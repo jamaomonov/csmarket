@@ -27,6 +27,12 @@ export function Layout() {
           <NavLink to="/users" className={navClass}>
             Пользователи
           </NavLink>
+          <NavLink to="/payments" className={navClass}>
+            Платежи
+          </NavLink>
+          <NavLink to="/audit" className={navClass}>
+            Журнал
+          </NavLink>
         </nav>
         <div className="flex items-center gap-3">
           <span className="text-fg-muted text-sm">{me?.display_name ?? "Администратор"}</span>
