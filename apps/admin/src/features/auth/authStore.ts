@@ -31,6 +31,8 @@ function isSteamReturn(): boolean {
 }
 
 async function probe(): Promise<Pick<AuthState, "status" | "me">> {
+  // A refresh refused as `account-suspended`: no token, but not a plain sign-out.
+  if (session.isSuspended()) return { status: "suspended", me: null };
   if (!session.getAccessToken()) return { status: "anonymous", me: null };
   try {
     const me = await session.apiGet<AdminMe>("/api/v1/admin/me");
@@ -71,7 +73,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-// A refused refresh mid-session means the session is dead: back to the login page.
+// A refused refresh mid-session means the session is dead: back to the login page,
+// or to «заблокирован» when the refusal was a ban.
 session.onAuthLost(() => {
-  useAuthStore.setState({ status: "anonymous", me: null });
+  useAuthStore.setState({ status: session.isSuspended() ? "suspended" : "anonymous", me: null });
 });

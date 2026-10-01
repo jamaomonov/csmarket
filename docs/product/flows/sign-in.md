@@ -12,7 +12,9 @@ Steam is the only sign-in. There is no registration form and no password.
 5. If Steam says no or the link is stale, they see a short error and a button to try again
    (in the language they started in). A Steam return that was not started in this browser
    — for example a link someone else sent — never signs anyone in.
-6. A suspended account sees a suspension notice instead of the account page.
+6. A suspended account sees a suspension notice instead of the account page. A ban ends every
+   session, and each later visit asks again and is told the account is suspended, so the notice
+   stays after a reload. Nothing about the ban is stored in the browser.
 
 The admin (`admin.csmarket.uz`) uses the same sign-in. A signed-in person without the
 `admin` role sees «Нет доступа».

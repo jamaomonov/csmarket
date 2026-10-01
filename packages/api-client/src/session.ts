@@ -13,6 +13,13 @@
  * never presented twice at once (the server treats reuse as theft). Only a
  * refusal (`401` / `403`) ends the session; a 5xx or a network error keeps it.
  *
+ * A refresh refused as `account-suspended` (a banned account, whose sessions the ban
+ * revoked) ends the session too, but leaves it **suspended** rather than signed out:
+ * no token, and {@link SessionClient.isSuspended} is true, so the app can say why.
+ * The hint and the (revoked) cookie are kept and no logout is sent, so every load
+ * asks again and the server answers 403 again; nothing about the ban is stored here.
+ * A suspended session never refreshes on a 401: it would only hear 403 again.
+ *
  * The token and the cookies go only to our API: a path relative to `baseUrl`.
  * An absolute URL is fetched with neither, and its 401 is not ours to refresh.
  *
@@ -64,7 +71,12 @@ export interface SessionClient {
   refreshAccessToken: () => Promise<boolean>;
   /** Called when a refresh is refused (the session is dead). Returns an unsubscribe. */
   onAuthLost: (cb: () => void) => () => void;
+  /** The last refresh was refused because the account is banned (until a new token or sign-out). */
+  isSuspended: () => boolean;
 }
+
+/** problem+json `type` of the API's `AccountSuspendedError` (403). */
+export const ACCOUNT_SUSPENDED_TYPE = "https://csmarket.uz/errors/account-suspended";
 
 export class SessionApiError extends Error {
   constructor(
@@ -101,11 +113,20 @@ async function readErrorBody(response: Response): Promise<unknown> {
   }
 }
 
+/** Whether a 403 is the API's `account-suspended` problem (and not any other refusal). */
+async function isSuspendedAnswer(response: Response): Promise<boolean> {
+  const body = await readErrorBody(response);
+  // Narrowing an unknown JSON body to the problem+json field we read.
+  const type = (body as { type?: unknown } | null)?.type;
+  return type === ACCOUNT_SUSPENDED_TYPE;
+}
+
 /** Build a session client; see the module docstring for the mechanics. */
 export function createSessionClient(opts: SessionClientOptions): SessionClient {
   const baseUrl = opts.baseUrl.replace(/\/+$/, "");
   let accessToken: string | null = null;
   let refreshInFlight: Promise<boolean> | null = null;
+  let suspended = false;
   const lostListeners = new Set<() => void>();
 
   const writeHint = (on: boolean): void => {
@@ -119,11 +140,13 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
 
   const setAccessToken = (token: string): void => {
     accessToken = token;
+    suspended = false;
     writeHint(true);
   };
 
   const clearSession = (): void => {
     accessToken = null;
+    suspended = false;
     writeHint(false);
     // JS can't delete the HttpOnly cookie; the server revokes and expires it.
     // Fire-and-forget: signing out must never block or throw.
@@ -134,6 +157,13 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
 
   const authLost = (): void => {
     clearSession();
+    for (const cb of lostListeners) cb();
+  };
+
+  /** Banned: drop the token but keep the hint and the cookie (see the module docstring). */
+  const suspend = (): void => {
+    accessToken = null;
+    suspended = true;
     for (const cb of lostListeners) cb();
   };
 
@@ -153,6 +183,10 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
     // cookie) or 403 (suspended). A 5xx / 429 is the API having a bad moment — keep
     // the session, like the network-error branch; clearing it would also POST
     // /auth/logout and revoke a perfectly good 30-day session.
+    if (response.status === 403 && (await isSuspendedAnswer(response))) {
+      suspend();
+      return false;
+    }
     if (response.status === 401 || response.status === 403) {
       authLost();
       return false;
@@ -206,6 +240,7 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
       ours &&
       allowRefresh &&
       !anonymous &&
+      !suspended &&
       !path.includes("/auth/refresh")
     ) {
       // A parallel call may have rotated the token already: replay with it.
@@ -252,6 +287,7 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
       }
     },
     refreshAccessToken,
+    isSuspended: () => suspended,
     onAuthLost: (cb) => {
       lostListeners.add(cb);
       return () => {

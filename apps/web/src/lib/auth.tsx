@@ -67,6 +67,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // boot-time refresh settles so server and first client render agree.
   const [booted, setBooted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
+  // A refresh refused as `account-suspended` (a banned account): the session client
+  // holds no token, so `/me` never runs; read the reason from the client instead.
+  const [sessionSuspended, setSessionSuspended] = useState(false);
   // On the Steam return a boot refresh against a stale cookie would fail, fire a
   // logout and revoke the session the sign-in is creating. Hydration order is not
   // fixed (the callback sits in a Suspense boundary that hydrates after this
@@ -84,11 +87,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
       if (!effect.cancelled) {
         setHasToken(Boolean(session.getAccessToken()));
+        setSessionSuspended(session.isSuspended());
         setBooted(true);
       }
     })();
     const off = session.onAuthLost(() => {
       setHasToken(false);
+      setSessionSuspended(session.isSuspended());
       qc.removeQueries({ queryKey: ME });
     });
     return () => {
@@ -105,7 +110,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     staleTime: 60_000,
   });
 
-  const suspended = me.error instanceof SessionApiError && me.error.status === 403;
+  const suspended =
+    sessionSuspended || (me.error instanceof SessionApiError && me.error.status === 403);
   const status: AuthStatus =
     // Pending never carries an error in react-query v5.
     !booted || (hasToken && me.isPending)
@@ -128,6 +134,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         session.setAccessToken(tokens.access_token);
         // Seed the cache before enabling the query, so it doesn't fetch /me twice.
         qc.setQueryData(ME, await fetchMe());
+        setSessionSuspended(false);
         setHasToken(true);
       } finally {
         signingIn.current = false;
@@ -139,6 +146,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signOut = useCallback((): Promise<void> => {
     session.clearSession();
     setHasToken(false);
+    setSessionSuspended(false);
     qc.removeQueries({ queryKey: ME });
     return Promise.resolve();
   }, [qc]);

@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { session } from "./api";
 import { AuthProvider, useAuth } from "./auth";
 
 const HINT = "csmarket.web.has_session";
@@ -34,6 +35,8 @@ describe("AuthProvider boot", () => {
     localStorage.setItem(HINT, "1");
   });
   afterEach(() => {
+    // The client is a module singleton: never carry a suspended state into the next test.
+    session.clearSession();
     vi.unstubAllGlobals();
     localStorage.clear();
     window.history.replaceState(null, "", "/");
@@ -56,5 +59,41 @@ describe("AuthProvider boot", () => {
     });
     expect(refreshCalls(fetchMock)).toBe(0);
     expect(localStorage.getItem(HINT)).toBe("1");
+  });
+
+  it("a refresh refused as suspended shows the account as blocked", async () => {
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith("/api/v1/auth/refresh")
+          ? new Response(
+              JSON.stringify({
+                type: "https://csmarket.uz/errors/account-suspended",
+                title: "Account suspended",
+                status: 403,
+              }),
+              { status: 403, headers: { "Content-Type": "application/problem+json" } },
+            )
+          : new Response(null, { status: 204 }),
+      ),
+    );
+    renderProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId("status").textContent).toBe("suspended");
+    });
+    // Not signed out: the next load asks the server again rather than trusting a flag.
+    expect(localStorage.getItem(HINT)).toBe("1");
+    const logouts = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/auth/logout"));
+    expect(logouts).toHaveLength(0);
+  });
+
+  it("any other 403 on refresh is signed out", async () => {
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(new Response(JSON.stringify({ status: 403 }), { status: 403 })),
+    );
+    renderProvider();
+    await waitFor(() => {
+      expect(screen.getByTestId("status").textContent).toBe("anonymous");
+    });
+    expect(localStorage.getItem(HINT)).toBeNull();
   });
 });

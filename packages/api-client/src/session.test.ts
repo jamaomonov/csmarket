@@ -88,6 +88,85 @@ describe("createSessionClient", () => {
     expect(localStorage.getItem("hint")).toBeNull();
   });
 
+  const SUSPENDED = {
+    type: "https://csmarket.uz/errors/account-suspended",
+    title: "Account suspended",
+    status: 403,
+  };
+  const urls = () => fetchMock.mock.calls.map((call) => call[0] as string);
+
+  it("a refresh refused as suspended keeps the session distinct from signed out", async () => {
+    const c = make();
+    const lost = vi.fn();
+    c.onAuthLost(lost);
+    localStorage.setItem("hint", "1");
+    fetchMock.mockResolvedValue(json(403, SUSPENDED));
+    await expect(c.refreshAccessToken()).resolves.toBe(false);
+    expect(c.isSuspended()).toBe(true);
+    expect(c.getAccessToken()).toBeNull();
+    expect(lost).toHaveBeenCalledOnce();
+    // The hint and the (revoked) cookie stay: the next load asks again and hears 403 again.
+    expect(localStorage.getItem("hint")).toBe("1");
+    expect(urls().some((u) => u.endsWith("/auth/logout"))).toBe(false);
+  });
+
+  it("parallel refreshes refused as suspended share one request", async () => {
+    const c = make();
+    fetchMock.mockResolvedValue(json(403, SUSPENDED));
+    await expect(Promise.all([c.refreshAccessToken(), c.refreshAccessToken()])).resolves.toEqual([
+      false,
+      false,
+    ]);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(c.isSuspended()).toBe(true);
+  });
+
+  it("a suspended session does not refresh and replay on a 401", async () => {
+    const c = make();
+    fetchMock.mockResolvedValueOnce(json(403, SUSPENDED));
+    await c.refreshAccessToken();
+    fetchMock.mockResolvedValueOnce(json(401, {}));
+    await expect(c.apiGet("/api/v1/wallet")).rejects.toMatchObject({ status: 401 });
+    expect(urls().filter((u) => u.endsWith("/auth/refresh"))).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("a new token or a sign-out ends the suspended state", async () => {
+    const c = make();
+    fetchMock.mockImplementation((url: string) =>
+      Promise.resolve(url.endsWith("/auth/logout") ? json(204, {}) : json(403, SUSPENDED)),
+    );
+    await c.refreshAccessToken();
+    c.setAccessToken("fresh");
+    expect(c.isSuspended()).toBe(false);
+    c.clearSession();
+    await c.refreshAccessToken();
+    expect(c.isSuspended()).toBe(true);
+    c.clearSession();
+    expect(c.isSuspended()).toBe(false);
+    expect(localStorage.getItem("hint")).toBeNull();
+  });
+
+  it("a 401 or another 403 on refresh is signed out, not suspended", async () => {
+    for (const [status, body] of [
+      [401, {}],
+      [403, {}],
+      [403, { type: "https://csmarket.uz/errors/forbidden", status: 403 }],
+    ] as const) {
+      const c = make();
+      const lost = vi.fn();
+      c.onAuthLost(lost);
+      c.setAccessToken("old");
+      fetchMock.mockReset();
+      fetchMock.mockResolvedValueOnce(json(status, body)).mockResolvedValue(json(204, {}));
+      await expect(c.refreshAccessToken()).resolves.toBe(false);
+      expect(c.isSuspended()).toBe(false);
+      expect(lost).toHaveBeenCalledOnce();
+      expect(localStorage.getItem("hint")).toBeNull();
+      expect(urls().some((u) => u.endsWith("/auth/logout"))).toBe(true);
+    }
+  });
+
   it.each([500, 502, 503, 429])(
     "a %i on refresh keeps the session: no logout, hint kept",
     async (status) => {
