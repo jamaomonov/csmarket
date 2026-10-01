@@ -26,8 +26,8 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import guard_ip
 from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.skins.cachekeys import catalog_version
-from csmarket.modules.skins.images import steam_image
-from csmarket.modules.skins.listings import listings_for
+from csmarket.modules.skins.images import steam_image, steam_image_only
+from csmarket.modules.skins.listings import listings_for, steam_inspect_url
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
 from csmarket.modules.skins.schemas import (
@@ -329,12 +329,15 @@ async def get_listings(
                     SkinStickerOut.model_validate(
                         {
                             **s,
-                            "image": steam_image(s.get("image"), host=settings.skins_image_host),
+                            "image": steam_image_only(
+                                s.get("image"), host=settings.skins_image_host
+                            ),
                         }
                     )
                     for s in row.stickers
                 ],
-                inspect_url=row.inspect_url,
+                # Checked again on the way out: a cached entry may predate the parse rule.
+                inspect_url=steam_inspect_url(row.inspect_url),
             )
         )
     return SkinListingsOut(items=items, degraded=degraded)

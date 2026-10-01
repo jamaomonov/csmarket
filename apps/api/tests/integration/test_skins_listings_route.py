@@ -82,6 +82,39 @@ async def test_live_listings_are_priced(integration_client: AsyncClient, item: S
 
 
 @respx.mock
+async def test_non_steam_sticker_images_and_inspect_links_never_reach_the_browser(
+    integration_client: AsyncClient, item: SkinItem
+) -> None:
+    raw = {
+        "item_id": 1,
+        "price": 27867,
+        "auto": True,
+        "inspect": "https://waxpeer.example/inspect/1",
+        "stickers": [
+            {"name": "Sticker | A", "slot": 0, "image": "https://cdn.waxpeer.example/a.png"},
+            {
+                "name": "Sticker | B",
+                "slot": 1,
+                "image": "https://community.akamai.steamstatic.com/economy/image/b",
+            },
+        ],
+    }
+    respx.get(f"{HOST}/v2/search-items-by-name").mock(
+        return_value=httpx.Response(
+            200, json={"success": True, "items": {item.market_hash_name: [raw]}}
+        )
+    )
+    r = await integration_client.get(f"/api/v1/skins/{item.slug}/listings")
+    assert r.status_code == 200
+    listing = r.json()["items"][0]
+    assert listing["inspect_url"] is None
+    assert [s["image"] for s in listing["stickers"]] == [
+        None,
+        "https://community.fastly.steamstatic.com/economy/image/b",
+    ]
+
+
+@respx.mock
 async def test_rate_limited_upstream_is_degraded_200(
     integration_client: AsyncClient, item: SkinItem
 ) -> None:

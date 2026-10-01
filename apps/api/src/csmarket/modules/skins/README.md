@@ -179,12 +179,16 @@ that calls Waxpeer from a request (AGENTS §11); `listings.listings_for` decides
    (`CSMARKET_SKINS_LISTINGS_TIMEOUT_SECONDS`). Only `auto` listings are kept, sorted by
    `(price, id)`, cached 90 s fresh and 1 h stale. A 429 or outage opens the breaker for 2 min; any
    other error just falls through;
-3. stale Redis `skins:listings:{slug}:stale` -> `degraded: true`;
+3. stale Redis `skins:listings:{slug}:stale` -> `degraded: true`. A cached entry that no longer
+   decodes into `Listing` (shape drift) counts as a miss, never a 500;
 4. the snapshot's `cheapest_auto` (no float, stickers or inspect link) -> `degraded: true`.
 
 It never raises for a Waxpeer problem, and logs only the exception type name (the API key rides
 Waxpeer's query string). Each row is re-quoted with the live rules (`pricing.quote`) and shown in
-soʻm at the CBU rate; sticker images use `CSMARKET_SKINS_IMAGE_HOST`. The route sits behind its own
+soʻm at the CBU rate. Nothing Waxpeer-hosted reaches a browser: a sticker image is kept only on a
+Steam CDN host (`*.steamstatic.com`, `*.akamaihd.net`, rewritten to `CSMARKET_SKINS_IMAGE_HOST`,
+`images.steam_image_only`), else `null`; `inspect_url` only when it is a `steam://` link
+(`listings.steam_inspect_url`), checked at parse and again on the way out. The route sits behind its own
 `ip_guard` bucket `skins-listings` (60 per window); an unknown or hidden slug is a 404 before any
 Waxpeer call. Redis keys: `docs/architecture/cache-keys.md`. Tests:
 `tests/unit/test_skins_listings.py`, `tests/integration/test_skins_listings_route.py`.

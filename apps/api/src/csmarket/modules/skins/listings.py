@@ -58,6 +58,11 @@ class Listing:
     delivery: str | None
 
 
+def steam_inspect_url(url: str | None) -> str | None:
+    """``url`` when it is a Steam inspect link (``steam://``), else ``None``."""
+    return url if isinstance(url, str) and url.startswith("steam://") else None
+
+
 def _sticker(raw: dict[str, Any]) -> dict[str, Any] | None:
     """Keep only well-typed fields; an odd one is dropped, never a 500."""
     name = raw.get("name")
@@ -93,7 +98,7 @@ def _parse(raw: dict[str, Any]) -> Listing | None:
         float_value=float(float_value) if isinstance(float_value, int | float) else None,
         paint_seed=int(seed) if isinstance(seed, int) else None,
         stickers=stickers,
-        inspect_url=raw.get("inspect") if isinstance(raw.get("inspect"), str) else None,
+        inspect_url=steam_inspect_url(raw.get("inspect")),
         delivery=raw.get("delivery") if isinstance(raw.get("delivery"), str) else None,
     )
 
@@ -121,6 +126,15 @@ def waxpeer_name_of(item: SkinItem) -> str:
     return f"{head} {item.phase} ({tail}" if sep else f"{item.market_hash_name} {item.phase}"
 
 
+def _decode(cached: str | bytes) -> list[Listing] | None:
+    """A cached entry back as listings, or ``None`` when it no longer fits ``Listing``
+    (an older shape, a bad write): drift is a cache miss, never a 500."""
+    try:
+        return [Listing(**e) for e in json.loads(cached)]
+    except (TypeError, ValueError, KeyError):
+        return None
+
+
 async def _budget_ok(redis: Redis, limit: int) -> bool:
     if limit <= 0:
         return False
@@ -137,10 +151,12 @@ async def listings_for(
 ) -> tuple[list[Listing], bool]:
     """``(listings, degraded)`` for one item — see the module docstring for the order."""
     key = f"skins:listings:{item.slug}"
+    cached = None
     with contextlib.suppress(RedisError):
         cached = await redis.get(key)
-        if cached is not None:
-            return [Listing(**e) for e in json.loads(cached)], False
+    fresh = _decode(cached) if cached is not None else None
+    if fresh is not None:
+        return fresh, False
 
     breaker_open = False
     with contextlib.suppress(RedisError):
@@ -174,10 +190,12 @@ async def listings_for(
                 await redis.set(f"{key}:stale", payload, ex=STALE_TTL)
             return rows, False
 
+    stale = None
     with contextlib.suppress(RedisError):
         stale = await redis.get(f"{key}:stale")
-        if stale is not None:
-            return [Listing(**e) for e in json.loads(stale)], True
+    old = _decode(stale) if stale is not None else None
+    if old is not None:
+        return old, True
     return _from_snapshot(item), True
 
 
@@ -188,5 +206,6 @@ __all__ = [
     "Listing",
     "SearchClient",
     "listings_for",
+    "steam_inspect_url",
     "waxpeer_name_of",
 ]

@@ -25,4 +25,18 @@ def steam_image(url: str | None, *, host: str) -> str | None:
     return urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
 
 
-__all__ = ["steam_image"]
+def steam_image_only(url: str | None, *, host: str) -> str | None:
+    """Like :func:`steam_image`, but a URL on any other host becomes ``None``.
+
+    For images that come from Waxpeer (listing stickers): only a Steam CDN image may
+    reach a browser, never one on Waxpeer's own CDN or anywhere else.
+    """
+    if not url:
+        return None
+    hostname = urlsplit(url).hostname
+    if not hostname or not hostname.endswith(_STEAM_HOST_SUFFIXES):
+        return None
+    return steam_image(url, host=host)
+
+
+__all__ = ["steam_image", "steam_image_only"]

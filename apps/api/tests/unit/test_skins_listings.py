@@ -10,7 +10,7 @@ from typing import Any
 import fakeredis.aioredis
 import pytest
 from csmarket.core.ids import new_id
-from csmarket.modules.skins.listings import listings_for, waxpeer_name_of
+from csmarket.modules.skins.listings import listings_for, steam_inspect_url, waxpeer_name_of
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.waxpeer import WaxpeerRateLimitedError, WaxpeerUnavailableError
 
@@ -173,3 +173,39 @@ async def test_failure_logs_only_the_exception_type(
     captured = capsys.readouterr()
     assert "SECRET-KEY" not in captured.out + captured.err
     assert "WaxpeerUnavailableError" in captured.out + captured.err
+
+
+def test_only_steam_inspect_links_are_kept() -> None:
+    assert steam_inspect_url("steam://rungame/730/1/+csgo_econ_action_preview%20A1D2") == (
+        "steam://rungame/730/1/+csgo_econ_action_preview%20A1D2"
+    )
+    assert steam_inspect_url("https://waxpeer.example/inspect/1") is None
+    assert steam_inspect_url("javascript:alert(1)") is None
+    assert steam_inspect_url("") is None
+    assert steam_inspect_url(None) is None
+
+
+@pytest.mark.parametrize(
+    "payload",
+    ["not json", '[{"listing_id": 1}]', '[{"listing_id": 1, "surprise": 2}]', "[1]", '{"a": 1}'],
+)
+async def test_a_malformed_cached_entry_is_a_miss_not_a_500(
+    redis: fakeredis.aioredis.FakeRedis, payload: str
+) -> None:
+    """Cache drift (an older ``Listing`` shape, a bad write) reads as a miss: the fresh
+    key falls through to a live read, the stale key to the snapshot."""
+    key = "skins:listings:ak-47-redline-field-tested"
+    await redis.set(key, payload)
+    client = _Client()
+    listings, degraded = await listings_for(
+        _item(), client=client, redis=redis, budget_per_minute=18
+    )
+    assert (client.calls, degraded) == (1, False)
+    assert [x.listing_id for x in listings] == [53857957789, 53863078495]
+
+    await redis.set(key, payload)  # fresh still bad, Waxpeer now down, stale bad too
+    await redis.set(f"{key}:stale", payload)
+    down = _Client(fail=WaxpeerUnavailableError("ReadTimeout"))
+    listings, degraded = await listings_for(_item(), client=down, redis=redis, budget_per_minute=18)
+    assert degraded is True
+    assert [x.listing_id for x in listings] == [53857957789]
