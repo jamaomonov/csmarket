@@ -146,7 +146,7 @@ safe, and the sweep closes the window within 5 minutes.
 | `-32504` | Basic auth failed                                                         |
 | `-32600` | Bad envelope or a missing / mistyped parameter                            |
 | `-32601` | Unknown method                                                            |
-| `-32700` | Body is not JSON                                                          |
+| `-32700` | Body is not JSON, or over 64 KiB                                          |
 
 Messages are trilingual (ru / uz / en); Uzbek uses ʻ (U+02BB).
 
@@ -163,7 +163,7 @@ opt-in); otherwise the tile is hidden and every call is `-32504`.
 
 `csmarket_kassa_rejections_total{provider="payme", reason}` (`docs/architecture/metrics.md`)
 counts webhooks refused before business logic. Counted: `-32504` as `reason="auth"`; `-32700` (bad
-JSON, including a body nested deeply enough to raise `RecursionError`) and `-32600` (envelope or a
+JSON, including a body over 64 KiB or nested deeply enough to raise `RecursionError`) and `-32600` (envelope or a
 handler's parameter extractor) as `"malformed"`, once each, in `routes.py`. Every other code
 counts nothing.
 

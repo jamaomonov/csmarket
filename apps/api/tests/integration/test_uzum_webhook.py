@@ -519,10 +519,25 @@ async def test_a_body_that_is_not_a_json_object_is_10002(
 
 
 async def test_a_deeply_nested_body_is_10002_not_500(integration_client: AsyncClient) -> None:
-    """Payme review lesson: ``json.loads`` raises ``RecursionError`` on deep nesting."""
-    content = b"[" * 200_000 + b"]" * 200_000
+    """Payme review lesson: ``json.loads`` raises ``RecursionError`` on deep nesting (this
+    body stays under the 64 KiB cap, so it reaches the parser)."""
+    content = b"[" * 30_000 + b"]" * 30_000
     r = await integration_client.post(f"{BASE}/check", headers=_auth(), content=content)
     assert (r.status_code, r.json()["errorCode"]) == (400, 10002)
+
+
+async def test_a_body_over_64_kib_is_10002(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    topup = await make_topup(db_session)
+    body = _check_body(topup.number)
+    padded = json.dumps({**body, "pad": "a" * (64 * 1024)}).encode()
+    r = await integration_client.post(f"{BASE}/check", headers=_auth(), content=padded)
+    assert r.json() == {"status": "FAILED", "errorCode": 10002}
+    near = json.dumps({**body, "pad": "a" * (60 * 1024)}).encode()
+    assert (
+        await integration_client.post(f"{BASE}/check", headers=_auth(), content=near)
+    ).status_code == 200
 
 
 @pytest.mark.parametrize("endpoint", ENDPOINTS)

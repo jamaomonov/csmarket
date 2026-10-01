@@ -30,7 +30,7 @@ POST /api/v1/payments/click/complete   action=1
   (≤ 8 KiB, ≤ 32 fields); anything else is `-8`. Response JSON.
 - **Always HTTP 200**, `{"error": <int>, "error_note": <str>, ...echo}`; the echo carries
   `click_trans_id` / `merchant_trans_id` exactly as sent. A commit failure is `-7`; a
-  non-POST is `-8`, never a 405.
+  non-POST is `-8`, never a 405 (and not counted as a rejection).
 - **Auth:** `sign_string`, checked before any business logic, constant-time and
   case-insensitive, over the **raw** wire strings (`"1000.00"` ≠ `"1000"`):
   - prepare: `md5(click_trans_id + service_id + SECRET_KEY + merchant_trans_id + amount + action + sign_time)`
@@ -108,9 +108,10 @@ every callback is `-1`.
 ## Metrics
 
 `csmarket_kassa_rejections_total{provider="click", reason}` (`docs/architecture/metrics.md`)
-counts webhooks refused before business logic. Counted: `-1` as `reason="signature"`, `-8` as
-`"malformed"` (a body that is not Click's form, a missing or non-numeric field, a stray non-POST),
-once each, in `routes.py`. Every other code counts nothing.
+counts webhooks refused before business logic. Counted: `-1` as `reason="signature"`, `-8` on a
+POST as `"malformed"` (a body that is not Click's form, a missing or non-numeric field), once
+each, in `routes.py`. A stray non-POST (also `-8`) and every other code count nothing: a GET is
+not a Click call, as with Payme's and Uzum's non-POST answers.
 
 ## Not here
 

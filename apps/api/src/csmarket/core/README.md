@@ -11,6 +11,7 @@ Ported by allow-list (spec §3.2). What it owns here:
 | `errors`        | `AppError` → RFC 7807 problem+json, `Retry-After` promotion                            |
 | `cache_headers` | `Cache-Control: no-store` unless a route says otherwise                                |
 | `client_ip`     | first `X-Forwarded-For` entry — relies on Caddy overwriting the header                 |
+| `request_body`  | `read_capped` — a webhook body with a ceiling (kassas: Click 8 KiB, Payme/Uzum 64 KiB) |
 | `metrics`       | domain Prometheus counters (`csmarket_*`), two rules in the docstring                  |
 | `money`         | `format_amount` for alerts: UZS whole, USD two decimals                                |
 | `idempotency`   | `Idempotency-Key` validation + generic replay store (`idempotent_responses`)           |

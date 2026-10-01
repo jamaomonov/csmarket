@@ -6,9 +6,10 @@ transport failure), dispatches ``method`` with Payme's parameter names translate
 renders every outcome.
 
 **Always HTTP 200.** Payme reads any non-200 as ``-32400``, so bad auth (``-32504``), bad
-JSON (``-32700``), a bad envelope (``-32600``), an unknown method (``-32601``), a non-POST
-(``-32300``) and internal errors (``-32400``) are all JSON-RPC ``error`` bodies; the commit
-sits inside the guard so a commit failure is ``-32400``, never a 500. Log lines carry the
+JSON or a body over 64 KiB (``-32700``), a bad envelope (``-32600``), an unknown method
+(``-32601``), a non-POST (``-32300``) and internal errors (``-32400``) are all JSON-RPC
+``error`` bodies; the commit sits inside the guard so a commit failure is ``-32400``, never
+a 500. Log lines carry the
 method, the outcome code, the number and the amount — never the Authorization header, the
 key or the body.
 """
@@ -29,6 +30,7 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import record_kassa_rejection
+from csmarket.core.request_body import KASSA_JSON_MAX_BYTES, read_capped
 from csmarket.modules.payme import service
 from csmarket.modules.payme.errors import (
     PaymeError,
@@ -201,9 +203,14 @@ async def _answer(request: Request, db: AsyncSession) -> tuple[object, Params, R
     if not _is_authorized(request.headers.get("authorization", "")):
         record_kassa_rejection(provider="payme", reason="auth")
         return None, {}, {"error": unauthorized().to_rpc_error(), "id": None}
-    try:
-        payload = json.loads(await request.body())
-    except (ValueError, RecursionError):  # bad JSON, undecodable bytes, or absurd nesting
+    raw = await read_capped(request, KASSA_JSON_MAX_BYTES)  # None past 64 KiB: not Payme
+    payload: object = None
+    if raw is not None:
+        try:
+            payload = json.loads(raw)
+        except (ValueError, RecursionError):  # bad JSON, undecodable bytes, or absurd nesting
+            raw = None
+    if raw is None:
         record_kassa_rejection(provider="payme", reason="malformed")
         return None, {}, {"error": bad_json().to_rpc_error(), "id": None}
     envelope: dict[str, Any] = payload if isinstance(payload, dict) else {}

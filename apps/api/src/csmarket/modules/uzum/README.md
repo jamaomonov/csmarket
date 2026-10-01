@@ -39,8 +39,8 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS on any of them   10003 at HTTP 400 (never a 40
   (off by default; startup warns `kassa.sandbox_enabled_in_prod` while it is on). Compared as
   UTF-8 bytes in constant time across the usable pairs; a pair with a blank half never
   matches; a non-ASCII or undecodable credential fails closed. Failure → `10001`.
-- **Body:** a JSON object, else `10002` — also for a body nested deeply enough to raise
-  `RecursionError`.
+- **Body:** a JSON object of at most 64 KiB (read with a bound, `core.request_body`), else
+  `10002` — also for a body nested deeply enough to raise `RecursionError`.
 - **`serviceId`:** must be exactly the configured `uzum_service_id` (an integer, not a
   string, float or `true`); otherwise, or with none configured, `10006`.
 - **Fields:** `transId` a string of 1..64; `amount` an integer (not `bool`, not a float);
@@ -148,7 +148,7 @@ a callback holds is skipped until the next tick; one failing row is logged
 | Code    | When                                                                         |
 | ------- | ---------------------------------------------------------------------------- |
 | `10001` | Basic auth failed                                                            |
-| `10002` | Body is not a JSON object (or too deeply nested)                             |
+| `10002` | Body is not a JSON object (or over 64 KiB, or too deeply nested)             |
 | `10003` | Not POST                                                                     |
 | `10005` | A required field is missing or mistyped                                      |
 | `10006` | `serviceId` is not ours, or none is configured                               |
@@ -180,7 +180,7 @@ offered with the service id and a whole usable pair (the sandbox pair in prod on
 
 `csmarket_kassa_rejections_total{provider="uzum", reason}` (`docs/architecture/metrics.md`) counts
 webhooks refused before business logic. Counted: `10001` as `reason="auth"`; `10002` (including a
-`RecursionError` body) and `10005` as `"malformed"`, once each, in `routes.py`. Every other code
+body over 64 KiB or a `RecursionError` body) and `10005` as `"malformed"`, once each, in `routes.py`. Every other code
 counts nothing.
 
 ## Not here

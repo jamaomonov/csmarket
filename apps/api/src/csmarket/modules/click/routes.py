@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import record_kassa_rejection
+from csmarket.core.request_body import read_capped
 from csmarket.modules.click import service, signature
 from csmarket.modules.click.errors import (
     ClickError,
@@ -147,11 +148,9 @@ async def _read_form(request: Request) -> Form | None:
     content_type = request.headers.get("content-type", "").split(";")[0].strip().lower()
     if content_type != "application/x-www-form-urlencoded":
         return None
-    raw = bytearray()
-    async for chunk in request.stream():
-        raw += chunk
-        if len(raw) > _MAX_BODY_BYTES:
-            return None
+    raw = await read_capped(request, _MAX_BODY_BYTES)
+    if raw is None:
+        return None
     try:
         pairs = parse_qsl(raw.decode("utf-8"), keep_blank_values=True, max_num_fields=_MAX_FIELDS)
     except ValueError:  # UnicodeDecodeError included; too many fields
@@ -333,8 +332,12 @@ async def click_complete(request: Request, db: DbSession) -> service.ClickRespon
 
 
 def _reject_non_post() -> service.ClickResponse:
-    """A stray non-POST: ``-8`` at HTTP 200 (Click has no "wrong method" code), never a 405."""
-    return _unreadable_body()
+    """A stray non-POST: ``-8`` at HTTP 200 (Click has no "wrong method" code), never a 405.
+
+    Not counted as a rejection: a GET is not a Click call (a scanner, a browser), and Payme
+    and Uzum leave their non-POST answers uncounted too.
+    """
+    return bad_request().to_response()
 
 
 for _path in ("/prepare", "/complete"):

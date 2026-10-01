@@ -211,11 +211,11 @@ Alert `KassaRejectionsSpike` (`infra/prometheus/alerts/payments.yml`): more than
 from one kassa refused **before any business logic** in 15 minutes, by
 `csmarket_kassa_rejections_total{provider, reason}`:
 
-| `reason`    | Means                                                                    |
-| ----------- | ------------------------------------------------------------------------ |
-| `signature` | Click: the MD5 `sign_string` did not match, or another `service_id` (−1) |
-| `auth`      | Payme −32504, Uzum 10001: the Basic login/key did not match              |
-| `malformed` | A body the protocol does not allow (bad JSON, missing field, not POST)   |
+| `reason`    | Means                                                                                                     |
+| ----------- | --------------------------------------------------------------------------------------------------------- |
+| `signature` | Click: the MD5 `sign_string` did not match, or another `service_id` (−1)                                  |
+| `auth`      | Payme −32504, Uzum 10001: the Basic login/key did not match                                               |
+| `malformed` | A POST body the protocol does not allow (bad JSON, over 64 KiB, missing field); a non-POST counts nothing |
 
 What to do:
 

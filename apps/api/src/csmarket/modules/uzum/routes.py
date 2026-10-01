@@ -6,9 +6,9 @@ envelope), checks ``serviceId`` and the endpoint's fields, dispatches, and rende
 outcome.
 
 **HTTP 200 on success, HTTP 400 on any error** (Uzum's contract): bad auth (10001), bad JSON
-(10002, also a body nested deeply enough to raise ``RecursionError``), a non-POST (10003), a
-missing field (10005), a foreign ``serviceId`` (10006) and internal errors (99999) are all
-``{"status": "FAILED", "errorCode", ...}`` bodies at 400 — never a 401, 405, 422 or 500. The
+(10002, also a body over 64 KiB or nested deeply enough to raise ``RecursionError``), a
+non-POST (10003), a missing field (10005), a foreign ``serviceId`` (10006) and internal
+errors (99999) are all ``{"status": "FAILED", "errorCode", ...}`` bodies at 400 — never a 401, 405, 422 or 500. The
 commit sits inside the guard, so a commit failure is 99999. Log lines carry the endpoint,
 the outcome code, the number and the tiyin amount — never the Authorization header, a
 password, the body or ``payment_source`` (it holds the payer's phone).
@@ -31,6 +31,7 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import record_kassa_rejection
+from csmarket.core.request_body import KASSA_JSON_MAX_BYTES, read_capped
 from csmarket.modules.uzum import service
 from csmarket.modules.uzum.errors import (
     UzumError,
@@ -93,8 +94,10 @@ def _is_authorized(header: str) -> bool:
     return ok
 
 
-def _parse_body(raw: bytes) -> Body:
-    """The body as a JSON object; else 10002 (also for ``RecursionError`` on deep nesting)."""
+def _parse_body(raw: bytes | None) -> Body:
+    """The body as a JSON object; else 10002 (also over 64 KiB, or ``RecursionError``)."""
+    if raw is None:  # over 64 KiB: no Uzum call is anywhere near that
+        raise bad_json()
     try:
         payload = json.loads(raw)
     except (ValueError, RecursionError):  # JSONDecodeError and undecodable bytes alike
@@ -262,7 +265,7 @@ async def _serve(
         answer, code = _fail(error), error.code
     else:
         try:
-            body = _parse_body(await request.body())
+            body = _parse_body(await read_capped(request, KASSA_JSON_MAX_BYTES))
         except UzumError as exc:
             if exc.code == _BAD_JSON:
                 record_kassa_rejection(provider="uzum", reason="malformed")

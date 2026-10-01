@@ -10,6 +10,7 @@ any other status as a transport error. Every key here is fake.
 from __future__ import annotations
 
 import base64
+import json
 from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any
@@ -412,6 +413,17 @@ async def test_the_key_and_the_header_never_reach_the_logs(
 
 
 # ---------- envelope: -32700 / -32600 / -32601 ----------
+
+
+async def test_a_body_over_64_kib_is_32700(integration_client: AsyncClient) -> None:
+    envelope = {"method": "CheckTransaction", "params": {"id": "nope"}, "id": 7}
+    over = json.dumps({**envelope, "pad": "a" * (64 * 1024)}).encode()
+    r = await integration_client.post(URL, headers=_auth(), content=over)
+    assert r.json() == {"error": r.json()["error"], "id": None}
+    assert r.json()["error"]["code"] == -32700
+    near = json.dumps({**envelope, "pad": "a" * (60 * 1024)}).encode()
+    r = await integration_client.post(URL, headers=_auth(), content=near)
+    assert (r.json()["error"]["code"], r.json()["id"]) == (-31003, 7)
 
 
 async def test_non_json_body_is_32700(integration_client: AsyncClient) -> None:

@@ -73,7 +73,7 @@ cabinet; Payme calls our CancelTransaction:
 | −32504 | Basic auth failed                                                    | The key in `secrets/api.env` vs the cabinet; alert `reason="auth"` |
 | −32600 | Bad envelope or a mistyped parameter                                 | Not Payme's normal traffic; check the caller                       |
 | −32601 | Unknown method                                                       | —                                                                  |
-| −32700 | Body is not JSON (or nested too deeply)                              | A proxy mangling the body, or probing                              |
+| −32700 | Body is not JSON (or over 64 KiB, or nested too deeply)              | A proxy mangling the body, or probing                              |
 
 Payme shows the customer «Сервис поставщика услуг недоступен» on −32400. A retry after a
 declined card opens a new attempt (`payme:<number>:<id>`), so a retry is never −32400 by

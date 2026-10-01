@@ -113,9 +113,16 @@ async def test_click_malformed_bodies_count_once_each(integration_client: AsyncC
     # a non-numeric id
     form = _click_form(sign="x") | {"click_trans_id": "abc"}
     assert (await integration_client.post(prepare, data=form)).json()["error"] == -8
-    # a stray GET
-    assert (await integration_client.get(prepare)).json()["error"] == -8
-    assert await _delta(integration_client, before) == {("click", "malformed"): 4.0}
+    assert await _delta(integration_client, before) == {("click", "malformed"): 3.0}
+
+
+async def test_click_non_post_counts_nothing(integration_client: AsyncClient) -> None:
+    """A GET is not a Click call (a scanner, a browser): answered -8, silent like Payme's
+    and Uzum's non-POST answers."""
+    before = await _counts(integration_client)
+    for url in ("/api/v1/payments/click/prepare", "/api/v1/payments/click/complete"):
+        assert (await integration_client.get(url)).json()["error"] == -8
+    assert await _delta(integration_client, before) == {}
 
 
 async def test_click_good_signature_wrong_action_counts_nothing(
@@ -146,8 +153,11 @@ async def test_payme_rejections_count_once_each(integration_client: AsyncClient)
     # -32700: not JSON
     r = await integration_client.post(PAYME, headers=good, content=b"{not json")
     assert r.json()["error"]["code"] == -32700
-    # -32700: nested deep enough to raise RecursionError in the JSON parser
-    r = await integration_client.post(PAYME, headers=good, content=b"[" * 200_000 + b"]" * 200_000)
+    # -32700: nested deep enough to raise RecursionError in the JSON parser (under 64 KiB)
+    r = await integration_client.post(PAYME, headers=good, content=b"[" * 30_000 + b"]" * 30_000)
+    assert (r.status_code, r.json()["error"]["code"]) == (200, -32700)
+    # -32700: a body over 64 KiB
+    r = await integration_client.post(PAYME, headers=good, content=b" " * (64 * 1024 + 1))
     assert (r.status_code, r.json()["error"]["code"]) == (200, -32700)
     # -32600: envelope without a method; params not an object
     r = await integration_client.post(PAYME, headers=good, json={"id": 1})
@@ -166,7 +176,7 @@ async def test_payme_rejections_count_once_each(integration_client: AsyncClient)
 
     assert await _delta(integration_client, before) == {
         ("payme", "auth"): 3.0,
-        ("payme", "malformed"): 5.0,
+        ("payme", "malformed"): 6.0,
     }
 
 
@@ -196,8 +206,9 @@ async def test_uzum_rejections_count_once_each(integration_client: AsyncClient) 
     for headers in (_basic(UZUM_LOGIN, "nope"), {}):
         r = await integration_client.post(f"{UZUM}/check", headers=headers, json=body)
         assert (r.status_code, r.json()["errorCode"]) == (400, 10001)
-    # 10002: not JSON, a JSON array, a body nested deep enough to raise RecursionError
-    for raw in (b"{nope", b"[1]", b"[" * 200_000 + b"]" * 200_000):
+    # 10002: not JSON, a JSON array, a body nested deep enough to raise RecursionError,
+    # a body over 64 KiB
+    for raw in (b"{nope", b"[1]", b"[" * 30_000 + b"]" * 30_000, b" " * (64 * 1024 + 1)):
         r = await integration_client.post(f"{UZUM}/check", headers=good, content=raw)
         assert (r.status_code, r.json()["errorCode"]) == (400, 10002)
     # 10005: a missing field, from the endpoint's own extractor
@@ -210,7 +221,7 @@ async def test_uzum_rejections_count_once_each(integration_client: AsyncClient) 
 
     assert await _delta(integration_client, before) == {
         ("uzum", "auth"): 2.0,
-        ("uzum", "malformed"): 5.0,
+        ("uzum", "malformed"): 6.0,
     }
 
 

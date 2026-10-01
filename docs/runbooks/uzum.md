@@ -65,7 +65,7 @@ There is no refund from our admin. Uzum calls `/reverse`:
 | Code  | Meaning                                              | Action                                                                                      |
 | ----- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | 10001 | Basic auth failed                                    | Auth above                                                                                  |
-| 10002 | Body is not a JSON object (or nested too deeply)     | A proxy mangling the body, or probing                                                       |
+| 10002 | Body is not a JSON object (over 64 KiB, too nested)  | A proxy mangling the body, or probing                                                       |
 | 10003 | Not POST                                             | Not Uzum; a stray caller                                                                    |
 | 10005 | A required field missing or mistyped                 | Compare with the Postman collection; the attribute must be `order` / `orderId` / `order_id` |
 | 10006 | `serviceId` not ours                                 | The service id in env vs Uzum's                                                             |
