@@ -18,6 +18,8 @@ from csmarket.core.db import metadata
 # Import every table-owning module so autogenerate sees the whole graph.
 # New modules MUST add their import here (M1: auth, users; M2: skins; ...).
 from csmarket.core import idempotency as _idempotency_models  # noqa: F401
+from csmarket.modules.auth import models as _auth_models  # noqa: F401
+from csmarket.modules.users import models as _users_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
