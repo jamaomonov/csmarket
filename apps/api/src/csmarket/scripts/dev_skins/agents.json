@@ -1,0 +1,46 @@
+[
+  {
+    "market_hash_name": "'Blueberries' Buckshot | NSWC SEAL",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIa-2lmxU-LR0dnuNm6E8Vl45Iv181z1fh7lk6nz6XRk-fO8YaVjNPrdXWLElL5ytbBsTXrqzUxzsWmHzN-gI3-TbwQmC5pzQLELsUbrx9bmP_SiuVJe8Pfo4Q",
+    "rarity": {
+      "name": "Exceptional",
+      "color": "#8847ff"
+    },
+    "team": {
+      "id": "counter-terrorists"
+    }
+  },
+  {
+    "market_hash_name": "Sergeant Bombson | SWAT",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIa-2lmxU-LR0dnuNm6E8Vl45Iv181z1fh7lk6nz6iNP0OSveq1sLuSaQD6Umbp15-RtHX21kxl-sG-Gy9f6ci2XPA8lDMAiTbJc5BfuwNXgYbn8p1uJ3rbO8bk",
+    "rarity": {
+      "name": "Exceptional",
+      "color": "#8847ff"
+    },
+    "team": {
+      "id": "counter-terrorists"
+    }
+  },
+  {
+    "market_hash_name": "Bloody Darryl The Strapped | The Professionals",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIa-2lmxU-LR0dnuNm6E8Vl45Iv181z1fgn8oYby8iRe_OGnZ6psLM-FD3WWlKAhtLhqHXDilxgm4z7dztesJH2SbgApCMchFrQNsRSxw4XhYeK0swbYlcsbmucxTysR",
+    "rarity": {
+      "name": "Superior",
+      "color": "#d32ce6"
+    },
+    "team": {
+      "id": "terrorists"
+    }
+  },
+  {
+    "market_hash_name": "Getaway Sally | The Professionals",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIa-2lmxU-LR0dnuNm6E8Vl45Iv181z1fgn8oYby8iRe_OGnZ6psLM-FD3Waj-0h4LM5H3jjzR9-4zmHzIuucXOWaAEkCsR5FrFcsEG5wNGzNeng71TAy9UScc7Ksy8",
+    "rarity": {
+      "name": "Exceptional",
+      "color": "#8847ff"
+    },
+    "team": {
+      "id": "terrorists"
+    }
+  }
+]

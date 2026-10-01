@@ -73,6 +73,10 @@ logs: ## Tail a service's logs: make logs service=api
 migrate: ## Apply all alembic migrations inside the api container
 	$(COMPOSE_DEV) exec api alembic upgrade head
 
+.PHONY: seed-skins
+seed-skins: ## Dev only: fill the catalogue with ~60 priced items (no Waxpeer key needed)
+	$(COMPOSE_DEV) exec api python -m csmarket.scripts.seed_skins_dev
+
 .PHONY: migration
 migration: ## Create a new alembic migration: make migration name=add_orders
 	@if [ -z "$(name)" ]; then echo "Usage: make migration name=add_x"; exit 1; fi

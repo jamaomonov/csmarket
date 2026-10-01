@@ -1,0 +1,837 @@
+[
+  {
+    "market_hash_name": "AK-47 | Redline (Minimal Wear)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.1,
+    "max_float": 0.7,
+    "paint_index": "282",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwlcK3wiFO0POlPPNSI_-RHGavzedxuPUnFniykEtzsWWBzoyuIiifaAchDZUjTOZe4RC_w4buM-6z7wzbgokUyzK-0H08hRGDMA"
+  },
+  {
+    "market_hash_name": "AK-47 | Redline (Field-Tested)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.1,
+    "max_float": 0.7,
+    "paint_index": "282",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwlcK3wiFO0POlPPNSI_-RHGavzOtyufRkASq2lkxx4W-HnNyqJC3FZwYoC5p0Q7FfthW6wdWxPu-371Pdit5HnyXgznQeHYY5wyA"
+  },
+  {
+    "market_hash_name": "AK-47 | Redline (Well-Worn)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.1,
+    "max_float": 0.7,
+    "paint_index": "282",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwlcK3wiFO0POlPPNSI_-RHGavzOtyufRkASq2lkxx4W-HnNyqJC3FZwYoC5p0Q7FfthW6wdWxPu-371Pdit5HnyXgznQeHYY5wyA"
+  },
+  {
+    "market_hash_name": "AK-47 | Redline (Battle-Scarred)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.1,
+    "max_float": 0.7,
+    "paint_index": "282",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwlcK3wiFO0POlPPNSI_-RHGavyet3pvgnTnuylk5-5m2EzI6peC_FbwN0XsN5R7Fet0HqltbgMLy0tQfe34hHxTK-0H2H-GppPg"
+  },
+  {
+    "market_hash_name": "StatTrak™ AK-47 | Redline (Field-Tested)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": true,
+    "souvenir": false,
+    "min_float": 0.1,
+    "max_float": 0.7,
+    "paint_index": "282",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwlcK3wiFO0POlPPNSI_-RHGavzOtyufRkASq2lkxx4W-HnNyqJC3FZwYoC5p0Q7FfthW6wdWxPu-371Pdit5HnyXgznQeHYY5wyA"
+  },
+  {
+    "market_hash_name": "AWP | Asiimov (Field-Tested)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.18,
+    "max_float": 1,
+    "paint_index": "279",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwiYbf_jdk7uW-V6V-Kf2cGFidxOp_pewnF3nhxEt0sGnSzN76dH3GOg9xC8FyEORftRe-x9PuYurq71bW3d8UnjK-0H0YSTpMGQ"
+  },
+  {
+    "market_hash_name": "AWP | Asiimov (Well-Worn)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.18,
+    "max_float": 1,
+    "paint_index": "279",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwiYbf_jdk7uW-V6V-Kf2cGFidxOp_pewnF3nhxEt0sGnSzN76dH3GOg9xC8FyEORftRe-x9PuYurq71bW3d8UnjK-0H0YSTpMGQ"
+  },
+  {
+    "market_hash_name": "AWP | Asiimov (Battle-Scarred)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.18,
+    "max_float": 1,
+    "paint_index": "279",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwiYbf_jdk7uW-V6V-Kf2cGFiYxO9gqa9sSS_mwR4h4D6Az9ardyqQa1NyDpIkTOBb5ES7wYDiMOyz4lPf2YsX02yg2Ubsh123"
+  },
+  {
+    "market_hash_name": "M4A4 | Howl (Factory New)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Contraband",
+      "color": "#e4ae39"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.4,
+    "paint_index": "309",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL8ypexwiFO0P_6afVSKP-EAm6extF6ueZhW2exwkl2tmTXwt39eCiUPQR2DMN4TOVetUK8xoLgM-K341eM2otDnC6okGoXufBz_TAB"
+  },
+  {
+    "market_hash_name": "M4A4 | Howl (Minimal Wear)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Contraband",
+      "color": "#e4ae39"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.4,
+    "paint_index": "309",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL8ypexwiFO0P_6afVSKP-EAm6extF6ueZhW2exwkl2tmTXwt39eCiUPQR2DMN4TOVetUK8xoLgM-K341eM2otDnC6okGoXufBz_TAB"
+  },
+  {
+    "market_hash_name": "M4A4 | Howl (Field-Tested)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Contraband",
+      "color": "#e4ae39"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.4,
+    "paint_index": "309",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL8ypexwiFO0P_6afVSKP-EAm6extF7teVgWiT9wh5_5zyAwo6oeSrDawUkCMN0QbEM5BO-wNazMe3qsgHZg4wQyy-t2jQJsHi3nDJ37A"
+  },
+  {
+    "market_hash_name": "Desert Eagle | Blaze (Factory New)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Restricted",
+      "color": "#8847ff"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "37",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL1m5fn8Sdk7vORbqhsLfWAMWuZxuZi_uI_TX6wxxkjsGXXnImsJ37COlUoWcByEOMOtxa5kdXmNu3htVPZjN1bjXKpkHLRfQU"
+  },
+  {
+    "market_hash_name": "Desert Eagle | Blaze (Minimal Wear)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Restricted",
+      "color": "#8847ff"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "37",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL1m5fn8Sdk7vORbqhsLfWAMWuZxuZi_uI_TX6wxxkjsGXXnImsJ37COlUoWcByEOMOtxa5kdXmNu3htVPZjN1bjXKpkHLRfQU"
+  },
+  {
+    "market_hash_name": "Glock-18 | Water Elemental (Factory New)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.7,
+    "paint_index": "353",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL2kpnj9h1Y-s2pZKtuK72fB3aFxP11te99cCW6khUz_TjVyompc3-QOFR2DJQkFOMJtBbqk9LlY-7n5QLZjtkTxCWqhixPv311o7FVIf8eASQ"
+  },
+  {
+    "market_hash_name": "Glock-18 | Water Elemental (Minimal Wear)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.7,
+    "paint_index": "353",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL2kpnj9h1Y-s2pZKtuK72fB3aFxP11te99cCW6khUz_TjVyompc3-QOFR2DJQkFOMJtBbqk9LlY-7n5QLZjtkTxCWqhixPv311o7FVIf8eASQ"
+  },
+  {
+    "market_hash_name": "Glock-18 | Water Elemental (Field-Tested)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.7,
+    "paint_index": "353",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL2kpnj9h1Y-s2pZKtuK72fB3aFxP11te99cCS2kRQyvnOGnNiodi6RPwEkWJV2EeFbtBTqkoDjMezk5wbZj4wRzi_2iShIuyls_a9cBjdLVuOU"
+  },
+  {
+    "market_hash_name": "Glock-18 | Water Elemental (Well-Worn)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.7,
+    "paint_index": "353",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL2kpnj9h1Y-s2pZKtuK72fB3aFxP11te99cCS2kRQyvnOGnNiodi6RPwEkWJV2EeFbtBTqkoDjMezk5wbZj4wRzi_2iShIuyls_a9cBjdLVuOU"
+  },
+  {
+    "market_hash_name": "Glock-18 | Water Elemental (Battle-Scarred)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.7,
+    "paint_index": "353",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL2kpnj9h1Y-s2pZKtuK72fB3aFxP11te99cCG2lAs-_WTRzoz9c3zDO1IkDMcmQe9cs0S9ldDlM-m0swGI3doXyXr4j3sd7Xl1o7FVLAlpDWE"
+  },
+  {
+    "market_hash_name": "USP-S | Kill Confirmed (Factory New)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 1,
+    "paint_index": "504",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLkjYbf7itX6vytbbZSI-WsG3SA_uV_vO1WTCa9kxQ1vjiBpYPwJiPTcFB2Xpp5TO5cskG9lYCxZu_jsVCL3o4Xnij23ClO5ik9tegFA_It8qHJz1aWe-uc160"
+  },
+  {
+    "market_hash_name": "USP-S | Kill Confirmed (Minimal Wear)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 1,
+    "paint_index": "504",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLkjYbf7itX6vytbbZSI-WsG3SA_uV_vO1WTCa9kxQ1vjiBpYPwJiPTcFB2Xpp5TO5cskG9lYCxZu_jsVCL3o4Xnij23ClO5ik9tegFA_It8qHJz1aWe-uc160"
+  },
+  {
+    "market_hash_name": "USP-S | Kill Confirmed (Field-Tested)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 1,
+    "paint_index": "504",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLkjYbf7itX6vytbbZSI-WsG3SA_uV_vO1WTCa9kxQ1vjiBpYL8JSLSMxghCMEjEeNe5hHpw9zhYuOz5VfcitpBmyqt3X9O6itrsesFUfYmrKzTkUifZqPQtnZK"
+  },
+  {
+    "market_hash_name": "USP-S | Kill Confirmed (Well-Worn)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 1,
+    "paint_index": "504",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLkjYbf7itX6vytbbZSI-WsG3SA_uV_vO1WTCa9kxQ1vjiBpYL8JSLSMxghCMEjEeNe5hHpw9zhYuOz5VfcitpBmyqt3X9O6itrsesFUfYmrKzTkUifZqPQtnZK"
+  },
+  {
+    "market_hash_name": "USP-S | Kill Confirmed (Battle-Scarred)",
+    "category": {
+      "name": "Pistols"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 1,
+    "paint_index": "504",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLkjYbf7itX6vytbbZSI-WsG3SA_uV_vO1WTCa9kxQ1vjiBpYf8ID3ecAB1X8BzFONctBDulYC0NuzrtACKiN0RyiT6iHlK7Ctt5LtRVKt2qPbJz1aW7BBgrQw"
+  },
+  {
+    "market_hash_name": "P90 | Asiimov (Factory New)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.92,
+    "paint_index": "359",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLhx8bf_jdk_6v-JaV-KfmeAXGvzedxuPUnTSjikRgksjuBzoz4dXLFb1QoC8QlTLQD4EPqk4LvN-Pns1aMioNBzTK-0H3gQVv65g"
+  },
+  {
+    "market_hash_name": "P90 | Asiimov (Minimal Wear)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.92,
+    "paint_index": "359",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLhx8bf_jdk_6v-JaV-KfmeAXGvzedxuPUnTSjikRgksjuBzoz4dXLFb1QoC8QlTLQD4EPqk4LvN-Pns1aMioNBzTK-0H3gQVv65g"
+  },
+  {
+    "market_hash_name": "P90 | Asiimov (Field-Tested)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.92,
+    "paint_index": "359",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLhx8bf_jdk_6v-JaV-KfmeAXGvzOtyufRkAXzgwUlwsmSGyo6ocinEPwZzC5J1F-EIsUXrwdbkNeqz7wPaj4wXnH7gznQeoepd94c"
+  },
+  {
+    "market_hash_name": "P90 | Asiimov (Well-Worn)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.92,
+    "paint_index": "359",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLhx8bf_jdk_6v-JaV-KfmeAXGvzOtyufRkAXzgwUlwsmSGyo6ocinEPwZzC5J1F-EIsUXrwdbkNeqz7wPaj4wXnH7gznQeoepd94c"
+  },
+  {
+    "market_hash_name": "P90 | Asiimov (Battle-Scarred)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.92,
+    "paint_index": "359",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLhx8bf_jdk_6v-JaV-KfmeAXGvyet3pvgnSyzqxEx1sGncn9n9JSmebAUmX8F5QLEDsxbqk9GxZbzh5QWM2YpGnzK-0H0XlyO5lA"
+  },
+  {
+    "market_hash_name": "MP9 | Starlight Protector (Factory New)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.8,
+    "paint_index": "1134",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL8js_f-jFk4uL3V7d5IeKfB2CY1dF6ueZhW2flkUtztz_SzYypJSqRalUhDJNwQO4PsBXtx9HkN-K37w3bgohGmHn3kGoXuZ3lRdvF"
+  },
+  {
+    "market_hash_name": "MP9 | Starlight Protector (Minimal Wear)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.8,
+    "paint_index": "1134",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL8js_f-jFk4uL3V7d5IeKfB2CY1dF6ueZhW2flkUtztz_SzYypJSqRalUhDJNwQO4PsBXtx9HkN-K37w3bgohGmHn3kGoXuZ3lRdvF"
+  },
+  {
+    "market_hash_name": "MP9 | Starlight Protector (Field-Tested)",
+    "category": {
+      "name": "SMGs"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.8,
+    "paint_index": "1134",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL8js_f-jFk4uL3V7d5IeKfB2CY1dF7teVgWiT9wU0htTjWnI2qcHvEZgQlW5VyROAD50W6lYDnN-zi5QyM2YtGzir43zQJsHh8IziyOQ"
+  },
+  {
+    "market_hash_name": "Nova | Hyper Beast (Field-Tested)",
+    "category": {
+      "name": "Heavy"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.6,
+    "paint_index": "537",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL_kYDhwiFO0PyhfqVSKOmDC3WSxO9lpN5kSi26gBBp6juAmImgIyqWPAQnA5JzTO4C4EHqwNHiZe_i4wbY3otBziStjS5J6zErvbi3rfP3KQ"
+  },
+  {
+    "market_hash_name": "Nova | Hyper Beast (Well-Worn)",
+    "category": {
+      "name": "Heavy"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.6,
+    "paint_index": "537",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL_kYDhwiFO0PyhfqVSKOmDC3WSxO9lpN5kSi26gBBp6juAmImgIyqWPAQnA5JzTO4C4EHqwNHiZe_i4wbY3otBziStjS5J6zErvbi3rfP3KQ"
+  },
+  {
+    "market_hash_name": "Nova | Hyper Beast (Battle-Scarred)",
+    "category": {
+      "name": "Heavy"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.6,
+    "paint_index": "537",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL_kYDhwiFO0PyhfqVSKOmDC3WSxO9lpN5hSiiljFMi5mnVm9ugcS2SbFAiX8QmTOFetRWxm9buN-yz4wyPj4lCmCz7235P8G81tNlihlzF"
+  },
+  {
+    "market_hash_name": "Negev | Mjölnir (Field-Tested)",
+    "category": {
+      "name": "Heavy"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.6,
+    "paint_index": "763",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL_m5Hl6x1c_M2gbaNoNs-HBmiC_uNztOh8QmeyxUV-4GmEzN2sdi-WPwJ1CpYiEOADsUO6xNHkPr7ktQLYiIoRz3__kGoXuYusrfPO"
+  },
+  {
+    "market_hash_name": "Negev | Mjölnir (Well-Worn)",
+    "category": {
+      "name": "Heavy"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.6,
+    "paint_index": "763",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL_m5Hl6x1c_M2gbaNoNs-HBmiC_uNztOh8QmeyxUV-4GmEzN2sdi-WPwJ1CpYiEOADsUO6xNHkPr7ktQLYiIoRz3__kGoXuYusrfPO"
+  },
+  {
+    "market_hash_name": "Negev | Mjölnir (Battle-Scarred)",
+    "category": {
+      "name": "Heavy"
+    },
+    "rarity": {
+      "name": "Classified",
+      "color": "#d32ce6"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.6,
+    "paint_index": "763",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL_m5Hl6x1c_M2gbaNoNs-HBmiC_uZzsfdwAXi2xUQm4TvWyYv4dyjDbAZ2CptyRuQIsxWwmta1Nb_i5QSKjIJCyyXgznQe5ZJEjPM"
+  },
+  {
+    "market_hash_name": "★ Karambit | Doppler (Factory New)",
+    "phase": "Phase 1",
+    "category": {
+      "name": "Knives"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "418",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL6kJ_m-B1Q7uCvZaZkNM-SA1iUzv5mvOR7cDm7lA4i4gKJk4jxNWXFb1cpDJR2FOFbsBTql9bjYbzq7gPZiN1MxH7_2ytNuCdpte1UB_Ui5OSJ2GbkVqni"
+  },
+  {
+    "market_hash_name": "★ Karambit | Doppler (Factory New)",
+    "phase": "Phase 2",
+    "category": {
+      "name": "Knives"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "419",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL6kJ_m-B1Q7uCvZaZkNM-SA1iUzv5mvOR7cDm7lA4i4QKJk4jxNWWXawUgA8dxRLEO40KwkobnMbnj5QKL348Qmy-sji5K7i466uxUUKQn5OSJ2KBZjkQR"
+  },
+  {
+    "market_hash_name": "★ Karambit | Doppler (Minimal Wear)",
+    "phase": "Phase 1",
+    "category": {
+      "name": "Knives"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "418",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL6kJ_m-B1Q7uCvZaZkNM-SA1iUzv5mvOR7cDm7lA4i4gKJk4jxNWXFb1cpDJR2FOFbsBTql9bjYbzq7gPZiN1MxH7_2ytNuCdpte1UB_Ui5OSJ2GbkVqni"
+  },
+  {
+    "market_hash_name": "★ Butterfly Knife | Fade (Factory New)",
+    "category": {
+      "name": "Knives"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "38",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL6kJ_m-B1Z-ua6bbZrLOmsD2avx-9ytd5lRi67gVNwsDvSwtqqc3iXZg4kCZYjReYLtRbum9XgYuvm5wbWjtgUzCn3iSsf8G81tFEeH9rw"
+  },
+  {
+    "market_hash_name": "★ Butterfly Knife | Fade (Minimal Wear)",
+    "category": {
+      "name": "Knives"
+    },
+    "rarity": {
+      "name": "Covert",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0,
+    "max_float": 0.08,
+    "paint_index": "38",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyL6kJ_m-B1Z-ua6bbZrLOmsD2avx-9ytd5lRi67gVNwsDvSwtqqc3iXZg4kCZYjReYLtRbum9XgYuvm5wbWjtgUzCn3iSsf8G81tFEeH9rw"
+  },
+  {
+    "market_hash_name": "★ Sport Gloves | Vice (Factory New)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10048",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk5UvzWCL2kpn2-DFk_OKherB0H_KfG2Kv0ed4u95lRi67gVNx4T-Bw434IHyVb1QlAsd1FOUDthG4xNznMu3m4QXXg90Wzn_33C1I8G81tLaDi_rK"
+  },
+  {
+    "market_hash_name": "★ Sport Gloves | Vice (Minimal Wear)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10048",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk5UvzWCL2kpn2-DFk_OKherB0H_KfG2Kv0ed4u95lRi67gVNx4T-Bw434IHyVb1QlAsd1FOUDthG4xNznMu3m4QXXg90Wzn_33C1I8G81tLaDi_rK"
+  },
+  {
+    "market_hash_name": "★ Sport Gloves | Vice (Field-Tested)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10048",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk5UvzWCL2kpn2-DFk_OKherB0H_KfG2Kv0ed4u95kSi26gBBp6jvcyY34J3jGZw51CJt1R-Beuxfqk4fhPu7n5VTY2tpHn3343y5P6DErvbh5izSzPA"
+  },
+  {
+    "market_hash_name": "★ Sport Gloves | Vice (Well-Worn)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10048",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk5UvzWCL2kpn2-DFk_OKherB0H_KfG2Kv0ed4u95kSi26gBBp6jvcyY34J3jGZw51CJt1R-Beuxfqk4fhPu7n5VTY2tpHn3343y5P6DErvbh5izSzPA"
+  },
+  {
+    "market_hash_name": "★ Sport Gloves | Vice (Battle-Scarred)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10048",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk5UvzWCL2kpn2-DFk_OKherB0H_KfG2Kv0ed4u95hSiiljFN3tT_QnNn9eC6SP1MiCpV5E-ZfuhC6l4XhZOK07wWM395Fyyys2H4d8G81tNR2TKD3"
+  },
+  {
+    "market_hash_name": "★ Specialist Gloves | Crimson Kimono (Minimal Wear)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10033",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk71ruQBH4jYLf-i5U-fe9V7d9JfOaD2uZ0vpJu-hkQCe8qhkusjCKlIvqHjnCOml8U8UoAfkItBLswdbuNbjr5FHdjNkUzSv73C1K5y46tu4EUvAg-6bU3FrBMOE4_9BdcyhkRns5"
+  },
+  {
+    "market_hash_name": "★ Specialist Gloves | Crimson Kimono (Field-Tested)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10033",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk71ruQBH4jYLf-i5U-fe9V7d9JfOaD2uZ0vpJu-hkQCe8qhkusjCKlIvqHjnCOml9X8YpALoUt0buw9XvZu3n5QXcjt8Rz374hitJ7y1ut7wGBPIn_KHX2g-TZeU65Y5DeqiDpqFsBg"
+  },
+  {
+    "market_hash_name": "★ Specialist Gloves | Crimson Kimono (Well-Worn)",
+    "category": {
+      "name": "Gloves"
+    },
+    "rarity": {
+      "name": "Extraordinary",
+      "color": "#eb4b4b"
+    },
+    "stattrak": false,
+    "souvenir": false,
+    "min_float": 0.06,
+    "max_float": 0.8,
+    "paint_index": "10033",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk71ruQBH4jYLf-i5U-fe9V7d9JfOaD2uZ0vpJu-hkQCe8qhkusjCKlIvqHjnCOml9X8YpALoUt0buw9XvZu3n5QXcjt8Rz374hitJ7y1ut7wGBPIn_KHX2g-TZeU65Y5DeqiDpqFsBg"
+  },
+  {
+    "market_hash_name": "Souvenir AWP | PAW (Field-Tested)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Restricted",
+      "color": "#8847ff"
+    },
+    "stattrak": false,
+    "souvenir": true,
+    "min_float": 0,
+    "max_float": 0.5,
+    "paint_index": "718",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwiYbf_C9k7uW-V7RsN-CSGVidxOp_pewnG3u1lEkm62vdy9ipICnDa1VzWZomRuVetxm4wIDlM-Pnsgfd2owQyTK-0H1CZIxs5g"
+  },
+  {
+    "market_hash_name": "Souvenir AWP | PAW (Minimal Wear)",
+    "category": {
+      "name": "Rifles"
+    },
+    "rarity": {
+      "name": "Restricted",
+      "color": "#8847ff"
+    },
+    "stattrak": false,
+    "souvenir": true,
+    "min_float": 0,
+    "max_float": 0.5,
+    "paint_index": "718",
+    "image": "https://community.akamai.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwiYbf_C9k7uW-V7RsN-CSGVicyOl-pK84Tn-3xkgltWWGnI39c3LDaA4lD5V0QO8It0LqktfuMOrq7gDajYJG02yg2bUm5WIV"
+  }
+]

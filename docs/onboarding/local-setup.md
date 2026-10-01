@@ -49,6 +49,19 @@ Every port is overridable in `.env`; container ports stay the defaults.
 Caddy's dev certificates come from its own local CA (`tls internal`); the browser warns until
 you trust it.
 
+## A catalogue to browse
+
+The Waxpeer key works only from the production IP, so a fresh dev database has no priced
+items. `make seed-skins` fills it with about 60 items (a committed ByMykel subset with
+fake, repeatable prices and a 12 700 soʻm rate) so every storefront page has data:
+
+```bash
+make dev-detached && make migrate && make seed-skins
+```
+
+Then open <http://localhost:3100/>. Run it again any time; it refuses to run in production.
+It treats the fake snapshot as the whole market, so use it on a dev database only.
+
 ## Running one app on the host
 
 Useful for a debugger or faster reloads. Stop that service in compose first

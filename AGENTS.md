@@ -337,6 +337,7 @@ over raw tools.**
 | `make dev-web` / `make dev-admin`                 | Storefront (`next dev`, `:3100`) / admin (Vite, `:3102`) as host processes          |
 | `make logs service=api`                           | Tail one dev service                                                                |
 | `make migrate`                                    | `alembic upgrade head` inside the dev `api` container                               |
+| `make seed-skins`                                 | Dev only: a priced ~60-item catalogue (refuses in prod)                             |
 | `make migration name=add_x`                       | Autogenerate an Alembic revision inside the dev `api` container                     |
 | `make psql`                                       | psql into the dev database                                                          |
 | `make test`                                       | `test-py` + `test-ts`                                                               |
