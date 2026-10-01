@@ -71,4 +71,28 @@ describe("EmailForm", () => {
     expect(screen.queryByText("Сохранено.")).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
   });
+
+  it("editing the address clears the last outcome", async () => {
+    api.apiPatch.mockResolvedValue({});
+    setup("old@example.com");
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "new@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(screen.getByText("Сохранено.")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "newer@example.com" } });
+    expect(screen.queryByText("Сохранено.")).not.toBeInTheDocument();
+  });
+
+  it("editing after a refusal clears the error", async () => {
+    api.apiPatch.mockRejectedValue(new SessionApiError(422, "Unprocessable", null));
+    setup();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "a@b" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(screen.getByText("Проверьте адрес.")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "a@b.uz" } });
+    expect(screen.queryByText("Проверьте адрес.")).not.toBeInTheDocument();
+  });
 });

@@ -72,6 +72,9 @@ export function TradeLinkForm({ initial, onChange }: TradeLinkFormProps) {
       setSaved(true);
     } catch (err) {
       setBusy(null);
+      // The old verdict belongs to a link the visitor is replacing; next to this
+      // error it would read as a verdict on the link just refused.
+      setState({ verdict: null, reason: null });
       setError(errorKey(err instanceof SessionApiError ? err.code : undefined));
       return;
     }
@@ -107,6 +110,7 @@ export function TradeLinkForm({ initial, onChange }: TradeLinkFormProps) {
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
+            setError(null);
           }}
           placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…&token=…"
           aria-label={t("title")}

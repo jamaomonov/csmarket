@@ -12,14 +12,11 @@ const api = vi.hoisted(() => ({ apiPut: vi.fn(), apiPost: vi.fn() }));
 vi.mock("@/lib/api", () => ({ session: api }));
 const LINK = "https://steamcommunity.com/tradeoffer/new/?partner=39734273&token=AbCdEf12";
 
-function setup(initial: string | null = null) {
+function setup(initial: string | null = null, verdict: "ok" | null = null) {
   const onChange = vi.fn();
   render(
     <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-      <TradeLinkForm
-        initial={{ trade_link: initial, verdict: null, reason: null }}
-        onChange={onChange}
-      />
+      <TradeLinkForm initial={{ trade_link: initial, verdict, reason: null }} onChange={onChange} />
     </NextIntlClientProvider>,
   );
   return { onChange };
@@ -97,5 +94,35 @@ describe("TradeLinkForm", () => {
     await waitFor(() => {
       expect(screen.getByText(/Сейчас не получилось проверить/)).toBeInTheDocument();
     });
+  });
+
+  it("a failed save hides the verdict of the previous link", async () => {
+    api.apiPut.mockRejectedValue(
+      new SessionApiError(422, "Unprocessable", { code: "trade_link_not_yours" }),
+    );
+    setup(LINK, "ok");
+    expect(screen.getByText(/Ссылка работает/)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: LINK.replace("39734273", "39734274") },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(screen.getByText(/другого аккаунта Steam/)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Ссылка работает/)).not.toBeInTheDocument();
+  });
+
+  it("editing the link clears the error", async () => {
+    api.apiPut.mockRejectedValue(
+      new SessionApiError(422, "Unprocessable", { code: "trade_link_invalid" }),
+    );
+    setup();
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "https://x.example" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(screen.getByText(/Это не ссылка на обмен Steam/)).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: LINK } });
+    expect(screen.queryByText(/Это не ссылка на обмен Steam/)).not.toBeInTheDocument();
   });
 });

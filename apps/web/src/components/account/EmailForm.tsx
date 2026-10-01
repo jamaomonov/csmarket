@@ -57,6 +57,7 @@ export function EmailForm({ email, onChange }: EmailFormProps) {
           value={value}
           onChange={(e) => {
             setValue(e.target.value);
+            setOutcome(null);
           }}
           aria-label={t("title")}
           className="border-border bg-surface flex-1 rounded-md border px-3 py-2 text-sm"
