@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -158,3 +160,46 @@ def test_trade_attentions_count_by_a_closed_reason() -> None:
     record_trade_attention("rolled_back")
     record_trade_attention("an-order-id")  # type: ignore[arg-type]  # a bug cannot mint a series
     assert (_attentions("rolled_back"), _attentions("other")) == (before + 1, other + 1)
+
+
+def test_every_enumerated_series_is_exposed_at_zero_from_import() -> None:
+    """A series that first appears at 1 makes ``increase()`` 0: the first refund, forbidden
+    buy or audit divergence after a restart would never alert. A fresh interpreter, because
+    other tests in this process have already incremented some of them."""
+    script = (
+        "from prometheus_client import generate_latest;"
+        "import csmarket.core.metrics;"
+        "print(generate_latest().decode())"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", script], check=True, capture_output=True, text=True
+    ).stdout
+    lines = set(out.splitlines())
+    expected = [
+        f'csmarket_order_refunds_total{{reason="{r}"}} 0.0'
+        for r in sorted(metrics._ORDER_REFUND_REASONS)
+    ]
+    expected += [
+        f'csmarket_trade_attention_total{{reason="{r}"}} 0.0'
+        for r in sorted(metrics._TRADE_ATTENTION_REASONS)
+    ]
+    expected += [
+        f'csmarket_order_buys_total{{outcome="{o}"}} 0.0'
+        for o in sorted(metrics._ORDER_BUY_OUTCOMES)
+    ]
+    expected += [
+        f'csmarket_waxpeer_calls_total{{endpoint="{e}",outcome="{o}"}} 0.0'
+        for e in sorted(metrics._WAXPEER_ENDPOINTS)
+        for o in sorted(metrics._WAXPEER_OUTCOMES)
+    ]
+    assert len(expected) == 5 + 5 + 10 + 18
+    assert [line for line in expected if line not in lines] == []
+
+
+def test_a_failed_balance_read_is_not_stamped() -> None:
+    """Only ``set_waxpeer_balance`` (a successful read) moves the read timestamp."""
+    metrics.WAXPEER_BALANCE_READ_TIMESTAMP.set(1.0)
+    metrics.set_waxpeer_balance_threshold(50.0)
+    assert metrics.WAXPEER_BALANCE_READ_TIMESTAMP._value.get() == 1.0
+    metrics.set_waxpeer_balance(42.0, 50.0)
+    assert metrics.WAXPEER_BALANCE_READ_TIMESTAMP._value.get() > 1.0

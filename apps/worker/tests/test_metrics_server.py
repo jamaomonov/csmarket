@@ -31,7 +31,7 @@ def test_the_metrics_endpoint_serves_the_registry(monkeypatch: pytest.MonkeyPatc
     with urllib.request.urlopen(f"http://127.0.0.1:{port}/metrics", timeout=5) as resp:
         body = resp.read().decode()
     assert 'csmarket_orders_stuck{state="paid"} 3.0' in body
-    assert "csmarket_order_buys_total" in body or "csmarket_waxpeer_balance_usd" in body
+    assert 'csmarket_order_buys_total{outcome="bought"}' in body  # pre-created at 0
 
 
 def test_a_taken_port_is_logged_not_raised(monkeypatch: pytest.MonkeyPatch) -> None:

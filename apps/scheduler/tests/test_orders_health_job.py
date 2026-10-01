@@ -11,6 +11,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from csmarket.core import metrics as metrics_mod
 from csmarket.core.config import Settings, get_settings
 from csmarket.modules.orders.health import Health
 from csmarket_scheduler import metrics
@@ -131,3 +132,47 @@ def test_the_scheduler_serves_on_its_own_port(monkeypatch: pytest.MonkeyPatch) -
         settings = get_settings().model_copy(update={"scheduler_metrics_port": port})
         monkeypatch.setattr(metrics, "get_settings", lambda: settings)
         assert metrics.start_metrics_server() is False  # taken: logged, not raised
+
+
+async def test_a_failed_tick_does_not_use_up_the_balance_slot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tick 1 is the balance tick; if it crashes the next tick asks for the balance again."""
+    clients: list[object | None] = []
+
+    async def flaky(db: object, client: object | None, *, settings: Settings) -> Health:
+        clients.append(client)
+        if len(clients) == 1:
+            raise RuntimeError("db")
+        return _health()
+
+    monkeypatch.setattr(orders_health, "measure", flaky)
+    assert await orders_health.run() is None
+    assert await orders_health.run() is not None
+    assert [client is not None for client in clients] == [True, True]
+
+
+async def test_timestamps_move_only_on_what_succeeded(monkeypatch: pytest.MonkeyPatch) -> None:
+    ts_balance = "csmarket_waxpeer_balance_read_timestamp_seconds"
+    ts_tick = "csmarket_orders_health_last_success_timestamp_seconds"
+    metrics_mod.WAXPEER_BALANCE_READ_TIMESTAMP.set(1.0)
+    metrics_mod.ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(1.0)
+
+    # a tick whose balance read failed: the tick is stamped, the balance is not
+    monkeypatch.setattr(orders_health, "measure", AsyncMock(return_value=_health(None)))
+    await orders_health.run()
+    assert _gauge(ts_balance) == 1.0
+    assert (_gauge(ts_tick) or 0) > 1.0
+
+    # a crashed tick stamps nothing
+    metrics_mod.ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(1.0)
+    monkeypatch.setattr(orders_health, "measure", AsyncMock(side_effect=RuntimeError("db")))
+    await orders_health.run()
+    assert _gauge(ts_tick) == 1.0
+
+    # a successful balance read stamps both
+    monkeypatch.setattr(orders_health, "_ticks", 0)
+    monkeypatch.setattr(orders_health, "measure", AsyncMock(return_value=_health(Decimal(9))))
+    await orders_health.run()
+    assert (_gauge(ts_balance) or 0) > 1.0
+    assert (_gauge(ts_tick) or 0) > 1.0

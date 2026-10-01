@@ -1,0 +1,249 @@
+# Unit tests for ../alerts/orders.yml. Run from the repo root:
+#
+#   docker run --rm -v "$PWD/infra/prometheus:/p" --entrypoint promtool \
+#     prom/prometheus test rules /p/tests/orders_test.yml
+#
+# (rules syntax alone: `promtool check rules /p/alerts/orders.yml`.)
+rule_files:
+  - ../alerts/orders.yml
+
+evaluation_interval: 1m
+
+tests:
+  # --- counters: the first increment after a restart must alert ----------------------------
+  # core/metrics.py pre-creates every enumerated label child, so the series is exported at 0
+  # and the first refund is a 0 -> 1 step.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_order_refunds_total{job="worker",reason="waxpeer_low_balance"}'
+        values: "0 0 0 1 1 1"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WaxpeerLowBalanceRefund
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: worker
+              reason: waxpeer_low_balance
+            exp_annotations:
+              summary: "An order was refunded because the Waxpeer balance ran out"
+              description: "A customer paid and the buy failed for lack of balance. Top up Waxpeer now.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-low"
+
+  # The failure this guards against: a series that first appears already at 1 has no step to
+  # see, increase() is 0, and nothing fires. (Documents why the pre-creation matters.)
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_order_refunds_total{job="worker",reason="waxpeer_low_balance"}'
+        values: "1 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: WaxpeerLowBalanceRefund
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_order_buys_total{job="worker",outcome="forbidden"}'
+        values: "0 0 1 1"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: WaxpeerForbidden
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: worker
+              outcome: forbidden
+            exp_annotations:
+              summary: "Waxpeer answers 403 to buys (key IP whitelist?)"
+              description: "Check the Waxpeer API key's allowed IPs against this server's address. Orders wait in `buying` and are retried; nothing is refunded.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#forbidden"
+
+  - interval: 1h
+    input_series:
+      - series: 'csmarket_trade_attention_total{job="scheduler",reason="audit_divergence"}'
+        values: "0 0 0 1 1"
+    alert_rule_test:
+      - eval_time: 4h
+        alertname: TradeAuditDivergence
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              job: scheduler
+              reason: audit_divergence
+            exp_annotations:
+              summary: "The trade-history audit found a divergence"
+              description: "A delivered or refunded order does not match Waxpeer's history. Open the flagged trade in the admin.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#audit-divergence"
+
+  # --- gauges: pinned to the scheduler ------------------------------------------------------
+  # The API exposes the same names unset (0): it must neither fire nor mask the scheduler.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_waxpeer_balance_usd{job="scheduler"}'
+        values: "80x20"
+      - series: 'csmarket_waxpeer_balance_threshold_usd{job="scheduler"}'
+        values: "50x20"
+      - series: 'csmarket_waxpeer_balance_usd{job="api"}'
+        values: "0x20"
+      - series: 'csmarket_waxpeer_balance_threshold_usd{job="api"}'
+        values: "0x20"
+      - series: 'csmarket_orders_stuck{job="api",state="paid"}'
+        values: "7x20"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WaxpeerBalanceLow
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: OrdersPaidStuck
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_waxpeer_balance_usd{job="scheduler"}'
+        values: "30x20"
+      - series: 'csmarket_waxpeer_balance_threshold_usd{job="scheduler"}'
+        values: "50x20"
+      - series: 'csmarket_waxpeer_balance_usd{job="api"}'
+        values: "100x20"
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: WaxpeerBalanceLow
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: "Waxpeer balance $30.00, below the alert threshold"
+              description: "Top up the Waxpeer balance before buys start failing and refunding customers.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-low"
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_orders_stuck{job="scheduler",state="paid"}'
+        values: "2x10"
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: OrdersPaidStuck
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: OrdersPaidStuck
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: "2 paid order(s) older than 5 min not picked up"
+              description: "Orders in `paid` for more than 5 minutes. Is the worker up, is Postgres LISTEN/NOTIFY working, is `CSMARKET_SKINS_BUY_ENABLED` on?\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#paid-stuck"
+
+  # --- a failed balance read keeps the last value: the timestamp says how old it is ----------
+  - interval: 1m
+    input_series:
+      # Last good read at t=0; the value itself stays 80 (the gauge keeps it) and the
+      # timestamp stops moving.
+      - series: 'csmarket_waxpeer_balance_usd{job="scheduler"}'
+        values: "80x60"
+      - series: 'csmarket_waxpeer_balance_read_timestamp_seconds{job="scheduler"}'
+        values: "0x60"
+    alert_rule_test:
+      - eval_time: 30m
+        alertname: WaxpeerBalanceUnknown
+        exp_alerts: []
+      - eval_time: 40m
+        alertname: WaxpeerBalanceUnknown
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              cause: stale_read
+            exp_annotations:
+              summary: "The last successful Waxpeer balance read is over 30 min old"
+              description: "WaxpeerBalanceLow is judging a stale number. Is the key valid, is Waxpeer answering `/v1/user`?\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-unknown"
+
+  # Reads keep succeeding: the timestamp follows the clock (value = seconds) -> quiet.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_waxpeer_balance_read_timestamp_seconds{job="scheduler"}'
+        values: "0+60x60"
+      - series: 'csmarket_waxpeer_balance_usd{job="scheduler"}'
+        values: "80x60"
+    alert_rule_test:
+      - eval_time: 50m
+        alertname: WaxpeerBalanceUnknown
+        exp_alerts: []
+
+  # No numeric balance exported at all (NaN since start, or the scheduler is gone).
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_waxpeer_balance_usd{job="scheduler"}'
+        values: "NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN NaN"
+      - series: 'csmarket_waxpeer_balance_read_timestamp_seconds{job="scheduler"}'
+        values: "0+60x60"
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: WaxpeerBalanceUnknown
+        exp_alerts: []
+      - eval_time: 35m
+        alertname: WaxpeerBalanceUnknown
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              cause: never_read
+            exp_annotations:
+              summary: "Waxpeer balance has not been read for 30 min"
+              description: "The scheduler exports no Waxpeer balance. Is the key valid, is Waxpeer answering `/v1/user`, is the scheduler up?\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-unknown"
+
+  # --- the job itself and the processes ------------------------------------------------------
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_orders_health_last_success_timestamp_seconds{job="scheduler"}'
+        values: "0x30"
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: OrdersHealthStale
+        exp_alerts: []
+      - eval_time: 12m
+        alertname: OrdersHealthStale
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "The order-health job has not succeeded for 5 min"
+              description: "The stuck-order and balance alerts are not being refreshed. Look at the scheduler's `orders.health.crashed` log lines.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#health-stale"
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_orders_health_last_success_timestamp_seconds{job="scheduler"}'
+        values: "0+60x30"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: OrdersHealthStale
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'up{job="worker"}'
+        values: "1 1 0 0 0 0"
+      - series: 'up{job="scheduler"}'
+        values: "1 0 0 0 0 0"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: WorkerDown
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: worker
+            exp_annotations:
+              summary: "The worker is not scrapeable"
+              description: "Paid orders are not being bought. Check the container and its logs.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#worker-down"
+      - eval_time: 5m
+        alertname: SchedulerDown
+        exp_alerts:
+          - exp_labels:
+              severity: page
+              job: scheduler
+            exp_annotations:
+              summary: "The scheduler is not scrapeable"
+              description: "Trades are not being reconciled and the order-health gauges are not refreshed. Check the container and its logs.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#scheduler-down"

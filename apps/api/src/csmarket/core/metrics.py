@@ -20,6 +20,8 @@ registry degrades to one warning log and a missing data point, never a 500.
 
 from __future__ import annotations
 
+import itertools
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Literal
@@ -162,6 +164,26 @@ ORDER_BUYS = Counter(
 )
 
 
+def _precreate(counter: Counter, **label_sets: frozenset[str]) -> None:
+    """Expose every enumerated label combination of ``counter`` at 0 from import.
+
+    A labelled child that is created on its first increment appears already at 1, and
+    Prometheus' ``increase()`` of a series that starts at 1 is 0: the first refund, buy
+    refusal or audit divergence after each restart would never alert. Pre-creating the
+    closed label sets makes that first increment a 0 -> 1 step the rules can see.
+    """
+    names = list(label_sets)
+    for combo in itertools.product(*(sorted(label_sets[name]) for name in names)):
+        counter.labels(**dict(zip(names, combo, strict=True)))
+
+
+_precreate(ORDER_REFUNDS, reason=_ORDER_REFUND_REASONS)
+_precreate(TRADE_ATTENTIONS, reason=_TRADE_ATTENTION_REASONS)
+_precreate(ORDER_BUYS, outcome=_ORDER_BUY_OUTCOMES)
+_precreate(WAXPEER_CALLS, endpoint=_WAXPEER_ENDPOINTS, outcome=_WAXPEER_OUTCOMES)
+_precreate(KASSA_REJECTIONS, provider=_KASSA_PROVIDERS, reason=_KASSA_REASONS)
+
+
 #: Which stuck-order check a ``csmarket_orders_stuck`` sample is for.
 OrderStuckState = Literal["paid", "buying", "trade_sent_unpolled"]
 
@@ -185,8 +207,21 @@ WAXPEER_BALANCE_THRESHOLD_USD = Gauge(
     "csmarket_waxpeer_balance_threshold_usd",
     "The balance below which WaxpeerBalanceLow fires (setting waxpeer_balance_alert_usd).",
 )
+WAXPEER_BALANCE_READ_TIMESTAMP = Gauge(
+    "csmarket_waxpeer_balance_read_timestamp_seconds",
+    "Unix time of the last successful Waxpeer balance read (alert: WaxpeerBalanceUnknown).",
+)
+ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP = Gauge(
+    "csmarket_orders_health_last_success_timestamp_seconds",
+    "Unix time the orders.health job last finished a tick (alert: OrdersHealthStale).",
+)
 WAXPEER_BALANCE_USD.set(float("nan"))
 WAXPEER_BALANCE_THRESHOLD_USD.set(float("nan"))
+# Start at process start, not 0: "never succeeded" then reads as stale only after the alert's
+# own window, instead of at once. The API and the worker keep these values; the alerts are
+# pinned to job="scheduler".
+WAXPEER_BALANCE_READ_TIMESTAMP.set(time.time())
+ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(time.time())
 
 
 def set_orders_stuck(state: OrderStuckState, count: int) -> None:
@@ -212,6 +247,7 @@ def set_waxpeer_balance(balance_usd: float, threshold_usd: float) -> None:
     try:
         WAXPEER_BALANCE_USD.set(balance_usd)
         WAXPEER_BALANCE_THRESHOLD_USD.set(threshold_usd)
+        WAXPEER_BALANCE_READ_TIMESTAMP.set(time.time())  # only a successful read gets here
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_waxpeer_balance", error=type(exc).__name__
@@ -225,6 +261,18 @@ def set_waxpeer_balance_threshold(threshold_usd: float) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_waxpeer_balance", error=type(exc).__name__
+        )
+
+
+def mark_orders_health_success() -> None:
+    """Stamp the end of a successful ``orders.health`` tick. Never raises."""
+    try:
+        ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(time.time())
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed",
+            metric="csmarket_orders_health_last_success_timestamp_seconds",
+            error=type(exc).__name__,
         )
 
 
@@ -342,12 +390,14 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 __all__ = [
     "KASSA_REJECTIONS",
+    "ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP",
     "ORDERS_STUCK",
     "ORDER_BUYS",
     "ORDER_REFUNDS",
     "STEAM_WEB_API_CALLS",
     "TRADES_ATTENTION",
     "TRADE_ATTENTIONS",
+    "WAXPEER_BALANCE_READ_TIMESTAMP",
     "WAXPEER_BALANCE_THRESHOLD_USD",
     "WAXPEER_BALANCE_USD",
     "WAXPEER_CALLS",
@@ -362,6 +412,7 @@ __all__ = [
     "TradeAttentionReason",
     "WaxpeerEndpoint",
     "WaxpeerOutcome",
+    "mark_orders_health_success",
     "record_kassa_rejection",
     "record_order_buy",
     "record_order_refund",

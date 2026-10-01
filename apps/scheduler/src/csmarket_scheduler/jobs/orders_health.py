@@ -2,7 +2,9 @@
 
 The logic is ``orders.health.measure``; this job times it and writes the gauges. Waxpeer's
 balance is read on every 5th tick (the first one included) — the endpoint is rate-limited
-and a balance moves slowly. A failed tick is logged and the gauges keep their last values.
+and a balance moves slowly. A failed tick is logged and the gauges keep their last values; two
+timestamp gauges (last successful tick, last successful balance read) let the alerts tell a
+stale value from a fresh one.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ from csmarket.core.config import get_settings
 from csmarket.core.db import get_session_factory
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import (
+    mark_orders_health_success,
     set_orders_stuck,
     set_trades_attention,
     set_waxpeer_balance,
@@ -41,12 +44,13 @@ async def run() -> Health | None:
     try:
         settings = get_settings()
         read_balance = _ticks % BALANCE_EVERY == 0
-        _ticks += 1
         client: TradeClient | None = None
         if read_balance and (settings.waxpeer_api_key or settings.waxpeer_fake):
             client = trade_client(settings)
         async with get_session_factory()() as db:
             health = await measure(db, client, settings=settings)
+        # Counted only now: a crashed tick must not use up the balance slot.
+        _ticks += 1
         set_orders_stuck("paid", health.paid_stuck)
         set_orders_stuck("buying", health.buying_stuck)
         set_orders_stuck("trade_sent_unpolled", health.trade_sent_unpolled)
@@ -56,6 +60,7 @@ async def run() -> Health | None:
             set_waxpeer_balance(float(health.waxpeer_balance_usd), threshold)
         else:
             set_waxpeer_balance_threshold(threshold)
+        mark_orders_health_success()
     except Exception:
         log.exception("orders.health.crashed")
         return None

@@ -1,14 +1,16 @@
 groups:
   - name: orders
     rules:
-      # Gauges come from the scheduler's `orders.health` job (every minute); counters from the
-      # worker, the scheduler and the API. The API and the worker expose the gauges too but
-      # never set them (the balance ones read NaN there), hence max()/min() across jobs.
+      # Gauges come from the scheduler's `orders.health` job (every minute), so every gauge
+      # selector is pinned to job="scheduler": the API and the worker expose the same names
+      # but never set them. Counters come from the worker, the scheduler and the API; they
+      # are pre-created at 0 in core/metrics.py so the first increment after a restart is a
+      # 0 -> 1 step that increase() can see.
 
       # A paid order the worker has not touched for 5 minutes: the money is taken and nothing
       # is buying the skin. Spec §12.
       - alert: OrdersPaidStuck
-        expr: max(csmarket_orders_stuck{state="paid"}) > 0
+        expr: max(csmarket_orders_stuck{state="paid",job="scheduler"}) > 0
         for: 2m
         labels: { severity: page }
         annotations:
@@ -21,7 +23,7 @@ groups:
       # Claimed for over 30 minutes, no open attention: the buy neither finished nor asked
       # for help.
       - alert: OrdersBuyingStuck
-        expr: max(csmarket_orders_stuck{state="buying"}) > 0
+        expr: max(csmarket_orders_stuck{state="buying",job="scheduler"}) > 0
         for: 5m
         labels: { severity: warn }
         annotations:
@@ -34,7 +36,7 @@ groups:
       # Trade-status polling stopped (or never reached an order): Waxpeer's answers are not
       # being applied. Spec §12.
       - alert: TradesUnpolled
-        expr: max(csmarket_orders_stuck{state="trade_sent_unpolled"}) > 0
+        expr: max(csmarket_orders_stuck{state="trade_sent_unpolled",job="scheduler"}) > 0
         for: 5m
         labels: { severity: warn }
         annotations:
@@ -45,7 +47,7 @@ groups:
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#trades-unpolled"
 
       - alert: TradesNeedAttention
-        expr: max(csmarket_trades_attention) > 0
+        expr: max(csmarket_trades_attention{job="scheduler"}) > 0
         for: 15m
         labels: { severity: warn }
         annotations:
@@ -58,7 +60,7 @@ groups:
       # Our Waxpeer balance is under CSMARKET_WAXPEER_BALANCE_ALERT_USD: the next buys will
       # be refunded as `waxpeer_low_balance`. Top it up. Spec §12.
       - alert: WaxpeerBalanceLow
-        expr: min(csmarket_waxpeer_balance_usd) < min(csmarket_waxpeer_balance_threshold_usd)
+        expr: min(csmarket_waxpeer_balance_usd{job="scheduler"}) < min(csmarket_waxpeer_balance_threshold_usd{job="scheduler"})
         for: 10m
         labels: { severity: page }
         annotations:
@@ -98,3 +100,66 @@ groups:
             A delivered or refunded order does not match Waxpeer's history. Open the flagged
             trade in the admin.
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#audit-divergence"
+
+      # The balance gauge keeps its last good value when a read fails, so a silent failure
+      # would leave WaxpeerBalanceLow judging an old number. Two ways to be unknown: no
+      # numeric balance has been exported for 30 minutes (never read since the scheduler
+      # started, or the scheduler is gone), or the last successful read is over 30 minutes old.
+      - alert: WaxpeerBalanceUnknown
+        expr: absent(csmarket_waxpeer_balance_usd{job="scheduler"} >= 0)
+        for: 30m
+        # `cause` keeps the two rules of this alert distinct for promtool's duplicate check.
+        labels: { severity: warn, cause: never_read }
+        annotations:
+          summary: "Waxpeer balance has not been read for 30 min"
+          description: >
+            The scheduler exports no Waxpeer balance. Is the key valid, is Waxpeer answering
+            `/v1/user`, is the scheduler up?
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-unknown"
+
+      - alert: WaxpeerBalanceUnknown
+        expr: time() - max(csmarket_waxpeer_balance_read_timestamp_seconds{job="scheduler"}) > 1800
+        for: 5m
+        labels: { severity: warn, cause: stale_read }
+        annotations:
+          summary: "The last successful Waxpeer balance read is over 30 min old"
+          description: >
+            WaxpeerBalanceLow is judging a stale number. Is the key valid, is Waxpeer
+            answering `/v1/user`?
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-unknown"
+
+      # A tick that crashes (database down, a bug) leaves every gauge at its last value and
+      # every alert above quiet. The job stamps the end of each successful tick.
+      - alert: OrdersHealthStale
+        expr: time() - max(csmarket_orders_health_last_success_timestamp_seconds{job="scheduler"}) > 300
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "The order-health job has not succeeded for 5 min"
+          description: >
+            The stuck-order and balance alerts are not being refreshed. Look at the
+            scheduler's `orders.health.crashed` log lines.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#health-stale"
+
+      # The worker buys paid orders, the scheduler follows trades and sets the gauges.
+      # Either one down stops the money path or the alerts above.
+      - alert: WorkerDown
+        expr: up{job="worker"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "The worker is not scrapeable"
+          description: >
+            Paid orders are not being bought. Check the container and its logs.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#worker-down"
+
+      - alert: SchedulerDown
+        expr: up{job="scheduler"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "The scheduler is not scrapeable"
+          description: >
+            Trades are not being reconciled and the order-health gauges are not refreshed.
+            Check the container and its logs.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#scheduler-down"

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -18,7 +18,7 @@ from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.trade_sweeps_kit import db_fixture  # noqa: F401 -- fixture
 
 
-def _ago(**delta: float) -> object:
+def _ago(**delta: float) -> datetime:
     return core_clock.now() - timedelta(**delta)
 
 
@@ -27,7 +27,11 @@ async def _measure(db: AsyncSession, client: FakeTradeClient | None = None) -> H
 
 
 async def _order(
-    db: AsyncSession, status: str, *, paid_at: object = None, claimed_at: object = None
+    db: AsyncSession,
+    status: str,
+    *,
+    paid_at: datetime | None = None,
+    claimed_at: datetime | None = None,
 ) -> Order:
     return await make_order(
         db, status=status, paid_with="payme", paid_at=paid_at, claimed_at=claimed_at
@@ -89,7 +93,7 @@ async def test_a_resolved_attention_is_neither_attention_nor_a_hiding_place(
     [(_ago(minutes=29), 0), (_ago(minutes=31), 1), (None, 1)],
 )
 async def test_trade_sent_unpolled_after_thirty_minutes_or_never(
-    db: AsyncSession, last_polled: object, stuck: int
+    db: AsyncSession, last_polled: datetime | None, stuck: int
 ) -> None:
     order = await _order(db, "trade_sent", paid_at=_ago(hours=2))
     await make_trade(db, order, last_polled_at=last_polled)
