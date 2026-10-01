@@ -35,6 +35,7 @@ from pydantic import BaseModel, ConfigDict
 from csmarket.core.config import Settings, get_settings
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import WaxpeerEndpoint, WaxpeerOutcome, record_waxpeer_call
+from csmarket.core.redis import get_redis
 from csmarket.modules.skins.waxpeer import (
     QueryValue,
     WaxpeerClient,
@@ -378,8 +379,17 @@ class WaxpeerTradeClient(WaxpeerClient):
 
 
 def trade_client(settings: Settings | None = None) -> TradeClient:
-    """The process's Waxpeer purchase client, with the buy timeout."""
+    """The process's Waxpeer purchase client, with the buy timeout.
+
+    The dev fake (Redis-backed, ruling R13) when ``waxpeer_fake`` is on outside prod: the
+    worker's buys and every scheduler sweep build their client here.
+    """
     settings = settings or get_settings()
+    # Imported here: the fake builds on this module's models.
+    from csmarket.modules.skins import waxpeer_fake
+
+    if waxpeer_fake.fake_active(settings):
+        return waxpeer_fake.FakeTradeClient(get_redis())
     return WaxpeerTradeClient(
         api_key=settings.waxpeer_api_key,
         base_url=settings.waxpeer_base_url,

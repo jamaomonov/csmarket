@@ -113,6 +113,28 @@ JWT keys: leave `CSMARKET_JWT_PRIVATE_KEY` / `CSMARKET_JWT_PUBLIC_KEY` empty in 
 makes an Ed25519 pair in memory, so access tokens die on an API restart; the refresh cookie
 survives and the app re-mints one on the next load.
 
+## Buying locally (the Waxpeer fake)
+
+The dev compose runs the API, worker and scheduler with `CSMARKET_WAXPEER_FAKE=true`: a fake
+Waxpeer whose trades live in Redis, so a local buy spends nothing. A paid order is bought at
+once; the fake "sends" the offer 6 s later and the reconcile sweep (every 10 s, first run
+about 4 min after the scheduler starts) moves the order to «обмен отправлен». With the fake
+on, the trade-link check passes Waxpeer's half for any link. Drive the rest with dev login's
+Bearer token:
+
+```bash
+# accept | decline | rollback (rollback only after accept)
+curl -s -X POST http://localhost:8100/api/v1/dev/orders/<NUMBER>/trade \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"action": "accept"}'
+# the fake's Waxpeer balance, in units (1000 = $1); default 10 000 000
+curl -s -X POST http://localhost:8100/api/v1/dev/waxpeer/balance \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' -d '{"units": 25000}'
+```
+
+`POST /dev/orders/<NUMBER>/pay` pays an order through the mock kassa first. **With a real
+`CSMARKET_WAXPEER_API_KEY` and `CSMARKET_WAXPEER_FAKE=false`, a local buy is a real purchase
+with real money.** Prod refuses to start with the fake on.
+
 ## Common commands
 
 ```bash

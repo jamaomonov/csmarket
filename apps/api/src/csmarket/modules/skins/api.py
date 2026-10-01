@@ -21,6 +21,12 @@ from csmarket.modules.skins.waxpeer import (
     WaxpeerRateLimitedError,
     WaxpeerUnavailableError,
 )
+from csmarket.modules.skins.waxpeer_fake import (
+    FakeAction,
+    FakeTradeClient,
+    fake_active,
+    fake_client,
+)
 from csmarket.modules.skins.waxpeer_trades import (
     LOOKUP_MAX_IDS,
     TradeClient,
@@ -36,6 +42,8 @@ from csmarket.modules.skins.waxpeer_trades import (
 
 __all__ = [
     "LOOKUP_MAX_IDS",
+    "FakeAction",
+    "FakeTradeClient",
     "Listing",
     "PricingRules",
     "SearchClient",
@@ -53,6 +61,8 @@ __all__ = [
     "WaxpeerTradeClient",
     "WaxpeerUnavailableError",
     "enabled_categories",
+    "fake_active",
+    "fake_client",
     "get_item",
     "listings_budget",
     "listings_for",

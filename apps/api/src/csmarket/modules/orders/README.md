@@ -47,7 +47,8 @@ order (`payments.OrderReversalRefusedError`, R7); kassa attempts are found by
 
 **Routes (`routes.py`):** `POST /orders` (checkout), `POST /orders/{number}/pay`,
 `GET /orders/{number}`, `GET /me/orders` — contract in `docs/api/README.md`.
-`dev_routes.py`: `POST /dev/orders/{number}/pay` (dev only, below).
+`dev_routes.py`: `POST /dev/orders/{number}/pay` and, with the dev Waxpeer fake on,
+`POST /dev/orders/{number}/trade` (dev only, below).
 
 ## Checkout (`checkout.py`, rulings R4, R10–R12)
 
@@ -104,6 +105,14 @@ unless dev login is active — `api.v1.deps.dev_gate`; not in the schema; keyles
 repeat is a no-op): order lock → `ensure_attempt("mock")` → `mark_pending` →
 `settle(event_id="mock:<attempt id>")` → commit; an expired order is 409
 `order_not_payable`.
+
+**Dev only, with the fake (`CSMARKET_WAXPEER_FAKE`):** `POST /dev/orders/{number}/trade
+{action: accept|decline|rollback}` reads the owner's order (`get_owned`, 404 otherwise),
+ends the transaction, and calls `skins.api.FakeTradeClient.act(order.id, action,
+waxpeer_id=<the stored one>)`. Nothing in `orders` changes there: the reconcile tick reads the
+trade like Waxpeer's — `accept` → `delivered`, `decline` → `returned` and refunded,
+`rollback` after an accept → the protection watch flags `rolled_back`. `trade_client()`
+returns the fake under the flag, so the worker's buys and every sweep run against it.
 
 ## Reads (`service.py`, `trade_view.py`)
 

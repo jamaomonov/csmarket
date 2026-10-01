@@ -70,6 +70,29 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   `endpoint`, `outcome`, `status` only — never a URL (key, `partner`, `token`) or a body.
 - **Tests:** `tests/contract/test_waxpeer_purchase.py` (recorded shapes 2026-09-28, redrawn
   link and Steam IDs), `tests/unit/test_waxpeer_trade_parse.py`.
+
+## Dev Waxpeer fake (`waxpeer_fake.py`, ruling R13)
+
+- **On with `CSMARKET_WAXPEER_FAKE=true`** (the dev compose default); `Settings` refuses it in
+  prod and `fake_active(settings)` re-checks `is_prod`. Then `trade_client()` (worker buys,
+  scheduler sweeps and gauges), `listings.search_client()` (item page, checkout) and
+  `users.routes.tradelink_checkers()` all return `FakeTradeClient(get_redis())`.
+- **`FakeTradeClient(redis)`** implements `TradeClient`, `SearchClient` and the trade-link
+  checker. `buy_one_p2p` always succeeds: a trade with a random id, `status=0`, `price` = the
+  asked units, kept in `skins:waxpeer:fake:trade:{project_id}` (hash, 7 days); a second buy
+  under one `project_id` adds a second trade (the sweeps then see an ambiguous lookup).
+  `check_project_ids` keeps the real contract (≤ 100 ids, `ValueError` above, unknown ids
+  absent) and reports each trade as of now: 0 → 2 with a 10-digit `trade_id` after 3 s → 4
+  with `send_until` 30 min after the offer went out (6 s). `balance_units` reads
+  `skins:waxpeer:fake:balance` (default 10 000 000 = $10 000; a buy does not spend it).
+  `search_listings` is always `WaxpeerUnavailableError` (the snapshot serves), and
+  `check_tradelink` always passes. Redis down reads as a Waxpeer outage.
+- **Dev routes** (404 unless dev login is on and the fake is on): `act()` behind
+  `POST /dev/orders/{number}/trade` — `accept` sets `release_date` = now + 7 days on a status-4
+  trade, `decline` sets 6 + `reason="Buyer failed to accept"`, `rollback` sets 6 +
+  `penalties={"rollback_fee": price}` after an accept; `dev_routes.py`'s
+  `POST /dev/waxpeer/balance {units}` sets the balance.
+- **Tests:** `tests/integration/test_waxpeer_fake.py` (the sweeps driven end to end).
 - **The API key rides the query string** (`?api=…`), so a request URL is never logged —
   only method, path and status. `httpx`/`httpcore` loggers are capped at WARNING in
   `core.logging`, and exception text from `httpx` is never logged either (it carries the

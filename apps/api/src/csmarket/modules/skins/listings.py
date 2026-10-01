@@ -22,6 +22,7 @@ from redis.exceptions import RedisError
 
 from csmarket.core.config import Settings, get_settings
 from csmarket.core.logging import get_logger
+from csmarket.core.redis import get_redis
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.waxpeer import (
     WaxpeerClient,
@@ -29,6 +30,7 @@ from csmarket.modules.skins.waxpeer import (
     WaxpeerRateLimitedError,
     WaxpeerUnavailableError,
 )
+from csmarket.modules.skins.waxpeer_fake import FakeTradeClient, fake_active
 
 log = get_logger("csmarket.skins.listings")
 
@@ -52,8 +54,11 @@ def search_client() -> SearchClient:
 
     Shared by ``GET /skins/{slug}/listings`` and checkout (``POST /orders``), so both read
     through the same client, cache, budget and breaker; tests override this one dependency.
+    Under the dev fake it is the fake, whose search is always an outage (the snapshot).
     """
     settings = get_settings()
+    if fake_active(settings):
+        return FakeTradeClient(get_redis())
     return WaxpeerClient(
         api_key=settings.waxpeer_api_key,
         base_url=settings.waxpeer_base_url,

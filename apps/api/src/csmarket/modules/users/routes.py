@@ -18,7 +18,7 @@ from csmarket.core.idempotency import (
 )
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import current_user, guard_ip, trade_hold_days
-from csmarket.modules.skins.api import WaxpeerClient
+from csmarket.modules.skins.api import FakeTradeClient, WaxpeerClient, fake_active
 from csmarket.modules.users.models import User
 from csmarket.modules.users.schemas import MeOut, MePatchIn, TradeLinkIn, TradeLinkOut
 from csmarket.modules.users.service import (
@@ -50,8 +50,13 @@ class _SteamHold:
 
 
 def tradelink_checkers() -> tuple[TradelinkChecker, HoldChecker]:
-    """Upstream checkers; overridden in tests via ``app.dependency_overrides``."""
+    """Upstream checkers; overridden in tests via ``app.dependency_overrides``.
+
+    Under the dev Waxpeer fake every link passes Waxpeer's half of the check.
+    """
     s = get_settings()
+    if fake_active(s):
+        return FakeTradeClient(get_redis()), _SteamHold()
     waxpeer = WaxpeerClient(
         api_key=s.waxpeer_api_key, base_url=s.waxpeer_base_url, timeout_seconds=_ADVISORY_TIMEOUT
     )

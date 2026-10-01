@@ -18,9 +18,9 @@ import base64
 import binascii
 from decimal import Decimal
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -325,6 +325,13 @@ class Settings(BaseSettings):
     sentry_traces_sample_rate: float = Field(default=0.1)
     log_level: str = Field(default="INFO")
     log_json: bool = Field(default=False)
+
+    @model_validator(mode="after")
+    def _no_waxpeer_fake_in_prod(self) -> Self:
+        """Refuse to start prod with the fake Waxpeer: its buys spend nothing and send nothing."""
+        if self.waxpeer_fake and self.is_prod:
+            raise ValueError("CSMARKET_WAXPEER_FAKE must be off in prod")
+        return self
 
     @property
     def is_prod(self) -> bool:

@@ -201,6 +201,17 @@ checked by hand (never promise a refund then).
 not prod, and answers 404 otherwise. Keyless (a repeat is a no-op) → `OrderOut`; 409
 `order_not_payable` (`reason: expired`) for an expired or cancelled order.
 
+Two more dev routes exist only with the dev Waxpeer fake on (`CSMARKET_WAXPEER_FAKE=true`,
+never in prod; 404 otherwise), both signed in, keyless and not in this schema:
+
+- `POST /dev/orders/{number}/trade {action: "accept" | "decline" | "rollback"}` — moves the
+  owner's trade at the fake and answers it as the fake now reports it (`WaxpeerTrade`). The
+  order itself moves on the next reconcile tick (the protection watch for a delivered one).
+  `accept` needs the offer out (status 4); `decline` any unaccepted trade; `rollback` an
+  accepted one. A repeat of a done action is a no-op; otherwise 409 `fake_trade_state`, or
+  `fake_trade_missing` before the buy. 404 for another account's order.
+- `POST /dev/waxpeer/balance {units}` (≥ 0) — sets the fake's Waxpeer balance → `{units}`.
+
 ### Kassa callbacks: Click (M3)
 
 Called by Click, not by our clients; anonymous, exempt from the per-IP limiter.

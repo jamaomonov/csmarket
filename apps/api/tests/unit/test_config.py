@@ -9,6 +9,7 @@ import pytest
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from csmarket.core.config import Settings, get_settings
+from pydantic import ValidationError
 
 
 def test_defaults_point_at_the_local_dev_stack(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -103,6 +104,21 @@ def test_dev_login_is_never_active_in_prod() -> None:
     assert Settings(environment="dev", dev_login_enabled=True).dev_login_active is True
     assert Settings(environment="prod", dev_login_enabled=True).dev_login_active is False
     assert Settings(environment="dev", dev_login_enabled=False).dev_login_active is False
+
+
+def test_the_waxpeer_fake_is_refused_in_prod() -> None:
+    with pytest.raises(ValidationError, match="CSMARKET_WAXPEER_FAKE"):
+        Settings(environment="prod", waxpeer_fake=True)
+    assert Settings(environment="prod", waxpeer_fake=False).waxpeer_fake is False
+    assert Settings(environment="dev", waxpeer_fake=True).waxpeer_fake is True
+    assert Settings(environment="staging", waxpeer_fake=True).waxpeer_fake is True
+
+
+def test_the_waxpeer_fake_from_env_stops_a_prod_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")
+    monkeypatch.setenv("CSMARKET_WAXPEER_FAKE", "true")
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None)  # type: ignore[call-arg]
 
 
 def test_skins_and_fx_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
