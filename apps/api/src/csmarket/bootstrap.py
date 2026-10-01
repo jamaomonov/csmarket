@@ -39,9 +39,22 @@ if TYPE_CHECKING:
 _LATENCY_BUCKETS = (0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
 
 #: Settings a production deploy is broken without, mapped to what silently stops
-#: working when they are empty: ``(ENV_NAME, settings_field, impact)``. Empty in
-#: M0; M1 adds the JWT keys and the Steam Web API key, M3 the acquirer credentials.
-_REQUIRED_IN_PROD: tuple[tuple[str, str, str], ...] = ()
+#: working when they are empty: ``(ENV_NAME, settings_field, impact)``. M1 added
+#: the JWT keys, the Steam Web API key and the Waxpeer key; M3 adds the acquirers.
+_REQUIRED_IN_PROD: tuple[tuple[str, str, str], ...] = (
+    (
+        "CSMARKET_JWT_PRIVATE_KEY",
+        "jwt_private_key",
+        "no session can be minted: every sign-in fails",
+    ),
+    ("CSMARKET_JWT_PUBLIC_KEY", "jwt_public_key", "no access token verifies: every request is 401"),
+    (
+        "CSMARKET_STEAM_API_KEY",
+        "steam_api_key",
+        "accounts sign in nameless; trade-hold check skipped",
+    ),
+    ("CSMARKET_WAXPEER_API_KEY", "waxpeer_api_key", "trade-link check always 'unavailable'"),
+)
 
 
 def missing_prod_settings(settings: Settings) -> list[str]:

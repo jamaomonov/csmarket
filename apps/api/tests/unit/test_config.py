@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import base64
+
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from csmarket.core.config import Settings, get_settings
 
 
@@ -66,3 +70,35 @@ def test_get_settings_is_cached_and_clearable(monkeypatch: pytest.MonkeyPatch) -
     get_settings.cache_clear()
     assert get_settings().service_name == "csmarket-api-2"
     get_settings.cache_clear()
+
+
+def _pem() -> str:
+    key = Ed25519PrivateKey.generate()
+    return key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.PKCS8,
+        serialization.NoEncryption(),
+    ).decode()
+
+
+def test_auth_defaults() -> None:
+    s = Settings(environment="dev")
+    assert s.jwt_access_ttl_seconds == 900
+    assert s.jwt_refresh_ttl_seconds == 2592000
+    assert s.jwt_issuer == "csmarket"
+    assert s.admin_base_url == "http://localhost:3102"
+    assert s.auth_ip_guard_bucket_max["steam-login"] == 60
+    assert s.auth_ip_guard_bucket_max["trade-link-check"] == 60
+
+
+def test_jwt_key_accepts_raw_or_base64_pem() -> None:
+    pem = _pem()
+    assert Settings(jwt_private_key=pem).jwt_private_key == pem
+    b64 = base64.b64encode(pem.encode()).decode()
+    assert Settings(jwt_private_key=b64).jwt_private_key == pem
+
+
+def test_dev_login_is_never_active_in_prod() -> None:
+    assert Settings(environment="dev", dev_login_enabled=True).dev_login_active is True
+    assert Settings(environment="prod", dev_login_enabled=True).dev_login_active is False
+    assert Settings(environment="dev", dev_login_enabled=False).dev_login_active is False

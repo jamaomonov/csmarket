@@ -71,6 +71,19 @@ def test_missing_prod_settings_is_empty_outside_prod() -> None:
     assert missing_prod_settings(Settings(environment="dev")) == []
 
 
-def test_missing_prod_settings_lists_nothing_in_m0() -> None:
-    """The tuple is empty until M1/M3 add JWT keys and acquirer credentials."""
-    assert missing_prod_settings(Settings(environment="prod")) == []
+def test_missing_prod_settings_names_auth_keys(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The session fixture exports test JWT keys; an unconfigured prod has none.
+    for name in (
+        "CSMARKET_JWT_PRIVATE_KEY",
+        "CSMARKET_JWT_PUBLIC_KEY",
+        "CSMARKET_STEAM_API_KEY",
+        "CSMARKET_WAXPEER_API_KEY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    missing = missing_prod_settings(Settings(environment="prod"))
+    assert missing == [
+        "CSMARKET_JWT_PRIVATE_KEY",
+        "CSMARKET_JWT_PUBLIC_KEY",
+        "CSMARKET_STEAM_API_KEY",
+        "CSMARKET_WAXPEER_API_KEY",
+    ]

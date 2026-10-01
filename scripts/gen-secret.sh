@@ -8,11 +8,17 @@ case "$kind" in
   jwt)
     echo "Generating Ed25519 keypair (base64)…"
     python3 - <<'PY'
+import base64
 from cryptography.hazmat.primitives import serialization as s
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 sk = Ed25519PrivateKey.generate()
 print("JWT_PRIVATE_KEY (PEM):"); print(sk.private_bytes(s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption()).decode())
-print("JWT_PUBLIC_KEY (PEM):"); print(sk.public_key().public_bytes(s.Encoding.PEM, s.PublicFormat.SubjectPublicKeyInfo).decode())
+pub = sk.public_key().public_bytes(s.Encoding.PEM, s.PublicFormat.SubjectPublicKeyInfo)
+print("JWT_PUBLIC_KEY (PEM):"); print(pub.decode())
+priv = sk.private_bytes(s.Encoding.PEM, s.PrivateFormat.PKCS8, s.NoEncryption())
+print("# base64 one-liners for secrets/api.env:")
+print("CSMARKET_JWT_PRIVATE_KEY=" + base64.b64encode(priv).decode())
+print("CSMARKET_JWT_PUBLIC_KEY=" + base64.b64encode(pub).decode())
 PY
     ;;
   pg|redis|generic)

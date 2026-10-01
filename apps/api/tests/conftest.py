@@ -7,6 +7,8 @@ from collections.abc import AsyncIterator, Iterator
 from typing import Any
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from httpx import ASGITransport, AsyncClient
 
 
@@ -19,7 +21,27 @@ def _test_env() -> Iterator[None]:
     the assertions see — `pytest` from the repo root would otherwise load it, and
     CI (no .env) would disagree with the laptop.
     """
-    env = {"CSMARKET_ENVIRONMENT": "test", "CSMARKET_SENTRY_DSN": ""}
+    key = Ed25519PrivateKey.generate()
+    env = {
+        "CSMARKET_ENVIRONMENT": "test",
+        "CSMARKET_SENTRY_DSN": "",
+        # Fresh Ed25519 pair per session: nothing secret is committed.
+        "CSMARKET_JWT_PRIVATE_KEY": key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.PKCS8,
+            serialization.NoEncryption(),
+        ).decode(),
+        "CSMARKET_JWT_PUBLIC_KEY": key.public_key()
+        .public_bytes(
+            serialization.Encoding.PEM,
+            serialization.PublicFormat.SubjectPublicKeyInfo,
+        )
+        .decode(),
+        "CSMARKET_JWT_KID": "test",
+        "CSMARKET_DEV_LOGIN_ENABLED": "true",
+        "CSMARKET_STEAM_API_KEY": "",
+        "CSMARKET_WAXPEER_API_KEY": "",
+    }
     previous = {k: os.environ.get(k) for k in env}
     os.environ.update(env)
 
