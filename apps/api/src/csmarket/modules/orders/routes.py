@@ -1,7 +1,7 @@
-"""Customer order routes: checkout (``POST /orders``), one order, and ``/me/orders``.
+"""Customer order routes: checkout (``POST /orders``), paying it, one order, ``/me/orders``.
 
 Routers parse and dispatch; checkout lives in :mod:`csmarket.modules.orders.checkout`,
-reads in :mod:`csmarket.modules.orders.service`.
+paying in :mod:`csmarket.modules.orders.paying`, reads in :mod:`csmarket.modules.orders.service`.
 """
 
 from __future__ import annotations
@@ -18,7 +18,14 @@ from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_ke
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.orders.checkout import create_order
-from csmarket.modules.orders.schemas import OrderCreateIn, OrderOut, OrdersPage
+from csmarket.modules.orders.paying import pay_order
+from csmarket.modules.orders.schemas import (
+    OrderCreateIn,
+    OrderOut,
+    OrderPayIn,
+    OrderPayOut,
+    OrdersPage,
+)
 from csmarket.modules.orders.service import get_owned, list_for_user, order_out
 from csmarket.modules.skins.api import SearchClient, search_client
 from csmarket.modules.users.api import User
@@ -74,6 +81,36 @@ async def post_order(
     if not created:
         response.status_code = 200
     return await _owned_out(db, user_id, order.number)
+
+
+@router.post("/{number}/pay", response_model=OrderPayOut, summary="Pay one of my orders")
+async def post_order_pay(
+    *,
+    number: str,
+    body: OrderPayIn,
+    request: Request,
+    user: Annotated[User, Depends(current_user)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+    idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
+) -> OrderPayOut:
+    """Pay from the balance (the order is ``paid`` at once) or get a kassa's payment page.
+
+    ``Idempotency-Key`` (16..160 chars) is required; the same key and body replay the first
+    answer, another body is 409 ``idempotency_mismatch``. 409 ``code``s:
+    ``order_not_payable`` (+ ``reason``: ``paid`` | ``expired``), ``balance_too_low``.
+    422 ``order_provider`` for a kassa not available here. Another user's order is a 404.
+    """
+    key = require_idempotency_key(idempotency_key)
+    user_id = user.id
+    await guard_ip(request, bucket="order-pay", subject=user_id)
+    return await pay_order(
+        db,
+        user_id=user_id,
+        number=number,
+        provider=body.provider,
+        locale=body.locale,
+        idempotency_key=key,
+    )
 
 
 @router.get("/{number}", response_model=OrderOut, summary="One of my orders")

@@ -53,6 +53,29 @@ class OrderOut(BaseModel):
     trade: SkinTradeOut | None
 
 
+#: How an order can be paid: the balance (ruling R8) or a kassa (``mock`` outside prod).
+PayProvider = Literal["wallet", "click", "payme", "uzum", "mock"]
+#: The language of the kassa's page and of the order page the buyer returns to.
+PayLocale = Literal["ru", "uz", "en"]
+
+
+class OrderPayIn(BaseModel):
+    """Pay an order from the balance or through a kassa."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider: PayProvider
+    locale: PayLocale
+
+
+class OrderPayOut(BaseModel):
+    """The order after the pay call, and where to pay when a kassa takes the money."""
+
+    order: OrderOut
+    #: The kassa's payment page; ``None`` for the balance (the order is already ``paid``).
+    intent_url: str | None
+
+
 class OrdersPage(BaseModel):
     """A page of the customer's orders, newest first."""
 
@@ -60,4 +83,13 @@ class OrdersPage(BaseModel):
     next_cursor: str | None
 
 
-__all__ = ["OrderCreateIn", "OrderOut", "OrderStatusOut", "OrdersPage"]
+__all__ = [
+    "OrderCreateIn",
+    "OrderOut",
+    "OrderPayIn",
+    "OrderPayOut",
+    "OrderStatusOut",
+    "OrdersPage",
+    "PayLocale",
+    "PayProvider",
+]

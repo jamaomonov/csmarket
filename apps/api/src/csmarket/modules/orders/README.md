@@ -42,8 +42,9 @@ transaction (delivered on commit). The caller holds the order `FOR UPDATE`;
 order (`payments.OrderReversalRefusedError`, R7); kassa attempts are found by
 `payments.order_id` (`ix_payments_order`).
 
-**Routes (`routes.py`):** `POST /orders` (checkout), `GET /orders/{number}`,
-`GET /me/orders` — contract in `docs/api/README.md`.
+**Routes (`routes.py`):** `POST /orders` (checkout), `POST /orders/{number}/pay`,
+`GET /orders/{number}`, `GET /me/orders` — contract in `docs/api/README.md`.
+`dev_routes.py`: `POST /dev/orders/{number}/pay` (dev only, below).
 
 ## Checkout (`checkout.py`, rulings R4, R10–R12)
 
@@ -70,6 +71,36 @@ The order is inserted `pending`, expiring after `order_expiry_minutes` (15), wit
 snapshot. Two first requests racing on one key: the unique `(user_id, idempotency_key)`
 refuses the second, which returns the first's order. The route charges the `order-create`
 ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
+
+## Paying (`paying.py`, ruling R8)
+
+`pay_order(db, *, user_id, number, provider, locale, idempotency_key) -> OrderPayOut` serves
+`POST /orders/{number}/pay` and commits. It locks the order (`payments.resolve(lock=True)`;
+another user's, a top-up's, unknown or malformed number → 404), then looks the key up in the
+replay store (scope `orders.pay:{number}`, the row keeps `{request: {provider, locale},
+response}`): the same body replays the stored answer, another body is 409
+`idempotency_mismatch`. Looked up under the order lock, so a double-click's second request
+waits for the first and replays it. Then an order that is not payable is 409
+`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), and:
+
+- **`wallet`** — one transaction: `wallet.debit_purchase` (locks the wallet; 409
+  `balance_too_low` writes nothing), a `payments` row `purpose="order"`,
+  `provider="wallet"`, `provider_ref="wallet:<number>"` moved `created → succeeded`,
+  `mark_paid(provider="wallet")` (`NOTIFY orders`), the replay row, commit. No mixed payment.
+- **a kassa** (`click`, `payme`, `uzum`, `mock`; 422 `order_provider` unless available
+  here) — `payments.ensure_attempt` opens or reuses the order's live attempt in that kassa
+  and the answer carries the kassa's `intent_url`; the order stays `pending` until the kassa
+  settles it. The replay row, commit.
+
+Lock order: order → (kassa row) → payment → user wallet. Log line `orders.paid` (number,
+provider, amount; never the user). `paying.py` imports `payments`, so `orders.api` never
+exports it (ruling A).
+
+**Dev only:** `dev_pay(db, *, user_id, number)` behind `POST /dev/orders/{number}/pay` (404
+unless dev login is active — `api.v1.deps.dev_gate`; not in the schema; keyless because a
+repeat is a no-op): order lock → `ensure_attempt("mock")` → `mark_pending` →
+`settle(event_id="mock:<attempt id>")` → commit; an expired order is 409
+`order_not_payable`.
 
 ## Reads (`service.py`, `trade_view.py`)
 

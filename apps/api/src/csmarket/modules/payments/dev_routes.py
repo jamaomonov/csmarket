@@ -11,22 +11,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from csmarket.api.v1.deps import db_session
-from csmarket.core.config import get_settings
+from csmarket.api.v1.deps import db_session, dev_gate
 from csmarket.core.errors import NotFoundError
 from csmarket.modules.auth.api import current_user
 from csmarket.modules.payments.schemas import TopupOut
 from csmarket.modules.payments.topups import dev_pay, owned_topup, topup_view
 from csmarket.modules.users.models import User
 
-
-def _dev_gate() -> None:
-    """404 unless ``dev_login_active`` — before auth and the body, like any unknown path."""
-    if not get_settings().dev_login_active:
-        raise NotFoundError("not found")
-
-
-router = APIRouter(prefix="/dev", tags=["dev"], dependencies=[Depends(_dev_gate)])
+router = APIRouter(prefix="/dev", tags=["dev"], dependencies=[Depends(dev_gate)])
 
 
 @router.post("/topups/{number}/pay", response_model=TopupOut, include_in_schema=False)

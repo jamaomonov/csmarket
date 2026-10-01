@@ -15,7 +15,8 @@ Ported by allow-list (ADR-0002): UZS only, no currency column, whole soʻm. Oper
   Append-only; deleted only by `CASCADE` from their transaction.
 
 **Interface (`api.py`):** `post`, `ensure_account`, `user_account`, `balance`,
-`user_balance`, `user_balance_column`, `credit_topup`, `reverse_topup`, `admin_adjust`,
+`user_balance`, `user_balance_column`, `credit_topup`, `reverse_topup`, `debit_purchase`,
+`credit_order_refund`, `admin_adjust`,
 `ADMIN_ADJUST_MAX`, `entries_for_user`, `entries_for_admin`, `Entry`, `AdminEntry`,
 `EntriesPage`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`,
 `InsufficientBalanceError`, and the three models.
@@ -67,7 +68,8 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
 | `purchase`       | D `house_payments_received` / C `user_wallet` (an order paid from the balance)                                              | `purchase:order:{order_id}`      |
 | `refund`         | balance-paid order: D `user_wallet` / C `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing` (R9) | `refund:order:{order_id}`        |
 
-`purchase` and `refund` are in `TX_KINDS` since M4a; `orders` books them (one each per order).
+`purchase` and `refund` are in `TX_KINDS` since M4a; `orders` books them (one each per order)
+through `purchases.py`, below.
 
 `credit_topup(db, *, user_id, topup_id, amount, provider)` and `reverse_topup(...)` (same
 arguments) book the first two rows; `payments.hooks` calls them. `reverse_topup` answers a
@@ -85,6 +87,24 @@ any balance check); the key on another user or amount is `ConflictError`
 `InsufficientBalanceError` with `code="balance_too_low"` (ruling R13 — never below zero).
 `actor = "admin:<admin_id>"`, `metadata = {"reason"}`. Its own file only to keep `service.py`
 under the size limit.
+
+## Orders (`purchases.py`, rulings R8, R9)
+
+`debit_purchase(db, *, user_id, order_id, amount)` — an order paid from the balance: C
+`user_wallet` / D `house_payments_received`, reference `("order", order_id)`, actor `orders`.
+It locks the user's wallet `FOR UPDATE` (the caller already holds the order row — lock
+order order → payment → wallet), then looks up the key `purchase:order:{order_id}`: a
+replay returns the booked transaction before any balance check. A balance below `amount`
+raises `InsufficientBalanceError` with `code="balance_too_low"` and writes nothing.
+
+`credit_order_refund(db, *, user_id, order_id, amount, paid_with, actor="orders")` — the
+order's money back to the balance, once (key `refund:order:{order_id}`). `paid_with ==
+"wallet"`: D `user_wallet` / C `house_payments_received` (the purchase undone). A kassa:
+D `user_wallet` / C `provider_clearing:<paid_with>` — a kassa-paid order books nothing when
+it is paid, so its refund has the shape of a top-up (the kassa's money becomes balance;
+`provider_clearing`'s normal side is C, so it grows and never goes negative). No wallet lock
+(a credit cannot overdraw). `metadata = {"paid_with"}`. Sale revenue is not booked in the
+ledger in M4a.
 
 ## Customer entries (`entries.py`)
 
@@ -108,6 +128,8 @@ no user id, so a log line never ties a person to money.
 
 **Tests:** `tests/integration/test_wallet_ledger.py` (postings, replay, refused legs,
 frozen and missing accounts, both SAVEPOINT races) and `test_wallet_ledger_props.py`
-(hypothesis: `SUM(D) == SUM(C)` over random top-up series), `test_wallet_routes.py`
+(hypothesis: `SUM(D) == SUM(C)` over random top-up series, and over random top-ups,
+purchases and refunds with the balance never below zero), `test_wallet_purchase.py` (legs,
+replays, `balance_too_low`, both refund shapes), `test_wallet_routes.py`
 (balance, signed entries, redaction, keyset paging, owner only), `test_wallet_admin_adjust.py`
 (credit, clawback, never below zero, replay, admin entries).

@@ -146,6 +146,16 @@ Signed in (401 without a token). One skin per order.
   again → **200** with the stored order, whatever the body. Rate-limited by the
   `order-create` bucket: 60 a minute per IP and 10 a minute per IP and account, then 429
   with `Retry-After`. The new order is `pending` and payable for 15 minutes.
+- `POST /orders/{number}/pay` `{provider, locale}` + **required** `Idempotency-Key`
+  (16..160 chars) → **200** `{order: OrderOut, intent_url}`. `provider` is `wallet` (the
+  balance), `click`, `payme`, `uzum` or `mock` (dev only); `locale` is `ru`, `uz` or `en`
+  (the kassa's page and the order page it returns to). From the balance the order is `paid`
+  at once and `intent_url` is `null`; a short balance is 409 `balance_too_low` and changes
+  nothing (no mixed payment). Through a kassa the order stays `pending` and `intent_url` is
+  the kassa's payment page (a second call reuses the same attempt). The same key and body
+  replay the first answer; the same key with another body is 409 `idempotency_mismatch`.
+  The owner's only (404 otherwise). Rate-limited by the `order-pay` bucket (as
+  `order-create`).
 - `GET /orders/{number}` → `OrderOut`. The owner's only: anyone else's, an unknown or a
   malformed number is a 404.
 - `GET /me/orders?cursor=` → `{items: [OrderOut], next_cursor}`, 20 a page, newest first;
@@ -174,6 +184,22 @@ checked by hand (never promise a refund then).
 | 404    | `not-found`        | —                    | Unknown or hidden item                                                               |
 | 503    | `rate-unavailable` | `rate_unavailable`   | No fresh soʻm rate                                                                   |
 | 422    | `validation`       | —                    | Malformed body or missing/short/over-long key                                        |
+
+`POST /orders/{number}/pay`:
+
+| Status | `type` suffix          | `code`                 | When                                                                     |
+| ------ | ---------------------- | ---------------------- | ------------------------------------------------------------------------ |
+| 409    | `conflict`             | `order_not_payable`    | `reason`: `paid` (already paid, any way) or `expired` (also cancelled)   |
+| 409    | `insufficient-balance` | `balance_too_low`      | The balance does not cover the order                                     |
+| 409    | `conflict`             | `idempotency_mismatch` | The key answered another `provider` / `locale`                           |
+| 422    | `validation`           | `order_provider`       | That kassa is not available here                                         |
+| 422    | `validation`           | —                      | Malformed body (unknown `provider`/`locale`, extra field) or key missing |
+| 404    | `not-found`            | —                      | Not the caller's order                                                   |
+
+`POST /dev/orders/{number}/pay` is not in this schema: it pays the owner's order through the
+`mock` kassa (the real `settle`), exists only when dev login is on and the environment is
+not prod, and answers 404 otherwise. Keyless (a repeat is a no-op) → `OrderOut`; 409
+`order_not_payable` (`reason: expired`) for an expired or cancelled order.
 
 ### Kassa callbacks: Click (M3)
 

@@ -36,7 +36,10 @@ adds `ix_payments_order` — an order's attempts are found by `order_id`).
 **Routes:** `routes.py` — `GET /payments/providers` (anonymous) and, under the `/wallet`
 prefix, `POST /wallet/topups` and `GET /wallet/topups/{number}` (they live here because
 `wallet` never imports `payments`); `dev_routes.py` — `POST /dev/topups/{number}/pay`
-(404 unless dev login is active; not in the OpenAPI schema).
+(404 unless dev login is active — `api.v1.deps.dev_gate`, shared with `orders.dev_routes`;
+not in the OpenAPI schema). An order's pay route (`POST /orders/{number}/pay`) lives in
+`orders`: it opens attempts here through `resolve` + `ensure_attempt` + `get_gateway`, and
+writes the balance's `provider="wallet"` row itself (ruling R8).
 
 ## Numbers
 

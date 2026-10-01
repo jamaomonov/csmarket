@@ -17,6 +17,7 @@ from csmarket.modules.admin.routes import router as admin_router
 from csmarket.modules.admin.users_routes import router as admin_users_router
 from csmarket.modules.auth.api import router as auth_router
 from csmarket.modules.click.routes import router as click_router
+from csmarket.modules.orders.dev_routes import router as orders_dev_router
 from csmarket.modules.orders.routes import me_router as my_orders_router
 from csmarket.modules.orders.routes import router as orders_router
 from csmarket.modules.payme.routes import router as payme_router
@@ -39,6 +40,7 @@ router.include_router(auth_router)
 router.include_router(click_router)
 router.include_router(orders_router)
 router.include_router(my_orders_router)
+router.include_router(orders_dev_router)
 router.include_router(payme_router)
 router.include_router(payments_dev_router)
 router.include_router(payments_router)

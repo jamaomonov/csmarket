@@ -1867,6 +1867,63 @@
         "title": "OrderOut",
         "type": "object"
       },
+      "OrderPayIn": {
+        "additionalProperties": false,
+        "description": "Pay an order from the balance or through a kassa.",
+        "properties": {
+          "locale": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Locale",
+            "type": "string"
+          },
+          "provider": {
+            "enum": [
+              "wallet",
+              "click",
+              "payme",
+              "uzum",
+              "mock"
+            ],
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider",
+          "locale"
+        ],
+        "title": "OrderPayIn",
+        "type": "object"
+      },
+      "OrderPayOut": {
+        "description": "The order after the pay call, and where to pay when a kassa takes the money.",
+        "properties": {
+          "intent_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Url"
+          },
+          "order": {
+            "$ref": "#/components/schemas/OrderOut"
+          }
+        },
+        "required": [
+          "order",
+          "intent_url"
+        ],
+        "title": "OrderPayOut",
+        "type": "object"
+      },
       "OrdersPage": {
         "description": "A page of the customer's orders, newest first.",
         "properties": {
@@ -5086,6 +5143,91 @@
           }
         },
         "summary": "One of my orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{number}/pay": {
+      "post": {
+        "description": "Pay from the balance (the order is ``paid`` at once) or get a kassa's payment page.\n\n``Idempotency-Key`` (16..160 chars) is required; the same key and body replay the first\nanswer, another body is 409 ``idempotency_mismatch``. 409 ``code``s:\n``order_not_payable`` (+ ``reason``: ``paid`` | ``expired``), ``balance_too_low``.\n422 ``order_provider`` for a kassa not available here. Another user's order is a 404.",
+        "operationId": "post_order_pay_api_v1_orders__number__pay_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderPayIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderPayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pay one of my orders",
         "tags": [
           "orders"
         ]
