@@ -26,8 +26,9 @@ def _req(headers: dict[str, str] | None = None, peer: str | None = None) -> Any:
 
 
 def test_takes_the_first_forwarded_entry() -> None:
-    # The edge overwrites the header with the real peer and our own Caddy then
-    # appends itself, so the client is the leftmost entry — never the last.
+    # Our Caddy overwrites the header with exactly one value, the visitor
+    # (core/client_ip.py). Should a chain ever arrive anyway, the leftmost entry
+    # is the one taken — never the last.
     assert (
         client_ip(_req({"X-Forwarded-For": "203.0.113.7, 10.0.0.2"}, "10.0.0.2")) == "203.0.113.7"
     )
