@@ -23,10 +23,9 @@
   | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                           |
   | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                           |
 
-- **Where things stand:** M0–M1 merged on local `main`; M2 on branch `m2-skins-catalogue` until
-  the owner says to merge. There is no git remote yet; nothing is pushed or deployed. M0 is
-  done for good when `https://csmarket.uz/` answers the hello page from CI-built images. Next:
-  the M3 plan, when the owner asks for it.
+- **Where things stand:** M0–M2 merged on local `main`. There is no git remote yet; nothing
+  is pushed or deployed. M0 is done for good when `https://csmarket.uz/` answers from CI-built
+  images. Next: the M3 plan, when the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). Everything later is listed in spec §16.
