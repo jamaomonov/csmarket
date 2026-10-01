@@ -42,6 +42,25 @@ async def test_request_over_limit_gets_429(limited_client: AsyncClient) -> None:
     assert "retry-after" in r.headers
 
 
+async def test_buckets_are_keyed_on_the_forwarded_client_ip(limited_client: AsyncClient) -> None:
+    # Pins the limiter <-> core.client_ip wiring: the key is the first
+    # X-Forwarded-For entry (the visitor Caddy wrote), not the socket peer, which
+    # is the same for every request behind the proxy.
+    a = {"X-Forwarded-For": "203.0.113.7"}
+    b = {"X-Forwarded-For": "198.51.100.4"}
+    for _ in range(3):
+        assert (await limited_client.get("/openapi.json", headers=a)).status_code == 200
+    assert (await limited_client.get("/openapi.json", headers=a)).status_code == 429
+
+    # Another visitor has its own, untouched bucket.
+    for _ in range(3):
+        assert (await limited_client.get("/openapi.json", headers=b)).status_code == 200
+
+    # The same visitor shares one bucket, whatever trails it in the header.
+    same_a = {"X-Forwarded-For": "203.0.113.7, 10.0.0.2"}
+    assert (await limited_client.get("/openapi.json", headers=same_a)).status_code == 429
+
+
 async def test_health_probes_are_exempt(limited_client: AsyncClient) -> None:
     for _ in range(10):
         assert (await limited_client.get("/healthz")).status_code == 200
