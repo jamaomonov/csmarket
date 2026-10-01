@@ -11,67 +11,67 @@ command in that message** (`AGENTS.md` § 14).
 2. Dispatch **Deploy** (`.github/workflows/deploy.yml`) with that tag:
 
    ```bash
-   gh workflow run deploy.yml -f environment=production -f image_tag=sha-1a2b3c4
+   make deploy tag=sha-1a2b3c4
+   # same as: gh workflow run deploy.yml -f environment=production -f image_tag=sha-1a2b3c4
    ```
 
-   (or Actions → Deploy → Run workflow). `make deploy env=production` dispatches the same
-   workflow with its default tag, `main` — a moving tag; prefer the pinned `sha-` tag.
+   (or Actions → Deploy → Run workflow). A release tag `vX.Y.Z` works the same way — its
+   images carry the git tag verbatim. `main` also works but is a moving tag; prefer the
+   pinned `sha-` tag.
 
-3. The workflow, over SSH in `~/opt/csmarket`: fetches, checks out, `pull`s, runs
-   `alembic upgrade head` in a one-shot `api` container, `up -d --remove-orphans` with
-   `IMAGE_TAG` set, recreates `caddy` when `infra/caddy/Caddyfile.prod` changed, waits for
-   `https://api.csmarket.uz/healthz`, `/readyz` and `https://csmarket.uz/`, then prunes old
-   images (keeping three per service).
+3. The workflow, over SSH in `~/opt/csmarket`: fetches, checks out **the commit the tag
+   names** (`sha-1a2b3c4` → commit `1a2b3c4`, `vX.Y.Z` → that git tag, `main` →
+   `origin/main`; a tag that resolves to nothing fails the deploy), `pull`s, runs
+   `alembic upgrade head` in a one-shot `api` container, writes `IMAGE_TAG=<tag>` into the
+   checkout's `.env`, `up -d --remove-orphans`, recreates `caddy` when
+   `infra/caddy/Caddyfile.prod` changed, waits for `https://api.csmarket.uz/healthz`,
+   `/readyz` and `https://csmarket.uz/`, then prunes old images (keeping three per service).
+
+Because the checkout follows the tag, `docker-compose.prod.yml`, the Caddyfile and the alert
+rules on the server always match the images that run.
 
 Deploys are stop-then-start, not rolling: expect a few seconds of held requests (Caddy retries
 for 15 s). Migrations run before the new code starts, so the old code briefly serves against
 the new schema — write migrations that the previous release tolerates.
 
-### Infra files with a `sha-` deploy
+## `IMAGE_TAG` lives in `~/opt/csmarket/.env`
 
-A `sha-…` input is an image tag, not a git ref, so the workflow cannot check it out and falls
-back to the server's local `main` — which `git fetch` does not move. When a release changes
-`docker-compose.prod.yml`, the Caddyfile, alert rules or other files under `infra/`,
-fast-forward the checkout first, then deploy:
-
-```bash
-ssh deploy@<VPS_IP> 'cd ~/opt/csmarket && git fetch && git checkout -B main origin/main'
-```
-
-## Any manual compose command on prod: `IMAGE_TAG` always
-
-`docker-compose.prod.yml` resolves images as `csmarket-<app>:${IMAGE_TAG:-main}`. A command
-without `IMAGE_TAG` falls back to whatever `:main` is cached locally and silently rolls the
-deploy back. Read the running tag first, reuse it, and check after:
+`docker-compose.prod.yml` resolves images as `csmarket-<app>:${IMAGE_TAG}` and refuses to run
+without it (`required variable IMAGE_TAG is missing a value`). The deploy workflow pins the
+tag in the checkout's git-ignored `.env`, which compose reads on every command, so a manual
+command reuses the deployed tag and never falls back to a stale cached `:main`:
 
 ```bash
 cd ~/opt/csmarket
-export IMAGE_TAG="$(docker inspect csmarket-prod-api-1 --format '{{.Config.Image}}' | sed 's/.*://')"
+cat .env                                            # IMAGE_TAG=sha-1a2b3c4 (+ COMPOSE_PROFILES from M5)
 docker compose -f docker-compose.prod.yml up -d api worker scheduler
-docker inspect csmarket-prod-api-1 --format '{{.Config.Image}}'
+docker inspect csmarket-prod-api-1 --format '{{.Config.Image}}'   # the same tag
 ```
+
+Do not `export IMAGE_TAG=…` in a shell on the server: an exported value overrides `.env` and
+is exactly how a hand-run command rolls a service back. To change the running tag, deploy.
 
 ## Rollback
 
 Redeploy the previous `sha-` tag through the same workflow:
 
 ```bash
-gh workflow run deploy.yml -f environment=production -f image_tag=sha-<previous>
+make deploy tag=sha-<previous>
 ```
 
-The last three images per service stay on the box, so the pull is instant. Schema rollbacks
-are not part of a normal rollback: migrations are forward-only, and the previous release must
-tolerate the new schema. If data has to go back, that is a restore from backup — ask the owner
-first.
+The checkout moves back to that commit, so compose, the Caddyfile and alert rules roll back
+with the images, and `.env` is rewritten to the old tag. The last three images per service
+stay on the box, so the pull is instant. Schema rollbacks are not part of a normal rollback:
+migrations are forward-only, and the previous release must tolerate the new schema. If data
+has to go back, that is a restore from backup — ask the owner first.
 
 ## Changing a secret
 
 Edit `secrets/<file>.env` on the server, then recreate the services that read it — **`up -d`,
-never `restart`** (`restart` keeps the old environment):
+never `restart`** (`restart` keeps the old environment). The tag comes from `.env`:
 
 ```bash
 cd ~/opt/csmarket
-export IMAGE_TAG=<running tag>     # see above
 docker compose -f docker-compose.prod.yml up -d api worker scheduler
 docker compose -f docker-compose.prod.yml exec -T api printenv CSMARKET_BASE_URL   # confirm it landed
 ```

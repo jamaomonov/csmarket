@@ -8,7 +8,8 @@ on:
         required: true
         default: "production"
         type: choice
-        options: ["staging", "production"]
+        # One box, one environment: there is no staging server to deploy to.
+        options: ["production"]
       image_tag:
         description: "Image tag (sha-..., vX.Y.Z, or main)"
         required: true
@@ -52,22 +53,38 @@ jobs:
             # root-owned paths, so no sudo anywhere in this script.
             cd "$HOME/opt/csmarket"
             git fetch --all --tags --prune --force
-            # Land the checkout on the freshly-fetched commit. A plain
-            # ``git checkout main`` switches to the LOCAL branch and does not
-            # move it to origin, so the on-disk compose/Caddyfiles stayed behind
-            # origin/main while only the images updated — an infra change would
-            # then silently not deploy. For a branch input, hard-reset the local
-            # branch to its remote ref; a sha/tag input has no origin/<x> and
-            # falls through to a (detached) checkout.
-            if git rev-parse -q --verify "origin/$IMAGE_TAG_INPUT" >/dev/null; then
-              git checkout -B "$IMAGE_TAG_INPUT" "origin/$IMAGE_TAG_INPUT"
+            # Land the checkout on the commit the images were built from, so
+            # compose, the Caddyfile and the alert rules always match the images
+            # (and a rollback rolls them back too). Build images tags a commit
+            # three ways: ``main`` (a branch), ``vX.Y.Z`` (the git tag itself)
+            # and ``sha-<7 hex>`` (strip the prefix to get the commit). A branch
+            # is hard-reset to its freshly fetched remote ref — a plain
+            # ``git checkout main`` would stay on the stale local branch.
+            # Anything that resolves to no commit fails the deploy: falling
+            # back to some other checkout would run new images on old infra.
+            ref="${IMAGE_TAG_INPUT#sha-}"
+            if git rev-parse -q --verify "origin/$ref^{commit}" >/dev/null; then
+              git checkout -B "$ref" "origin/$ref"
+            elif git rev-parse -q --verify "$ref^{commit}" >/dev/null; then
+              git checkout --detach "$ref"
             else
-              git checkout --force "$IMAGE_TAG_INPUT" || git checkout --force main
+              echo "::error::image tag $IMAGE_TAG_INPUT names no branch, tag or commit in the checkout"
+              exit 1
             fi
             export IMAGE_TAG="$IMAGE_TAG_INPUT"
 
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
+
+            # Pin the tag in the checkout's git-ignored .env, which compose reads
+            # for interpolation on every command. docker-compose.prod.yml refuses
+            # to start without IMAGE_TAG, so a later hand-run ``up -d`` reuses
+            # exactly this tag instead of a stale cached ``:main``. Other lines
+            # (COMPOSE_PROFILES, say) are kept. Written only after the pull and
+            # the migration succeeded.
+            touch .env
+            { grep -v '^IMAGE_TAG=' .env || true; printf 'IMAGE_TAG=%s\n' "$IMAGE_TAG"; } > .env.new
+            mv .env.new .env
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             # The app stack's Caddyfile is a single-FILE bind mount, so the

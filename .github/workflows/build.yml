@@ -46,11 +46,13 @@ jobs:
         id: meta
         with:
           images: ghcr.io/${{ github.repository_owner }}/csmarket-${{ matrix.image }}
+          # Every image tag must also be a git ref deploy.yml can check out:
+          # ``main`` (branch), ``vX.Y.Z`` (the git tag verbatim — semver
+          # patterns would drop the ``v``) and ``sha-<7 hex>`` (the commit).
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=tag
             type=sha,format=short
       - uses: docker/build-push-action@v6
         with:

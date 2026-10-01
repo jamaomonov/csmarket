@@ -147,9 +147,9 @@ gen-api: ## Regenerate docs/api/openapi.json + packages/api-client
 	fi
 
 .PHONY: deploy
-deploy: ## Deploy via GitHub Actions: make deploy env=prod
-	@if [ -z "$(env)" ]; then echo "Usage: make deploy env=prod"; exit 1; fi
-	gh workflow run deploy.yml -f environment=$(env)
+deploy: ## Deploy via GitHub Actions: make deploy tag=sha-xxxxxxx
+	@if [ -z "$(tag)" ]; then echo "Usage: make deploy tag=sha-xxxxxxx  (or vX.Y.Z, or main)"; exit 1; fi
+	gh workflow run deploy.yml -f environment=production -f image_tag='$(tag)'
 
 ##@ Ops
 

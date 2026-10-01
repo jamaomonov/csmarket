@@ -346,7 +346,7 @@ over raw tools.**
 | `make typecheck`                                  | mypy + tsc                                                                          |
 | `make gen-api`                                    | Regenerate `docs/api/openapi.json` + `packages/api-client`                          |
 | `make build`                                      | Build the dev compose images                                                        |
-| `make deploy env=production`                      | Dispatch `deploy.yml` (image tag `main`); pin a tag per `docs/runbooks/deploy.md`   |
+| `make deploy tag=sha-xxxxxxx`                     | Dispatch `deploy.yml` to production with that image tag (`docs/runbooks/deploy.md`) |
 | `make backup` / `make restore file=…`             | One-off backup / restore against the **prod** compose (run on the server)           |
 
 Dev ports (`docker-compose.yml`; csmarket's own block so it can run beside another stack —
@@ -373,8 +373,11 @@ Setup walkthrough: `docs/onboarding/local-setup.md`. Deploys: `docs/runbooks/`.
   Batch pushes (GitHub Actions minutes). Before any push run `npx prettier --check .`.
 - The owner usually says «тесты локально не гоняй» when ordering a deploy — CI runs them.
   Otherwise `make lint typecheck test` before calling work done.
-- **Prod restarts always with `IMAGE_TAG`** — a plain `docker compose up -d` rolls back to a
-  stale `:main` image silently. Verify with `docker inspect … --format '{{.Config.Image}}'`.
+- **Prod restarts always with `IMAGE_TAG`** — a plain `docker compose up -d` must never roll
+  back to a stale `:main` image. Mechanism: every deploy pins `IMAGE_TAG=<tag>` in the server
+  checkout's git-ignored `~/opt/csmarket/.env`, and `docker-compose.prod.yml` refuses to run
+  without it; never `export` a different one by hand. Verify with
+  `docker inspect … --format '{{.Config.Image}}'`.
 - **Kill processes by PID only.** Never `pkill -f <pattern>` (it once killed Docker Desktop).
   On this laptop, touch only csmarket's own containers (`csmarket-dev`): another project's
   dev stack may be running beside it.
