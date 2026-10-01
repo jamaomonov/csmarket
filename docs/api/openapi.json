@@ -764,6 +764,81 @@
         "title": "SkinItemOut",
         "type": "object"
       },
+      "SkinListingOut": {
+        "description": "One live auto listing at our price.",
+        "properties": {
+          "float_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Float Value"
+          },
+          "inspect_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inspect Url"
+          },
+          "listing_id": {
+            "title": "Listing Id",
+            "type": "integer"
+          },
+          "paint_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Seed"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "price_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Uzs"
+          },
+          "stickers": {
+            "items": {
+              "$ref": "#/components/schemas/SkinStickerOut"
+            },
+            "title": "Stickers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "listing_id",
+          "price_usd",
+          "price_uzs",
+          "float_value",
+          "paint_seed",
+          "stickers",
+          "inspect_url"
+        ],
+        "title": "SkinListingOut",
+        "type": "object"
+      },
       "SkinListingSummaryOut": {
         "description": "One of the cheapest auto listings from the last price tick, at our price.",
         "properties": {
@@ -795,6 +870,28 @@
         "title": "SkinListingSummaryOut",
         "type": "object"
       },
+      "SkinListingsOut": {
+        "description": "Live listings for one item.",
+        "properties": {
+          "degraded": {
+            "title": "Degraded",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SkinListingOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "degraded"
+        ],
+        "title": "SkinListingsOut",
+        "type": "object"
+      },
       "SkinSlugsOut": {
         "description": "A page of item slugs on sale, and how many there are.",
         "properties": {
@@ -815,6 +912,56 @@
           "total"
         ],
         "title": "SkinSlugsOut",
+        "type": "object"
+      },
+      "SkinStickerOut": {
+        "description": "A sticker applied to a live listing.",
+        "properties": {
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
+          },
+          "wear": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wear"
+          }
+        },
+        "required": [
+          "name",
+          "image",
+          "slot",
+          "wear"
+        ],
+        "title": "SkinStickerOut",
         "type": "object"
       },
       "SkinSuggestOut": {
@@ -2025,6 +2172,49 @@
           }
         },
         "summary": "One item with its cheapest listings",
+        "tags": [
+          "skins"
+        ]
+      }
+    },
+    "/api/v1/skins/{slug}/listings": {
+      "get": {
+        "description": "Live offers for one item; a Waxpeer problem is a 200 with ``degraded: true``.\n\nAdvisory read, so no ``Idempotency-Key``. An unknown or hidden slug is a 404 before\nany Waxpeer call.",
+        "operationId": "get_listings_api_v1_skins__slug__listings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkinListingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Live auto listings for one item (cached, rate-budgeted, degradable)",
         "tags": [
           "skins"
         ]

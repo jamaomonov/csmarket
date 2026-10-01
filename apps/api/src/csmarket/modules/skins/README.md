@@ -94,7 +94,7 @@ first call**; M2 adds the catalogue, import, price sync and listings; buying arr
 
 ## Public read API (M2)
 
-Postgres only — no route here calls Waxpeer (the live-listings proxy is separate). Every read
+Postgres only — no route here calls Waxpeer except `GET /{slug}/listings` (see **Live listings**). Every read
 leaves out `hidden` rows and categories outside `CSMARKET_SKINS_CATEGORIES`; the API is always
 on (no feature flag, ruling Q1).
 
@@ -123,3 +123,25 @@ rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..
 - **`schemas`** — the public DTOs; nothing in them names Waxpeer.
 - **Tests:** `tests/unit/test_skins_cursor.py`, `tests/integration/test_skins_catalog_routes.py`,
   `test_skins_facets_scoped.py`, `test_skins_catalog_resilience.py` (no rate, Redis down).
+
+## Live listings
+
+`GET /skins/{slug}/listings` -> `SkinListingsOut {items, degraded}` is the one advisory carve-out
+that calls Waxpeer from a request (AGENTS §11); `listings.listings_for` decides how, in order:
+
+1. fresh Redis `skins:listings:{slug}` (90 s) -> `degraded: false`;
+2. if the breaker `skins:wax:breaker` is closed and the process-wide budget
+   (`skins:wax:budget:{minute}`, `CSMARKET_SKINS_LISTINGS_BUDGET_PER_MINUTE` = 18, 0 without an API
+   key) has room: one `search_listings([waxpeer_name_of(item)])` with a 4 s timeout
+   (`CSMARKET_SKINS_LISTINGS_TIMEOUT_SECONDS`). Only `auto` listings are kept, sorted by
+   `(price, id)`, cached 90 s fresh and 1 h stale. A 429 or outage opens the breaker for 2 min; any
+   other error just falls through;
+3. stale Redis `skins:listings:{slug}:stale` -> `degraded: true`;
+4. the snapshot's `cheapest_auto` (no float, stickers or inspect link) -> `degraded: true`.
+
+It never raises for a Waxpeer problem, and logs only the exception type name (the API key rides
+Waxpeer's query string). Each row is re-quoted with the live rules (`pricing.quote`) and shown in
+soʻm at the CBU rate; sticker images use `CSMARKET_SKINS_IMAGE_HOST`. The route sits behind its own
+`ip_guard` bucket `skins-listings` (60 per window); an unknown or hidden slug is a 404 before any
+Waxpeer call. Redis keys: `docs/architecture/cache-keys.md`. Tests:
+`tests/unit/test_skins_listings.py`, `tests/integration/test_skins_listings_route.py`.

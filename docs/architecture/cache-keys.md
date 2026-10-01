@@ -21,6 +21,10 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
 | `skins:job:{import\|price_sync}`                                  | none (overwritten each run)                   | `skins.job_status.record_job` (scheduler `skins.catalog_import`, price sync)                     | `skins.job_status.read_job` (admin status card)                                       | No: finished_at, ok, counters, our own error label                      |
 | `skins:catalog:ver`                                               | none (an integer, `INCR`)                     | `skins.cachekeys.bump_catalog_version` (after every price tick commit; later hide / alias edits) | `skins.cachekeys.catalog_version` (every cached catalogue page carries it in its key) | No: a counter                                                           |
 | `skins:{catalog\|facets\|suggest}:{ver}:{sha1}`                   | 60 s                                          | `skins.routes._cached` (on a miss)                                                               | `skins.routes._cached` (`GET /skins/catalog`, `/facets`, `/suggest`)                  | No: a public page body; the key is a digest of the query (and the rate) |
+| `skins:listings:{slug}`                                           | 90 s (fresh)                                  | `skins.listings.listings_for` (after a live Waxpeer read)                                        | `skins.listings.listings_for` (`GET /skins/{slug}/listings`)                          | No: public listing data (ids, prices, floats, stickers)                 |
+| `skins:listings:{slug}:stale`                                     | 3600 s                                        | `skins.listings.listings_for` (twin of the fresh key)                                            | `skins.listings.listings_for` when the live read is not possible                      | No: as above                                                            |
+| `skins:wax:breaker`                                               | 120 s                                         | `skins.listings.listings_for` on a Waxpeer 429 or outage                                         | `skins.listings.listings_for` (open: no live call)                                    | No                                                                      |
+| `skins:wax:budget:{YYYYMMDDHHMM}`                                 | 120 s                                         | `skins.listings.listings_for` (`INCR` per live attempt)                                          | `skins.listings.listings_for` (over `skins_listings_budget_per_minute`: no live call) | No: a counter per UTC minute                                            |
 
 ## Notes
 
@@ -35,8 +39,16 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
   search text out of key names. A Redis error on read or write is swallowed and the page is
   built from Postgres.
 
-- **Buckets** in use: `steam-login`, `dev-login` (sign-in routes, no subject) and
-  `trade-link-check` (IP plus user id). Per-bucket ceilings: `auth_ip_guard_bucket_max`
+- **Live listings.** `GET /skins/{slug}/listings` reads `skins:listings:{slug}` first (90 s). On a
+  miss it makes one Waxpeer search if the breaker is closed and the process-wide budget
+  (`skins:wax:budget:{minute}`, 18 per minute, under Waxpeer's 20) has room; a 429 or outage
+  opens the breaker for 120 s. Without a live answer it serves the 1 h stale twin, then the
+  last price snapshot's `cheapest_auto`, both with `degraded: true`. A Redis error on any of
+  these is swallowed (a failed budget `INCR` counts as "room left").
+
+- **Buckets** in use: `steam-login`, `dev-login` (sign-in routes, no subject),
+  `trade-link-check` (IP plus user id) and `skins-listings` (IP only; a cache miss spends Waxpeer
+  quota, so the bucket bounds distinct items per address). Per-bucket ceilings: `auth_ip_guard_bucket_max`
   (60 per window each); the subject ceiling is `auth_ip_guard_subject_max` (10).
 - **Fail open.** A Redis error in a blocklist read or write, or in `guard_ip`, lets the
   request through; a cache error in the trade-link check falls through to a live check. An

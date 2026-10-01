@@ -15,7 +15,7 @@ from collections.abc import Awaitable, Callable
 from decimal import Decimal
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,9 +23,11 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.redis import get_redis
+from csmarket.modules.auth.api import guard_ip
 from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.skins.cachekeys import catalog_version
 from csmarket.modules.skins.images import steam_image
+from csmarket.modules.skins.listings import listings_for
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
 from csmarket.modules.skins.schemas import (
@@ -35,8 +37,11 @@ from csmarket.modules.skins.schemas import (
     SkinFacetsOut,
     SkinFamilyMemberOut,
     SkinItemOut,
+    SkinListingOut,
+    SkinListingsOut,
     SkinListingSummaryOut,
     SkinsPageOut,
+    SkinStickerOut,
     SkinSuggestOut,
 )
 from csmarket.modules.skins.service import (
@@ -49,6 +54,7 @@ from csmarket.modules.skins.service import (
     suggest,
 )
 from csmarket.modules.skins.settings import enabled_categories, load_rules
+from csmarket.modules.skins.waxpeer import WaxpeerClient
 
 _PAGE_TTL = 60
 
@@ -266,6 +272,72 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
         for m in await family(db, item, categories=categories)
     ]
     return SkinDetailOut(**base.model_dump(), cheapest=cheapest, family=members)
+
+
+@router.get(
+    "/{slug}/listings",
+    response_model=SkinListingsOut,
+    summary="Live auto listings for one item (cached, rate-budgeted, degradable)",
+)
+async def get_listings(
+    slug: str, request: Request, db: Annotated[AsyncSession, Depends(db_session)]
+) -> SkinListingsOut:
+    """Live offers for one item; a Waxpeer problem is a 200 with ``degraded: true``.
+
+    Advisory read, so no ``Idempotency-Key``. An unknown or hidden slug is a 404 before
+    any Waxpeer call.
+    """
+    # Spends Waxpeer quota on a cache miss — the bucket bounds distinct items per address.
+    await guard_ip(request, bucket="skins-listings")
+    settings = get_settings()
+    item = await get_item(db, slug, categories=enabled_categories(settings))
+    rules = await load_rules(db)
+    rate = await usd_uzs_rate(db)
+    client = WaxpeerClient(
+        api_key=settings.waxpeer_api_key,
+        base_url=settings.waxpeer_base_url,
+        timeout_seconds=settings.skins_listings_timeout_seconds,
+    )
+    rows, degraded = await listings_for(
+        item,
+        client=client,
+        redis=get_redis(),
+        budget_per_minute=settings.skins_listings_budget_per_minute
+        if settings.waxpeer_api_key
+        else 0,
+    )
+    items: list[SkinListingOut] = []
+    for row in rows:
+        usd = quote(
+            row.price_units,
+            rules=rules,
+            category=item.category,
+            weapon=item.weapon,
+            count_auto=item.count_auto,
+            item_pp=item.margin_override_pp,
+            fixed_price_usd=item.fixed_price_usd,
+            steam_price_units=item.steam_price_units,
+        ).price_usd
+        items.append(
+            SkinListingOut(
+                listing_id=row.listing_id,
+                price_usd=str(usd),
+                price_uzs=_to_uzs(usd, rate, rules),
+                float_value=row.float_value,
+                paint_seed=row.paint_seed,
+                stickers=[
+                    SkinStickerOut.model_validate(
+                        {
+                            **s,
+                            "image": steam_image(s.get("image"), host=settings.skins_image_host),
+                        }
+                    )
+                    for s in row.stickers
+                ],
+                inspect_url=row.inspect_url,
+            )
+        )
+    return SkinListingsOut(items=items, degraded=degraded)
 
 
 __all__ = ["router", "usd_uzs_rate"]
