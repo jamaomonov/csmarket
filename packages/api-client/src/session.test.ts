@@ -77,6 +77,54 @@ describe("createSessionClient", () => {
     expect(localStorage.getItem("hint")).toBeNull();
   });
 
+  it("a banned account's 403 on refresh is also a lost session", async () => {
+    const c = make();
+    const lost = vi.fn();
+    c.onAuthLost(lost);
+    c.setAccessToken("old");
+    fetchMock.mockResolvedValueOnce(json(403, {})).mockResolvedValue(json(204, {}));
+    await expect(c.refreshAccessToken()).resolves.toBe(false);
+    expect(lost).toHaveBeenCalledOnce();
+    expect(localStorage.getItem("hint")).toBeNull();
+  });
+
+  it.each([500, 502, 503, 429])(
+    "a %i on refresh keeps the session: no logout, hint kept",
+    async (status) => {
+      const c = make();
+      const lost = vi.fn();
+      c.onAuthLost(lost);
+      c.setAccessToken("old");
+      fetchMock.mockResolvedValueOnce(json(status, {}));
+      await expect(c.refreshAccessToken()).resolves.toBe(false);
+      expect(lost).not.toHaveBeenCalled();
+      expect(localStorage.getItem("hint")).toBe("1");
+      const urls = fetchMock.mock.calls.map((call) => call[0] as string);
+      expect(urls.some((u) => u.endsWith("/auth/logout"))).toBe(false);
+    },
+  );
+
+  it("an absolute URL gets neither the Bearer token nor the cookies", async () => {
+    const c = make();
+    c.setAccessToken("A");
+    fetchMock.mockResolvedValueOnce(json(200, { ok: true }));
+    await c.apiGet("https://elsewhere.example/thing");
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://elsewhere.example/thing");
+    expect(new Headers(init.headers).get("Authorization")).toBeNull();
+    expect(init.credentials).toBe("omit");
+  });
+
+  it("an absolute URL's 401 does not trigger a refresh", async () => {
+    const c = make();
+    c.setAccessToken("A");
+    fetchMock.mockResolvedValueOnce(json(401, {}));
+    await expect(c.apiGet("https://elsewhere.example/thing")).rejects.toBeInstanceOf(
+      SessionApiError,
+    );
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("exposes problem+json code", async () => {
     const c = make();
     fetchMock.mockResolvedValueOnce(json(422, { code: "trade_link_not_yours", type: "x" }));

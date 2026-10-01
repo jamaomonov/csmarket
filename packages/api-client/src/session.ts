@@ -4,13 +4,17 @@
  * Keeps the access JWT in memory (never localStorage, so an XSS payload can't
  * read it), attaches it as a Bearer header and surfaces non-2xx answers as
  * {@link SessionApiError}. The 30-day refresh token rides an HttpOnly cookie
- * (`credentials: "include"` on every call); on load the app re-mints the access
+ * (`credentials: "include"` on every API call); on load the app re-mints the access
  * token from it with {@link SessionClient.refreshAccessToken}.
  *
  * A `401` triggers one refresh and one replay of the original request. The
  * refresh is single-flight: parallel 401s share one in-flight promise in the
  * tab, and the Web Locks API serialises tabs, so the rotating refresh token is
- * never presented twice at once (the server treats reuse as theft).
+ * never presented twice at once (the server treats reuse as theft). Only a
+ * refusal (`401` / `403`) ends the session; a 5xx or a network error keeps it.
+ *
+ * The token and the cookies go only to our API: a path relative to `baseUrl`.
+ * An absolute URL is fetched with neither, and its 401 is not ours to refresh.
  *
  * Everything is closed over per client: two clients never share a token.
  */
@@ -145,14 +149,18 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
       // Network error: keep the session — the visitor may just be offline.
       return false;
     }
-    // Any refusal (401 / 403 / 422 / 5xx) means the session is dead or absent.
-    const body = response.ok
-      ? ((await response.json().catch(() => null)) as { access_token?: unknown } | null)
-      : null;
-    if (typeof body?.access_token !== "string" || !body.access_token) {
+    // Only a refusal means the session is dead: 401 (no, unknown, reused or expired
+    // cookie) or 403 (suspended). A 5xx / 429 is the API having a bad moment — keep
+    // the session, like the network-error branch; clearing it would also POST
+    // /auth/logout and revoke a perfectly good 30-day session.
+    if (response.status === 401 || response.status === 403) {
       authLost();
       return false;
     }
+    if (!response.ok) return false;
+    // Narrowing the refresh endpoint's JSON (`TokensOut`) to the field we read.
+    const body = (await response.json().catch(() => null)) as { access_token?: unknown } | null;
+    if (typeof body?.access_token !== "string" || !body.access_token) return false;
     setAccessToken(body.access_token);
     return true;
   };
@@ -175,23 +183,31 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
     allowRefresh: boolean,
   ): Promise<T> => {
     const { anonymous, idempotencyKey, body, headers, method, signal } = init;
-    const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
+    // Ours = relative to baseUrl. Anything absolute is a third party: no token, no cookies.
+    const ours = !path.startsWith("http");
+    const url = ours ? `${baseUrl}${path}` : path;
     const h = new Headers(headers);
     h.set("Accept", "application/json");
     if (body !== undefined && !h.has("Content-Type")) h.set("Content-Type", "application/json");
     if (idempotencyKey) h.set("Idempotency-Key", idempotencyKey);
-    const sentToken = anonymous ? null : accessToken;
+    const sentToken = anonymous || !ours ? null : accessToken;
     if (sentToken) h.set("Authorization", `Bearer ${sentToken}`);
 
     const response = await fetch(url, {
       method: method ?? "GET",
       headers: h,
-      credentials: "include",
+      credentials: ours ? "include" : "omit",
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
       ...(signal ? { signal } : {}),
     });
 
-    if (response.status === 401 && allowRefresh && !anonymous && !path.includes("/auth/refresh")) {
+    if (
+      response.status === 401 &&
+      ours &&
+      allowRefresh &&
+      !anonymous &&
+      !path.includes("/auth/refresh")
+    ) {
       // A parallel call may have rotated the token already: replay with it.
       const ok =
         accessToken !== null && accessToken !== sentToken ? true : await refreshAccessToken();
