@@ -91,9 +91,11 @@ import or the price sync. `phase` is `''` when an item has none, never NULL.
   sell price; writers set `updated_at` explicitly.
 - **`sync_prices`** — one tick: stream the snapshot, read `/v1/prices`, then take
   `lock_pricing`, apply, `reprice_rows` with rules read fresh from Postgres, commit, and bump the
-  catalogue version. A snapshot naming fewer than `MIN_SNAPSHOT_SHARE` (half) of the active
-  catalogue is **refused** (`ApplyResult.refused`): a truncated body must not read as "everything
-  sold out". Nothing is written and the previous prices stand.
+  catalogue version. A snapshot with an `auto` listing for fewer names than `MIN_SNAPSHOT_SHARE`
+  (half) of the active catalogue is **refused** (`ApplyResult.refused`) before the lock: a
+  truncated body, or an `auto` column whose format changed, must not read as "everything sold
+  out". Nothing is written and the previous prices stand. Only rows active now are candidates
+  for deactivation, so the `IN (…)` list never grows with the inactive catalogue.
 - **`cachekeys`** — `catalog_version` / `bump_catalog_version` for Redis `skins:catalog:ver`
   (`docs/architecture/cache-keys.md`). Kept apart from `prices` so the read path never imports the
   Waxpeer client.

@@ -60,10 +60,12 @@ The «Состояние» card, top of the page (the item search and «Сино
 
 ### `thin_snapshot` on the price sync
 
-The price sync refuses a snapshot that names fewer than half of the active catalogue (a
-truncated or empty Waxpeer body would otherwise read as "everything sold out"). Nothing is
-written; the previous prices stand and the site keeps working with them. Log:
-`skins.prices.refused`.
+The price sync refuses a snapshot that has an `auto` listing for fewer than half of the
+active catalogue (a truncated or empty Waxpeer body, or a changed format of the CSV `auto`
+column, would otherwise read as "everything sold out"). Nothing is written; the previous
+prices stand and the site keeps working with them. Log: `skins.prices.refused` with `names`
+(names seen) and `priced` (names with an `auto` listing) — many names but `priced` near 0
+points at the `auto` column, not at a short body.
 
 1. Wait for the next tick (5 minutes); most are a transient Waxpeer hiccup.
 2. If it repeats: run the sync by hand and read the log. Check the Waxpeer status and that

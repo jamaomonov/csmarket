@@ -11,11 +11,12 @@ sequenceDiagram
     S->>S: aggregate to one row per (name, phase); only auto listings set a price
     S->>WP: GET /v1/prices?minified=0 (type, rarity, image for new names)
     WP-->>S: names with taxonomy
-    S->>DB: advisory xact lock (pricing)
-    alt snapshot names fewer than half of the active catalogue
+    S->>DB: count active rows
+    alt names with an auto listing fewer than half of the active catalogue
         S->>R: skins:job:price_sync = {ok: false, error: thin_snapshot}
-        Note over S,DB: nothing written, previous prices stand
+        Note over S,DB: refused before any lock or write, previous prices stand
     else normal snapshot
+        S->>DB: advisory xact lock (pricing)
         S->>DB: apply: update rows whose price_hash changed, deactivate absent rows, insert stubs
         S->>DB: reprice all active rows (rules read fresh from Postgres) -> sell_price_usd, discount_percent
         S->>DB: COMMIT

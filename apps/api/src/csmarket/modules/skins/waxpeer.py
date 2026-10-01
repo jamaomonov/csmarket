@@ -81,11 +81,16 @@ def _retry_after(headers: Mapping[str, str], body: object) -> float | None:
 
 
 def _snapshot_row(header: Sequence[str], cells: Sequence[str]) -> SnapshotRow | None:
-    """One snapshot line, or ``None`` when its id or price is unknown (empty cell, zero)."""
+    """One snapshot line, or ``None`` when its id, price or name is unknown.
+
+    An empty cell or a zero price is unknown, and so is a cell a short line (a truncated
+    last line) does not reach.
+    """
     row = dict(zip(header, cells, strict=False))
     try:
         price = int(row["price"]) if row["price"] else 0
         item_id = int(row["item_id"])
+        name = row["name"]
     except (KeyError, ValueError):
         return None
     if price <= 0:
@@ -93,7 +98,7 @@ def _snapshot_row(header: Sequence[str], cells: Sequence[str]) -> SnapshotRow | 
         # knife at the floor.
         return None
     return SnapshotRow(
-        item_id=item_id, name=row["name"], price_units=price, auto=row.get("auto") == "true"
+        item_id=item_id, name=name, price_units=price, auto=row.get("auto") == "true"
     )
 
 

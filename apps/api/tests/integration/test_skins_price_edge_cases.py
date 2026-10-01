@@ -6,10 +6,11 @@ import fakeredis.aioredis
 import pytest
 from csmarket.core.clock import now
 from csmarket.modules.skins.bymykel import dedupe, rows_from_file, rows_from_skins, upsert_items
+from csmarket.modules.skins.cachekeys import catalog_version
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.prices import aggregate, apply_prices, sync_prices
 from csmarket.modules.skins.waxpeer import SnapshotRow
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 pytestmark = pytest.mark.asyncio
@@ -134,3 +135,63 @@ async def test_a_collapsed_snapshot_is_refused(db_engine) -> None:  # type: igno
         active = (await db.execute(select(SkinItem).where(SkinItem.active.is_(True)))).all()
     assert len(active) == 10  # no previously active row went inactive
     await redis.aclose()
+
+
+async def test_a_snapshot_without_auto_listings_is_refused(db_engine) -> None:  # type: ignore[no-untyped-def]
+    """Names all present, but none counted as ``auto`` (say the CSV's ``auto`` column
+    changed format): applying it would take every row inactive, so it is refused."""
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    full = [SnapshotRow(i, f"P250 | Skin {i} (Field-Tested)", 1000 + i, True) for i in range(10)]
+    await sync_prices(factory, _Client(full), redis)  # type: ignore[arg-type]
+    version = await catalog_version(redis)
+    no_auto = [SnapshotRow(r.item_id, r.name, r.price_units, False) for r in full]
+    result = await sync_prices(factory, _Client(no_auto), redis)  # type: ignore[arg-type]
+    assert result.refused is True
+    assert (result.changed, result.deactivated, result.stubs) == (0, 0, 0)
+    async with factory() as db:
+        active = (await db.execute(select(SkinItem).where(SkinItem.active.is_(True)))).all()
+    assert len(active) == 10
+    assert await catalog_version(redis) == version  # no cache bump either
+    await redis.aclose()
+
+
+async def test_inactive_rows_absent_from_the_snapshot_are_not_touched(
+    db_session: AsyncSession,
+) -> None:
+    """Only active rows are candidates for deactivation: an already inactive row that
+    is not in the snapshot keeps its columns (including ``updated_at``)."""
+    first = [
+        SnapshotRow(1, "AK-47 | Redline (Field-Tested)", 27867, True),
+        SnapshotRow(2, "AWP | Asiimov (Field-Tested)", 50000, False),  # inactive stub
+    ]
+    await apply_prices(db_session, aggregate(first), meta=[], at=now())
+    await db_session.commit()
+    db_session.expire_all()
+    awp = (
+        await db_session.execute(
+            select(SkinItem).where(SkinItem.market_hash_name == "AWP | Asiimov (Field-Tested)")
+        )
+    ).scalar_one()
+    before = (awp.active, awp.price_hash, awp.count_all, awp.updated_at)
+    assert before[0] is False
+    assert before[1] is not None
+
+    statements: list[str] = []
+
+    def _capture(*args: object) -> None:
+        statements.append(str(args[2]))  # (conn, cursor, statement, ...)
+
+    engine = db_session.bind.sync_engine  # type: ignore[union-attr]
+    event.listen(engine, "before_cursor_execute", _capture)
+    try:
+        result = await apply_prices(db_session, aggregate(first[:1]), meta=[], at=now())
+    finally:
+        event.remove(engine, "before_cursor_execute", _capture)
+    await db_session.commit()
+    assert result.deactivated == 0
+    db_session.expire_all()
+    await db_session.refresh(awp)
+    assert (awp.active, awp.price_hash, awp.count_all, awp.updated_at) == before
+    # Nothing to deactivate, so no ``IN (...)`` UPDATE was sent at all.
+    assert not any(s.lstrip().upper().startswith("UPDATE") for s in statements)

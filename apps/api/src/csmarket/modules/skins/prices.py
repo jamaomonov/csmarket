@@ -36,8 +36,9 @@ from csmarket.modules.skins.waxpeer import SnapshotRow, WaxpeerClient
 log = get_logger("csmarket.skins.prices")
 
 CHEAPEST_KEPT = 10
-#: A tick whose snapshot names fewer than this share of the currently active
-#: items is refused rather than applied (a truncated or empty body).
+#: A tick whose snapshot prices (has an ``auto`` listing for) fewer than this share
+#: of the currently active items is refused rather than applied (a truncated or
+#: empty body, or an ``auto`` column whose format changed).
 MIN_SNAPSHOT_SHARE = 0.5
 _BATCH = 1000
 
@@ -142,6 +143,7 @@ def _phase_unknown(key: tuple[str, str]) -> bool:
     return phase == "" and parse_market_name(name).skin in {"Doppler", "Gamma Doppler"}
 
 
+# Any: ``/v1/prices`` items are loose JSON objects read field by field.
 def _meta_by_name(meta: Iterable[Mapping[str, Any]]) -> dict[tuple[str, str], Mapping[str, Any]]:
     return {canonical_name(str(m.get("name", ""))): m for m in meta if m.get("name")}
 
@@ -150,7 +152,7 @@ async def apply_prices(
     db: AsyncSession,
     aggregates: Mapping[tuple[str, str], PriceAggregate],
     *,
-    meta: Iterable[Mapping[str, Any]],
+    meta: Iterable[Mapping[str, Any]],  # Any: loose ``/v1/prices`` JSON objects
     at: datetime,
 ) -> ApplyResult:
     """Write the aggregates onto ``skin_items``: changed rows, deactivations, stubs.
@@ -168,18 +170,20 @@ async def apply_prices(
                 SkinItem.phase,
                 SkinItem.price_hash,
                 SkinItem.slug,
+                SkinItem.active,
             )
         )
     ).all()
-    by_key = {(name, phase): (item_id, digest) for item_id, name, phase, digest, _ in existing}
+    by_key = {(name, phase): (item_id, digest) for item_id, name, phase, digest, _, _ in existing}
     slugs = resolve(
         ((key, slug_for(*key)) for key in aggregates if key not in by_key),
-        {(name, phase): slug for _, name, phase, _, slug in existing},
+        {(name, phase): slug for _, name, phase, _, slug, _ in existing},
     )
     meta_by_key = _meta_by_name(meta)
 
+    # Any: row dicts mix ints, strings, lists, datetimes and bools for executemany.
     updates: list[dict[str, Any]] = []
-    stubs: list[dict[str, Any]] = []
+    stubs: list[dict[str, Any]] = []  # Any: as ``updates``
     for key, agg in aggregates.items():
         digest = price_hash(agg)
         steam = meta_by_key.get(key, {}).get("steam_price")
@@ -238,7 +242,14 @@ async def apply_prices(
             .on_conflict_do_nothing(constraint="uq_skin_items_name_phase")
         )
 
-    missing = [item_id for key, (item_id, _) in by_key.items() if key not in aggregates]
+    # Only rows that are active now can be deactivated, so only they are sent: a
+    # growing catalogue of inactive rows never inflates the ``IN (...)`` list
+    # (asyncpg caps bind parameters at 32 767).
+    missing = [
+        item_id
+        for item_id, name, phase, _, _, active in existing
+        if active and (name, phase) not in aggregates
+    ]
     deactivated = 0
     if missing:
         result = await db.execute(
@@ -276,11 +287,14 @@ async def sync_prices(
             ).scalar_one()
         )
         # A truncated or empty snapshot would otherwise read as "everything sold
-        # out" and take the whole storefront down until the next good tick.
-        if active_before and len(aggregates) < active_before * MIN_SNAPSHOT_SHARE:
+        # out" and take the whole storefront down until the next good tick. Counted
+        # by names that would stay active (an ``auto`` listing), not by names seen.
+        priced = sum(1 for agg in aggregates.values() if agg.count_auto > 0)
+        if active_before and priced < active_before * MIN_SNAPSHOT_SHARE:
             log.warning(
                 "skins.prices.refused",
                 names=len(aggregates),
+                priced=priced,
                 active_before=active_before,
                 reason="snapshot far smaller than the live catalogue",
             )

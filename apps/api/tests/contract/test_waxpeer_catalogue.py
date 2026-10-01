@@ -161,6 +161,19 @@ async def test_snapshot_rows_with_an_unknown_price_are_skipped_and_counted(
 
 
 @respx.mock
+async def test_a_short_line_is_a_bad_row_not_a_crash(logs: _Logs) -> None:
+    """Columns are read by name, so a short line (a truncated last line, say) can lack
+    ``name`` even though its id and price parse; it is skipped and counted."""
+    body = 'item_id,price,auto,name\n1,000000000500,true,"A"\n2,000000000700,true'
+    respx.get(f"{HOST}/v1/prices/snapshot").mock(return_value=httpx.Response(200, text=body))
+    rows = [row async for row in _client().iter_snapshot_rows()]
+    assert [(r.item_id, r.name) for r in rows] == [(1, "A")]
+    done = [line for line in logs.lines() if "waxpeer.snapshot.done" in line]
+    assert len(done) == 1
+    assert "'bad_rows': 1" in done[0]
+
+
+@respx.mock
 async def test_prices_returns_items() -> None:
     respx.get(f"{HOST}/v1/prices").mock(
         return_value=httpx.Response(200, content=(FIXTURES / "prices.json").read_bytes())

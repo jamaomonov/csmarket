@@ -71,6 +71,7 @@ class SkinItem(Base):
     min_auto_units: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     count_auto: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     #: Up to ten ``{"listing_id": int, "price_units": int}`` cheapest auto listings.
+    # Any: a JSONB column; the shape above is enforced by ``prices.apply_prices``.
     cheapest_auto: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
@@ -129,6 +130,7 @@ class SkinPricingRules(Base):
     __tablename__ = "skin_pricing_rules"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Any: a JSONB document validated by ``pricing.PricingRules`` on every read.
     rules: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     updated_by: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
