@@ -83,6 +83,22 @@ WAXPEER_CALLS = Counter(
 )
 
 
+#: Why an order's money went back to the balance (``orders.failure_reason``).
+OrderRefundReason = Literal[
+    "sold_out", "waxpeer_low_balance", "invalid_trade_link", "not_accepted", "admin"
+]
+
+_ORDER_REFUND_REASONS = frozenset(
+    ("sold_out", "waxpeer_low_balance", "invalid_trade_link", "not_accepted", "admin")
+)
+
+ORDER_REFUNDS = Counter(
+    "csmarket_order_refunds_total",
+    "Orders refunded to the balance, by reason (each order at most once).",
+    ("reason",),
+)
+
+
 def _inc(counter: Counter, name: str, labels: dict[str, str]) -> None:
     """Increment one labelled counter, swallowing anything the registry throws."""
     try:
@@ -133,6 +149,18 @@ def record_waxpeer_call(endpoint: WaxpeerEndpoint, outcome: WaxpeerOutcome) -> N
     )
 
 
+def record_order_refund(reason: OrderRefundReason) -> None:
+    """Count one order refunded to the balance.
+
+    A value outside the closed set becomes ``"other"``. Never raises.
+    """
+    _inc(
+        ORDER_REFUNDS,
+        "csmarket_order_refunds_total",
+        {"reason": reason if reason in _ORDER_REFUND_REASONS else "other"},
+    )
+
+
 @contextmanager
 def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer) -> Iterator[None]:
     """Count the keyed Steam call made in the block, however it ends.
@@ -150,16 +178,19 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 __all__ = [
     "KASSA_REJECTIONS",
+    "ORDER_REFUNDS",
     "STEAM_WEB_API_CALLS",
     "WAXPEER_CALLS",
     "KassaProvider",
     "KassaRejectionReason",
+    "OrderRefundReason",
     "SteamApiConsumer",
     "SteamApiEndpoint",
     "SteamApiOutcome",
     "WaxpeerEndpoint",
     "WaxpeerOutcome",
     "record_kassa_rejection",
+    "record_order_refund",
     "record_steam_web_api_call",
     "record_waxpeer_call",
     "steam_web_api_call",

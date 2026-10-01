@@ -203,3 +203,28 @@ async def test_a_refund_names_its_actor(db_session: AsyncSession) -> None:
     )
     await db_session.commit()
     assert txn.actor == "admin:a1"
+
+
+@pytest.mark.parametrize("paid_with", ["", "card", "paynet", "WALLET", "provider_clearing"])
+async def test_a_refund_from_an_unknown_source_is_a_caller_bug(
+    db_session: AsyncSession, paid_with: str
+) -> None:
+    """A stray ``paid_with`` must never mint a clearing account for a kassa we do not have."""
+    uid = await _funded(db_session, 0)
+    with pytest.raises(ValueError, match="paid_with"):
+        await credit_order_refund(
+            db_session, user_id=uid, order_id=new_id(), amount=PRICE, paid_with=paid_with
+        )
+    assert await _count(db_session, "refund") == 0
+    accounts = await db_session.scalar(
+        select(func.count())
+        .select_from(WalletAccount)
+        .where(WalletAccount.kind == "provider_clearing", WalletAccount.owner_id == paid_with)
+    )
+    assert accounts == 0
+
+
+def test_wallet_names_the_balance_as_a_payment_source() -> None:
+    from csmarket.modules.wallet.api import WALLET
+
+    assert WALLET == "wallet"

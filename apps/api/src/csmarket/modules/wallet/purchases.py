@@ -32,8 +32,10 @@ from csmarket.modules.wallet.service import (
     user_account,
 )
 
-#: ``orders.paid_with`` of an order paid from the balance.
+#: ``orders.paid_with`` (and ``payments.provider``) of an order paid from the balance.
 WALLET = "wallet"
+#: Every ``orders.paid_with`` a refund can come from: the balance or one of our kassas.
+REFUND_SOURCES: frozenset[str] = frozenset({WALLET, "click", "payme", "uzum", "mock"})
 
 
 async def _house_payments_received(db: AsyncSession) -> WalletAccount:
@@ -105,8 +107,12 @@ async def credit_order_refund(
         actor: Who books it (``orders`` for the automatic refunds, ``admin:<id>``).
 
     Raises:
+        ValueError: ``paid_with`` is none of :data:`REFUND_SOURCES` — a caller bug, refused
+            before anything is written (it must not mint a stray clearing account).
         ConflictError: ``code="idempotency_mismatch"`` — the key booked another kind.
     """
+    if paid_with not in REFUND_SOURCES:
+        raise ValueError(f"paid_with {paid_with!r} is not a refund source")
     wallet = await user_account(db, user_id)
     source = (
         await _house_payments_received(db)
@@ -124,4 +130,4 @@ async def credit_order_refund(
     )
 
 
-__all__ = ["credit_order_refund", "debit_purchase"]
+__all__ = ["REFUND_SOURCES", "WALLET", "credit_order_refund", "debit_purchase"]

@@ -32,7 +32,8 @@ class EntryOut(BaseModel):
     #: Signed whole soʻm: ``+50000`` credited, ``-10000`` debited.
     amount_uzs: str
     created_at: datetime
-    #: The top-up's number for ``topup``/``topup_reversal``; else ``null``.
+    #: The top-up's number for ``topup``/``topup_reversal``, the order's number for
+    #: ``purchase``/``refund``; else ``null``.
     reference_number: str | None
 
     @classmethod

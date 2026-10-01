@@ -18,7 +18,8 @@ Ported by allow-list (ADR-0002): UZS only, no currency column, whole soʻm. Oper
 `user_balance`, `user_balance_column`, `credit_topup`, `reverse_topup`, `debit_purchase`,
 `credit_order_refund`, `admin_adjust`,
 `ADMIN_ADJUST_MAX`, `entries_for_user`, `entries_for_admin`, `Entry`, `AdminEntry`,
-`EntriesPage`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`,
+`EntriesPage`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`, `WALLET`
+(`"wallet"`: `orders.paid_with` / `payments.provider` of a balance payment),
 `InsufficientBalanceError`, and the three models.
 
 **Routes (`routes.py`):** `GET /wallet` → `{balance_uzs}` and `GET /wallet/entries` for
@@ -103,8 +104,10 @@ order's money back to the balance, once (key `refund:order:{order_id}`). `paid_w
 D `user_wallet` / C `provider_clearing:<paid_with>` — a kassa-paid order books nothing when
 it is paid, so its refund has the shape of a top-up (the kassa's money becomes balance;
 `provider_clearing`'s normal side is C, so it grows and never goes negative). No wallet lock
-(a credit cannot overdraw). `metadata = {"paid_with"}`. Sale revenue is not booked in the
-ledger in M4a.
+(a credit cannot overdraw). `metadata = {"paid_with"}`. A `paid_with` outside `wallet`,
+`click`, `payme`, `uzum`, `mock` (`REFUND_SOURCES`) is a `ValueError` before anything is
+written — a caller bug must not mint a stray clearing account. Sale revenue is not booked
+in the ledger in M4a. `orders.refunds.refund_to_balance` is its only caller.
 
 ## Customer entries (`entries.py`)
 
@@ -112,10 +115,12 @@ ledger in M4a.
 `user_wallet` leg of each transaction, newest first, keyset-paged on
 `(posting.created_at DESC, posting.id DESC)` with an opaque base64 cursor (a malformed one
 is a 422); `limit` 1..100. Each line: the transaction id, `kind`, the **signed** amount (+
-when the leg is D — the account's normal side — − when C) and, for `topup` /
-`topup_reversal`, the top-up's `T…` number. **Never the actor or the metadata** — an
-admin's identity and reason stay in admin views. The number is read through a bare
-`table("wallet_topups")` clause, so `wallet` still imports nothing from `payments`. No
+when the leg is D — the account's normal side — − when C) and the public number of what
+it is about: the top-up's `T…` number for `topup` / `topup_reversal`, the order's number
+for `purchase` / `refund`. **Never the actor or the metadata** — an admin's identity and
+reason stay in admin views. The numbers are read through bare `table("wallet_topups")` /
+`table("orders")` clauses (one query per kind present on the page), so `wallet` still
+imports nothing from `payments` or `orders`. No
 wallet yet → an empty page (none is created).
 
 `entries_for_admin(db, user_id, *, limit=20)` shares the query and returns `AdminEntry`

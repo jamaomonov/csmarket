@@ -47,12 +47,9 @@ from csmarket.modules.payments.api import (
     settle,
 )
 from csmarket.modules.payments.api import move as move_payment
-from csmarket.modules.wallet.api import debit_purchase
+from csmarket.modules.wallet.api import WALLET, debit_purchase
 
 log = get_logger("csmarket.orders.paying")
-
-#: ``provider`` of an order paid from the balance (and its ``orders.paid_with``).
-WALLET = "wallet"
 
 
 def _scope(number: str) -> str:
@@ -217,4 +214,4 @@ async def dev_pay(db: AsyncSession, *, user_id: str, number: str) -> OrderOut:
     return out
 
 
-__all__ = ["WALLET", "dev_pay", "pay_order"]
+__all__ = ["dev_pay", "pay_order"]

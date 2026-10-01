@@ -17,7 +17,7 @@ from csmarket.modules.wallet.entries import (
     user_balance_column,
 )
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
-from csmarket.modules.wallet.purchases import credit_order_refund, debit_purchase
+from csmarket.modules.wallet.purchases import WALLET, credit_order_refund, debit_purchase
 from csmarket.modules.wallet.service import (
     NORMAL_SIDE,
     TX_KINDS,
@@ -38,6 +38,7 @@ __all__ = [
     "ADMIN_ADJUST_MAX",
     "NORMAL_SIDE",
     "TX_KINDS",
+    "WALLET",
     "AdminEntry",
     "Direction",
     "EntriesPage",

@@ -204,3 +204,43 @@ async def test_entries_cost_the_same_queries_for_any_page_size(db_session: Async
         return len(statements)
 
     assert await _queries(2) == await _queries(12) == 3
+
+
+async def test_order_numbers_cost_one_query_for_any_page_size(db_session: AsyncSession) -> None:
+    """Top-ups and orders on one page: the account, the page, one batch per kind."""
+    from csmarket.core.ids import new_id
+    from csmarket.modules.wallet.api import credit_topup, debit_purchase, entries_for_user
+    from sqlalchemy import event
+
+    from tests.integration.orders_factory import make_order
+    from tests.integration.payments_factory import make_user
+
+    async def _queries(orders: int) -> int:
+        user = await make_user(db_session)
+        await credit_topup(
+            db_session, user_id=user.id, topup_id=new_id(), amount=Decimal(10**7), provider="mock"
+        )
+        numbers = []
+        for _ in range(orders):
+            order = await make_order(db_session, user=user, status="paid", paid_with="wallet")
+            await debit_purchase(
+                db_session, user_id=user.id, order_id=order.id, amount=order.price_uzs
+            )
+            numbers.append(order.number)
+        await db_session.commit()
+        statements: list[str] = []
+
+        def _capture(*args: object) -> None:
+            statements.append(str(args[2]))
+
+        engine = db_session.bind.sync_engine  # type: ignore[union-attr]
+        event.listen(engine, "before_cursor_execute", _capture)
+        try:
+            page = await entries_for_user(db_session, user.id, limit=100)
+        finally:
+            event.remove(engine, "before_cursor_execute", _capture)
+        purchases = [e for e in page.items if e.kind == "purchase"]
+        assert sorted(e.reference_number or "" for e in purchases) == sorted(numbers)
+        return len(statements)
+
+    assert await _queries(1) == await _queries(6) == 4

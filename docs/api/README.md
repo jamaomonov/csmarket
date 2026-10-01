@@ -110,9 +110,9 @@ intent_url, awaiting_kassa}`. `amount_uzs` is a JSON **integer** of whole soʻm,
 - `GET /wallet` → `{balance_uzs}`.
 - `GET /wallet/entries?cursor=&limit=` (1..100, default 20) → `{items: [{id, kind,
 amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount_uzs` is
-  **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal` or
-  `admin_adjust` (M4 adds `purchase`, `refund`); `reference_number` is the top-up's number
-  for the first two, else `null`. The cursor is opaque; a malformed one is 422.
+  **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal`,
+  `admin_adjust`, `purchase` or `refund`; `reference_number` is the top-up's number for the
+  first two, the order's number for `purchase` and `refund`, else `null`. The cursor is opaque; a malformed one is 422.
 - `POST /dev/topups/{number}/pay` is not in this schema: it pays the owner's top-up through
   the `mock` kassa, exists only when dev login is on and the environment is not prod, and
   answers 404 otherwise. Keyless (a repeat is a no-op); 409 `code: topup_not_payable` for an

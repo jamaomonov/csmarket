@@ -122,3 +122,15 @@ def test_waxpeer_recording_never_raises(monkeypatch: pytest.MonkeyPatch) -> None
 
     monkeypatch.setattr(metrics, "WAXPEER_CALLS", _Broken())
     metrics.record_waxpeer_call("lookup", "ok")
+
+
+def test_order_refunds_count_by_a_closed_reason() -> None:
+    from csmarket.core.metrics import ORDER_REFUNDS, record_order_refund
+
+    def _refunds(reason: str) -> float:
+        return ORDER_REFUNDS.labels(reason=reason)._value.get()  # type: ignore[no-any-return]
+
+    before, other = _refunds("sold_out"), _refunds("other")
+    record_order_refund("sold_out")
+    record_order_refund("a-user-id")  # type: ignore[arg-type]  # a bug cannot mint a series
+    assert (_refunds("sold_out"), _refunds("other")) == (before + 1, other + 1)

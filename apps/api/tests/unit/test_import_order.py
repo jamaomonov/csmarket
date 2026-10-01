@@ -47,6 +47,7 @@ import pytest
         "csmarket.modules.orders.models",
         "csmarket.modules.orders.paid",
         "csmarket.modules.orders.paying",
+        "csmarket.modules.orders.refunds",
         "csmarket.modules.orders.routes",
         "csmarket.modules.orders.schemas",
         "csmarket.modules.orders.service",

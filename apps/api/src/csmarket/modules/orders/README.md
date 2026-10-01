@@ -30,7 +30,8 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `ATTENTION_REASONS`, `FAILURE_REASONS`, `TRANSITIONS`, `InvalidOrderTransitionError`,
 `move`, `ORDERS_CHANNEL` (`NOTIFY orders` wakes the worker), the response shapes `OrderOut`,
 `OrderStatusOut`, `SkinTradeOut` and `order_out`, `skin_trade_out`, `effective_status`,
-`is_expired`, `mark_paid`. `api.py` never imports `payments`
+`is_expired`, `mark_paid`, and the refunds (`refund_to_balance`, `in_flight`,
+`admin_refund`, `ADMIN_REFUNDABLE`, `RefundStatus`). `api.py` never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
 
@@ -132,6 +133,36 @@ so nothing refunds. `buying → delivered | returned` exists because one reconci
 Waxpeer jump past "sent". `failed` and `returned` come with the refund to the balance in the
 same transaction; an unknown or spent outcome (R3) never reaches them automatically — it
 sets `skin_trades.attention_reason` and waits for an admin.
+
+## Refunds (`refunds.py`, spec §7.8, rulings R3, R9)
+
+Refunds go to the balance only, once per order. `refunds.py` imports `wallet` and this
+module's models and FSM — never `payments`.
+
+- `refund_to_balance(db, *, order, to_status, reason, actor) -> bool` — the one refund path
+  (the worker, the reconcile sweep, the admin). The caller holds the order `FOR UPDATE`.
+  `refunded_at` already set → `False`, nothing written. Else `wallet.credit_order_refund`
+  (key `refund:order:{order_id}`; balance-paid: D `user_wallet` / C
+  `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing:<kassa>`),
+  `move(order, to_status)` (`failed` | `returned`), `refunded_at`, `refunded_to="balance"`,
+  `failure_reason = reason`, `csmarket_order_refunds_total{reason}` + 1, log
+  `orders.refunded` (number, amount, reason, status — never the buyer) → `True`. Flushes,
+  never commits. A `to_status` or `reason` outside its set is a `ValueError` (caller bug);
+  an order with no `paid_with` is 409 `order_not_paid`; an FSM edge that does not exist
+  raises `InvalidOrderTransitionError` before anything is booked. The payment row stays
+  `succeeded` (the money stays with us, now as balance).
+- `in_flight(order, trade) -> bool` — `paid`, `buying`, `trade_sent`, and a `delivered`
+  order whose trade has an unresolved `attention_reason` (e.g. `rolled_back`): the skin may
+  be on its way or already with the buyer, so nothing refunds.
+- `admin_refund(db, *, number, admin_id) -> Order` — locks the order (then reads its trade
+  under that lock). Refunds (`failed`, reason `admin`, actor `admin:<id>`) only a `buying`
+  order whose trade carries `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden`
+  (`ADMIN_REFUNDABLE`) **and** is resolved — an operator checked Waxpeer: nothing was
+  bought. Refusals, all 409: `already_refunded`; `order_in_flight` (in flight by the rule
+  above, including an unresolved or "something may be bought" attention); `order_not_refundable`
+  (settled with nothing to give back: unpaid, cancelled, delivered). Unknown or malformed
+  number → 404. Flushes, never commits: the admin route writes its audit row in the same
+  transaction (Task 12).
 
 ## Lock order
 

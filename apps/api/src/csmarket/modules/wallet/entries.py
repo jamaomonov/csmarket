@@ -2,12 +2,13 @@
 
 Only the customer's ``user_wallet`` leg of each transaction, newest first, keyset-paged on
 ``(posting.created_at DESC, posting.id DESC)``. A line carries the kind, the signed amount
-and — for ``topup``/``topup_reversal`` — the top-up's public number; never the actor or the
-transaction metadata (an admin's identity and reason stay in admin views:
+and the public number of what it is about — the top-up's ``T…`` number for
+``topup``/``topup_reversal``, the order's number for ``purchase``/``refund``; never the actor
+or the transaction metadata (an admin's identity and reason stay in admin views:
 ``entries_for_admin``, which shares the query and adds them).
 
-The top-up number is read through a bare ``table()`` clause, not ``payments``' model:
-``wallet`` never imports ``payments`` (one direction only).
+The numbers are read through bare ``table()`` clauses, not ``payments``' or ``orders``'
+models: ``wallet`` imports neither (one direction only).
 """
 
 from __future__ import annotations
@@ -39,6 +40,12 @@ from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletT
 
 #: ``payments``' top-ups, as far as an entry needs them (id → public number).
 _TOPUPS = table("wallet_topups", column("id", UUID(as_uuid=False)), column("number", String))
+#: ``orders``' orders, as far as an entry needs them (id → public number).
+_ORDERS = table("orders", column("id", UUID(as_uuid=False)), column("number", String))
+#: The ``reference_type`` whose public number a line shows, and the table holding it.
+_NUMBERED = {"topup": _TOPUPS, "order": _ORDERS}
+#: A line's ``(reference_type, reference_id)`` → that row's public number.
+Numbers = dict[tuple[str, str], str]
 #: Default and largest page.
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 100
@@ -54,7 +61,8 @@ class Entry:
     #: Signed soʻm: positive when the balance grew, negative when it shrank.
     amount: Decimal
     created_at: datetime
-    #: The top-up's ``T…`` number for ``topup``/``topup_reversal``; else ``None``.
+    #: The top-up's ``T…`` number (``topup``/``topup_reversal``) or the order's number
+    #: (``purchase``/``refund``); else ``None``.
     reference_number: str | None
 
 
@@ -76,13 +84,19 @@ class EntriesPage:
     next_cursor: str | None
 
 
-async def _topup_numbers(db: AsyncSession, topup_ids: set[str]) -> dict[str, str]:
-    if not topup_ids:
-        return {}
-    rows = await db.execute(
-        select(_TOPUPS.c.id, _TOPUPS.c.number).where(_TOPUPS.c.id.in_(topup_ids))
-    )
-    return {str(row.id): str(row.number) for row in rows}
+async def _numbers(
+    db: AsyncSession, rows: list[tuple[WalletPosting, WalletTransaction]]
+) -> Numbers:
+    """The public numbers of the top-ups and orders ``rows`` refer to: one query per kind
+    present on the page, none for a kind absent from it (no N+1)."""
+    numbers: Numbers = {}
+    for ref_type, tbl in _NUMBERED.items():
+        ids = {str(t.reference_id) for _, t in rows if t.reference_type == ref_type}
+        if not ids:
+            continue
+        found = await db.execute(select(tbl.c.id, tbl.c.number).where(tbl.c.id.in_(ids)))
+        numbers.update({(ref_type, str(r.id)): str(r.number) for r in found})
+    return numbers
 
 
 async def _user_wallet_id(db: AsyncSession, user_id: str) -> str | None:
@@ -97,8 +111,8 @@ async def _user_wallet_id(db: AsyncSession, user_id: str) -> str | None:
 
 async def _lines(
     db: AsyncSession, account_id: str, *, after: tuple[datetime, str] | None, limit: int
-) -> tuple[list[tuple[WalletPosting, WalletTransaction]], dict[str, str]]:
-    """Up to ``limit`` postings on ``account_id`` (newest first) and their top-up numbers."""
+) -> tuple[list[tuple[WalletPosting, WalletTransaction]], Numbers]:
+    """Up to ``limit`` postings on ``account_id`` (newest first) and their public numbers."""
     stmt = (
         select(WalletPosting, WalletTransaction)
         .join(WalletTransaction, WalletTransaction.id == WalletPosting.transaction_id)
@@ -115,20 +129,17 @@ async def _lines(
             )
         )
     rows = [(p, t) for p, t in (await db.execute(stmt)).all()]
-    numbers = await _topup_numbers(
-        db, {str(t.reference_id) for _, t in rows if t.reference_type == "topup"}
-    )
-    return rows, numbers
+    return rows, await _numbers(db, rows)
 
 
-def _entry(p: WalletPosting, t: WalletTransaction, numbers: dict[str, str]) -> Entry:
+def _entry(p: WalletPosting, t: WalletTransaction, numbers: Numbers) -> Entry:
     return Entry(
         id=t.id,
         kind=t.kind,
         # ``user_wallet`` is a debit-normal account: D grows the balance.
         amount=p.amount if p.direction == "D" else -p.amount,
         created_at=p.created_at,
-        reference_number=numbers.get(str(t.reference_id)) if t.reference_type == "topup" else None,
+        reference_number=numbers.get((t.reference_type or "", str(t.reference_id))),
     )
 
 
