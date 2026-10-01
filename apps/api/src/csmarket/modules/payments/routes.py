@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
-from csmarket.core.errors import NotFoundError, ValidationError
-from csmarket.core.idempotency import IDEMPOTENCY_HEADER, normalize_idempotency_key
+from csmarket.core.errors import NotFoundError
+from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_key
 from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.payments.gateways import available_providers
 from csmarket.modules.payments.schemas import (
@@ -35,20 +35,6 @@ from csmarket.modules.users.models import User
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 wallet_router = APIRouter(prefix="/wallet", tags=["wallet"])
-
-#: ``wallet_topups.idempotency_key`` is ``varchar(160)``.
-_MAX_KEY_LENGTH = 160
-
-
-def _required_key(value: str | None) -> str:
-    """The ``Idempotency-Key`` a top-up must carry: 16 to 160 characters."""
-    key = normalize_idempotency_key(value)
-    if key is None or len(key) > _MAX_KEY_LENGTH:
-        raise ValidationError(
-            f"{IDEMPOTENCY_HEADER} header of 16 to {_MAX_KEY_LENGTH} characters is required",
-            header=IDEMPOTENCY_HEADER,
-        )
-    return key
 
 
 @router.get("/providers", response_model=ProvidersOut, summary="Kassas available now")
@@ -73,7 +59,7 @@ async def post_topup(
     the same top-up (201 again); with another amount or kassa it is a 409
     ``idempotency_mismatch``.
     """
-    key = _required_key(idempotency_key)
+    key = require_idempotency_key(idempotency_key)
     await guard_ip(request, bucket="topup-create", subject=user.id)
     topup, payment, url = await create_topup(
         db,

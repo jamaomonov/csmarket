@@ -45,8 +45,8 @@ In order:
    (`bootstrap._LATENCY_BUCKETS`: 0.025 … 10), so p95 is measurable up to there.
 
 **Two latency alerts, and which one you have.** `ApiHighLatency` (p95 > 1.5 s for 10 min)
-excludes the Waxpeer-bound routes — `/skins/{slug}/listings` (M2) and the trade-link check
-(M1). If it fires, something **we** own is slow. `ApiWaxpeerLatency` (p95 > 5 s for 15 min)
+excludes the Waxpeer-bound routes — `/skins/{slug}/listings` (M2), the trade-link check
+(M1) and checkout `POST /orders` (M4a, re-prices through the listings read). If it fires, something **we** own is slow. `ApiWaxpeerLatency` (p95 > 5 s for 15 min)
 watches only those routes and means Waxpeer or Steam is degraded — check them before touching
 anything here. A new upstream-bound route must be added to both `handler` regexes, or the
 first alert starts crying wolf.
@@ -122,6 +122,8 @@ restart loop, and for Postgres that means repeated crash recovery.
   answer from the 5-minute snapshot with `degraded: true`. Nothing to do.
 - **Trade-link check** (M1) — advisory; an outage answers "could not check" and never blocks
   checkout.
+- **Checkout** (M4a) — re-prices through the same listings read; a degraded answer is
+  accepted (the worker's price cap guards the money), so checkout keeps working.
 - **Buying at Waxpeer** (M4) — runs in the worker off the request path. A slow Waxpeer delays
   deliveries, not checkouts; `paid` orders wait in the table and are claimed when it recovers.
 

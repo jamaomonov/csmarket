@@ -54,6 +54,27 @@ def normalize_idempotency_key(idempotency_key: str | None) -> str | None:
     return idempotency_key
 
 
+#: The longest key a row can store (``orders`` / ``wallet_topups`` keep it in ``varchar(160)``).
+MAX_IDEMPOTENCY_KEY_LENGTH = 160
+
+
+def require_idempotency_key(value: str | None) -> str:
+    """The ``Idempotency-Key`` a create endpoint must carry: 16 to 160 characters.
+
+    Raises:
+        ValidationError: The header is missing, shorter than 16 or longer than 160
+            characters (``header`` names it).
+    """
+    key = normalize_idempotency_key(value)
+    if key is None or len(key) > MAX_IDEMPOTENCY_KEY_LENGTH:
+        raise ValidationError(
+            f"{IDEMPOTENCY_HEADER} header of {MIN_IDEMPOTENCY_KEY_LENGTH} to "
+            f"{MAX_IDEMPOTENCY_KEY_LENGTH} characters is required",
+            header=IDEMPOTENCY_HEADER,
+        )
+    return key
+
+
 class IdempotentResponse(Base):
     """One stored replay: the first response returned for ``(scope, idempotency_key)``.
 
@@ -134,10 +155,12 @@ async def save_replay(
 __all__ = [
     "IDEMPOTENCY_HEADER",
     "IDEMPOTENCY_KEY_TTL_SECONDS",
+    "MAX_IDEMPOTENCY_KEY_LENGTH",
     "MIN_IDEMPOTENCY_KEY_LENGTH",
     "CachedResponse",
     "IdempotentResponse",
     "load_replay",
     "normalize_idempotency_key",
+    "require_idempotency_key",
     "save_replay",
 ]

@@ -1641,6 +1641,216 @@
         "title": "MePatchIn",
         "type": "object"
       },
+      "OrderCreateIn": {
+        "additionalProperties": false,
+        "description": "Buy one skin: the offer the buyer chose and the price the panel showed them.",
+        "properties": {
+          "listing_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Listing Id",
+            "type": "integer"
+          },
+          "price_uzs": {
+            "exclusiveMinimum": 0.0,
+            "title": "Price Uzs",
+            "type": "integer"
+          },
+          "slug": {
+            "maxLength": 160,
+            "minLength": 1,
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "listing_id",
+          "price_uzs"
+        ],
+        "title": "OrderCreateIn",
+        "type": "object"
+      },
+      "OrderOut": {
+        "description": "An order as its owner sees it.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "paid_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid With"
+          },
+          "payable": {
+            "title": "Payable",
+            "type": "boolean"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "refunded_to": {
+            "anyOf": [
+              {
+                "const": "balance",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded To"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "buying",
+              "trade_sent",
+              "delivered",
+              "cancelled",
+              "failed",
+              "returned"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkinTradeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "slug",
+          "name",
+          "phase",
+          "image_url",
+          "price_uzs",
+          "price_usd",
+          "created_at",
+          "expires_at",
+          "paid_at",
+          "delivered_at",
+          "paid_with",
+          "refunded_to",
+          "payable",
+          "trade"
+        ],
+        "title": "OrderOut",
+        "type": "object"
+      },
+      "OrdersPage": {
+        "description": "A page of the customer's orders, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "OrdersPage",
+        "type": "object"
+      },
       "ProviderOut": {
         "description": "A kassa the storefront may offer.",
         "properties": {
@@ -1705,6 +1915,10 @@
       "SkinDetailOut": {
         "description": "The item page: the card plus its cheapest listings and its family.",
         "properties": {
+          "buy_enabled": {
+            "title": "Buy Enabled",
+            "type": "boolean"
+          },
           "category": {
             "title": "Category",
             "type": "string"
@@ -1908,7 +2122,8 @@
           "min_float",
           "max_float",
           "cheapest",
-          "family"
+          "family",
+          "buy_enabled"
         ],
         "title": "SkinDetailOut",
         "type": "object"
@@ -2350,6 +2565,58 @@
         "title": "SkinListingsOut",
         "type": "object"
       },
+      "SkinSellerOut": {
+        "description": "Who the offer comes from.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "joined_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Joined At"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "SkinSellerOut",
+        "type": "object"
+      },
       "SkinSlugsOut": {
         "description": "A page of item slugs on sale, and how many there are.",
         "properties": {
@@ -2437,6 +2704,102 @@
           "items"
         ],
         "title": "SkinSuggestOut",
+        "type": "object"
+      },
+      "SkinTradeOut": {
+        "description": "An order's trade, as the buyer sees it.",
+        "properties": {
+          "offer_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Url"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "not_accepted",
+                  "sold_out",
+                  "try_later",
+                  "support",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "refunded_to": {
+            "anyOf": [
+              {
+                "const": "balance",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded To"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "seller": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkinSellerOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "send_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send Until"
+          },
+          "state": {
+            "enum": [
+              "buying",
+              "offer_sent",
+              "accepted",
+              "released",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "SkinTradeOut",
         "type": "object"
       },
       "SkinsPageOut": {
@@ -4346,6 +4709,72 @@
         ]
       }
     },
+    "/api/v1/me/orders": {
+      "get": {
+        "description": "My orders, newest first, 20 a page; cancelled and expired unpaid ones are left out.",
+        "operationId": "get_my_orders_api_v1_me_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My orders",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/api/v1/me/trade-link": {
       "put": {
         "description": "Parse, require that it is this account's own link, save. No external call.",
@@ -4469,6 +4898,141 @@
         "summary": "Check my trade link",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/orders": {
+      "post": {
+        "description": "Open an order for the chosen offer at the price the panel showed.\n\n``Idempotency-Key`` (16..160 chars) is required. A replayed key answers 200 with the\nstored order, whatever the body says. 409 ``code``s: ``buying_disabled``,\n``trade_link_missing``, ``trade_link_bad`` (+ ``reason``), ``price_changed`` (+ the new\n``price_uzs``), ``offer_gone`` (+ ``next_offer`` or ``null``). 404 for an unknown item;\n503 ``rate_unavailable`` without a fresh so\u02bbm rate.",
+        "operationId": "post_order_api_v1_orders_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buy one skin",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/api/v1/orders/{number}": {
+      "get": {
+        "description": "The owner's order; anyone else's, an unknown or a malformed number is a 404.",
+        "operationId": "get_order_api_v1_orders__number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One of my orders",
+        "tags": [
+          "orders"
         ]
       }
     },

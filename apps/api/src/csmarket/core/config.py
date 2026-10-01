@@ -143,6 +143,8 @@ class Settings(BaseSettings):
             "dev-login": 60,
             "skins-listings": 60,
             "topup-create": 60,
+            "order-create": 60,
+            "order-pay": 60,
         },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "

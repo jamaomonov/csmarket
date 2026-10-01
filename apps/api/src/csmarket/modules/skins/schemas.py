@@ -97,6 +97,8 @@ class SkinDetailOut(SkinItemOut):
 
     cheapest: list[SkinListingSummaryOut]
     family: list[SkinFamilyMemberOut]
+    #: Buying is switched on (``skins_buy_enabled``): show the buy panel.
+    buy_enabled: bool
 
 
 class SkinStickerOut(BaseModel):

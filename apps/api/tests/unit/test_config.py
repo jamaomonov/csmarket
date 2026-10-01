@@ -173,6 +173,8 @@ def test_orders_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.order_unconfirmed_minutes == 10
     assert s.trades_reconcile_seconds == 10
     assert s.waxpeer_buy_timeout_seconds == 20.0
+    assert s.auth_ip_guard_bucket_max["order-create"] == 60
+    assert s.auth_ip_guard_bucket_max["order-pay"] == 60
     assert s.waxpeer_fake is False
 
 

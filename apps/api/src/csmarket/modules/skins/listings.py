@@ -20,9 +20,11 @@ from typing import Any, Protocol
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
+from csmarket.core.config import Settings, get_settings
 from csmarket.core.logging import get_logger
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.waxpeer import (
+    WaxpeerClient,
     WaxpeerError,
     WaxpeerRateLimitedError,
     WaxpeerUnavailableError,
@@ -43,6 +45,25 @@ class SearchClient(Protocol):
     async def search_listings(
         self, names: list[str], *, game: str = "csgo"
     ) -> dict[str, list[dict[str, Any]]]: ...
+
+
+def search_client() -> SearchClient:
+    """The Waxpeer client of the live-listings read (4 s timeout) — a FastAPI dependency.
+
+    Shared by ``GET /skins/{slug}/listings`` and checkout (``POST /orders``), so both read
+    through the same client, cache, budget and breaker; tests override this one dependency.
+    """
+    settings = get_settings()
+    return WaxpeerClient(
+        api_key=settings.waxpeer_api_key,
+        base_url=settings.waxpeer_base_url,
+        timeout_seconds=settings.skins_listings_timeout_seconds,
+    )
+
+
+def listings_budget(settings: Settings) -> int:
+    """Live searches allowed per minute: none without a Waxpeer key (snapshot only)."""
+    return settings.skins_listings_budget_per_minute if settings.waxpeer_api_key else 0
 
 
 @dataclass(frozen=True)
@@ -205,7 +226,9 @@ __all__ = [
     "STALE_TTL",
     "Listing",
     "SearchClient",
+    "listings_budget",
     "listings_for",
+    "search_client",
     "steam_inspect_url",
     "waxpeer_name_of",
 ]

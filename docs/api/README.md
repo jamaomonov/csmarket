@@ -72,7 +72,7 @@ Public, no sign-in. Under `/skins`:
 - `GET /skins/facets?category=` — counts for the filters; an unknown category is 422.
 - `GET /skins/suggest?q=` — search-box suggestions.
 - `GET /skins/{slug}` — one item with its wears and cheapest offers; 404 for an unknown or
-  hidden slug.
+  hidden slug. `buy_enabled` (M4a) says whether to show the buy panel.
 - `GET /skins/{slug}/listings` — live offers `{items, degraded}`. `degraded: true` means the
   answer is the last cached or last snapshot offers because Waxpeer could not answer; it is
   not an error. Rate-limited per IP in its own bucket (`skins-listings`); 429 carries
@@ -130,6 +130,49 @@ Money is a string of whole soʻm digits (`balance_uzs`, `amount_uzs`).
 
 Kassa callbacks (below) and the admin routes are documented with their auth; design and the
 rulings behind them: ADR-0006. Cabinet settings: `docs/runbooks/kassa-setup.md`.
+
+### Orders (M4a)
+
+Signed in (401 without a token). One skin per order.
+
+- `POST /orders` `{slug, listing_id, price_uzs}` + **required** `Idempotency-Key` (16..160
+  chars) → **201** `OrderOut`. `listing_id` is an offer from `GET /skins/{slug}/listings`;
+  `price_uzs` is the whole soʻm the panel showed for it (a JSON **integer** > 0). The server
+  re-prices the offer from the same live listings: within ±2 % of `price_uzs` it bills **its
+  own** price; further off → 409 `price_changed` with the new `price_uzs`. An offer sold in
+  the meantime is replaced by the cheapest other offer of the item priced at most 3 % above
+  `price_uzs`, billed at the lower of its price and `price_uzs` (never more than shown);
+  none → 409 `offer_gone` with `next_offer: {listing_id, price_uzs}` or `null`. The same key
+  again → **200** with the stored order, whatever the body. Rate-limited by the
+  `order-create` bucket: 60 a minute per IP and 10 a minute per IP and account, then 429
+  with `Retry-After`. The new order is `pending` and payable for 15 minutes.
+- `GET /orders/{number}` → `OrderOut`. The owner's only: anyone else's, an unknown or a
+  malformed number is a 404.
+- `GET /me/orders?cursor=` → `{items: [OrderOut], next_cursor}`, 20 a page, newest first;
+  cancelled orders and unpaid ones past their time are left out. The cursor is opaque; a
+  malformed one is 422.
+
+`OrderOut`: `number`, `status` (`pending`, `paid`, `buying`, `trade_sent`, `delivered`,
+`cancelled`, `failed`, `returned` — a `pending` order past `expires_at` already reads
+`cancelled`), `slug`, `name`, `phase`, `image_url`, `price_uzs` / `price_usd` (strings),
+`created_at`, `expires_at`, `paid_at`, `delivered_at`, `paid_with`, `refunded_to`
+(`balance` or `null` — promise a refund only when it is set), `payable`, `trade`.
+`trade` is `null` for `pending`/`cancelled`, else `{state, reason_code, offer_url,
+send_until, release_date, seller, refunded_to}`: `state` is `buying`, `offer_sent` (accept
+in Steam before `send_until`), `accepted` (Steam protects it until `release_date`),
+`released` or `failed`; `reason_code` (`not_accepted`, `sold_out`, `try_later`, `support`,
+`other`) is set on `failed`, and `support` also while a purchase is being checked by hand.
+
+| Status | `type` suffix      | `code`               | When                                                                                 |
+| ------ | ------------------ | -------------------- | ------------------------------------------------------------------------------------ |
+| 409    | `conflict`         | `buying_disabled`    | Buying is switched off                                                               |
+| 409    | `conflict`         | `trade_link_missing` | No trade link saved                                                                  |
+| 409    | `conflict`         | `trade_link_bad`     | The saved link was checked bad (`reason`: `invalid`, `private`, `trade_ban`, `hold`) |
+| 409    | `conflict`         | `price_changed`      | The offer's price moved beyond ±2 % (`price_uzs`)                                    |
+| 409    | `conflict`         | `offer_gone`         | Sold, no substitute within 3 % (`next_offer` or `null`)                              |
+| 404    | `not-found`        | —                    | Unknown or hidden item                                                               |
+| 503    | `rate-unavailable` | `rate_unavailable`   | No fresh soʻm rate                                                                   |
+| 422    | `validation`       | —                    | Malformed body or missing/short/over-long key                                        |
 
 ### Kassa callbacks: Click (M3)
 

@@ -18,7 +18,7 @@ allow-list — ADR-0002). Tables and columns are spec §5; scope per module is s
 | `click`         | `click_transactions`                                             | M3 (built)                                                         | `modules/click/` — Click Shop API (prepare / complete, MD5 sign), 30-min timeout sweep; money through `payments` hooks                                                                                                                                            |
 | `payme`         | `payme_transactions`                                             | M3 (built)                                                         | `modules/payme/` — Payme Merchant API (JSON-RPC, seven methods), 12-h timeout sweep; money through `payments` hooks                                                                                                                                               |
 | `uzum`          | `uzum_transactions`                                              | M3 (built)                                                         | `modules/uzum/` — Uzum Merchant API (check / create / confirm / reverse / status), its state machine, 30-min timeout sweep; money through `payments` hooks                                                                                                        |
-| `orders`        | `orders` (the queue), `skin_trades`                              | M4a (built: tables, FSM)                                           | **new, thin** — one skin, one offer; statuses (`orders.fsm`), money, the Waxpeer purchase and trade (`skin_trades`, YuPay's load-bearing columns, R2)                                                                                                             |
+| `orders`        | `orders` (the queue), `skin_trades`                              | M4a (built: tables, FSM, checkout, reads)                          | **new, thin** — one skin, one offer; statuses (`orders.fsm`), money, the Waxpeer purchase and trade (`skin_trades`, YuPay's load-bearing columns, R2)                                                                                                             |
 | `realtime`      | —                                                                | M4                                                                 | `modules/realtime/` — WebSocket order status                                                                                                                                                                                                                      |
 | `notifications` | —                                                                | M4                                                                 | `modules/notifications/` — email only (receipt, trade sent, refunded)                                                                                                                                                                                             |
 | `sell`          | —                                                                | after MVP                                                          | not ported — skinslink sell side; the MVP only reserves the slot and the `sell_payout` ledger kind                                                                                                                                                                |
@@ -92,8 +92,11 @@ Flow: [`sequence-diagrams/topup.mmd`](./sequence-diagrams/topup.mmd),
   the only place an order's status changes. `orders` may import `payments`, `wallet`,
   `skins`, `users` and `fx`; `payments` reaches `orders` only through `orders.api` (its
   models module imports `orders.models` once, to register the `payments.order_id` target);
-  `wallet` imports neither. The ledger gains the `purchase` and `refund` kinds. Checkout,
-  payment, buying, trades and refunds land in the following M4a tasks.
+  `wallet` imports neither. The ledger gains the `purchase` and `refund` kinds. Checkout
+  (`POST /orders`) re-prices through `skins`' listings read (`skins.api.search_client`,
+  `listings_for`) and the rate through `fx.api`; the order reads (`GET /orders/{number}`,
+  `GET /me/orders`) carry the buyer's trade view. Payment, buying, trades and refunds land
+  in the following M4a tasks.
 
 ## Processes outside the API
 

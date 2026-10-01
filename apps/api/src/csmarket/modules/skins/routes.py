@@ -27,7 +27,13 @@ from csmarket.modules.auth.api import guard_ip
 from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.skins.cachekeys import catalog_version
 from csmarket.modules.skins.images import steam_image, steam_image_only
-from csmarket.modules.skins.listings import listings_for, steam_inspect_url
+from csmarket.modules.skins.listings import (
+    SearchClient,
+    listings_budget,
+    listings_for,
+    search_client,
+    steam_inspect_url,
+)
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.pricing import (
     PricingRules,
@@ -60,7 +66,6 @@ from csmarket.modules.skins.service import (
     suggest,
 )
 from csmarket.modules.skins.settings import enabled_categories, load_rules
-from csmarket.modules.skins.waxpeer import WaxpeerClient
 
 _PAGE_TTL = 60
 
@@ -283,7 +288,12 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
         )
         for m in await family(db, item, categories=categories)
     ]
-    return SkinDetailOut(**base.model_dump(), cheapest=cheapest, family=members)
+    return SkinDetailOut(
+        **base.model_dump(),
+        cheapest=cheapest,
+        family=members,
+        buy_enabled=get_settings().skins_buy_enabled,
+    )
 
 
 @router.get(
@@ -292,7 +302,10 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
     summary="Live auto listings for one item (cached, rate-budgeted, degradable)",
 )
 async def get_listings(
-    slug: str, request: Request, db: Annotated[AsyncSession, Depends(db_session)]
+    slug: str,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(db_session)],
+    client: Annotated[SearchClient, Depends(search_client)],
 ) -> SkinListingsOut:
     """Live offers for one item; a Waxpeer problem is a 200 with ``degraded: true``.
 
@@ -305,18 +318,8 @@ async def get_listings(
     item = await get_item(db, slug, categories=enabled_categories(settings))
     rules = await load_rules(db)
     rate = await usd_uzs_rate(db)
-    client = WaxpeerClient(
-        api_key=settings.waxpeer_api_key,
-        base_url=settings.waxpeer_base_url,
-        timeout_seconds=settings.skins_listings_timeout_seconds,
-    )
     rows, degraded = await listings_for(
-        item,
-        client=client,
-        redis=get_redis(),
-        budget_per_minute=settings.skins_listings_budget_per_minute
-        if settings.waxpeer_api_key
-        else 0,
+        item, client=client, redis=get_redis(), budget_per_minute=listings_budget(settings)
     )
     items: list[SkinListingOut] = []
     for row in rows:

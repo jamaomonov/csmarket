@@ -304,8 +304,11 @@ csmarket/
   `ip_guard` bucket. A
   second carve-out: `POST /me/trade-link/check` (M1; Waxpeer `check-tradelink` + Steam
   `GetTradeHoldDurations`), advisory, 4 s timeouts, 10-min Redis cache keyed by a hash of
-  the link. A new one needs an ADR and a line here — and its route in the `handler` regexes
-  of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
+  the link. A third: `POST /orders` (M4a, ruling R11) re-prices the chosen offer through the
+  same cached, budgeted, breaker-guarded read as `GET /skins/{slug}/listings` (a degraded
+  answer is accepted; the worker's price cap is the money guard), with no DB connection
+  held across it. A new one needs an ADR and a line here — and its route in the `handler`
+  regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.
 - One uvicorn process per API container: CPU an endpoint burns is a ceiling for the whole API.
