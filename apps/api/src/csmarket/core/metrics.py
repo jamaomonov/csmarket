@@ -46,6 +46,23 @@ STEAM_WEB_API_CALLS = Counter(
     ("endpoint", "consumer", "outcome"),
 )
 
+#: The acquirer whose webhook was refused.
+KassaProvider = Literal["click", "payme", "uzum"]
+
+#: Why: ``auth`` = Basic credentials wrong (Payme -32504, Uzum 10001); ``signature`` = the
+#: Click MD5 ``sign_string`` or service id wrong (-1); ``malformed`` = not a body the
+#: protocol allows (Click -8, Payme -32700 / -32600, Uzum 10002 / 10005).
+KassaRejectionReason = Literal["auth", "signature", "malformed"]
+
+_KASSA_PROVIDERS = frozenset(("click", "payme", "uzum"))
+_KASSA_REASONS = frozenset(("auth", "signature", "malformed"))
+
+KASSA_REJECTIONS = Counter(
+    "csmarket_kassa_rejections_total",
+    "Acquirer webhooks refused before any business logic ran (alert: KassaRejectionsSpike).",
+    ("provider", "reason"),
+)
+
 
 def _inc(counter: Counter, name: str, labels: dict[str, str]) -> None:
     """Increment one labelled counter, swallowing anything the registry throws."""
@@ -66,6 +83,22 @@ def record_steam_web_api_call(
     )
 
 
+def record_kassa_rejection(*, provider: KassaProvider, reason: KassaRejectionReason) -> None:
+    """Count one acquirer webhook refused for auth, signature or a malformed body.
+
+    A value outside the closed sets becomes ``"other"``, so a bug (or a hostile value that
+    reached here) cannot mint a new time series. Never raises.
+    """
+    _inc(
+        KASSA_REJECTIONS,
+        "csmarket_kassa_rejections_total",
+        {
+            "provider": provider if provider in _KASSA_PROVIDERS else "other",
+            "reason": reason if reason in _KASSA_REASONS else "other",
+        },
+    )
+
+
 @contextmanager
 def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer) -> Iterator[None]:
     """Count the keyed Steam call made in the block, however it ends.
@@ -82,10 +115,14 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 
 __all__ = [
+    "KASSA_REJECTIONS",
     "STEAM_WEB_API_CALLS",
+    "KassaProvider",
+    "KassaRejectionReason",
     "SteamApiConsumer",
     "SteamApiEndpoint",
     "SteamApiOutcome",
+    "record_kassa_rejection",
     "record_steam_web_api_call",
     "steam_web_api_call",
 ]

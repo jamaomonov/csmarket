@@ -6,7 +6,13 @@ from typing import Any
 
 import pytest
 from csmarket.core import metrics
-from csmarket.core.metrics import STEAM_WEB_API_CALLS, record_steam_web_api_call, steam_web_api_call
+from csmarket.core.metrics import (
+    KASSA_REJECTIONS,
+    STEAM_WEB_API_CALLS,
+    record_kassa_rejection,
+    record_steam_web_api_call,
+    steam_web_api_call,
+)
 
 
 def _value(**labels: str) -> float:
@@ -52,3 +58,45 @@ def test_a_broken_registry_never_raises(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_metric_names_carry_the_csmarket_prefix() -> None:
     assert STEAM_WEB_API_CALLS._name == "csmarket_steam_web_api_calls"  # type: ignore[attr-defined]
+
+
+def _rejections(provider: str, reason: str) -> float:
+    return KASSA_REJECTIONS.labels(provider=provider, reason=reason)._value.get()  # type: ignore[no-any-return]
+
+
+def test_kassa_rejection_increments_the_labelled_series() -> None:
+    before = _rejections("click", "signature")
+    record_kassa_rejection(provider="click", reason="signature")
+    assert _rejections("click", "signature") == before + 1
+
+
+def test_kassa_rejection_unknown_labels_collapse_to_other() -> None:
+    # A caller passing an identifier where a verdict goes must not mint a new series.
+    before = _rejections("other", "other")
+    record_kassa_rejection(provider="76561198000000000", reason="198.51.100.7")  # type: ignore[arg-type]
+    assert _rejections("other", "other") == before + 1
+    known = {
+        tuple(sample.labels.values())
+        for family in KASSA_REJECTIONS.collect()
+        for sample in family.samples
+    }
+    assert ("76561198000000000", "198.51.100.7") not in known
+
+
+def test_kassa_rejection_keeps_a_known_provider_with_an_unknown_reason() -> None:
+    before = _rejections("payme", "other")
+    record_kassa_rejection(provider="payme", reason="whatever")  # type: ignore[arg-type]
+    assert _rejections("payme", "other") == before + 1
+
+
+def test_a_broken_kassa_registry_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Broken:
+        def labels(self, **_: Any) -> Any:
+            raise ValueError("label mismatch")
+
+    monkeypatch.setattr(metrics, "KASSA_REJECTIONS", _Broken())
+    record_kassa_rejection(provider="uzum", reason="auth")
+
+
+def test_kassa_rejection_metric_name_carries_the_csmarket_prefix() -> None:
+    assert KASSA_REJECTIONS._name == "csmarket_kassa_rejections"  # type: ignore[attr-defined]

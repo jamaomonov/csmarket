@@ -1,0 +1,20 @@
+groups:
+  - name: payments
+    rules:
+      # Acquirer webhooks the API refused before any business logic ran: wrong Basic
+      # credentials (Payme, Uzum), a wrong Click signature, or a body the protocol does
+      # not allow. A trickle is internet noise. More than 20 in 15 minutes on one
+      # provider/reason is either someone probing the callback URLs, or — worse — a
+      # rotated secret / changed cabinet setting that makes every genuine callback fail
+      # (top-ups then silently stop). One series per (provider, reason), so the alert
+      # names which kassa and which kind of refusal. Spec §12.
+      - alert: KassaRejectionsSpike
+        expr: increase(csmarket_kassa_rejections_total{job="api"}[15m]) > 20
+        labels: { severity: warning }
+        annotations:
+          summary: '{{ $labels.provider }} webhooks refused ({{ $labels.reason }}): {{ $value | printf "%.0f" }} in 15 min'
+          description: >
+            The API refused more than 20 {{ $labels.provider }} callbacks for
+            {{ $labels.reason }} in 15 minutes. Check whether the kassa's credentials
+            or cabinet settings changed before treating it as probing.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/kassa-setup.md#rejections"

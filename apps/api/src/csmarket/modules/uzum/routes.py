@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.logging import get_logger
+from csmarket.core.metrics import record_kassa_rejection
 from csmarket.modules.uzum import service
 from csmarket.modules.uzum.errors import (
     UzumError,
@@ -55,6 +56,9 @@ Answer = dict[str, Any] | JSONResponse
 _MAX_TRANS_ID = 64
 #: The longest account value worth echoing into a log line.
 _LOG_MAX = 16
+#: Uzum's codes for a body that is not JSON and for a missing / mistyped field.
+_BAD_JSON = 10002
+_MISSING_PARAMS = 10005
 #: ``params`` keys carrying the top-up number, in order of preference (R9): our cabinet is
 #: set to ``order``; Uzum has been seen sending camelCase ``orderId`` (2026-09-04).
 _ACCOUNT_KEYS = ("order", "orderId", "order_id")
@@ -222,6 +226,8 @@ async def _run(
         try:
             result = await handler(db, body, service_id)
         except UzumError as exc:
+            if exc.code == _MISSING_PARAMS:  # raised only by the field extractors
+                record_kassa_rejection(provider="uzum", reason="malformed")
             await (db.commit() if exc.persist else db.rollback())
             return _fail(exc, **echo), exc.code
         await db.commit()
@@ -254,12 +260,15 @@ async def _serve(
     body: Body = {}
     answer: Answer
     if not _is_authorized(request.headers.get("authorization", "")):
+        record_kassa_rejection(provider="uzum", reason="auth")
         error = access_denied()
         answer, code = _fail(error), error.code
     else:
         try:
             body = _parse_body(await request.body())
         except UzumError as exc:
+            if exc.code == _BAD_JSON:
+                record_kassa_rejection(provider="uzum", reason="malformed")
             answer, code = _fail(exc), exc.code
         else:
             answer, code = await _run(db, endpoint, body, handler, stamp=stamp)

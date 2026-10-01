@@ -173,6 +173,12 @@ offered with the service id and a whole pair; otherwise the tile is hidden and e
 `10001` (or `10006` without a service id). The checkout link is
 `{open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our top-up page>` — no amount.
 
+## Metrics
+
+`csmarket_kassa_rejections_total{provider="uzum", reason}` (`docs/architecture/metrics.md`) counts
+webhooks refused before business logic. Counted: `10001` as `reason="auth"`; `10002` (including a `RecursionError` body) and `10005` as
+`"malformed"`, once each, in `routes.py`. Every other code counts nothing.
+
 ## Not here
 
 Orders (M4 resolves non-`T` numbers), anti-fraud vetoes, card refunds from admin (Uzum's side

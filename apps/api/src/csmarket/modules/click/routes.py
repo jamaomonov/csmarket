@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
 from csmarket.core.logging import get_logger
+from csmarket.core.metrics import record_kassa_rejection
 from csmarket.modules.click import service, signature
 from csmarket.modules.click.errors import (
     ClickError,
@@ -44,9 +45,30 @@ _LOG_NUMBER_MAX = 16
 #: A Click body is ~11 short fields; anything bigger is not Click.
 _MAX_BODY_BYTES = 8 * 1024
 _MAX_FIELDS = 32
+#: Click's codes for a wrong signature or service id, and for a malformed request.
+_SIGN_CHECK_FAILED = -1
+_BAD_REQUEST = -8
 
 #: The parsed body: field name → the raw string Click sent (the last one if repeated).
 Form = Mapping[str, str]
+
+
+def _count_rejection(exc: ClickError) -> None:
+    """Count a refusal raised while validating the body: ``-1`` sign, ``-8`` malformed.
+
+    The one place a validation :class:`ClickError` is counted. ``-3`` (a signed call for the
+    other endpoint) is not a hostile or broken caller, so it counts nothing.
+    """
+    if exc.code == _SIGN_CHECK_FAILED:
+        record_kassa_rejection(provider="click", reason="signature")
+    elif exc.code == _BAD_REQUEST:
+        record_kassa_rejection(provider="click", reason="malformed")
+
+
+def _unreadable_body() -> service.ClickResponse:
+    """``-8`` for a body that is not Click's form (counted as malformed)."""
+    record_kassa_rejection(provider="click", reason="malformed")
+    return bad_request().to_response()
 
 
 def _req_str(form: Form, key: str) -> str:
@@ -242,6 +264,7 @@ async def _prepare(db: AsyncSession, form: Form) -> service.ClickResponse:
     try:
         click_trans_id, service_id, click_paydoc_id, error = _check_prepare(form)
     except ClickError as exc:
+        _count_rejection(exc)
         return exc.to_response(**_echo(form))
 
     async def handler() -> service.ClickResponse:
@@ -264,6 +287,7 @@ async def _complete(db: AsyncSession, form: Form) -> service.ClickResponse:
     try:
         click_trans_id, service_id, merchant_prepare_id, error = _check_complete(form)
     except ClickError as exc:
+        _count_rejection(exc)
         return exc.to_response(**_echo(form))
 
     async def handler() -> service.ClickResponse:
@@ -290,7 +314,7 @@ async def click_prepare(request: Request, db: DbSession) -> service.ClickRespons
     Idempotent on Click's ``(click_trans_id, service_id)``, so no ``Idempotency-Key``.
     """
     form = await _read_form(request)
-    body = bad_request().to_response() if form is None else await _prepare(db, form)
+    body = _unreadable_body() if form is None else await _prepare(db, form)
     _log_outcome("prepare", form, body)
     return body
 
@@ -303,14 +327,14 @@ async def click_complete(request: Request, db: DbSession) -> service.ClickRespon
     ``merchant_prepare_id`` (a replay is ``-4``), so no ``Idempotency-Key``.
     """
     form = await _read_form(request)
-    body = bad_request().to_response() if form is None else await _complete(db, form)
+    body = _unreadable_body() if form is None else await _complete(db, form)
     _log_outcome("complete", form, body)
     return body
 
 
 def _reject_non_post() -> service.ClickResponse:
     """A stray non-POST: ``-8`` at HTTP 200 (Click has no "wrong method" code), never a 405."""
-    return bad_request().to_response()
+    return _unreadable_body()
 
 
 for _path in ("/prepare", "/complete"):

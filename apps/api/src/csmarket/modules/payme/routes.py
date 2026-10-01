@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.logging import get_logger
+from csmarket.core.metrics import record_kassa_rejection
 from csmarket.modules.payme import service
 from csmarket.modules.payme.errors import (
     PaymeError,
@@ -53,6 +54,8 @@ Params = dict[str, Any]
 _MAX_ID = 64
 #: The longest method name or account value worth echoing into a log line.
 _LOG_MAX = 32
+#: Payme's code for a bad envelope or a missing / mistyped parameter.
+_INVALID_REQUEST = -32600
 
 
 def _is_authorized(header: str) -> bool:
@@ -182,6 +185,8 @@ async def _run(db: AsyncSession, method: str, params: Params, req_id: object) ->
         try:
             result = await handler(db, params)
         except PaymeError as exc:
+            if exc.code == _INVALID_REQUEST:  # raised only by the ``_req_*`` extractors
+                record_kassa_rejection(provider="payme", reason="malformed")
             await (db.commit() if exc.persist else db.rollback())
             return {"error": exc.to_rpc_error(), "id": req_id}
         await db.commit()
@@ -194,10 +199,12 @@ async def _run(db: AsyncSession, method: str, params: Params, req_id: object) ->
 async def _answer(request: Request, db: AsyncSession) -> tuple[object, Params, RpcResponse]:
     """Authenticate, parse and dispatch; returns ``(method, params, body)`` for the log."""
     if not _is_authorized(request.headers.get("authorization", "")):
+        record_kassa_rejection(provider="payme", reason="auth")
         return None, {}, {"error": unauthorized().to_rpc_error(), "id": None}
     try:
         payload = json.loads(await request.body())
     except ValueError:  # JSONDecodeError and undecodable bytes alike
+        record_kassa_rejection(provider="payme", reason="malformed")
         return None, {}, {"error": bad_json().to_rpc_error(), "id": None}
     envelope: dict[str, Any] = payload if isinstance(payload, dict) else {}
     req_id = envelope.get("id")
@@ -206,6 +213,7 @@ async def _answer(request: Request, db: AsyncSession) -> tuple[object, Params, R
     if params is None:
         params = {}
     if not isinstance(method, str) or not isinstance(params, dict):
+        record_kassa_rejection(provider="payme", reason="malformed")
         return method, {}, {"error": bad_rpc_fields().to_rpc_error(), "id": req_id}
     return method, params, await _run(db, method, params, req_id)
 

@@ -153,6 +153,12 @@ redacted from logs), `CSMARKET_PAYME_LOGIN` (default `Paycom`), `CSMARKET_PAYME_
 offered with the merchant id and either key; otherwise the tile is hidden and every call is
 `-32504`.
 
+## Metrics
+
+`csmarket_kassa_rejections_total{provider="payme", reason}` (`docs/architecture/metrics.md`) counts
+webhooks refused before business logic. Counted: `-32504` as `reason="auth"`; `-32700` and `-32600` (envelope or a handler's parameter
+extractor) as `"malformed"`, once each, in `routes.py`. Every other code counts nothing.
+
 ## Not here
 
 Orders (M4 resolves non-`T` numbers), anti-fraud vetoes, card refunds from admin (Payme's

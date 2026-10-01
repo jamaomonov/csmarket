@@ -28,7 +28,10 @@
 # promtail ships Caddy's stdout to Loki. Caddy's request object carries the
 # visitor's address (remote_ip, client_ip), every header (Cf-Connecting-Ip,
 # X-Forwarded-For, Cookie, User-Agent, Referer) and the full URI, whose query
-# string carries the Steam ID on the OpenID callback from M1. This filter keeps
+# string carries the Steam ID on the OpenID callback from M1. Dropping every header
+# also drops ``Authorization``, which on the kassa webhooks is the acquirer's Basic
+# credential (Payme ``Paycom:<key>``, Uzum login:password) — a secret, not just PII.
+# This filter keeps
 # method, host, path, status, size and duration and drops the rest. It is
 # applied to the access log AND to Caddy's default logger: handler errors
 # (``http.log.error.*`` — an upstream refusing a connection, say) go there with
@@ -117,6 +120,40 @@ api.csmarket.uz {
 	# Prometheus scrapes api:8000 on the internal network; never from the public host.
 	@metrics path /metrics /metrics/*
 	respond @metrics 404
+
+	# Payme's Merchant API (JSON-RPC) accepts calls only from Payme's documented
+	# source range 185.234.113.1-185.234.113.15 (the /28 below covers .0-.15).
+	# Defense-in-depth beside the app-layer Basic Auth check (-32504 in
+	# csmarket.modules.payme.routes); it does not replace it.
+	#
+	# Must be ``client_ip``, never ``remote_ip`` (ADR-0003): Cloudflare sits in
+	# front, so the socket peer is always a Cloudflare address. ``client_ip`` is
+	# Cf-Connecting-Ip, honoured only from the Cloudflare ranges trusted in the
+	# global options above. This matcher doubles as a canary for that wiring: if
+	# the edge ever resolves a Cloudflare address instead of the visitor, every
+	# genuine Payme call 403s here and top-ups through Payme stop.
+	@paymeMerchantBlocked {
+		path /api/v1/payments/payme/merchant
+		not client_ip 185.234.113.0/28
+	}
+	respond @paymeMerchantBlocked 403
+
+	# Uzum Bank Merchant API webhook allowlist — DEFERRED, NOT ACTIVE.
+	# Unlike Payme, Uzum has not documented its webhook source IPs. Until it
+	# confirms a range, the app-layer Basic Auth check (errorCode 10001 in
+	# csmarket.modules.uzum.routes) is the only gate on this path, and that is
+	# sufficient on its own.
+	#
+	# Do NOT uncomment this with a guessed CIDR: a wrong range would 403 genuine
+	# Uzum callbacks, and a matcher left with an empty or placeholder client_ip
+	# list would 403 all traffic on this path. Once Uzum confirms the IPs, fill in
+	# <UZUM_IPS>, uncomment, and validate with `caddy validate` before reloading.
+	#
+	# @uzumMerchantBlocked {
+	# 	path /api/v1/payments/uzum/*
+	# 	not client_ip <UZUM_IPS>
+	# }
+	# respond @uzumMerchantBlocked 403
 
 	# Rate limiting lives in FastAPI (slowapi); Caddy's rate_limit needs a custom
 	# build. Volumetric abuse is Cloudflare's WAF.
