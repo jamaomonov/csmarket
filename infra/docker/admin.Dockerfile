@@ -24,7 +24,10 @@ ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 COPY --from=deps /app /app
 COPY . .
-RUN pnpm --filter @csmarket/admin build
+# Source maps stay in the builder stage: nginx would serve any .map in dist to
+# whoever appends ".map" to a public bundle name.
+RUN pnpm --filter @csmarket/admin build \
+ && find apps/admin/dist -name '*.map' -delete
 
 FROM nginx:alpine AS runner
 COPY --from=builder /app/apps/admin/dist /usr/share/nginx/html

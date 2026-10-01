@@ -59,5 +59,8 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 4173,
   },
-  build: { sourcemap: true },
+  // "hidden": maps are generated (for a later Sentry upload) but the bundle
+  // carries no sourceMappingURL. admin.Dockerfile deletes them before the
+  // nginx stage, so the admin's source never ships publicly.
+  build: { sourcemap: "hidden" },
 });
