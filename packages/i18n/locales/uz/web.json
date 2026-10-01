@@ -63,7 +63,7 @@
     "meta": {
       "title": "CS2 skinlari (CS2 skins) — Oʻzbekistonda soʻmga sotib olish",
       "description": "CS2 skinlari tezkor yetkazib berish bilan: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Soʻmda toʻlov.",
-      "itemTitle": "{name} — Oʻzbekistonda {price} ga sotib olish",
+      "itemTitle": "{name} — Oʻzbekistonda {price}ga sotib olish",
       "itemTitleNoPrice": "{name} — Oʻzbekistonda soʻmga sotib olish",
       "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Soʻmda toʻlov, skin Steamʼga keladi.",
       "itemDescriptionNoPrice": "{name} — CS2 skini, soʻmda tezkor yetkazib berish bilan sotib oling."
@@ -97,7 +97,7 @@
       "cases": "Keyslar",
       "keys": "Kalitlar",
       "music-kits": "Musiqa",
-      "charms": "Brelok"
+      "charms": "Breloklar"
     },
     "exterior": {
       "FN": "Zavoddan yangi",
@@ -110,7 +110,7 @@
     "loadMore": "Yana koʻrsatish",
     "loading": "Yuklanmoqda…",
     "empty": "Hech narsa topilmadi. Boshqa nom bilan qidiring yoki filtrlarni tozalang.",
-    "fromPrice": "{price} dan",
+    "fromPrice": "{price}dan",
     "steamPrice": "Steamʼdagi narx",
     "offers": "Takliflar",
     "inspect": "Oʻyinda koʻrish",
@@ -128,7 +128,7 @@
     "close": "Yopish",
     "belowSteam": "Steamʼdan −{percent}%",
     "landing": {
-      "weaponTitle": "{weapon} skinlari CS2 — Oʻzbekistonda soʻmga sotib olish",
+      "weaponTitle": "CS2 {weapon} skinlari — Oʻzbekistonda soʻmga sotib olish",
       "weaponH1": "{weapon} skinlari",
       "categoryTitle": "CS2 {name} — Oʻzbekistonda soʻmga sotib olish",
       "categoryH1": "CS2 {name}",
@@ -154,11 +154,11 @@
     "faq": {
       "title": "Koʻp soʻraladigan savollar",
       "priceQ": "{name} Oʻzbekistonda qancha turadi?",
-      "priceA": "{name} csmarketʼda {price} dan — {count} ta taklifning eng arzoni.",
+      "priceA": "{name} csmarketʼda {price}dan — {count} ta taklifning eng arzoni.",
       "steamQ": "{name} Steamʼdagidan arzonmi?",
-      "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda hozir {percent} % arzonroq.",
+      "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda hozir {percent}% arzonroq.",
       "floatQ": "{name} floati qanday?",
-      "floatA": "{exterior}: float {min} dan {max} gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
+      "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
     }
   }
 }

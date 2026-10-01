@@ -128,7 +128,7 @@
     "close": "Close",
     "belowSteam": "−{percent}% vs Steam",
     "landing": {
-      "weaponTitle": "{weapon} skins CS2 — buy in Uzbekistan for soʻm",
+      "weaponTitle": "CS2 {weapon} skins — buy in Uzbekistan for soʻm",
       "weaponH1": "{weapon} skins",
       "categoryTitle": "CS2 {name} — buy in Uzbekistan for soʻm",
       "categoryH1": "CS2 {name}",
@@ -156,7 +156,7 @@
       "priceQ": "How much is {name} in Uzbekistan?",
       "priceA": "{name} costs from {price} on csmarket — the cheapest of {count, plural, one {# offer} other {# offers}}.",
       "steamQ": "Is {name} cheaper than on Steam?",
-      "steamA": "Yes: on the Steam Community Market it costs ${steam}; here it is {percent} % cheaper right now.",
+      "steamA": "Yes: on the Steam Community Market it costs ${steam}; here it is {percent}% cheaper right now.",
       "floatQ": "What float does {name} have?",
       "floatA": "{exterior}: float from {min} to {max}. Each offer's exact float is in the list above."
     }

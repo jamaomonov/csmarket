@@ -60,5 +60,5 @@ it("draws each category tile with its silhouette icon", () => {
   const icon = tile.querySelector("[data-skin-icon]");
   expect(icon?.getAttribute("style")).toContain("/skins/categories/rifles.png");
   // Music kits have no item image — a glyph stands in.
-  expect(screen.getByRole("link", { name: "Музыка" }).querySelector("svg")).not.toBeNull();
+  expect(screen.getByRole("link", { name: "Наборы музыки" }).querySelector("svg")).not.toBeNull();
 });

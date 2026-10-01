@@ -71,3 +71,26 @@ it("writes a category in running text in lower case with КС2, agents in the ac
   inLocale("ru", ru, <Description name="Агенты" category="agents" />);
   expect(screen.getByText(/^Купить агентов КС2 в Узбекистане/)).toBeInTheDocument();
 });
+
+it("names every category in full, so running text reads naturally (ru)", () => {
+  const names = ru.skins.category;
+  inLocale("ru", ru, <Description name={names.smgs} category="smgs" />);
+  expect(screen.getByText(/^Купить пистолеты-пулемёты КС2 в Узбекистане/)).toBeInTheDocument();
+  inLocale("ru", ru, <Description name={names["music-kits"]} category="music-kits" />);
+  expect(screen.getByText(/^Купить наборы музыки КС2 в Узбекистане/)).toBeInTheDocument();
+  inLocale("ru", ru, <Description name={names.heavy} category="heavy" />);
+  expect(screen.getByText(/^Купить тяжёлое оружие КС2 в Узбекистане/)).toBeInTheDocument();
+});
+
+it("attaches Uzbek suffixes to the value, never as a separate word", () => {
+  const strings: string[] = [];
+  const walk = (o: object) => {
+    for (const v of Object.values(o)) {
+      if (typeof v === "string") strings.push(v);
+      else if (v && typeof v === "object") walk(v as object);
+    }
+  };
+  walk(uz.skins);
+  const detached = strings.filter((s) => /\} (dan|gacha|ga|da|ni|ning)\b/.test(s));
+  expect(detached).toEqual([]);
+});
