@@ -9,7 +9,12 @@ from __future__ import annotations
 import httpx
 import pytest
 import respx
-from csmarket.modules.skins.waxpeer import WaxpeerClient, WaxpeerError, WaxpeerUnavailableError
+from csmarket.modules.skins.waxpeer import (
+    WaxpeerClient,
+    WaxpeerError,
+    WaxpeerRateLimitedError,
+    WaxpeerUnavailableError,
+)
 
 pytestmark = pytest.mark.asyncio
 URL = "https://api.waxpeer.com/v1/check-tradelink"
@@ -76,3 +81,11 @@ async def test_malformed_200_is_unavailable_not_a_reason(response: httpx.Respons
     respx.post(URL).mock(return_value=response)
     with pytest.raises(WaxpeerUnavailableError):
         await _client().check_tradelink(LINK)
+
+
+@respx.mock
+async def test_429_is_rate_limited() -> None:
+    respx.post(URL).mock(return_value=httpx.Response(429, headers={"Retry-After": "3"}))
+    with pytest.raises(WaxpeerRateLimitedError) as exc:
+        await _client().check_tradelink(LINK)
+    assert exc.value.retry_after_seconds == 3.0

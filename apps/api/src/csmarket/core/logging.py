@@ -66,6 +66,10 @@ REDACTED_KEYS = frozenset(
         # Uzum's /confirm extras: they hold the payer's phone (never logged, masked in admin).
         "payment_source",
         "waxpeer_api_key",
+        # Waxpeer's trade entries name both Steam accounts; ``parse_trade`` drops them,
+        # and these keys stay masked should a raw entry ever reach a log line.
+        "for_steamid64",
+        "seller_steam_id",
         "steam_api_key",
         # Generic terms worth blocking wherever they appear as a literal key —
         # e.g. an acquirer's raw webhook JSON replayed into the admin audit feed.

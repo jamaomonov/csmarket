@@ -63,6 +63,25 @@ KASSA_REJECTIONS = Counter(
     ("provider", "reason"),
 )
 
+#: The Waxpeer purchase-side call: ``buy-one-p2p``, ``check-many-project-id``, ``user``.
+WaxpeerEndpoint = Literal["buy", "lookup", "balance"]
+
+#: How the call ended: ``refused`` = a 200 with ``success: false``; ``forbidden`` = HTTP
+#: 403 (the key's IP whitelist); ``unavailable`` = network failure or an unreadable 200;
+#: ``error`` = any other HTTP error status.
+WaxpeerOutcome = Literal["ok", "refused", "forbidden", "rate_limited", "unavailable", "error"]
+
+_WAXPEER_ENDPOINTS = frozenset(("buy", "lookup", "balance"))
+_WAXPEER_OUTCOMES = frozenset(
+    ("ok", "refused", "forbidden", "rate_limited", "unavailable", "error")
+)
+
+WAXPEER_CALLS = Counter(
+    "csmarket_waxpeer_calls_total",
+    "Waxpeer purchase-side calls by endpoint and outcome (alert: WaxpeerForbidden).",
+    ("endpoint", "outcome"),
+)
+
 
 def _inc(counter: Counter, name: str, labels: dict[str, str]) -> None:
     """Increment one labelled counter, swallowing anything the registry throws."""
@@ -99,6 +118,21 @@ def record_kassa_rejection(*, provider: KassaProvider, reason: KassaRejectionRea
     )
 
 
+def record_waxpeer_call(endpoint: WaxpeerEndpoint, outcome: WaxpeerOutcome) -> None:
+    """Count one Waxpeer purchase-side call by how it ended.
+
+    A value outside the closed sets becomes ``"other"``. Never raises.
+    """
+    _inc(
+        WAXPEER_CALLS,
+        "csmarket_waxpeer_calls_total",
+        {
+            "endpoint": endpoint if endpoint in _WAXPEER_ENDPOINTS else "other",
+            "outcome": outcome if outcome in _WAXPEER_OUTCOMES else "other",
+        },
+    )
+
+
 @contextmanager
 def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer) -> Iterator[None]:
     """Count the keyed Steam call made in the block, however it ends.
@@ -117,12 +151,16 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 __all__ = [
     "KASSA_REJECTIONS",
     "STEAM_WEB_API_CALLS",
+    "WAXPEER_CALLS",
     "KassaProvider",
     "KassaRejectionReason",
     "SteamApiConsumer",
     "SteamApiEndpoint",
     "SteamApiOutcome",
+    "WaxpeerEndpoint",
+    "WaxpeerOutcome",
     "record_kassa_rejection",
     "record_steam_web_api_call",
+    "record_waxpeer_call",
     "steam_web_api_call",
 ]

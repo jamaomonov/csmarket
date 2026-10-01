@@ -9,11 +9,33 @@ from csmarket.modules.skins.waxpeer import (
     WaxpeerRateLimitedError,
     WaxpeerUnavailableError,
 )
+from csmarket.modules.skins.waxpeer_trades import (
+    LOOKUP_MAX_IDS,
+    TradeClient,
+    WaxpeerBuy,
+    WaxpeerBuyRefusedError,
+    WaxpeerForbiddenError,
+    WaxpeerSeller,
+    WaxpeerTrade,
+    WaxpeerTradeClient,
+    parse_trade,
+    trade_client,
+)
 
 __all__ = [
+    "LOOKUP_MAX_IDS",
     "SnapshotRow",
+    "TradeClient",
+    "WaxpeerBuy",
+    "WaxpeerBuyRefusedError",
     "WaxpeerClient",
     "WaxpeerError",
+    "WaxpeerForbiddenError",
     "WaxpeerRateLimitedError",
+    "WaxpeerSeller",
+    "WaxpeerTrade",
+    "WaxpeerTradeClient",
     "WaxpeerUnavailableError",
+    "parse_trade",
+    "trade_client",
 ]

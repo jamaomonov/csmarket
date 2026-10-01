@@ -2,7 +2,7 @@
 
 The CS2 catalogue and everything Waxpeer (spec §3.2). M1 shipped the Waxpeer client's first
 call; **M2 is the browsable catalogue** (import, price sync, stored sell prices, read API,
-listings, admin); buying arrives in M4. Decisions: [ADR-0005](../../../../../../docs/decisions/0005-skins-catalogue-fx-and-indexing.md).
+listings, admin); M4a adds the Waxpeer purchase client (below). Decisions: [ADR-0005](../../../../../../docs/decisions/0005-skins-catalogue-fx-and-indexing.md).
 
 ## What the module owns
 
@@ -16,7 +16,10 @@ Migration `0003_skins_catalog`. `hidden` is the admin's flag and is never writte
 import or the price sync. `phase` is `''` when an item has none, never NULL.
 
 - **Public interface:** `skins.api` — `WaxpeerClient`, `WaxpeerError`,
-  `WaxpeerUnavailableError`, `WaxpeerRateLimitedError`, `SnapshotRow`. Other modules import
+  `WaxpeerUnavailableError`, `WaxpeerRateLimitedError`, `SnapshotRow`, and the purchase
+  side (`TradeClient`, `WaxpeerTradeClient`, `trade_client`, `WaxpeerBuy`, `WaxpeerTrade`,
+  `WaxpeerSeller`, `parse_trade`, `WaxpeerBuyRefusedError`, `WaxpeerForbiddenError`,
+  `LOOKUP_MAX_IDS`). Other modules import
   nothing else from here; the catalogue is reached through HTTP routes, not through `api.py`.
 - **`waxpeer.WaxpeerClient`** — transport only, async `httpx`, inject `client=` in tests.
   `check_tradelink(url) -> str | None` (`POST /v1/check-tradelink`):
@@ -34,6 +37,39 @@ import or the price sync. `phase` is `''` when an item has none, never NULL.
   at most 50 names; returns Waxpeer's `items` map (name -> list of listings). 20 calls a minute.
 - **`WaxpeerRateLimitedError`** (HTTP 429, `retry_after_seconds`) subclasses
   `WaxpeerUnavailableError`: a rate limit is an outage to callers that do not care which.
+  `_request` (the `POST`/`GET` helper under `check_tradelink` and the purchase calls)
+  raises it on 429 too; `params` follow the key and a list value repeats its key.
+- **`WaxpeerUnavailableError` is not a `WaxpeerError`.** Catch it (and the rate limit)
+  before `WaxpeerError` when the branches differ.
+
+## Buying at Waxpeer (M4a)
+
+- **`waxpeer_trades.WaxpeerTradeClient(WaxpeerClient)`**, behind the `TradeClient` protocol;
+  `trade_client(settings)` builds it with `waxpeer_buy_timeout_seconds`.
+  - `buy_one_p2p(item_id=, price_units=, partner=, token=, project_id=) -> WaxpeerBuy(id,
+price_units)` — `GET /v1/buy-one-p2p`, never over `price_units`; `project_id` is our
+    order id. A success without an integer `id` / `price` is `WaxpeerUnavailableError`.
+  - `check_project_ids(ids) -> list[WaxpeerTrade]` — `GET /v1/check-many-project-id?id=…&id=…`,
+    at most 100 ids (more raises `ValueError`, never truncated); unknown ids are absent;
+    no ids makes no call; an answer without a readable `trades` list is unavailable,
+    never "absent".
+  - `balance_units() -> int` — `GET /v1/user` → `user.wallet`; anything but an integer is
+    unavailable (never a guessed balance).
+- **Errors, classified (ruling R6):** `WaxpeerBuyRefusedError(WaxpeerError)` — 200
+  `success: false`, `new_price_units` when Waxpeer named one; `WaxpeerForbiddenError(WaxpeerError)`
+  — HTTP 403 (IP whitelist); `WaxpeerRateLimitedError` — 429; `WaxpeerUnavailableError` —
+  no key, network, unreadable answer (the buy may have happened: resolve by lookup, never by
+  buying again); `WaxpeerError(status=…)` — any other HTTP status.
+- **`parse_trade(raw) -> WaxpeerTrade`** (frozen pydantic): `status` −1 when unparsable;
+  `send_until` / `seller_steam_joined` epoch seconds; `release_date` ISO 8601 with an
+  offset (naive → `None`); empty `penalties` → `None`; `seller` = `WaxpeerSeller(name,
+avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (both it and
+  `seller_steam_id` are also on the log redaction list).
+- **Observability:** `csmarket_waxpeer_calls_total{endpoint, outcome}`
+  (`docs/architecture/metrics.md`); one `skins.waxpeer.call` log line per call with
+  `endpoint`, `outcome`, `status` only — never a URL (key, `partner`, `token`) or a body.
+- **Tests:** `tests/contract/test_waxpeer_purchase.py` (recorded shapes 2026-09-28, redrawn
+  link and Steam IDs), `tests/unit/test_waxpeer_trade_parse.py`.
 - **The API key rides the query string** (`?api=…`), so a request URL is never logged —
   only method, path and status. `httpx`/`httpcore` loggers are capped at WARNING in
   `core.logging`, and exception text from `httpx` is never logged either (it carries the

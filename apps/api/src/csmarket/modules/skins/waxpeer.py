@@ -1,10 +1,10 @@
 """Waxpeer HTTP client — transport only.
 
 Four reads: ``check-tradelink``, the CSV price snapshot, item prices and live
-search-by-name; buying arrives in M4. Two facts shape it: refusals arrive as HTTP 200
-with ``success: false``, and the API key travels as the ``api`` query parameter — so the
-URL is never logged (``httpx`` loggers are capped at WARNING in ``core.logging``), only
-method + path + status.
+search-by-name; the purchase calls (``waxpeer_trades``) build on ``_request``. Two facts
+shape it: refusals arrive as HTTP 200 with ``success: false``, and the API key travels as
+the ``api`` query parameter — so the URL is never logged (``httpx`` loggers are capped at
+WARNING in ``core.logging``), only method + path + status.
 """
 
 from __future__ import annotations
@@ -80,6 +80,29 @@ def _retry_after(headers: Mapping[str, str], body: object) -> float | None:
     return None
 
 
+#: One query value: a scalar, or a list/tuple that repeats its key.
+QueryValue = str | int | list[str] | tuple[str, ...]
+
+
+def _query_pairs(params: Mapping[str, QueryValue]) -> list[tuple[str, str]]:
+    """``params`` as ordered ``(key, value)`` pairs; a list or tuple value repeats the key."""
+    pairs: list[tuple[str, str]] = []
+    for key, value in params.items():
+        if isinstance(value, list | tuple):
+            pairs.extend((key, str(item)) for item in value)
+        else:
+            pairs.append((key, str(value)))
+    return pairs
+
+
+def _json_or_none(resp: httpx.Response) -> object:
+    """The decoded body, or ``None`` when it is not JSON."""
+    try:
+        return resp.json()
+    except ValueError:
+        return None
+
+
 def _snapshot_row(header: Sequence[str], cells: Sequence[str]) -> SnapshotRow | None:
     """One snapshot line, or ``None`` when its id, price or name is unknown.
 
@@ -133,17 +156,34 @@ class WaxpeerClient:
         path: str,
         *,
         json: dict[str, Any] | None = None,  # Any: JSON request body of mixed value types
+        params: Mapping[str, QueryValue] | None = None,
     ) -> dict[str, Any]:  # Any: Waxpeer's JSON body, narrowed by each caller
+        """``{method} {base_url}{path}``; the key is the first query parameter, never logged.
+
+        ``params`` follow the key; a list or tuple value repeats its key
+        (``id=a&id=b``).
+
+        Raises:
+            WaxpeerUnavailableError: No API key, the network failed, or an unreadable 200.
+            WaxpeerRateLimitedError: Waxpeer answered 429.
+            WaxpeerError: Any other HTTP error status, or a 200 with ``success: false``
+                (``status=200``, ``body`` = the raw answer).
+        """
         self._require_key()
+        query = httpx.QueryParams([("api", self._api_key), *_query_pairs(params or {})])
         try:
             async with self._session() as client:
                 resp = await client.request(
-                    method, f"{self._base_url}{path}", params={"api": self._api_key}, json=json
+                    method, f"{self._base_url}{path}", params=query, json=json
                 )
         except httpx.HTTPError as exc:
             log.warning("waxpeer.network_error", method=method, path=path, error=type(exc).__name__)
             raise WaxpeerUnavailableError(type(exc).__name__) from exc
         log.info("waxpeer.request", method=method, path=path, status=resp.status_code)
+        if resp.status_code == 429:
+            raise WaxpeerRateLimitedError(
+                "rate limited", retry_after_seconds=_retry_after(resp.headers, _json_or_none(resp))
+            )
         if resp.status_code >= 400:
             raise WaxpeerError(resp.text[:200], status=resp.status_code, body=resp.text)
         # A 200 we cannot read is an upstream fault, not a refusal: as a ``WaxpeerError``
@@ -317,7 +357,8 @@ class WaxpeerClient:
         Raises:
             WaxpeerUnavailableError: No API key, the network failed, or a 200 whose body
                 is not a JSON object.
-            WaxpeerError: Waxpeer answered with an HTTP error status.
+            WaxpeerRateLimitedError: Waxpeer answered 429.
+            WaxpeerError: Waxpeer answered with another HTTP error status.
         """
         try:
             body = await self._request("POST", "/check-tradelink", json={"tradelink": url})

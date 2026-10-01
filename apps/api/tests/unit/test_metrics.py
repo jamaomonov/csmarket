@@ -100,3 +100,25 @@ def test_a_broken_kassa_registry_never_raises(monkeypatch: pytest.MonkeyPatch) -
 
 def test_kassa_rejection_metric_name_carries_the_csmarket_prefix() -> None:
     assert KASSA_REJECTIONS._name == "csmarket_kassa_rejections"  # type: ignore[attr-defined]
+
+
+def _waxpeer(endpoint: str, outcome: str) -> float:
+    return metrics.WAXPEER_CALLS.labels(endpoint=endpoint, outcome=outcome)._value.get()  # type: ignore[no-any-return]
+
+
+def test_waxpeer_calls_are_counted_and_unknown_labels_collapse() -> None:
+    ok_before = _waxpeer("buy", "forbidden")
+    other_before = _waxpeer("other", "other")
+    metrics.record_waxpeer_call("buy", "forbidden")
+    metrics.record_waxpeer_call("sell", "maybe")  # type: ignore[arg-type]
+    assert _waxpeer("buy", "forbidden") == ok_before + 1
+    assert _waxpeer("other", "other") == other_before + 1
+
+
+def test_waxpeer_recording_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Broken:
+        def labels(self, **_: Any) -> Any:
+            raise ValueError("label mismatch")
+
+    monkeypatch.setattr(metrics, "WAXPEER_CALLS", _Broken())
+    metrics.record_waxpeer_call("lookup", "ok")

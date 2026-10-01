@@ -77,6 +77,7 @@ import pytest
         "csmarket.modules.skins.routes",
         "csmarket.modules.skins.seo_routes",
         "csmarket.modules.skins.service",
+        "csmarket.modules.skins.waxpeer_trades",
         "csmarket.modules.wallet.adjust",
         "csmarket.modules.wallet.api",
         "csmarket.modules.wallet.entries",
