@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import { JsonLd } from "@/components/JsonLd";
 import { SkinFaq } from "@/components/skins/SkinFaq";
 import { SkinHero } from "@/components/skins/SkinHero";
+import { SkinItemTitle } from "@/components/skins/SkinItemTitle";
 import { SkinListings } from "@/components/skins/SkinListings";
 import { SkinOffersProvider } from "@/components/skins/SkinOffers";
 import { SkinPriceBlock } from "@/components/skins/SkinPriceBlock";
@@ -170,17 +171,14 @@ export default async function SkinPage({ params }: Props) {
             <div className="hidden space-y-5 md:block">{details}</div>
           </div>
           <div className="flex flex-col gap-5">
-            <div>
-              <p className="text-fg-dim text-[14px] font-semibold">
-                {item.stattrak && <span className="text-orange-400">StatTrak™ </span>}
-                {item.souvenir && <span className="text-yellow-400">Souvenir </span>}
-                {item.weapon ?? category}
-              </p>
-              <h1 className="font-sans text-2xl font-bold md:text-3xl">
-                {name}
-                {item.phase && <span className="text-fg-muted"> · {item.phase}</span>}
-              </h1>
-            </div>
+            <SkinItemTitle
+              name={name}
+              phase={item.phase}
+              weapon={item.weapon}
+              stattrak={item.stattrak}
+              souvenir={item.souvenir}
+              category={category}
+            />
             <SkinPriceBlock
               storedUzs={item.price_uzs}
               storedUsd={item.price_usd}

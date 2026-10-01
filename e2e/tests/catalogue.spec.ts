@@ -52,9 +52,10 @@ test("search suggests and opens an item", async ({ page }) => {
 
 test("item page: wears, offers from the snapshot, JSON-LD, no buy button", async ({ page }) => {
   await page.goto("/item/ak-47-redline-field-tested");
-  // The H1 is the skin name; the weapon sits in the line above it.
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Redline");
-  await expect(page.getByText("AK-47").first()).toBeVisible();
+  // The H1 carries the weapon (its own line, above) and the skin name.
+  const h1 = page.getByRole("heading", { level: 1 });
+  await expect(h1).toContainText("AK-47");
+  await expect(h1).toContainText("Redline");
   await expect(page.locator('script[type="application/ld+json"]').first()).toBeAttached();
   const ld = await page.locator('script[type="application/ld+json"]').allTextContents();
   expect(
