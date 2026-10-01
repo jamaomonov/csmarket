@@ -61,6 +61,14 @@ class ForbiddenError(AppError):
     title = "Forbidden"
 
 
+class AccountSuspendedError(AppError):
+    """The account is banned. 403 so SPAs don't treat it as an expired session and loop."""
+
+    status_code = 403
+    type_uri = "https://csmarket.uz/errors/account-suspended"
+    title = "Account suspended"
+
+
 class RateLimitedError(AppError):
     """Request rate limit exceeded -- client should slow down."""
 
