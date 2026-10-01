@@ -46,6 +46,9 @@ class TopupView:
     provider: str | None
     #: Where to pay; ``None`` once the top-up cannot be paid (paid, expired, reversed).
     intent_url: str | None
+    #: Still ``pending`` while a kassa holds an attempt (Payme state 1, a prepared Click or a
+    #: created Uzum transaction): that kassa may still settle it past ``expires_at``.
+    awaiting_kassa: bool = False
 
 
 def _check_amount(amount: Decimal) -> None:
@@ -63,8 +66,16 @@ def _check_amount(amount: Decimal) -> None:
 
 def _gateway(provider: str) -> PaymentGateway:
     """The kassa to open the top-up in; the balance itself is never one."""
-    if provider == "wallet" or provider not in available_providers():
+    gateway = _gateway_or_none(provider)
+    if gateway is None:
         raise ValidationError("payment provider not available", code="topup_provider")
+    return gateway
+
+
+def _gateway_or_none(provider: str) -> PaymentGateway | None:
+    """``provider``'s gateway while it is available; else ``None`` (also for ``wallet``)."""
+    if provider == "wallet" or provider not in available_providers():
+        return None
     return get_gateway(provider)
 
 
@@ -114,15 +125,16 @@ async def _replay(
     existing: WalletTopup,
     *,
     amount: Decimal,
-    gateway: PaymentGateway,
+    provider: str,
     locale: str,
 ) -> tuple[WalletTopup, Payment, str | None]:
+    """The stored top-up for a replayed key; no pay URL once its kassa is unavailable."""
     first = await _first_attempt(db, existing.id)
-    _assert_replay_matches(existing, first, amount=amount, provider=gateway.provider)
+    _assert_replay_matches(existing, first, amount=amount, provider=provider)
     if first is None:  # the top-up and its attempt commit together; never seen
         raise ConflictError("top-up has no payment attempt yet; retry")
     payable = await resolve(db, existing.number)
-    return existing, first, _intent(gateway, payable, locale)
+    return existing, first, _intent(_gateway_or_none(provider), payable, locale)
 
 
 async def create_topup(
@@ -137,7 +149,9 @@ async def create_topup(
     """Open a top-up of ``amount_uzs`` in ``provider``, or replay the one ``idempotency_key`` opened.
 
     Flushes, never commits. The top-up expires ``topup_expiry_minutes`` from now unless a
-    kassa takes it up (R8).
+    kassa takes it up (R8). A replay is looked up before the kassa is: a replayed key
+    returns its stored top-up even after that kassa lost its credentials (then without a
+    pay URL).
 
     Returns:
         The top-up, its first attempt and the URL to pay at (``None`` when a replayed
@@ -148,11 +162,11 @@ async def create_topup(
             ``topup_provider`` (unknown, unavailable here, or ``wallet``).
         ConflictError: ``idempotency_mismatch`` — the key opened a different top-up.
     """
-    _check_amount(amount_uzs)
-    gateway = _gateway(provider)
     existing = await _by_key(db, user_id=user_id, idempotency_key=idempotency_key)
     if existing is not None:
-        return await _replay(db, existing, amount=amount_uzs, gateway=gateway, locale=locale)
+        return await _replay(db, existing, amount=amount_uzs, provider=provider, locale=locale)
+    _check_amount(amount_uzs)
+    gateway = _gateway(provider)
     topup = WalletTopup(
         id=new_id(),
         number=await allocate(db, WalletTopup.number, topup_number),
@@ -172,7 +186,7 @@ async def create_topup(
         winner = await _by_key(db, user_id=user_id, idempotency_key=idempotency_key)
         if winner is None:
             raise ConflictError("top-up conflict; retry") from exc
-        return await _replay(db, winner, amount=amount_uzs, gateway=gateway, locale=locale)
+        return await _replay(db, winner, amount=amount_uzs, provider=provider, locale=locale)
     payable = await resolve(db, topup.number, lock=True)
     payment = await ensure_attempt(db, payable=payable, provider=provider)
     log.info(
@@ -189,17 +203,25 @@ async def owned_topup(db: AsyncSession, *, user_id: str, number: str) -> WalletT
     return (await db.execute(stmt)).scalar_one_or_none()
 
 
+async def awaiting_kassa(db: AsyncSession, topup: WalletTopup) -> bool:
+    """Whether ``topup`` is ``pending`` with an attempt a kassa holds (status ``pending``)."""
+    if topup.status != "pending":
+        return False
+    held = select(Payment.id).where(Payment.topup_id == topup.id, Payment.status == "pending")
+    return bool(await db.scalar(held.exists().select()))
+
+
 async def topup_view(db: AsyncSession, topup: WalletTopup, *, locale: str) -> TopupView:
     """The top-up with its kassa and, while it can still be paid there, the URL to pay at."""
     first = await _first_attempt(db, topup.id)
     payable = await resolve(db, topup.number)
-    gateway = None
-    if first is not None and first.provider in available_providers():
-        gateway = get_gateway(first.provider)
+    current = payable.topup or topup
+    gateway = _gateway_or_none(first.provider) if first is not None else None
     return TopupView(
-        topup=payable.topup or topup,
+        topup=current,
         provider=first.provider if first is not None else None,
         intent_url=_intent(gateway, payable, locale),
+        awaiting_kassa=await awaiting_kassa(db, current),
     )
 
 
@@ -272,6 +294,7 @@ async def expire_stale(db: AsyncSession, *, limit: int = 500) -> int:
 
 __all__ = [
     "TopupView",
+    "awaiting_kassa",
     "create_topup",
     "dev_pay",
     "expire_stale",

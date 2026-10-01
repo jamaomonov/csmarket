@@ -2556,6 +2556,10 @@
             "title": "Amount Uzs",
             "type": "string"
           },
+          "awaiting_kassa": {
+            "title": "Awaiting Kassa",
+            "type": "boolean"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
@@ -2604,7 +2608,8 @@
           "provider",
           "status",
           "expires_at",
-          "intent_url"
+          "intent_url",
+          "awaiting_kassa"
         ],
         "title": "TopupOut",
         "type": "object"

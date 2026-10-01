@@ -93,17 +93,20 @@ Signed in (401 without a token), except the provider list.
   the order `click, payme, uzum, mock` (`mock` never in prod). The balance page shows these.
 - `POST /wallet/topups` `{amount_uzs, provider, locale}` + **required** `Idempotency-Key`
   (16..160 chars) → **201** `TopupOut {number, amount_uzs, provider, status, expires_at,
-intent_url}`. `amount_uzs` is a JSON **integer** of whole soʻm, 1 000..10 000 000 (a
+intent_url, awaiting_kassa}`. `amount_uzs` is a JSON **integer** of whole soʻm, 1 000..10 000 000 (a
   string, a fraction or a boolean is 422). `locale` `ru|uz|en` picks the kassa page and the
   page the customer returns to. Send the customer to `intent_url`; every kassa returns them
   to `/account/balance/topups/{number}`. The same key with the same amount and provider
-  returns the same top-up (201 again); with another amount or provider → 409
+  returns the same top-up (201 again) — also after that kassa became unavailable (then
+  `intent_url` is `null`); with another amount or provider → 409
   `code: idempotency_mismatch`. Rate-limited by the `topup-create` bucket: 60 a minute per IP
   and 10 a minute per IP and account, then 429 with `Retry-After`.
 - `GET /wallet/topups/{number}?locale=` → `TopupOut`. The owner's only: anyone else's, an
   unknown or a malformed number is a 404 (never 403). `status` is `pending`, `succeeded`,
   `expired` or `reversed`; `intent_url` is `null` once the top-up cannot be paid. A pending
-  top-up no kassa took up expires after 30 minutes.
+  top-up no kassa took up expires after 30 minutes. `awaiting_kassa` is `true` while the
+  top-up is `pending` and a kassa holds an attempt (it may still settle past `expires_at`):
+  show "checking the payment" and keep polling, not "expired".
 - `GET /wallet` → `{balance_uzs}`.
 - `GET /wallet/entries?cursor=&limit=` (1..100, default 20) → `{items: [{id, kind,
 amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount_uzs` is

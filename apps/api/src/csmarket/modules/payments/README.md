@@ -111,11 +111,15 @@ provider and amount only, never the user.
   same top-up; anything else is `ConflictError` `code=idempotency_mismatch` (409). The
   check runs on the pre-read **and** on the race path (two requests with one key: the
   loser's insert fails on the unique once the winner commits, then is held to the same
-  rule).
+  rule). The replay is looked up **before** the provider is checked, so a replayed key
+  returns its stored top-up even after that kassa lost its credentials (`intent_url`
+  `None`).
 - `owned_topup(db, *, user_id, number)` — `None` for a malformed, unknown or someone
   else's number (the route answers 404, never 403). `topup_view(db, topup, *, locale)` —
   the first attempt's provider and the intent URL while the top-up is payable (`None`
-  once paid, expired or reversed, or when that kassa is no longer available).
+  once paid, expired or reversed, or when that kassa is no longer available), and
+  `awaiting_kassa(db, topup)`: `pending` with an attempt in `pending` (a kassa holds it and
+  may still settle past `expires_at`); the storefront shows "checking" instead of "expired".
 - `expire_stale(db, *, limit=500)` (R8) — pending top-ups past `expires_at` with no
   attempt in `pending`/`succeeded`, locked `FOR UPDATE SKIP LOCKED` (a kassa mid-create
   holds its top-up: skipped, not waited for). The attempts are re-read after the lock and

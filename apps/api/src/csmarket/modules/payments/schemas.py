@@ -49,6 +49,9 @@ class TopupOut(BaseModel):
     expires_at: datetime
     #: Where to pay; ``null`` once the top-up cannot be paid.
     intent_url: str | None
+    #: ``pending`` while a kassa holds an attempt: it may still settle after ``expires_at``,
+    #: so a ``pending`` top-up without ``intent_url`` is "being checked", not "expired".
+    awaiting_kassa: bool
 
     @classmethod
     def of(cls, view: TopupView) -> TopupOut:
@@ -61,6 +64,7 @@ class TopupOut(BaseModel):
             status=t.status,  # type: ignore[arg-type]  # DB check constraint guarantees the set
             expires_at=t.expires_at,
             intent_url=view.intent_url,
+            awaiting_kassa=view.awaiting_kassa,
         )
 
 

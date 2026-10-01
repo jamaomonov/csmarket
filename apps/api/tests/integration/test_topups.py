@@ -168,6 +168,57 @@ async def test_replay_different_provider_is_409(
     assert r.json()["code"] == "idempotency_mismatch"
 
 
+async def test_replay_after_the_kassa_became_unavailable_returns_the_topup(
+    integration_client: AsyncClient, customer_headers: Headers, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The kassa lost its credentials between the first call and the retry: the replay
+    still answers the stored top-up (without a pay URL); a new key is refused."""
+    from csmarket.modules.payments import topups
+
+    h = await customer_headers()
+    key = _key()
+    first = await _create(integration_client, h, key=key)
+    assert first.status_code == 201
+    monkeypatch.setattr(topups, "available_providers", list)
+    again = await _create(integration_client, h, key=key)
+    assert again.status_code == 201, again.text
+    assert again.json() == {**first.json(), "intent_url": None}
+    fresh = await _create(integration_client, h)
+    assert (fresh.status_code, fresh.json()["code"]) == (422, "topup_provider")
+
+
+async def test_awaiting_kassa_tells_a_held_topup_from_an_expired_one(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    """Past ``expires_at`` both answer ``pending`` without a pay URL; only the one a kassa
+    holds (an attempt in ``pending``) may still settle, and says so."""
+    h = await customer_headers()
+    created = [(await _create(integration_client, h)).json() for _ in range(2)]
+    assert [c["awaiting_kassa"] for c in created] == [False, False]
+    held, idle = (c["number"] for c in created)
+    payable = await resolve(db_session, held, lock=True)
+    attempt = await ensure_attempt(db_session, payable=payable, provider="mock")
+    await mark_pending(db_session, payment=attempt)
+    for topup in (await db_session.execute(select(WalletTopup))).scalars():
+        topup.expires_at = clock.now() - timedelta(minutes=5)
+    await db_session.commit()
+
+    shown = {
+        n: (await integration_client.get(f"{TOPUPS}/{n}", headers=h)).json() for n in (held, idle)
+    }
+    assert [
+        (shown[n]["status"], shown[n]["intent_url"], shown[n]["awaiting_kassa"])
+        for n in (held, idle)
+    ] == [
+        ("pending", None, True),
+        ("pending", None, False),
+    ]
+    await settle(db_session, payment=attempt, event_id="held-then-paid")
+    await db_session.commit()
+    paid = (await integration_client.get(f"{TOPUPS}/{held}", headers=h)).json()
+    assert (paid["status"], paid["awaiting_kassa"]) == ("succeeded", False)
+
+
 async def test_the_same_key_from_another_user_is_a_new_topup(
     integration_client: AsyncClient, customer_headers: Headers, admin_headers: Headers
 ) -> None:

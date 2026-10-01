@@ -24,7 +24,13 @@ from csmarket.modules.payments.schemas import (
     TopupIn,
     TopupOut,
 )
-from csmarket.modules.payments.topups import TopupView, create_topup, owned_topup, topup_view
+from csmarket.modules.payments.topups import (
+    TopupView,
+    awaiting_kassa,
+    create_topup,
+    owned_topup,
+    topup_view,
+)
 from csmarket.modules.users.models import User
 
 router = APIRouter(prefix="/payments", tags=["payments"])
@@ -77,7 +83,13 @@ async def post_topup(
         idempotency_key=key,
         locale=body.locale,
     )
-    return TopupOut.of(TopupView(topup=topup, provider=payment.provider, intent_url=url))
+    view = TopupView(
+        topup=topup,
+        provider=payment.provider,
+        intent_url=url,
+        awaiting_kassa=await awaiting_kassa(db, topup),
+    )
+    return TopupOut.of(view)
 
 
 @wallet_router.get("/topups/{number}", response_model=TopupOut, summary="One of my top-ups")
