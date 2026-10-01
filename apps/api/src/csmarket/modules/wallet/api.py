@@ -14,8 +14,10 @@ from csmarket.modules.wallet.service import (
     Leg,
     Reference,
     balance,
+    credit_topup,
     ensure_account,
     post,
+    reverse_topup,
     user_account,
     user_balance,
 )
@@ -31,8 +33,10 @@ __all__ = [
     "WalletPosting",
     "WalletTransaction",
     "balance",
+    "credit_topup",
     "ensure_account",
     "post",
+    "reverse_topup",
     "user_account",
     "user_balance",
 ]

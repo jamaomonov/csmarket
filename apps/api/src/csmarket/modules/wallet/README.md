@@ -14,7 +14,7 @@ allow-list (ADR-0002): UZS only, no currency column, whole soʻm.
   Append-only; deleted only by `CASCADE` from their transaction.
 
 **Interface (`api.py`):** `post`, `ensure_account`, `user_account`, `balance`,
-`user_balance`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`,
+`user_balance`, `credit_topup`, `reverse_topup`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`,
 `InsufficientBalanceError`, and the three models. `wallet` imports no other domain
 module — `payments` (and M4 `orders`) build on it, never the reverse.
 
@@ -56,6 +56,11 @@ module — `payments` (and M4 `orders`) build on it, never the reverse.
 | `refund` (M4)    | D `user_wallet` / C `house_payments_received`                         | `refund:{order_id}`              |
 
 M4 adds `purchase` and `refund` to `TX_KINDS`.
+
+`credit_topup(db, *, user_id, topup_id, amount, provider)` and `reverse_topup(...)` (same
+arguments) book the first two rows; `payments.hooks` calls them. `reverse_topup` answers a
+replayed key first, then locks the user's wallet and raises `InsufficientBalanceError` when
+the balance is below the amount.
 
 **Logs:** `csmarket.wallet.service` writes `wallet.posted` (kind, transaction id, amount) —
 no user id, so a log line never ties a person to money.

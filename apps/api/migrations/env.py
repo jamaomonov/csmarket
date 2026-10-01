@@ -21,6 +21,7 @@ from csmarket.core import idempotency as _idempotency_models  # noqa: F401
 from csmarket.modules.admin import models as _admin_models  # noqa: F401
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
+from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.users import models as _users_models  # noqa: F401
 from csmarket.modules.wallet import models as _wallet_models  # noqa: F401

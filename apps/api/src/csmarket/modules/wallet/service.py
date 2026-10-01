@@ -273,3 +273,63 @@ async def user_balance(db: AsyncSession, user_id: str) -> Decimal:
     if account is None:
         return Decimal(0)
     return await balance(db, account.id)
+
+
+async def _provider_clearing(db: AsyncSession, provider: str) -> WalletAccount:
+    """The kassa's clearing account (owner = provider slug)."""
+    return await ensure_account(
+        db, owner_type="provider", owner_id=provider, kind="provider_clearing"
+    )
+
+
+async def credit_topup(
+    db: AsyncSession, *, user_id: str, topup_id: str, amount: Decimal, provider: str
+) -> WalletTransaction:
+    """Book a paid top-up: D ``user_wallet`` / C ``provider_clearing:<provider>``.
+
+    At most once per top-up, whatever the retries: the key is ``topup:{topup_id}``, so a
+    second call returns the first transaction. Flushes, never commits.
+    """
+    wallet = await user_account(db, user_id)
+    clearing = await _provider_clearing(db, provider)
+    return await post(
+        db,
+        kind="topup",
+        legs=[Leg(wallet.id, "D", amount), Leg(clearing.id, "C", amount)],
+        idempotency_key=f"topup:{topup_id}",
+        reference=Reference(type="topup", id=topup_id),
+        actor="payments",
+        metadata={"provider": provider},
+    )
+
+
+async def reverse_topup(
+    db: AsyncSession, *, user_id: str, topup_id: str, amount: Decimal, provider: str
+) -> WalletTransaction:
+    """Claw a top-up back: D ``provider_clearing:<provider>`` / C ``user_wallet``.
+
+    Never drives the balance below zero: the user's wallet is locked ``FOR UPDATE`` and the
+    reversal is refused when the balance no longer covers ``amount`` (the money was spent).
+    A reversal already booked (key ``topup_reversal:{topup_id}``) is returned as is, before
+    any balance check. Flushes, never commits.
+
+    Raises:
+        InsufficientBalanceError: the balance is below ``amount``.
+    """
+    key = f"topup_reversal:{topup_id}"
+    existing = await _transaction_by_key(db, key)
+    if existing is not None:
+        return existing
+    wallet = await user_account(db, user_id, lock=True)
+    if await balance(db, wallet.id) < amount:
+        raise InsufficientBalanceError("the top-up was already spent", amount=str(amount))
+    clearing = await _provider_clearing(db, provider)
+    return await post(
+        db,
+        kind="topup_reversal",
+        legs=[Leg(clearing.id, "D", amount), Leg(wallet.id, "C", amount)],
+        idempotency_key=key,
+        reference=Reference(type="topup", id=topup_id),
+        actor="payments",
+        metadata={"provider": provider},
+    )

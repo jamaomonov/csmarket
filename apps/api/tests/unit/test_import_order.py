@@ -26,6 +26,13 @@ import pytest
         "csmarket.modules.users.api",
         "csmarket.modules.users.routes",
         "csmarket.modules.users.tradelink",
+        "csmarket.modules.payments.api",
+        "csmarket.modules.payments.fsm",
+        "csmarket.modules.payments.gateways",
+        "csmarket.modules.payments.gateways.mock",
+        "csmarket.modules.payments.hooks",
+        "csmarket.modules.payments.models",
+        "csmarket.modules.payments.payable",
         "csmarket.modules.skins.admin_routes",
         "csmarket.modules.skins.api",
         "csmarket.modules.skins.routes",
@@ -48,3 +55,15 @@ def test_module_imports_first_without_a_cycle(module: str) -> None:
         timeout=60,
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_wallet_never_imports_payments() -> None:
+    """One direction only: ``payments`` builds on ``wallet``, never the reverse."""
+    code = (
+        "import sys, csmarket.modules.wallet.api, csmarket.modules.wallet.service; "
+        "sys.exit(any(m.startswith('csmarket.modules.payments') for m in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
+    )
+    assert result.returncode == 0, result.stderr or "wallet imported payments"
