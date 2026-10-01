@@ -135,6 +135,7 @@ async def _reset_realtime_redis() -> AsyncIterator[None]:
 #: with plain `DELETE` (fast on empty tables); a wrong order raises and falls back to
 #: `TRUNCATE … CASCADE`. A new table goes in front of whatever it references.
 _EMPTY_IN_ORDER: tuple[str, ...] = (
+    "admin_audit_log",
     "fx_snapshots",
     "idempotent_responses",
     "refresh_tokens",
@@ -302,3 +303,35 @@ def begin_steam(integration_client: AsyncClient) -> Callable[..., Awaitable[str]
         return dict(parse_qsl(urlsplit(r.headers["location"]).query))["openid.return_to"]
 
     return _begin
+
+
+#: The steamid64s the two header fixtures sign in as (fake, never a real account).
+ADMIN_STEAM_ID = "76561198000000009"
+CUSTOMER_STEAM_ID = "76561198000000008"
+
+
+async def dev_login_headers(c: AsyncClient, *, steam_id: str, admin: bool) -> dict[str, str]:
+    """Sign in through the dev-login route; the ``Authorization`` header for that account."""
+    r = await c.post("/api/v1/auth/dev-login", json={"steam_id": steam_id, "admin": admin})
+    assert r.status_code == 200, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+@pytest.fixture
+def admin_headers(integration_client: AsyncClient) -> Callable[[], Awaitable[dict[str, str]]]:
+    """``await admin_headers()`` — a Bearer header for a fresh admin sign-in."""
+
+    async def _headers() -> dict[str, str]:
+        return await dev_login_headers(integration_client, steam_id=ADMIN_STEAM_ID, admin=True)
+
+    return _headers
+
+
+@pytest.fixture
+def customer_headers(integration_client: AsyncClient) -> Callable[[], Awaitable[dict[str, str]]]:
+    """``await customer_headers()`` — a Bearer header for a signed-in non-admin."""
+
+    async def _headers() -> dict[str, str]:
+        return await dev_login_headers(integration_client, steam_id=CUSTOMER_STEAM_ID, admin=False)
+
+    return _headers

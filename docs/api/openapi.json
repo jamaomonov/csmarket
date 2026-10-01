@@ -1,6 +1,278 @@
 {
   "components": {
     "schemas": {
+      "AdminSkinItemOut": {
+        "description": "One row of the admin item search.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "souvenir": {
+            "title": "Souvenir",
+            "type": "boolean"
+          },
+          "stattrak": {
+            "title": "Stattrak",
+            "type": "boolean"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "phase",
+          "category",
+          "weapon",
+          "exterior",
+          "stattrak",
+          "souvenir",
+          "image_url",
+          "active",
+          "hidden",
+          "price_usd",
+          "count"
+        ],
+        "title": "AdminSkinItemOut",
+        "type": "object"
+      },
+      "AdminSkinItemPatchIn": {
+        "description": "Hide (``true``) or show (``false``) an item everywhere public (ruling Q4).",
+        "properties": {
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "hidden"
+        ],
+        "title": "AdminSkinItemPatchIn",
+        "type": "object"
+      },
+      "AdminSkinItemsOut": {
+        "description": "Admin item search results (no paging: narrow the query instead).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminSkinItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AdminSkinItemsOut",
+        "type": "object"
+      },
+      "AliasIn": {
+        "description": "The text an alias expands to (\u00ab\u0430\u043a\u00bb -> ``ak-47``).",
+        "properties": {
+          "text": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "AliasIn",
+        "type": "object"
+      },
+      "AliasOut": {
+        "description": "One search alias.",
+        "properties": {
+          "alias": {
+            "title": "Alias",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "alias",
+          "text"
+        ],
+        "title": "AliasOut",
+        "type": "object"
+      },
+      "AliasesOut": {
+        "description": "Every search alias, ordered by alias.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AliasOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AliasesOut",
+        "type": "object"
+      },
+      "CatalogStatusOut": {
+        "description": "The admin status card: catalogue size, job outcomes, rate and switches.",
+        "properties": {
+          "fx": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FxOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "import_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items_active": {
+            "title": "Items Active",
+            "type": "integer"
+          },
+          "items_hidden": {
+            "title": "Items Hidden",
+            "type": "integer"
+          },
+          "items_total": {
+            "title": "Items Total",
+            "type": "integer"
+          },
+          "price_sync_job": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prices_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prices Updated At"
+          },
+          "sync_enabled": {
+            "title": "Sync Enabled",
+            "type": "boolean"
+          },
+          "waxpeer_key_set": {
+            "title": "Waxpeer Key Set",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items_total",
+          "items_active",
+          "items_hidden",
+          "prices_updated_at",
+          "import_job",
+          "price_sync_job",
+          "fx",
+          "sync_enabled",
+          "waxpeer_key_set"
+        ],
+        "title": "CatalogStatusOut",
+        "type": "object"
+      },
       "FacetOut": {
         "description": "A facet value and how many on-sale items carry it.",
         "properties": {
@@ -20,6 +292,31 @@
         "title": "FacetOut",
         "type": "object"
       },
+      "FxOut": {
+        "description": "The CBU rate the catalogue prices with.",
+        "properties": {
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "usd_uzs": {
+            "title": "Usd Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "usd_uzs",
+          "fetched_at",
+          "source"
+        ],
+        "title": "FxOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -31,6 +328,46 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "JobOut": {
+        "description": "The last run of a catalogue job (ruling Q6).",
+        "properties": {
+          "counters": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Counters",
+            "type": "object"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "format": "date-time",
+            "title": "Finished At",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "finished_at",
+          "ok",
+          "counters",
+          "error"
+        ],
+        "title": "JobOut",
         "type": "object"
       },
       "MeOut": {
@@ -1242,6 +1579,438 @@
           }
         },
         "summary": "The signed-in admin",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/aliases": {
+      "get": {
+        "description": "Every alias, ordered by alias.",
+        "operationId": "list_aliases_api_v1_admin_skins_aliases_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search aliases",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/aliases/{alias}": {
+      "delete": {
+        "description": "Remove an alias; 404 when there is none by that name.",
+        "operationId": "delete_alias_api_v1_admin_skins_aliases__alias__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "title": "Alias",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete an alias",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Set what ``alias`` expands to in a search; both are stored lower-case.",
+        "operationId": "put_alias_api_v1_admin_skins_aliases__alias__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "alias",
+            "required": true,
+            "schema": {
+              "title": "Alias",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AliasIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AliasOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create or replace an alias",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/catalog/status": {
+      "get": {
+        "description": "Item counts, the newest price tick, the last job runs, the rate and the switches.",
+        "operationId": "catalog_status_api_v1_admin_skins_catalog_status_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalogue status",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/items": {
+      "get": {
+        "description": "Substring match on the folded name; ``hidden`` filters; most listings first.",
+        "operationId": "search_items_api_v1_admin_skins_items_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "minLength": 2,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "hidden",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Hidden"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSkinItemsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Find items (hidden included)",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/items/{slug}": {
+      "patch": {
+        "description": "Hide or show an item on every public read; the price sync keeps pricing it.",
+        "operationId": "patch_item_api_v1_admin_skins_items__slug__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSkinItemPatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSkinItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hide or show an item",
         "tags": [
           "admin"
         ]

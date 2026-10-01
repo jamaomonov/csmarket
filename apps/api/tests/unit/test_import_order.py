@@ -17,6 +17,7 @@ import pytest
     "module",
     [
         "csmarket.modules.admin.api",
+        "csmarket.modules.admin.audit",
         "csmarket.modules.admin.deps",
         "csmarket.modules.admin.routes",
         "csmarket.modules.auth.deps",
@@ -25,6 +26,7 @@ import pytest
         "csmarket.modules.users.api",
         "csmarket.modules.users.routes",
         "csmarket.modules.users.tradelink",
+        "csmarket.modules.skins.admin_routes",
         "csmarket.modules.skins.api",
         "csmarket.modules.skins.routes",
         "csmarket.modules.skins.seo_routes",

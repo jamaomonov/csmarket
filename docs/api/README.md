@@ -59,3 +59,18 @@ Steam OpenID is the only sign-in (ADR-0004). The flow, in short:
 - `POST /me/trade-link/check` — advisory. `verdict` is `ok`, `warn` or `bad`, or `null`
   when the check was unavailable; `reason` is `invalid`, `private`, `trade_ban`, `hold` or
   `unavailable`. Cached 10 minutes; 4 s upstream timeouts.
+
+### Admin catalogue (M2)
+
+All under `/admin/skins`, admin only (401 without a token, 403 for a customer).
+
+- `GET /admin/skins/catalog/status` — counts, newest price tick, last import / price-sync run,
+  the CBU rate, `sync_enabled`, `waxpeer_key_set`.
+- `GET /admin/skins/items?q=&hidden=&limit=` — find items, hidden ones included.
+- `PATCH /admin/skins/items/{slug}` `{hidden}` — hide or show an item everywhere public.
+- `GET /admin/skins/aliases`, `PUT /admin/skins/aliases/{alias}` `{text}`,
+  `DELETE /admin/skins/aliases/{alias}` (204) — search aliases; alias 1..64 letters, digits,
+  spaces or hyphens, text 1..128, both stored lower-case.
+- Writes take an optional `Idempotency-Key` (≥ 16 chars): a repeat replays the first response
+  and writes nothing, including no second audit row. Every write is audited in
+  `admin_audit_log`.

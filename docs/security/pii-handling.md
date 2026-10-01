@@ -44,6 +44,8 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - **Refresh token.** Only its SHA-256 is stored (`refresh_tokens.token_hash`); the raw value
   lives in an `HttpOnly` cookie. The access JWT carries no PII beyond the user id.
 - **Roles** are in `users.roles`. `grant_admin` prints one word and never the Steam ID.
+- **Admin audit log** (`admin_audit_log`, M2): the actor is `actor_user_id` (our uuid); the
+  `payload` names things only (slugs, aliases) — never a Steam ID, email or IP.
 
 ## Where each may appear
 

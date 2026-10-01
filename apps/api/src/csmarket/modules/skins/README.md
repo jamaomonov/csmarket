@@ -124,6 +124,31 @@ rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..
 - **Tests:** `tests/unit/test_skins_cursor.py`, `tests/integration/test_skins_catalog_routes.py`,
   `test_skins_facets_scoped.py`, `test_skins_catalog_resilience.py` (no rate, Redis down).
 
+## Admin catalogue (M2)
+
+`admin_routes` (`/admin/skins`, `require_admin` on the router; DTOs in `admin_schemas`):
+
+- `GET /catalog/status` -> `CatalogStatusOut`: `items_total`, `items_active`, `items_hidden`,
+  `prices_updated_at` (the newest tick), `import_job` / `price_sync_job` (`job_status.read_job`,
+  ruling Q6), `fx` (`{usd_uzs, fetched_at, source}` or `null` without a fresh rate),
+  `sync_enabled` and `waxpeer_key_set` (a bool, never the key).
+- `GET /items?q=&hidden=&limit=` -> `AdminSkinItemsOut`: `q` (2..80) folded by
+  `naming.search_text` and matched as an escaped `ILIKE` substring of `search_text`; `hidden`
+  filters; `limit` 1..100 (20); hidden and inactive items included; most listings first, then
+  slug.
+- `PATCH /items/{slug}` `{hidden}` -> `AdminSkinItemOut` (ruling Q4): off every public read at
+  once, still priced by the sync, so unhiding is instant. Unknown slug: 404.
+- `GET /aliases`, `PUT /aliases/{alias}` `{text}` -> `AliasOut`, `DELETE /aliases/{alias}` ->
+  204 (404 if absent). Ruling Q13: admin-edited, none seeded. The alias is trimmed and
+  lower-cased, 1..64 letters, digits, spaces or hyphens (no `_`); the text is trimmed and
+  lower-cased, 1..128. `expand_aliases` substitutes whole words, so a one-word alias is what
+  matches.
+- **Every write** takes an optional `Idempotency-Key` (`core.idempotency`, scopes
+  `admin.skins.item:{item id}`, `admin.skins.alias:{alias}`, `admin.skins.alias.delete:{alias}`),
+  records one `admin_audit_log` row (`admin/README.md`), commits, then bumps
+  `skins:catalog:ver` so every cached public page expires. A replay writes nothing.
+- **Tests:** `tests/integration/test_skins_admin_catalogue.py`.
+
 ## Live listings
 
 `GET /skins/{slug}/listings` -> `SkinListingsOut {items, degraded}` is the one advisory carve-out
