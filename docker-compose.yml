@@ -1,0 +1,128 @@
+name: csmarket-dev
+
+x-app-env: &app-env
+  CSMARKET_ENVIRONMENT: ${CSMARKET_ENVIRONMENT:-dev}
+  CSMARKET_DEBUG: ${CSMARKET_DEBUG:-true}
+  CSMARKET_LOG_LEVEL: ${CSMARKET_LOG_LEVEL:-INFO}
+  CSMARKET_LOG_JSON: ${CSMARKET_LOG_JSON:-false}
+  CSMARKET_DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-csmarket_app}:${POSTGRES_PASSWORD:-csmarket_app}@postgres:5432/${POSTGRES_DB:-csmarket}
+  CSMARKET_REDIS_URL: redis://redis:6379/0
+  CSMARKET_BASE_URL: ${CSMARKET_BASE_URL:-http://localhost:8100}
+  CSMARKET_WEB_BASE_URL: ${CSMARKET_WEB_BASE_URL:-http://localhost:3100}
+  CSMARKET_CORS_ALLOW_ORIGINS: '${CSMARKET_CORS_ALLOW_ORIGINS:-["*"]}'
+  CSMARKET_APP_ENC_KEY: ${CSMARKET_APP_ENC_KEY:-}
+  CSMARKET_SENTRY_DSN: ${CSMARKET_SENTRY_DSN:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-csmarket_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-csmarket_app}
+      POSTGRES_DB: ${POSTGRES_DB:-csmarket}
+    ports:
+      # Loopback only — a dev Postgres with default creds must not face the LAN.
+      - "127.0.0.1:${POSTGRES_PORT:-5442}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-csmarket_app} -d ${POSTGRES_DB:-csmarket}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6390}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: { context: ., dockerfile: infra/docker/api.Dockerfile }
+    restart: unless-stopped
+    environment: { <<: *app-env }
+    ports: ["${CSMARKET_API_PORT:-8100}:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes: ["./apps/api:/app/apps/api"]
+    command: ["uvicorn", "csmarket.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+  worker:
+    build: { context: ., dockerfile: infra/docker/worker.Dockerfile }
+    restart: unless-stopped
+    environment: { <<: *app-env }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes: ["./apps:/app/apps"]
+
+  scheduler:
+    build: { context: ., dockerfile: infra/docker/scheduler.Dockerfile }
+    restart: unless-stopped
+    environment: { <<: *app-env }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes: ["./apps:/app/apps"]
+
+  web:
+    # Dev image: `next dev` with HMR over bind-mounted apps/web + packages. The
+    # production build lives in web.Dockerfile and ships via GHCR.
+    build: { context: ., dockerfile: infra/docker/web.dev.Dockerfile }
+    restart: unless-stopped
+    environment:
+      API_INTERNAL_URL: http://api:8000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8100
+      WATCHPACK_POLLING: "true"
+    ports: ["${CSMARKET_WEB_PORT:-3100}:3000"]
+    depends_on: [api]
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages:/app/packages
+      # Anonymous volumes keep the image's node_modules under the bind-mounts.
+      - /app/node_modules
+      - /app/apps/web/node_modules
+
+  admin:
+    build: { context: ., dockerfile: infra/docker/admin.dev.Dockerfile }
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ""
+      DOCKER_CONTAINER: "1"
+    ports: ["${CSMARKET_ADMIN_PORT:-3102}:5173"]
+    depends_on: [api]
+    volumes:
+      - ./apps/admin:/app/apps/admin
+      - ./packages:/app/packages
+      - /app/node_modules
+      - /app/apps/admin/node_modules
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "${CSMARKET_CADDY_HTTPS_PORT:-8543}:443"
+      - "${CSMARKET_CADDY_HTTP_PORT:-8180}:80"
+    volumes:
+      - ./infra/caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api, web, admin]
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,20 @@
+# Local dev with internal TLS so HTTPS works on *.localhost.
+{
+	local_certs
+	auto_https disable_redirects
+}
+
+csmarket.localhost {
+	tls internal
+	reverse_proxy web:3000
+}
+
+admin.localhost {
+	tls internal
+	reverse_proxy admin:5173
+}
+
+api.localhost {
+	tls internal
+	reverse_proxy api:8000
+}

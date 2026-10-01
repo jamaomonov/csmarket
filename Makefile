@@ -40,7 +40,7 @@ dev-detached: ## Bring up the dev stack in the background
 
 .PHONY: dev-api
 dev-api: ## Run only the API (host process; requires postgres+redis up)
-	cd apps/api && uv run uvicorn csmarket.main:app --reload --host 0.0.0.0 --port 8000
+	cd apps/api && uv run uvicorn csmarket.main:app --reload --host 0.0.0.0 --port 8100
 
 .PHONY: dev-worker
 dev-worker: ## Run only the worker
