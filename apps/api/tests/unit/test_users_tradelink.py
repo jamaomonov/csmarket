@@ -137,3 +137,23 @@ async def test_unavailable_is_not_cached(redis) -> None:
         parse_tradelink(LINK), waxpeer=_Wax(), hold=_Hold(0), redis=redis
     )
     assert result.verdict == "ok"
+
+
+async def test_malformed_waxpeer_answer_is_unavailable_not_bad(redis) -> None:
+    import httpx
+    import respx
+    from csmarket.modules.skins.waxpeer import WaxpeerClient
+
+    wax = WaxpeerClient(api_key="k", base_url="https://api.waxpeer.com/v1", timeout_seconds=1)
+    with respx.mock() as mock:
+        mock.post("https://api.waxpeer.com/v1/check-tradelink").mock(
+            return_value=httpx.Response(200, json=[])
+        )
+        result = await check_trade_link(
+            parse_tradelink(LINK), waxpeer=wax, hold=_Hold(), redis=redis
+        )
+    assert result == CheckResult(verdict=None, reason="unavailable")
+    assert await redis.exists("users:tradelink:breaker")
+    assert [
+        k async for k in redis.scan_iter("users:tradelink:*") if k != "users:tradelink:breaker"
+    ] == []

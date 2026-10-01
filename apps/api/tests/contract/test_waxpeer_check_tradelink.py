@@ -60,3 +60,19 @@ async def test_timeout_is_unavailable() -> None:
     respx.post(URL).mock(side_effect=httpx.ConnectTimeout("t"))
     with pytest.raises(WaxpeerUnavailableError):
         await _client().check_tradelink(LINK)
+
+
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(200, json=[]),
+        httpx.Response(200, json=None),
+        httpx.Response(200, json="ok"),
+        httpx.Response(200, text="<html>maintenance</html>"),
+    ],
+)
+@respx.mock
+async def test_malformed_200_is_unavailable_not_a_reason(response: httpx.Response) -> None:
+    respx.post(URL).mock(return_value=response)
+    with pytest.raises(WaxpeerUnavailableError):
+        await _client().check_tradelink(LINK)

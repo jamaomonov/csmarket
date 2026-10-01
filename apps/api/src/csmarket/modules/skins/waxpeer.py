@@ -29,7 +29,7 @@ class WaxpeerError(Exception):
 
 
 class WaxpeerUnavailableError(Exception):
-    """Waxpeer could not be reached, or no API key is configured."""
+    """Waxpeer could not be reached, gave an unreadable answer, or no API key is configured."""
 
 
 class WaxpeerClient:
@@ -76,9 +76,16 @@ class WaxpeerClient:
         log.info("waxpeer.request", method=method, path=path, status=resp.status_code)
         if resp.status_code >= 400:
             raise WaxpeerError(resp.text[:200], status=resp.status_code, body=resp.text)
-        body = resp.json()
+        # A 200 we cannot read is an upstream fault, not a refusal: as a ``WaxpeerError``
+        # it would reach callers as Waxpeer's reason text (ruling P10).
+        try:
+            body = resp.json()
+        except ValueError as exc:
+            log.warning("waxpeer.unexpected_body", method=method, path=path)
+            raise WaxpeerUnavailableError("unexpected body") from exc
         if not isinstance(body, dict):
-            raise WaxpeerError("unexpected body", body=resp.text)
+            log.warning("waxpeer.unexpected_body", method=method, path=path)
+            raise WaxpeerUnavailableError("unexpected body")
         if not body.get("success", False):
             raise WaxpeerError(str(body.get("msg") or "refused"), body=resp.text)
         return body
@@ -91,7 +98,8 @@ class WaxpeerClient:
         failure or HTTP error raises.
 
         Raises:
-            WaxpeerUnavailableError: No API key, or the network failed.
+            WaxpeerUnavailableError: No API key, the network failed, or a 200 whose body
+                is not a JSON object.
             WaxpeerError: Waxpeer answered with an HTTP error status.
         """
         try:

@@ -8,8 +8,9 @@ client**; the catalogue, import, price sync, listings and buying arrive in M2.
 - **`waxpeer.WaxpeerClient`** — transport only, async `httpx`, inject `client=` in tests.
   M1 has one call: `check_tradelink(url) -> str | None` (`POST /v1/check-tradelink`):
   `None` when the link works, else Waxpeer's reason text (`info` on `success: true`,
-  `msg` on `success: false`). An HTTP error status raises `WaxpeerError`; no API key or a
-  network failure raises `WaxpeerUnavailableError` (no traffic without a key).
+  `msg` on `success: false`). An HTTP error status raises `WaxpeerError`; no API key, a
+  network failure or a 200 whose body is not a JSON object raises `WaxpeerUnavailableError`
+  (no traffic without a key) — an unreadable answer is an outage, never a reason.
 - **The API key rides the query string** (`?api=…`), so a request URL is never logged —
   only method, path and status. `httpx`/`httpcore` loggers are capped at WARNING in
   `core.logging`, and exception text from `httpx` is never logged either (it carries the
