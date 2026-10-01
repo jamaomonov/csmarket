@@ -10,6 +10,13 @@ from csmarket.core.config import get_settings
 from csmarket.core.logging import configure_logging, get_logger
 from csmarket.core.observability import init_sentry
 
+# Imported for their side effect: ``RefreshToken`` relates to ``User``, so both mappers
+# must be registered before any job opens a session (AGENTS.md §4).
+from csmarket.modules.auth import models as _auth_models  # noqa: F401
+from csmarket.modules.users import models as _users_models  # noqa: F401
+
+from csmarket_scheduler.jobs import purge_refresh_tokens
+
 configure_logging()
 log = get_logger("csmarket.scheduler")
 
@@ -18,9 +25,11 @@ def build_scheduler() -> AsyncIOScheduler:
     """The AsyncIO scheduler with every production job attached.
 
     Keep the body short: each ``jobs/<name>.register(scheduler)`` owns its own
-    trigger and first-run stagger. No jobs in M0.
+    trigger and first-run stagger.
     """
-    return AsyncIOScheduler(timezone="UTC")
+    scheduler = AsyncIOScheduler(timezone="UTC")
+    purge_refresh_tokens.register(scheduler)
+    return scheduler
 
 
 async def run() -> None:
