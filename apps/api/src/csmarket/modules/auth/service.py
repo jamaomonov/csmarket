@@ -121,6 +121,7 @@ async def steam_login(
     params: dict[str, str],
     *,
     app: AppName,
+    nonce: str | None,
     settings: Settings | None = None,
     verifier: SteamVerifier | None = None,
     persona: PersonaFetcher | None = None,
@@ -135,6 +136,8 @@ async def steam_login(
         db: The request's session; flushed, not committed.
         params: The ``openid.*`` params exactly as Steam appended them.
         app: Which app asked; its callback is the only ``return_to`` accepted.
+        nonce: The sign-in nonce from this browser's ``csmarket_oid`` cookie (``None``
+            when absent); the signed ``return_to`` must carry the same one.
         settings: Overrides the process settings; for tests.
         verifier: Replaces :func:`steam.verify_callback`; for tests.
         persona: Replaces :func:`steam.fetch_persona`; for tests.
@@ -144,16 +147,24 @@ async def steam_login(
 
     Raises:
         UnauthorizedError: Verification failed (foreign ``return_to``, bad
-            ``claimed_id``, Steam said no, Steam unreachable).
+            ``claimed_id``, unsigned fields, missing or foreign nonce, Steam said no,
+            Steam unreachable).
         AccountSuspendedError: The account is banned.
     """
     s = settings or get_settings()
     verify = verifier or steam.verify_callback
     try:
-        steam_id = await verify(params, expected_return_prefix=callback_url(s, app))
+        steam_id = await verify(params, expected_return_to=callback_url(s, app), nonce=nonce)
     except steam.SteamAuthError as exc:
-        # The message never carries the steamid or the params (see steam.SteamAuthError).
-        log.info("auth.steam.rejected", reason=str(exc), app=app)
+        # The message is one of steam.py's fixed strings — never the steamid, the params
+        # or upstream text; the cause goes out by class name only.
+        cause = exc.__cause__
+        log.info(
+            "auth.steam.rejected",
+            reason=str(exc),
+            error=type(cause).__name__ if cause is not None else None,
+            app=app,
+        )
         raise UnauthorizedError("steam verification failed") from exc
     name: str | None = None
     avatar: str | None = None
@@ -264,7 +275,7 @@ async def _blocklist_access_token(access_token: str, *, settings: Settings) -> N
     ttl = int((claims.exp - now()).total_seconds())
     if ttl <= 0:
         return
-    await get_redis().set(f"auth:revoked:{claims.jti}", "1", ex=ttl)
+    await _blocklist_write(f"auth:revoked:{claims.jti}", ttl=ttl, kind="access")
 
 
 async def _blocklist_session_id(sid: str, *, settings: Settings) -> None:
@@ -274,7 +285,28 @@ async def _blocklist_session_id(sid: str, *, settings: Settings) -> None:
     ``auth:revoked_sid`` marker, checked per request, ends them now. The marker outlives
     the longest access token that can carry this ``sid`` and then disappears.
     """
-    await get_redis().set(f"auth:revoked_sid:{sid}", "1", ex=settings.jwt_access_ttl_seconds)
+    await _blocklist_write(
+        f"auth:revoked_sid:{sid}", ttl=settings.jwt_access_ttl_seconds, kind="session"
+    )
+
+
+async def _blocklist_write(key: str, *, ttl: int, kind: str) -> None:
+    """Set a blocklist marker. **Fails open**, like :func:`_is_blocklisted`.
+
+    The ``refresh_tokens`` row is the source of truth and is written regardless, so a
+    Redis blip costs only the acceleration: the access token lives out its 15-minute TTL
+    instead of dying now. Raising would turn a refresh or a sign-out into a 500 and leave
+    the customer stuck. The key is never logged (it carries a ``jti``/``sid``).
+
+    Args:
+        key: The blocklist key to set.
+        ttl: Seconds the marker lives.
+        kind: ``"access"`` or ``"session"`` — for the log line.
+    """
+    try:
+        await get_redis().set(key, "1", ex=ttl)
+    except RedisError:
+        log.exception("auth.blocklist_unwritable", blocklist=kind)
 
 
 async def logout(
@@ -369,9 +401,7 @@ async def resolve_current_user(
     claims = authjwt.verify(access_token, expected_kind="access", settings=s)
     if await _is_blocklisted(f"auth:revoked:{claims.jti}", kind="access"):
         raise UnauthorizedError("token revoked")
-    if claims.sid is not None and await _is_blocklisted(
-        f"auth:revoked_sid:{claims.sid}", kind="session"
-    ):
+    if await _is_blocklisted(f"auth:revoked_sid:{claims.sid}", kind="session"):
         raise UnauthorizedError("session revoked")
     user = await get_user_by_id(db, claims.sub)
     if user is None:

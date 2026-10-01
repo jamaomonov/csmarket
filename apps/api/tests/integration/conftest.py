@@ -14,8 +14,9 @@ import os
 # unit-shaped integration tests. Disable before importing the testcontainers package.
 os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
 
-from collections.abc import AsyncIterator, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
 from pathlib import Path
+from urllib.parse import parse_qsl, urlsplit
 
 import pytest
 from alembic import command
@@ -248,3 +249,48 @@ def app_overrides(integration_app: FastAPI) -> Iterator[Callable[..., None]]:
 
     yield _set
     integration_app.dependency_overrides.clear()
+
+
+#: The fields Steam really signs on a sign-in (``openid.signed``).
+STEAM_SIGNED = "signed,op_endpoint,claimed_id,identity,return_to,response_nonce,assoc_handle"
+
+
+def _steam_assertion(return_to: str, sid: str = "76561198000000001") -> dict[str, str]:
+    """A Steam-shaped ``id_res`` assertion for ``return_to`` (fake id, fake signature)."""
+    identity = f"https://steamcommunity.com/openid/id/{sid}"
+    return {
+        "openid.ns": "http://specs.openid.net/auth/2.0",
+        "openid.mode": "id_res",
+        "openid.op_endpoint": "https://steamcommunity.com/openid/login",
+        "openid.claimed_id": identity,
+        "openid.identity": identity,
+        "openid.return_to": return_to,
+        "openid.response_nonce": "2026-10-01T00:00:00Zfake",
+        "openid.assoc_handle": "1234567890",
+        "openid.signed": STEAM_SIGNED,
+        "openid.sig": "ZmFrZS1zaWduYXR1cmU=",
+    }
+
+
+@pytest.fixture
+def steam_assertion() -> Callable[..., dict[str, str]]:
+    """Build a Steam-shaped assertion: ``steam_assertion(return_to, sid=...)``."""
+    return _steam_assertion
+
+
+@pytest.fixture
+def begin_steam(integration_client: AsyncClient) -> Callable[..., Awaitable[str]]:
+    """Run ``GET /auth/steam/start`` like the browser does; return the minted ``return_to``.
+
+    The client keeps the ``csmarket_oid`` cookie the start sets, so a following
+    ``POST /auth/steam`` carrying an assertion for this ``return_to`` is bound to it.
+    """
+
+    async def _begin(app: str = "web", locale: str = "ru") -> str:
+        r = await integration_client.get(
+            "/api/v1/auth/steam/start", params={"app": app, "locale": locale}
+        )
+        assert r.status_code == 302, r.text
+        return dict(parse_qsl(urlsplit(r.headers["location"]).query))["openid.return_to"]
+
+    return _begin

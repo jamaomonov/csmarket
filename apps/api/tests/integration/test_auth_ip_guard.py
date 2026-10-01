@@ -78,3 +78,28 @@ async def test_redis_down_fails_open(
     finally:
         monkeypatch.undo()
         cfg.get_settings.cache_clear()
+
+
+async def test_every_counter_expires(integration_client: AsyncClient) -> None:
+    """A counter without a TTL would throttle that address forever."""
+    await _attempt(integration_client)
+    keys = [k async for k in get_redis().scan_iter("auth:ipguard:*")]
+    assert keys
+    for k in keys:
+        ttl = await get_redis().ttl(k)
+        assert 0 < ttl <= cfg.get_settings().auth_ip_guard_window_seconds
+
+
+async def test_a_counter_that_lost_its_ttl_gets_one_back(integration_client: AsyncClient) -> None:
+    """INCR-then-EXPIRE-on-first-hit leaves a key immortal if the EXPIRE never lands; the
+    next hit must repair it rather than count on forever."""
+    from csmarket.modules.auth.ip_guard import hit_counter
+
+    redis = get_redis()
+    await redis.set("auth:ipguard:test:immortal", 3)  # a count with no TTL
+    assert await redis.ttl("auth:ipguard:test:immortal") == -1
+    assert await hit_counter("auth:ipguard:test:immortal", limit=10, window=60) is False
+    assert 0 < await redis.ttl("auth:ipguard:test:immortal") <= 60
+    count = await redis.get("auth:ipguard:test:immortal")
+    assert count is not None
+    assert int(count) == 4

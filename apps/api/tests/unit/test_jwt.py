@@ -170,3 +170,27 @@ def test_a_half_configured_pair_is_not_used() -> None:
     """Only a full pair wins; one key alone outside prod falls back to the ephemeral pair."""
     s = Settings(environment="dev", jwt_private_key=_other_private_pem(), jwt_public_key="")
     assert authjwt._keys(s) == authjwt._ephemeral_pair()
+
+
+def test_verify_rejects_a_token_without_a_sid(settings: Settings) -> None:
+    """Every access token belongs to a session; one without ``sid`` escapes revocation."""
+    now = int(datetime.now(UTC).timestamp())
+    token = pyjwt.encode(
+        {
+            "iss": settings.jwt_issuer,
+            "sub": "u",
+            "kind": "access",
+            "jti": "j",
+            "iat": now,
+            "exp": now + 60,
+        },
+        settings.jwt_private_key,
+        algorithm="EdDSA",
+    )
+    with pytest.raises(UnauthorizedError):
+        verify(token, settings=settings)
+
+
+def test_verified_claims_always_carry_the_sid(settings: Settings) -> None:
+    claims = verify(mint_access(sub="u", sid="session-1", settings=settings), settings=settings)
+    assert claims.sid == "session-1"

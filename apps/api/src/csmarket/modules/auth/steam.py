@@ -12,13 +12,21 @@ one is the documented exception: it IS the authentication, it happens once per
 login on a low-rate credential endpoint behind ``ip_guard``, and it is
 bounded by a short timeout.
 
+Steam's signature proves *who* signed in, not *which browser* asked. To stop login CSRF
+(an attacker handing a victim their own Steam redirect and signing the victim into the
+attacker's account), ``/auth/steam/start`` gives the browser a random nonce in an
+``HttpOnly`` cookie and puts the same nonce into ``return_to`` as ``n``. Steam signs
+``return_to``, so the completion accepts an assertion only when its signed ``n`` equals
+the cookie this browser sends.
+
 Identity is the steamid64 alone; ``users.steam_id`` holds it as text.
 """
 
 from __future__ import annotations
 
+import hmac
 import re
-from urllib.parse import urlencode
+from urllib.parse import parse_qs, urlencode, urlsplit
 
 import httpx
 
@@ -27,6 +35,13 @@ from csmarket.core.metrics import SteamApiConsumer, steam_web_api_call
 _STEAM_OPENID = "https://steamcommunity.com/openid/login"
 _CLAIMED_ID = re.compile(r"^https://steamcommunity\.com/openid/id/(\d{10,20})$")
 _TIMEOUT_SECONDS = 10.0
+#: The fields an assertion must sign for the checks below to mean anything: an
+#: unsigned ``return_to`` would make the nonce binding decorative.
+REQUIRED_SIGNED = frozenset(
+    {"claimed_id", "identity", "return_to", "response_nonce", "assoc_handle"}
+)
+#: The ``return_to`` query parameter carrying the sign-in nonce.
+NONCE_PARAM = "n"
 
 
 class SteamAuthError(Exception):
@@ -50,32 +65,59 @@ def build_login_url(*, return_to: str, realm: str) -> str:
     return f"{_STEAM_OPENID}?{urlencode(params)}"
 
 
+def check_assertion(params: dict[str, str], *, expected_return_to: str, nonce: str | None) -> int:
+    """The local half of verification — no network. Returns the claimed steamid64.
+
+    Args:
+        params: The ``openid.*`` parameters exactly as Steam sent them.
+        expected_return_to: Our callback URL (scheme, host and path); a ``return_to``
+            anywhere else means the assertion was minted for another site or app.
+        nonce: The sign-in nonce from this browser's ``csmarket_oid`` cookie, or
+            ``None`` when it sent none.
+
+    Raises:
+        SteamAuthError: A ``claimed_id`` that is not a Steam identity, a required field
+            left unsigned, a foreign ``return_to``, or a missing or foreign nonce.
+    """
+    match = _CLAIMED_ID.match(params.get("openid.claimed_id", ""))
+    if match is None:
+        raise SteamAuthError("claimed_id is not a steam identity")
+    signed = set(params.get("openid.signed", "").split(","))
+    if not REQUIRED_SIGNED.issubset(signed):
+        raise SteamAuthError("assertion leaves required fields unsigned")
+    parts = urlsplit(params.get("openid.return_to", ""))
+    if f"{parts.scheme}://{parts.netloc}{parts.path}" != expected_return_to:
+        raise SteamAuthError("return_to does not belong to us")
+    if not nonce:
+        raise SteamAuthError("sign-in was not started in this browser")
+    sent = parse_qs(parts.query).get(NONCE_PARAM, [])
+    if len(sent) != 1 or not hmac.compare_digest(sent[0].encode(), nonce.encode()):
+        raise SteamAuthError("sign-in nonce does not match this browser")
+    return int(match.group(1))
+
+
 async def verify_callback(
     params: dict[str, str],
     *,
-    expected_return_prefix: str,
+    expected_return_to: str,
+    nonce: str | None,
     http: httpx.AsyncClient | None = None,
 ) -> int:
     """Verify a Steam OpenID callback and return the steamid64.
 
+    :func:`check_assertion` runs first, so nothing it refuses ever reaches Steam.
+
     Args:
         params: The ``openid.*`` query parameters exactly as Steam sent them.
-        expected_return_prefix: Our own callback URL; a ``return_to`` pointing
-            anywhere else means the assertion was minted for another site.
+        expected_return_to: Our own callback URL, without a query.
+        nonce: This browser's sign-in nonce (the ``csmarket_oid`` cookie), if any.
         http: Injected client for tests.
 
     Raises:
-        SteamAuthError: Missing fields, foreign ``return_to``, Steam saying
-            the assertion is not valid, or an unparseable ``claimed_id``.
+        SteamAuthError: Any :func:`check_assertion` refusal, Steam saying the assertion
+            is not valid, or Steam unreachable. The message never carries upstream text.
     """
-    claimed = params.get("openid.claimed_id", "")
-    match = _CLAIMED_ID.match(claimed)
-    if match is None:
-        raise SteamAuthError("claimed_id is not a steam identity")
-    return_to = params.get("openid.return_to", "")
-    if not return_to.startswith(expected_return_prefix):
-        raise SteamAuthError("return_to does not belong to us")
-
+    steam_id = check_assertion(params, expected_return_to=expected_return_to, nonce=nonce)
     check = {k: v for k, v in params.items() if k.startswith("openid.")}
     check["openid.mode"] = "check_authentication"
 
@@ -89,14 +131,16 @@ async def verify_callback(
         resp.raise_for_status()
         body = resp.text
     except httpx.HTTPError as exc:
-        raise SteamAuthError(f"steam unreachable: {exc}") from exc
+        # httpx messages can carry URLs and request data; only the type is kept (as
+        # ``__cause__``, which the caller logs by class name).
+        raise SteamAuthError("steam unreachable") from exc
     finally:
         if http is None:
             await client.aclose()
 
     if "is_valid:true" not in body:
         raise SteamAuthError("steam rejected the assertion")
-    return int(match.group(1))
+    return steam_id
 
 
 _SUMMARIES = "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/"
@@ -236,8 +280,11 @@ async def fetch_persona(
 
 
 __all__ = [
+    "NONCE_PARAM",
+    "REQUIRED_SIGNED",
     "SteamAuthError",
     "build_login_url",
+    "check_assertion",
     "fetch_persona",
     "resolve_persona",
     "trade_hold_days",

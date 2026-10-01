@@ -13,6 +13,11 @@ environment-aware:
 
 One cookie serves the storefront and the admin (ruling P8): signing out of one signs out
 of the other.
+
+A second, short-lived cookie, ``csmarket_oid``, binds a Steam sign-in to the browser that
+started it (login-CSRF defence, see :mod:`csmarket.modules.auth.steam`): a random nonce,
+no PII, ``HttpOnly``, ``SameSite=Lax``, ten minutes, scoped to ``/api/v1/auth`` and
+spent by the completion whatever its outcome.
 """
 
 from __future__ import annotations
@@ -24,6 +29,11 @@ from fastapi import Response
 from csmarket.core.config import Settings
 
 REFRESH_COOKIE_NAME = "csmarket_refresh"
+OID_COOKIE_NAME = "csmarket_oid"
+#: Only the auth routes need the nonce back; the router is mounted at ``/api/v1/auth``.
+_OID_COOKIE_PATH = "/api/v1/auth"
+#: Long enough to pick an account on Steam and come back; short enough to be useless later.
+OID_COOKIE_MAX_AGE = 600
 
 
 def _cookie_domain(settings: Settings) -> str | None:
@@ -71,11 +81,41 @@ def clear_refresh_cookie(response: Response, *, settings: Settings) -> None:
     )
 
 
+def set_oid_cookie(response: Response, *, nonce: str, settings: Settings) -> None:
+    """Attach the sign-in nonce cookie (set by ``/auth/steam/start``)."""
+    response.set_cookie(
+        key=OID_COOKIE_NAME,
+        value=nonce,
+        max_age=OID_COOKIE_MAX_AGE,
+        path=_OID_COOKIE_PATH,
+        httponly=True,
+        secure=settings.is_prod,
+        samesite="lax",
+        domain=_cookie_domain(settings),
+    )
+
+
+def clear_oid_cookie(response: Response, *, settings: Settings) -> None:
+    """Expire the sign-in nonce cookie. Attributes must match the set call."""
+    response.delete_cookie(
+        key=OID_COOKIE_NAME,
+        path=_OID_COOKIE_PATH,
+        httponly=True,
+        secure=settings.is_prod,
+        samesite="lax",
+        domain=_cookie_domain(settings),
+    )
+
+
 cookie_domain = _cookie_domain
 
 __all__ = [
+    "OID_COOKIE_MAX_AGE",
+    "OID_COOKIE_NAME",
     "REFRESH_COOKIE_NAME",
+    "clear_oid_cookie",
     "clear_refresh_cookie",
     "cookie_domain",
+    "set_oid_cookie",
     "set_refresh_cookie",
 ]

@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
+
 import httpx
 import pytest
 import respx
@@ -29,22 +31,19 @@ async def _ban(db: AsyncSession, steam_id: str) -> None:
 
 @respx.mock
 async def test_a_banned_account_cannot_sign_in_with_steam(
-    integration_client: AsyncClient, db_session: AsyncSession
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    begin_steam: Callable[..., Awaitable[str]],
+    steam_assertion: Callable[..., dict[str, str]],
 ) -> None:
     respx.post(_OPENID).mock(return_value=httpx.Response(200, text="is_valid:true\n"))
     await _ban(db_session, _SID)
-    params = {
-        "openid.ns": "http://specs.openid.net/auth/2.0",
-        "openid.mode": "id_res",
-        "openid.claimed_id": f"https://steamcommunity.com/openid/id/{_SID}",
-        "openid.return_to": "http://localhost:3100/auth/steam/callback?locale=ru",
-        "openid.sig": "s",
-        "openid.signed": "a,b",
-    }
+    params = steam_assertion(await begin_steam(), sid=_SID)
     r = await integration_client.post("/api/v1/auth/steam", json={"app": "web", "params": params})
     assert r.status_code == 403
     assert r.json()["type"].endswith("/account-suspended")
-    assert "set-cookie" not in r.headers
+    assert "csmarket_refresh" not in r.headers.get("set-cookie", "")
+    assert integration_client.cookies.get("csmarket_refresh") is None
 
 
 async def test_a_ban_stops_the_very_next_refresh(

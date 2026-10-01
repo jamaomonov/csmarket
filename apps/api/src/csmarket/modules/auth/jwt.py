@@ -42,7 +42,7 @@ class Claims:
     jti: str
     iat: datetime
     exp: datetime
-    sid: str | None = None
+    sid: str
 
 
 def _settings_or(settings: Settings | None) -> Settings:
@@ -149,7 +149,8 @@ def verify(
         The decoded claims.
 
     Raises:
-        UnauthorizedError: On a bad signature, expiry, wrong issuer or kind mismatch.
+        UnauthorizedError: On a bad signature, expiry, wrong issuer, a missing required
+            claim (``sid`` included) or a kind mismatch.
         RuntimeError: In prod when the key pair is not configured.
     """
     s = _settings_or(settings)
@@ -160,7 +161,8 @@ def verify(
             public_key,
             algorithms=[ALG],
             issuer=s.jwt_issuer,
-            options={"require": ["iat", "exp", "iss", "sub", "jti"]},
+            # ``sid`` too: a token without one could not be revoked with its session.
+            options={"require": ["iat", "exp", "iss", "sub", "jti", "sid"]},
         )
     except InvalidTokenError as exc:
         raise UnauthorizedError("invalid token") from exc
@@ -169,12 +171,11 @@ def verify(
     if kind != expected_kind:
         raise UnauthorizedError("wrong token kind")
 
-    sid = raw.get("sid")
     return Claims(
         sub=str(raw["sub"]),
         kind=cast(TokenKind, kind),
         jti=str(raw["jti"]),
         iat=datetime.fromtimestamp(int(raw["iat"]), tz=now().tzinfo),
         exp=datetime.fromtimestamp(int(raw["exp"]), tz=now().tzinfo),
-        sid=str(sid) if sid is not None else None,
+        sid=str(raw["sid"]),
     )

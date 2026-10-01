@@ -70,10 +70,12 @@ def subject_key(bucket: str, ip: str, subject: str) -> str:
 async def hit_counter(key: str, *, limit: int, window: int) -> bool:
     """Count one attempt against ``key``. True when it puts the caller over ``limit``.
 
-    The single fixed-window counter behind every guard in the app: INCR, set the TTL
-    on the first hit of a window, compare. Public so that any other guard reuses this
-    counter instead of growing a second copy of the INCR/EXPIRE dance that drifts in
-    behaviour under Redis trouble.
+    The single fixed-window counter behind every guard in the app: INCR and
+    ``EXPIRE … NX`` in one ``MULTI``, then compare. ``NX`` sets the TTL only when the key
+    has none, so the window stays fixed from its first hit — and a key that ever lost
+    its TTL (a crash between two separate commands) gets one back on its next hit
+    instead of throttling that address forever. Public so that any other guard reuses
+    this counter instead of growing a second copy that drifts under Redis trouble.
 
     Best-effort by design: a Redis error counts as "under the limit" so a cache hiccup
     degrades to no throttling rather than locking everyone out. Callers own the
@@ -90,11 +92,11 @@ async def hit_counter(key: str, *, limit: int, window: int) -> bool:
     """
     count = 0
     with contextlib.suppress(Exception):  # fail open on Redis trouble
-        redis = get_redis()
-        count = await redis.incr(key)
-        if count == 1:
-            await redis.expire(key, window)
-    return count > limit
+        async with get_redis().pipeline(transaction=True) as pipe:
+            pipe.incr(key)
+            pipe.expire(key, window, nx=True)
+            count, _ = await pipe.execute()
+    return int(count) > limit
 
 
 async def guard_ip(request: Request, *, bucket: str, subject: str | None = None) -> None:

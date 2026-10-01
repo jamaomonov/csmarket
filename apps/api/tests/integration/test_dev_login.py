@@ -85,3 +85,24 @@ async def test_prod_never_exposes_dev_login(
     finally:
         monkeypatch.undo()
         cfg.get_settings.cache_clear()
+
+
+async def test_prod_answers_404_before_reading_the_body(
+    monkeypatch: pytest.MonkeyPatch, db_engine: AsyncEngine
+) -> None:
+    """A 422 for ``{}`` would tell a prober the route exists; prod must look like any 404."""
+    from csmarket.bootstrap import create_app
+    from httpx import ASGITransport
+
+    monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")
+    monkeypatch.setenv("CSMARKET_DEV_LOGIN_ENABLED", "true")
+    cfg.get_settings.cache_clear()
+    try:
+        app = create_app()
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+            r = await c.post("/api/v1/auth/dev-login", json={})
+        assert r.status_code == 404
+        assert r.json()["type"] == "https://csmarket.uz/errors/not-found"
+    finally:
+        monkeypatch.undo()
+        cfg.get_settings.cache_clear()

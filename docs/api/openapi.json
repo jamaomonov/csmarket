@@ -543,8 +543,26 @@
     },
     "/api/v1/auth/steam": {
       "post": {
-        "description": "Verify the callback with Steam and open a session.\n\nKeyless by design: replaying an OpenID assertion is refused by Steam itself\n(``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.",
+        "description": "Verify the callback with Steam and open a session.\n\nThe signed ``return_to`` must carry the nonce of this browser's ``csmarket_oid``\ncookie (login-CSRF defence). The nonce is single-use: the cookie is cleared on every\noutcome, so a failure is retried from ``/auth/steam/start``.\n\nKeyless by design: replaying an OpenID assertion is refused by Steam itself\n(``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.",
         "operationId": "steam_complete_api_v1_auth_steam_post",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "csmarket_oid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Csmarket Oid"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -566,6 +584,9 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "description": "Not verified, or not started in this browser"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -585,7 +606,7 @@
     },
     "/api/v1/auth/steam/start": {
       "get": {
-        "description": "Send the browser to Steam.\n\n``return_to`` is the app's own callback page; realm is the app's origin. Both come\nfrom settings \u2014 the query only picks which app, so the redirect cannot be aimed\nanywhere else.",
+        "description": "Send the browser to Steam, bound to this browser by a fresh nonce.\n\n``return_to`` is the app's own callback page; realm is the app's origin. Both come\nfrom settings \u2014 the query only picks which app, so the redirect cannot be aimed\nanywhere else. The nonce goes into ``return_to`` (which Steam signs) and into the\n``csmarket_oid`` cookie; :func:`steam_complete` requires the two to match.",
         "operationId": "steam_start_api_v1_auth_steam_start_get",
         "parameters": [
           {
