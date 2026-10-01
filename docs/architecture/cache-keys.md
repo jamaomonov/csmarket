@@ -16,6 +16,7 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
 | `auth:ipguard:{bucket}:{hash_short(ip)}:s:{sha256(subject)[:32]}` | window, 60 s                                  | `auth.ip_guard.guard_ip` when a `subject` is given         | `auth.ip_guard.guard_ip`                                  | Digests only (IP, and the subject: the user id for `trade-link-check`) |
 | `users:tradelink:{sha256(link)[:32]}`                             | 600 s                                         | `users.tradelink.check_trade_link`                         | `users.tradelink.check_trade_link`                        | Value is `{verdict, reason}` only; the key is a digest of the link     |
 | `users:tradelink:breaker`                                         | 60 s                                          | `users.tradelink.check_trade_link` on any upstream failure | `users.tradelink.check_trade_link`                        | No                                                                     |
+| `skins:pricing`                                                   | 3600 s                                        | `skins.settings.load_rules` (on a miss), `publish_rules`   | `skins.settings.load_rules`                               | No: the pricing rules document                                         |
 
 ## Notes
 
