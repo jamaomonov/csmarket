@@ -75,6 +75,12 @@ Related decisions taken while building M1:
   `users.api`); `tests/unit/test_import_order.py` guards it.
 - Refresh-token reuse detection commits the revocation of every session **before** raising
   `401`, so the request-scoped `get_session` rollback cannot undo it.
+- (M3, migration 0011) Reuse detection fires only for a token revoked by **rotation**.
+  `refresh_tokens.revoked_reason` records each revocation as `rotated`, `logout`, `admin`
+  or `reuse`; NULL is legacy and counts as `rotated`. A logged-out, ban-revoked or
+  burned-down token is a plain `401`. A banned owner's token is `403 account-suspended`,
+  and nothing is written. Without this, after an unban, a stale cookie on another device
+  revoked the user's fresh session, and every suspended page load wrote a revoke-all.
 - A Waxpeer `200` whose body is not a JSON object counts as "unavailable", never as a
   reason: an unreadable answer is an outage, and the link stays saved with verdict `null`.
 - The storefront skips the boot refresh on the Steam return URL (decided by `openid.mode`

@@ -29,10 +29,14 @@ sequenceDiagram
     Note over App,API: Later, page load or a 401
     App->>API: POST /auth/refresh (cookie)
     API->>DB: Rotate: revoke the old row, insert a new one
-    alt token already rotated (reuse)
-        API->>DB: Revoke every session of the user, commit
+    alt owner banned (token revoked by the ban)
+        API-->>App: 403 account-suspended (no writes)
+    else token already rotated (reuse)
+        API->>DB: Revoke every session of the user (reason reuse), commit
         API->>R: auth:revoked_sid for each session
         API-->>App: 401
+    else token ended by logout, admin or an earlier reuse
+        API-->>App: 401 (nothing else revoked)
     else normal
         API-->>App: 200 {access_token} + new cookie
     end

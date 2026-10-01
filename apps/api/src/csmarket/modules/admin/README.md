@@ -85,10 +85,11 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
   (`users.mask_trade_link`): `partner` kept, the token `••••` + its last 2 characters.
 - **Ban:** refuses oneself (`409 ban_self`), an admin (`409 ban_admin` — revoke the role
   first) and a banned account (`409 already_banned`); sets `banned_at`/`ban_reason` and calls
-  `auth.revoke_all_sessions` (every refresh row revoked, its `sid` blocklisted). The user's
-  next request is `403 account-suspended`; their refresh is `401`.
+  `auth.revoke_all_sessions` (every refresh row revoked with reason `admin`, its `sid`
+  blocklisted). The user's next request and every refresh are `403 account-suspended`.
 - **Unban:** `409 not_banned` unless banned; clears both columns. Sessions stay revoked: the
-  user signs in again.
+  user signs in again. A stale cookie on another device is then a plain `401`, and it never
+  ends the new session (the reuse trip-wire covers only rotated tokens; see `auth/README.md`).
 - **Adjust:** `wallet.admin_adjust` — credit D `user_wallet` / C `house_adjustments`,
   clawback the mirror; the user's wallet is locked and a clawback beyond the balance is
   `409 balance_too_low` (ruling R13: never below zero). `amount_uzs` is a JSON integer,

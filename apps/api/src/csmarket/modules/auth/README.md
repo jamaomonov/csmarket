@@ -24,14 +24,30 @@ Steam sign-in (OpenID 2.0, the only sign-in), sessions, access tokens, the Redis
 | Access  | 15 min   | EdDSA JWT in the JSON body; the app keeps it in memory and sends it as Bearer  |
 | Refresh | 30 days  | Opaque, `csmarket_refresh` `HttpOnly` cookie; only its SHA-256 is in the table |
 
-Refresh rotates on every use. Presenting a refresh token that was already rotated
-revokes every session of the user (the reuse trip-wire). One cookie serves the storefront
-and the admin (ruling P8).
+Refresh rotates on every use. One cookie serves the storefront and the admin (ruling P8).
 
-`resolve_current_user` checks the ban **before** the blocklist: an admin ban (M3) also
+Every revoked refresh row records why, in `revoked_reason`: `rotated` (a refresh),
+`logout`, `admin` (`revoke_all_sessions`, the ban) or `reuse` (the trip-wire's
+burn-down). NULL marks rows revoked before migration 0011 and reads as `rotated`. Presenting
+a revoked refresh token again is answered in this order:
+
+| Case                                      | Answer                        | Writes                                                     |
+| ----------------------------------------- | ----------------------------- | ---------------------------------------------------------- |
+| The owner is banned                       | `403 account-suspended`       | None                                                       |
+| `rotated` or NULL: the token was replayed | `401` "reuse detected"        | The reuse trip-wire: every live session revoked as `reuse` |
+| `logout`, `admin` or `reuse`              | `401` "refresh token revoked" | None                                                       |
+
+The trip-wire is scoped to rotated tokens. A rotated token coming back means two holders
+of one cookie, which is theft. A logged-out or ban-revoked cookie is only dead. Otherwise,
+after an unban and a fresh sign-in, a stale cookie on another device would end the new
+session.
+
+`resolve_current_user` checks the ban **before** the blocklist. An admin ban (M3) also
 revokes every session (`revoke_all_sessions`), and the apps must hear `403
 account-suspended`, not `401` "session revoked" (which would send them refreshing). The
-banned user's refresh then fails with `401` (its row is revoked), which signs the app out.
+banned user's refresh is `403 account-suspended` as well, on every attempt and without a
+write, so a suspended browser keeps its cookie and shows the suspension notice on each load
+(`@csmarket/api-client` `isSuspended()`).
 
 ## Cookies
 

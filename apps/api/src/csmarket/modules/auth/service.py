@@ -9,6 +9,7 @@ minted from it. Revoking a session writes ``revoked_at`` and drops a Redis marke
 presents the access token also blocklists that token's ``jti`` (``auth:revoked:{jti}``).
 Service functions flush and leave the commit to the caller — except the reuse trip-wire,
 which commits its burn-down itself (see :func:`refresh_session`).
+Every revocation records ``revoked_reason`` (``RevokedReason``); see :func:`_refuse_revoked`.
 """
 
 from __future__ import annotations
@@ -16,7 +17,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Literal
+from typing import Literal, NoReturn
 
 from redis.exceptions import RedisError
 from sqlalchemy import delete, or_, select, update
@@ -35,6 +36,9 @@ from csmarket.modules.auth.security import hash_token, new_refresh_token
 from csmarket.modules.users.api import User, get_user_by_id, set_roles, upsert_user_by_steam
 
 log = get_logger("csmarket.auth.service")
+
+#: Why a refresh row was revoked (``refresh_tokens.revoked_reason``).
+RevokedReason = Literal["rotated", "logout", "admin", "reuse"]
 
 #: How long a revoked or expired row is kept before :func:`purge_stale_refresh_tokens`
 #: deletes it. Deleting at once would turn "your session was replaced" (reuse detection
@@ -212,10 +216,7 @@ async def refresh_session(
 ) -> SessionTokens:
     """Rotate a refresh token: revoke the old row, open a new session.
 
-    Reuse trip-wire: presenting a refresh token whose row is already revoked revokes
-    **every** live session of the user. That burn-down is committed here, before the
-    error is raised — the request dependency rolls back on any raised error, which would
-    otherwise undo it and leave the other refresh tokens working.
+    A revoked token is refused by :func:`_refuse_revoked` (reuse trip-wire, ban, 401).
 
     Args:
         db: The caller's session. Flushed on success; committed on reuse.
@@ -226,7 +227,7 @@ async def refresh_session(
         The new session's tokens.
 
     Raises:
-        UnauthorizedError: Unknown, reused or expired token, or the user is gone.
+        UnauthorizedError: Unknown, revoked, reused or expired token, or the user is gone.
         AccountSuspendedError: The account is banned (also when its token was revoked by
             the ban).
     """
@@ -244,15 +245,7 @@ async def refresh_session(
         raise UnauthorizedError("invalid refresh token")
 
     if row.revoked_at is not None:
-        revoked = await _revoke_all_for_user(db, row.user_id)
-        await db.commit()
-        for sid in revoked:
-            await _blocklist_session_id(sid, settings=s)
-        # An admin ban revokes every session; tell the app why rather than "reuse".
-        owner = await get_user_by_id(db, row.user_id)
-        if owner is not None and owner.banned_at is not None:
-            raise AccountSuspendedError("this account has been suspended")
-        raise UnauthorizedError("refresh token reuse detected")
+        await _refuse_revoked(db, row, settings=s)
 
     if row.expires_at <= now():
         raise UnauthorizedError("refresh token expired")
@@ -262,9 +255,36 @@ async def refresh_session(
         raise UnauthorizedError("user no longer exists")
 
     row.revoked_at = now()
+    row.revoked_reason = "rotated"
     # The rotated-out session's access token dies immediately, not after 15 min.
     await _blocklist_session_id(row.id, settings=s)
     return await open_session(db, user=user, settings=s)
+
+
+async def _refuse_revoked(db: AsyncSession, row: RefreshToken, *, settings: Settings) -> NoReturn:
+    """Refuse a revoked refresh token; trip the reuse wire only when that means theft.
+
+    A banned owner hears 403 with no writes (a suspended browser asks on every load; its
+    sessions are already revoked). A ``rotated`` token — or NULL, rows revoked before the
+    reason existed — coming back is theft: every live session of the user is revoked as
+    ``reuse`` and committed *before* raising, since the request dependency rolls back on
+    any error. ``logout`` / ``admin`` / ``reuse`` tokens are just dead: 401, nothing else.
+
+    Raises:
+        AccountSuspendedError: The owner is banned.
+        UnauthorizedError: ``reuse detected`` or ``refresh token revoked``.
+    """
+    owner = await get_user_by_id(db, row.user_id)
+    if owner is not None and owner.banned_at is not None:
+        raise AccountSuspendedError("this account has been suspended")
+    if row.revoked_reason not in (None, "rotated"):
+        # Not stolen: an old cookie like this must not end a later, legitimate sign-in.
+        raise UnauthorizedError("refresh token revoked")
+    revoked = await _revoke_all_for_user(db, row.user_id, reason="reuse")
+    await db.commit()
+    for sid in revoked:
+        await _blocklist_session_id(sid, settings=settings)
+    raise UnauthorizedError("refresh token reuse detected")
 
 
 async def _blocklist_access_token(access_token: str, *, settings: Settings) -> None:
@@ -339,6 +359,7 @@ async def logout(
         return  # don't leak whether the token ever existed
     if row.revoked_at is None:
         row.revoked_at = now()
+        row.revoked_reason = "logout"
         # Cookie-only logout must kill the access token too.
         await _blocklist_session_id(row.id, settings=s)
         await db.flush()
@@ -363,18 +384,20 @@ async def revoke_all_sessions(
         How many sessions were live.
     """
     s = settings or get_settings()
-    revoked = await _revoke_all_for_user(db, user_id)
+    revoked = await _revoke_all_for_user(db, user_id, reason="admin")
     for sid in revoked:
         await _blocklist_session_id(sid, settings=s)
     return len(revoked)
 
 
-async def _revoke_all_for_user(db: AsyncSession, user_id: str) -> list[str]:
+async def _revoke_all_for_user(
+    db: AsyncSession, user_id: str, *, reason: RevokedReason
+) -> list[str]:
     """Revoke every live session of ``user_id`` in one statement; return their ids."""
     result = await db.execute(
         update(RefreshToken)
         .where(RefreshToken.user_id == user_id, RefreshToken.revoked_at.is_(None))
-        .values(revoked_at=now())
+        .values(revoked_at=now(), revoked_reason=reason)
         .returning(RefreshToken.id)
     )
     return [str(sid) for sid in result.scalars().all()]
