@@ -2,6 +2,18 @@
 
 from __future__ import annotations
 
-from csmarket.modules.skins.waxpeer import WaxpeerClient, WaxpeerError, WaxpeerUnavailableError
+from csmarket.modules.skins.waxpeer import (
+    SnapshotRow,
+    WaxpeerClient,
+    WaxpeerError,
+    WaxpeerRateLimitedError,
+    WaxpeerUnavailableError,
+)
 
-__all__ = ["WaxpeerClient", "WaxpeerError", "WaxpeerUnavailableError"]
+__all__ = [
+    "SnapshotRow",
+    "WaxpeerClient",
+    "WaxpeerError",
+    "WaxpeerRateLimitedError",
+    "WaxpeerUnavailableError",
+]
