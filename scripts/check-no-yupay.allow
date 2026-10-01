@@ -1,0 +1,4 @@
+# One extended regex per line; matched case-insensitively and removed from a
+# line before the forbidden-token check runs. Every entry needs a reason.
+# Click Shop API names its order-id field this way (Prepare/Complete, M3).
+merchant_trans_id
