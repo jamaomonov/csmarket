@@ -76,3 +76,24 @@ def test_mock_intent_is_the_topup_page(locale: str, url: str) -> None:
 def test_return_url_refuses_an_unknown_locale() -> None:
     with pytest.raises(ValueError, match="locale"):
         return_url("T7K3M9QX", "de")
+
+
+@pytest.mark.parametrize(
+    ("number", "locale", "url"),
+    [
+        ("T7K3M9QX", "ru", "http://localhost:3100/account/balance/topups/T7K3M9QX"),
+        ("K7M3Q9X2", "ru", "http://localhost:3100/orders/K7M3Q9X2"),
+        ("K7M3Q9X2", "uz", "http://localhost:3100/uz/orders/K7M3Q9X2"),
+        ("K7M3Q9X2", "en", "http://localhost:3100/en/orders/K7M3Q9X2"),
+    ],
+)
+def test_return_url_is_the_payables_own_page(number: str, locale: str, url: str) -> None:
+    assert return_url(number, locale) == url
+
+
+def test_mock_intent_of_an_order_is_the_order_page() -> None:
+    payable = Payable("order", "K7M3Q9X2", Decimal(171800), "u", True, "ok", None)
+    assert (
+        get_gateway("mock").intent_url(payable=payable, locale="en")
+        == "http://localhost:3100/en/orders/K7M3Q9X2?mock=1"
+    )

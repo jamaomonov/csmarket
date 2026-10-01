@@ -1,7 +1,7 @@
-"""Admin payments: search the attempts, open one with its top-up and the kassas' rows.
+"""Admin payments: search the attempts, open one with its top-up or order and the kassas' rows.
 
 Read-only. A list is one statement whatever its size (the payer's name comes from a join);
-a detail is a fixed handful (payment, top-up, one lookup per kassa).
+a detail is a fixed handful (payment, top-up or order, one lookup per kassa).
 """
 
 from __future__ import annotations
@@ -16,12 +16,14 @@ from csmarket.core.errors import NotFoundError
 from csmarket.core.money import wire_uzs
 from csmarket.modules.admin.payments_kassa import kassa_transactions
 from csmarket.modules.admin.payments_schemas import (
+    AdminOrderInfo,
     AdminPaymentDetail,
     AdminPaymentFull,
     AdminPaymentRow,
     AdminPaymentUser,
     AdminTopupInfo,
 )
+from csmarket.modules.orders.api import Order
 from csmarket.modules.payments.api import Payment, WalletTopup
 from csmarket.modules.users.api import User
 
@@ -86,7 +88,7 @@ async def list_payments(
 
 
 async def payment_detail(db: AsyncSession, payment_id: str) -> AdminPaymentDetail:
-    """One payment with its payer, its top-up and the kassas' transactions.
+    """One payment with its payer, its top-up or order, and the kassas' transactions.
 
     Raises:
         NotFoundError: no such payment, or ``payment_id`` is not a UUID.
@@ -106,6 +108,7 @@ async def payment_detail(db: AsyncSession, payment_id: str) -> AdminPaymentDetai
         raise NotFoundError("payment not found")
     payment, display_name = found
     topup = await db.get(WalletTopup, payment.topup_id) if payment.topup_id is not None else None
+    order = await db.get(Order, payment.order_id) if payment.order_id is not None else None
     metadata = {
         k: v
         for k, v in payment.extra_metadata.items()
@@ -128,6 +131,15 @@ async def payment_detail(db: AsyncSession, payment_id: str) -> AdminPaymentDetai
                 succeeded_at=topup.succeeded_at,
             )
             if topup is not None
+            else None
+        ),
+        order=(
+            AdminOrderInfo(
+                number=order.number,
+                status=order.status,  # type: ignore[arg-type]  # DB check constraint
+                price_uzs=wire_uzs(order.price_uzs),
+            )
+            if order is not None
             else None
         ),
         kassa=await kassa_transactions(db, payment.id),

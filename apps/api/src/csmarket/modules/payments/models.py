@@ -159,6 +159,8 @@ class Payment(Base):
         # collation (a plain btree only under C); equality still uses it too.
         Index("ix_payments_number", "number", postgresql_ops={"number": "text_pattern_ops"}),
         Index("ix_payments_topup", "topup_id"),
+        # The payable resolver's callers, the kassa sweeps and the admin read by order.
+        Index("ix_payments_order", "order_id"),
         Index("ix_payments_status_created", "status", text("created_at DESC")),
         Index("ix_payments_created", text("created_at DESC"), text("id DESC")),
     )

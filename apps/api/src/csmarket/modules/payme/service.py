@@ -1,4 +1,4 @@
-"""Payme Merchant API handlers for balance top-ups.
+"""Payme Merchant API handlers for top-ups and orders.
 
 The seven JSON-RPC methods Payme calls — ``CheckPerformTransaction``,
 ``CreateTransaction``, ``PerformTransaction``, ``CancelTransaction``, ``CheckTransaction``,
@@ -7,16 +7,22 @@ the ``payments`` hooks (``ensure_attempt``, ``mark_pending``, ``settle``, ``reve
 ``cancel_pending``); :class:`PaymeTransaction` is only Payme's own state machine. The route
 checks Basic auth before anything here runs.
 
-**Lock order (global): top-up → Payme row → payment → user wallet.** ``CheckPerform`` and
-``Create`` resolve the top-up with ``lock=True`` before they read or insert the Payme row.
-``Perform``, ``Cancel`` and ``SetFiscalData`` start from a Payme id: they read the row
-without a lock to learn its account, lock the top-up, then lock the row and re-check its
-state. ``CheckTransaction`` and ``GetStatement`` only read and take no lock. The timeout
-sweep locks top-ups ``FOR UPDATE SKIP LOCKED`` in its scan, then each row.
+``account.order`` is a payable number: a top-up's (``T…``) or an order's (M4a); "owner"
+below is whichever it names.
 
-A top-up is credited at most once: Create on a paid top-up is −31051; Perform after the
-top-up was paid meanwhile (another kassa, or a sibling row sharing this attempt) is −31008
-and the transaction is cancelled (state −1, reason 3), so Payme cancels that charge.
+**Lock order (global): owner (top-up or order) → Payme row → payment → user wallet.**
+``CheckPerform`` and ``Create`` resolve the owner with ``lock=True`` before they read or
+insert the Payme row. ``Perform``, ``Cancel`` and ``SetFiscalData`` start from a Payme id:
+they read the row without a lock to learn its account, lock the owner, then lock the row
+and re-check its state. ``CheckTransaction`` and ``GetStatement`` only read and take no
+lock. The timeout sweep scans unlocked, then per row locks the owner ``FOR UPDATE SKIP
+LOCKED``, then the row.
+
+An owner is paid at most once: Create on a paid top-up or order is −31051; Perform after
+the owner was paid meanwhile (another kassa, or a sibling row sharing this attempt) is
+−31008 and the transaction is cancelled (state −1, reason 3), so Payme cancels that charge.
+A performed transaction is cancelled only for an unspent top-up; a spent top-up and any
+order answer −31007 (ruling R7).
 """
 
 from __future__ import annotations
@@ -55,10 +61,10 @@ from csmarket.modules.payments.api import (
     AlreadyPaidError,
     Payable,
     Payment,
-    TopupSpentError,
-    WalletTopup,
+    ReversalRefusedError,
     cancel_pending,
     ensure_attempt,
+    lock_owner_or_skip,
     mark_pending,
     resolve,
     reverse,
@@ -86,7 +92,7 @@ _REFUSALS: dict[str, Callable[[], PaymeError]] = {
     "reversed": account_not_payable,
 }
 
-#: Top-up reasons that mean its one credit is already taken.
+#: Payable reasons that mean its one payment is already taken.
 _CREDITED = ("paid", "reversed")
 
 
@@ -134,7 +140,7 @@ async def _lock_txn(db: AsyncSession, txn_id: str) -> PaymeTransaction:
 async def _locked_by_payme_id(
     db: AsyncSession, payme_id: str, *, missing: Callable[[], PaymeError]
 ) -> tuple[Payable, PaymeTransaction]:
-    """The row named by ``payme_id``, locked in the global order: top-up, then the row.
+    """The row named by ``payme_id``, locked in the global order: owner, then the row.
 
     Raises:
         PaymeError: ``missing()`` when there is no such row.
@@ -147,7 +153,7 @@ async def _locked_by_payme_id(
 
 
 async def _payment(db: AsyncSession, payment_id: str) -> Payment:
-    """The attempt, re-read: callers hold its top-up, so its status is the committed one."""
+    """The attempt, re-read: callers hold its owner, so its status is the committed one."""
     stmt = select(Payment).where(Payment.id == payment_id).execution_options(populate_existing=True)
     return (await db.execute(stmt)).scalar_one()
 
@@ -190,7 +196,7 @@ async def _release_attempt(db: AsyncSession, txn: PaymeTransaction) -> None:
 
 
 async def _cancel_created(db: AsyncSession, txn: PaymeTransaction, *, reason: int) -> None:
-    """State 1 → −1 with ``reason``; the caller holds the top-up and the row."""
+    """State 1 → −1 with ``reason``; the caller holds the owner and the row."""
     txn.state = STATE_CANCELLED
     txn.reason = reason
     txn.cancel_time = now_ms()
@@ -213,7 +219,7 @@ async def _refuse_second_charge(db: AsyncSession, txn: PaymeTransaction) -> Paym
 async def check_perform_transaction(
     db: AsyncSession, *, amount: int, account: dict[str, Any]
 ) -> Result:
-    """``CheckPerformTransaction``: may Payme charge ``amount`` tiyin for this top-up?
+    """``CheckPerformTransaction``: may Payme charge ``amount`` tiyin for this payable?
 
     Raises:
         PaymeError: −31050 unknown, −31051 paid / expired / reversed, −31001 amount.
@@ -229,8 +235,8 @@ async def create_transaction(
     """``CreateTransaction``: hold an attempt and register Payme's transaction (state 1).
 
     Idempotent on ``payme_id``: a replay echoes the stored row whatever its state now (a
-    legitimate replay may land after the top-up was paid). A second, different active
-    transaction on the same top-up is −31099. The attempt work and the insert share one
+    legitimate replay may land after the owner was paid). A second, different active
+    transaction on the same owner is −31099. The attempt work and the insert share one
     SAVEPOINT, so losing the insert race to another account leaves no attempt ``pending``.
 
     Args:
@@ -238,7 +244,7 @@ async def create_transaction(
         payme_id: Payme's transaction id (unique).
         time: Payme's creation time (epoch ms), echoed back verbatim.
         amount: Tiyin.
-        account: Payme's ``account``; ``order`` is the top-up number.
+        account: Payme's ``account``; ``order`` is the top-up or order number.
 
     Raises:
         PaymeError: −31050 / −31051 / −31001 as ``CheckPerformTransaction``, −31099 busy,
@@ -248,7 +254,7 @@ async def create_transaction(
     payable = await resolve(db, number, lock=True)
     seen = await _txn_by_payme_id(db, payme_id)
     if seen is not None:
-        # Another account's row is refused from this unlocked read: its top-up is not the one
+        # Another account's row is refused from this unlocked read: its owner is not the one
         # we hold, so locking the row here would step outside the global lock order.
         if seen.account != number:
             raise operation_not_permitted()
@@ -285,7 +291,7 @@ async def create_transaction(
             db.add(txn)
             await db.flush()
     except IntegrityError:
-        # The same payme_id for another account locked another top-up and won the insert.
+        # The same payme_id for another account locked another owner and won the insert.
         winner = await _txn_by_payme_id(db, payme_id)
         if winner is None:  # pragma: no cover - the unique id collided, so the row exists
             raise
@@ -295,9 +301,9 @@ async def create_transaction(
 
 
 async def perform_transaction(db: AsyncSession, *, payme_id: str) -> Result:
-    """``PerformTransaction``: Payme debited the customer — settle, credit the top-up once.
+    """``PerformTransaction``: Payme debited the customer — settle, pay the owner once.
 
-    A replay on a performed transaction echoes it. If the top-up was credited meanwhile
+    A replay on a performed transaction echoes it. If the owner was paid meanwhile
     (another kassa, or a sibling Payme row on this attempt), this charge is refused with
     −31008 and the transaction is cancelled (−1, reason 3) — ``persist`` is set so the
     route commits that.
@@ -315,7 +321,7 @@ async def perform_transaction(db: AsyncSession, *, payme_id: str) -> Result:
         raise await _refuse_second_charge(db, txn)
     try:
         await settle(db, payment=payment, event_id=f"payme:{payme_id}")
-    except AlreadyPaidError:  # pragma: no cover - refused above under the same top-up lock
+    except AlreadyPaidError:  # pragma: no cover - refused above under the same owner lock
         raise await _refuse_second_charge(db, txn) from None
     txn.state = STATE_PERFORMED
     txn.perform_time = now_ms()
@@ -328,12 +334,14 @@ async def perform_transaction(db: AsyncSession, *, payme_id: str) -> Result:
 async def cancel_transaction(db: AsyncSession, *, payme_id: str, reason: int) -> Result:
     """``CancelTransaction``, routed by the transaction's state.
 
-    State 1 → −1: the attempt is released (unless another state-1 row holds it). State 2
-    → −2: the top-up is reversed if its money is still on the balance; otherwise −31007
-    and nothing changes (ruling R7). A replay on a cancelled transaction echoes it.
+    State 1 → −1: the attempt is released (unless another state-1 row holds it); an order
+    stays ``pending``. State 2 → −2: a top-up is reversed if its money is still on the
+    balance; a spent top-up or any order answers −31007 and nothing changes (ruling R7). A
+    replay on a cancelled transaction echoes it.
 
     Raises:
-        PaymeError: −31003 unknown, −31007 the top-up was spent.
+        PaymeError: −31003 unknown, −31007 the top-up was spent or the payment was an
+            order's.
     """
     _, txn = await _locked_by_payme_id(db, payme_id, missing=transaction_not_found)
     if txn.state == STATE_CREATED:
@@ -343,7 +351,7 @@ async def cancel_transaction(db: AsyncSession, *, payme_id: str, reason: int) ->
             await reverse(
                 db, payment=await _payment(db, txn.payment_id), event_id=f"payme:{payme_id}"
             )
-        except TopupSpentError:
+        except ReversalRefusedError:
             raise cannot_cancel_spent() from None
         txn.state = STATE_CANCELLED_AFTER_PERFORM
         txn.reason = reason
@@ -421,28 +429,29 @@ async def set_fiscal_data(
 async def cancel_stale(db: AsyncSession, *, limit: int = 500) -> int:
     """Cancel state-1 transactions Payme left untouched for :data:`TIMEOUT` (−1, reason 4).
 
-    The scan locks the rows' top-ups ``FOR UPDATE SKIP LOCKED`` (one a callback holds is
-    left for the next tick), then each row is re-read ``FOR UPDATE`` and re-checked: a
-    ``PerformTransaction`` that landed meanwhile is never clobbered. Each row runs in its
-    own savepoint, so one failure does not stop the rest. Flushes, never commits.
+    Covers top-up and order attempts alike. The scan reads unlocked; per row, in its own
+    savepoint, the owner (top-up or order) is locked ``FOR UPDATE SKIP LOCKED`` — one a
+    callback holds is left for the next tick — then the row is re-read ``FOR UPDATE`` and
+    re-checked, so a ``PerformTransaction`` that landed meanwhile is never clobbered. An
+    order's status is never touched (its expiry sweep owns it). One failing row does not
+    stop the rest. Flushes, never commits.
 
     Returns:
         How many transactions went to state −1.
     """
     cutoff = now_ms() - int(TIMEOUT.total_seconds() * 1000)
     stmt = (
-        select(PaymeTransaction.id)
-        .join(Payment, Payment.id == PaymeTransaction.payment_id)
-        .join(WalletTopup, WalletTopup.id == Payment.topup_id)
+        select(PaymeTransaction.id, PaymeTransaction.payment_id)
         .where(PaymeTransaction.state == STATE_CREATED, PaymeTransaction.create_time < cutoff)
         .order_by(PaymeTransaction.create_time)
         .limit(limit)
-        .with_for_update(of=WalletTopup, skip_locked=True)
     )
     cancelled = 0
-    for txn_id in list((await db.execute(stmt)).scalars()):
+    for txn_id, payment_id in (await db.execute(stmt)).all():
         try:
             async with db.begin_nested():
+                if not await lock_owner_or_skip(db, payment_id=payment_id):
+                    continue
                 txn = await _lock_txn(db, txn_id)
                 if txn.state != STATE_CREATED:
                     continue

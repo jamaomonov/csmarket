@@ -1,18 +1,24 @@
-"""Click Shop API handlers for balance top-ups: ``prepare``, ``complete``, ``cancel``.
+"""Click Shop API handlers for top-ups and orders: ``prepare``, ``complete``, ``cancel``.
 
 Every money move goes through the ``payments`` hooks (``ensure_attempt``, ``mark_pending``,
 ``settle``, ``cancel_pending``); :class:`ClickTransaction` is only Click's own state machine.
 The route verifies the MD5 signature before anything here runs.
 
-**Lock order (global): top-up → Click row → payment → user wallet.** ``prepare`` resolves
-the top-up with ``lock=True`` before it reads or inserts the Click row. ``complete`` and
-``cancel`` start from a Click identifier: they read the row without a lock to learn its
-account, lock the top-up, then lock the row and re-check its status. The timeout sweep
-locks top-ups ``FOR UPDATE SKIP LOCKED`` in its scan, then each row.
+The account (``merchant_trans_id``) is a payable number: a top-up's (``T…``) or an order's
+(M4a); "owner" below is whichever it names.
 
-A top-up is credited at most once: a prepare on a paid top-up is ``-4``; a complete whose
-top-up was paid meanwhile (another kassa, or a sibling Click transaction sharing this
+**Lock order (global): owner (top-up or order) → Click row → payment → user wallet.**
+``prepare`` resolves the owner with ``lock=True`` before it reads or inserts the Click row.
+``complete`` and ``cancel`` start from a Click identifier: they read the row without a lock
+to learn its account, lock the owner, then lock the row and re-check its status. The
+timeout sweep scans unlocked, then per row locks the owner ``FOR UPDATE SKIP LOCKED``, then
+the row.
+
+An owner is paid at most once: a prepare on a paid top-up or order is ``-4``; a complete
+whose owner was paid meanwhile (another kassa, or a sibling Click transaction sharing this
 attempt) is ``-4`` and the transaction becomes ``CANCELLED``, so Click cancels that charge.
+Click has no reversal of a completed payment, so an order's money never goes back through
+Click (ruling R7).
 """
 
 from __future__ import annotations
@@ -41,9 +47,9 @@ from csmarket.modules.payments.api import (
     AlreadyPaidError,
     Payable,
     Payment,
-    WalletTopup,
     cancel_pending,
     ensure_attempt,
+    lock_owner_or_skip,
     mark_pending,
     resolve,
     settle,
@@ -68,7 +74,7 @@ _REFUSALS: dict[str, Callable[[], ClickError]] = {
     "reversed": transaction_cancelled,
 }
 
-#: Top-up reasons that mean its one credit is already taken.
+#: Payable reasons that mean its one payment is already taken.
 _CREDITED = ("paid", "reversed")
 
 
@@ -112,7 +118,7 @@ async def _lock_txn(db: AsyncSession, txn_id: str) -> ClickTransaction:
 
 
 async def _payment(db: AsyncSession, payment_id: str) -> Payment:
-    """The attempt, re-read: callers hold its top-up, so its status is the committed one."""
+    """The attempt, re-read: callers hold its owner, so its status is the committed one."""
     stmt = select(Payment).where(Payment.id == payment_id).execution_options(populate_existing=True)
     return (await db.execute(stmt)).scalar_one()
 
@@ -134,7 +140,7 @@ def _check_payable(payable: Payable) -> None:
 
 
 async def _cancel_locked(db: AsyncSession, txn: ClickTransaction) -> None:
-    """``PREPARED`` → ``CANCELLED``; the caller holds the top-up and the row.
+    """``PREPARED`` → ``CANCELLED``; the caller holds the owner and the row.
 
     The attempt is cancelled only when no other ``PREPARED`` Click row still holds it (a
     retried checkout shares one live attempt), and ``cancel_pending`` leaves an attempt a
@@ -175,7 +181,7 @@ async def prepare(
     merchant_trans_id: str,
     amount: str,
 ) -> ClickResponse:
-    """``/prepare``: check the top-up, hold an attempt, allocate a ``PREPARED`` row.
+    """``/prepare``: check the payable, hold an attempt, allocate a ``PREPARED`` row.
 
     Idempotent on ``(click_trans_id, service_id)``: a replay returns the same
     ``merchant_prepare_id``, also after a concurrent first call won the insert.
@@ -185,12 +191,12 @@ async def prepare(
         click_trans_id: Click's transaction id.
         service_id: Our Click service (the route verified the signature with its secret).
         click_paydoc_id: Click's payment document id, kept for reconciliation.
-        merchant_trans_id: The top-up number.
+        merchant_trans_id: The top-up or order number.
         amount: Click's raw ``amount`` in soʻm.
 
     Raises:
         ClickError: ``-5`` unknown, ``-4`` already paid, ``-9`` expired or reversed,
-            ``-2`` amount not the top-up's.
+            ``-2`` amount not the top-up's ``amount_uzs`` / the order's ``price_uzs``.
     """
     payable = await resolve(db, merchant_trans_id, lock=True)
     existing = await _txn_by_click(
@@ -202,9 +208,9 @@ async def prepare(
     if not _amount_is(amount, payable.amount_uzs):
         raise incorrect_amount()
     # SAVEPOINT: two first-time prepares with one (click_trans_id, service_id) but different
-    # accounts lock different top-ups, so both can reach this insert; the loser re-reads the
+    # accounts lock different owners, so both can reach this insert; the loser re-reads the
     # winner's row and answers the same success (Click's replay contract). The attempt work
-    # sits inside it too, so the loser's top-up is not left with a ``pending`` attempt that no
+    # sits inside it too, so the loser's owner is not left with a ``pending`` attempt that no
     # Click row holds (no sweep would ever release it).
     try:
         async with db.begin_nested():
@@ -242,7 +248,7 @@ async def complete(
     merchant_prepare_id: int,
     amount: str,
 ) -> ClickResponse:
-    """``/complete``: Click debited the customer — settle the attempt, credit the top-up once.
+    """``/complete``: Click debited the customer — settle the attempt, pay the owner once.
 
     Args:
         db: Session; the caller commits (also on a ``persist`` error).
@@ -253,7 +259,7 @@ async def complete(
         amount: Click's raw ``amount`` in soʻm; must equal the prepared amount.
 
     Raises:
-        ClickError: ``-6`` unknown or mismatched, ``-4`` already confirmed or the top-up
+        ClickError: ``-6`` unknown or mismatched, ``-4`` already confirmed or the owner
             already paid (then the row is cancelled and ``persist`` is set), ``-9``
             cancelled, ``-2`` amount mismatch.
     """
@@ -280,7 +286,7 @@ async def complete(
         raise await _refuse_second_charge(db, txn)
     try:
         await settle(db, payment=payment, event_id=f"click:{click_trans_id}")
-    except AlreadyPaidError:  # pragma: no cover - refused above under the same top-up lock
+    except AlreadyPaidError:  # pragma: no cover - refused above under the same owner lock
         raise await _refuse_second_charge(db, txn) from None
     txn.status = CONFIRMED
     txn.complete_time = now()
@@ -331,30 +337,31 @@ async def cancel(
 async def cancel_stale(db: AsyncSession, *, limit: int = 500) -> int:
     """Cancel ``PREPARED`` rows Click has not completed within :data:`PREPARE_TIMEOUT`.
 
-    The scan locks the rows' top-ups ``FOR UPDATE SKIP LOCKED`` (one a callback holds is
-    left for the next tick), then each row is re-read ``FOR UPDATE`` and re-checked: a
-    ``/complete`` that landed meanwhile is never clobbered. Each row runs in its own
-    savepoint, so one failure does not stop the rest. Flushes, never commits.
+    Covers top-up and order attempts alike. The scan reads unlocked; per row, in its own
+    savepoint, the owner (top-up or order) is locked ``FOR UPDATE SKIP LOCKED`` — one a
+    callback holds is left for the next tick — then the row is re-read ``FOR UPDATE`` and
+    re-checked, so a ``/complete`` that landed meanwhile is never clobbered. An order's
+    status is never touched (its expiry sweep owns it). One failing row does not stop the
+    rest. Flushes, never commits.
 
     Returns:
         How many rows went ``CANCELLED``.
     """
     stmt = (
-        select(ClickTransaction.id)
-        .join(Payment, Payment.id == ClickTransaction.payment_id)
-        .join(WalletTopup, WalletTopup.id == Payment.topup_id)
+        select(ClickTransaction.id, ClickTransaction.payment_id)
         .where(
             ClickTransaction.status == PREPARED,
             ClickTransaction.prepare_time < now() - PREPARE_TIMEOUT,
         )
         .order_by(ClickTransaction.prepare_time)
         .limit(limit)
-        .with_for_update(of=WalletTopup, skip_locked=True)
     )
     cancelled = 0
-    for txn_id in list((await db.execute(stmt)).scalars()):
+    for txn_id, payment_id in (await db.execute(stmt)).all():
         try:
             async with db.begin_nested():
+                if not await lock_owner_or_skip(db, payment_id=payment_id):
+                    continue
                 txn = await _lock_txn(db, txn_id)
                 if txn.status != PREPARED:
                     continue

@@ -98,8 +98,42 @@
         "title": "AdminEntryOut",
         "type": "object"
       },
+      "AdminOrderInfo": {
+        "description": "The order the payment pays for.",
+        "properties": {
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "buying",
+              "trade_sent",
+              "delivered",
+              "cancelled",
+              "failed",
+              "returned"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "price_uzs"
+        ],
+        "title": "AdminOrderInfo",
+        "type": "object"
+      },
       "AdminPaymentDetail": {
-        "description": "A payment with its top-up and the kassas' transactions.",
+        "description": "A payment with what it pays for (its top-up or its order) and the kassas' transactions.",
         "properties": {
           "kassa": {
             "items": {
@@ -107,6 +141,16 @@
             },
             "title": "Kassa",
             "type": "array"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminOrderInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "payment": {
             "$ref": "#/components/schemas/AdminPaymentFull"
@@ -125,6 +169,7 @@
         "required": [
           "payment",
           "topup",
+          "order",
           "kassa"
         ],
         "title": "AdminPaymentDetail",

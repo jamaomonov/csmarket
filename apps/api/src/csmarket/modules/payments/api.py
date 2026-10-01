@@ -1,7 +1,8 @@
 """Public interface of the ``payments`` module — other modules import from here only.
 
-``payments`` builds on ``wallet`` (it credits and reverses top-ups through it); ``wallet``
-never imports ``payments``.
+``payments`` builds on ``wallet`` (it credits and reverses top-ups through it) and reaches
+orders only through ``orders.api`` (a settled order attempt marks the order paid); neither
+``wallet`` nor ``orders.api`` imports ``payments``.
 """
 
 from __future__ import annotations
@@ -16,9 +17,13 @@ from csmarket.modules.payments.gateways import (
 )
 from csmarket.modules.payments.hooks import (
     AlreadyPaidError,
+    OrderReversalRefusedError,
+    Owner,
+    ReversalRefusedError,
     TopupSpentError,
     cancel_pending,
     ensure_attempt,
+    lock_owner_or_skip,
     mark_pending,
     reverse,
     settle,
@@ -38,9 +43,12 @@ __all__ = [
     "TRANSITIONS",
     "AlreadyPaidError",
     "InvalidTransitionError",
+    "OrderReversalRefusedError",
+    "Owner",
     "Payable",
     "Payment",
     "PaymentGateway",
+    "ReversalRefusedError",
     "Status",
     "TopupSpentError",
     "TopupView",
@@ -51,6 +59,7 @@ __all__ = [
     "ensure_attempt",
     "expire_stale",
     "get_gateway",
+    "lock_owner_or_skip",
     "mark_pending",
     "move",
     "owned_topup",

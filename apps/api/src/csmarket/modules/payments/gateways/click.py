@@ -1,8 +1,8 @@
-"""Click (Shop API) gateway: the ``my.click.uz`` pay link for a top-up.
+"""Click (Shop API) gateway: the ``my.click.uz`` pay link for a top-up or an order.
 
 Click's checkout is a plain GET URL; the money moves later through Click's own callbacks
 (``/payments/click/prepare`` and ``/complete``, module ``click``). Click's ``amount`` is
-soʻm (major units), unlike Payme's and Uzum's tiyin. ``transaction_param`` is the top-up
+soʻm (major units), unlike Payme's and Uzum's tiyin. ``transaction_param`` is the payable
 number; Click sends it back as ``merchant_trans_id``. Click has no merchant-initiated refund.
 """
 

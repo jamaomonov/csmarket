@@ -74,7 +74,8 @@ def transaction_not_found() -> PaymeError:
 
 
 def cannot_cancel_spent() -> PaymeError:
-    """−31007: the performed top-up's money is no longer on the balance (ruling R7)."""
+    """−31007: the performed payment cannot be cancelled (ruling R7) — a top-up whose money
+    is no longer on the balance, or an order (its skin is bought at payment)."""
     return PaymeError(
         -31007,
         {

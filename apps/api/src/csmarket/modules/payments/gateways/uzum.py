@@ -1,9 +1,9 @@
-"""Uzum (Merchant API) gateway: the ``uzumbank.uz/open-service`` link for a top-up.
+"""Uzum (Merchant API) gateway: the ``uzumbank.uz/open-service`` link for a top-up or an order.
 
 Uzum's checkout is a GET deep link; no API call happens at intent time. The money moves
 later through Uzum's five calls to ``/payments/uzum/*`` (module ``uzum``). The link carries
 no amount: Uzum's app prefills it from our ``/check`` answer (``data.amount.value``, soʻm).
-``order`` is the top-up number; Uzum sends it back as ``params.order`` (R9). Uzum has no
+``order`` is the payable number; Uzum sends it back as ``params.order`` (R9). Uzum has no
 merchant-initiated refund: a refund is Uzum calling ``/reverse``.
 """
 

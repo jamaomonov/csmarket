@@ -30,7 +30,17 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `ATTENTION_REASONS`, `FAILURE_REASONS`, `TRANSITIONS`, `InvalidOrderTransitionError`,
 `move`, `ORDERS_CHANNEL` (`NOTIFY orders` wakes the worker), the response shapes `OrderOut`,
 `OrderStatusOut`, `SkinTradeOut` and `order_out`, `skin_trade_out`, `effective_status`,
-`is_expired`. `api.py` never imports `payments`.
+`is_expired`, `mark_paid`. `api.py` never imports `payments`
+(`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
+leaves `csmarket.modules.payments` out of `sys.modules`).
+
+**Paid (`paid.py`):** `mark_paid(db, order, *, provider)` — `move(order, "paid")`,
+`paid_with = provider`, then `SELECT pg_notify('orders', <number>)` in the caller's
+transaction (delivered on commit). The caller holds the order `FOR UPDATE`;
+`payments.hooks.settle` calls it for a kassa (once per order: a non-`pending` order is
+`AlreadyPaidError` there), the balance pay (R8) for `wallet`. A kassa can never reverse an
+order (`payments.OrderReversalRefusedError`, R7); kassa attempts are found by
+`payments.order_id` (`ix_payments_order`).
 
 **Routes (`routes.py`):** `POST /orders` (checkout), `GET /orders/{number}`,
 `GET /me/orders` — contract in `docs/api/README.md`.

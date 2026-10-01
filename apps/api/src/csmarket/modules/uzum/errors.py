@@ -119,7 +119,8 @@ def transaction_already_confirmed() -> UzumError:
 
 
 def transaction_cannot_be_cancelled() -> UzumError:
-    """10017: cannot be reversed now — the top-up's money was already spent (ruling R7)."""
+    """10017: cannot be reversed (ruling R7) — the top-up's money was already spent, or the
+    payment was an order's (its skin is bought at payment)."""
     return UzumError(10017, "Transaction cannot be cancelled in current state")
 
 

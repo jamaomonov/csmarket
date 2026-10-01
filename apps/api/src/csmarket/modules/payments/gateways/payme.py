@@ -1,9 +1,9 @@
-"""Payme (Merchant API) gateway: the ``checkout.paycom.uz`` link for a top-up.
+"""Payme (Merchant API) gateway: the ``checkout.paycom.uz`` link for a top-up or an order.
 
 Payme's checkout is a GET URL carrying a base64, ``;``-delimited parameter string; no API
 call happens at intent time. The money moves later through Payme's JSON-RPC calls to
 ``/payments/payme/merchant`` (module ``payme``). Payme speaks **tiyin** (1 soʻm = 100).
-``ac.order`` is the top-up number; Payme sends it back as ``params.account.order`` (R9).
+``ac.order`` is the payable number; Payme sends it back as ``params.account.order`` (R9).
 Payme has no merchant-initiated refund: a refund is a ``CancelTransaction`` from its cabinet.
 """
 

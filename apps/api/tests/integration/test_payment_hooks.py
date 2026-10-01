@@ -34,7 +34,6 @@ from csmarket.modules.wallet.models import WalletTransaction
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from tests.integration.orders_factory import make_order
 from tests.integration.payments_factory import make_topup
 
 
@@ -277,30 +276,6 @@ async def test_ensure_attempt_reuses_a_live_attempt_of_the_same_provider(
     assert other.id not in (a.id, c.id)
     assert other.provider_ref == f"click:{t.number}"
     await db_session.commit()
-
-
-async def test_order_payables_are_not_implemented(db_session: AsyncSession) -> None:
-    with pytest.raises(NotImplementedError):
-        await ensure_attempt(
-            db_session, payable=await resolve(db_session, "7K3M9QX2"), provider="payme"
-        )
-    order_row = await make_order(db_session)
-    order = Payment(
-        number=order_row.number,
-        purpose="order",
-        order_id=order_row.id,
-        user_id=order_row.user_id,
-        provider="payme",
-        amount_uzs=Decimal(1000),
-        status="pending",
-    )
-    db_session.add(order)
-    await db_session.commit()
-    with pytest.raises(NotImplementedError):
-        await settle(db_session, payment=order, event_id="e1")
-    with pytest.raises(NotImplementedError):
-        await reverse(db_session, payment=order, event_id="r1")
-    await db_session.rollback()
 
 
 async def test_wallet_topup_postings_replay_by_key(db_session: AsyncSession) -> None:

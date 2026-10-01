@@ -20,6 +20,7 @@ from httpx import AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from tests.integration.orders_factory import make_order
 from tests.integration.payments_factory import make_user
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
@@ -286,7 +287,8 @@ async def test_detail_without_a_kassa_row(
     r = await integration_client.get(f"{BASE}/{payment.id}", headers=await admin_headers())
     assert r.status_code == 200, r.text
     body = r.json()
-    assert set(body) == {"payment", "topup", "kassa"}
+    assert set(body) == {"payment", "topup", "order", "kassa"}
+    assert body["order"] is None
     assert body["payment"]["id"] == payment.id
     assert body["payment"]["provider_ref"] == "mock:T7KQ4M2X"
     assert body["payment"]["user"] == {"id": user.id, "display_name": "Alice"}
@@ -551,3 +553,31 @@ async def test_a_payment_with_several_kassa_rows_lists_them_oldest_first(
     await db_session.commit()
     r = await integration_client.get(f"{BASE}/{payment.id}", headers=await admin_headers())
     assert [k["external_id"] for k in r.json()["kassa"]] == ["101", "100"]
+
+
+async def test_detail_of_an_order_payment_shows_the_order(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    user = await _named_user(db_session, "Bob")
+    order = await make_order(db_session, user=user, status="paid", price_uzs=Decimal(171_800))
+    payment = Payment(
+        id=new_id(),
+        number=order.number,
+        purpose="order",
+        order_id=order.id,
+        user_id=user.id,
+        provider="payme",
+        provider_ref=f"payme:{order.number}",
+        amount_uzs=order.price_uzs,
+        status="succeeded",
+        succeeded_at=T0,
+    )
+    db_session.add(payment)
+    await db_session.commit()
+
+    r = await integration_client.get(f"{BASE}/{payment.id}", headers=await admin_headers())
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["topup"] is None
+    assert body["order"] == {"number": order.number, "status": "paid", "price_uzs": "171800"}
+    assert body["payment"]["purpose"] == "order"

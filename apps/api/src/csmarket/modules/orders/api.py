@@ -17,12 +17,10 @@ from csmarket.modules.orders.models import (
     Order,
     SkinTrade,
 )
+from csmarket.modules.orders.paid import ORDERS_CHANNEL, mark_paid
 from csmarket.modules.orders.schemas import OrderOut, OrderStatusOut
 from csmarket.modules.orders.service import effective_status, is_expired, order_out
 from csmarket.modules.orders.trade_view import SkinTradeOut, skin_trade_out
-
-#: ``NOTIFY`` channel the worker listens on for paid orders.
-ORDERS_CHANNEL = "orders"
 
 __all__ = [
     "ATTENTION_REASONS",
@@ -40,6 +38,7 @@ __all__ = [
     "SkinTradeOut",
     "effective_status",
     "is_expired",
+    "mark_paid",
     "move",
     "order_out",
     "skin_trade_out",

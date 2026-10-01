@@ -1,7 +1,8 @@
 """The dev ``mock`` gateway (ruling R11) — never available in production.
 
-Its intent URL is the top-up's own storefront page with ``?mock=1``; the page completes the
-payment through the dev-only pay route, which drives the real ``hooks.settle``.
+Its intent URL is the payable's own storefront page (a top-up's or an order's) with
+``?mock=1``; the page completes the payment through the dev-only pay route, which drives the
+real ``hooks.settle``.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ class MockGateway:
         return not get_settings().is_prod
 
     def intent_url(self, *, payable: Payable, locale: str) -> str:
-        """The top-up's status page, flagged ``?mock=1``."""
+        """The payable's status page (top-up or order), flagged ``?mock=1``."""
         return f"{return_url(payable.number, locale)}?mock=1"
 
 

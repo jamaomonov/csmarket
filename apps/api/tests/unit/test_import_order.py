@@ -44,6 +44,7 @@ import pytest
         "csmarket.modules.orders.checkout",
         "csmarket.modules.orders.fsm",
         "csmarket.modules.orders.models",
+        "csmarket.modules.orders.paid",
         "csmarket.modules.orders.routes",
         "csmarket.modules.orders.schemas",
         "csmarket.modules.orders.service",
@@ -165,3 +166,17 @@ def test_the_api_registers_every_foreign_key_target() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_orders_api_never_imports_payments() -> None:
+    """One direction only (ruling A): ``payments`` reaches orders through ``orders.api``;
+    ``orders.api`` (and ``orders.paid`` behind it) never import ``payments``."""
+    code = (
+        "import sys, csmarket.modules.orders.api; "
+        "sys.exit('csmarket.modules.payments' in sys.modules "
+        "or any(m.startswith('csmarket.modules.payments.') for m in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
+    )
+    assert result.returncode == 0, result.stderr or "orders.api imported payments"

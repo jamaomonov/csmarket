@@ -7,17 +7,21 @@ Import as ``from tests.integration.orders_factory import make_order``.
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+import os
+from collections.abc import AsyncIterator, Sequence
+from contextlib import asynccontextmanager
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
+import asyncpg  # type: ignore[import-untyped]  # no bundled stubs
 from csmarket.core import clock
 from csmarket.core.ids import new_id
 from csmarket.core.numbers import allocate, order_number
 from csmarket.core.redis import get_redis
 from csmarket.modules.fx.models import FxSnapshot
+from csmarket.modules.orders.api import ORDERS_CHANNEL
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.users.models import User
@@ -165,3 +169,35 @@ class StubListings:
         if self.barrier is not None:
             await self.barrier.wait()
         return {name: list(self.rows.get(name, [])) for name in names}
+
+
+class OrdersListener:
+    """The payloads ``NOTIFY orders`` delivered to a raw asyncpg connection (as the worker
+    listens). :meth:`drain` makes every notification committed so far visible."""
+
+    def __init__(self, conn: asyncpg.Connection) -> None:
+        self._conn = conn
+        self.payloads: list[str] = []
+
+    def on_notify(self, _conn: object, _pid: int, _channel: str, payload: str) -> None:
+        """asyncpg's listener callback."""
+        self.payloads.append(payload)
+
+    async def drain(self) -> list[str]:
+        """One round trip: the server sends pending notifications before it answers."""
+        await self._conn.execute("SELECT 1")
+        await asyncio.sleep(0.05)
+        return list(self.payloads)
+
+
+@asynccontextmanager
+async def listen_orders() -> AsyncIterator[OrdersListener]:
+    """LISTEN on the orders channel on its own connection for the ``with`` block."""
+    dsn = os.environ["CSMARKET_DATABASE_URL"].replace("postgresql+asyncpg://", "postgresql://")
+    conn = await asyncpg.connect(dsn)
+    listener = OrdersListener(conn)
+    await conn.add_listener(ORDERS_CHANNEL, listener.on_notify)
+    try:
+        yield listener
+    finally:
+        await conn.close()

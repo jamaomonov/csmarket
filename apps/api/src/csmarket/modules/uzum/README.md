@@ -1,6 +1,6 @@
 # uzum
 
-Uzum Bank's Merchant API for balance top-ups (spec §3.2, §13; M3, ADR-0006), ported by
+Uzum Bank's Merchant API for balance top-ups and orders (spec §3.2, §13; M3, M4a, ADR-0006), ported by
 allow-list (ADR-0002). Uzum does not deliver a webhook: **we are Uzum's Merchant API
 server**. Uzum calls five endpoints over the life of a transaction, and **we** own the
 transaction state machine — Uzum signals a replay with a dedicated code, not an echo. Every
@@ -8,7 +8,7 @@ money move goes through the `payments` hooks; this module never touches `wallet`
 
 **Owns:** table `uzum_transactions` (migration `0010_uzum_transactions`): `id`, `trans_id`
 (`varchar(64)`, unique — Uzum's transaction id, the replay key), `payment_id` (the attempt,
-`ON DELETE RESTRICT`), `account` (the top-up number Uzum sent), `amount_tiyin BIGINT`,
+`ON DELETE RESTRICT`), `account` (the top-up or order number Uzum sent), `amount_tiyin BIGINT`,
 `status` `CREATED` | `CONFIRMED` | `REVERSED` | `FAILED`, `service_id`, `create_time`
 (`BIGINT` epoch ms, ours), `confirm_time` / `reverse_time` (`BIGINT`, `NULL` until set),
 `payment_source jsonb`, `created_at`, `updated_at`. Indexes on `payment_id`, `account` and a
@@ -55,11 +55,13 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS on any of them   10003 at HTTP 400 (never a 40
 ## Amounts and account
 
 - **Tiyin on the wire, soʻm only in `/check`'s `data`.** `amount` on `/create`, `/confirm`,
-  `/reverse`, `/status` is tiyin and must equal the top-up's `amount_uzs × 100` exactly (the
+  `/reverse`, `/status` is tiyin and must equal the top-up's `amount_uzs × 100` (an
+  order's `price_uzs × 100`) exactly (the
   soʻm figure is `10011`). `/check` answers `data.amount.value` = whole soʻm as a bare
   integer string (`"50000"`) — Uzum's app prefills the amount from it. Do not unify the
   units: the asymmetry is Uzum's contract.
-- **Account field (R9):** `params.order` = the top-up number (`T` + 7). `params.orderId`,
+- **Account field (R9):** `params.order` = the top-up number (`T` + 7) or an order number
+  (M4a). `params.orderId`,
   then `params.order_id`, are accepted too (Uzum was seen sending camelCase `orderId` on
   2026-09-04; the field name is configurable per service). The first non-empty string wins;
   none → `10005`.
@@ -101,16 +103,24 @@ CREATED   --/confirm after the top-up was credited elsewhere--> FAILED, answer 1
 FAILED    --/reverse--> REVERSED    the row closes; its attempt was released when it failed
 ```
 
-### One credit per top-up
+### One payment per top-up or order
 
-- `/check` / `/create` on a paid top-up → `10008`; expired or reversed → `10009`.
-- **`/confirm` after the top-up was paid elsewhere** (another kassa, or a sibling Uzum row
+The account is a top-up or an order — its _owner_; an order is refused like a top-up (the
+refusals key on `payable.reason`).
+
+- `/check` / `/create` on a paid top-up or order → `10008`; expired or reversed (an order
+  past its window, or cancelled) → `10009`.
+- **`/confirm` after the owner was paid elsewhere** (another kassa, or a sibling Uzum row
   sharing this attempt) → `10008`, and the transaction is **FAILED and committed**
   (`UzumError.persist`), so Uzum drops this charge and `/status` reports `FAILED`.
 - **`/reverse` of a confirmed top-up** → `REVERSED` and `payments.reverse` (`topup_reversal`)
   when the amount is still on the balance; otherwise `10017` and nothing changes (ruling R7,
   logged `payments.topup.reverse_refused`). Refunds start on Uzum's side; there is no
   merchant-initiated refund.
+- **`/reverse` of a confirmed order** → `10017` and nothing changes (ruling R7: the skin is
+  bought at payment and refunds go to the balance; `payments.reverse` raises
+  `OrderReversalRefusedError`, caught as `ReversalRefusedError`). A `CREATED` order row
+  reverses normally and the order stays `pending`.
 - **A retried checkout** (a second `/create` with a new `transId` on a top-up Uzum already
   holds) shares the live attempt. Releasing it (reverse, sweep, a refused second charge)
   cancels the attempt only when no other `CREATED` Uzum row holds it, and `cancel_pending`
@@ -123,15 +133,16 @@ FAILED    --/reverse--> REVERSED    the row closes; its attempt was released whe
 
 ## Lock order
 
-Global: **top-up → Uzum row → payment → user wallet.**
+Global: **owner (top-up or order) → Uzum row → payment → user wallet.** "top-up" below
+reads "owner".
 
-| Handler               | Sequence                                                                                                                                                                               |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/check`              | `resolve(account, lock=True)` (top-up)                                                                                                                                                 |
-| `/create`             | `resolve(account, lock=True)` → row by `transId`, **unlocked** read (replay → `10010`) → payable / amount → SAVEPOINT { `ensure_attempt` → `mark_pending` (top-up, payment) → insert } |
-| `/confirm`/`/reverse` | read the row by `transId` **without** a lock → `resolve(row.account, lock=True)` → row `FOR UPDATE` (populate_existing), re-check status → payment → `settle` / `reverse` / release    |
-| `/status`             | plain read, no lock                                                                                                                                                                    |
-| `fail_stale`          | scan joins row → payment → top-up `FOR UPDATE OF wallet_topups SKIP LOCKED` → per row (SAVEPOINT) row `FOR UPDATE`, re-check `CREATED` → `FAILED` + release                            |
+| Handler               | Sequence                                                                                                                                                                                                                                                        |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/check`              | `resolve(account, lock=True)` (top-up)                                                                                                                                                                                                                          |
+| `/create`             | `resolve(account, lock=True)` → row by `transId`, **unlocked** read (replay → `10010`) → payable / amount → SAVEPOINT { `ensure_attempt` → `mark_pending` (top-up, payment) → insert }                                                                          |
+| `/confirm`/`/reverse` | read the row by `transId` **without** a lock → `resolve(row.account, lock=True)` → row `FOR UPDATE` (populate_existing), re-check status → payment → `settle` / `reverse` / release                                                                             |
+| `/status`             | plain read, no lock                                                                                                                                                                                                                                             |
+| `fail_stale`          | unlocked scan of stale `CREATED` rows (top-up and order attempts) → per row (SAVEPOINT) `lock_owner_or_skip` (owner `FOR UPDATE SKIP LOCKED`; held → next tick) → row `FOR UPDATE`, re-check `CREATED` → `FAILED` + release; an order's status is never touched |
 
 `test_handlers_lock_the_topup_before_the_uzum_row` deadlocks if a handler takes the row first.
 
@@ -145,26 +156,26 @@ a callback holds is skipped until the next tick; one failing row is logged
 
 ## Error codes
 
-| Code    | When                                                                         |
-| ------- | ---------------------------------------------------------------------------- |
-| `10001` | Basic auth failed                                                            |
-| `10002` | Body is not a JSON object (or over 64 KiB, or too deeply nested)             |
-| `10003` | Not POST                                                                     |
-| `10005` | A required field is missing or mistyped                                      |
-| `10006` | `serviceId` is not ours, or none is configured                               |
-| `10007` | Unknown top-up number                                                        |
-| `10008` | Top-up already paid; at `/confirm`, a second charge (the transaction FAILED) |
-| `10009` | Top-up expired or reversed                                                   |
-| `10010` | `transId` already created (any account)                                      |
-| `10011` | Amount is not the top-up's × 100 (tiyin)                                     |
-| `10012` | Below minimum — reserved, not raised (the top-up's own amount is checked)    |
-| `10013` | Above maximum — reserved, not raised                                         |
-| `10014` | Unknown `transId`                                                            |
-| `10015` | `/confirm` on a REVERSED or FAILED transaction                               |
-| `10016` | `/confirm` replay on a CONFIRMED transaction                                 |
-| `10017` | `/reverse` of a CONFIRMED top-up whose money was spent                       |
-| `10018` | `/reverse` replay on a REVERSED transaction                                  |
-| `99999` | Internal error or a failed commit                                            |
+| Code    | When                                                                                 |
+| ------- | ------------------------------------------------------------------------------------ |
+| `10001` | Basic auth failed                                                                    |
+| `10002` | Body is not a JSON object (or over 64 KiB, or too deeply nested)                     |
+| `10003` | Not POST                                                                             |
+| `10005` | A required field is missing or mistyped                                              |
+| `10006` | `serviceId` is not ours, or none is configured                                       |
+| `10007` | Unknown top-up or order number                                                       |
+| `10008` | Top-up / order already paid; at `/confirm`, a second charge (the transaction FAILED) |
+| `10009` | Top-up / order expired, top-up reversed, order cancelled                             |
+| `10010` | `transId` already created (any account)                                              |
+| `10011` | Amount is not the top-up's / order's × 100 (tiyin)                                   |
+| `10012` | Below minimum — reserved, not raised (the top-up's own amount is checked)            |
+| `10013` | Above maximum — reserved, not raised                                                 |
+| `10014` | Unknown `transId`                                                                    |
+| `10015` | `/confirm` on a REVERSED or FAILED transaction                                       |
+| `10016` | `/confirm` replay on a CONFIRMED transaction                                         |
+| `10017` | `/reverse` of a CONFIRMED top-up whose money was spent, or of a CONFIRMED order      |
+| `10018` | `/reverse` replay on a REVERSED transaction                                          |
+| `99999` | Internal error or a failed commit                                                    |
 
 ## Settings
 
@@ -185,8 +196,9 @@ counts nothing.
 
 ## Not here
 
-Orders (M4 resolves non-`T` numbers), anti-fraud vetoes, card refunds from admin (Uzum's side
+Anti-fraud vetoes, card refunds from admin (Uzum's side
 only), email (M4). Postman collection for Uzum's engineer: `docs/api/uzum.postman_collection.json`.
-`fail_stale` scans only top-up attempts until M4 extends it to orders. Cabinet setup (including
+Order tests: `tests/integration/test_payments_orders_uzum.py`,
+`tests/integration/test_kassa_sweeps_orders.py`. Cabinet setup (including
 the `order` attribute name): `docs/runbooks/kassa-setup.md`; troubleshooting:
 `docs/runbooks/uzum.md`.

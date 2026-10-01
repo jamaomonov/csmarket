@@ -1,4 +1,4 @@
-"""Uzum Bank Merchant API handlers for balance top-ups.
+"""Uzum Bank Merchant API handlers for top-ups and orders.
 
 The five webhooks Uzum calls — ``/check``, ``/create``, ``/confirm``, ``/reverse``,
 ``/status`` — plus the 30-minute timeout sweep. Every money move goes through the
@@ -7,15 +7,21 @@ The five webhooks Uzum calls — ``/check``, ``/create``, ``/confirm``, ``/rever
 Unlike Payme, Uzum signals a replay with a dedicated code (10010 / 10016 / 10018), not an
 echo. The route checks Basic auth and ``serviceId`` before anything here runs.
 
-**Lock order (global): top-up → Uzum row → payment → user wallet.** ``/check`` and
-``/create`` resolve the top-up with ``lock=True`` first. ``/confirm`` and ``/reverse`` start
-from a ``transId``: they read the row without a lock to learn its account, lock the top-up,
-then lock the row and re-check its status. ``/status`` only reads. The timeout sweep locks
-top-ups ``FOR UPDATE SKIP LOCKED`` in its scan, then each row.
+``params.order`` is a payable number: a top-up's (``T…``) or an order's (M4a); "owner"
+below is whichever it names.
 
-A top-up is credited at most once: ``/create`` on a paid top-up is 10008; ``/confirm`` after
-the top-up was paid meanwhile (another kassa, or a sibling Uzum row sharing this attempt)
-is 10008 and the transaction is FAILED and committed, so Uzum drops that charge.
+**Lock order (global): owner (top-up or order) → Uzum row → payment → user wallet.**
+``/check`` and ``/create`` resolve the owner with ``lock=True`` first. ``/confirm`` and
+``/reverse`` start from a ``transId``: they read the row without a lock to learn its
+account, lock the owner, then lock the row and re-check its status. ``/status`` only reads.
+The timeout sweep scans unlocked, then per row locks the owner ``FOR UPDATE SKIP LOCKED``,
+then the row.
+
+An owner is paid at most once: ``/create`` on a paid top-up or order is 10008;
+``/confirm`` after the owner was paid meanwhile (another kassa, or a sibling Uzum row
+sharing this attempt) is 10008 and the transaction is FAILED and committed, so Uzum drops
+that charge. A confirmed transaction is reversed only for an unspent top-up; a spent top-up
+and any order answer 10017 (ruling R7).
 """
 
 from __future__ import annotations
@@ -36,10 +42,10 @@ from csmarket.modules.payments.api import (
     AlreadyPaidError,
     Payable,
     Payment,
-    TopupSpentError,
-    WalletTopup,
+    ReversalRefusedError,
     cancel_pending,
     ensure_attempt,
+    lock_owner_or_skip,
     mark_pending,
     resolve,
     settle,
@@ -84,7 +90,7 @@ _REFUSALS: dict[str, Callable[[], UzumError]] = {
     "reversed": payment_cancelled,
 }
 
-#: Top-up reasons that mean its one credit is already taken.
+#: Payable reasons that mean its one payment is already taken.
 _CREDITED = ("paid", "reversed")
 
 
@@ -100,7 +106,7 @@ def _check_payable(payable: Payable) -> None:
 
 
 def _tiyin(payable: Payable) -> int:
-    """The top-up's amount in tiyin (whole soʻm × 100, exact)."""
+    """The payable's amount in tiyin (whole soʻm × 100, exact)."""
     return int(payable.amount_uzs * 100)
 
 
@@ -122,7 +128,7 @@ async def _lock_txn(db: AsyncSession, txn_id: str) -> UzumTransaction:
 
 
 async def _locked_by_trans_id(db: AsyncSession, trans_id: str) -> tuple[Payable, UzumTransaction]:
-    """The row named by ``trans_id``, locked in the global order: top-up, then the row.
+    """The row named by ``trans_id``, locked in the global order: owner, then the row.
 
     Raises:
         UzumError: 10014 when there is no such row.
@@ -135,7 +141,7 @@ async def _locked_by_trans_id(db: AsyncSession, trans_id: str) -> tuple[Payable,
 
 
 async def _payment(db: AsyncSession, payment_id: str) -> Payment:
-    """The attempt, re-read: callers hold its top-up, so its status is the committed one."""
+    """The attempt, re-read: callers hold its owner, so its status is the committed one."""
     stmt = select(Payment).where(Payment.id == payment_id).execution_options(populate_existing=True)
     return (await db.execute(stmt)).scalar_one()
 
@@ -161,7 +167,7 @@ async def _release_attempt(db: AsyncSession, txn: UzumTransaction) -> None:
 
 
 async def _fail_created(db: AsyncSession, txn: UzumTransaction) -> None:
-    """CREATED → FAILED and release the attempt; the caller holds the top-up and the row."""
+    """CREATED → FAILED and release the attempt; the caller holds the owner and the row."""
     txn.status = STATUS_FAILED
     txn.updated_at = now()
     await db.flush()
@@ -180,7 +186,7 @@ async def _refuse_second_charge(db: AsyncSession, txn: UzumTransaction) -> UzumE
 
 
 async def check(db: AsyncSession, *, account: str) -> Result:
-    """``/check``: may this top-up be paid? Reports its amount for Uzum's app to prefill.
+    """``/check``: may this payable be paid? Reports its amount for Uzum's app to prefill.
 
     Returns:
         ``{"status": "OK", "data": {"amount": {"value": <whole soʻm as a string>}}}`` —
@@ -201,15 +207,15 @@ async def create(
 
     A ``transId`` we already have is refused with 10010 whatever its state or account
     (Uzum's replay code); the row is only read, never locked, so a ``transId`` of another
-    top-up is never locked while we hold this one. The attempt work and the insert share one
+    owner is never locked while we hold this one. The attempt work and the insert share one
     SAVEPOINT, so losing the insert race leaves no attempt ``pending``. A second
-    ``transId`` on the same top-up (a retried checkout) shares its live attempt.
+    ``transId`` on the same owner (a retried checkout) shares its live attempt.
 
     Args:
         db: Session; the caller commits.
         service_id: Our ``serviceId`` (already checked), stored for audit.
         trans_id: Uzum's transaction id (unique) — the replay key.
-        account: The top-up number Uzum sent.
+        account: The top-up or order number Uzum sent.
         amount: Tiyin.
 
     Raises:
@@ -255,9 +261,9 @@ async def create(
 
 
 async def confirm(db: AsyncSession, *, trans_id: str, payment_source: dict[str, Any]) -> Result:
-    """``/confirm``: Uzum debited the customer — settle, credit the top-up once.
+    """``/confirm``: Uzum debited the customer — settle, pay the owner once.
 
-    If the top-up was credited meanwhile (another kassa, or a sibling Uzum row on this
+    If the owner was paid meanwhile (another kassa, or a sibling Uzum row on this
     attempt), this charge is refused with 10008 and the transaction goes ``FAILED`` —
     ``persist`` is set so the route commits that.
 
@@ -282,7 +288,7 @@ async def confirm(db: AsyncSession, *, trans_id: str, payment_source: dict[str, 
         raise await _refuse_second_charge(db, txn)
     try:
         await settle(db, payment=payment, event_id=f"uzum:{trans_id}")
-    except AlreadyPaidError:  # pragma: no cover - refused above under the same top-up lock
+    except AlreadyPaidError:  # pragma: no cover - refused above under the same owner lock
         raise await _refuse_second_charge(db, txn) from None
     txn.status = STATUS_CONFIRMED
     txn.confirm_time = now_ms()
@@ -301,12 +307,14 @@ async def reverse(db: AsyncSession, *, trans_id: str) -> Result:
     """``/reverse``, routed by the transaction's status.
 
     ``CREATED`` → the attempt is released (unless another CREATED row holds it).
-    ``FAILED`` → its attempt was already released; only the row closes. ``CONFIRMED`` → the
-    top-up is reversed if its money is still on the balance; otherwise 10017 and nothing
-    changes (ruling R7).
+    ``FAILED`` → its attempt was already released; only the row closes. ``CONFIRMED`` → a
+    top-up is reversed if its money is still on the balance; a spent top-up or any order
+    answers 10017 and nothing changes (ruling R7). An order whose CREATED row is reversed
+    stays ``pending``.
 
     Raises:
-        UzumError: 10014 unknown, 10018 already reversed, 10017 the top-up was spent.
+        UzumError: 10014 unknown, 10018 already reversed, 10017 the top-up was spent or the
+            payment was an order's.
     """
     _, txn = await _locked_by_trans_id(db, trans_id)
     previous = txn.status
@@ -317,7 +325,7 @@ async def reverse(db: AsyncSession, *, trans_id: str) -> Result:
             await reverse_payment(
                 db, payment=await _payment(db, txn.payment_id), event_id=f"uzum:{trans_id}"
             )
-        except TopupSpentError:
+        except ReversalRefusedError:
             raise transaction_cannot_be_cancelled() from None
     elif txn.status == STATUS_CREATED:
         await _release_attempt(db, txn)
@@ -365,28 +373,29 @@ async def status(db: AsyncSession, *, trans_id: str) -> Result:
 async def fail_stale(db: AsyncSession, *, limit: int = 500) -> int:
     """FAIL CREATED transactions Uzum left untouched for :data:`TIMEOUT`.
 
-    The scan locks the rows' top-ups ``FOR UPDATE SKIP LOCKED`` (one a callback holds is
-    left for the next tick), then each row is re-read ``FOR UPDATE`` and re-checked: a
-    ``/confirm`` that landed meanwhile is never clobbered. Each row runs in its own
-    savepoint, so one failure does not stop the rest. Flushes, never commits.
+    Covers top-up and order attempts alike. The scan reads unlocked; per row, in its own
+    savepoint, the owner (top-up or order) is locked ``FOR UPDATE SKIP LOCKED`` — one a
+    callback holds is left for the next tick — then the row is re-read ``FOR UPDATE`` and
+    re-checked, so a ``/confirm`` that landed meanwhile is never clobbered. An order's
+    status is never touched (its expiry sweep owns it). One failing row does not stop the
+    rest. Flushes, never commits.
 
     Returns:
         How many transactions went to ``FAILED``.
     """
     cutoff = now_ms() - int(TIMEOUT.total_seconds() * 1000)
     stmt = (
-        select(UzumTransaction.id)
-        .join(Payment, Payment.id == UzumTransaction.payment_id)
-        .join(WalletTopup, WalletTopup.id == Payment.topup_id)
+        select(UzumTransaction.id, UzumTransaction.payment_id)
         .where(UzumTransaction.status == STATUS_CREATED, UzumTransaction.create_time < cutoff)
         .order_by(UzumTransaction.create_time)
         .limit(limit)
-        .with_for_update(of=WalletTopup, skip_locked=True)
     )
     failed = 0
-    for txn_id in list((await db.execute(stmt)).scalars()):
+    for txn_id, payment_id in (await db.execute(stmt)).all():
         try:
             async with db.begin_nested():
+                if not await lock_owner_or_skip(db, payment_id=payment_id):
+                    continue
                 txn = await _lock_txn(db, txn_id)
                 if txn.status != STATUS_CREATED:
                     continue

@@ -1,13 +1,16 @@
 # payments
 
-Balance top-ups and the attempts to pay them through a kassa (spec §5, rulings R3–R6,
-R10, R11; ADR-0006). Builds on `wallet` (credits and reversals go through `wallet.api`);
-`wallet` never imports `payments`. Operations: `docs/runbooks/kassa-setup.md`; flow:
+Balance top-ups, and the attempts to pay a top-up or an order (M4a) through a kassa (spec
+§5, rulings R3–R6, R10, R11; ADR-0006; M4a ruling R7). Builds on `wallet` (credits and
+reversals go through `wallet.api`) and reaches orders only through `orders.api` (a settled
+order attempt calls `orders.mark_paid`); neither `wallet` nor `orders.api` imports
+`payments` (`test_orders_api_never_imports_payments`). Operations: `docs/runbooks/kassa-setup.md`; flow:
 `docs/product/flows/balance-topup.md`.
 
 **Owns:** tables `wallet_topups` and `payments` (migration `0007_payments_topups`;
 `0012_payments_number_pattern_ops` rebuilds `ix_payments_number` with `text_pattern_ops` so
-the admin search's prefix `LIKE` uses it under any collation).
+the admin search's prefix `LIKE` uses it under any collation; `0014_payments_order_id_idx`
+adds `ix_payments_order` — an order's attempts are found by `order_id`).
 
 - `wallet_topups` — what the customer pays: `number` (`T` + 7 Crockford chars, unique),
   `user_id`, `amount_uzs numeric(14,0) > 0`, `status` `pending` | `succeeded` | `expired` |
@@ -20,12 +23,13 @@ the admin search's prefix `LIKE` uses it under any collation).
   an order paid from the balance — never a registered gateway), `provider_ref` (unique per
   provider when set), `amount_uzs`, `status`, `idempotency_key` (unique when set),
   `metadata` (kassa event ids, never PII),
-  `created_at`, `updated_at`, `succeeded_at`. A top-up has 1..N attempts, at most one live
-  (`created`/`pending`) per provider.
+  `created_at`, `updated_at`, `succeeded_at`. A top-up or an order (its _owner_) has 1..N
+  attempts, at most one live (`created`/`pending`) per provider.
 
 **Interface (`api.py`):** `Payment`, `WalletTopup`, `Payable`, `resolve`, `ensure_attempt`,
-`mark_pending`, `settle`, `reverse`, `cancel_pending`, `AlreadyPaidError`,
-`TopupSpentError`, `move`, `TRANSITIONS`, `LIVE`, `InvalidTransitionError`,
+`mark_pending`, `settle`, `reverse`, `cancel_pending`, `lock_owner_or_skip`, `Owner`,
+`AlreadyPaidError`, `ReversalRefusedError`, `TopupSpentError`, `OrderReversalRefusedError`,
+`move`, `TRANSITIONS`, `LIVE`, `InvalidTransitionError`,
 `unclaimed_external_id`, `PaymentGateway`, `available_providers`, `get_gateway`,
 `return_url`, `create_topup`, `owned_topup`, `topup_view`, `TopupView`, `expire_stale`.
 
@@ -36,7 +40,7 @@ prefix, `POST /wallet/topups` and `GET /wallet/topups/{number}` (they live here 
 
 ## Numbers
 
-Top-ups and orders (M4) share the namespace a kassa sees in its account field. A top-up
+Top-ups and orders (M4a) share the namespace a kassa sees in its account field. A top-up
 number starts with `T`; an order number never does (`core.numbers`). `payable.resolve` tells
 them apart by that letter.
 
@@ -58,28 +62,41 @@ created ──► pending ──► succeeded ──► refunded
 `resolve(db, account, *, lock=False) -> Payable` — the one way a kassa's account value
 (Click `merchant_trans_id`, Payme `account.order`, Uzum `params.order`) becomes a payable.
 
-| Top-up                         | `payable` | `reason`    |
-| ------------------------------ | --------- | ----------- |
-| `pending`, before `expires_at` | yes       | `ok`        |
-| `pending`, past `expires_at`   | no        | `expired`   |
-| `succeeded`                    | no        | `paid`      |
-| `expired`                      | no        | `expired`   |
-| `reversed`                     | no        | `reversed`  |
-| anything else (orders in M4)   | no        | `not_found` |
+A `T…` number is a top-up, any other well-formed number an order (`kind="order"`,
+`Payable.order` set, `amount_uzs = order.price_uzs`, `user_id = order.user_id`).
 
-`lock=True` reads the top-up `FOR UPDATE` (re-read even if already in the session).
+| Top-up                         | `payable` | `reason`   |
+| ------------------------------ | --------- | ---------- |
+| `pending`, before `expires_at` | yes       | `ok`       |
+| `pending`, past `expires_at`   | no        | `expired`  |
+| `succeeded`                    | no        | `paid`     |
+| `expired`                      | no        | `expired`  |
+| `reversed`                     | no        | `reversed` |
+
+| Order                                                             | `payable` | `reason`  |
+| ----------------------------------------------------------------- | --------- | --------- |
+| `pending`, before `expires_at`                                    | yes       | `ok`      |
+| `pending`, past `expires_at`; `cancelled`                         | no        | `expired` |
+| `paid`, `buying`, `trade_sent`, `delivered`, `failed`, `returned` | no        | `paid`    |
+
+An unknown or malformed number is `not_found` (amount 0, no owner). `lock=True` reads the
+top-up or order `FOR UPDATE` (re-read even if already in the session). The kassas'
+`_REFUSALS` tables key on `reason`, so an order is refused exactly like a top-up: paid →
+Click −4 / Payme −31051 / Uzum 10008, expired → Click −9 / Payme −31051 / Uzum 10009.
 
 ## Hooks (`hooks.py`, ruling R6)
 
 Every kassa calls these; nothing else changes money state. They flush; the caller commits.
+An attempt's _owner_ is its top-up or its order.
 
-| Hook                                  | Does                                                                             | Idempotent / refuses                                                                                                                                                                                                                                |
-| ------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ensure_attempt(payable=, provider=)` | Reuses the top-up's live attempt of that provider, else inserts a `created` one  | `provider_ref = <provider>:<number>`, suffixed `:<payment id>` when an earlier attempt holds it (`unclaimed_external_id`); `AlreadyPaidError` when the top-up is `paid` or `reversed` (an expired one is allowed — callers check `payable.payable`) |
-| `mark_pending(payment=)`              | `created → pending` (the kassa now holds a transaction)                          | no-op if `pending`; `InvalidTransitionError` otherwise                                                                                                                                                                                              |
-| `settle(payment=, event_id=)`         | attempt `succeeded`; top-up `succeeded` with `payment_id`; `wallet.credit_topup` | no-op if this attempt already succeeded; `AlreadyPaidError` if the top-up was credited through another attempt                                                                                                                                      |
-| `reverse(payment=, event_id=)`        | `wallet.reverse_topup`; attempt `refunded`; top-up `reversed`                    | no-op if `refunded`; `TopupSpentError` if the balance no longer covers it (R7); `InvalidTransitionError` if never paid                                                                                                                              |
-| `cancel_pending(payment=)`            | `created`/`pending` → `cancelled`                                                | no-op on any other status — a settled attempt is never pulled back                                                                                                                                                                                  |
+| Hook                                  | Does                                                                                                                                                                         | Idempotent / refuses                                                                                                                                                                                                                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ensure_attempt(payable=, provider=)` | Reuses the owner's live attempt of that provider, else inserts a `created` one (an order's: `purpose="order"`, `order_id`, `amount_uzs = price_uzs`)                         | `provider_ref = <provider>:<number>`, suffixed `:<payment id>` when an earlier attempt holds it (`unclaimed_external_id`); `AlreadyPaidError` when the payable is `paid` or `reversed` (an expired one is allowed — callers check `payable.payable`); `ValueError` for `not_found` |
+| `mark_pending(payment=)`              | `created → pending` (the kassa now holds a transaction)                                                                                                                      | no-op if `pending`; `InvalidTransitionError` otherwise                                                                                                                                                                                                                             |
+| `settle(payment=, event_id=)`         | attempt `succeeded`; a top-up `succeeded` with `payment_id` + `wallet.credit_topup`; an order `orders.mark_paid` (`paid`, `paid_with` = provider, `NOTIFY orders` on commit) | no-op if this attempt already succeeded (no second `NOTIFY`); `AlreadyPaidError` if the top-up was credited through another attempt, or the order is no longer `pending`                                                                                                           |
+| `reverse(payment=, event_id=)`        | a top-up: `wallet.reverse_topup`; attempt `refunded`; top-up `reversed`                                                                                                      | no-op if `refunded`; `TopupSpentError` if the balance no longer covers it; `OrderReversalRefusedError` for any order payment (R7); `InvalidTransitionError` if never paid. Both refusals are `ReversalRefusedError` (Payme −31007, Uzum 10017)                                     |
+| `cancel_pending(payment=)`            | `created`/`pending` → `cancelled` (an order stays `pending`: its expiry sweep owns it)                                                                                       | no-op on any other status — a settled attempt is never pulled back                                                                                                                                                                                                                 |
+| `lock_owner_or_skip(payment_id=)`     | locks the attempt's owner `FOR UPDATE SKIP LOCKED` (the kassas' timeout sweeps)                                                                                              | `False` when a callback holds the owner — the sweep skips that row until its next tick                                                                                                                                                                                             |
 
 - **One credit per top-up**: the ledger key is `topup:{topup_id}`, and `settle` refuses a
   second attempt once the top-up is `succeeded` or `reversed` (the kassa then refuses the
@@ -87,20 +104,27 @@ Every kassa calls these; nothing else changes money state. They flush; the calle
 - **Paid after expiry**: `settle` credits an attempt the kassa held even when the top-up's
   `expires_at` has passed — the money arrived. A kassa cannot _start_ paying an expired
   top-up: `resolve` refuses it first.
+- **One payment per order**: `settle` refuses an attempt once the order left `pending`, so
+  a second kassa's charge is refused (Click −4, Payme −31008, Uzum 10008) and the worker
+  hears one `NOTIFY orders` per order. A kassa-paid order books nothing on the balance.
+- **A kassa never reverses an order** (R7): the skin is bought at payment and refunds go
+  to the balance, so `reverse` raises `OrderReversalRefusedError` before touching anything.
 - **No overdraft**: `reverse_topup` locks the user's wallet and refuses when the balance is
   below the amount; nothing is written and the caller rolls back.
-- **Lock order, everywhere: top-up → kassa transaction row → payment → user wallet.** A
-  kassa opening an attempt resolves the top-up with `lock=True` before it touches the
-  attempt, so every hook that moves an attempt (`mark_pending`, `settle`, `reverse`,
-  `cancel_pending`) locks the top-up first too, and so does the expiry sweep. The other
+- **Lock order, everywhere: owner (top-up or order) → kassa transaction row → payment →
+  user wallet.** A kassa opening an attempt resolves the owner with `lock=True` before it
+  touches the attempt, so every hook that moves an attempt (`mark_pending`, `settle`,
+  `reverse`, `cancel_pending`) locks the owner first too (`_lock_owner_then_payment`), and
+  so do the expiry sweep and the kassas' timeout sweeps (`lock_owner_or_skip`). The other
   order deadlocks a create racing a settle
   (`test_settle_and_a_kassa_create_on_one_topup_do_not_deadlock`,
-  `test_mark_pending_then_settle_racing_a_kassa_create_do_not_deadlock`).
-- `purpose='order'` raises `NotImplementedError` until M4.
+  `test_mark_pending_then_settle_racing_a_kassa_create_do_not_deadlock`,
+  `test_settle_and_a_kassa_create_on_one_order_do_not_deadlock`).
 
-**Logs:** `payments.attempt.created`, `payments.topup.created`, `payments.topup.credited`, `payments.topup.reversed`,
-`payments.topup.reverse_refused`, `payments.topup.second_payment_refused` — number,
-provider and amount only, never the user.
+**Logs:** `payments.attempt.created`, `payments.topup.created`, `payments.topup.credited`,
+`payments.topup.reversed`, `payments.topup.reverse_refused`,
+`payments.topup.second_payment_refused`, `payments.order.paid`, `payments.order.second_payment_refused`,
+`payments.order.reverse_refused` — number, provider, amount and status only, never the user.
 
 ## Top-ups (`topups.py`, owner decision D1, rulings R3, R8, R11)
 
@@ -141,10 +165,11 @@ A gateway only builds the URL the customer is sent to — `intent_url(payable=, 
 `registry()` holds every gateway; `available_providers()` lists the available ones in the
 order `click, payme, uzum, mock`; `get_gateway(provider)` raises `NotFoundError` (404) for
 an unknown or unavailable one. Every intent returns the customer to our own page,
-`return_url(number, locale)` = `{web_base_url}[/uz|/en]/account/balance/topups/{number}`
-(ru has no prefix) — there is no client-supplied return URL.
+`return_url(number, locale)` = `{web_base_url}[/uz|/en]/account/balance/topups/{number}` for
+a `T…` number and `{web_base_url}[/uz|/en]/orders/{number}` for any other (an order; ru has
+no prefix) — there is no client-supplied return URL.
 
-`mock` is available everywhere but production; its intent URL is the top-up page with
+`mock` is available everywhere but production; its intent URL is the payable's page with
 `?mock=1`, from which the dev-only pay route drives the real `settle`.
 
 `click` (`gateways/click.py`) is available with `click_merchant_id`, `click_service_id` and
@@ -164,17 +189,19 @@ pair from `Settings.uzum_pairs()` (production, or sandbox outside prod or with
 `{uzum_open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our top-up page>` — no
 amount: Uzum's app prefills it from our `/check`. It imports nothing from the `uzum` module.
 
-## Not here (M4)
+## Not here
 
-`purpose='order'` in the hooks (they raise `NotImplementedError`), the `wallet` gateway (pay
-from the balance), the order FK on `payments`, and order payments in the kassas' timeout
-sweeps. Admin "settle a stuck payment", a kassa kill-switch and card refunds from admin are
-not planned (ruling R12).
+Paying an order from the balance (`provider="wallet"`, ruling R8) and the order pay route
+live in `orders` (M4a Task 6). Admin "settle a stuck payment", a kassa kill-switch and card
+refunds from admin are not planned (ruling R12).
 
 **Tests:** `tests/unit/test_payment_fsm.py`, `tests/unit/test_payment_gateways.py`,
 `tests/integration/test_payable_resolver.py`, `tests/integration/test_payment_hooks.py`
 (including real races: two kassas settling one top-up, a create racing a settle, a create
 racing `mark_pending` + `settle`), `tests/integration/test_topups.py` (HTTP: create,
 limits, providers, replay and the replay race, owner-only read, dev pay),
-`tests/integration/test_topup_expiry.py` (the sweep, R8).
+`tests/integration/test_topup_expiry.py` (the sweep, R8); orders (M4a):
+`tests/integration/test_payment_hooks_orders.py` (attempt, settle + `NOTIFY`, refusals, the
+create/settle race), `test_payments_orders_{click,payme,uzum}.py` (each kassa over HTTP),
+`test_kassa_sweeps_orders.py` (the timeout sweeps for both owners, SKIP LOCKED).
 `tests/integration/payments_factory.py` makes users and top-ups for the payments suites.

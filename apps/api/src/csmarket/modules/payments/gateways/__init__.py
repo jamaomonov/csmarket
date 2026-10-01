@@ -1,4 +1,4 @@
-"""Payment gateways: the registry of kassas a top-up can be paid through.
+"""Payment gateways: the registry of kassas a top-up or an order can be paid through.
 
 The registry is built on first use; whether a gateway is offered is decided per call by
 its ``available`` (credentials in settings, or "not prod" for ``mock``). Tasks adding a

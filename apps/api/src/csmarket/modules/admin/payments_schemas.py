@@ -30,7 +30,7 @@ class AdminPaymentRow(BaseModel):
     """One payment attempt in the list."""
 
     id: str
-    #: The payable's public number (a top-up's ``T…``).
+    #: The payable's public number (a top-up's ``T…``, or an order's).
     number: str
     purpose: Purpose
     provider: str
@@ -67,6 +67,17 @@ class AdminTopupInfo(BaseModel):
     succeeded_at: datetime | None
 
 
+class AdminOrderInfo(BaseModel):
+    """The order the payment pays for."""
+
+    number: str
+    status: Literal[
+        "pending", "paid", "buying", "trade_sent", "delivered", "cancelled", "failed", "returned"
+    ]
+    #: Whole soʻm, digits.
+    price_uzs: str
+
+
 class KassaTimes(BaseModel):
     """When the kassa created, performed and cancelled the transaction (``null`` = not yet)."""
 
@@ -95,14 +106,16 @@ class KassaTxnOut(BaseModel):
 
 
 class AdminPaymentDetail(BaseModel):
-    """A payment with its top-up and the kassas' transactions."""
+    """A payment with what it pays for (its top-up or its order) and the kassas' transactions."""
 
     payment: AdminPaymentFull
     topup: AdminTopupInfo | None
+    order: AdminOrderInfo | None
     kassa: list[KassaTxnOut]
 
 
 __all__ = [
+    "AdminOrderInfo",
     "AdminPaymentDetail",
     "AdminPaymentFull",
     "AdminPaymentRow",

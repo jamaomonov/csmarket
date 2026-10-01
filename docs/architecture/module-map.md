@@ -71,8 +71,8 @@ Flows: [`sequence-diagrams/skins-price-sync.mmd`](./sequence-diagrams/skins-pric
   reverse.
 - **`click`**, **`payme`**, **`uzum`** — each kassa's callback server and its transaction
   table; every money move goes through the `payments` hooks, never `wallet` directly. Each
-  has a timeout sweep in the scheduler. Lock order everywhere: top-up → kassa row → payment →
-  user wallet.
+  has a timeout sweep in the scheduler. Lock order everywhere: top-up (or, from M4a, order)
+  → kassa row → payment → user wallet.
 - **`admin`** — aggregates the users API (list, card, ban/unban, balance adjustment), the
   payments API (search, detail with each kassa's transactions) and the audit-log read. It
   imports `users`, `wallet`, `payments`, `click`, `payme`, `uzum` and `auth` through their
@@ -95,8 +95,15 @@ Flow: [`sequence-diagrams/topup.mmd`](./sequence-diagrams/topup.mmd),
   `wallet` imports neither. The ledger gains the `purchase` and `refund` kinds. Checkout
   (`POST /orders`) re-prices through `skins`' listings read (`skins.api.search_client`,
   `listings_for`) and the rate through `fx.api`; the order reads (`GET /orders/{number}`,
-  `GET /me/orders`) carry the buyer's trade view. Payment, buying, trades and refunds land
-  in the following M4a tasks.
+  `GET /me/orders`) carry the buyer's trade view. Buying, trades and refunds land in the
+  following M4a tasks.
+- **`payments` learns orders** — the payable resolver reads a non-`T` number as an order;
+  the hooks pay an attempt's _owner_ (top-up or order): `settle` on an order calls
+  `orders.api.mark_paid` (`paid`, `NOTIFY orders`), `reverse` on an order raises
+  `OrderReversalRefusedError` (a `ReversalRefusedError`, like `TopupSpentError`: Payme
+  −31007, Uzum 10017 — ruling R7). The kassas' timeout sweeps cover order attempts and lock
+  the owner first, `SKIP LOCKED`, per row. Lock order for orders: order → kassa row →
+  payment → wallet. The admin payment detail carries an `order` block.
 
 ## Processes outside the API
 

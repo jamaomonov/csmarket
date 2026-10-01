@@ -123,3 +123,38 @@ def test_0013_orders_skin_trades_downgrades_and_upgrades(
         monkeypatch.setenv("CSMARKET_DATABASE_URL", admin)
         app_config.get_settings.cache_clear()
         asyncio.run(_admin(admin, f"DROP DATABASE IF EXISTS {_SCRATCH} WITH (FORCE)"))
+
+
+async def _payments_order_index(url: str) -> list[str]:
+    engine = create_async_engine(url)
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text("SELECT indexname FROM pg_indexes WHERE indexname = 'ix_payments_order'")
+        )
+        names = [r[0] for r in rows]
+    await engine.dispose()
+    return names
+
+
+def test_0014_payments_order_id_idx_downgrades_and_upgrades(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shared = make_url(os.environ["CSMARKET_DATABASE_URL"])
+    scratch = shared.set(database=_SCRATCH).render_as_string(hide_password=False)
+    admin = shared.render_as_string(hide_password=False)
+    asyncio.run(_admin(admin, f"DROP DATABASE IF EXISTS {_SCRATCH}"))
+    asyncio.run(_admin(admin, f"CREATE DATABASE {_SCRATCH}"))
+    monkeypatch.setenv("CSMARKET_DATABASE_URL", scratch)
+    app_config.get_settings.cache_clear()
+    try:
+        cfg = _alembic(scratch)
+        command.upgrade(cfg, "head")
+        assert asyncio.run(_payments_order_index(scratch)) == ["ix_payments_order"]
+        command.downgrade(cfg, "0013_orders_skin_trades")
+        assert asyncio.run(_payments_order_index(scratch)) == []
+        command.upgrade(cfg, "head")
+        assert asyncio.run(_payments_order_index(scratch)) == ["ix_payments_order"]
+    finally:
+        monkeypatch.setenv("CSMARKET_DATABASE_URL", admin)
+        app_config.get_settings.cache_clear()
+        asyncio.run(_admin(admin, f"DROP DATABASE IF EXISTS {_SCRATCH} WITH (FORCE)"))
