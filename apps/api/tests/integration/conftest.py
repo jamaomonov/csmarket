@@ -25,8 +25,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from testcontainers.postgres import PostgresContainer
-from testcontainers.redis import RedisContainer
+from testcontainers.community.postgres import PostgresContainer
+from testcontainers.community.redis import RedisContainer
 
 
 @pytest.fixture(scope="session")
@@ -34,8 +34,8 @@ def _pg_container() -> Iterator[PostgresContainer]:
     container = PostgresContainer(image="postgres:16-alpine", driver=None).with_bind_ports(
         5432, None
     )
-    container.start()
     try:
+        container.start()
         yield container
     finally:
         container.stop()
@@ -45,8 +45,8 @@ def _pg_container() -> Iterator[PostgresContainer]:
 def _redis_container() -> Iterator[RedisContainer]:
     """A private Redis per session/worker, so the per-test ``flushdb`` is always safe."""
     container = RedisContainer(image="redis:7-alpine").with_bind_ports(6379, None)
-    container.start()
     try:
+        container.start()
         yield container
     finally:
         container.stop()
@@ -62,15 +62,38 @@ def _make_async_url(container: PostgresContainer) -> str:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def _apply_migrations(_pg_container: PostgresContainer, _redis_container: RedisContainer) -> None:
-    """Point Settings + Alembic at the containers and run migrations once."""
+def _apply_migrations(
+    _pg_container: PostgresContainer, _redis_container: RedisContainer
+) -> Iterator[None]:
+    """Point Settings + Alembic at the containers and run migrations once.
+
+    The env vars live for the whole session (integration tests need them) and are
+    restored at teardown, with the settings cache cleared both ways.
+    """
     url = _make_async_url(_pg_container)
-    os.environ["CSMARKET_DATABASE_URL"] = url
     redis_host = _redis_container.get_container_host_ip()
     redis_port = _redis_container.get_exposed_port(6379)
-    os.environ["CSMARKET_REDIS_URL"] = f"redis://{redis_host}:{redis_port}/0"
+    overrides = {
+        "CSMARKET_DATABASE_URL": url,
+        "CSMARKET_REDIS_URL": f"redis://{redis_host}:{redis_port}/0",
+    }
+    previous = {k: os.environ.get(k) for k in overrides}
+    os.environ.update(overrides)
     cfg.get_settings.cache_clear()
+    try:
+        _upgrade_to_head(url)
+        yield
+    finally:
+        for k, v in previous.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        cfg.get_settings.cache_clear()
 
+
+def _upgrade_to_head(url: str) -> None:
+    """Run ``alembic upgrade head`` against ``url``."""
     api_dir = Path(__file__).resolve().parents[2]
     ini = api_dir / "alembic.ini"
     alembic_cfg = Config(str(ini))

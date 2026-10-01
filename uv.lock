@@ -662,7 +662,7 @@ dev = [
     { name = "pytest-xdist", specifier = ">=3.6" },
     { name = "respx", specifier = ">=0.21" },
     { name = "ruff", specifier = ">=0.7" },
-    { name = "testcontainers", extras = ["postgres", "redis"], specifier = ">=4.8" },
+    { name = "testcontainers", extras = ["postgres", "redis"], specifier = ">=4.15" },
 ]
 
 [[package]]

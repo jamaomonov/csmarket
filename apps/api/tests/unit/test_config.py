@@ -6,7 +6,17 @@ import pytest
 from csmarket.core.config import Settings, get_settings
 
 
-def test_defaults_point_at_the_local_dev_stack() -> None:
+def test_defaults_point_at_the_local_dev_stack(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Hermetic: integration fixtures export CSMARKET_DATABASE_URL / CSMARKET_REDIS_URL for
+    # the whole session, so any CSMARKET_* var that feeds an asserted field is cleared.
+    for name in (
+        "CSMARKET_DATABASE_URL",
+        "CSMARKET_REDIS_URL",
+        "CSMARKET_SERVICE_NAME",
+        "CSMARKET_RATE_LIMIT_DEFAULT",
+        "CSMARKET_CORS_ALLOW_ORIGINS",
+    ):
+        monkeypatch.delenv(name, raising=False)
     s = Settings(environment="dev")
     assert s.database_url.startswith("postgresql+asyncpg://csmarket_app:")
     assert s.database_url.endswith("/csmarket")
