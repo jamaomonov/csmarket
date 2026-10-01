@@ -23,9 +23,8 @@
   | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                      |
   | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                      |
 
-- **Where things stand:** M0 is merged on local `main`. M1 (Steam sign-in, users, trade
-  link, admin gate) is done on branch `m1-auth-users` and is merged locally when the owner
-  says. There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
+- **Where things stand:** M0 and M1 (Steam sign-in, users, trade link, admin gate) are
+  merged on local `main`. There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
   `https://csmarket.uz/` answers the hello page from CI-built images. Next: the M2 plan, when
   the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
