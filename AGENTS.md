@@ -14,19 +14,20 @@
 - **Milestones** (spec §15), each with its own plan written with `superpowers:writing-plans`
   and saved to `docs/superpowers/plans/`, and its own deploy:
 
-  | #   | Scope                                                            | Plan                                               |
-  | --- | ---------------------------------------------------------------- | -------------------------------------------------- |
-  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs | `docs/superpowers/plans/2026-10-01-m0-skeleton.md` |
-  | M1  | `auth` (Steam), `users`, roles, account page, trade link         | not written yet                                    |
-  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO | not written yet                                    |
-  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | not written yet                                    |
-  | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                    |
-  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                    |
+  | #   | Scope                                                            | Plan                                                 |
+  | --- | ---------------------------------------------------------------- | ---------------------------------------------------- |
+  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`   |
+  | M1  | `auth` (Steam), `users`, roles, account page, trade link         | `docs/superpowers/plans/2026-10-01-m1-auth-users.md` |
+  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO | not written yet                                      |
+  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | not written yet                                      |
+  | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                      |
+  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                      |
 
-- **Where M0 stands:** code is committed locally on branch `m0-skeleton`. There is no git
-  remote yet. The owner creates `jamaomonov/csmarket` on GitHub and says when to push. M0 is
-  done when `https://csmarket.uz/` answers the hello page from CI-built images. Next: the M1
-  plan, when the owner asks for it.
+- **Where things stand:** M0 is merged on local `main`. M1 (Steam sign-in, users, trade
+  link, admin gate) is done on branch `m1-auth-users` and is merged locally when the owner
+  says. There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
+  `https://csmarket.uz/` answers the hello page from CI-built images. Next: the M2 plan, when
+  the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). Everything later is listed in spec §16.
@@ -276,7 +277,7 @@ csmarket/
   say in their docstring why they are keyless.
 - Money as `Decimal` / `string`, never floats; UZS whole units, USD six decimals for Waxpeer
   prices.
-- Auth (M1): 15-min EdDSA JWT access, 30-day rotating refresh, server-side blocklist; admin =
+- Auth (M1, ADR-0004): 15-min EdDSA JWT access (in memory, Bearer), 30-day rotating refresh in an `HttpOnly` cookie, server-side blocklist; admin =
   Steam sign-in + `admin` role on named `steam_id`s. No passwords anywhere.
 - Rate limits: slowapi per route in FastAPI (`bootstrap._build_limiter`, in-process, keyed by
   client IP) + Redis `ip_guard` (M1) on sign-in, trade-link check, order creation, top-up
@@ -348,6 +349,16 @@ over raw tools.**
 | `make build`                                      | Build the dev compose images                                                        |
 | `make deploy tag=sha-xxxxxxx`                     | Dispatch `deploy.yml` to production with that image tag (`docs/runbooks/deploy.md`) |
 | `make backup` / `make restore file=… identity=…`  | One-off backup / restore against the **prod** compose (run on the server)           |
+
+Auth helpers (not `make` targets; `docs/onboarding/local-setup.md`, `docs/runbooks/admin-bootstrap.md`):
+
+- Make an account admin (it must have signed in once):
+  `docker compose exec api python -m csmarket.scripts.grant_admin --steam-id <17 digits>`;
+  add `--revoke` to take it back. Prod: `docker compose -f docker-compose.prod.yml exec api …`.
+- Dev login, `POST /api/v1/auth/dev-login {steam_id, display_name?, admin?}`, signs in without
+  Steam. **Dev only**: it needs `CSMARKET_DEV_LOGIN_ENABLED=true` and answers 404 in prod
+  regardless (`test_prod_never_exposes_dev_login`). Keep the flag `false` in
+  `infra/secrets-example/api.env`.
 
 Dev ports (`docker-compose.yml`; csmarket's own block so it can run beside another stack —
 each is env-overridable, container ports unchanged):

@@ -7,7 +7,7 @@ template**: copy each `.env` there, fill in real values, then `chmod 600` the lo
 The server holds the only copy. `/secrets/` is in `.gitignore` and the server's
 deploy key is read-only, so these files cannot be pushed back — but that also
 means nothing restores them for you. Keep an offline copy of whatever you cannot
-regenerate (notably `CSMARKET_APP_ENC_KEY`: rotating it makes every encrypted row unreadable; from M1 also `CSMARKET_JWT_PRIVATE_KEY`: rotating it invalidates every live session).
+regenerate (notably `CSMARKET_APP_ENC_KEY`: rotating it makes every encrypted row unreadable; also `CSMARKET_JWT_PRIVATE_KEY`: rotating it signs everyone out).
 
 ## On the host (one-time)
 
@@ -50,7 +50,7 @@ are harmless.
 openssl rand -base64 32 | tr -d '+/='
 ```
 
-### JWT keypair (Ed25519, base64-PEM) — from M1
+### JWT keypair (Ed25519, base64-PEM)
 
 ```bash
 umask 077
@@ -63,7 +63,8 @@ shred -u priv.pem 2>/dev/null || rm -P priv.pem
 ```
 
 Put each into `CSMARKET_JWT_PRIVATE_KEY` / `CSMARKET_JWT_PUBLIC_KEY` in `api.env`
-(M1 adds them to the template). The private key never leaves the server.
+(both are in the `api.env` template). The private key never leaves the server.
+`./scripts/gen-secret.sh jwt` prints the same pair in the one-liner form.
 
 ### AGE keypair for backup encryption
 

@@ -67,6 +67,39 @@ Useful for a debugger or faster reloads. Stop that service in compose first
   `VITE_API_BASE_URL` empty (as in `apps/admin/.env.example`) so requests go through that
   proxy.
 
+## Signing in locally
+
+Steam is the only sign-in, and **real Steam works on localhost**: `GET /api/v1/auth/steam/start`
+sends you to steamcommunity.com and back to `http://localhost:3100/auth/steam/callback`. No
+key is needed to sign in. Without `CSMARKET_STEAM_API_KEY` your display name and avatar stay
+empty, and the trade-link hold check is skipped (the verdict comes from Waxpeer alone, and
+without `CSMARKET_WAXPEER_API_KEY` the check answers "unavailable"; the link is still saved).
+
+**Dev login** skips Steam. It is on in dev (`CSMARKET_DEV_LOGIN_ENABLED=true` in
+`.env.example`) and always 404 in prod:
+
+```bash
+curl -s -c /tmp/cs.jar -X POST http://localhost:8100/api/v1/auth/dev-login \
+  -H 'Content-Type: application/json' \
+  -d '{"steam_id": "76561198000000001", "display_name": "Dev", "admin": true}'
+```
+
+It returns an access token and sets the `csmarket_refresh` cookie in the jar. For a browser
+session, the Playwright helper `e2e/tests/helpers.ts` does the same. The ID must be a valid
+SteamID64 (17 digits); use a made-up one, never a real person's.
+
+**Becoming admin.** Sign in once (Steam or dev login), then:
+
+```bash
+docker compose exec api python -m csmarket.scripts.grant_admin --steam-id 76561198000000001
+```
+
+It prints `granted`; reload `http://localhost:3102`. Or pass `"admin": true` to dev login.
+
+JWT keys: leave `CSMARKET_JWT_PRIVATE_KEY` / `CSMARKET_JWT_PUBLIC_KEY` empty in dev. The API
+makes an Ed25519 pair in memory, so access tokens die on an API restart; the refresh cookie
+survives and the app re-mints one on the next load.
+
 ## Common commands
 
 ```bash

@@ -7,13 +7,13 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 
 ## Inventory
 
-| Data                     | Stored in                                                  | Arrives in | Notes                                                                                                        |
-| ------------------------ | ---------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
-| Steam ID (SteamID64)     | `users.steam_id`                                           | M1         | The identity. Public on Steam, still personal here: it links a person to purchases                           |
-| Display name, avatar URL | `users.display_name`, `users.avatar_url`                   | M1         | Copied from Steam at sign-in                                                                                 |
-| Email                    | `users.email` (optional)                                   | M1         | Only for receipts and order emails (M4)                                                                      |
-| Trade link               | `users.trade_link`; a snapshot in `orders.trade_link` (M4) | M1         | Its `token` is a **credential**: anyone holding it can send that account offers. `partner` is the account id |
-| Client IP                | **not stored** in Postgres                                 | M0         | Rate-limit counters only (below)                                                                             |
+| Data                     | Stored in                                                  | Arrives in | Notes                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Steam ID (SteamID64)     | `users.steam_id`                                           | M1         | The identity. Public on Steam, still personal here: it links a person to purchases. Never logged (redactor key `steam_id` and stem `*steamid*`)                    |
+| Display name, avatar URL | `users.display_name`, `users.avatar_url`                   | M1         | Copied from Steam at sign-in                                                                                                                                       |
+| Email                    | `users.email` (optional)                                   | M1         | Only for receipts and order emails (M4). Unverified until then (`email_verified_at` is null). Never logged                                                         |
+| Trade link               | `users.trade_link`; a snapshot in `orders.trade_link` (M4) | M1         | Its `token` is a **credential**: anyone holding it can send that account offers. `partner` is the account id. Returned only to its owner (`GET /me`); never logged |
+| Client IP                | **not stored** in Postgres                                 | M0         | Rate-limit counters only (below)                                                                                                                                   |
 
 ### Client IP
 
@@ -21,21 +21,39 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   memory** for its window (one minute by default). Nothing is written to disk.
 - `ip_guard` (M1) keeps per-IP counters in **Redis** under keys that expire with their window
   (60 s by default). Never in Postgres, never in a column.
-- The trade-link verdict cache (M1) is keyed by a **hash** of the link, never the link.
+- The trade-link verdict cache (M1) is keyed by a **hash** of the link, never the link; its
+  value is the verdict and reason only.
+- In `ip_guard` keys the address appears only as `hash_short(ip)` (12 hex characters), and a
+  subject (the user id) as a SHA-256 prefix. Keys live one window (60 s). Catalogue:
+  `docs/architecture/cache-keys.md`.
+
+### Sign-in and trade-link specifics (M1)
+
+- **OpenID callback params.** Steam returns the browser to the app with `openid.*` in the
+  query string (it includes the claimed Steam ID). The callback page `POST`s them to the API
+  and replaces the URL at once, so they do not stay in the address bar or history. The API
+  never logs them; a rejected sign-in logs a reason only (`auth.steam.rejected`).
+- **Upstream error text is never logged.** `httpx` exceptions carry the request URL: Steam
+  Web API calls carry `key=` and the trade token, Waxpeer's key rides the query string. Only
+  the exception **type name** is logged, and the `httpx` / `httpcore` loggers are capped at
+  WARNING (`core/logging.py`).
+- **Refresh token.** Only its SHA-256 is stored (`refresh_tokens.token_hash`); the raw value
+  lives in an `HttpOnly` cookie. The access JWT carries no PII beyond the user id.
+- **Roles** are in `users.roles`. `grant_admin` prints one word and never the Steam ID.
 
 ## Where each may appear
 
-| Channel                | Rule                                                                                                                                                                                                                                                                                    |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application logs       | **Never.** `core/logging.py` redacts by key (`steam_id`, `email`, `ip`, `trade_link`, `partner`, `token`, `user_id`, …) and by stem (`*email*`, `*steamid*`, `*_ip`, `*_token`). Use `hash_short()` when a log needs to correlate one person's events                                   |
-| Prometheus metrics     | **Never as a label.** Labels are bounded `Literal`s (`core/metrics.py`, rule 1)                                                                                                                                                                                                         |
-| Sentry                 | `send_default_pii=False` (no bodies, headers, cookies, user) and `include_local_variables=False` (no stack-frame locals) — `core/observability.py`                                                                                                                                      |
-| Traces, locals in logs | Off: structlog renders tracebacks with `show_locals=False`                                                                                                                                                                                                                              |
-| URLs and query strings | Never carry a trade link or token. Advisory lookups that take one are `POST`. Our own logs drop query strings (below), but Cloudflare and browsers still see full URLs                                                                                                                  |
-| Edge and access logs   | Caddy's access log and its error log pass a filter (`(pii_filter)` in `infra/caddy/Caddyfile.prod`): it keeps method, host, path, status, size and duration and deletes the client address, every request and response header and the query string. uvicorn runs with `--no-access-log` |
-| Chat, docs, tests      | Never a real trade-link token or a real person's Steam ID; use redrawn / fake values                                                                                                                                                                                                    |
-| Admin UI               | Shows what an operator needs to resolve an order (M1+); every admin action is audited in `admin_audit_log`                                                                                                                                                                              |
-| Third parties          | Waxpeer receives the trade link to check it (M1) and its `partner` and `token` to deliver (M4); acquirers receive the order number and amount, not the Steam ID                                                                                                                         |
+| Channel                | Rule                                                                                                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application logs       | **Never.** `core/logging.py` redacts by key (`steam_id`, `email`, `ip`, `trade_link`, `partner`, `token`, `user_id`, …) and by stem (`*email*`, `*steamid*`, `*_ip`, `*_token`). Use `hash_short()` when a log needs to correlate one person's events                                       |
+| Prometheus metrics     | **Never as a label.** Labels are bounded `Literal`s (`core/metrics.py`, rule 1)                                                                                                                                                                                                             |
+| Sentry                 | `send_default_pii=False` (no bodies, headers, cookies, user) and `include_local_variables=False` (no stack-frame locals) — `core/observability.py`                                                                                                                                          |
+| Traces, locals in logs | Off: structlog renders tracebacks with `show_locals=False`                                                                                                                                                                                                                                  |
+| URLs and query strings | Never carry a trade link or token. Advisory lookups that take one are `POST`. Our own logs drop query strings (below), but Cloudflare and browsers still see full URLs                                                                                                                      |
+| Edge and access logs   | Caddy's access log and its error log pass a filter (`(pii_filter)` in `infra/caddy/Caddyfile.prod`): it keeps method, host, path, status, size and duration and deletes the client address, every request and response header and the query string. uvicorn runs with `--no-access-log`     |
+| Chat, docs, tests      | Never a real trade-link token or a real person's Steam ID; use redrawn / fake values                                                                                                                                                                                                        |
+| Admin UI               | Shows what an operator needs to resolve an order (M1+); every admin action is audited in `admin_audit_log`                                                                                                                                                                                  |
+| Third parties          | Steam (Web API) receives the Steam ID and the trade token for the hold check, and its OpenID service sees the sign-in (M1); Waxpeer receives the trade link to check it (M1) and its `partner` and `token` to deliver (M4); acquirers receive the order number and amount, not the Steam ID |
 
 ## Retention
 
