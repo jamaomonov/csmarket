@@ -26,6 +26,8 @@
  * Everything is closed over per client: two clients never share a token.
  */
 
+import { isSuspendedAnswer, readErrorBody, SessionApiError } from "./problem";
+
 export interface SessionClientOptions {
   /** API origin, e.g. `https://api.csmarket.uz`; empty for same-origin. */
   baseUrl: string;
@@ -73,52 +75,6 @@ export interface SessionClient {
   onAuthLost: (cb: () => void) => () => void;
   /** The last refresh was refused because the account is banned (until a new token or sign-out). */
   isSuspended: () => boolean;
-}
-
-/** problem+json `type` of the API's `AccountSuspendedError` (403). */
-export const ACCOUNT_SUSPENDED_TYPE = "https://csmarket.uz/errors/account-suspended";
-
-export class SessionApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly statusText: string,
-    public readonly body: unknown,
-  ) {
-    super(`${status.toString()} ${statusText}`);
-    this.name = "SessionApiError";
-  }
-
-  /** problem+json `code` (e.g. "trade_link_not_yours"), when the API sent one. */
-  get code(): string | undefined {
-    // Narrowing an unknown JSON body to the problem+json shape we read.
-    const b = this.body as { code?: unknown } | null;
-    return typeof b?.code === "string" ? b.code : undefined;
-  }
-
-  /** problem+json `type` URI. */
-  get type(): string | undefined {
-    // Narrowing an unknown JSON body to the problem+json shape we read.
-    const b = this.body as { type?: unknown } | null;
-    return typeof b?.type === "string" ? b.type : undefined;
-  }
-}
-
-async function readErrorBody(response: Response): Promise<unknown> {
-  const text = await response.text().catch(() => "");
-  if (!text) return null;
-  try {
-    return JSON.parse(text) as unknown;
-  } catch {
-    return text;
-  }
-}
-
-/** Whether a 403 is the API's `account-suspended` problem (and not any other refusal). */
-async function isSuspendedAnswer(response: Response): Promise<boolean> {
-  const body = await readErrorBody(response);
-  // Narrowing an unknown JSON body to the problem+json field we read.
-  const type = (body as { type?: unknown } | null)?.type;
-  return type === ACCOUNT_SUSPENDED_TYPE;
 }
 
 /** Build a session client; see the module docstring for the mechanics. */

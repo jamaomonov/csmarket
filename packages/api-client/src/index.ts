@@ -1,8 +1,7 @@
 export { createApiClient, ApiError, type ApiClient, type ApiClientOptions } from "./client";
+export { ACCOUNT_SUSPENDED_TYPE, SessionApiError } from "./problem";
 export {
-  ACCOUNT_SUSPENDED_TYPE,
   createSessionClient,
-  SessionApiError,
   type SessionClient,
   type SessionClientOptions,
   type SessionReadOptions,

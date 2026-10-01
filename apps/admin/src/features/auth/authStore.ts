@@ -1,4 +1,5 @@
 /** Admin session state: Steam sign-in plus the `admin` role gate (`GET /admin/me`). */
+import { ACCOUNT_SUSPENDED_TYPE } from "@csmarket/api-client";
 import { create } from "zustand";
 
 import { apiBase, ApiError, session } from "@/lib/api";
@@ -39,7 +40,7 @@ async function probe(): Promise<Pick<AuthState, "status" | "me">> {
     return { status: "admin", me };
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) {
-      const suspended = err.type?.endsWith("/account-suspended") ?? false;
+      const suspended = err.type === ACCOUNT_SUSPENDED_TYPE;
       return { status: suspended ? "suspended" : "forbidden", me: null };
     }
     return { status: "anonymous", me: null };

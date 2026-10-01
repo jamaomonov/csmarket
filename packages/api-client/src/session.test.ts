@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createSessionClient, SessionApiError } from "./session";
+import { SessionApiError } from "./problem";
+import { createSessionClient } from "./session";
 
 const BASE = "http://api.test";
 
