@@ -18,13 +18,15 @@ const WEB_ROUTES = [
   "/item/warm-up-404",
   "/account",
   "/en/account",
+  "/account/balance",
+  "/account/balance/topups/TZZZZZZZ",
   "/sitemap.xml",
   "/skins-sitemap/0.xml",
   "/skins-sitemap/landings.xml",
   "/robots.txt",
   "/warm-up-404",
 ];
-const ADMIN_ROUTES = ["/", "/catalogue"];
+const ADMIN_ROUTES = ["/", "/catalogue", "/users", "/audit"];
 
 async function warm(origin: string, path: string): Promise<void> {
   try {

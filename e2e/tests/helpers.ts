@@ -26,3 +26,14 @@ export function tradeLinkFor(steamId: string, token = "E2eTok12"): string {
   const partner = (BigInt(steamId) - 76561197960265728n).toString();
   return `https://steamcommunity.com/tradeoffer/new/?partner=${partner}&token=${token}`;
 }
+
+/**
+ * A fresh steamid64 per call: a 10-digit prefix of the spec's own (so files never share an
+ * account) and 7 random digits (so parallel tests and repeated runs don't either).
+ */
+export function uniqueSteamId(prefix: string): string {
+  const tail = Math.floor(Math.random() * 10_000_000)
+    .toString()
+    .padStart(7, "0");
+  return `${prefix}${tail}`;
+}
