@@ -57,3 +57,32 @@ describe("skin landings", () => {
     expect(countUnit(undefined)).toBe("other");
   });
 });
+
+describe("every weapon the item page links to has a landing", () => {
+  // The item page links `weaponPath(weaponSlug(item.weapon))`; the landing must resolve it.
+  const WEAPONS = [
+    { value: "AK-47", count: 594 },
+    { value: "★ Karambit", count: 120 },
+    { value: "★ Bayonet", count: 80 },
+    { value: "★ Butterfly Knife", count: 60 },
+    { value: "★ Sport Gloves", count: 40 },
+    { value: "★ Moto Gloves", count: 30 },
+    { value: "Desert Eagle", count: 381 },
+    { value: "MP5-SD", count: 12 },
+    { value: "SSG 08", count: 40 },
+  ];
+  const facets = { categories: [], weapons: WEAPONS, exteriors: [], rarities: [] };
+
+  it.each(WEAPONS)("$value resolves from its own link", (w) => {
+    const slug = weaponSlug(w.value);
+    expect(slug).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
+    expect(weaponPath(slug)).toBe(`/weapon/${slug}`);
+    expect(findWeapon(facets, slug)).toEqual(w);
+    expect(landingPaths(facets)).toContain(weaponPath(slug));
+  });
+
+  it("slugs ★ names without the star", () => {
+    expect(weaponSlug("★ Karambit")).toBe("karambit");
+    expect(weaponSlug("★ Sport Gloves")).toBe("sport-gloves");
+  });
+});

@@ -19,7 +19,8 @@ test("unknown path is a real 404", async ({ page }) => {
   expect(response?.status()).toBe(404);
 });
 
-test("robots.txt disallows everything before launch", async ({ request }) => {
+test("robots.txt allows crawling and names the sitemap", async ({ request }) => {
   const body = await (await request.get("/robots.txt")).text();
-  expect(body).toContain("Disallow: /");
+  expect(body).toContain("Sitemap: https://csmarket.uz/sitemap.xml");
+  expect(body).not.toMatch(/^Disallow: \/$/m);
 });
