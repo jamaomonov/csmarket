@@ -1,0 +1,6 @@
+{
+  "brand": "csmarket",
+  "tagline": "Oʻzbekistonda CS2 skinlari",
+  "actions": { "home": "Bosh sahifaga", "retry": "Yangilash" },
+  "errors": { "generic": "Nimadir xato ketdi. Qayta urinib koʻring." }
+}

@@ -1,0 +1,6 @@
+{
+  "brand": "csmarket",
+  "tagline": "CS2 skins in Uzbekistan",
+  "actions": { "home": "Home", "retry": "Retry" },
+  "errors": { "generic": "Something went wrong. Please try again." }
+}

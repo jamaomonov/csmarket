@@ -1,0 +1,5 @@
+{
+  "extends": "@csmarket/config-tsconfig/react-library.json",
+  "compilerOptions": { "noEmit": true },
+  "include": ["src/**/*"]
+}

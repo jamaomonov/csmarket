@@ -1,0 +1,19 @@
+{
+  "meta": {
+    "title": "csmarket — CS2 skins in Uzbekistan",
+    "description": "CS2 skins priced in soʻm: pay with Click, Payme or Uzum, delivered as a Steam trade offer. Coming soon."
+  },
+  "home": {
+    "title": "CS2 skins in Uzbekistan",
+    "lead": "Pay in soʻm. The skin arrives as a Steam trade offer.",
+    "soon": "Opening soon."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "subtitle": "There is no such page. Go back home."
+  },
+  "error": {
+    "title": "The page did not load",
+    "body": "Something went wrong on our side. Try refreshing."
+  }
+}

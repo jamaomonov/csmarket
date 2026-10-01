@@ -1,0 +1,32 @@
+/* Tailwind v4 preset — import this from each app's globals.css. */
+
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Tailwind v4 discovers sources by walking the importing app's tree, skipping
+   node_modules — where pnpm puts the workspace symlink to @csmarket/ui. Without
+   this, any utility used *only* inside a shared component is silently absent
+   from the build: Select rendered with no padding and no appearance-none until
+   this line existed, and Input's focus ring survived only because the app's
+   own source happened to use the same classes. */
+@source "../ui/src";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+}
