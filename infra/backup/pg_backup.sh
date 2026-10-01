@@ -17,6 +17,10 @@ mkdir -p "$tmp_dir"
 
 dump="${tmp_dir}/csmarket-${file_ts}.dump"
 enc="${dump}.age"
+# Never leave the plaintext dump (or a partial .age) behind on any exit —
+# a failed encrypt or upload must not park an unencrypted copy of the database
+# in the backup-tmp volume.
+trap 'rm -f "$dump" "$enc"' EXIT
 
 echo "[backup] dumping ${PGDATABASE} ..."
 pg_dump --format=custom --no-owner --no-privileges --file "$dump"
