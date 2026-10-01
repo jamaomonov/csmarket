@@ -168,6 +168,8 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      # Shares api.env; its own name so Sentry tells the three processes apart.
+      CSMARKET_SERVICE_NAME: csmarket-worker
     env_file: ./secrets/api.env
     depends_on: [postgres, redis]
 
@@ -178,6 +180,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *app-env
+      CSMARKET_SERVICE_NAME: csmarket-scheduler
     env_file: ./secrets/api.env
     depends_on: [postgres, redis]
 
@@ -194,10 +197,12 @@ services:
     restart: unless-stopped
     environment:
       # Server Components and ISR revalidation talk to the API directly over
-      # the compose network. Without this they fall back to the public hostname,
-      # so every server render would leave the box, cross Cloudflare and Caddy,
-      # and come back — arriving with the VPS's own address as its client IP,
-      # which collapses all server rendering into one per-IP rate-limit bucket.
+      # the compose network instead of leaving the box through Cloudflare and
+      # Caddy. These calls carry no X-Forwarded-For, so the API keys them on the
+      # web container's own address: ALL server rendering shares one per-IP
+      # rate-limit bucket (the public hostname would collapse them into the
+      # VPS's address just the same). M2 must forward the visitor IP from Next
+      # or exempt the internal network (ADR-0003).
       # Not a secret: it is an internal hostname, so it belongs here rather than
       # in secrets/web.env (public-only, since NEXT_PUBLIC_* is inlined into the
       # browser bundle).
@@ -328,9 +333,10 @@ services:
     command: ["-config.file=/etc/promtail/promtail-config.yml"]
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      # Read-only: promtail only enumerates containers. A writable docker.sock
-      # is host root — an RCE/supply-chain compromise of this image would
-      # otherwise escalate to full host takeover.
+      # promtail only enumerates containers through it. ``:ro`` stops writes to
+      # the socket FILE, not calls to the Docker API: anyone who can open the
+      # socket can still drive the daemon, which is host root. Treat this image
+      # as trusted; a socket proxy limited to GET /containers would be the fix.
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
     depends_on: [loki]

@@ -73,7 +73,7 @@ services:
   worker:
     build: { context: ., dockerfile: infra/docker/worker.Dockerfile }
     restart: unless-stopped
-    environment: { <<: *app-env }
+    environment: { <<: *app-env, CSMARKET_SERVICE_NAME: csmarket-worker }
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -82,7 +82,7 @@ services:
   scheduler:
     build: { context: ., dockerfile: infra/docker/scheduler.Dockerfile }
     restart: unless-stopped
-    environment: { <<: *app-env }
+    environment: { <<: *app-env, CSMARKET_SERVICE_NAME: csmarket-scheduler }
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

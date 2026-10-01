@@ -15,8 +15,14 @@ exactly one value: ``{client_ip}``, which Caddy resolves from
 ``Cf-Connecting-Ip`` when -- and only when -- the peer is in Cloudflare's
 published ranges (``trusted_proxies`` + ``client_ip_headers`` in the global
 block), and from the socket peer otherwise. So a caller cannot inject a chain
-and pick an address, and no request reaches FastAPI around that proxy (the api
-port is not published).
+and pick an address, and nothing from outside the box reaches FastAPI around
+that proxy (the api port is not published).
+
+One caller inside the compose network does: the storefront's server-side
+requests go straight to ``http://api:8000`` (``API_INTERNAL_URL``) with no
+``X-Forwarded-For``, so they resolve to the web container's socket address and
+all server rendering shares one bucket. M2 must forward the visitor IP from Next
+or exempt the internal network.
 
 If the Caddyfile is ever changed to append instead of overwrite, this function
 starts returning attacker-controlled data and the limiter and ``ip_guard``

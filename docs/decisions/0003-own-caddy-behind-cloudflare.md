@@ -45,7 +45,10 @@ Client IP, end to end:
 - Every upstream block **overwrites** `X-Forwarded-For` with `{client_ip}`
   (`header_up X-Forwarded-For {client_ip}`), so the API receives exactly one value.
 - `apps/api/src/csmarket/core/client_ip.py` trusts the first `X-Forwarded-For` entry. The api
-  port is not published, so nothing reaches FastAPI around Caddy.
+  port is not published, so nothing from outside the box reaches FastAPI around Caddy.
+- Inside the compose network one caller does: the storefront's server-side requests go
+  straight to `http://api:8000` (`API_INTERNAL_URL`) with no `X-Forwarded-For`, so the API
+  sees the `web` container's own address for every one of them.
 
 No Caddy `rate_limit` (it needs a custom build); per-route limits live in FastAPI (slowapi)
 and the volumetric tier is Cloudflare's WAF.
@@ -67,6 +70,9 @@ and the volumetric tier is Cloudflare's WAF.
   edge address (fails safe — shared bucket, never a spoofable one).
 - A first certificate may need the record set to DNS only for a moment if the Cloudflare zone
   redirects HTTP to HTTPS before the origin has a certificate (`docs/runbooks/first-deploy.md`).
+- All server-side rendering shares one rate-limit bucket: the `web` container's address
+  (above). **M2 must forward the visitor IP from Next or exempt the internal network** before
+  SSR traffic can trip the limiter.
 - Editing the single-file Caddyfile bind mount needs `up -d --force-recreate caddy`; the
   deploy workflow does it when the file's hash changes.
 
