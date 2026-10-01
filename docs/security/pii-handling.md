@@ -32,7 +32,11 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - **OpenID callback params.** Steam returns the browser to the app with `openid.*` in the
   query string (it includes the claimed Steam ID). The callback page `POST`s them to the API
   and replaces the URL at once, so they do not stay in the address bar or history. The API
-  never logs them; a rejected sign-in logs a reason only (`auth.steam.rejected`).
+  never logs them; a rejected sign-in logs a fixed reason and, for a transport failure, the
+  exception class name only (`auth.steam.rejected`).
+- **Sign-in nonce cookie.** `csmarket_oid` holds a random nonce (no PII) for 10 minutes
+  between `/auth/steam/start` and the completion, which clears it; the same nonce rides
+  Steam's `return_to` as `n`. It identifies nobody and is never logged.
 - **Upstream error text is never logged.** `httpx` exceptions carry the request URL: Steam
   Web API calls carry `key=` and the trade token, Waxpeer's key rides the query string. Only
   the exception **type name** is logged, and the `httpx` / `httpcore` loggers are capped at

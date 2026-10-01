@@ -9,7 +9,9 @@ Steam is the only sign-in. There is no registration form and no password.
 3. They land on `/account` already signed in, with their Steam name and avatar. A brief
    «Входим через Steam…» screen shows while the callback is processed.
 4. Next visits: still signed in for 30 days. Closing the tab does not sign them out.
-5. If Steam says no or the link is stale, they see a short error and a button to try again.
+5. If Steam says no or the link is stale, they see a short error and a button to try again
+   (in the language they started in). A Steam return that was not started in this browser
+   — for example a link someone else sent — never signs anyone in.
 6. A suspended account sees a suspension notice instead of the account page.
 
 The admin (`admin.csmarket.uz`) uses the same sign-in. A signed-in person without the
@@ -29,19 +31,21 @@ sequenceDiagram
 
     U->>App: Click "Sign in with Steam"
     App->>API: GET /auth/steam/start?app=web&locale=ru
-    API-->>U: 302 to Steam (return_to = app origin /auth/steam/callback)
+    API->>API: Mint nonce n (token_urlsafe(16))
+    API-->>U: 302 to Steam (return_to = app origin /auth/steam/callback?locale=ru&n=…) + Set-Cookie csmarket_oid=n (HttpOnly, 10 min)
     U->>Steam: Approve
-    Steam-->>U: 302 back to the app callback with openid.* params
-    U->>App: /auth/steam/callback?openid.*
+    Steam-->>U: 302 back to the app callback with openid.* params (return_to signed)
+    U->>App: /auth/steam/callback?locale&n&openid.*
     App->>App: Strip the params from the URL
-    App->>API: POST /auth/steam {app, params}
+    App->>API: POST /auth/steam {app, params: openid.*} + cookie csmarket_oid
     API->>R: ip_guard steam-login
-    API->>API: Check return_to origin, claimed_id shape
+    API->>API: Check claimed_id shape, openid.signed fields, return_to = our callback
+    API->>API: Signed n == csmarket_oid cookie? (no → 401, nothing written)
     API->>Steam: check_authentication (10 s)
     Steam-->>API: is_valid:true
     API->>Steam: GetPlayerSummaries (5 s, best effort)
     API->>DB: Upsert user by steam_id, insert refresh_tokens (SHA-256)
-    API-->>App: 200 {access_token} + Set-Cookie csmarket_refresh
+    API-->>App: 200 {access_token} + Set-Cookie csmarket_refresh, csmarket_oid cleared
     App->>App: Keep the access token in memory
 
     Note over App,API: Later, page load or a 401

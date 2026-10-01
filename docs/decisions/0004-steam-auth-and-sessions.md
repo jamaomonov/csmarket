@@ -18,7 +18,8 @@ and what happens to keys and the admin role outside prod.
 
 ## Decision drivers
 
-- A forged or replayed Steam callback must never open a session.
+- A forged or replayed Steam callback must never open a session, and a genuine one must
+  only open a session in the browser that started it (no login CSRF).
 - Steam shows the realm to the user: it must be the site they know, not `api.csmarket.uz`.
 - An XSS must not be able to read a 30-day session.
 - Local work and e2e must run without Steam and without secrets.
@@ -38,8 +39,21 @@ and what happens to keys and the admin role outside prod.
   302s to Steam with `return_to = <app origin>/auth/steam/callback` and the app origin as
   realm; both come from settings, never from the query. The app's callback page `POST`s the
   `openid.*` params to `/api/v1/auth/steam`, which checks `return_to`, the `claimed_id`
-  shape and Steam's `check_authentication`, then upserts the user and sets the cookie. The
-  callback page strips the params from the URL at once.
+  shape, the browser binding (below) and Steam's `check_authentication`, then upserts the
+  user and sets the cookie. The callback page strips the params from the URL at once.
+- **Browser binding (login-CSRF defence).** Steam's signature proves who signed in, not
+  which browser asked: without a binding an attacker could send a victim their own Steam
+  redirect and sign the victim into the attacker's account. `/steam/start` mints
+  `n = secrets.token_urlsafe(16)`, sets it as `csmarket_oid` (`HttpOnly`, `SameSite=Lax`,
+  10 min, `Path=/api/v1/auth`, same domain and `Secure` rules as the refresh cookie) and
+  puts it into `return_to` as `n`. `POST /steam` requires `openid.signed` to cover
+  `claimed_id`, `identity`, `return_to`, `response_nonce` and `assoc_handle`, `return_to`
+  to be exactly this app's callback, and its signed `n` to equal the cookie
+  (constant-time); otherwise 401 before any call to Steam. The cookie is cleared on every
+  outcome, so a nonce is single-use. Two sign-ins started in parallel tabs share one
+  cookie: the older tab's return fails and offers a retry. The web POST is cross-origin
+  with `credentials: "include"` (same-site, so `Lax` sends it); the admin in dev goes
+  through the Vite proxy on its own host.
 - **P2 — The access token is not a cookie.** The refresh token is an opaque `HttpOnly`
   cookie (`csmarket_refresh`, 30 days, rotating, only its SHA-256 stored). The EdDSA access
   JWT (15 min) comes in the JSON body, lives in JS memory and is re-minted from the cookie
@@ -67,6 +81,13 @@ Related decisions taken while building M1:
   in the query), so the callback page and the boot refresh do not race.
 - The shared browser session client (memory token, single-flight refresh, `onAuthLost`)
   lives in `@csmarket/api-client` as `createSessionClient`; web and admin both use it.
+  Only a `401` / `403` on refresh ends the session; a 5xx, `429` or network error keeps
+  it. It sends the Bearer token and cookies only to `baseUrl`-relative paths.
+- The Redis blocklist fails open on reads **and writes**: the `refresh_tokens` row is the
+  source of truth, so a Redis blip only lets an access token live out its 15 minutes and
+  never turns refresh or logout into a 500. Access tokens must carry `sid`.
+- Account deletion (later) must change `upsert_user_by_steam`, `resolve_current_user`,
+  `refresh_session` and `grant_admin` together: `users.deleted_at` exists but M1 ignores it.
 
 ### New dependencies (AGENTS §4)
 
@@ -93,14 +114,21 @@ Related decisions taken while building M1:
 - Dev login is a hole by design. It must stay prod-off: `test_prod_never_exposes_dev_login`
   fails the build if `environment=prod` ever exposes it, and `infra/secrets-example/api.env`
   sets the flag to `false`.
-- The spec's "callback on the API" wording is superseded for M1; spec §7.1 stays as written.
+- The spec's "callback on the API" wording is superseded for M1. Spec §7.1 is not edited;
+  this ADR governs the callback location and token storage.
+- A sign-in nonce lives 10 minutes; a visitor who idles longer on Steam's page gets a
+  "try again".
 
 ## Validation
 
-- `test_auth_steam.py`: foreign `return_to`, a non-Steam `claimed_id` and `is_valid:false`
-  all give 401 and no user row.
-- `test_auth_refresh.py`: reuse burns every session; two concurrent refreshes with one
-  token cannot both win.
+- `test_auth_steam.py`: foreign `return_to`, a non-Steam `claimed_id`, unsigned required
+  fields, a missing or foreign nonce and `is_valid:false` all give 401 and no user row.
+- `test_auth_routes.py`: `/steam/start` sets `csmarket_oid` and `return_to` carries it; a
+  POST without the cookie or with another browser's nonce is 401 with no user row; reuse
+  of a rotated cookie burns the session; refresh and logout survive a Redis outage.
+- `test_auth_sessions.py::test_reuse_revocation_survives_the_callers_rollback` and
+  `test_auth_refresh_race.py::test_concurrent_refresh_same_token_rotates_once`: reuse burns
+  every session; two concurrent refreshes with one token cannot both win.
 - `test_dev_login.py::test_prod_never_exposes_dev_login`.
 - The e2e suite signs in through dev login and opens the admin gate.
 

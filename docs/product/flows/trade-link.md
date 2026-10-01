@@ -36,7 +36,7 @@ sequenceDiagram
     alt not the user's own link
         API-->>App: 422 trade_link_not_yours (nothing written)
     else own link
-        API->>DB: Save link, clear verdict, reason, checked_at
+        API->>DB: Save link; a different link clears verdict, reason, checked_at
         API-->>App: 200 TradeLinkOut (verdict null)
     end
 
@@ -50,6 +50,7 @@ sequenceDiagram
         alt breaker open
             API->>API: verdict null, reason unavailable
         else closed
+            Note over API,DB: Read transaction committed first: no connection held across the calls
             API->>WP: POST check-tradelink (4 s)
             API->>Steam: GetTradeHoldDurations (4 s)
             Note over API: Waxpeer reason gives bad (private, trade_ban, invalid).<br/>Non-zero hold gives warn (hold).<br/>Any failure opens the 60 s breaker.

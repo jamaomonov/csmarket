@@ -24,13 +24,16 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
   `PATCH` and `PUT` accept `Idempotency-Key` (≥ 16 chars) and replay through
   `core.idempotency` (scopes `users.patch_me:{user_id}`, `users.trade_link:{user_id}`).
   The check is keyless (it writes only a derived verdict; re-running it is the point) and
-  sits behind `ip_guard` bucket `trade-link-check`, keyed by IP and user id.
+  sits behind `ip_guard` bucket `trade-link-check`, keyed by IP and user id. It commits
+  the read transaction before calling Waxpeer and Steam, so no pooled connection is held
+  across the upstream calls (AGENTS §11); the verdict is written in a fresh one.
 
 - **Email (ruling P4):** optional, stored lower-domain via `EmailStr`; any change resets
   `email_verified_at`. Verification arrives with notifications in M4.
 - **Trade link** (`tradelink.py`, spec §7.2):
   - Only `https://steamcommunity.com/tradeoffer/new/?partner=<digits>&token=<6-16 chars>`
-    parses (`422 trade_link_invalid` otherwise).
+    parses (`422 trade_link_invalid` otherwise). ASCII only (`re.ASCII`): look-alike
+    Unicode digits or letters are refused.
   - `partner + STEAM64_BASE` must equal the signed-in `steam_id`, or
     `422 trade_link_not_yours` and nothing is written.
   - Saving a different link clears `trade_link_verdict`, `trade_link_reason` and
