@@ -1,0 +1,286 @@
+# Runbook — First deploy to a fresh VPS
+
+The one-time bootstrap that brings csmarket up on its own Ubuntu 24.04 server. Every release
+after this one follows [`deploy.md`](deploy.md).
+
+Target: **csmarket.uz** on one VPS (4 vCPU / 8 GB RAM / ≥ 80 GB SSD), the whole stack in
+`docker-compose.prod.yml`, its own Caddy on `:80`/`:443`, Cloudflare in front (ADR-0003).
+
+> Nothing here runs without the owner's explicit word: a push, a workflow run and a deploy
+> each need it (`AGENTS.md` § 14).
+
+---
+
+## 0. Prerequisites
+
+- [ ] Domain `csmarket.uz` in Cloudflare (the zone is active, DNS managed there).
+- [ ] VPS ordered: Ubuntu 24.04, public IPv4 known, provider snapshots on.
+- [ ] An SSH keypair on the operator's laptop.
+- [ ] GitHub repo `jamaomonov/csmarket` exists, `main` pushed.
+- [ ] An **age keypair for backups**, made on the operator's laptop, never on the server:
+      `age-keygen -o ~/csmarket-backup.key`. The public `age1…` line goes to the server; the
+      `AGE-SECRET-KEY-…` line stays offline — without it no backup can be read.
+- [ ] Cloudflare R2 bucket **`csmarket-backups`** and an R2 API token scoped to that bucket
+      only (details: `infra/secrets-example/README.md`).
+- [ ] Sentry project for csmarket and its DSN (optional for M0; empty disables Sentry).
+- [ ] Ops Telegram chat id and an alert bot token whose bot is a member of that chat.
+
+---
+
+## 1. DNS and TLS mode in Cloudflare
+
+Point five records at the VPS, **proxied** (orange cloud):
+
+| Type | Name       | Value      |
+| ---- | ---------- | ---------- |
+| A    | `@` (apex) | `<VPS_IP>` |
+| A    | `www`      | `<VPS_IP>` |
+| A    | `api`      | `<VPS_IP>` |
+| A    | `admin`    | `<VPS_IP>` |
+| A    | `grafana`  | `<VPS_IP>` |
+
+`www` only redirects to the apex, but Caddy requests a certificate for it, so it needs a record.
+
+SSL/TLS → Overview → encryption mode **Full (strict)**. "Flexible" talks cleartext to an
+HTTPS origin and loops the redirect. Leave **Always Use HTTPS off** until step 7: with it on,
+Cloudflare answers the Let's Encrypt HTTP challenge with a redirect to HTTPS, which the origin
+cannot serve before it has a certificate.
+
+---
+
+## 2. Server bootstrap
+
+As `root` (or the provider's sudo user):
+
+```bash
+ssh root@<VPS_IP>
+
+# Non-root deploy user with your key.
+adduser --disabled-password --gecos "" deploy
+usermod -aG sudo deploy
+install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+install -m 600 -o deploy -g deploy ~/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+
+# No passwords, no root over SSH.
+sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+systemctl restart ssh
+
+# Firewall: SSH, HTTP, HTTPS only.
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw --force enable
+```
+
+Log in again as `deploy` and install Docker with the Compose plugin:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y ca-certificates curl gnupg git
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" \
+  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
+sudo apt-get update
+sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker deploy
+newgrp docker
+docker compose version
+```
+
+Clone the repo with a **read-only deploy key** (GitHub → repo → Settings → Deploy keys), so a
+compromised box cannot push:
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/csmarket_deploy -N "" -C "csmarket-vps"
+cat ~/.ssh/csmarket_deploy.pub     # add as a deploy key, write access OFF
+cat >> ~/.ssh/config <<'CFG'
+Host github.com
+  IdentityFile ~/.ssh/csmarket_deploy
+  IdentitiesOnly yes
+CFG
+install -d ~/opt
+git clone git@github.com:jamaomonov/csmarket.git ~/opt/csmarket
+```
+
+The path matters: `.github/workflows/deploy.yml` runs `cd "$HOME/opt/csmarket"`.
+
+If the GHCR packages are private (the default for a private repo), log the server in once
+with a classic token that has only `read:packages`:
+
+```bash
+echo '<token>' | docker login ghcr.io -u jamaomonov --password-stdin
+```
+
+---
+
+## 3. Secrets
+
+`docker-compose.prod.yml` reads `./secrets/*.env` — git-ignored, inside the checkout, owned by
+`deploy`. `infra/secrets-example/README.md` explains every file and how to generate each value.
+
+```bash
+cd ~/opt/csmarket
+install -d -m 0700 secrets
+cp infra/secrets-example/*.env secrets/
+$EDITOR secrets/*.env               # replace every CHANGE_ME
+chmod 600 secrets/*.env
+grep -RIn 'CHANGE_ME' secrets/      # must print nothing
+```
+
+Keep an offline copy of `CSMARKET_APP_ENC_KEY`: the server holds the only one, and losing it
+makes every encrypted row unreadable.
+
+---
+
+## 4. GitHub
+
+1. Repo → Settings → Secrets and variables → Actions: add **`DEPLOY_HOST`** (the VPS IP),
+   **`DEPLOY_USER`** (`deploy`) and **`DEPLOY_SSH_KEY`** (a private key whose public half is in
+   `~deploy/.ssh/authorized_keys` — a dedicated key, not your personal one).
+2. **Build images** (`.github/workflows/build.yml`) runs on every push to `main`; run it by
+   hand from the Actions tab if it has not. It pushes
+   `ghcr.io/jamaomonov/csmarket-{api,worker,scheduler,web,admin}`.
+3. Note the image tag: `sha-` + the first 7 characters of the built commit
+   (`git rev-parse --short=7 origin/main`), e.g. `sha-1a2b3c4`.
+
+---
+
+## 5. First start, by hand
+
+```bash
+cd ~/opt/csmarket
+export IMAGE_TAG=sha-1a2b3c4        # the tag from step 4 — never leave it unset
+
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
+docker compose -f docker-compose.prod.yml up -d --remove-orphans
+docker compose -f docker-compose.prod.yml ps
+```
+
+Watch Caddy obtain certificates — one `certificate obtained successfully` per host:
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f caddy
+```
+
+If one host keeps failing its ACME challenge, set that record to **DNS only** (grey cloud),
+wait for the certificate, then switch the proxy back on.
+
+Check, from your laptop:
+
+```bash
+curl -fsS https://api.csmarket.uz/healthz                                  # {"status":"ok"}
+curl -fsS https://api.csmarket.uz/readyz                                   # {"status":"ready",…}
+curl -s -o /dev/null -w '%{http_code}\n' https://csmarket.uz/              # 200 — the hello page
+curl -s -o /dev/null -w '%{http_code}\n' https://www.csmarket.uz/          # 301 → apex
+curl -s -o /dev/null -w '%{http_code}\n' https://admin.csmarket.uz/        # 200
+curl -s -o /dev/null -w '%{http_code}\n' https://api.csmarket.uz/metrics   # 404 — internal only
+```
+
+And on the server, that every app container runs the tag you meant:
+
+```bash
+for s in api worker scheduler web admin; do
+  docker inspect "csmarket-prod-$s-1" --format '{{.Config.Image}}'
+done
+```
+
+`https://csmarket.uz/` answering the hello page from these images is M0's done-criterion.
+
+---
+
+## 6. Grafana
+
+Open `https://grafana.csmarket.uz/`. Caddy asks for basic-auth first (user `ops`, the
+password whose bcrypt hash is `GRAFANA_BASIC_AUTH_HASH` in `secrets/caddy.env`), then Grafana
+shows its own login (`GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD` from
+`secrets/grafana.env`). Datasources and dashboards are provisioned from `infra/grafana/`.
+Logs: Explore → Loki → `{container=~"csmarket-prod-.*"}`.
+
+---
+
+## 7. Cloudflare settings
+
+Once every host has its certificate:
+
+- SSL/TLS → Edge Certificates → **Always Use HTTPS: on**.
+- **No cache rule that drops the query string from the cache key** on storefront paths.
+  Next.js fetches `?_rsc=…` payloads from the same URLs as the HTML; a key without the query
+  string can serve that payload to a visitor as the page (a lesson carried over from YuPay).
+- No WAF challenge or Bot Fight Mode on **`api.csmarket.uz`**. From M3 the acquirers' webhooks
+  arrive there, and a challenge page is an unanswered webhook.
+- Network → **WebSockets: on** (the default) — the order page uses `wss://api.csmarket.uz`
+  from M4.
+
+---
+
+## 8. Verify the client IP
+
+The rate limiter (and `ip_guard` from M1) keys on the first `X-Forwarded-For` entry, which
+Caddy must overwrite with the visitor's address (ADR-0003). Check what the API actually
+receives without writing any address to a log — watch the header on the wire inside the api
+container's network namespace, on the server:
+
+```bash
+cd ~/opt/csmarket
+docker run --rm -it --net "container:$(docker compose -f docker-compose.prod.yml ps -q api)" \
+  nicolaka/netshoot tcpdump -A -s0 -l 'tcp dst port 8000' | grep -i 'x-forwarded-for'
+```
+
+Meanwhile, from your laptop:
+
+```bash
+# Through Cloudflare, with a forged header:
+curl -s -o /dev/null https://api.csmarket.uz/healthz -H 'X-Forwarded-For: 1.2.3.4'
+# Straight to the origin, forging both headers:
+curl -sk -o /dev/null --resolve api.csmarket.uz:443:<VPS_IP> https://api.csmarket.uz/healthz \
+  -H 'X-Forwarded-For: 1.2.3.4' -H 'Cf-Connecting-Ip: 5.6.7.8'
+```
+
+Each request must show **exactly one** `X-Forwarded-For` line carrying your own public
+address — never `1.2.3.4`, never `5.6.7.8`, never a Cloudflare address. Stop `tcpdump` with
+Ctrl-C; nothing was stored. A Cloudflare address means its ranges in `Caddyfile.prod` are
+stale; a forged value means `header_up X-Forwarded-For {client_ip}` is missing from a site
+block.
+
+---
+
+## 9. Backups and alerts
+
+The `backup` service runs `pg_backup.sh` every night at `BACKUP_HOUR_UTC` (02:00 UTC by
+default). Run it once now and look at the result:
+
+```bash
+cd ~/opt/csmarket
+docker compose -f docker-compose.prod.yml exec -T backup bash /scripts/pg_backup.sh
+docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-backups
+```
+
+Prometheus targets must all be up, and a test alert must reach the ops chat with the
+`[csmarket]` prefix:
+
+```bash
+docker compose -f docker-compose.prod.yml exec -T prometheus \
+  wget -qO- http://localhost:9090/api/v1/targets | grep -o '"health":"[a-z]*"' | sort | uniq -c
+docker compose -f docker-compose.prod.yml exec -T alertmanager \
+  amtool alert add csmarket_first_deploy_test severity=warn --alertmanager.url=http://localhost:9093
+```
+
+The test alert resolves by itself after a few minutes.
+
+---
+
+## Done
+
+- Five hostnames serve valid certificates through Cloudflare (Full (strict)).
+- `/healthz` and `/readyz` answer; the storefront serves the hello page; admin loads.
+- The API sees the visitor's real address and nothing else.
+- A backup sits in R2; alerts reach the ops Telegram chat.
+
+Next: routine releases — [`deploy.md`](deploy.md); something slow — [`traffic-surge.md`](traffic-surge.md);
+something broken — open an incident from [`incident-template.md`](incident-template.md).
