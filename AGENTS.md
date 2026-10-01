@@ -23,11 +23,10 @@
   | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                           |
   | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                           |
 
-- **Where things stand:** M0–M2 merged on local `main`; M3 on branch `m3-wallet-payments`
-  until the owner says to merge; real-kassa check pending the first deploy (ADR-0006 R14,
-  `docs/runbooks/kassa-setup.md`). There is no git remote yet; nothing is pushed or deployed.
-  M0 is done for good when `https://csmarket.uz/` answers from CI-built images. Next: merge
-  M3, then the M4 plan, when the owner asks for it.
+- **Where things stand:** M0–M3 merged on local `main`; the real-kassa check is pending the
+  first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`). There is no git remote yet;
+  nothing is pushed or deployed. M0 is done for good when `https://csmarket.uz/` answers from
+  CI-built images. Next: the M4 plan, when the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
