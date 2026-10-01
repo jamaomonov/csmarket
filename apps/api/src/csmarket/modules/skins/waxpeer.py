@@ -103,6 +103,14 @@ def _json_or_none(resp: httpx.Response) -> object:
         return None
 
 
+def _raise_if_rate_limited(resp: httpx.Response, body: object) -> None:
+    """Raise :class:`WaxpeerRateLimitedError` on HTTP 429, with Waxpeer's retry hint."""
+    if resp.status_code == 429:
+        raise WaxpeerRateLimitedError(
+            "rate limited", retry_after_seconds=_retry_after(resp.headers, body)
+        )
+
+
 def _snapshot_row(header: Sequence[str], cells: Sequence[str]) -> SnapshotRow | None:
     """One snapshot line, or ``None`` when its id, price or name is unknown.
 
@@ -180,10 +188,7 @@ class WaxpeerClient:
             log.warning("waxpeer.network_error", method=method, path=path, error=type(exc).__name__)
             raise WaxpeerUnavailableError(type(exc).__name__) from exc
         log.info("waxpeer.request", method=method, path=path, status=resp.status_code)
-        if resp.status_code == 429:
-            raise WaxpeerRateLimitedError(
-                "rate limited", retry_after_seconds=_retry_after(resp.headers, _json_or_none(resp))
-            )
+        _raise_if_rate_limited(resp, _json_or_none(resp))
         if resp.status_code >= 400:
             raise WaxpeerError(resp.text[:200], status=resp.status_code, body=resp.text)
         # A 200 we cannot read is an upstream fault, not a refusal: as a ``WaxpeerError``
@@ -231,10 +236,7 @@ class WaxpeerClient:
             body: object = resp.json()
         except ValueError:
             body = None
-        if resp.status_code == 429:
-            raise WaxpeerRateLimitedError(
-                "rate limited", retry_after_seconds=_retry_after(resp.headers, body)
-            )
+        _raise_if_rate_limited(resp, body)
         if resp.status_code >= 400:
             raise WaxpeerError(resp.text[:200], status=resp.status_code, body=resp.text)
         if not isinstance(body, dict):
@@ -269,10 +271,7 @@ class WaxpeerClient:
                 log.info(
                     "waxpeer.request", method="GET", path=_SNAPSHOT_PATH, status=resp.status_code
                 )
-                if resp.status_code == 429:
-                    raise WaxpeerRateLimitedError(
-                        "rate limited", retry_after_seconds=_retry_after(resp.headers, None)
-                    )
+                _raise_if_rate_limited(resp, None)
                 if resp.status_code >= 400:
                     await resp.aread()
                     raise WaxpeerError(resp.text[:200], status=resp.status_code, body=resp.text)

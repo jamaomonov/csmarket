@@ -6,6 +6,7 @@ token, Steam ID and seller below is redrawn — never a real one in tests.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 
 import httpx
@@ -408,3 +409,39 @@ def test_trade_client_uses_the_buy_timeout(monkeypatch: pytest.MonkeyPatch) -> N
     assert isinstance(client, TradeClient)
     assert client._timeout == 7.5
     assert client._api_key == "k2"
+
+
+@pytest.mark.parametrize(
+    "entry",
+    [
+        {"project_id": ""},
+        {"project_id": None},
+        {"id": 0},
+        {"id": "x"},
+        {"id": -3},
+    ],
+)
+@respx.mock
+async def test_lookup_entry_without_an_id_or_project_id_is_unavailable(
+    entry: dict[str, object],
+) -> None:
+    # An entry we cannot tie to an order must never make that order look "never bought".
+    respx.get(f"{BASE}/check-many-project-id").respond(
+        200, json={"success": True, "trades": [_trade(project_id="o-2"), _trade(**entry)]}
+    )
+    before = _calls("lookup", "unavailable")
+    with pytest.raises(WaxpeerUnavailableError):
+        await _client().check_project_ids(["o-1", "o-2"])
+    assert _calls("lookup", "unavailable") == before + 1
+
+
+@respx.mock
+async def test_a_cancelled_call_is_not_counted() -> None:
+    def _cancel(_: httpx.Request) -> httpx.Response:
+        raise asyncio.CancelledError
+
+    respx.get(f"{BASE}/buy-one-p2p").mock(side_effect=_cancel)
+    before = {o: _calls("buy", o) for o in ("error", "unavailable", "ok")}
+    with pytest.raises(asyncio.CancelledError):
+        await _buy()
+    assert {o: _calls("buy", o) for o in before} == before

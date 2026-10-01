@@ -23,6 +23,7 @@ or the body, so neither a URL nor a body is ever logged.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Mapping, Sequence
 from contextlib import asynccontextmanager
@@ -233,6 +234,10 @@ async def _metered(endpoint: WaxpeerEndpoint) -> AsyncIterator[None]:
     """Count and log the call made in the block, however it ends; exceptions propagate."""
     try:
         yield
+    except asyncio.CancelledError:
+        # Our own cancellation (shutdown, a timeout around us), not Waxpeer's answer: not
+        # counted. A cancelled buy is still unknown — the caller resolves it by lookup.
+        raise
     except BaseException as exc:
         outcome, status = _classify(exc)
         _record(endpoint, outcome, status)
@@ -322,7 +327,8 @@ class WaxpeerTradeClient(WaxpeerClient):
 
         An id Waxpeer has never seen is simply absent (``[]`` for all-unknown). More than
         100 ids is refused rather than truncated: a dropped id would read as "never
-        bought". An answer without a readable ``trades`` list is an outage, not "absent".
+        bought". An answer without a readable ``trades`` list, or with an entry lacking a
+        positive ``id`` or a ``project_id``, is an outage, not "absent".
 
         Raises:
             ValueError: More than :data:`LOOKUP_MAX_IDS` ids.
@@ -340,10 +346,15 @@ class WaxpeerTradeClient(WaxpeerClient):
             return []
         async with _metered("lookup"):
             body = await self._call("/check-many-project-id", {"id": list(project_ids)})
-            trades = body.get("trades")
-            if not isinstance(trades, list) or not all(isinstance(t, dict) for t in trades):
+            raw = body.get("trades")
+            if not isinstance(raw, list) or not all(isinstance(t, dict) for t in raw):
                 raise WaxpeerUnavailableError("unexpected body")
-        return [parse_trade(t) for t in trades]
+            trades = [parse_trade(t) for t in raw]
+            # An entry we cannot tie to an order would leave that order looking "never
+            # bought" — and a rebuy. The whole answer is unreadable instead.
+            if any(t.id <= 0 or not t.project_id for t in trades):
+                raise WaxpeerUnavailableError("unexpected body")
+        return trades
 
     async def balance_units(self) -> int:
         """``GET /v1/user`` → ``user.wallet``, our balance in units (1000 = $1).
