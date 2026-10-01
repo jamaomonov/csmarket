@@ -1,0 +1,155 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  commitlint:
+    name: Commit messages
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      # Version pinned by ``packageManager: pnpm@9.x`` in package.json;
+      # passing ``version:`` here too makes pnpm/action-setup@v4 abort.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec commitlint --from origin/${{ github.base_ref }} --to HEAD --verbose
+
+  lint-py:
+    name: Lint Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+      - run: uv sync --frozen --all-packages --all-groups
+      - run: uv run ruff check apps
+      - run: uv run ruff format --check apps
+      - run: uv run mypy apps
+      - name: No YuPay leftovers in source
+        run: bash scripts/check-no-yupay.sh
+
+  lint-ts:
+    name: Lint TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Version pinned by ``packageManager: pnpm@9.x`` in package.json;
+      # passing ``version:`` here too makes pnpm/action-setup@v4 abort.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run lint typecheck
+      - run: pnpm exec prettier --check .
+
+  test-py:
+    name: Test Python
+    runs-on: ubuntu-latest
+    env:
+      CSMARKET_ENVIRONMENT: test
+      # sys.monitoring tracer — pytest-cov ignores the ``core`` config key,
+      # so the env var does the forcing. See [tool.coverage.run] for why.
+      COVERAGE_CORE: sysmon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+      - run: uv sync --frozen --all-packages --all-groups
+      # Floor at 80% line coverage (via sysmon). Money modules get a 95% gate
+      # from M3 on, with the payments module.
+      #
+      # The integration suite starts its own Postgres and Redis via
+      # testcontainers (see apps/api/tests/integration/conftest.py); Docker is
+      # available on ubuntu-latest, so no GH-managed ``services:`` are needed.
+      #
+      # `-n auto` (pytest-xdist) spreads the tests across the runner's cores —
+      # each worker gets its own Postgres and Redis containers, so they never
+      # share state. pytest-cov combines the workers' coverage data
+      # automatically; no separate merge step needed.
+      - run: uv run pytest -n auto --cov=apps --cov-report=xml --cov-report=json --cov-fail-under=80
+
+  test-ts:
+    name: Test TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Version pinned by ``packageManager: pnpm@9.x`` in package.json;
+      # passing ``version:`` here too makes pnpm/action-setup@v4 abort.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo run test
+
+  openapi-drift:
+    name: OpenAPI drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+      # Version pinned by ``packageManager: pnpm@9.x`` in package.json;
+      # passing ``version:`` here too makes pnpm/action-setup@v4 abort.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: uv sync --frozen --all-packages --all-groups
+      - run: pnpm install --frozen-lockfile
+      - run: |
+          cd apps/api && uv run python -m csmarket.scripts.export_openapi ../../docs/api/openapi.json
+          cd ../.. && pnpm --filter @csmarket/api-client gen:api
+      - name: Fail if generated files drifted
+        run: |
+          if [[ -n "$(git status --porcelain docs/api)" ]]; then
+            echo '::error::OpenAPI schema is out of date. Run make gen-api and commit.'
+            git --no-pager diff
+            exit 1
+          fi
+
+  docs-check:
+    name: Docs check
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Verify docs change accompanies code change
+        run: |
+          base=$(git merge-base origin/${{ github.base_ref }} HEAD)
+          changed=$(git diff --name-only "$base"..HEAD)
+          touched_modules=$(echo "$changed" | grep -E '^apps/api/src/csmarket/modules/' || true)
+          touched_docs=$(echo "$changed" | grep -E '^docs/' || true)
+          if [[ -n "$touched_modules" && -z "$touched_docs" ]]; then
+            echo '::error::A backend module changed but docs/ was not updated. See AGENTS.md § 5.'
+            echo "Touched modules:"; echo "$touched_modules"
+            exit 1
+          fi

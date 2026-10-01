@@ -1,0 +1,68 @@
+name: Build images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build & push ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - image: api
+            dockerfile: infra/docker/api.Dockerfile
+          - image: worker
+            dockerfile: infra/docker/worker.Dockerfile
+          - image: scheduler
+            dockerfile: infra/docker/scheduler.Dockerfile
+          - image: web
+            dockerfile: infra/docker/web.Dockerfile
+            # Next.js inlines NEXT_PUBLIC_* at build time — they must be passed
+            # here, not (only) at runtime, for the client bundle to see them.
+            build_args: |
+              NEXT_PUBLIC_API_BASE_URL=https://api.csmarket.uz
+          - image: admin
+            dockerfile: infra/docker/admin.Dockerfile
+            # Vite inlines VITE_* at build time.
+            build_args: |
+              VITE_API_BASE_URL=https://api.csmarket.uz
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/csmarket-${{ matrix.image }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Vite reads VITE_* at build time and inlines into the JS
+          # bundle. Empty for api / worker / scheduler —
+          # they read env at runtime and don't need build args.
+          build-args: ${{ matrix.build_args }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
