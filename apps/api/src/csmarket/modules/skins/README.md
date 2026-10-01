@@ -91,3 +91,35 @@ first call**; M2 adds the catalogue, import, price sync and listings; buying arr
 - **Tests:** `tests/unit/test_skins_prices.py`, `tests/integration/test_skins_price_sync.py`,
   `test_skins_price_edge_cases.py`, `test_skins_reprice_lock.py`;
   `apps/scheduler/tests/test_skins_price_sync.py`.
+
+## Public read API (M2)
+
+Postgres only — no route here calls Waxpeer (the live-listings proxy is separate). Every read
+leaves out `hidden` rows and categories outside `CSMARKET_SKINS_CATEGORIES`; the API is always
+on (no feature flag, ruling Q1).
+
+- **`service`** — `list_items` (filters; keyset `(sort value, id)` cursor for `price`, `-price`,
+  `discount`, `popular`; `q` switches to trigram similarity with an offset cursor after
+  `expand_aliases`), `facets` (categories counted catalogue-wide, the rest scoped to `category`;
+  weapons led by `WEAPON_PRIORITY`, rarities by `RARITY_TIER`, agents' `teams` only inside a
+  category), `suggest`, `get_item` (a sold-out item still resolves; an unknown, hidden or
+  disabled-category slug is `NotFoundError`), `family` (every visible wear / StatTrak / Souvenir
+  twin). A bad cursor is a 422.
+- **`routes`** (`/skins`): `GET /catalog` (`category, weapon, exterior, stattrak, souvenir,
+rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..100 default
+  48), `GET /facets?category=` (an unknown category is a 422), `GET /suggest?q=`,
+  `GET /{slug}` (card + `cheapest` from the last tick's ten cheapest auto listings, re-quoted
+  with the live rules, + `family`). Cards show the stored `sell_price_usd` and, at the CBU rate
+  (`usd_uzs_rate` -> `fx.api.current_usd_uzs`), `price_uzs` rounded up to `uzs_round_to`.
+  **Without a fresh rate** `price_uzs` is `null` and soʻm bounds are ignored, not guessed
+  (ruling Q3). Image hosts are rewritten to `CSMARKET_SKINS_IMAGE_HOST`.
+- **Page cache:** catalogue, facets and suggest bodies sit 60 s in Redis under
+  `skins:{catalog|facets|suggest}:{ver}:{sha1}` — `ver` is the catalogue version, so a price tick
+  or a hide expires them all at once; the digest covers the query and the rate. Every Redis error
+  is swallowed: without Redis each request builds its page.
+- **`seo_routes`** (`/skins/seo`, mounted before `/skins` in `api/v1/router.py`):
+  `GET /slugs?offset&limit` (≤ 5 000) -> `SkinSlugsOut {items, total}`, alphabetical, the same
+  set the catalogue shows — the sitemap source.
+- **`schemas`** — the public DTOs; nothing in them names Waxpeer.
+- **Tests:** `tests/unit/test_skins_cursor.py`, `tests/integration/test_skins_catalog_routes.py`,
+  `test_skins_facets_scoped.py`, `test_skins_catalog_resilience.py` (no rate, Redis down).

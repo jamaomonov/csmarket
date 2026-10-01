@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "FacetOut": {
+        "description": "A facet value and how many on-sale items carry it.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "count"
+        ],
+        "title": "FacetOut",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -193,6 +212,655 @@
           }
         },
         "title": "MePatchIn",
+        "type": "object"
+      },
+      "RarityFacetOut": {
+        "description": "A rarity facet with the game's colour for that grade.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "count"
+        ],
+        "title": "RarityFacetOut",
+        "type": "object"
+      },
+      "SkinDetailOut": {
+        "description": "The item page: the card plus its cheapest listings and its family.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "cheapest": {
+            "items": {
+              "$ref": "#/components/schemas/SkinListingSummaryOut"
+            },
+            "title": "Cheapest",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "discount_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Percent"
+          },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "family": {
+            "items": {
+              "$ref": "#/components/schemas/SkinFamilyMemberOut"
+            },
+            "title": "Family",
+            "type": "array"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "max_float": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Float"
+          },
+          "min_float": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Float"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd"
+          },
+          "price_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Uzs"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
+          },
+          "skin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skin"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "souvenir": {
+            "title": "Souvenir",
+            "type": "boolean"
+          },
+          "stattrak": {
+            "title": "Stattrak",
+            "type": "boolean"
+          },
+          "steam_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steam Price Usd"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "phase",
+          "category",
+          "weapon",
+          "skin",
+          "exterior",
+          "stattrak",
+          "souvenir",
+          "rarity",
+          "rarity_color",
+          "image_url",
+          "price_usd",
+          "price_uzs",
+          "steam_price_usd",
+          "discount_percent",
+          "count",
+          "min_float",
+          "max_float",
+          "cheapest",
+          "family"
+        ],
+        "title": "SkinDetailOut",
+        "type": "object"
+      },
+      "SkinFacetsOut": {
+        "description": "Counts per category, weapon, wear, rarity and (for agents) side.",
+        "properties": {
+          "categories": {
+            "items": {
+              "$ref": "#/components/schemas/FacetOut"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "exteriors": {
+            "items": {
+              "$ref": "#/components/schemas/FacetOut"
+            },
+            "title": "Exteriors",
+            "type": "array"
+          },
+          "rarities": {
+            "items": {
+              "$ref": "#/components/schemas/RarityFacetOut"
+            },
+            "title": "Rarities",
+            "type": "array"
+          },
+          "teams": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FacetOut"
+            },
+            "title": "Teams",
+            "type": "array"
+          },
+          "weapons": {
+            "items": {
+              "$ref": "#/components/schemas/FacetOut"
+            },
+            "title": "Weapons",
+            "type": "array"
+          }
+        },
+        "required": [
+          "categories",
+          "weapons",
+          "exteriors",
+          "rarities"
+        ],
+        "title": "SkinFacetsOut",
+        "type": "object"
+      },
+      "SkinFamilyMemberOut": {
+        "description": "Another wear (or StatTrak/Souvenir twin) of the same skin.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd"
+          },
+          "price_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Uzs"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "souvenir": {
+            "title": "Souvenir",
+            "type": "boolean"
+          },
+          "stattrak": {
+            "title": "Stattrak",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slug",
+          "exterior",
+          "stattrak",
+          "souvenir",
+          "price_usd",
+          "price_uzs",
+          "count"
+        ],
+        "title": "SkinFamilyMemberOut",
+        "type": "object"
+      },
+      "SkinItemOut": {
+        "description": "One catalogue card.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "discount_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discount Percent"
+          },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "max_float": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Float"
+          },
+          "min_float": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Float"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd"
+          },
+          "price_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Uzs"
+          },
+          "rarity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
+          },
+          "skin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skin"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "souvenir": {
+            "title": "Souvenir",
+            "type": "boolean"
+          },
+          "stattrak": {
+            "title": "Stattrak",
+            "type": "boolean"
+          },
+          "steam_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steam Price Usd"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "phase",
+          "category",
+          "weapon",
+          "skin",
+          "exterior",
+          "stattrak",
+          "souvenir",
+          "rarity",
+          "rarity_color",
+          "image_url",
+          "price_usd",
+          "price_uzs",
+          "steam_price_usd",
+          "discount_percent",
+          "count",
+          "min_float",
+          "max_float"
+        ],
+        "title": "SkinItemOut",
+        "type": "object"
+      },
+      "SkinListingSummaryOut": {
+        "description": "One of the cheapest auto listings from the last price tick, at our price.",
+        "properties": {
+          "listing_id": {
+            "title": "Listing Id",
+            "type": "integer"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "price_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Uzs"
+          }
+        },
+        "required": [
+          "listing_id",
+          "price_usd",
+          "price_uzs"
+        ],
+        "title": "SkinListingSummaryOut",
+        "type": "object"
+      },
+      "SkinSlugsOut": {
+        "description": "A page of item slugs on sale, and how many there are.",
+        "properties": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "SkinSlugsOut",
+        "type": "object"
+      },
+      "SkinSuggestOut": {
+        "description": "Search-as-you-type results.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SkinItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SkinSuggestOut",
+        "type": "object"
+      },
+      "SkinsPageOut": {
+        "description": "A catalogue page and the cursor for the next (``None`` on the last).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SkinItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "SkinsPageOut",
         "type": "object"
       },
       "SteamCallbackIn": {
@@ -907,6 +1575,458 @@
         "summary": "Check my trade link",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/skins/catalog": {
+      "get": {
+        "description": "One page of on-sale items, dearest first by default; ``q`` ranks by match.",
+        "operationId": "get_catalog_api_v1_skins_catalog_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "weapon",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Weapon"
+            }
+          },
+          {
+            "in": "query",
+            "name": "exterior",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Exterior"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stattrak",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stattrak"
+            }
+          },
+          {
+            "in": "query",
+            "name": "souvenir",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Souvenir"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rarity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rarity"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ct",
+                    "t"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_uzs",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Uzs"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_uzs",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000000000000.0,
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Max Uzs"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "-price",
+              "enum": [
+                "price",
+                "-price",
+                "discount",
+                "popular"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 48,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkinsPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Browse the skins catalogue",
+        "tags": [
+          "skins"
+        ]
+      }
+    },
+    "/api/v1/skins/facets": {
+      "get": {
+        "description": "Facet counts; with ``category`` the weapon, wear and rarity facets are scoped to it.",
+        "operationId": "get_facets_api_v1_skins_facets_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkinFacetsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Counts per category, weapon, wear",
+        "tags": [
+          "skins"
+        ]
+      }
+    },
+    "/api/v1/skins/seo/slugs": {
+      "get": {
+        "description": "Slugs of active, unhidden items in enabled categories, alphabetical.\n\nThe same set the catalogue shows, so a sitemap never lists a page the market hides.",
+        "operationId": "get_slugs_api_v1_skins_seo_slugs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5000,
+              "maximum": 5000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkinSlugsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Item pages for the sitemap",
+        "tags": [
+          "skins"
+        ]
+      }
+    },
+    "/api/v1/skins/suggest": {
+      "get": {
+        "description": "Up to ten on-sale items matching ``q`` (aliases expanded), best match first.",
+        "operationId": "get_suggest_api_v1_skins_suggest_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 80,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkinSuggestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search-as-you-type",
+        "tags": [
+          "skins"
+        ]
+      }
+    },
+    "/api/v1/skins/{slug}": {
+      "get": {
+        "description": "The item page; a sold-out item is a page, an unknown or hidden one a 404.",
+        "operationId": "get_detail_api_v1_skins__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SkinDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One item with its cheapest listings",
+        "tags": [
+          "skins"
         ]
       }
     },

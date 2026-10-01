@@ -13,9 +13,14 @@ from fastapi import APIRouter
 
 from csmarket.modules.admin.routes import router as admin_router
 from csmarket.modules.auth.api import router as auth_router
+from csmarket.modules.skins.routes import router as skins_router
+from csmarket.modules.skins.seo_routes import router as skins_seo_router
 from csmarket.modules.users.routes import router as users_router
 
 router = APIRouter()
 router.include_router(admin_router)
 router.include_router(auth_router)
+# /skins/seo/* must precede /skins/{slug}, which would otherwise swallow it.
+router.include_router(skins_seo_router)
+router.include_router(skins_router)
 router.include_router(users_router)
