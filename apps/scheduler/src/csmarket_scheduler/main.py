@@ -17,7 +17,12 @@ from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.users import models as _users_models  # noqa: F401
 
-from csmarket_scheduler.jobs import fx_refresh, purge_refresh_tokens, skins_catalog_import
+from csmarket_scheduler.jobs import (
+    fx_refresh,
+    purge_refresh_tokens,
+    skins_catalog_import,
+    skins_price_sync,
+)
 
 configure_logging()
 log = get_logger("csmarket.scheduler")
@@ -33,6 +38,7 @@ def build_scheduler() -> AsyncIOScheduler:
     purge_refresh_tokens.register(scheduler)
     fx_refresh.register(scheduler)
     skins_catalog_import.register(scheduler)
+    skins_price_sync.register(scheduler)
     return scheduler
 
 

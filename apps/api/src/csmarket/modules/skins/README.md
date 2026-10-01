@@ -63,3 +63,31 @@ first call**; M2 adds the catalogue, import, price sync and listings; buying arr
 - **Tests:** `tests/unit/test_skins_bymykel.py`, `tests/integration/test_skins_import.py`
   (respx, never the real GitHub), `tests/integration/test_skins_job_status.py`;
   `apps/scheduler/tests/test_skins_catalog_import.py`.
+
+## Price sync (M2)
+
+- **`prices`** — folds Waxpeer's CSV snapshot onto `skin_items` every
+  `CSMARKET_SKINS_SNAPSHOT_INTERVAL_MINUTES` (5). `aggregate_stream` reduces the ~1.2 M rows to one
+  `PriceAggregate` per canonical `(name, phase)` in one pass; `apply_prices` then, in the caller's
+  transaction, updates only rows whose `price_hash` changed, deactivates rows absent from the
+  snapshot (price columns cleared) and inserts a `source='stub'` row for a name the catalogue has
+  never seen. **Only `auto` listings set a price** (`min_auto_units`, `count_auto`, the ten cheapest
+  in `cheapest_auto`); manual listings count in `count_all` / `min_all_units` only. A name is
+  `active` when it has an auto listing, except a Doppler without a phase. A Steam price of 0 is
+  stored as NULL (unknown). `apply_prices` never writes `hidden`, metadata, `slug` or the stored
+  sell price; writers set `updated_at` explicitly.
+- **`sync_prices`** — one tick: stream the snapshot, read `/v1/prices`, then take
+  `lock_pricing`, apply, `reprice_rows` with rules read fresh from Postgres, commit, and bump the
+  catalogue version. A snapshot naming fewer than `MIN_SNAPSHOT_SHARE` (half) of the active
+  catalogue is **refused** (`ApplyResult.refused`): a truncated body must not read as "everything
+  sold out". Nothing is written and the previous prices stand.
+- **`cachekeys`** — `catalog_version` / `bump_catalog_version` for Redis `skins:catalog:ver`
+  (`docs/architecture/cache-keys.md`). Kept apart from `prices` so the read path never imports the
+  Waxpeer client.
+- **Scheduler job** `skins.price_sync` (first run 60 s after start, `max_instances=1`) is skipped
+  unless `CSMARKET_SKINS_SYNC_ENABLED` is true **and** `CSMARKET_WAXPEER_API_KEY` is set. It never
+  raises: Waxpeer trouble, a crash or a refused tick is logged by exception type name (never
+  Waxpeer text) and recorded under `JOB_PRICE_SYNC` (a refused tick as `error="thin_snapshot"`).
+- **Tests:** `tests/unit/test_skins_prices.py`, `tests/integration/test_skins_price_sync.py`,
+  `test_skins_price_edge_cases.py`, `test_skins_reprice_lock.py`;
+  `apps/scheduler/tests/test_skins_price_sync.py`.
