@@ -16,15 +16,13 @@ import { StatusChip } from "./StatusChip";
 
 import { errorText, providerLabel } from "@/features/users/labels";
 import { formatDateTime, formatSum } from "@/lib/format";
+import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
 
 const DEBOUNCE_MS = 300;
-
-/** The value if it is one of `allowed`, else `undefined` (a hand-edited URL is ignored). */
-function pick<T extends string>(allowed: readonly T[], value: string): T | undefined {
-  return allowed.find((a) => a === value);
-}
+/** The API's `q` ceiling (and the input's `maxLength`). */
+const Q_MAX = 32;
 
 interface FilterSelectProps<T extends string> {
   label: string;
@@ -90,7 +88,7 @@ function PaymentRow({ payment }: { payment: AdminPaymentRow }) {
 
 export function PaymentsPage() {
   const url = useUrlParams();
-  const urlQ = url.get("q");
+  const urlQ = upTo(url.get("q"), Q_MAX);
   const status = pick(PAYMENT_STATUSES, url.get("status"));
   const provider = pick(PAYMENT_PROVIDERS, url.get("provider"));
   const purpose = pick(PAYMENT_PURPOSES, url.get("purpose"));
@@ -136,7 +134,7 @@ export function PaymentsPage() {
           <input
             type="search"
             value={text}
-            maxLength={32}
+            maxLength={Q_MAX}
             onChange={(e) => {
               setText(e.target.value);
             }}

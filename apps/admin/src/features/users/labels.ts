@@ -18,10 +18,14 @@ const CODE_MESSAGES: Record<string, string> = {
 /** 409s meaning the card is stale (someone else changed the ban): close and refresh. */
 export const STALE_BAN_CODES: ReadonlySet<string> = new Set(["already_banned", "not_banned"]);
 
+/** A 422 the page has no words for (e.g. a filter the API refused): never its raw detail. */
+const UNPROCESSABLE = "Запрос не принят: проверьте введённые значения и фильтры.";
+
 export function errorText(err: unknown): string {
   if (!(err instanceof ApiError)) return "Не получилось. Попробуйте ещё раз.";
   const known = err.code !== undefined ? CODE_MESSAGES[err.code] : undefined;
-  return known ?? formatApiError(err);
+  if (known !== undefined) return known;
+  return err.status === 422 ? UNPROCESSABLE : formatApiError(err);
 }
 
 export function roleLabel(roles: string[]): string {

@@ -7,6 +7,8 @@ import { ROW } from "./fixtures";
 import { PAYMENT_STATUSES } from "./kinds";
 import { PaymentsPage } from "./PaymentsPage";
 
+import { ApiError } from "@/lib/api";
+
 const api = vi.hoisted(() => ({ listPayments: vi.fn(), getPayment: vi.fn() }));
 vi.mock("./api", () => api);
 
@@ -100,6 +102,24 @@ describe("PaymentsPage", () => {
     renderPage("/payments?status=bogus");
     await screen.findByTestId("payments-table");
     expect(api.listPayments).toHaveBeenCalledWith({});
+  });
+
+  it("ignores a ?q= longer than the API accepts", async () => {
+    api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
+    renderPage(`/payments?q=${"T".repeat(33)}`);
+    await screen.findByTestId("payments-table");
+    expect(screen.getByLabelText("Номер платежа или пополнения")).toHaveValue("");
+    expect(api.listPayments).toHaveBeenCalledWith({});
+  });
+
+  it("shows a Russian line, not the raw detail, when the API refuses a filter", async () => {
+    api.listPayments.mockRejectedValue(
+      new ApiError(422, "Unprocessable Entity", { detail: [{ msg: "String should match" }] }),
+    );
+    renderPage("/payments?q=T7K");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Запрос не принят: проверьте введённые значения и фильтры.",
+    );
   });
 
   it("loads the next page behind «Показать ещё»", async () => {

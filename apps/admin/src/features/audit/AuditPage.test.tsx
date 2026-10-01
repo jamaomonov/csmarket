@@ -21,11 +21,11 @@ function row(over: Partial<AuditRow> & Pick<AuditRow, "id" | "action">): AuditRo
   };
 }
 
-function renderPage() {
+function renderPage(url = "/audit") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>
         <AuditPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -122,6 +122,26 @@ describe("AuditPage", () => {
       });
     });
     expect(await screen.findByText("Записей нет.")).toBeInTheDocument();
+  });
+
+  it("drops unknown options and an over-long id from a hand-edited URL", async () => {
+    api.listAudit.mockResolvedValue({ items: [], next_cursor: null });
+    renderPage(`/audit?action=orders.nope&target_type=planet&target_id=${"x".repeat(65)}`);
+    expect(await screen.findByText("Записей нет.")).toBeInTheDocument();
+    expect(api.listAudit).toHaveBeenCalledWith({});
+    expect(screen.getByLabelText("Действие")).toHaveValue("");
+    expect(screen.getByLabelText("Id цели")).toHaveValue("");
+  });
+
+  it("keeps known options and an id within the limit from the URL", async () => {
+    api.listAudit.mockResolvedValue({ items: [], next_cursor: null });
+    renderPage(`/audit?action=users.ban&target_type=user&target_id=${"x".repeat(64)}`);
+    expect(await screen.findByText("Записей нет.")).toBeInTheDocument();
+    expect(api.listAudit).toHaveBeenCalledWith({
+      action: "users.ban",
+      target_type: "user",
+      target_id: "x".repeat(64),
+    });
   });
 
   it("loads the next page behind «Показать ещё»", async () => {

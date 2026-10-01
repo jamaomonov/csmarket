@@ -21,10 +21,15 @@ import {
 
 import { errorText } from "@/features/users/labels";
 import { formatDateTime } from "@/lib/format";
+import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
 
 const DEBOUNCE_MS = 300;
+/** The API's `target_id` ceiling (and the input's `maxLength`). */
+const TARGET_ID_MAX = 64;
+const ACTIONS = Object.keys(ACTION_LABELS);
+const TARGET_TYPES = Object.keys(TARGET_TYPE_LABELS);
 
 interface FilterSelectProps {
   label: string;
@@ -101,9 +106,10 @@ function AuditTableRow({ row }: { row: AuditRow }) {
 
 export function AuditPage() {
   const url = useUrlParams();
-  const action = url.get("action");
-  const targetType = url.get("target_type");
-  const targetId = url.get("target_id");
+  // A hand-edited URL never reaches the API: unknown options and over-long ids are dropped.
+  const action = pick(ACTIONS, url.get("action")) ?? "";
+  const targetType = pick(TARGET_TYPES, url.get("target_type")) ?? "";
+  const targetId = upTo(url.get("target_id"), TARGET_ID_MAX);
 
   const [idText, setIdText] = useState(targetId);
   const typedId = useDebounced(idText.trim(), DEBOUNCE_MS);
@@ -160,7 +166,7 @@ export function AuditPage() {
           <input
             type="search"
             value={idText}
-            maxLength={64}
+            maxLength={TARGET_ID_MAX}
             onChange={(e) => {
               setIdText(e.target.value);
             }}
