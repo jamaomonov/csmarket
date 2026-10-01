@@ -382,6 +382,56 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/me": {
+      "get": {
+        "description": "200 for an admin, 403 for anyone else signed in, 401 without a token.",
+        "operationId": "admin_me_api_v1_admin_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The signed-in admin",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
         "description": "Revoke this session and clear the cookie.\n\nIdempotent: unknown or already-revoked tokens succeed silently, which is also why it\ntakes no ``Idempotency-Key``.",

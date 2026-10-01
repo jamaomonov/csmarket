@@ -16,6 +16,9 @@ import pytest
 @pytest.mark.parametrize(
     "module",
     [
+        "csmarket.modules.admin.api",
+        "csmarket.modules.admin.deps",
+        "csmarket.modules.admin.routes",
         "csmarket.modules.auth.deps",
         "csmarket.modules.auth.routes",
         "csmarket.modules.auth.api",
