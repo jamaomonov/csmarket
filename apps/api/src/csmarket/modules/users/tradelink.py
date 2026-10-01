@@ -3,8 +3,9 @@
 The ``token`` in a trade link lets anyone send that account offers — a credential. It is
 never logged and never part of a Redis key (keys use a SHA-256 digest of the link).
 The check asks Waxpeer whether the link works (private inventory, trade ban) and Steam
-whether a trade would be held (no mobile authenticator → escrow). It is advisory: any
-upstream failure answers ``unavailable`` and opens a 60-second breaker (AGENTS §11).
+whether a trade would be held (no mobile authenticator → escrow). A hold is refused:
+verdict ``bad``, reason ``hold`` (owner decision 2026-10-01; the DB check and the schema
+still allow ``warn``, which nothing produces any more). It is advisory: any upstream failure answers ``unavailable`` and opens a 60-second breaker (AGENTS §11).
 """
 
 from __future__ import annotations
@@ -146,7 +147,7 @@ async def _run(link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker)
         return CheckResult(verdict="bad", reason=_reason_for(info))
     days = await hold.trade_hold_days(link.steam_id, link.token)
     if days:
-        return CheckResult(verdict="warn", reason="hold")
+        return CheckResult(verdict="bad", reason="hold")
     return CheckResult(verdict="ok", reason=None)
 
 

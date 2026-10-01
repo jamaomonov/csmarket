@@ -46,7 +46,7 @@ describe("TradeLinkForm", () => {
     });
     api.apiPost.mockResolvedValue({
       trade_link: LINK,
-      verdict: "warn",
+      verdict: "bad",
       reason: "hold",
       checked_at: "2026-10-01T00:00:00Z",
     });
@@ -54,7 +54,7 @@ describe("TradeLinkForm", () => {
     fireEvent.change(screen.getByRole("textbox"), { target: { value: LINK } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
-      expect(screen.getByText(/Steam задержит обмен/)).toBeInTheDocument();
+      expect(screen.getByText(/Steam задерживает обмены/)).toBeInTheDocument();
     });
     const [, body, opts] = api.apiPut.mock.calls[0] as [
       string,

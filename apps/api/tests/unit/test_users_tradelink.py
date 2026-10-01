@@ -98,7 +98,7 @@ def test_ownership() -> None:
     [
         (None, 0, CheckResult(verdict="ok", reason=None)),
         (None, None, CheckResult(verdict="ok", reason=None)),  # no Steam number → Waxpeer alone
-        (None, 7, CheckResult(verdict="warn", reason="hold")),
+        (None, 7, CheckResult(verdict="bad", reason="hold")),  # owner 2026-10-01: a hold is refused
         ("Inventory is private", 0, CheckResult(verdict="bad", reason="private")),
         ("User has trade ban", 0, CheckResult(verdict="bad", reason="trade_ban")),
         ("Invalid tradelink", 0, CheckResult(verdict="bad", reason="invalid")),
@@ -190,3 +190,18 @@ def test_mask_keeps_partner_and_the_last_two_token_chars() -> None:
 @pytest.mark.parametrize(("raw", "out"), [(None, None), ("not a link", "••••"), ("", "••••")])
 def test_mask_hides_anything_else_whole(raw: str | None, out: str | None) -> None:
     assert mask_trade_link(raw) == out
+
+
+async def test_a_trade_hold_is_bad_not_warn(redis) -> None:
+    result = await check_trade_link(
+        parse_tradelink(LINK), waxpeer=_Wax(), hold=_Hold(3), redis=redis
+    )
+    assert result == CheckResult(verdict="bad", reason="hold")
+
+
+async def test_a_cached_hold_verdict_is_bad_too(redis) -> None:
+    hold = _Hold(3)
+    first = await check_trade_link(parse_tradelink(LINK), waxpeer=_Wax(), hold=hold, redis=redis)
+    second = await check_trade_link(parse_tradelink(LINK), waxpeer=_Wax(), hold=hold, redis=redis)
+    assert first == second == CheckResult(verdict="bad", reason="hold")
+    assert hold.calls == 1  # the second answer came from the cache

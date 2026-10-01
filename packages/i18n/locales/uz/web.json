@@ -39,7 +39,7 @@
       "checking": "Havola tekshirilmoqda…",
       "status": {
         "ok": "Havola ishlaydi — skin darhol keladi.",
-        "hold": "Steam almashuvni kechiktiradi: hisobda Steam Guard mobil autentifikatori yoqilmagan. Uni Steam ilovasida yoqing — skin darhol keladi.",
+        "hold": "Steam bu hisobdagi almashuvlarni ushlab turadi: Steam Guardʼni mobil ilovada yoqing. 7 kundan keyin xarid qilish mumkin boʻladi.",
         "invalid": "Havola ishlamaydi. Uni Steamʼdan qaytadan nusxalang.",
         "private": "Inventar yashirilgan. Uni Steam maxfiylik sozlamalarida oching.",
         "trade_ban": "Hisobda Steam almashuv cheklovi bor. Skin unga kelmaydi.",

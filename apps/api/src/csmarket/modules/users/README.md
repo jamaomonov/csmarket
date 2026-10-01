@@ -39,8 +39,9 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
   - Saving a different link clears `trade_link_verdict`, `trade_link_reason` and
     `trade_link_checked_at`.
   - The check asks Waxpeer `check-tradelink` (reason text → `private`, `trade_ban` or
-    `invalid`, verdict `bad`), then Steam `GetTradeHoldDurations` (non-zero hold → `warn`,
-    `hold`; explain, don't block). No Steam key → the hold check is skipped (ruling P10).
+    `invalid`, verdict `bad`), then Steam `GetTradeHoldDurations` (non-zero hold → `bad`,
+    `hold`: a hold is refused, owner 2026-10-01; `warn` stays in the schema and the DB check
+    but nothing produces it). No Steam key → the hold check is skipped (ruling P10).
   - Any upstream failure or a missing Waxpeer key → verdict `null`, reason `unavailable`,
     the link stays saved and `trade_link_checked_at` is not touched; a 60 s breaker stops
     further upstream calls.

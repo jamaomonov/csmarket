@@ -29,7 +29,6 @@ interface TradeLinkFormProps {
 
 const TONE: Record<Tone, string> = {
   ok: "text-success",
-  warn: "text-warning",
   bad: "text-danger",
   muted: "text-fg-muted",
 };

@@ -11,8 +11,9 @@ account page.
    another Steam account, is refused with a plain message; nothing is saved.
 3. After saving, the page checks the link and shows one of:
    - **ok** — the link works;
-   - **warn** — the link works, but Steam holds trades for some days (it explains; it does not block);
-   - **bad** — the link is invalid, the inventory is private or trading is banned (it says which);
+   - **bad** — the link is invalid, the inventory is private, trading is banned, or Steam holds
+     trades on the account (a hold is refused: the customer is told to turn on Steam Guard in the
+     mobile app, and the link cannot be used to buy until the hold is gone) — it says which;
    - **no verdict** — the check was unavailable right now. The link stays saved.
 4. They can run the check again at any time. A repeat within 10 minutes answers at once.
 
@@ -53,7 +54,7 @@ sequenceDiagram
             Note over API,DB: Read transaction committed first: no connection held across the calls
             API->>WP: POST check-tradelink (4 s)
             API->>Steam: GetTradeHoldDurations (4 s)
-            Note over API: Waxpeer reason gives bad (private, trade_ban, invalid).<br/>Non-zero hold gives warn (hold).<br/>Any failure opens the 60 s breaker.
+            Note over API: Waxpeer reason gives bad (private, trade_ban, invalid).<br/>Non-zero hold gives bad (hold).<br/>Any failure opens the 60 s breaker.
             API->>R: SET verdict and reason, 600 s
         end
     end

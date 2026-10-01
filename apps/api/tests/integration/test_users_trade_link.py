@@ -51,7 +51,7 @@ async def test_saving_a_new_link_clears_the_old_verdict(
     await integration_client.put("/api/v1/me/trade-link", json={"url": LINK}, headers=h)
     app_overrides(hold_days=7)
     r = await integration_client.post("/api/v1/me/trade-link/check", headers=h)
-    assert r.json()["verdict"] == "warn"
+    assert r.json()["verdict"] == "bad"
     assert r.json()["reason"] == "hold"
     assert r.json()["checked_at"] is not None
     link2 = LINK.replace("AbCdEf12", "ZyXwVu98")

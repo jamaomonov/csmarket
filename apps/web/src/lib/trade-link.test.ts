@@ -5,8 +5,8 @@ import { errorKey, verdictMessage } from "./trade-link";
 describe("verdictMessage", () => {
   it("maps every state to copy", () => {
     expect(verdictMessage({ verdict: "ok", reason: null })).toEqual({ tone: "ok", key: "ok" });
-    expect(verdictMessage({ verdict: "warn", reason: "hold" })).toEqual({
-      tone: "warn",
+    expect(verdictMessage({ verdict: "bad", reason: "hold" })).toEqual({
+      tone: "bad",
       key: "hold",
     });
     expect(verdictMessage({ verdict: "bad", reason: "private" })).toEqual({
@@ -26,6 +26,15 @@ describe("verdictMessage", () => {
       key: "unavailable",
     });
     expect(verdictMessage({ verdict: null, reason: null })).toBeNull();
+  });
+});
+
+describe("verdictMessage, legacy warn", () => {
+  it("shows a stored warn like a hold: the API no longer produces it, the DB may hold it", () => {
+    expect(verdictMessage({ verdict: "warn", reason: "hold" })).toEqual({
+      tone: "bad",
+      key: "hold",
+    });
   });
 });
 

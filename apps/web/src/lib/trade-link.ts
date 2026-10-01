@@ -10,7 +10,7 @@ export interface CheckState {
   reason: Me["trade_link_reason"];
 }
 
-export type Tone = "ok" | "warn" | "bad" | "muted";
+export type Tone = "ok" | "bad" | "muted";
 
 /**
  * Copy key under `web.account.tradeLink.status`, or null when nothing is worth saying.
@@ -21,12 +21,17 @@ export function verdictMessage(state: CheckState): { tone: Tone; key: string } |
   switch (state.verdict) {
     case "ok":
       return { tone: "ok", key: "ok" };
+    // `warn` is no longer produced (a hold is `bad`, owner 2026-10-01) but the schema and the
+    // DB still allow it, so a row stored before the change reads as the hold it was.
     case "warn":
-      return { tone: "warn", key: "hold" };
+      return { tone: "bad", key: "hold" };
     case "bad":
       return {
         tone: "bad",
-        key: state.reason === "private" || state.reason === "trade_ban" ? state.reason : "invalid",
+        key:
+          state.reason === "private" || state.reason === "trade_ban" || state.reason === "hold"
+            ? state.reason
+            : "invalid",
       };
     case null:
       return state.reason === "unavailable" ? { tone: "muted", key: "unavailable" } : null;

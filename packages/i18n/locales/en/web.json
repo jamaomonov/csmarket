@@ -39,7 +39,7 @@
       "checking": "Checking the link…",
       "status": {
         "ok": "The link works — your skin arrives right away.",
-        "hold": "Steam will hold the trade: Steam Guard Mobile Authenticator is off on this account. Turn it on in the Steam app and the skin arrives right away.",
+        "hold": "Steam is holding trades on this account: turn on Steam Guard in the mobile app. Purchases will open up in 7 days.",
         "invalid": "The link doesn't work. Copy it again from Steam.",
         "private": "Your inventory is private. Make it public in Steam privacy settings.",
         "trade_ban": "This account has a Steam trade restriction. A skin can't be sent to it.",
