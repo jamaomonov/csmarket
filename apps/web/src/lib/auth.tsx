@@ -52,6 +52,11 @@ const ME = ["me"] as const;
 
 const fetchMe = (): Promise<Me> => session.apiGet<Me>("/api/v1/me");
 
+/** The page is Steam's return to the callback: the URL still carries the assertion. */
+function isSteamReturn(): boolean {
+  return new URLSearchParams(window.location.search).has("openid.mode");
+}
+
 function signInHref(locale: string): string {
   return `${API_BASE}/api/v1/auth/steam/start?app=web&locale=${encodeURIComponent(locale)}`;
 }
@@ -62,16 +67,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // boot-time refresh settles so server and first client render agree.
   const [booted, setBooted] = useState(false);
   const [hasToken, setHasToken] = useState(false);
-  // Set by the Steam callback before this provider's boot effect runs (child
-  // effects run first): a boot refresh against a stale cookie would otherwise
-  // fail, fire a logout and revoke the session the sign-in is creating.
+  // On the Steam return a boot refresh against a stale cookie would fail, fire a
+  // logout and revoke the session the sign-in is creating. Hydration order is not
+  // fixed (the callback sits in a Suspense boundary that hydrates after this
+  // shell), so decide from the URL; the ref covers the callback having already
+  // stripped the query from it.
   const signingIn = useRef(false);
 
   useEffect(() => {
     // An object, not a `let`: the flag is flipped by the cleanup, after the await.
     const effect = { cancelled: false };
     void (async () => {
-      if (!signingIn.current && !session.getAccessToken() && session.hasSessionHint()) {
+      const steamReturn = signingIn.current || isSteamReturn();
+      if (!steamReturn && !session.getAccessToken() && session.hasSessionHint()) {
         await session.refreshAccessToken();
       }
       if (!effect.cancelled) {
