@@ -1,12 +1,7 @@
 {
   "meta": {
     "title": "csmarket — Oʻzbekistonda CS2 skinlari",
-    "description": "CS2 skinlari soʻmda: Click, Payme va Uzum orqali toʻlov, Steam trade-offer bilan yetkazish. Tez kunda."
-  },
-  "home": {
-    "title": "Oʻzbekistonda CS2 skinlari",
-    "lead": "Toʻlov soʻmda. Skin Steamʼga trade-offer bilan keladi.",
-    "soon": "Tez kunda ochilamiz."
+    "description": "CS2 skinlari soʻmda. Toʻlov soʻmda, skin Steamʼga trade-offer bilan keladi."
   },
   "notFound": {
     "title": "Sahifa topilmadi",

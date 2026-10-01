@@ -41,8 +41,6 @@ export async function generateMetadata({
     metadataBase: new URL(SITE),
     title: { default: t("title"), template: "%s — csmarket" },
     description: t("description"),
-    // Pre-launch: keep the hello page out of search (M2 lifts this).
-    robots: { index: false, follow: false },
     icons: { icon: "/favicon.svg" },
   };
 }
