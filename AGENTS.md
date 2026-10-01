@@ -334,7 +334,7 @@ over raw tools.**
 | `make down`                                       | Stop the dev stack                                                                  |
 | `make dev-api`                                    | API as a host process on `:8100` (needs dev Postgres + Redis up)                    |
 | `make dev-worker` / `make dev-scheduler`          | Worker / scheduler as host processes                                                |
-| `make dev-web` / `make dev-admin`                 | Storefront (`next dev`, `:3000`) / admin (Vite, `:5173`) as host processes          |
+| `make dev-web` / `make dev-admin`                 | Storefront (`next dev`, `:3100`) / admin (Vite, `:3102`) as host processes          |
 | `make logs service=api`                           | Tail one dev service                                                                |
 | `make migrate`                                    | `alembic upgrade head` inside the dev `api` container                               |
 | `make migration name=add_x`                       | Autogenerate an Alembic revision inside the dev `api` container                     |

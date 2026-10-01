@@ -51,12 +51,12 @@ dev-scheduler: ## Run only the scheduler
 	cd apps/scheduler && uv run python -m csmarket_scheduler.main
 
 .PHONY: dev-web
-dev-web: ## Run only the public web (host process)
-	pnpm --filter @csmarket/web dev
+dev-web: ## Run only the public web (host process, :3100)
+	pnpm --filter @csmarket/web exec next dev --turbo -p 3100
 
 .PHONY: dev-admin
-dev-admin: ## Run only the admin SPA (host process)
-	pnpm --filter @csmarket/admin dev
+dev-admin: ## Run only the admin SPA (host process, :3102)
+	pnpm --filter @csmarket/admin exec vite --port 3102
 
 .PHONY: down
 down: ## Bring the dev stack down

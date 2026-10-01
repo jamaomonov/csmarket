@@ -55,16 +55,17 @@ Useful for a debugger or faster reloads. Stop that service in compose first
 (`docker compose stop api`), keep Postgres and Redis up.
 
 - **API** — `make dev-api` serves on `:8100` from `apps/api` and reads `apps/api/.env`.
-  Create it from `apps/api/.env.example` and point it at the compose ports:
+  Copy it from `apps/api/.env.example`, which already points at the compose ports:
   `CSMARKET_DATABASE_URL=postgresql+asyncpg://csmarket_app:csmarket_app@localhost:5442/csmarket`,
   `CSMARKET_REDIS_URL=redis://localhost:6390/0`.
 - **Worker / scheduler** — `make dev-worker`, `make dev-scheduler`; same `CSMARKET_*`
   variables, exported in the shell.
-- **Storefront** — `make dev-web` runs `next dev` on `:3000`. `apps/web/.env.example` holds
+- **Storefront** — `make dev-web` runs `next dev` on `:3100` (stop compose `web` first). `apps/web/.env.example` holds
   `NEXT_PUBLIC_API_BASE_URL=http://localhost:8100`; copy it to `apps/web/.env.local`.
-- **Admin** — `make dev-admin` runs Vite on `:5173` and proxies `/api/*` to
-  `http://localhost:8100` (`VITE_DEV_API_TARGET` overrides). Leave `VITE_API_BASE_URL` unset
-  so requests go through that proxy.
+- **Admin** — `make dev-admin` runs Vite on `:3102` (stop compose `admin` first) and proxies
+  `/api/*` to `http://localhost:8100` (`VITE_DEV_API_TARGET` overrides). Leave
+  `VITE_API_BASE_URL` empty (as in `apps/admin/.env.example`) so requests go through that
+  proxy.
 
 ## Common commands
 
