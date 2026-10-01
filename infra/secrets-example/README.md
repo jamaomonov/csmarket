@@ -76,6 +76,10 @@ age-keygen -o ~/csmarket-backup.key
 # need it to decrypt a backup during restore.
 ```
 
+A restore copies the key to the server's RAM (`/dev/shm`) for the run only and passes it as
+`make restore file=… identity=/dev/shm/csmarket-backup.key`; delete it right after. The steps
+are in the header of `infra/backup/restore.sh`.
+
 ### Grafana basic-auth hash
 
 Caddy needs a bcrypt hash, not the plaintext password:
@@ -108,7 +112,8 @@ Verify end to end rather than trusting a green log line:
 ```bash
 docker compose -f docker-compose.prod.yml exec -T backup bash /scripts/pg_backup.sh
 docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-backups
-# Then restore-test it — see docs/runbooks/restore-from-backup.md.
+# Then restore-test it: make restore file=… identity=… (usage in infra/backup/restore.sh;
+# the full runbook, docs/runbooks/restore-from-backup.md, comes with M5).
 ```
 
 ## Validation

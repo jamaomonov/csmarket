@@ -347,7 +347,7 @@ over raw tools.**
 | `make gen-api`                                    | Regenerate `docs/api/openapi.json` + `packages/api-client`                          |
 | `make build`                                      | Build the dev compose images                                                        |
 | `make deploy tag=sha-xxxxxxx`                     | Dispatch `deploy.yml` to production with that image tag (`docs/runbooks/deploy.md`) |
-| `make backup` / `make restore file=…`             | One-off backup / restore against the **prod** compose (run on the server)           |
+| `make backup` / `make restore file=… identity=…`  | One-off backup / restore against the **prod** compose (run on the server)           |
 
 Dev ports (`docker-compose.yml`; csmarket's own block so it can run beside another stack —
 each is env-overridable, container ports unchanged):

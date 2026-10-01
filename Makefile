@@ -158,6 +158,14 @@ backup: ## One-off pg_backup.sh run (the backup service itself runs nightly)
 	$(COMPOSE_PROD) run --rm backup /bin/bash /scripts/pg_backup.sh
 
 .PHONY: restore
-restore: ## Restore DB from backup: make restore file=path
-	@if [ -z "$(file)" ]; then echo "Usage: make restore file=/path/to/backup.dump"; exit 1; fi
-	$(COMPOSE_PROD) run --rm -v $(file):/restore.dump backup /bin/bash /scripts/restore.sh /restore.dump
+restore: ## Restore DB: make restore file=/path/x.dump.age identity=/dev/shm/csmarket-backup.key
+	@if [ -z "$(file)" ] || [ -z "$(identity)" ]; then \
+		echo "Usage: make restore file=/path/to/backup.dump.age identity=/dev/shm/csmarket-backup.key"; \
+		echo "identity = the age private key, copied to the server only for the restore (see infra/backup/restore.sh)"; \
+		exit 1; \
+	fi
+	$(COMPOSE_PROD) run --rm \
+		-v "$(abspath $(patsubst ~/%,$(HOME)/%,$(file))):/restore/backup.dump.age:ro" \
+		-v "$(abspath $(patsubst ~/%,$(HOME)/%,$(identity))):/restore/identity.key:ro" \
+		-e BACKUP_AGE_IDENTITY=/restore/identity.key \
+		backup /bin/bash /scripts/restore.sh /restore/backup.dump.age
