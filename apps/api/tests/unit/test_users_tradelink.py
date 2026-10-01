@@ -9,6 +9,7 @@ from csmarket.modules.users.tradelink import (
     CheckResult,
     assert_owned,
     check_trade_link,
+    mask_trade_link,
     parse_tradelink,
 )
 
@@ -178,3 +179,14 @@ async def test_malformed_waxpeer_answer_is_unavailable_not_bad(redis) -> None:
     assert [
         k async for k in redis.scan_iter("users:tradelink:*") if k != "users:tradelink:breaker"
     ] == []
+
+
+def test_mask_keeps_partner_and_the_last_two_token_chars() -> None:
+    masked = mask_trade_link(LINK)
+    assert masked == ("https://steamcommunity.com/tradeoffer/new/?partner=39734273&token=••••12")
+    assert "AbCdEf" not in (masked or "")
+
+
+@pytest.mark.parametrize(("raw", "out"), [(None, None), ("not a link", "••••"), ("", "••••")])
+def test_mask_hides_anything_else_whole(raw: str | None, out: str | None) -> None:
+    assert mask_trade_link(raw) == out

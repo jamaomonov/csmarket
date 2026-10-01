@@ -20,6 +20,9 @@ import pytest
         "csmarket.modules.admin.audit",
         "csmarket.modules.admin.deps",
         "csmarket.modules.admin.routes",
+        "csmarket.modules.admin.users_routes",
+        "csmarket.modules.admin.users_schemas",
+        "csmarket.modules.admin.users_service",
         "csmarket.modules.auth.deps",
         "csmarket.modules.auth.routes",
         "csmarket.modules.auth.api",
@@ -63,6 +66,7 @@ import pytest
         "csmarket.modules.skins.routes",
         "csmarket.modules.skins.seo_routes",
         "csmarket.modules.skins.service",
+        "csmarket.modules.wallet.adjust",
         "csmarket.modules.wallet.api",
         "csmarket.modules.wallet.entries",
         "csmarket.modules.wallet.models",
@@ -96,3 +100,18 @@ def test_wallet_never_imports_payments() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
     )
     assert result.returncode == 0, result.stderr or "wallet imported payments"
+
+
+def test_no_domain_module_imports_the_admin_users_routes() -> None:
+    """One direction only: ``admin`` builds on ``users``, ``wallet``, ``payments``, ``auth``."""
+    code = (
+        "import sys, csmarket.modules.users.api, csmarket.modules.users.routes, "
+        "csmarket.modules.wallet.api, csmarket.modules.wallet.routes, "
+        "csmarket.modules.payments.api, csmarket.modules.payments.routes, "
+        "csmarket.modules.auth.api; "
+        "sys.exit(any(m.startswith('csmarket.modules.admin.users') for m in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
+    )
+    assert result.returncode == 0, result.stderr or "a domain module imported admin.users_*"

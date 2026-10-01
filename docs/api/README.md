@@ -168,6 +168,30 @@ Called by Uzum, not by our clients; anonymous, exempt from the per-IP limiter.
   `apps/api/src/csmarket/modules/uzum/README.md`; Postman collection for Uzum's engineer:
   `docs/api/uzum.postman_collection.json`.
 
+### Admin users (M3)
+
+All under `/admin/users`, admin only (401 without a token, 403 for a customer). Details,
+error codes and the replay rule: `apps/api/src/csmarket/modules/admin/README.md`, **Users**.
+
+- `GET /admin/users?q=&cursor=&limit=` → `{items: [{id, display_name, avatar_url, steam_id,
+roles, banned_at, created_at, balance_uzs}], next_cursor}` — newest first; `q` = part of the
+  display name or an exact 17-digit Steam ID; `limit` 1..100 (20); a bad cursor is 422
+  `cursor`.
+- `GET /admin/users/{id}` → `AdminUserCard {user: {id, steam_id, display_name, avatar_url,
+email, locale, roles, banned_at, ban_reason, created_at, trade_link_masked,
+trade_link_verdict, trade_link_reason, trade_link_checked_at}, balance_uzs, entries: [{id,
+kind, amount_uzs, created_at, reference_number, actor, reason}], topups: [{number,
+amount_uzs, status, provider, created_at, succeeded_at}]}` — the latest 20 of each. Unknown
+  or malformed id → 404.
+- `POST /admin/users/{id}/ban` `{reason: 3..500}` → card. 409 `ban_self`, `ban_admin`,
+  `already_banned`. Ends every session of the user.
+- `POST /admin/users/{id}/unban` `{reason: 3..500}` → card. 409 `not_banned`.
+- `POST /admin/users/{id}/wallet/adjust` `{amount_uzs: JSON integer ≠ 0, |x| ≤ 100 000 000,
+reason: 4..500}` → card. 409 `balance_too_low` for a clawback beyond the balance.
+- Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise). A replay returns
+  the stored card and writes nothing; the same key with another body or user is 409
+  `idempotency_mismatch`. Audited: `users.ban`, `users.unban`, `wallet.adjust`.
+
 ### Admin catalogue (M2)
 
 All under `/admin/skins`, admin only (401 without a token, 403 for a customer).

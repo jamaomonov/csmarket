@@ -15,12 +15,14 @@ from csmarket.modules.users.service import (
     set_roles,
     upsert_user_by_steam,
 )
+from csmarket.modules.users.tradelink import mask_trade_link
 
 __all__ = [
     "STEAM64_BASE",
     "User",
     "get_user_by_id",
     "get_user_by_steam_id",
+    "mask_trade_link",
     "set_roles",
     "upsert_user_by_steam",
 ]

@@ -339,6 +339,31 @@ async def logout(
         await db.flush()
 
 
+async def revoke_all_sessions(
+    db: AsyncSession, user_id: str, *, settings: Settings | None = None
+) -> int:
+    """Sign ``user_id`` out everywhere: revoke every live session and kill its access tokens.
+
+    The rows are flushed, not committed — the caller's transaction decides. The Redis
+    markers are written at once (fail-open, like every blocklist write); should the
+    caller roll back, the only effect is that the user's access tokens die early and the
+    apps refresh.
+
+    Args:
+        db: The caller's session.
+        user_id: Whose sessions to end.
+        settings: Overrides the process settings; for tests.
+
+    Returns:
+        How many sessions were live.
+    """
+    s = settings or get_settings()
+    revoked = await _revoke_all_for_user(db, user_id)
+    for sid in revoked:
+        await _blocklist_session_id(sid, settings=s)
+    return len(revoked)
+
+
 async def _revoke_all_for_user(db: AsyncSession, user_id: str) -> list[str]:
     """Revoke every live session of ``user_id`` in one statement; return their ids."""
     result = await db.execute(
@@ -399,17 +424,19 @@ async def resolve_current_user(
     """
     s = settings or get_settings()
     claims = authjwt.verify(access_token, expected_kind="access", settings=s)
+    user = await get_user_by_id(db, claims.sub)
+    if user is None:
+        raise UnauthorizedError("user not found")
+    # Checked on every request: a ban takes effect on the very next call, even with an
+    # access token minted seconds earlier. Checked before the blocklist, because an admin
+    # ban also revokes every session (``revoke_all_sessions``) and the apps must hear
+    # "suspended" (403), not "session revoked" (401, which sends them refreshing).
+    if user.banned_at is not None:
+        raise AccountSuspendedError("this account has been suspended")
     if await _is_blocklisted(f"auth:revoked:{claims.jti}", kind="access"):
         raise UnauthorizedError("token revoked")
     if await _is_blocklisted(f"auth:revoked_sid:{claims.sid}", kind="session"):
         raise UnauthorizedError("session revoked")
-    user = await get_user_by_id(db, claims.sub)
-    if user is None:
-        raise UnauthorizedError("user not found")
-    # Checked on every request rather than by revoking sessions on ban: a ban takes
-    # effect on the very next call, even with an access token minted seconds earlier.
-    if user.banned_at is not None:
-        raise AccountSuspendedError("this account has been suspended")
     return user
 
 

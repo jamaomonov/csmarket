@@ -18,6 +18,7 @@ from csmarket.modules.auth.service import (
     purge_stale_refresh_tokens,
     refresh_session,
     resolve_current_user,
+    revoke_all_sessions,
 )
 from csmarket.modules.users.service import upsert_user_by_steam
 from sqlalchemy import func, select
@@ -214,3 +215,35 @@ async def test_purge_drops_only_rows_past_retention(db_session: AsyncSession) ->
 
     left = set((await db_session.execute(select(RefreshToken.token_hash))).scalars().all())
     assert left == {hash_token(live.refresh_token), hash_token(recent_revoked.refresh_token)}
+
+
+async def test_revoke_all_sessions_ends_every_session_and_its_access_tokens(
+    db_session: AsyncSession,
+) -> None:
+    user = await _user(db_session)
+    a = await open_session(db_session, user=user)
+    b = await open_session(db_session, user=user)
+    bystander = await open_session(db_session, user=await _user(db_session, "76561198000000002"))
+    await db_session.commit()
+    assert await revoke_all_sessions(db_session, user.id) == 2
+    await db_session.commit()
+    for tokens in (a, b):
+        with pytest.raises(UnauthorizedError, match="session revoked"):
+            await resolve_current_user(db_session, tokens.access_token)
+        with pytest.raises(UnauthorizedError):
+            await refresh_session(db_session, tokens.refresh_token)
+    assert await revoke_all_sessions(db_session, user.id) == 0
+    assert (await resolve_current_user(db_session, bystander.access_token)).id != user.id
+
+
+async def test_a_banned_account_with_revoked_sessions_hears_suspended_not_revoked(
+    db_session: AsyncSession,
+) -> None:
+    user = await _user(db_session)
+    tokens = await open_session(db_session, user=user)
+    await db_session.commit()
+    await revoke_all_sessions(db_session, user.id)
+    user.banned_at = now()
+    await db_session.commit()
+    with pytest.raises(AccountSuspendedError):
+        await resolve_current_user(db_session, tokens.access_token)

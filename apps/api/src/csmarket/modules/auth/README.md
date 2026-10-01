@@ -7,14 +7,15 @@ Steam sign-in (OpenID 2.0, the only sign-in), sessions, access tokens, the Redis
 
 `auth.api` — other modules import nothing else from here:
 
-| Name              | What it is                                                                 |
-| ----------------- | -------------------------------------------------------------------------- |
-| `router`          | The `/api/v1/auth` routes (mounted in `api/v1/router.py`)                  |
-| `current_user`    | FastAPI dependency: the signed-in `User`; 401 absent/invalid, 403 banned   |
-| `SessionTokens`   | Access + refresh token pair and TTLs returned by the service               |
-| `TokensOut`       | Response body of every route that opens or rotates a session               |
-| `guard_ip`        | Two-axis Redis rate guard (`bucket`, optional `subject`); 429 past a limit |
-| `trade_hold_days` | Steam `GetTradeHoldDurations` for a trade link (used by `users`)           |
+| Name                  | What it is                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `router`              | The `/api/v1/auth` routes (mounted in `api/v1/router.py`)                                   |
+| `current_user`        | FastAPI dependency: the signed-in `User`; 401 absent/invalid, 403 banned                    |
+| `SessionTokens`       | Access + refresh token pair and TTLs returned by the service                                |
+| `TokensOut`           | Response body of every route that opens or rotates a session                                |
+| `guard_ip`            | Two-axis Redis rate guard (`bucket`, optional `subject`); 429 past a limit                  |
+| `trade_hold_days`     | Steam `GetTradeHoldDurations` for a trade link (used by `users`)                            |
+| `revoke_all_sessions` | Sign a user out everywhere: revoke every live session, blocklist its `sid`s (admin ban, M3) |
 
 ## Tokens
 
@@ -26,6 +27,11 @@ Steam sign-in (OpenID 2.0, the only sign-in), sessions, access tokens, the Redis
 Refresh rotates on every use. Presenting a refresh token that was already rotated
 revokes every session of the user (the reuse trip-wire). One cookie serves the storefront
 and the admin (ruling P8).
+
+`resolve_current_user` checks the ban **before** the blocklist: an admin ban (M3) also
+revokes every session (`revoke_all_sessions`), and the apps must hear `403
+account-suspended`, not `401` "session revoked" (which would send them refreshing). The
+banned user's refresh then fails with `401` (its row is revoked), which signs the app out.
 
 ## Cookies
 

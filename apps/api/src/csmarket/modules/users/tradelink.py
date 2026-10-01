@@ -91,6 +91,30 @@ def parse_tradelink(raw: str) -> TradeLink:
     return TradeLink(url=url, partner=int(match.group(1)), token=match.group(2))
 
 
+#: What stands in for the hidden part of a trade-link token.
+MASK = "••••"
+
+
+def mask_trade_link(raw: str | None) -> str | None:
+    """The link with its token hidden but for the last 2 characters — for admin views.
+
+    ``partner`` stays (an operator matches it to the Steam account); the token is a
+    credential and never leaves whole. A stored value that is not a trade link (none
+    should be: ``save_trade_link`` parses first) is masked entirely.
+
+    Examples:
+        >>> mask_trade_link("https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdEf12")
+        'https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••12'
+    """
+    if raw is None:
+        return None
+    match = _LINK.match(raw.strip())
+    if match is None:
+        return MASK
+    partner, token = match.group(1), match.group(2)
+    return f"https://steamcommunity.com/tradeoffer/new/?partner={partner}&token={MASK}{token[-2:]}"
+
+
 def assert_owned(link: TradeLink, steam_id: str) -> None:
     """The link must belong to the signed-in account (spec §7.2).
 

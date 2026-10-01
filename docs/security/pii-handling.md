@@ -46,7 +46,15 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   lives in an `HttpOnly` cookie. The access JWT carries no PII beyond the user id.
 - **Roles** are in `users.roles`. `grant_admin` prints one word and never the Steam ID.
 - **Admin audit log** (`admin_audit_log`, M2): the actor is `actor_user_id` (our uuid); the
-  `payload` names things only (slugs, aliases) — never a Steam ID, email or IP.
+  `payload` names things only (slugs, aliases) — never a Steam ID, email or IP. M3 adds
+  `users.ban` / `users.unban` / `wallet.adjust` with the operator's `reason` (and the signed
+  amount); the target is the user's uuid in `target_id`, never a Steam ID.
+- **Admin users API (M3):** the card shows an operator the Steam ID, email and trade-link
+  verdict; the trade link only masked (`partner` kept, token `••••` + last 2 characters —
+  `users.mask_trade_link`), never whole. An admin adjustment's reason lives in
+  `wallet_transactions.metadata` and reaches admin views only (`entries_for_admin`); the
+  customer's `/wallet/entries` never carries `actor` or `metadata`. Nothing here is logged
+  with a user id (`wallet.posted` carries kind, transaction id and amount only).
 - **Catalogue and rate (M2) hold no personal data.** The catalogue, price sync and listings
   carry items and prices only; CBU calls carry nothing about a person. Waxpeer's API key rides
   the query string, so a Waxpeer URL and `httpx` exception text are never logged: only the

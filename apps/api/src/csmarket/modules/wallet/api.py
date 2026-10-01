@@ -1,11 +1,21 @@
 """Public interface of the ``wallet`` module — other modules import from here only.
 
-``wallet`` imports no other domain module; ``payments`` (and M4 ``orders``) build on it.
+``wallet`` never imports ``payments``: ``payments`` (and M4 ``orders``, and ``admin``) build
+on it. ``api``/``service`` are domain-pure; only ``wallet.routes`` reaches ``auth.api`` and
+``users.models`` for the signed-in customer.
 """
 
 from __future__ import annotations
 
-from csmarket.modules.wallet.entries import EntriesPage, Entry, entries_for_user
+from csmarket.modules.wallet.adjust import ADMIN_ADJUST_MAX, admin_adjust
+from csmarket.modules.wallet.entries import (
+    AdminEntry,
+    EntriesPage,
+    Entry,
+    entries_for_admin,
+    entries_for_user,
+    user_balance_column,
+)
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
 from csmarket.modules.wallet.service import (
     NORMAL_SIDE,
@@ -24,8 +34,10 @@ from csmarket.modules.wallet.service import (
 )
 
 __all__ = [
+    "ADMIN_ADJUST_MAX",
     "NORMAL_SIDE",
     "TX_KINDS",
+    "AdminEntry",
     "Direction",
     "EntriesPage",
     "Entry",
@@ -35,12 +47,15 @@ __all__ = [
     "WalletAccount",
     "WalletPosting",
     "WalletTransaction",
+    "admin_adjust",
     "balance",
     "credit_topup",
     "ensure_account",
+    "entries_for_admin",
     "entries_for_user",
     "post",
     "reverse_topup",
     "user_account",
     "user_balance",
+    "user_balance_column",
 ]

@@ -14,14 +14,19 @@ allow-list (ADR-0002): UZS only, no currency column, whole soʻm.
   Append-only; deleted only by `CASCADE` from their transaction.
 
 **Interface (`api.py`):** `post`, `ensure_account`, `user_account`, `balance`,
-`user_balance`, `credit_topup`, `reverse_topup`, `entries_for_user`, `Entry`, `EntriesPage`,
-`Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`, `InsufficientBalanceError`, and
-the three models.
+`user_balance`, `user_balance_column`, `credit_topup`, `reverse_topup`, `admin_adjust`,
+`ADMIN_ADJUST_MAX`, `entries_for_user`, `entries_for_admin`, `Entry`, `AdminEntry`,
+`EntriesPage`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`,
+`InsufficientBalanceError`, and the three models.
 
 **Routes (`routes.py`):** `GET /wallet` → `{balance_uzs}` and `GET /wallet/entries` for
 the signed-in customer. The top-up routes under `/wallet/topups` are mounted from
-`payments.routes`. `wallet` imports no other domain
-module — `payments` (and M4 `orders`) build on it, never the reverse.
+`payments.routes`.
+
+**Direction:** `wallet` never imports `payments` — `payments` (and M4 `orders`, and
+`admin`) build on it, never the reverse. `wallet.api`, `service`, `adjust` and `entries` are
+domain-pure (no other domain module); only `wallet.routes` imports `auth.api` and
+`users.models` for the signed-in customer (`test_wallet_never_imports_payments`).
 
 ## Rules
 
@@ -67,6 +72,18 @@ arguments) book the first two rows; `payments.hooks` calls them. `reverse_topup`
 replayed key first, then locks the user's wallet and raises `InsufficientBalanceError` when
 the balance is below the amount.
 
+## Admin adjustments (`adjust.py`)
+
+`admin_adjust(db, *, user_id, amount, reason, admin_id, idempotency_key)` — `amount` a
+non-zero whole soʻm, `|amount| ≤ ADMIN_ADJUST_MAX` (100 000 000), and a non-blank reason
+(`ValidationError` `adjust_amount` / `adjust_reason`). It locks the user's wallet, then looks
+up the key `admin_adjust:{idempotency_key}`: a replay returns the booked transaction (before
+any balance check); the key on another user or amount is `ConflictError`
+`idempotency_mismatch`. A clawback the balance does not cover raises
+`InsufficientBalanceError` with `code="balance_too_low"` (ruling R13 — never below zero).
+`actor = "admin:<admin_id>"`, `metadata = {"reason"}`. Its own file only to keep `service.py`
+under the size limit.
+
 ## Customer entries (`entries.py`)
 
 `entries_for_user(db, user_id, *, cursor=None, limit=20)` — only the customer's
@@ -79,10 +96,16 @@ admin's identity and reason stay in admin views. The number is read through a ba
 `table("wallet_topups")` clause, so `wallet` still imports nothing from `payments`. No
 wallet yet → an empty page (none is created).
 
+`entries_for_admin(db, user_id, *, limit=20)` shares the query and returns `AdminEntry`
+(an `Entry` plus `actor` and `reason` = `metadata.reason`) — admin views only; the customer
+route never builds one. `user_balance_column(user_id_column)` is a correlated scalar
+subquery of the `user_wallet` balance, for list queries (one statement per page).
+
 **Logs:** `csmarket.wallet.service` writes `wallet.posted` (kind, transaction id, amount) —
 no user id, so a log line never ties a person to money.
 
 **Tests:** `tests/integration/test_wallet_ledger.py` (postings, replay, refused legs,
 frozen and missing accounts, both SAVEPOINT races) and `test_wallet_ledger_props.py`
 (hypothesis: `SUM(D) == SUM(C)` over random top-up series), `test_wallet_routes.py`
-(balance, signed entries, redaction, keyset paging, owner only).
+(balance, signed entries, redaction, keyset paging, owner only), `test_wallet_admin_adjust.py`
+(credit, clawback, never below zero, replay, admin entries).
