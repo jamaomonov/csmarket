@@ -9,13 +9,18 @@ the trade sweeps (``orders.sweeps``). Callers hold the order row and then the tr
 Waxpeer's status → what :func:`apply` does (rulings R1, R3):
 
 =====================================================  ======================================
-0, 1, 2, −1 (buying, unparsable)                        nothing
+0, 1, 2, −1 (buying, unparsable)                        nothing (−1 never overwrites a status)
 4 without ``release_date`` (offer sent)                 ``buying → trade_sent``
 4 with ``release_date``, 5, or ``is_released``          ``buying | trade_sent → delivered``
-6 on a delivered order, after acceptance, or with       attention ``rolled_back``; the status
-penalties                                               stays; the money is spent (R3)
+6 on a delivered order, after acceptance, released,     ``buying | trade_sent → delivered``,
+or with penalties                                       then attention ``rolled_back``; the
+                                                        money is spent (R3)
 6 otherwise (the offer was declined or never sent)      ``returned`` + refund ``not_accepted``
 =====================================================  ======================================
+
+A 6 is conclusive only when it is **ours**: :func:`ours` never returns a 6 for a trade whose
+Waxpeer id we do not know — it may be a refused attempt under the same ``project_id`` while
+our (lost) buy went through.
 """
 
 from __future__ import annotations
@@ -38,6 +43,8 @@ log = get_logger("csmarket.orders.trades")
 
 #: Waxpeer's status of a failed or returned trade.
 FAILED_STATUS = 6
+#: A status we could not parse.
+UNPARSABLE_STATUS = -1
 #: Waxpeer's status of a sent offer (accepted once ``release_date`` is set).
 SENT_STATUS = 4
 #: Waxpeer's status of a trade out of Steam's protection (released to the buyer).
@@ -77,6 +84,22 @@ def pick_trade(trades: Sequence[WaxpeerTrade], waxpeer_id: int | None) -> Waxpee
     raise AmbiguousTradeError(f"{len(live)} live trades")
 
 
+def ours(trades: Sequence[WaxpeerTrade], trade: SkinTrade) -> WaxpeerTrade | None:
+    """Our trade among a lookup's, as far as it can settle anything.
+
+    :func:`pick_trade` by the stored Waxpeer id; but a failed (6) trade picked without a
+    known id is not taken as ours — it may be a refused attempt under the same
+    ``project_id`` while our lost buy went through. Then ``None``: unseen.
+
+    Raises:
+        AmbiguousTradeError: several live trades and no id to choose by.
+    """
+    wt = pick_trade(trades, trade.waxpeer_id)
+    if wt is not None and trade.waxpeer_id is None and wt.status == FAILED_STATUS:
+        return None
+    return wt
+
+
 # Any: the seller document is a JSON object of scalars.
 def _seller(trade: SkinTrade, wt: WaxpeerTrade) -> dict[str, Any]:
     """The stored seller with every non-empty value of ``wt``'s seller laid over it."""
@@ -91,7 +114,7 @@ def _seller(trade: SkinTrade, wt: WaxpeerTrade) -> dict[str, Any]:
 def mirror(trade: SkinTrade, wt: WaxpeerTrade) -> None:
     """Copy one Waxpeer trade report onto our row; never blank a known value.
 
-    ``status`` is always copied; ``accepted_at`` is stamped the first time a
+    ``status`` is copied unless it is unparsable (−1) over a known one; ``accepted_at`` is stamped the first time a
     ``release_date`` appears (the buyer accepted the offer); ``is_released`` never goes
     back to false. The caller holds the order and the trade ``FOR UPDATE`` and commits.
 
@@ -101,7 +124,8 @@ def mirror(trade: SkinTrade, wt: WaxpeerTrade) -> None:
     """
     at = now()
     trade.waxpeer_id = wt.id or trade.waxpeer_id
-    trade.status = wt.status
+    if wt.status != UNPARSABLE_STATUS or trade.status is None:
+        trade.status = wt.status
     trade.trade_id = wt.trade_id or trade.trade_id
     trade.escrow_status = wt.escrow_status or trade.escrow_status
     trade.send_until = wt.send_until or trade.send_until
@@ -157,7 +181,7 @@ def _spent(order: Order, trade: SkinTrade) -> bool:
     )
 
 
-async def _returned(db: AsyncSession, order: Order) -> str:
+async def _returned(db: AsyncSession, order: Order, *, first_seen: bool) -> str:
     """The offer came back unaccepted: ``returned`` and the money to the balance."""
     try:
         await refund_to_balance(
@@ -166,21 +190,24 @@ async def _returned(db: AsyncSession, order: Order) -> str:
     except ConflictError as exc:
         if exc.extra.get("code") != "order_needs_attention":
             raise
-        log.warning("orders.trade.refund_held", number=order.number)
+        if first_seen:  # once per order, not every tick while the attention stays open
+            log.warning("orders.trade.refund_held", number=order.number)
         return "held"  # an open attention (R3): an admin decides first
     return "returned"
 
 
-async def _failed(db: AsyncSession, order: Order, trade: SkinTrade) -> str:
-    """Waxpeer 6: money spent (attention) when the skin may have reached the buyer, else
-    ``returned`` and the refund."""
+async def _failed(db: AsyncSession, order: Order, trade: SkinTrade, *, first_seen: bool) -> str:
+    """Waxpeer 6: the skin may have reached the buyer → ``delivered`` (money spent) and an
+    attention; else ``returned`` and the refund."""
     if _spent(order, trade):
+        if order.status in ("buying", "trade_sent"):
+            move(order, "delivered")
         if flag(trade, "rolled_back"):
             log.error("orders.trade.rolled_back", number=order.number)
         return "rolled_back"
     if order.status not in ("buying", "trade_sent"):
         return "unchanged"
-    return await _returned(db, order)
+    return await _returned(db, order, first_seen=first_seen)
 
 
 async def apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: WaxpeerTrade) -> str:
@@ -194,15 +221,16 @@ async def apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: Waxpeer
         db: Session; the caller holds ``order``, then ``trade``, ``FOR UPDATE`` and commits.
         order: The order, locked.
         trade: Its trade, locked.
-        wt: Waxpeer's report of the trade (picked with :func:`pick_trade`).
+        wt: Waxpeer's report of the trade (picked with :func:`ours`).
 
     Returns:
         ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``rolled_back`` (also
         when the attention was already open) or ``held``.
     """
+    first_seen = trade.status != FAILED_STATUS
     mirror(trade, wt)
     if wt.status == FAILED_STATUS:
-        return await _failed(db, order, trade)
+        return await _failed(db, order, trade, first_seen=first_seen)
     accepted = wt.status == SENT_STATUS and trade.release_date is not None
     if accepted or wt.status == RELEASED_STATUS or trade.is_released:
         target = "delivered"
@@ -220,9 +248,11 @@ __all__ = [
     "FAILED_STATUS",
     "RELEASED_STATUS",
     "SENT_STATUS",
+    "UNPARSABLE_STATUS",
     "AmbiguousTradeError",
     "apply",
     "flag",
     "mirror",
+    "ours",
     "pick_trade",
 ]

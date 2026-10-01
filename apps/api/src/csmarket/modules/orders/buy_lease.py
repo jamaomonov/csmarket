@@ -62,12 +62,15 @@ async def take_lease(db: AsyncSession, order_id: str) -> datetime | None:
     return lease
 
 
-async def release(db: AsyncSession, order_id: str, lease: datetime) -> None:
-    """Make the order due again — only if the lease is still this attempt's."""
+async def release(
+    db: AsyncSession, order_id: str, lease: datetime, *, after: timedelta = timedelta(0)
+) -> None:
+    """Make the order due again ``after`` from now — only if the lease is still this
+    attempt's."""
     await db.execute(
         update(Order)
         .where(Order.id == order_id, Order.status == "buying", Order.next_check_at == lease)
-        .values(next_check_at=now())
+        .values(next_check_at=now() + after)
     )
     await db.commit()
 

@@ -124,6 +124,12 @@ async def cancel_while_held(db: AsyncSession, order: Order) -> None:
     await db.commit()
 
 
+async def make_due(db: AsyncSession, order: Order) -> None:
+    """Make ``order`` due now (``next_check_at`` cleared), as when a backoff has passed."""
+    await db.execute(update(Order).where(Order.id == order.id).values(next_check_at=None))
+    await db.commit()
+
+
 async def saved_trade_link(
     db: AsyncSession,
     steam_id: str,

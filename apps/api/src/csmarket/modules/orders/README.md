@@ -192,24 +192,29 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   snapshot (`nothing_to_do`, lease released, unless still `buying` with a buy pending). A
   second attempt (the sweep racing the worker) finds the lease held, or the buy no longer
   pending, so it can never act on a `buy_pending` it read before the first attempt settled
-  the buy. The release (`next_check_at = now`) is owner-checked (`WHERE next_check_at =
+  the buy. The release (`next_check_at = now`; `now + 60 s` after `forbidden`, `now + 20 s`
+  after `rate_limited` — `RELEASE_BACKOFF` bounds the lookups a 403/429 storm causes) is
+  owner-checked (`WHERE next_check_at =
 <this attempt's lease>`); an attempt is bounded by `ATTEMPT_BUDGET` (lease − 30 s), so it
   never outlives its lease — a timeout after the buy was sent is `unconfirmed`, before it
   `lookup_later`. A lease left by a dead process lapses by itself. Outcomes:
 
-  | Case                                                        | Outcome        | Writes                                                                 |
-  | ----------------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
-  | trade link does not parse                                   | `invalid_link` | `failed` + refund `invalid_trade_link`                                 |
-  | lookup: 429, unavailable, a refusal                         | `lookup_later` | nothing (`buy_pending` kept; no buy without a lookup)                  |
-  | lookup or buy: HTTP 403                                     | `forbidden`    | attention `waxpeer_forbidden` (once), `buy_pending` kept               |
-  | lookup finds our trade (`orders.trades.pick_trade`)         | `adopted`      | `mirror`, `bought_units`, `buy_pending = false` — never rebought       |
-  | lookup finds several live trades                            | `ambiguous`    | attention `ambiguous_trade`, `buy_pending = false` (no refund)         |
-  | buy accepted                                                | `bought`       | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0` |
-  | buy: 429                                                    | `rate_limited` | nothing (`buy_pending` kept, next tick)                                |
-  | buy: unavailable / unreadable / 5xx                         | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)          |
-  | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`  | `failed` + refund `waxpeer_low_balance`                                |
-  | buy refused (sold, price moved, a 4xx), no substitute       | `sold_out`     | `failed` + refund `sold_out`                                           |
-  | a buy accepted or lost, but the rows moved during the call  | `stale_bought` | attention `ambiguous_trade` (unless it is the purchase on record)      |
+  | Case                                                        | Outcome         | Writes                                                                  |
+  | ----------------------------------------------------------- | --------------- | ----------------------------------------------------------------------- |
+  | trade link does not parse                                   | `invalid_link`  | `failed` + refund `invalid_trade_link`                                  |
+  | lookup: 429, unavailable, a refusal                         | `lookup_later`  | nothing (`buy_pending` kept; no buy without a lookup)                   |
+  | lookup or buy: HTTP 403                                     | `forbidden`     | attention `waxpeer_forbidden` (once), `buy_pending` kept                |
+  | lookup finds our trade (`orders.trades.pick_trade`)         | `adopted`       | `mirror`, `bought_units`, `buy_pending = false` — never rebought        |
+  | lookup finds only failed (6) trades, none accepted          | (buys)          | never adopted: refused attempts, nothing live was bought — buy as usual |
+  | … the same after a lost answer (`buy_unconfirmed_at`)       | `nothing_to_do` | `buy_pending = false`; reconcile's unconfirmed rule decides (R3)        |
+  | … one of them accepted, released or with penalties          | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false`; nothing bought      |
+  | lookup finds several live trades                            | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false` (no refund)          |
+  | buy accepted                                                | `bought`        | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0`  |
+  | buy: 429                                                    | `rate_limited`  | nothing (`buy_pending` kept, next tick)                                 |
+  | buy: unavailable / unreadable / 5xx                         | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
+  | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `waxpeer_low_balance`                                 |
+  | buy refused (sold, price moved, a 4xx), no substitute       | `sold_out`      | `failed` + refund `sold_out`                                            |
+  | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (unless it is the purchase on record)       |
 
   A refusal that is not low balance is retried **once** with the cheapest other `auto`
   listing of the item at most `paid_units × (1 + order_substitute_ceiling)` units, read
@@ -270,25 +275,33 @@ The three trade jobs do nothing without `waxpeer_api_key` (or `waxpeer_fake`); e
 - `reconcile` — the ≤ 100 oldest due orders (`buying` / `trade_sent`, `next_check_at` null
   or `<= now`). Those whose buy is no longer pending are looked up in one call; each is then
   locked (order → trade), re-checked (still followed, not `buy_pending`, still due), moved
-  by `trades.apply` and given `next_check_at = now + trades_reconcile_seconds`. No trade
-  under our `project_id`: a buy whose answer was lost (`buy_unconfirmed_at`) waits
+  by `trades.apply` and given `next_check_at = now + trades_reconcile_seconds`. Ours is
+  picked by `trades.ours`: **a 6 is conclusive only when it is our trade** (its id is the
+  stored `waxpeer_id`); a 6 picked without a known id may be a refused attempt under the
+  same `project_id` while our lost buy went through, so it counts as unseen — never mirrored,
+  its id never pinned. Unseen: a buy whose answer was lost (`buy_unconfirmed_at`) waits
   `order_unconfirmed_minutes` (10), then gets the attention `buy_unconfirmed` — never a
-  refund (R3). Several live trades and no Waxpeer id: attention `ambiguous_trade`. A trade
+  refund (R3); a trade whose Waxpeer id we know but Waxpeer stops reporting (not seen for
+  10 min since `last_polled_at`) gets `ambiguous_trade` once. Our trade found (live, or by
+  its known id) answers an open `buy_unconfirmed` (cleared, ruling Q); `ambiguous_trade`
+  stays for a human. Several live trades and no Waxpeer id: attention `ambiguous_trade`. A
+  trade
   still `buy_pending` goes to `attempt_buy` (after the poll), whose lease is the only writer
   of its `next_check_at` (ruling M). A failed lookup writes nothing: every row stays due.
   One order's failure is rolled back and logged (type only); the sweep never raises.
 - `trades.apply(db, *, order, trade, wt)` — `mirror`, then:
 
-  | Waxpeer reports                                                                            | Order                                                 |
-  | ------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
-  | 0, 1, 2, −1                                                                                | unchanged                                             |
-  | 4 without `release_date` (the offer is out)                                                | `buying → trade_sent`                                 |
-  | 4 with `release_date` (accepted), 5, or `is_released`                                      | `buying` / `trade_sent → delivered`                   |
-  | 6 on a `delivered` order, or after acceptance (`accepted_at`), released, or with penalties | unchanged; attention `rolled_back` — money spent (R3) |
-  | 6 otherwise (declined, expired, a refused attempt adopted by the buy)                      | `returned` + refund `not_accepted`                    |
+  | Waxpeer reports                                                                            | Order                                                                                           |
+  | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+  | 0, 1, 2, −1 (−1 never overwrites a known status)                                           | unchanged                                                                                       |
+  | 4 without `release_date` (the offer is out)                                                | `buying → trade_sent`                                                                           |
+  | 4 with `release_date` (accepted), 5, or `is_released`                                      | `buying` / `trade_sent → delivered`                                                             |
+  | 6 on a `delivered` order, or after acceptance (`accepted_at`), released, or with penalties | `buying` / `trade_sent → delivered` (ruling P), then attention `rolled_back` — money spent (R3) |
+  | 6 otherwise (our trade, declined or expired)                                               | `returned` + refund `not_accepted`                                                              |
 
   A refund an open attention blocks (`refund_to_balance` → `order_needs_attention`) leaves the
-  order as it is (`held`): an admin resolves first, and the next tick refunds.
+  order as it is (`held`, warned once — when the 6 is first seen): an admin resolves
+  first, and the next tick refunds.
 
 - `trades.flag(trade, reason, *, reopen=False) -> bool` — opens an attention unless one is
   open (an open `waxpeer_forbidden` gives way); a new attention clears any earlier

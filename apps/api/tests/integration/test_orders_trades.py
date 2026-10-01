@@ -16,6 +16,7 @@ from csmarket.core.errors import ConflictError
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.trades import apply
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from tests.integration.fake_trade_client import FakeTradeClient
 from tests.integration.trade_sweeps_kit import (  # noqa: F401 -- fixtures by name
@@ -37,6 +38,7 @@ from tests.integration.trade_sweeps_kit import (  # noqa: F401 -- fixtures by na
     set_trade,
     trade,
     trade_sent_order_fixture,
+    watch_once,
 )
 
 # --- the offer to acceptance ---------------------------------------------------------------
@@ -92,7 +94,7 @@ async def test_a_released_trade_is_delivered(
 async def test_waxpeer_still_buying_changes_nothing_but_the_mirror(
     db: AsyncSession, fake: FakeTradeClient
 ) -> None:
-    orders = [await order_in(db, "buying") for _ in range(4)]
+    orders = [await order_in(db, "buying", status=1) for _ in range(4)]
     fake.lookup_returns(
         [
             trade(project_id=o.id, status=status)
@@ -100,7 +102,8 @@ async def test_waxpeer_still_buying_changes_nothing_but_the_mirror(
         ]
     )
     await reconcile_once(db, fake)
-    for o, status in zip(orders, (0, 1, 2, -1), strict=True):
+    # −1 (unparsable) never overwrites the status we knew.
+    for o, status in zip(orders, (0, 1, 2, 1), strict=True):
         order, row = await load(db, o)
         assert (order.status, row.status) == ("buying", status)
 
@@ -137,12 +140,14 @@ async def test_an_offer_failed_while_buying_is_returned(
 async def test_a_rollback_after_acceptance_is_money_spent(
     db: AsyncSession, fake: FakeTradeClient, trade_sent_order: Order
 ) -> None:
-    # Accepted (release_date) and rolled back between two ticks: no penalties needed.
+    # Accepted (release_date) and rolled back between two ticks: no penalties needed. The
+    # skin reached the buyer: delivered first, then the attention (ruling P).
     before = attentions("rolled_back")
     fake.lookup_returns([trade(project_id=trade_sent_order.id, status=6, release_date=RELEASE)])
     await reconcile_once(db, fake)
     order, row = await load(db, trade_sent_order)
-    assert order.status == "trade_sent"
+    assert order.status == "delivered"
+    assert order.delivered_at is not None
     assert order.refunded_at is None
     assert row.attention_reason == "rolled_back"
     assert row.accepted_at is not None
@@ -158,8 +163,21 @@ async def test_penalties_alone_mark_a_failed_trade_spent(
     )
     await reconcile_once(db, fake)
     order, row = await load(db, trade_sent_order)
-    assert (order.status, order.refunded_at) == ("trade_sent", None)
+    assert (order.status, order.refunded_at) == ("delivered", None)
     assert row.attention_reason == "rolled_back"
+
+
+async def test_a_rollback_seen_while_buying_is_delivered_then_flagged(
+    db: AsyncSession, fake: FakeTradeClient, buying_order: Order
+) -> None:
+    fake.lookup_returns([trade(project_id=buying_order.id, status=6, penalties={"fee": 1})])
+    await reconcile_once(db, fake)
+    order, row = await load(db, buying_order)
+    assert (order.status, order.refunded_at, row.attention_reason) == (
+        "delivered",
+        None,
+        "rolled_back",
+    )
 
 
 async def test_a_rolled_back_attention_is_raised_once_and_a_resolution_stands(
@@ -171,13 +189,13 @@ async def test_a_rolled_back_attention_is_raised_once_and_a_resolution_stands(
     before = attentions("rolled_back")
     await reconcile_once(db, fake)
     await set_order(db, trade_sent_order, next_check_at=None)
-    await reconcile_once(db, fake)
+    await reconcile_once(db, fake)  # delivered now: reconcile no longer follows it
     assert attentions("rolled_back") == before + 1
+    assert fake.lookup_calls == 1
     await set_trade(db, trade_sent_order, resolved_at=core_clock.now(), resolved_by="admin:x")
-    await set_order(db, trade_sent_order, next_check_at=None)
-    await reconcile_once(db, fake)
+    await watch_once(db, fake)  # out of protection too (our row is 6 now)
     _, row = await load(db, trade_sent_order)
-    assert row.resolved_at is not None  # an admin's decision is not re-opened every tick
+    assert row.resolved_at is not None  # an admin's decision is not re-opened
     assert attentions("rolled_back") == before + 1
 
 
@@ -195,29 +213,17 @@ async def test_a_refused_attempt_under_the_same_key_is_not_a_rollback(
     assert (row.waxpeer_id, row.attention_reason, row.penalties) == (WAXPEER_ID, None, None)
 
 
-async def test_a_buy_adopted_with_only_a_refused_attempt_is_returned(
-    db: AsyncSession, fake: FakeTradeClient
-) -> None:
-    order0 = await order_in(db, "buying", waxpeer_id=None, status=None, buy_pending=True)
-    fake.lookup_returns([trade(project_id=order0.id, status=6, reason="Item not available")])
-    fake.buy_raises(AssertionError("a buy after a lookup that found a trade"))
-    await reconcile_once(db, fake)  # the pending buy: the lookup adopts the refused attempt
-    order, row = await load(db, order0)
-    assert (order.status, row.buy_pending, row.status) == ("buying", False, 6)
-    await reconcile_once(db, fake)  # the next tick reads it as any 6
-    order, row = await load(db, order0)
-    assert (order.status, order.failure_reason) == ("returned", "not_accepted")
-    assert row.attention_reason is None
-    assert fake.buy_calls == 0
-    assert await balance(db, order) == PRICE
-
-
 async def test_a_refund_an_open_attention_blocks_waits_for_the_admin(
     db: AsyncSession, fake: FakeTradeClient, trade_sent_order: Order
 ) -> None:
-    await set_trade(db, trade_sent_order, attention_reason="buy_unconfirmed")
+    await set_trade(db, trade_sent_order, attention_reason="ambiguous_trade")
     fake.lookup_returns([trade(project_id=trade_sent_order.id, status=6)])
-    await reconcile_once(db, fake)
+    with capture_logs() as logs:
+        await reconcile_once(db, fake)
+        await set_order(db, trade_sent_order, next_check_at=None)
+        await reconcile_once(db, fake)
+    held = [e for e in logs if e["event"] == "orders.trade.refund_held"]
+    assert len(held) == 1  # warned once, not every tick
     order, _ = await load(db, trade_sent_order)
     assert (order.status, order.refunded_at) == ("trade_sent", None)
     await set_trade(db, trade_sent_order, resolved_at=core_clock.now(), resolved_by="admin:x")
@@ -251,7 +257,10 @@ async def test_apply_never_moves_a_settled_order(
 async def test_unconfirmed_after_10_min_needs_attention_no_refund(
     db: AsyncSession, fake: FakeTradeClient, clock: Clock, buying_order: Order
 ) -> None:
-    await set_trade(db, buying_order, buy_unconfirmed_at=clock.now(), buy_pending=False)
+    # A lost answer: no Waxpeer id is known (fix round 1: a known one is "missing", not this).
+    await set_trade(
+        db, buying_order, buy_unconfirmed_at=clock.now(), buy_pending=False, waxpeer_id=None
+    )
     fake.lookup_returns([])
     clock.advance(minutes=11)
     await reconcile_once(db, fake)

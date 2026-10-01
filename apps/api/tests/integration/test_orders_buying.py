@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.integration.fake_trade_client import FakeTradeClient, waxpeer_trade
 from tests.integration.orders_factory import (
     build_order,
+    make_due,
     make_item_and_rate,
     make_order,
     make_trade,
@@ -245,6 +246,10 @@ async def test_forbidden_buy_keeps_order_buying_and_alerts(
     assert trade.buy_pending
     assert fake.search_calls == 0  # no substitute
     assert metric("forbidden") == before + 1
+    assert order.next_check_at is not None
+    left = order.next_check_at - clock.now()
+    assert timedelta(seconds=55) < left <= timedelta(seconds=60)  # backoff, not every tick
+    assert await _attempt(db_session, fake, buying_order, settings) == "nothing_to_do"
 
 
 async def test_a_forbidden_lookup_buys_nothing_and_alerts(
@@ -263,7 +268,9 @@ async def test_a_buy_after_access_returns_clears_the_forbidden_attention(
 ) -> None:
     fake.buy_raises(WaxpeerForbiddenError())
     assert await _attempt(db_session, fake, buying_order, settings) == "forbidden"
+    await make_due(db_session, buying_order)
     assert await _attempt(db_session, fake, buying_order, settings) == "forbidden"
+    await make_due(db_session, buying_order)
     _, trade = await load(db_session, buying_order)
     trade.resolved_at, trade.resolved_by = clock.now(), "admin:x"  # an operator looked
     await db_session.commit()
@@ -280,9 +287,14 @@ async def test_rate_limited_buy_is_retried(
     fake.lookup_returns([])
     fake.buy_raises(WaxpeerRateLimitedError("slow", retry_after_seconds=1))
     assert await _attempt(db_session, fake, buying_order, settings) == "rate_limited"
-    _, trade = await load(db_session, buying_order)
+    order, trade = await load(db_session, buying_order)
     assert trade.buy_pending
     assert trade.attention_reason is None
+    assert order.next_check_at is not None
+    left = order.next_check_at - clock.now()
+    assert timedelta(seconds=15) < left <= timedelta(seconds=20)
+    assert await _attempt(db_session, fake, buying_order, settings) == "nothing_to_do"
+    await make_due(db_session, buying_order)
     fake.buy_returns(WaxpeerBuy(id=6, price_units=10_000))
     assert await _attempt(db_session, fake, buying_order, settings) == "bought"
     _, trade = await load(db_session, buying_order)

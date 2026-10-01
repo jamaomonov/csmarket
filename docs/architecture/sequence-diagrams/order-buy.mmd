@@ -23,11 +23,13 @@ sequenceDiagram
                 W->>DB: lock, re-check; attention waxpeer_forbidden, buy_pending kept
             else unavailable / 429 / refused
                 Note over W: lookup_later — nothing sent, retried next tick
-            else a trade under our project_id
+            else a live trade under our project_id
                 W->>DB: lock, re-check; mirror it, buy_pending = false (adopted, never rebought)
+            else only failed (6) trades — never adopted
+                Note over W,DB: one accepted / penalties → attention ambiguous_trade, nothing bought<br/>after a lost answer → buy_pending = false, reconcile decides (R3)<br/>otherwise refused attempts only → buy as below
             else several live trades
                 W->>DB: lock, re-check; attention ambiguous_trade, buy_pending = false
-            else none
+            else none (or refused attempts only)
                 W->>X: buy-one-p2p (listing, paid_units, trade link, project_id)
                 alt accepted
                     W->>DB: lock, re-check; waxpeer_id, bought_units, status 0, buy_pending = false

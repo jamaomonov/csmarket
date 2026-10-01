@@ -17,7 +17,7 @@ own transaction. Log lines carry the order number, never the buyer or a Waxpeer 
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.clock import now
 from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
+from csmarket.core.metrics import TradeAttentionReason
 from csmarket.modules.orders.buying import attempt_buy
 from csmarket.modules.orders.expiry import expire_pending
 from csmarket.modules.orders.models import Order, SkinTrade
@@ -42,7 +43,7 @@ from csmarket.modules.orders.trades import (
     AmbiguousTradeError,
     apply,
     flag,
-    pick_trade,
+    ours,
 )
 from csmarket.modules.skins.api import LOOKUP_MAX_IDS, TradeClient, WaxpeerTrade
 
@@ -77,14 +78,28 @@ async def _due(db: AsyncSession) -> list[SweepRow]:
 
 
 def _unseen(order: Order, trade: SkinTrade, settings: Settings) -> str:
-    """No trade under our ``project_id``: a lost buy answer waits, then needs an admin (R3)."""
-    since = trade.buy_unconfirmed_at
+    """No trade of ours in the lookup: a lost buy answer waits, then needs an admin (R3); a
+    trade we knew (its Waxpeer id) that Waxpeer stops reporting needs one too."""
     window = timedelta(minutes=settings.order_unconfirmed_minutes)
+    since: datetime | None
+    if trade.waxpeer_id is not None:
+        since = trade.last_polled_at or trade.updated_at
+        reason: TradeAttentionReason = "ambiguous_trade"
+    else:
+        since = trade.buy_unconfirmed_at
+        reason = "buy_unconfirmed"
     if since is None or now() - since <= window:
         return "unseen"
-    if flag(trade, "buy_unconfirmed"):
-        log.error("orders.trade.buy_unconfirmed", number=order.number)
-    return "unconfirmed"
+    if flag(trade, reason):
+        log.error("orders.trade.unseen", number=order.number, attention=reason)
+    return "unconfirmed" if reason == "buy_unconfirmed" else "missing"
+
+
+def _answered(trade: SkinTrade) -> None:
+    """Our trade showed up: an open ``buy_unconfirmed`` is answered (ruling Q)."""
+    if trade.attention_reason == "buy_unconfirmed" and trade.resolved_at is None:
+        trade.attention_reason = None
+        trade.updated_at = now()
 
 
 async def _reconcile_one(
@@ -102,7 +117,7 @@ async def _reconcile_one(
         await db.commit()
         return "skipped"
     try:
-        wt = pick_trade(theirs, trade.waxpeer_id)
+        wt = ours(theirs, trade)
     except AmbiguousTradeError:
         if flag(trade, "ambiguous_trade"):
             # An event, not a traceback: the attention is the record an admin works from.
@@ -112,6 +127,7 @@ async def _reconcile_one(
         if wt is None:
             outcome = _unseen(order, trade, settings)
         else:
+            _answered(trade)
             outcome = await apply(db, order=order, trade=trade, wt=wt)
     if order.status in RECONCILED:
         order.next_check_at = now() + timedelta(seconds=settings.trades_reconcile_seconds)
@@ -186,7 +202,7 @@ async def _watch_one(db: AsyncSession, row: SweepRow, theirs: list[WaxpeerTrade]
         and not trade.is_released
     ):
         try:
-            wt = pick_trade(theirs, trade.waxpeer_id)
+            wt = ours(theirs, trade)
         except AmbiguousTradeError:
             # Nothing is mirrored from a guess; the audit reports it.
             log.warning("orders.protection.ambiguous", number=order.number)

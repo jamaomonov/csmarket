@@ -38,6 +38,8 @@ class BuySnapshot(BaseModel):
     skin_item_id: str
     listing_id: int
     paid_units: int
+    #: A buy's answer was lost before (``buy_unconfirmed_at``): a lookup decides, not a buy.
+    unconfirmed: bool = False
 
 
 async def _lock_both(db: AsyncSession, order_id: str) -> tuple[Order | None, SkinTrade | None]:
@@ -152,6 +154,19 @@ async def adopt(db: AsyncSession, snap: BuySnapshot, found: WaxpeerTrade) -> str
     return "adopted"
 
 
+async def park(db: AsyncSession, snap: BuySnapshot) -> str:
+    """An earlier buy's answer was lost and the lookup shows only failed trades: buy nothing,
+    end the pending buy, and let the reconcile sweep's unconfirmed rule decide (R3)."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return _stale(snap, "nothing_to_do")
+    _, trade = pair
+    _settle(trade)
+    await db.commit()
+    log.warning("orders.buy.parked", number=snap.number)
+    return "nothing_to_do"
+
+
 async def unconfirmed(db: AsyncSession, snap: BuySnapshot) -> str:
     """The buy's answer was lost: resolve by lookup (R3), never by buying again.
 
@@ -212,6 +227,7 @@ __all__ = [
     "BuySnapshot",
     "adopt",
     "attention",
+    "park",
     "record_bought",
     "refund",
     "secure_sent",

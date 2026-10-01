@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from csmarket.modules.orders.models import SkinTrade
-from csmarket.modules.orders.trades import AmbiguousTradeError, flag, mirror, pick_trade
+from csmarket.modules.orders.trades import AmbiguousTradeError, flag, mirror, ours, pick_trade
 from csmarket.modules.skins.api import WaxpeerSeller, WaxpeerTrade
 
 NOW = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
@@ -129,3 +129,22 @@ def test_a_new_reason_reopens_a_resolved_trade_without_its_resolution() -> None:
     row = _flagged("buy_unconfirmed", resolved=True)
     assert flag(row, "rolled_back") is True
     assert (row.attention_reason, row.resolved_at, row.resolved_by) == ("rolled_back", None, None)
+
+
+def test_an_unparsable_status_never_overwrites_a_known_one() -> None:
+    row = _flagged()
+    mirror(row, _wt(-1))
+    assert row.status == -1  # nothing known yet: recorded as received
+    mirror(row, _wt(4))
+    mirror(row, _wt(-1))
+    assert row.status == 4
+
+
+def test_a_failed_trade_is_ours_only_by_our_waxpeer_id() -> None:
+    row = _flagged()
+    refused = _wt(6, id=111)
+    assert ours([refused], row) is None  # no id known: maybe a refused attempt
+    live = _wt(2, id=222)
+    assert ours([refused, live], row) is live
+    row.waxpeer_id = 111
+    assert ours([refused, live], row) is refused  # our id: conclusive

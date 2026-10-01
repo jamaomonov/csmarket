@@ -23,6 +23,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.fake_trade_client import FakeTradeClient
+from tests.integration.orders_factory import make_due
 from tests.integration.test_orders_buying import COST, _buying, load
 
 
@@ -175,6 +176,7 @@ async def test_a_new_403_reopens_a_resolved_forbidden_attention(
     _, trade = await load(db_session, order)
     trade.resolved_at, trade.resolved_by, trade.resolved_note = clock.now(), "admin:x", "seen"
     await db_session.commit()
+    await make_due(db_session, order)
     assert await _go(db_session, fake, order.id, settings) == "forbidden"
     _, trade = await load(db_session, order)
     assert trade.attention_reason == "waxpeer_forbidden"
