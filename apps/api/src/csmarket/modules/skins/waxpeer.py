@@ -249,6 +249,11 @@ class WaxpeerClient:
                         continue
                     rows += 1
                     yield row
+                if header is None:
+                    # An empty or truncated 200 is an outage: a sync that trusts "finished"
+                    # would otherwise deactivate the whole catalogue.
+                    log.warning("waxpeer.unexpected_body", method="GET", path=_SNAPSHOT_PATH)
+                    raise WaxpeerUnavailableError("unexpected body")
         except httpx.HTTPError as exc:
             log.warning(
                 "waxpeer.network_error", method="GET", path=_SNAPSHOT_PATH, error=type(exc).__name__

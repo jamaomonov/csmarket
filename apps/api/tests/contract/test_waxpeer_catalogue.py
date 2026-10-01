@@ -132,6 +132,14 @@ async def test_snapshot_without_required_columns_raises_once() -> None:
         _ = [row async for row in _client().iter_snapshot_rows()]
 
 
+@pytest.mark.parametrize("body", ["", "\n\n"])
+@respx.mock
+async def test_snapshot_empty_200_is_unavailable(body: str) -> None:
+    respx.get(f"{HOST}/v1/prices/snapshot").mock(return_value=httpx.Response(200, text=body))
+    with pytest.raises(WaxpeerUnavailableError, match="unexpected body"):
+        _ = [row async for row in _client().iter_snapshot_rows()]
+
+
 @respx.mock
 async def test_snapshot_rows_with_an_unknown_price_are_skipped_and_counted(
     logs: _Logs,
