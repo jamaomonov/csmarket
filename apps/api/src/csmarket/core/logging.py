@@ -63,6 +63,8 @@ REDACTED_KEYS = frozenset(
         "payme_test_key",
         "uzum_password",
         "uzum_test_password",
+        # Uzum's /confirm extras: they hold the payer's phone (never logged, masked in admin).
+        "payment_source",
         "waxpeer_api_key",
         "steam_api_key",
         # Generic terms worth blocking wherever they appear as a literal key —

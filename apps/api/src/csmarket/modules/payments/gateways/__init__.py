@@ -22,8 +22,14 @@ def registry() -> dict[str, PaymentGateway]:
     from csmarket.modules.payments.gateways.click import ClickGateway
     from csmarket.modules.payments.gateways.mock import MockGateway
     from csmarket.modules.payments.gateways.payme import PaymeGateway
+    from csmarket.modules.payments.gateways.uzum import UzumGateway
 
-    gateways: list[PaymentGateway] = [ClickGateway(), PaymeGateway(), MockGateway()]
+    gateways: list[PaymentGateway] = [
+        ClickGateway(),
+        PaymeGateway(),
+        UzumGateway(),
+        MockGateway(),
+    ]
     return {gateway.provider: gateway for gateway in gateways}
 
 

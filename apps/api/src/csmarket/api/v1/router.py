@@ -22,6 +22,7 @@ from csmarket.modules.skins.admin_routes import router as skins_admin_router
 from csmarket.modules.skins.routes import router as skins_router
 from csmarket.modules.skins.seo_routes import router as skins_seo_router
 from csmarket.modules.users.routes import router as users_router
+from csmarket.modules.uzum.routes import router as uzum_router
 from csmarket.modules.wallet.routes import router as wallet_router
 
 router = APIRouter()
@@ -36,6 +37,7 @@ router.include_router(skins_admin_router)
 router.include_router(skins_seo_router)
 router.include_router(skins_router)
 router.include_router(users_router)
+router.include_router(uzum_router)
 router.include_router(wallet_router)
 # /wallet/topups* is ``payments``' (``wallet`` never imports ``payments``).
 router.include_router(topups_router)

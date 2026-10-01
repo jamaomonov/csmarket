@@ -2819,6 +2819,106 @@
         ]
       }
     },
+    "/api/v1/payments/uzum/check": {
+      "post": {
+        "description": "May this top-up be paid? Answers its amount in so\u02bbm for Uzum's app to prefill.\n\nBasic auth before the body is read; HTTP 400 on any error (see the module docstring).\nWrites nothing, so no ``Idempotency-Key``.",
+        "operationId": "uzum_check_api_v1_payments_uzum_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Uzum Merchant API: /check",
+        "tags": [
+          "uzum"
+        ]
+      }
+    },
+    "/api/v1/payments/uzum/confirm": {
+      "post": {
+        "description": "Uzum debited the customer: credit the top-up once (a replay is 10016).",
+        "operationId": "uzum_confirm_api_v1_payments_uzum_confirm_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Uzum Merchant API: /confirm",
+        "tags": [
+          "uzum"
+        ]
+      }
+    },
+    "/api/v1/payments/uzum/create": {
+      "post": {
+        "description": "Register Uzum's transaction (``CREATED``) and hold a payment attempt.\n\nIdempotent on Uzum's ``transId`` (a replay is 10010), so no ``Idempotency-Key``.",
+        "operationId": "uzum_create_api_v1_payments_uzum_create_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Uzum Merchant API: /create",
+        "tags": [
+          "uzum"
+        ]
+      }
+    },
+    "/api/v1/payments/uzum/reverse": {
+      "post": {
+        "description": "Cancel a held transaction or reverse a confirmed top-up (a replay is 10018).",
+        "operationId": "uzum_reverse_api_v1_payments_uzum_reverse_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Uzum Merchant API: /reverse",
+        "tags": [
+          "uzum"
+        ]
+      }
+    },
+    "/api/v1/payments/uzum/status": {
+      "post": {
+        "description": "The transaction's status and times (a plain read).",
+        "operationId": "uzum_status_api_v1_payments_uzum_status_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Uzum Merchant API: /status",
+        "tags": [
+          "uzum"
+        ]
+      }
+    },
     "/api/v1/skins/catalog": {
       "get": {
         "description": "One page of on-sale items, dearest first by default; ``q`` ranks by match.",

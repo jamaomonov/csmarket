@@ -1,0 +1,169 @@
+{
+  "info": {
+    "name": "csmarket.uz — Uzum Merchant API",
+    "description": "Manual sandbox requests for the five Uzum Bank merchant webhooks (check, create, confirm, reverse, status) that csmarket.uz exposes at /api/v1/payments/uzum. Hand this to Uzum's integration engineer for sandbox testing. Every value here is a placeholder: set login/password to the sandbox pair, serviceId to ours, order to a fresh unpaid top-up number (T + 7 characters) and amount to that top-up in tiyin (soʻm × 100). Success is HTTP 200; every error is HTTP 400 with errorCode.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      {
+        "key": "username",
+        "value": "{{login}}",
+        "type": "string"
+      },
+      {
+        "key": "password",
+        "value": "{{password}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base",
+      "value": "https://api.csmarket.uz/api/v1/payments/uzum"
+    },
+    {
+      "key": "login",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "serviceId",
+      "value": "100000"
+    },
+    {
+      "key": "order",
+      "value": "T0000000"
+    },
+    {
+      "key": "transId",
+      "value": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "key": "amount",
+      "value": "5000000"
+    }
+  ],
+  "item": [
+    {
+      "name": "check",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceId\": {{serviceId}},\n  \"timestamp\": 1698361456728,\n  \"params\": {\n    \"order\": \"{{order}}\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base}}/check",
+          "host": ["{{base}}"],
+          "path": ["check"]
+        },
+        "description": "Verify payment possibility for a balance top-up. Expected success status: OK."
+      },
+      "response": []
+    },
+    {
+      "name": "create",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceId\": {{serviceId}},\n  \"timestamp\": 1698361456728,\n  \"transId\": \"{{transId}}\",\n  \"params\": {\n    \"order\": \"{{order}}\"\n  },\n  \"amount\": {{amount}}\n}"
+        },
+        "url": {
+          "raw": "{{base}}/create",
+          "host": ["{{base}}"],
+          "path": ["create"]
+        },
+        "description": "Create the transaction for a balance top-up. Expected success status: CREATED."
+      },
+      "response": []
+    },
+    {
+      "name": "confirm",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceId\": {{serviceId}},\n  \"timestamp\": 1698361456728,\n  \"transId\": \"{{transId}}\",\n  \"paymentSource\": \"INSTALLMENT\",\n  \"tariff\": \"003\",\n  \"processingReferenceNumber\": \"000\",\n  \"phone\": \"998000000000\",\n  \"cardType\": 2\n}"
+        },
+        "url": {
+          "raw": "{{base}}/confirm",
+          "host": ["{{base}}"],
+          "path": ["confirm"]
+        },
+        "description": "Settle the payment and credit the balance. Expected success status: CONFIRMED."
+      },
+      "response": []
+    },
+    {
+      "name": "reverse",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceId\": {{serviceId}},\n  \"timestamp\": 1698361456728,\n  \"transId\": \"{{transId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base}}/reverse",
+          "host": ["{{base}}"],
+          "path": ["reverse"]
+        },
+        "description": "Cancel or refund the transaction. Expected success status: REVERSED."
+      },
+      "response": []
+    },
+    {
+      "name": "status",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"serviceId\": {{serviceId}},\n  \"timestamp\": 1698361456728,\n  \"transId\": \"{{transId}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base}}/status",
+          "host": ["{{base}}"],
+          "path": ["status"]
+        },
+        "description": "Report the current transaction state. Expected success status: CONFIRMED (reflects whatever the transaction's current status actually is)."
+      },
+      "response": []
+    }
+  ]
+}

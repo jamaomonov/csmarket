@@ -152,6 +152,22 @@ Called by Payme, not by our clients; anonymous, exempt from the per-IP limiter.
 - No `Idempotency-Key`: every method is idempotent on Payme's transaction `id`. Codes and
   states: `apps/api/src/csmarket/modules/payme/README.md`.
 
+### Kassa callbacks: Uzum (M3)
+
+Called by Uzum, not by our clients; anonymous, exempt from the per-IP limiter.
+
+- `POST /payments/uzum/check`, `/create`, `/confirm`, `/reverse`, `/status` — Uzum Bank's
+  Merchant API, JSON bodies carrying `serviceId`. Authenticated by HTTP Basic
+  `<login>:<password>` (the production or the sandbox pair), checked before the body is read.
+  **HTTP 200 on success, HTTP 400 on every error** with
+  `{"status": "FAILED", "errorCode", "serviceId", "transId"?}`; any other HTTP method is
+  `10003`. Amounts are tiyin (soʻm × 100), except `/check`'s `data.amount.value`, which is
+  whole soʻm. The account is `params.order` (also `orderId`, `order_id`) = the top-up number.
+- No `Idempotency-Key`: every call is keyed on Uzum's `transId`, and a replay answers a
+  dedicated code (`10010` create, `10016` confirm, `10018` reverse). Codes and states:
+  `apps/api/src/csmarket/modules/uzum/README.md`; Postman collection for Uzum's engineer:
+  `docs/api/uzum.postman_collection.json`.
+
 ### Admin catalogue (M2)
 
 All under `/admin/skins`, admin only (401 without a token, 403 for a customer).

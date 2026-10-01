@@ -26,6 +26,7 @@ from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.users import models as _users_models  # noqa: F401
+from csmarket.modules.uzum import models as _uzum_models  # noqa: F401
 from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 
 config = context.config

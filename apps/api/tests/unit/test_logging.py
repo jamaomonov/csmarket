@@ -84,6 +84,7 @@ def test_acquirer_secrets_never_reach_the_log_output(
             uzum_test_password="t3st-uzum",
             authorization="Basic eC1zZWNyZXQ=",
             request_authorization_header="Basic eC1zZWNyZXQ=",
+            payment_source={"paymentSource": "UZCARD", "phone": "998000000001"},
             amount_uzs="125000",
         )
     finally:
@@ -98,6 +99,8 @@ def test_acquirer_secrets_never_reach_the_log_output(
         "p4ss-uzum",
         "t3st-uzum",
         "Basic eC1z",
+        "998000000001",
+        "UZCARD",
     ):
         assert leaked not in out, leaked
     assert '"amount_uzs": "125000"' in out

@@ -84,6 +84,15 @@ async def test_the_payme_merchant_endpoint_is_exempt(limited_client: AsyncClient
         assert r.json()["error"]["code"] == -32504
 
 
+@pytest.mark.parametrize("endpoint", ["check", "create", "confirm", "reverse", "status"])
+async def test_the_uzum_webhooks_are_exempt(limited_client: AsyncClient, endpoint: str) -> None:
+    # Basic auth is the gate; a 429 would read to Uzum as a transport failure.
+    for _ in range(10):
+        r = await limited_client.post(f"/api/v1/payments/uzum/{endpoint}", json={})
+        assert r.status_code == 400
+        assert r.json()["errorCode"] == 10001
+
+
 async def test_rate_limit_off_by_default_in_tests(integration_client: AsyncClient) -> None:
     for _ in range(10):
         assert (await integration_client.get("/openapi.json")).status_code == 200

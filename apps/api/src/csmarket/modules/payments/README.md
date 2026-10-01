@@ -148,6 +148,11 @@ It imports nothing from the `click` module (which imports `payments`).
 `params = "m=<merchant id>;ac.order=<number>;a=<tiyin>;c=<our top-up page>;l=<ru|uz|en>"`.
 It imports nothing from the `payme` module.
 
+`uzum` (`gateways/uzum.py`) is available with `uzum_service_id` and a whole login/password
+pair (production or sandbox); its intent URL is
+`{uzum_open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our top-up page>` — no
+amount: Uzum's app prefills it from our `/check`. It imports nothing from the `uzum` module.
+
 **Tests:** `tests/unit/test_payment_fsm.py`, `tests/unit/test_payment_gateways.py`,
 `tests/integration/test_payable_resolver.py`, `tests/integration/test_payment_hooks.py`
 (including real races: two kassas settling one top-up, a create racing a settle, a create
