@@ -13,13 +13,15 @@ const CODE_MESSAGES: Record<string, string> = {
   ban_admin: "Администратора заблокировать нельзя.",
   already_banned: "Пользователь уже заблокирован.",
   not_banned: "Пользователь уже разблокирован.",
+  adjust_amount: "Сумма: целое число сумов, не ноль, по модулю не больше 100 000 000.",
+  adjust_reason: "Причина: от 4 до 500 символов.",
 };
 
 /** 409s meaning the card is stale (someone else changed the ban): close and refresh. */
 export const STALE_BAN_CODES: ReadonlySet<string> = new Set(["already_banned", "not_banned"]);
 
-/** A 422 the page has no words for (e.g. a filter the API refused): never its raw detail. */
-const UNPROCESSABLE = "Запрос не принят: проверьте введённые значения и фильтры.";
+/** A 422 the page has no words for (a refused filter or field): never its raw detail. */
+const UNPROCESSABLE = "Запрос не принят: проверьте введённые значения.";
 
 export function errorText(err: unknown): string {
   if (!(err instanceof ApiError)) return "Не получилось. Попробуйте ещё раз.";

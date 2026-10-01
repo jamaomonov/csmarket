@@ -118,7 +118,7 @@ describe("PaymentsPage", () => {
     );
     renderPage("/payments?q=T7K");
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Запрос не принят: проверьте введённые значения и фильтры.",
+      "Запрос не принят: проверьте введённые значения.",
     );
   });
 
