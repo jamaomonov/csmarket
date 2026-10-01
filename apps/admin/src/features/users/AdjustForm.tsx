@@ -11,7 +11,6 @@ import { errorText } from "./labels";
 import { parseAmount } from "./parseAmount";
 import { type IdempotencyKey } from "./useIdempotencyKey";
 
-import { ApiError } from "@/lib/api";
 import { formatSum } from "@/lib/format";
 
 /** The API's per-adjustment ceiling (`wallet.ADMIN_ADJUST_MAX`). */
@@ -32,13 +31,6 @@ function validate(amountText: string, reasonText: string): Draft | string {
   const reason = reasonText.trim();
   if (reason.length < REASON_MIN) return "Напишите причину — от 4 символов.";
   return { amount, reason };
-}
-
-function adjustErrorText(err: unknown): string {
-  if (err instanceof ApiError && err.code === "balance_too_low") {
-    return "На балансе меньше, чем вы хотите списать.";
-  }
-  return errorText(err);
 }
 
 /** `Начислить 50 000 сум` / `Списать 10 000 сум`. */
@@ -86,7 +78,7 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
   const onConfirm = () => {
     if (draft === null || inFlight.current) return;
     inFlight.current = true;
-    mutation.mutate({ ...draft, key: idem.keyFor(JSON.stringify(draft)) });
+    mutation.mutate({ ...draft, key: idem.keyFor(JSON.stringify({ userId, ...draft })) });
   };
 
   const box = "border-border bg-surface space-y-4 rounded-lg border p-5";
@@ -96,7 +88,7 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
         <p>Причина: {draft.reason}</p>
         {mutation.isError && (
           <p role="alert" className="text-danger text-sm">
-            {adjustErrorText(mutation.error)}
+            {errorText(mutation.error)}
           </p>
         )}
         <div className="flex gap-2">

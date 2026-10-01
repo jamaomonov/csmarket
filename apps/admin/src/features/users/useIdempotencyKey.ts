@@ -9,6 +9,8 @@
  */
 import { useCallback, useRef } from "react";
 
+import { newUuid } from "@/lib/uuid";
+
 export interface IdempotencyKey {
   keyFor: (body: string) => string;
   reset: () => void;
@@ -19,7 +21,7 @@ export function useIdempotencyKey(prefix: string): IdempotencyKey {
   const keyFor = useCallback(
     (body: string): string => {
       if (ref.current?.body !== body) {
-        ref.current = { body, key: `${prefix}-${crypto.randomUUID()}` };
+        ref.current = { body, key: `${prefix}-${newUuid()}` };
       }
       return ref.current.key;
     },

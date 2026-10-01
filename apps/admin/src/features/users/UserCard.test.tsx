@@ -1,10 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient } from "@tanstack/react-query";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AdminUserCard } from "./api";
-import { UserCard } from "./UserCard";
+import { CARD, renderCard as renderWith, STEAM_ID } from "./fixtures";
 
 import { ApiError } from "@/lib/api";
 
@@ -17,69 +16,8 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("./api", () => api);
 
-// Fake IDs and a fake, already-masked trade link; never a real account.
-const STEAM_ID = "76561190000000001";
-const CARD: AdminUserCard = {
-  user: {
-    id: "u-1",
-    steam_id: STEAM_ID,
-    display_name: "Ivan",
-    avatar_url: null,
-    email: "ivan@example.test",
-    locale: "uz",
-    roles: [],
-    banned_at: null,
-    ban_reason: null,
-    created_at: "2026-09-01T10:00:00Z",
-    trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••zz",
-    trade_link_verdict: "warn",
-    trade_link_reason: "hold",
-    trade_link_checked_at: "2026-09-30T10:00:00Z",
-  },
-  balance_uzs: "30000",
-  entries: [
-    {
-      id: "e-2",
-      kind: "admin_adjust",
-      amount_uzs: "-20000",
-      created_at: "2026-09-30T11:00:00Z",
-      reference_number: null,
-      actor: "admin:a-1",
-      reason: "Ошибочное начисление",
-    },
-    {
-      id: "e-1",
-      kind: "topup",
-      amount_uzs: "+50000",
-      created_at: "2026-09-30T10:00:00Z",
-      reference_number: "T100001",
-      actor: "payments",
-      reason: null,
-    },
-  ],
-  topups: [
-    {
-      number: "T100001",
-      amount_uzs: "50000",
-      status: "succeeded",
-      provider: "click",
-      created_at: "2026-09-30T09:55:00Z",
-      succeeded_at: "2026-09-30T10:00:00Z",
-    },
-  ],
-};
-
-function renderCard() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/users/u-1"]}>
-        <Routes>
-          <Route path="/users/:id" element={<UserCard />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+function renderCard(seed?: (qc: QueryClient) => void) {
+  renderWith(new QueryClient({ defaultOptions: { queries: { retry: false } } }), seed);
 }
 
 async function openAdjust(amount: string, reason: string) {
@@ -217,49 +155,41 @@ describe("UserCard", () => {
     expect(screen.queryByRole("button", { name: /Начислить/ })).not.toBeInTheDocument();
   });
 
-  it("bans only with a reason", async () => {
-    api.banUser.mockResolvedValue({
+  it("drops an open adjustment when navigating to another (cached) user", async () => {
+    const other: AdminUserCard = {
       ...CARD,
-      user: { ...CARD.user, banned_at: "2026-10-01T10:00:00Z", ban_reason: "Мошенничество" },
+      user: { ...CARD.user, id: "a-1", display_name: "Boss", steam_id: "76561190000000002" },
+      balance_uzs: "0",
+    };
+    api.adjustBalance.mockResolvedValue(other);
+    renderCard((qc) => {
+      qc.setQueryData(["admin", "users", "card", "a-1"], other);
     });
-    renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Заблокировать" }));
-    const dialog = screen.getByRole("dialog", { name: "Заблокировать пользователя" });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Заблокировать" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("причину");
-    expect(api.banUser).not.toHaveBeenCalled();
-
-    fireEvent.change(within(dialog).getByLabelText("Причина"), {
-      target: { value: "Мошенничество" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Заблокировать" }));
-    await waitFor(() => {
-      expect(api.banUser).toHaveBeenCalledTimes(1);
-    });
-    const [id, reason, key] = api.banUser.mock.calls[0] as [string, string, string];
-    expect([id, reason]).toEqual(["u-1", "Мошенничество"]);
-    expect(key.length).toBeGreaterThanOrEqual(16);
-    expect(await screen.findByText(/Заблокирован/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Разблокировать" })).toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await openAdjust("50000", "Компенсация за задержку");
+    expect(await screen.findByTestId("adjust-confirm")).toBeInTheDocument();
+    // The history's actor link goes to the other account's card.
+    const history = screen.getByRole("region", { name: "История баланса" });
+    fireEvent.click(within(history).getByRole("link", { name: "администратор" }));
+    expect(await screen.findByRole("heading", { name: "Boss" })).toBeInTheDocument();
+    expect(screen.queryByTestId("adjust-confirm-step")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("adjust-form")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Начислить/ })).not.toBeInTheDocument();
+    expect(api.adjustBalance).not.toHaveBeenCalled();
   });
 
-  it("unbans a banned user with a reason", async () => {
-    api.getUserCard.mockResolvedValue({
-      ...CARD,
-      user: { ...CARD.user, banned_at: "2026-10-01T10:00:00Z", ban_reason: "Мошенничество" },
-    });
-    api.unbanUser.mockResolvedValue(CARD);
+  it("says in Russian when a key was already used with other data", async () => {
+    api.adjustBalance.mockRejectedValue(
+      new ApiError(409, "Conflict", {
+        code: "idempotency_mismatch",
+        detail: "Idempotency-Key reused with a different request",
+      }),
+    );
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Разблокировать" }));
-    const dialog = screen.getByRole("dialog", { name: "Разблокировать пользователя" });
-    fireEvent.change(within(dialog).getByLabelText("Причина"), {
-      target: { value: "Разобрались" },
-    });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Разблокировать" }));
-    await waitFor(() => {
-      expect(api.unbanUser).toHaveBeenCalledWith("u-1", "Разобрались", expect.any(String));
-    });
+    await openAdjust("50000", "Компенсация за задержку");
+    fireEvent.click(await screen.findByRole("button", { name: /Начислить/ }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Эта операция уже была выполнена с другими данными.");
+    expect(alert).not.toHaveTextContent("Idempotency-Key");
   });
 
   it("says when the user does not exist", async () => {

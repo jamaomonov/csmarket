@@ -162,14 +162,25 @@ function CardBody({ card }: { card: AdminUserCard }) {
   const qc = useQueryClient();
   const [panel, setPanel] = useState<Panel>("none");
   // One key per confirmed adjustment, kept across reopening the form (see useIdempotencyKey).
+  // CardBody is keyed by the user id, so all of this state is per user.
   const adjustKey = useIdempotencyKey("admin-adjust");
+  const banKey = useIdempotencyKey("admin-ban");
+  const unbanKey = useIdempotencyKey("admin-unban");
+  const [notice, setNotice] = useState<string | null>(null);
   const u = card.user;
+  const banned = u.banned_at !== null;
+  const open = (next: Panel) => {
+    setNotice(null);
+    setPanel(next);
+  };
   const changed = (next: AdminUserCard) => {
     qc.setQueryData(cardKey(u.id), next);
     void qc.invalidateQueries({ queryKey: ["admin", "users", "list"] });
     setPanel("none");
   };
-  const stale = () => {
+  const stale = (message: string) => {
+    setPanel("none");
+    setNotice(message);
     void qc.invalidateQueries({ queryKey: cardKey(u.id) });
   };
   const close = () => {
@@ -198,31 +209,38 @@ function CardBody({ card }: { card: AdminUserCard }) {
       </p>
       <div className="flex flex-wrap gap-2">
         <Button
-          variant={u.banned_at ? "secondary" : "danger"}
+          variant={banned ? "secondary" : "danger"}
           onClick={() => {
-            setPanel("ban");
+            open("ban");
           }}
         >
-          {u.banned_at ? "Разблокировать" : "Заблокировать"}
+          {banned ? "Разблокировать" : "Заблокировать"}
         </Button>
         <Button
           variant="secondary"
           onClick={() => {
-            setPanel("adjust");
+            open("adjust");
           }}
         >
           Изменить баланс
         </Button>
       </div>
+      {notice !== null && (
+        <p role="alert" className="text-danger text-sm">
+          {notice}
+        </p>
+      )}
       {panel === "adjust" && (
         <AdjustForm userId={u.id} idem={adjustKey} onDone={changed} onClose={close} />
       )}
       {panel === "ban" && (
         <BanDialog
+          key={String(banned)}
           userId={u.id}
-          banned={u.banned_at !== null}
+          banned={banned}
+          idem={banned ? unbanKey : banKey}
           onDone={changed}
-          onConflict={stale}
+          onStale={stale}
           onClose={close}
         />
       )}
@@ -244,5 +262,6 @@ export function UserCard() {
       </p>
     );
   }
-  return <CardBody card={card.data} />;
+  // Keyed by the route id: another user's card never inherits a draft, dialog or key.
+  return <CardBody key={id} card={card.data} />;
 }

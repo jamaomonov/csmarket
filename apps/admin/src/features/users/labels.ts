@@ -5,8 +5,23 @@ import { type AdminUserDetail, type TopupStatus } from "./api";
 
 import { ApiError, formatApiError } from "@/lib/api";
 
+/** Known problem+json codes in Russian; the API's English `detail` is never shown for these. */
+const CODE_MESSAGES: Record<string, string> = {
+  idempotency_mismatch: "Эта операция уже была выполнена с другими данными. Обновите страницу.",
+  balance_too_low: "На балансе меньше, чем вы хотите списать.",
+  ban_self: "Себя заблокировать нельзя.",
+  ban_admin: "Администратора заблокировать нельзя.",
+  already_banned: "Пользователь уже заблокирован.",
+  not_banned: "Пользователь уже разблокирован.",
+};
+
+/** 409s meaning the card is stale (someone else changed the ban): close and refresh. */
+export const STALE_BAN_CODES: ReadonlySet<string> = new Set(["already_banned", "not_banned"]);
+
 export function errorText(err: unknown): string {
-  return err instanceof ApiError ? formatApiError(err) : "Не получилось. Попробуйте ещё раз.";
+  if (!(err instanceof ApiError)) return "Не получилось. Попробуйте ещё раз.";
+  const known = err.code !== undefined ? CODE_MESSAGES[err.code] : undefined;
+  return known ?? formatApiError(err);
 }
 
 export function roleLabel(roles: string[]): string {
