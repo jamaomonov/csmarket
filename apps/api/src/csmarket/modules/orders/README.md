@@ -169,7 +169,7 @@ module's models and FSM — never `payments`.
   number → 404. Flushes, never commits: the admin route writes its audit row in the same
   transaction (Task 12).
 
-## Buying (`buying.py`, `buy_writes.py`, `buy_rules.py`, `trades.py`, rulings R3, R4, R6, K)
+## Buying (`buying.py`, `buy_lease.py`, `buy_writes.py`, `buy_rules.py`, `trades.py`, rulings R3, R4, R6, K)
 
 The worker's `orders` queue (`apps/worker`, two drainers) buys each paid order at Waxpeer,
 at most once: `skin_trades.project_id` = the order id, every buy is preceded by a
@@ -216,9 +216,14 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy
   or adoption ends a `waxpeer_forbidden` attention (cleared with its resolution: the access
   question is moot, and an admin refund must not see a "nothing bought" order that bought).
-  Any unexpected exception from the buy call itself (an unclassified error, a timeout, a
-  shutdown's `CancelledError`) marks the trade unconfirmed before it propagates — the request
-  may have reached Waxpeer. `bought_units` falls back to the units offered when Waxpeer
+  Once a buy request has been **sent** in an attempt, no exit that failed to record its
+  outcome frees the order: a timeout, a shutdown's `CancelledError` or any unexpected error —
+  in the buy call or in the write after it (a lock wait, a slow database) — rolls the
+  attempt's session back and records the buy as unconfirmed in a **fresh session**
+  (`buy_lease.secure` → `buy_writes.secure_sent`; on an order that left `buying` it also
+  flags `ambiguous_trade`); when even that write fails the lease is **kept**, so it lapses
+  after 5 min as a dead attempt's and no one buys again within it. The attempt's budget is
+  counted from before the lease is taken. `bought_units` falls back to the units offered when Waxpeer
   answers `price: 0`. A 403 on an order whose `waxpeer_forbidden` attention was resolved
   re-opens it (resolution cleared): an admin refund must not see a still-forbidden order as
   settled.

@@ -41,6 +41,7 @@ import pytest
         "csmarket.modules.click.signature",
         "csmarket.modules.orders",
         "csmarket.modules.orders.api",
+        "csmarket.modules.orders.buy_lease",
         "csmarket.modules.orders.buy_rules",
         "csmarket.modules.orders.buy_writes",
         "csmarket.modules.orders.buying",

@@ -7,9 +7,10 @@
 - :func:`attempt_buy` — the one buy path, also run by the reconcile sweep for a trade still
   ``buy_pending``:
 
-  1. read unlocked; nothing to do unless the order is ``buying`` and the trade
-     ``buy_pending``; take the order's lease (``next_check_at``), so a second attempt —
-     the sweep racing the worker — finds it held and does nothing;
+  1. take the order's lease first (``orders.buy_lease``: one UPDATE that requires
+     ``buying`` and ``buy_pending``), then read the snapshot — a second attempt (the sweep
+     racing the worker) finds the lease held or the buy settled and does nothing; the
+     attempt's time budget starts before the lease, so it ends before the lease does;
   2. a trade link that does not parse → refund ``invalid_trade_link``;
   3. **lookup first** (``check_project_ids``): a failure buys nothing and retries later; a
      403 sets the attention ``waxpeer_forbidden``; a found trade is adopted — never rebought;
@@ -22,8 +23,10 @@
 
 No lock is held across a Waxpeer call: every write (``orders.buy_writes``) locks the order,
 then the trade (ruling K), re-checks ``status == "buying"`` and ``buy_pending``, writes and
-commits — a sweep may have moved the rows meanwhile, and then nothing is written. Log lines carry the order
-number and the outcome, never the trade link, its partner or token, or a Waxpeer URL.
+commits — a sweep may have moved the rows meanwhile, and then nothing is written. Once a
+buy request went out, an exit that could not record its outcome marks it unconfirmed in a
+fresh session, or keeps the lease. Log lines carry the order number and the outcome, never
+the trade link, its partner or token, or a Waxpeer URL.
 """
 
 from __future__ import annotations
@@ -34,7 +37,7 @@ import socket
 from datetime import datetime, timedelta
 from typing import cast
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
@@ -42,6 +45,14 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
+from csmarket.modules.orders.buy_lease import (
+    BUY_LEASE,
+    discard,
+    release,
+    release_fresh,
+    secure,
+    take_lease,
+)
 from csmarket.modules.orders.buy_rules import low_balance, substitute
 from csmarket.modules.orders.buy_writes import (
     BuySnapshot,
@@ -56,7 +67,6 @@ from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.trades import AmbiguousTradeError, pick_trade
 from csmarket.modules.skins.api import (
     TradeClient,
-    WaxpeerBuy,
     WaxpeerError,
     WaxpeerForbiddenError,
     WaxpeerRateLimitedError,
@@ -67,11 +77,8 @@ from csmarket.modules.users.api import TradeLink, parse_tradelink
 
 log = get_logger("csmarket.orders.buying")
 
-#: How long one attempt holds its order against a second one. Longer than the slowest
-#: attempt (six Waxpeer calls at ``waxpeer_buy_timeout_seconds``); an attempt that dies
-#: mid-way leaves the order to the reconcile sweep once it lapses.
-BUY_LEASE = timedelta(minutes=5)
-#: An attempt's time budget: it ends before its lease does.
+#: An attempt's time budget, counted from before its lease is taken: it ends at least
+#: 30 s before the lease does.
 ATTEMPT_BUDGET = BUY_LEASE - timedelta(seconds=30)
 #: Outcomes that are not a buy attempt's result (nothing was tried, or nothing written).
 _UNCOUNTED = frozenset({"nothing_to_do", "lookup_later"})
@@ -149,6 +156,16 @@ async def drain_paid(
     return len(claimed)
 
 
+class _Run:
+    """One attempt's progress: its snapshot once read, and whether a buy request went out."""
+
+    __slots__ = ("sent", "snap")
+
+    def __init__(self) -> None:
+        self.snap: BuySnapshot | None = None
+        self.sent = False
+
+
 async def attempt_buy(
     db: AsyncSession, client: TradeClient, *, order_id: str, settings: Settings
 ) -> str:
@@ -156,8 +173,10 @@ async def attempt_buy(
 
     The lease comes first (one atomic UPDATE that also requires ``buy_pending``), the
     snapshot is read after it: a second attempt can never act on a ``buy_pending`` it read
-    before the first one settled the buy. The attempt is bounded by
-    :data:`ATTEMPT_BUDGET`, so it never outlives its lease.
+    before the first one settled the buy. The attempt is bounded by :data:`ATTEMPT_BUDGET`
+    counted from before the lease, so it never outlives its lease. Once a buy request went
+    out, every exit that did not record the outcome marks it unconfirmed (fresh session)
+    or keeps the lease.
 
     Args:
         db: Session; each step commits its own short transaction.
@@ -170,38 +189,54 @@ async def attempt_buy(
         ``invalid_link``, ``forbidden``, ``rate_limited``, ``unconfirmed``, ``ambiguous``,
         ``stale_bought``, ``lookup_later`` or ``nothing_to_do``.
     """
-    lease = await _take_lease(db, order_id)
+    deadline = asyncio.get_running_loop().time() + ATTEMPT_BUDGET.total_seconds()
+    lease = await take_lease(db, order_id)
     if lease is None:
         return "nothing_to_do"
-    read = await _read(db, order_id)
-    if read is None:
-        await _release(db, order_id, lease)
-        return "nothing_to_do"
-    snap, raw_link = read
+    run = _Run()
     try:
-        async with asyncio.timeout(ATTEMPT_BUDGET.total_seconds()):
-            outcome = await _attempt(db, client, snap=snap, raw_link=raw_link, settings=settings)
+        async with asyncio.timeout_at(deadline):
+            outcome = await _leased(db, client, order_id=order_id, settings=settings, run=run)
     except TimeoutError:
-        outcome = await _after_timeout(db, snap)
-    await _release(db, order_id, lease)
+        outcome = await _after_timeout(db, order_id=order_id, lease=lease, run=run)
+    except BaseException:
+        if run.sent and run.snap is not None:
+            await discard(db)
+            await secure(db, run.snap)  # the lease is kept either way: it lapses
+        raise
+    else:
+        await release(db, order_id, lease)
+    if run.snap is None:
+        return outcome
     if outcome not in _UNCOUNTED:
         record_order_buy(cast(OrderBuyOutcome, outcome))  # every other outcome is in the set
-    log.info("orders.buy", number=snap.number, outcome=outcome)
+    log.info("orders.buy", number=run.snap.number, outcome=outcome)
     return outcome
 
 
-async def _after_timeout(db: AsyncSession, snap: BuySnapshot) -> str:
-    """The attempt ran out of time: ``unconfirmed`` if its buy was sent (and recorded so),
-    else nothing was sent and the next tick tries again."""
-    await db.rollback()
-    trade = await db.scalar(
-        select(SkinTrade)
-        .where(SkinTrade.order_id == snap.order_id)
-        .execution_options(populate_existing=True)
-    )
-    sent = trade is not None and trade.buy_unconfirmed_at is not None and not trade.buy_pending
-    await db.commit()
-    return "unconfirmed" if sent else "lookup_later"
+async def _leased(
+    db: AsyncSession, client: TradeClient, *, order_id: str, settings: Settings, run: _Run
+) -> str:
+    """Read the snapshot under the lease, then run the attempt."""
+    read = await _read(db, order_id)
+    if read is None:
+        return "nothing_to_do"
+    run.snap, raw_link = read
+    return await _attempt(db, client, snap=run.snap, raw_link=raw_link, settings=settings, run=run)
+
+
+async def _after_timeout(db: AsyncSession, *, order_id: str, lease: datetime, run: _Run) -> str:
+    """The budget ran out: nothing sent → due again; a sent buy → recorded as unconfirmed
+    (fresh session), or the lease is kept when even that cannot be written."""
+    await discard(db)
+    if not run.sent or run.snap is None:
+        await release_fresh(db, order_id, lease)
+        return "lookup_later"
+    marked = await secure(db, run.snap)
+    if marked is None:
+        return "unconfirmed"  # not written: the lease lapses as a dead attempt's
+    await release_fresh(db, order_id, lease)
+    return "unconfirmed" if marked else "nothing_to_do"
 
 
 async def _read(db: AsyncSession, order_id: str) -> tuple[BuySnapshot, str] | None:
@@ -228,46 +263,14 @@ async def _read(db: AsyncSession, order_id: str) -> tuple[BuySnapshot, str] | No
     return result
 
 
-async def _take_lease(db: AsyncSession, order_id: str) -> datetime | None:
-    """Hold a ``buying`` order whose buy is pending for :data:`BUY_LEASE`.
-
-    Returns:
-        The lease (the ``next_check_at`` this attempt wrote), or ``None`` when the order is
-        not buying, its buy is no longer pending, or another attempt holds it.
-    """
-    at = now()
-    pending = (
-        select(SkinTrade.order_id)
-        .where(SkinTrade.order_id == Order.id, SkinTrade.buy_pending.is_(True))
-        .exists()
-    )
-    lease = await db.scalar(
-        update(Order)
-        .where(
-            Order.id == order_id,
-            Order.status == "buying",
-            pending,
-            or_(Order.next_check_at.is_(None), Order.next_check_at <= at),
-        )
-        .values(next_check_at=at + BUY_LEASE)
-        .returning(Order.next_check_at)
-    )
-    await db.commit()
-    return lease
-
-
-async def _release(db: AsyncSession, order_id: str, lease: datetime) -> None:
-    """Make the order due again — only if the lease is still this attempt's."""
-    await db.execute(
-        update(Order)
-        .where(Order.id == order_id, Order.status == "buying", Order.next_check_at == lease)
-        .values(next_check_at=now())
-    )
-    await db.commit()
-
-
 async def _attempt(
-    db: AsyncSession, client: TradeClient, *, snap: BuySnapshot, raw_link: str, settings: Settings
+    db: AsyncSession,
+    client: TradeClient,
+    *,
+    snap: BuySnapshot,
+    raw_link: str,
+    settings: Settings,
+    run: _Run,
 ) -> str:
     """Steps 2–4 of :func:`attempt_buy` (the order is leased)."""
     try:
@@ -284,11 +287,17 @@ async def _attempt(
         return await attention(db, snap, "ambiguous_trade", outcome="ambiguous", settle=True)
     if found is not None:
         return await adopt(db, snap, found)
-    return await _buy(db, client, snap=snap, link=link, settings=settings)
+    return await _buy(db, client, snap=snap, link=link, settings=settings, run=run)
 
 
 async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the ruling
-    db: AsyncSession, client: TradeClient, *, snap: BuySnapshot, link: TradeLink, settings: Settings
+    db: AsyncSession,
+    client: TradeClient,
+    *,
+    snap: BuySnapshot,
+    link: TradeLink,
+    settings: Settings,
+    run: _Run,
 ) -> str:
     """The chosen listing at the agreed units, then at most one substitute (R4, R6)."""
     ceiling = int(snap.paid_units * (1 + settings.order_substitute_ceiling))
@@ -298,8 +307,13 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
         listing_id, units = queue.pop(0)
         tried.add(listing_id)
         try:
-            bought = await _send_buy(
-                db, client, snap=snap, link=link, item_id=listing_id, units=units
+            run.sent = True  # from here on an unrecorded exit must not free the order
+            bought = await client.buy_one_p2p(
+                item_id=listing_id,
+                price_units=units,
+                partner=link.partner,
+                token=link.token,
+                project_id=snap.order_id,
             )
         except WaxpeerForbiddenError:
             return await attention(db, snap, "waxpeer_forbidden", outcome="forbidden")
@@ -322,40 +336,6 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
             continue
         return await record_bought(db, snap, bought, listing_id=listing_id, units=units)
     return await refund(db, snap, "sold_out")
-
-
-async def _send_buy(
-    db: AsyncSession,
-    client: TradeClient,
-    *,
-    snap: BuySnapshot,
-    link: TradeLink,
-    item_id: int,
-    units: int,
-) -> WaxpeerBuy:
-    """``buy-one-p2p``; anything but a classified Waxpeer answer leaves the buy unconfirmed.
-
-    An unexpected exception (an unreadable answer the client did not classify, a timeout or
-    a shutdown cancelling the call) may come after the request reached Waxpeer: the trade
-    is marked unconfirmed — resolved by lookup, never rebought — before it propagates.
-    """
-    try:
-        return await client.buy_one_p2p(
-            item_id=item_id,
-            price_units=units,
-            partner=link.partner,
-            token=link.token,
-            project_id=snap.order_id,
-        )
-    except (WaxpeerError, WaxpeerUnavailableError):
-        raise
-    except BaseException:
-        try:
-            await db.rollback()
-            await unconfirmed(db, snap)
-        except Exception as exc:  # noqa: BLE001 -- the original error is the one to raise
-            log.error("orders.buy.unconfirm_failed", number=snap.number, error=type(exc).__name__)  # noqa: TRY400
-        raise
 
 
 __all__ = ["ATTEMPT_BUDGET", "BUY_LEASE", "attempt_buy", "drain_paid", "worker_id"]

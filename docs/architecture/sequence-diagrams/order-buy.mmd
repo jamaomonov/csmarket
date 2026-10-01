@@ -13,7 +13,8 @@ sequenceDiagram
     loop each claimed order (its own transactions; one failure never stops the batch)
         W->>DB: take the lease first: UPDATE next_check_at = now + 5 min<br/>WHERE buying AND buy_pending AND due RETURNING (else nothing to do)
         W->>DB: read the snapshot (still buying + buy_pending? else release, nothing to do)
-        Note over W: the attempt runs under asyncio.timeout(lease − 30 s)
+        Note over W: the attempt's budget (lease − 30 s) starts before the lease is taken
+        Note over W,DB: once the buy is sent, an exit that did not record it → unconfirmed<br/>in a fresh session, or the lease is kept (lapses as a dead attempt's)
         alt trade link does not parse
             W->>DB: lock order → trade, re-check; failed + refund to balance (invalid_trade_link)
         else

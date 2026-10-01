@@ -39,20 +39,26 @@ class BuySnapshot(BaseModel):
     paid_units: int
 
 
-async def _locked(db: AsyncSession, snap: BuySnapshot) -> tuple[Order, SkinTrade] | None:
-    """The order and its trade ``FOR UPDATE`` if still ``buying`` with a buy pending."""
+async def _lock_both(db: AsyncSession, order_id: str) -> tuple[Order | None, SkinTrade | None]:
+    """The order, then its trade, ``FOR UPDATE`` (ruling K), read fresh."""
     order = await db.scalar(
         select(Order)
-        .where(Order.id == snap.order_id)
+        .where(Order.id == order_id)
         .with_for_update()
         .execution_options(populate_existing=True)
     )
     trade = await db.scalar(
         select(SkinTrade)
-        .where(SkinTrade.order_id == snap.order_id)
+        .where(SkinTrade.order_id == order_id)
         .with_for_update()
         .execution_options(populate_existing=True)
     )
+    return order, trade
+
+
+async def _locked(db: AsyncSession, snap: BuySnapshot) -> tuple[Order, SkinTrade] | None:
+    """The order and its trade ``FOR UPDATE`` if still ``buying`` with a buy pending."""
+    order, trade = await _lock_both(db, snap.order_id)
     if order is None or trade is None or order.status != "buying" or not trade.buy_pending:
         await db.commit()  # nothing written: just let the locks go
         return None
@@ -88,18 +94,7 @@ async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int |
     purchase may exist outside our record: the trade gets the ``ambiguous_trade`` attention
     (which also blocks any automatic refund, R3) and an error is logged — number only.
     """
-    order = await db.scalar(
-        select(Order)
-        .where(Order.id == snap.order_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    trade = await db.scalar(
-        select(SkinTrade)
-        .where(SkinTrade.order_id == snap.order_id)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
+    order, trade = await _lock_both(db, snap.order_id)
     if order is None or trade is None:  # pragma: no cover - a foreign key
         await db.commit()
         return "stale_bought"
@@ -119,6 +114,27 @@ def _settle(trade: SkinTrade) -> None:
         trade.attention_reason = None
         trade.resolved_at = trade.resolved_by = trade.resolved_note = None
     trade.updated_at = now()
+
+
+async def secure_sent(db: AsyncSession, snap: BuySnapshot) -> bool:
+    """A buy this attempt sent but could not record: never leave it ``buy_pending``.
+
+    Marks the trade unconfirmed (resolved by lookup, never rebought, R3) — and, on an order
+    that left ``buying`` meanwhile, flags ``ambiguous_trade``. A trade whose buy is no
+    longer pending already has its outcome on record: nothing to do.
+
+    Returns:
+        Whether this call marked the trade.
+    """
+    order, trade = await _lock_both(db, snap.order_id)
+    marked = order is not None and trade is not None and trade.buy_pending
+    if marked and order is not None and trade is not None:
+        _settle(trade)
+        trade.buy_unconfirmed_at = now()
+        if order.status != "buying":
+            _flag(trade, "ambiguous_trade")
+    await db.commit()
+    return marked
 
 
 async def record_bought(
@@ -208,5 +224,6 @@ __all__ = [
     "attention",
     "record_bought",
     "refund",
+    "secure_sent",
     "unconfirmed",
 ]

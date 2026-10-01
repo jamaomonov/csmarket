@@ -6,18 +6,21 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime, timedelta
+from typing import Any
 
 import pytest
 from csmarket.core import clock
 from csmarket.core.config import Settings, get_settings
-from csmarket.modules.orders import buying
+from csmarket.modules.orders import buy_lease, buy_writes, buying
 from csmarket.modules.orders.api import Order, SkinTrade, attempt_buy
 from csmarket.modules.skins.api import (
     WaxpeerBuy,
+    WaxpeerError,
     WaxpeerForbiddenError,
     WaxpeerUnavailableError,
 )
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.fake_trade_client import FakeTradeClient
 from tests.integration.test_orders_buying import COST, _buying, load
@@ -50,7 +53,7 @@ async def test_an_attempt_that_read_before_another_settled_the_buy_never_buys_ag
     order_id = order.id
     if first == "unconfirmed":
         fake.buy_raises(WaxpeerUnavailableError("timeout"))
-    take_lease = buying._take_lease
+    take_lease = buy_lease.take_lease
     competed: list[str] = []
 
     async def competing_first(db: AsyncSession, oid: str) -> datetime | None:
@@ -59,7 +62,7 @@ async def test_an_attempt_that_read_before_another_settled_the_buy_never_buys_ag
             competed[0] = await _go(db, fake, oid, settings)
         return await take_lease(db, oid)
 
-    monkeypatch.setattr(buying, "_take_lease", competing_first)
+    monkeypatch.setattr(buying, "take_lease", competing_first)
     assert await _go(db_session, fake, order_id, settings) == "nothing_to_do"
     assert competed == [first]
     assert fake.buy_calls == 1
@@ -200,7 +203,131 @@ async def test_an_order_with_no_buy_pending_takes_no_lease(
     assert row.next_check_at is None
 
 
-async def test_a_failed_unconfirm_still_raises_the_original_error(
+async def _slow(seconds: float = 5.0) -> None:
+    await asyncio.sleep(seconds)
+
+
+async def _lease_held(db: AsyncSession, order: Order) -> bool:
+    row, _ = await load(db, order)
+    return row.next_check_at is not None and row.next_check_at > clock.now()
+
+
+async def test_a_timeout_after_a_successful_answer_is_unconfirmed_never_rebought(
+    db_session: AsyncSession,
+    fake: FakeTradeClient,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=200))
+    record = buy_writes.record_bought
+
+    async def slow_record(*args: Any, **kwargs: Any) -> str:
+        await _slow()
+        return await record(*args, **kwargs)
+
+    monkeypatch.setattr(buying, "record_bought", slow_record)
+    order = await _buying(db_session)
+    order_id = order.id
+    assert await _go(db_session, fake, order_id, settings) == "unconfirmed"
+    _, trade = await load(db_session, order)
+    assert trade.buy_pending is False
+    assert trade.buy_unconfirmed_at is not None
+    assert await _go(db_session, fake, order_id, settings) == "nothing_to_do"
+    assert fake.buy_calls == 1
+
+
+async def test_a_timeout_on_a_lock_wait_while_recording_is_unconfirmed(
+    db_engine: AsyncEngine,
+    db_session: AsyncSession,
+    fake: FakeTradeClient,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The cancellation lands mid-statement (the order row is locked elsewhere)."""
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=300))
+    order = await _buying(db_session)
+    order_id = order.id
+    other = async_sessionmaker(bind=db_engine, expire_on_commit=False)()
+    tasks: list[asyncio.Task[None]] = []
+
+    async def lock_the_order() -> None:
+        await other.execute(select(Order).where(Order.id == order_id).with_for_update())
+
+        async def let_go() -> None:
+            await asyncio.sleep(0.8)
+            await other.commit()
+
+        tasks.append(asyncio.create_task(let_go()))
+
+    fake.before_buy = lock_the_order
+    try:
+        assert await _go(db_session, fake, order_id, settings) == "unconfirmed"
+    finally:
+        await asyncio.gather(*tasks)
+        await other.close()
+    trade = await db_session.get(SkinTrade, order_id, populate_existing=True)
+    assert trade is not None  # the rollback expired ``order``: read by id
+    assert trade.buy_pending is False
+    assert trade.buy_unconfirmed_at is not None
+    assert await _go(db_session, fake, order_id, settings) == "nothing_to_do"
+    assert fake.buy_calls == 1
+
+
+async def test_a_timeout_inside_the_unconfirmed_write_after_a_5xx_still_records_it(
+    db_session: AsyncSession,
+    fake: FakeTradeClient,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=200))
+    write = buy_writes.unconfirmed
+
+    async def slow_unconfirmed(*args: Any, **kwargs: Any) -> str:
+        await _slow()
+        return await write(*args, **kwargs)
+
+    monkeypatch.setattr(buying, "unconfirmed", slow_unconfirmed)
+    order = await _buying(db_session)
+    order_id = order.id
+    fake.buy_raises(WaxpeerError("bad gateway", status=502))
+    assert await _go(db_session, fake, order_id, settings) == "unconfirmed"
+    _, trade = await load(db_session, order)
+    assert trade.buy_pending is False
+    assert trade.buy_unconfirmed_at is not None
+    assert await _go(db_session, fake, order_id, settings) == "nothing_to_do"
+    assert fake.buy_calls == 1
+
+
+async def _secure_fails(db: AsyncSession, snap: object) -> bool:
+    raise RuntimeError("database gone")
+
+
+async def test_a_timeout_whose_unconfirmed_write_fails_keeps_the_lease(
+    db_session: AsyncSession,
+    fake: FakeTradeClient,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=200))
+    record = buy_writes.record_bought
+
+    async def slow_record(*args: Any, **kwargs: Any) -> str:
+        await _slow()
+        return await record(*args, **kwargs)
+
+    monkeypatch.setattr(buying, "record_bought", slow_record)
+    monkeypatch.setattr(buy_writes, "secure_sent", _secure_fails)
+    order = await _buying(db_session)
+    order_id = order.id
+    assert await _go(db_session, fake, order_id, settings) == "unconfirmed"
+    _, trade = await load(db_session, order)
+    assert trade.buy_pending is True  # nothing could be written ...
+    assert await _lease_held(db_session, order)  # ... so the lease lapses as a dead attempt's
+    assert await _go(db_session, fake, order_id, settings) == "nothing_to_do"
+    assert fake.buy_calls == 1
+
+
+async def test_a_failed_unconfirm_raises_the_original_error_and_keeps_the_lease(
     db_session: AsyncSession,
     fake: FakeTradeClient,
     settings: Settings,
@@ -208,11 +335,76 @@ async def test_a_failed_unconfirm_still_raises_the_original_error(
 ) -> None:
     order = await _buying(db_session)
     order_id = order.id
-
-    async def broken(db: AsyncSession, snap: object) -> str:
-        raise RuntimeError("database gone")
-
-    monkeypatch.setattr(buying, "unconfirmed", broken)
+    monkeypatch.setattr(buy_writes, "secure_sent", _secure_fails)
     fake.buy_raises(ValueError("unreadable"))
     with pytest.raises(ValueError, match="unreadable"):
         await _go(db_session, fake, order_id, settings)
+    _, trade = await load(db_session, order)
+    assert trade.buy_pending is True
+    assert await _lease_held(db_session, order)
+    assert await _go(db_session, fake, order_id, settings) == "nothing_to_do"
+    assert fake.buy_calls == 1
+
+
+async def test_a_timeout_after_another_writer_recorded_the_buy_changes_nothing(
+    db_session: AsyncSession,
+    fake: FakeTradeClient,
+    settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=200))
+    record = buy_writes.record_bought
+
+    async def record_then_hang(*args: Any, **kwargs: Any) -> str:
+        await record(*args, **kwargs)
+        await _slow()
+        return "bought"
+
+    monkeypatch.setattr(buying, "record_bought", record_then_hang)
+    order = await _buying(db_session)
+    assert await _go(db_session, fake, order.id, settings) == "nothing_to_do"
+    _, trade = await load(db_session, order)
+    assert trade.buy_unconfirmed_at is None
+    assert trade.waxpeer_id == 50_000_002
+
+
+async def test_securing_a_sent_buy_on_an_order_that_left_buying_flags_it(
+    db_session: AsyncSession,
+) -> None:
+    order = await _buying(db_session)
+    row, _ = await load(db_session, order)
+    row.status = "delivered"
+    await db_session.commit()
+    snap = buy_writes.BuySnapshot(
+        order_id=order.id,
+        number=order.number,
+        skin_item_id=order.skin_item_id,
+        listing_id=order.listing_id,
+        paid_units=COST,
+    )
+    assert await buy_writes.secure_sent(db_session, snap) is True
+    _, trade = await load(db_session, order)
+    assert trade.buy_pending is False
+    assert trade.attention_reason == "ambiguous_trade"
+
+
+async def test_a_broken_session_is_given_back_and_a_failed_release_is_swallowed(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    closed: list[bool] = []
+
+    class _Broken:
+        async def rollback(self) -> None:
+            raise RuntimeError("connection gone")
+
+        async def close(self) -> None:
+            closed.append(True)
+
+    await buy_lease.discard(_Broken())  # type: ignore[arg-type]  # a session-shaped fake
+    assert closed == [True]
+
+    async def release_fails(db: AsyncSession, order_id: str, lease: datetime) -> None:
+        raise RuntimeError("database gone")
+
+    monkeypatch.setattr(buy_lease, "release", release_fails)
+    await buy_lease.release_fresh(db_session, "an-order", clock.now())  # never raises
