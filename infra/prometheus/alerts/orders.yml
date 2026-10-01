@@ -1,0 +1,100 @@
+groups:
+  - name: orders
+    rules:
+      # Gauges come from the scheduler's `orders.health` job (every minute); counters from the
+      # worker, the scheduler and the API. The API and the worker expose the gauges too but
+      # never set them (the balance ones read NaN there), hence max()/min() across jobs.
+
+      # A paid order the worker has not touched for 5 minutes: the money is taken and nothing
+      # is buying the skin. Spec §12.
+      - alert: OrdersPaidStuck
+        expr: max(csmarket_orders_stuck{state="paid"}) > 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} paid order(s) older than 5 min not picked up'
+          description: >
+            Orders in `paid` for more than 5 minutes. Is the worker up, is Postgres
+            LISTEN/NOTIFY working, is `CSMARKET_SKINS_BUY_ENABLED` on?
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#paid-stuck"
+
+      # Claimed for over 30 minutes, no open attention: the buy neither finished nor asked
+      # for help.
+      - alert: OrdersBuyingStuck
+        expr: max(csmarket_orders_stuck{state="buying"}) > 0
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} order(s) buying for over 30 min'
+          description: >
+            Orders in `buying`, claimed more than 30 minutes ago, with no open attention.
+            Look at the trade in the admin and at Waxpeer; never buy again by hand.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#buying-stuck"
+
+      # Trade-status polling stopped (or never reached an order): Waxpeer's answers are not
+      # being applied. Spec §12.
+      - alert: TradesUnpolled
+        expr: max(csmarket_orders_stuck{state="trade_sent_unpolled"}) > 0
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} trade(s) not polled at Waxpeer for 30 min'
+          description: >
+            Orders in `trade_sent` whose trade was last looked up more than 30 minutes ago.
+            Is the scheduler's `trades.reconcile` running, and is Waxpeer answering?
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#trades-unpolled"
+
+      - alert: TradesNeedAttention
+        expr: max(csmarket_trades_attention) > 0
+        for: 15m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} trade(s) waiting for an admin'
+          description: >
+            Trades with an unresolved attention (unconfirmed buy, ambiguous trade, rolled
+            back, Waxpeer forbidden, audit divergence). Open them in the admin.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#attention"
+
+      # Our Waxpeer balance is under CSMARKET_WAXPEER_BALANCE_ALERT_USD: the next buys will
+      # be refunded as `waxpeer_low_balance`. Top it up. Spec §12.
+      - alert: WaxpeerBalanceLow
+        expr: min(csmarket_waxpeer_balance_usd) < min(csmarket_waxpeer_balance_threshold_usd)
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: 'Waxpeer balance ${{ $value | printf "%.2f" }}, below the alert threshold'
+          description: >
+            Top up the Waxpeer balance before buys start failing and refunding customers.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-low"
+
+      # HTTP 403 from Waxpeer on a buy or lookup: the API key's IP whitelist no longer
+      # matches this server. Orders stay in `buying` and are retried every tick.
+      - alert: WaxpeerForbidden
+        expr: increase(csmarket_order_buys_total{outcome="forbidden"}[10m]) > 0
+        labels: { severity: page }
+        annotations:
+          summary: "Waxpeer answers 403 to buys (key IP whitelist?)"
+          description: >
+            Check the Waxpeer API key's allowed IPs against this server's address. Orders
+            wait in `buying` and are retried; nothing is refunded.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#forbidden"
+
+      - alert: WaxpeerLowBalanceRefund
+        expr: increase(csmarket_order_refunds_total{reason="waxpeer_low_balance"}[15m]) > 0
+        labels: { severity: page }
+        annotations:
+          summary: "An order was refunded because the Waxpeer balance ran out"
+          description: >
+            A customer paid and the buy failed for lack of balance. Top up Waxpeer now.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#balance-low"
+
+      # The nightly history audit disagrees with our records. Spec §12.
+      - alert: TradeAuditDivergence
+        expr: increase(csmarket_trade_attention_total{reason="audit_divergence"}[1d]) > 0
+        labels: { severity: warn }
+        annotations:
+          summary: "The trade-history audit found a divergence"
+          description: >
+            A delivered or refunded order does not match Waxpeer's history. Open the flagged
+            trade in the admin.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#audit-divergence"

@@ -29,6 +29,7 @@ from csmarket_scheduler.jobs import (
     click_timeout,
     fx_refresh,
     orders_expiry,
+    orders_health,
     payme_timeout,
     purge_refresh_tokens,
     skins_catalog_import,
@@ -39,6 +40,7 @@ from csmarket_scheduler.jobs import (
     trades_reconcile,
     uzum_timeout,
 )
+from csmarket_scheduler.metrics import start_metrics_server
 
 configure_logging()
 log = get_logger("csmarket.scheduler")
@@ -63,12 +65,14 @@ def build_scheduler() -> AsyncIOScheduler:
     trades_reconcile.register(scheduler)
     trades_protection.register(scheduler)
     trades_audit.register(scheduler)
+    orders_health.register(scheduler)
     return scheduler
 
 
 async def run() -> None:
     """Start the scheduler and block until SIGINT/SIGTERM."""
     init_sentry(get_settings(), integrations="none")
+    start_metrics_server()
     scheduler = build_scheduler()
     scheduler.start()
     log.info("scheduler.started", jobs=[job.id for job in scheduler.get_jobs()])

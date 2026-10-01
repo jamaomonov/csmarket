@@ -32,6 +32,12 @@ from csmarket_worker.consumer import (
 )
 
 
+@pytest.fixture(autouse=True)
+def _no_metrics_server(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``run()`` must not bind the real metrics port in every test."""
+    monkeypatch.setattr(consumer, "start_metrics_server", lambda: True)
+
+
 def _queue(drain: Any, *, name: str = "test", concurrency: int = 1) -> Queue:
     """A queue whose drain is a fake -- the loop's own logic is what is under
     test here, never the SQL."""

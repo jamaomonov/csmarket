@@ -57,6 +57,7 @@ from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from csmarket_worker import shutdown
+from csmarket_worker.metrics import start_metrics_server
 
 configure_logging()
 log = get_logger("csmarket.worker.consumer")
@@ -354,6 +355,7 @@ async def run() -> int:
     # unreported crash costs money.
     # No ASGI integrations: nothing here serves a request.
     init_sentry(cfg, integrations="none")
+    start_metrics_server()
     stop = asyncio.Event()
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGTERM, signal.SIGINT):

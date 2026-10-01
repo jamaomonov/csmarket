@@ -24,7 +24,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Literal
 
-from prometheus_client import Counter
+from prometheus_client import Counter, Gauge, start_http_server
 
 from csmarket.core.logging import get_logger
 
@@ -162,6 +162,91 @@ ORDER_BUYS = Counter(
 )
 
 
+#: Which stuck-order check a ``csmarket_orders_stuck`` sample is for.
+OrderStuckState = Literal["paid", "buying", "trade_sent_unpolled"]
+
+#: Gauges below are set by the scheduler's ``orders.health`` job only; the API and the worker
+#: expose them too (same module) but never set them. The two balance gauges start as NaN so
+#: that process cannot read as "balance 0" -- a comparison against NaN is never true.
+ORDERS_STUCK = Gauge(
+    "csmarket_orders_stuck",
+    "Orders waiting longer than they should, by state (alerts: OrdersPaidStuck and friends).",
+    ("state",),
+)
+TRADES_ATTENTION = Gauge(
+    "csmarket_trades_attention",
+    "Trades waiting for an admin right now (alert: TradesNeedAttention).",
+)
+WAXPEER_BALANCE_USD = Gauge(
+    "csmarket_waxpeer_balance_usd",
+    "Our Waxpeer balance in USD, as of the last successful read (alert: WaxpeerBalanceLow).",
+)
+WAXPEER_BALANCE_THRESHOLD_USD = Gauge(
+    "csmarket_waxpeer_balance_threshold_usd",
+    "The balance below which WaxpeerBalanceLow fires (setting waxpeer_balance_alert_usd).",
+)
+WAXPEER_BALANCE_USD.set(float("nan"))
+WAXPEER_BALANCE_THRESHOLD_USD.set(float("nan"))
+
+
+def set_orders_stuck(state: OrderStuckState, count: int) -> None:
+    """Set the stuck-orders gauge of one state. Never raises."""
+    try:
+        ORDERS_STUCK.labels(state=state).set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning("metrics.set_failed", metric="csmarket_orders_stuck", error=type(exc).__name__)
+
+
+def set_trades_attention(count: int) -> None:
+    """Set how many trades wait for an admin. Never raises."""
+    try:
+        TRADES_ATTENTION.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_trades_attention", error=type(exc).__name__
+        )
+
+
+def set_waxpeer_balance(balance_usd: float, threshold_usd: float) -> None:
+    """Set the Waxpeer balance and the alert threshold beside it. Never raises."""
+    try:
+        WAXPEER_BALANCE_USD.set(balance_usd)
+        WAXPEER_BALANCE_THRESHOLD_USD.set(threshold_usd)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_waxpeer_balance", error=type(exc).__name__
+        )
+
+
+def set_waxpeer_balance_threshold(threshold_usd: float) -> None:
+    """Set only the alert threshold (a tick that did not read the balance). Never raises."""
+    try:
+        WAXPEER_BALANCE_THRESHOLD_USD.set(threshold_usd)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_waxpeer_balance", error=type(exc).__name__
+        )
+
+
+def serve_metrics(port: int, *, service: str) -> bool:
+    """Serve this process's registry on ``port`` (``/metrics``), once, on a daemon thread.
+
+    The worker and the scheduler have no HTTP server of their own; Prometheus scrapes them
+    over the compose network (ports not published). A taken port is logged and the process
+    goes on without metrics: a missing graph must never stop the money path.
+
+    Returns:
+        ``True`` when the server is up, ``False`` when it could not start.
+    """
+    try:
+        start_http_server(port)
+    except OSError as exc:
+        log.warning("metrics.server_not_started", service=service, port=port, error=str(exc))
+        return False
+    log.info("metrics.server_started", service=service, port=port)
+    return True
+
+
 def record_steam_web_api_call(
     *, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer, outcome: SteamApiOutcome
 ) -> None:
@@ -257,15 +342,20 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 __all__ = [
     "KASSA_REJECTIONS",
+    "ORDERS_STUCK",
     "ORDER_BUYS",
     "ORDER_REFUNDS",
     "STEAM_WEB_API_CALLS",
+    "TRADES_ATTENTION",
     "TRADE_ATTENTIONS",
+    "WAXPEER_BALANCE_THRESHOLD_USD",
+    "WAXPEER_BALANCE_USD",
     "WAXPEER_CALLS",
     "KassaProvider",
     "KassaRejectionReason",
     "OrderBuyOutcome",
     "OrderRefundReason",
+    "OrderStuckState",
     "SteamApiConsumer",
     "SteamApiEndpoint",
     "SteamApiOutcome",
@@ -278,5 +368,10 @@ __all__ = [
     "record_steam_web_api_call",
     "record_trade_attention",
     "record_waxpeer_call",
+    "serve_metrics",
+    "set_orders_stuck",
+    "set_trades_attention",
+    "set_waxpeer_balance",
+    "set_waxpeer_balance_threshold",
     "steam_web_api_call",
 ]

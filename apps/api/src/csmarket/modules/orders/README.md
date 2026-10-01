@@ -268,6 +268,7 @@ transaction is held across a Waxpeer call, and lookups ask at most 100 ids
 | `trades.reconcile`  | every `trades_reconcile_seconds` (10 s), 240 s | `reconcile(db_factory, client, *, settings)` |
 | `trades.protection` | hourly, first run 280 s after start            | `watch_protected(db, client)`                |
 | `trades.audit`      | cron 23:30 UTC (04:30 Tashkent), coalesced     | `audit_recent(db, client, *, days=14)`       |
+| `orders.health`     | every 60 s, first run 260 s after start        | `health.measure(db, client, *, settings)`    |
 
 The three trade jobs do nothing without `waxpeer_api_key` (or `waxpeer_fake`); every job's
 `run()` logs and swallows any failure.
@@ -327,6 +328,17 @@ The three trade jobs do nothing without `waxpeer_api_key` (or `waxpeer_fake`); e
   when no graver attention is open and counts the metric **once per verdict**; agreement
   clears `audit_verdict` (the attention waits for an admin). The audit changes no other
   trade or order state.
+
+## Health (`health.py`, ruling R14)
+
+`measure(db, client, *, settings) -> Health` is read-only: `paid` orders with `paid_at` older
+than 5 min, `buying` orders claimed over 30 min ago with no **open** attention (a resolved one
+does not hide an order), `trade_sent` orders whose trade was last polled over 30 min ago (or
+never), the count of unresolved attentions, and Waxpeer's balance in USD (`balance_units() /
+1000`; `None` without a client or on any error). The scheduler's `orders.health` job sets the
+`csmarket_orders_stuck{state}`, `csmarket_trades_attention` and `csmarket_waxpeer_balance_*`
+gauges from it and reads the balance on every 5th tick (the first included). The alerts are in
+`infra/prometheus/alerts/orders.yml`; the gauges in `docs/architecture/metrics.md`.
 
 ## Lock order
 

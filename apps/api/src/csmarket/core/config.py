@@ -299,6 +299,11 @@ class Settings(BaseSettings):
         description="Dev and e2e: an in-process fake Waxpeer (trades in Redis). Never in prod.",
     )
 
+    waxpeer_balance_alert_usd: Decimal = Field(
+        default=Decimal("50"),
+        description="The alert WaxpeerBalanceLow fires when our Waxpeer balance is below this.",
+    )
+
     # --- worker ---
     worker_poll_seconds: int = Field(
         default=5,
@@ -306,6 +311,13 @@ class Settings(BaseSettings):
             "Worker poll tick. LISTEN/NOTIFY does the real-time work; "
             "the tick catches lost notifications."
         ),
+    )
+
+    worker_metrics_port: int = Field(
+        default=9101, description="The worker's /metrics port (internal network only)."
+    )
+    scheduler_metrics_port: int = Field(
+        default=9102, description="The scheduler's /metrics port (internal network only)."
     )
 
     # --- observability ---

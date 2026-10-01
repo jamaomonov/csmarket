@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from csmarket.modules.orders.buying import attempt_buy, drain_paid
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
+from csmarket.modules.orders.health import Health, measure
 from csmarket.modules.orders.models import (
     ATTENTION_REASONS,
     FAILURE_REASONS,
@@ -47,6 +48,7 @@ __all__ = [
     "ORDER_STATUSES",
     "TERMINAL",
     "TRANSITIONS",
+    "Health",
     "InvalidOrderTransitionError",
     "Order",
     "OrderOut",
@@ -63,6 +65,7 @@ __all__ = [
     "in_flight",
     "is_expired",
     "mark_paid",
+    "measure",
     "move",
     "order_out",
     "reconcile",
