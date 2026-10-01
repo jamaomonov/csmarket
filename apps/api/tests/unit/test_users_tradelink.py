@@ -64,6 +64,27 @@ def test_parse_rejects_anything_else(raw: str) -> None:
     assert exc.value.extra["code"] == "trade_link_invalid"
 
 
+_NEW = "https://steamcommunity.com/tradeoffer/new/?"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        # Arabic-Indic and full-width digits are \d in a Unicode regex, and int() accepts
+        # them: a look-alike link would turn into somebody's partner id.
+        f"{_NEW}partner=\u0663\u0669\u0667\u0663\u0664&token=AbCdEf12",
+        f"{_NEW}partner=\uff13\uff19\uff17\uff13&token=AbCdEf12",
+        # Cyrillic and accented letters are \w in a Unicode regex.
+        f"{_NEW}partner=39734273&token=\u0410bCdEf12",
+        f"{_NEW}partner=39734273&token=AbC\u00e9Ef12",
+    ],
+)
+def test_parse_rejects_non_ascii_look_alikes(raw: str) -> None:
+    with pytest.raises(ValidationError) as exc:
+        parse_tradelink(raw)
+    assert exc.value.extra["code"] == "trade_link_invalid"
+
+
 def test_ownership() -> None:
     assert_owned(parse_tradelink(LINK), OWNER)
     with pytest.raises(ValidationError) as exc:

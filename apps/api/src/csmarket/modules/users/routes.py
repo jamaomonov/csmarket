@@ -128,9 +128,12 @@ async def check_my_trade_link(
     await guard_ip(request, bucket="trade-link-check", subject=user.id)
     if not user.trade_link:
         raise ValidationError("no trade link saved", code="trade_link_missing")
+    link = parse_tradelink(user.trade_link)
+    # End the read transaction before the upstream calls (AGENTS §11): the connection
+    # goes back to the pool instead of idling for up to 8 s. ``expire_on_commit=False``
+    # keeps ``user`` loaded; the verdict write below opens a fresh transaction.
+    await db.commit()
     waxpeer, hold = checkers
-    result = await check_trade_link(
-        parse_tradelink(user.trade_link), waxpeer=waxpeer, hold=hold, redis=get_redis()
-    )
+    result = await check_trade_link(link, waxpeer=waxpeer, hold=hold, redis=get_redis())
     await record_trade_link_check(db, user, verdict=result.verdict, reason=result.reason)
     return TradeLinkOut.of(user)

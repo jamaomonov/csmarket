@@ -25,8 +25,11 @@ from csmarket.modules.users.service import STEAM64_BASE
 
 log = get_logger("csmarket.users.tradelink")
 
+#: ``re.ASCII``: in a Unicode pattern ``\d`` matches Arabic-Indic or full-width digits
+#: (which ``int()`` then accepts) and ``\w`` matches Cyrillic — look-alike links.
 _LINK = re.compile(
-    r"^https://steamcommunity\.com/tradeoffer/new/\?partner=(\d{1,12})&token=([\w-]{6,16})$"
+    r"^https://steamcommunity\.com/tradeoffer/new/\?partner=(\d{1,12})&token=([\w-]{6,16})$",
+    re.ASCII,
 )
 CACHE_TTL_SECONDS = 600
 BREAKER_TTL_SECONDS = 60

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 
+from fastapi import FastAPI
 from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
 
 OWNER = "76561198000000001"
 #: Redrawn fake links — never a real partner/token in tests.
@@ -108,3 +110,44 @@ async def test_requires_sign_in(integration_client: AsyncClient) -> None:
     r = await integration_client.put("/api/v1/me/trade-link", json={"url": LINK})
     assert r.status_code == 401
     assert (await integration_client.post("/api/v1/me/trade-link/check")).status_code == 401
+
+
+async def test_no_transaction_is_held_across_the_upstream_calls(
+    integration_client: AsyncClient, integration_app: FastAPI
+) -> None:
+    """AGENTS §11: a pooled connection must not idle in a transaction while Waxpeer and
+    Steam take up to 4 s each — 20 slow checks would starve the whole API."""
+    from csmarket.api.v1.deps import db_session
+    from csmarket.modules.users.routes import tradelink_checkers
+
+    sessions: list[AsyncSession] = []
+    seen: list[bool] = []
+
+    async def _recording_session() -> AsyncIterator[AsyncSession]:
+        async for s in db_session():
+            sessions.append(s)
+            yield s
+
+    class _Wax:
+        async def check_tradelink(self, url: str) -> str | None:
+            seen.append(sessions[-1].in_transaction())
+            return None
+
+    class _Hold:
+        async def trade_hold_days(self, steam_id: str, token: str) -> int | None:
+            seen.append(sessions[-1].in_transaction())
+            return 0
+
+    h = await _auth(integration_client)
+    await integration_client.put("/api/v1/me/trade-link", json={"url": LINK}, headers=h)
+    integration_app.dependency_overrides[db_session] = _recording_session
+    integration_app.dependency_overrides[tradelink_checkers] = lambda: (_Wax(), _Hold())
+    try:
+        r = await integration_client.post("/api/v1/me/trade-link/check", headers=h)
+    finally:
+        integration_app.dependency_overrides.clear()
+    assert r.status_code == 200, r.text
+    assert r.json()["verdict"] == "ok"
+    assert seen == [False, False]
+    me = (await integration_client.get("/api/v1/me", headers=h)).json()
+    assert me["trade_link_verdict"] == "ok"  # the verdict written after still lands
