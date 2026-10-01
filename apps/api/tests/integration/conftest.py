@@ -1,0 +1,185 @@
+"""Integration-test fixtures.
+
+A session-scoped Postgres and a session-scoped Redis testcontainer are started once per
+test session (so once per xdist worker). The Alembic migrations are applied against the
+Postgres one. Each test starts from emptied tables and a flushed Redis — much faster than
+rebuilding the containers.
+"""
+
+from __future__ import annotations
+
+import os
+
+# Ryuk (testcontainers' GC sidecar) is finicky on Docker Desktop; we don't need it for
+# unit-shaped integration tests. Disable before importing the testcontainers package.
+os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
+
+from collections.abc import AsyncIterator, Iterator
+from pathlib import Path
+
+import pytest
+from alembic import command
+from alembic.config import Config
+from csmarket.core import config as cfg
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from testcontainers.postgres import PostgresContainer
+from testcontainers.redis import RedisContainer
+
+
+@pytest.fixture(scope="session")
+def _pg_container() -> Iterator[PostgresContainer]:
+    container = PostgresContainer(image="postgres:16-alpine", driver=None).with_bind_ports(
+        5432, None
+    )
+    container.start()
+    try:
+        yield container
+    finally:
+        container.stop()
+
+
+@pytest.fixture(scope="session")
+def _redis_container() -> Iterator[RedisContainer]:
+    """A private Redis per session/worker, so the per-test ``flushdb`` is always safe."""
+    container = RedisContainer(image="redis:7-alpine").with_bind_ports(6379, None)
+    container.start()
+    try:
+        yield container
+    finally:
+        container.stop()
+
+
+def _make_async_url(container: PostgresContainer) -> str:
+    host = container.get_container_host_ip()
+    port = container.get_exposed_port(5432)
+    user = container.username
+    password = container.password
+    db = container.dbname
+    return f"postgresql+asyncpg://{user}:{password}@{host}:{port}/{db}"
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _apply_migrations(_pg_container: PostgresContainer, _redis_container: RedisContainer) -> None:
+    """Point Settings + Alembic at the containers and run migrations once."""
+    url = _make_async_url(_pg_container)
+    os.environ["CSMARKET_DATABASE_URL"] = url
+    redis_host = _redis_container.get_container_host_ip()
+    redis_port = _redis_container.get_exposed_port(6379)
+    os.environ["CSMARKET_REDIS_URL"] = f"redis://{redis_host}:{redis_port}/0"
+    cfg.get_settings.cache_clear()
+
+    api_dir = Path(__file__).resolve().parents[2]
+    ini = api_dir / "alembic.ini"
+    alembic_cfg = Config(str(ini))
+    alembic_cfg.set_main_option("script_location", str(api_dir / "migrations"))
+    alembic_cfg.set_main_option("sqlalchemy.url", url)
+    command.upgrade(alembic_cfg, "head")
+
+
+@pytest.fixture(autouse=True)
+async def _reset_realtime_redis() -> AsyncIterator[None]:
+    """Reset the ``get_redis()`` singleton and flush Redis around every integration test.
+
+    Each pytest-asyncio test runs on its own event loop; a client cached from a previous
+    test would be bound to a closed loop and blow up with "Future attached to a different
+    loop" / "Event loop is closed". Resetting here makes every test start from, and leave,
+    a clean singleton regardless of which fixtures it requests.
+    """
+    import contextlib
+
+    from csmarket.core import redis as core_redis
+
+    core_redis._client = None  # type: ignore[attr-defined]
+    # Flush leftover Redis DATA (the singleton reset only drops the client object): rate-limit
+    # counters and the like would otherwise accumulate across the run from the shared
+    # test-client IP. The Redis is this worker's own container, so flushing is safe.
+    # Close the flush client immediately: ``integration_client`` resets the
+    # singleton on its own setup, which would otherwise orphan this client's
+    # connection — a leak that exhausts the pool and hangs the run mid-suite.
+    with contextlib.suppress(Exception):
+        await core_redis.get_redis().flushdb()
+        await core_redis.close_redis()
+    yield
+    await core_redis.close_redis()
+
+
+#: Every table a test may write, **children before parents**. `db_engine` empties them
+#: with plain `DELETE` (fast on empty tables); a wrong order raises and falls back to
+#: `TRUNCATE … CASCADE`. A new table goes in front of whatever it references.
+_EMPTY_IN_ORDER: tuple[str, ...] = ("idempotent_responses",)
+
+
+@pytest.fixture
+async def db_engine():
+    """A fresh async engine per test, with the database emptied first.
+
+    Emptied with ``DELETE``, not ``TRUNCATE``: ``TRUNCATE`` pays a fixed per-table price
+    (ACCESS EXCLUSIVE lock, catalogue work) while ``DELETE`` on an already-empty table is
+    nearly free, and after a worker's first test they all are. ``TRUNCATE ... CASCADE``
+    stays as a fallback: the order in ``_EMPTY_IN_ORDER`` is children-before-parents, which
+    is what makes plain ``DELETE`` legal against ``ON DELETE RESTRICT``; if a table is
+    listed in the wrong place the ``DELETE`` raises and the sledgehammer runs instead, so
+    CI stays green and the next person sees a slow suite rather than a red one.
+
+    Sequences are not restarted by ``DELETE``; no test may assert a generated value.
+    """
+    settings = cfg.get_settings()
+    engine = create_async_engine(settings.database_url, future=True)
+    try:
+        try:
+            async with engine.begin() as conn:
+                for table in _EMPTY_IN_ORDER:
+                    await conn.execute(text(f"DELETE FROM {table}"))
+        except SQLAlchemyError:
+            # A foreign key the order above does not satisfy. Fall back to the
+            # sledgehammer so the suite runs; the speed is a bonus, not a
+            # correctness requirement.
+            async with engine.begin() as conn:
+                await conn.execute(
+                    text(
+                        "TRUNCATE TABLE " + ", ".join(_EMPTY_IN_ORDER) + " RESTART IDENTITY CASCADE"
+                    )
+                )
+        yield engine
+    finally:
+        await engine.dispose()
+
+
+@pytest.fixture
+async def db_session(db_engine) -> AsyncIterator[AsyncSession]:
+    """A session bound to the truncated engine."""
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    async with factory() as session:
+        yield session
+
+
+@pytest.fixture
+async def integration_client(db_engine) -> AsyncIterator[AsyncClient]:
+    """An ASGI HTTP client wired to a fresh FastAPI app + truncated DB."""
+    from csmarket.bootstrap import create_app
+    from csmarket.core import db as core_db
+    from csmarket.core import redis as core_redis
+
+    # Swap the global engine so the app's session dependency uses the test engine.
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    core_db._engine = db_engine  # type: ignore[attr-defined]
+    core_db._session_factory = factory  # type: ignore[attr-defined]
+
+    # Reset the Redis singleton so it is re-created on the current event loop.
+    # Each pytest-asyncio function test runs in its own loop; a cached client from
+    # a previous test would be bound to a closed loop, causing "Future attached to
+    # a different loop" errors for the second Redis-using test in a session.
+    core_redis._client = None  # type: ignore[attr-defined]
+
+    app = create_app()
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        yield ac
+
+    core_db._engine = None  # type: ignore[attr-defined]
+    core_db._session_factory = None  # type: ignore[attr-defined]
+    # Close the Redis client so its connection pool doesn't linger on this loop.
+    await core_redis.close_redis()
