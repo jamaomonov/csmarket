@@ -12,7 +12,7 @@ import { ENTRIES_KEY } from "./EntriesList";
 
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { devPay, getTopup, type Topup } from "@/lib/balance";
+import { BALANCE_KEY, devPay, getTopup, type Topup } from "@/lib/balance";
 import { markOpened, searchWithoutGo, shouldAutoOpen } from "@/lib/kassa-redirect";
 
 /** Poll cadence while the customer pays: every 3 s… */
@@ -93,7 +93,7 @@ export function TopupStatus({ locale, number }: TopupStatusProps) {
   const shown = topup.data ? viewOf(topup.data) : null;
   useEffect(() => {
     if (shown !== "succeeded") return;
-    void qc.invalidateQueries({ queryKey: ["wallet", "balance"] });
+    void qc.invalidateQueries({ queryKey: BALANCE_KEY });
     void qc.invalidateQueries({ queryKey: ENTRIES_KEY });
   }, [shown, qc]);
 

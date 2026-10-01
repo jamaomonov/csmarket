@@ -80,6 +80,9 @@ export interface AttemptStore {
   current: { signature: string; key: string } | null;
 }
 
+/** Query key of the balance, for the balance page and whoever needs to invalidate it. */
+export const BALANCE_KEY = ["wallet", "balance"] as const;
+
 /** `GET /wallet`: spendable soʻm, `"0"` before the first top-up. */
 export function getBalance(): Promise<Balance> {
   return session.apiGet<Balance>("/api/v1/wallet");

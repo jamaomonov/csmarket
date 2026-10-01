@@ -9,7 +9,7 @@ import { EntriesList } from "./EntriesList";
 import { TopupForm } from "./TopupForm";
 
 import { useAuth } from "@/lib/auth";
-import { getBalance, getProviders } from "@/lib/balance";
+import { BALANCE_KEY, getBalance, getProviders } from "@/lib/balance";
 
 interface BalanceViewProps {
   locale: string;
@@ -23,7 +23,7 @@ export function BalanceView({ locale }: BalanceViewProps) {
   const { status, user, signInHref } = useAuth();
   const signedIn = status === "signed_in" && user !== null;
   const balance = useQuery({
-    queryKey: ["wallet", "balance"],
+    queryKey: BALANCE_KEY,
     queryFn: getBalance,
     enabled: signedIn,
   });
