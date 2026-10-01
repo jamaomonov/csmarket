@@ -1,6 +1,6 @@
 # payme
 
-Payme's Merchant API for balance top-ups (spec §3.2, §13; M3 Task 6), ported by allow-list
+Payme's Merchant API for balance top-ups (spec §3.2, §13; M3, ADR-0006), ported by allow-list
 (ADR-0002). Payme does not deliver a webhook: **we are Payme's JSON-RPC server**. Payme calls
 seven methods on one endpoint over the life of a transaction, and its transaction record is
 mirrored here. Every money move goes through the `payments` hooks; this module never touches
@@ -36,7 +36,7 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS       -32300 (never a 405)
 - Parameters are checked by type (`amount`, `time`, `reason`, `from`, `to` integers — not
   `bool`, not floats; `id` a string of 1..64; `account`, `fiscal_data` objects) → `-32600`.
 - Exempt from slowapi (`bootstrap._exempt_self_authenticating_routes`). Payme's source range
-  `185.234.113.0/28` is enforced at Caddy (Task 8) on top of Basic auth.
+  `185.234.113.0/28` is enforced at Caddy (`infra/caddy/Caddyfile.prod`) on top of Basic auth.
 - Logs: `payme.rpc method= code= number= amount_tiyin=` (code `0` = success) and
   `payme.created|performed|cancelled number= amount=` — never the Authorization header, a
   key, the body or a user id.
@@ -122,7 +122,9 @@ The scheduler job `payme.timeout` (every 5 min, first run after 180 s) runs
 `cancel_stale`: state-1 rows whose `create_time` is older than 12 h go to `-1`, reason 4,
 and their attempt is cancelled; the top-up expiry sweep then closes the top-up. A row whose
 top-up a callback holds is skipped until the next tick; one failing row is logged
-(`payme.timeout.row_failed`) and skipped.
+(`payme.timeout.row_failed`) and skipped. A PerformTransaction on a state-1 row older than
+12 h that the sweep has not reached yet still settles — the customer paid, so the credit is
+safe, and the sweep closes the window within 5 minutes.
 
 ## Error codes
 
@@ -163,6 +165,6 @@ counts nothing.
 
 ## Not here
 
-Orders (M4 resolves non-`T` numbers), anti-fraud vetoes, card refunds from admin (Payme's
-cabinet only), email (M4). The Payme cabinet setup lives in `docs/runbooks/kassa-setup.md`
-(Task 16); the Caddy IP allowlist is Task 8.
+Orders (M4 resolves non-`T` numbers; `cancel_stale` scans only top-up attempts until M4
+extends it), anti-fraud vetoes, card refunds from admin (Payme's cabinet only), email (M4).
+Cabinet setup: `docs/runbooks/kassa-setup.md`; troubleshooting: `docs/runbooks/payme.md`.

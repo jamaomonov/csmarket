@@ -1,6 +1,6 @@
 # uzum
 
-Uzum Bank's Merchant API for balance top-ups (spec §3.2, §13; M3 Task 7), ported by
+Uzum Bank's Merchant API for balance top-ups (spec §3.2, §13; M3, ADR-0006), ported by
 allow-list (ADR-0002). Uzum does not deliver a webhook: **we are Uzum's Merchant API
 server**. Uzum calls five endpoints over the life of a transaction, and **we** own the
 transaction state machine — Uzum signals a replay with a dedicated code, not an echo. Every
@@ -85,7 +85,7 @@ state. No attempt is opened for the caller's top-up.
 `/confirm` stores everything it was sent except `serviceId`, `timestamp`, `transId` in
 `payment_source` (`paymentSource`, `tariff`, `processingReferenceNumber`, `phone`,
 `cardType`, …) — the payer's phone is in it, so it is never logged and admin shows it masked
-(Task 10).
+(`admin.payments_kassa.mask_phone`).
 
 ## State machine
 
@@ -184,4 +184,6 @@ counts nothing.
 
 Orders (M4 resolves non-`T` numbers), anti-fraud vetoes, card refunds from admin (Uzum's side
 only), email (M4). Postman collection for Uzum's engineer: `docs/api/uzum.postman_collection.json`.
-The Uzum cabinet setup lives in `docs/runbooks/kassa-setup.md` (Task 16).
+`fail_stale` scans only top-up attempts until M4 extends it to orders. Cabinet setup (including
+the `order` attribute name): `docs/runbooks/kassa-setup.md`; troubleshooting:
+`docs/runbooks/uzum.md`.

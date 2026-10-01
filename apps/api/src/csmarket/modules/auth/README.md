@@ -67,8 +67,12 @@ account.
 ## Table
 
 `refresh_tokens` — `id` (the `sid` claim of the access tokens minted from it),
-`user_id`, `token_hash`, `expires_at`, `revoked_at`, `created_at`. Revoked or expired rows
-are kept 7 days, then purged by `purge_stale_refresh_tokens`.
+`user_id`, `token_hash`, `expires_at`, `revoked_at`, `revoked_reason`, `created_at`.
+`revoked_reason` (migration `0011_refresh_revoked_reason`, CHECK
+`ck_refresh_tokens_revoked_reason`) is `rotated`, `logout`, `admin` (a ban) or `reuse` (the
+trip-wire's burn-down); `NULL` on a live row, and on a legacy revoked row it counts as
+`rotated`. Only a `rotated` token trips the reuse wire (above). Revoked or expired rows are
+kept 7 days, then purged by `purge_stale_refresh_tokens`.
 
 ## HTTP surface
 

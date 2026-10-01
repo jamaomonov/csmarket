@@ -1,6 +1,6 @@
 # click
 
-Click's Shop API for balance top-ups (spec §3.2, §13; M3 Task 5), ported by allow-list
+Click's Shop API for balance top-ups (spec §3.2, §13; M3, ADR-0006), ported by allow-list
 (ADR-0002). Click does not deliver a webhook: **we are Click's Shop API server**. Click calls
 `/prepare` then `/complete` as the customer pays in Click Up or on `my.click.uz`, and we own
 the transaction state machine. Every money move goes through the `payments` hooks; this
@@ -114,6 +114,8 @@ once each, in `routes.py`. Every other code counts nothing.
 
 ## Not here
 
-The bot / mini-app service, orders (M4 resolves non-`T` numbers), anti-fraud vetoes,
-refunds (Click-side only), email (M4). The Click cabinet setup lives in
-`docs/runbooks/kassa-setup.md` (Task 16).
+The bot / mini-app service, anti-fraud vetoes, refunds (Click-side only), email (M4).
+**Order payments (M4):** `payable.resolve` answers "not found" for non-`T` numbers, and
+`cancel_stale` scans only top-up attempts (it joins through `payments.topup_id`) — M4 extends
+the scan to order payments. Cabinet setup: `docs/runbooks/kassa-setup.md`; troubleshooting:
+`docs/runbooks/click.md`.

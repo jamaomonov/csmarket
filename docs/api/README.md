@@ -98,7 +98,8 @@ intent_url}`. `amount_uzs` is a JSON **integer** of whole soʻm, 1 000..10 000 0
   page the customer returns to. Send the customer to `intent_url`; every kassa returns them
   to `/account/balance/topups/{number}`. The same key with the same amount and provider
   returns the same top-up (201 again); with another amount or provider → 409
-  `code: idempotency_mismatch`. Rate-limited per IP and per account (`topup-create`).
+  `code: idempotency_mismatch`. Rate-limited by the `topup-create` bucket: 60 a minute per IP
+  and 10 a minute per IP and account, then 429 with `Retry-After`.
 - `GET /wallet/topups/{number}?locale=` → `TopupOut`. The owner's only: anyone else's, an
   unknown or a malformed number is a 404 (never 403). `status` is `pending`, `succeeded`,
   `expired` or `reversed`; `intent_url` is `null` once the top-up cannot be paid. A pending
@@ -123,6 +124,9 @@ amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount
 | 409    | `conflict`    | `topup_not_payable`    | Dev pay of an expired or reversed top-up         |
 
 Money is a string of whole soʻm digits (`balance_uzs`, `amount_uzs`).
+
+Kassa callbacks (below) and the admin routes are documented with their auth; design and the
+rulings behind them: ADR-0006. Cabinet settings: `docs/runbooks/kassa-setup.md`.
 
 ### Kassa callbacks: Click (M3)
 

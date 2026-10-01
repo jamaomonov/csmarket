@@ -19,16 +19,20 @@
   | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`        |
   | M1  | `auth` (Steam), `users`, roles, account page, trade link         | `docs/superpowers/plans/2026-10-01-m1-auth-users.md`      |
   | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO | `docs/superpowers/plans/2026-10-01-m2-skins-catalogue.md` |
-  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | not written yet                                           |
+  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | `docs/superpowers/plans/2026-10-01-m3-wallet-payments.md` |
   | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                           |
   | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                           |
 
-- **Where things stand:** M0–M2 merged on local `main`. There is no git remote yet; nothing
-  is pushed or deployed. M0 is done for good when `https://csmarket.uz/` answers from CI-built
-  images. Next: the M3 plan, when the owner asks for it.
+- **Where things stand:** M0–M2 merged on local `main`; M3 on branch `m3-wallet-payments`
+  until the owner says to merge; real-kassa check pending the first deploy (ADR-0006 R14,
+  `docs/runbooks/kassa-setup.md`). There is no git remote yet; nothing is pushed or deployed.
+  M0 is done for good when `https://csmarket.uz/` answers from CI-built images. Next: merge
+  M3, then the M4 plan, when the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
-  (`docs/runbooks/first-deploy.md`). Everything later is listed in spec §16.
+  (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
+  cabinets and credentials (`docs/runbooks/kassa-setup.md`). Everything later is listed in
+  spec §16.
 
 ---
 
@@ -280,8 +284,10 @@ csmarket/
 - Rate limits: slowapi per route in FastAPI (`bootstrap._build_limiter`, in-process, keyed by
   client IP) + Redis `ip_guard` (M1) on sign-in, trade-link check, order creation, top-up
   creation. Acquirer webhooks are exempt from the coarse tier
-  (`bootstrap._exempt_self_authenticating_routes`, one audited list — empty until M3). No
-  Caddy `rate_limit`; the volumetric tier is Cloudflare's WAF.
+  (`bootstrap._exempt_self_authenticating_routes`, one audited list — since M3 the Click,
+  Payme and Uzum callbacks; each authenticates itself before parsing). No Caddy
+  `rate_limit`; the volumetric tier is Cloudflare's WAF; Payme's callback is IP-allowlisted
+  in Caddy (`185.234.113.0/28`).
 - Client IP = the first `X-Forwarded-For` entry (`core/client_ip.py`), which our Caddy
   overwrites with `{client_ip}` (Cloudflare's `Cf-Connecting-Ip` honoured only from
   Cloudflare's ranges). ADR-0003. Changing Caddy to append breaks both limiters.

@@ -1,0 +1,62 @@
+sequenceDiagram
+    autonumber
+    actor U as Signed-in customer
+    participant Web as Balance page / status page
+    participant API as API
+    participant DB as Postgres
+    participant K as Kassa (Click / Payme / Uzum)
+    participant S as Scheduler
+
+    U->>Web: Amount + kassa, «Пополнить на …»
+    Web->>API: POST /wallet/topups {amount_uzs, provider, locale} + Idempotency-Key
+    API->>API: ip_guard topup-create, 1 000..10 000 000 soʻm, kassa available
+    API->>DB: wallet_topups T… (pending, expires_at +30 min) + payments attempt (created)
+    API-->>Web: 201 {number, intent_url}
+    Web->>Web: Go to /account/balance/topups/T…?go=1
+    Web->>API: GET /wallet/topups/T…
+    API-->>Web: pending, intent_url
+    Web->>K: Auto-open intent_url once (within 8 s), else «Перейти к оплате»
+
+    Note over API,DB: Every callback: auth before the body, then lock order<br/>top-up → kassa row → payment → user wallet
+    K->>API: Check / prepare / create (account = T…, amount)
+    API->>DB: resolve(T…, lock): payable? amount equal (soʻm / tiyin)?
+    alt not payable (paid, expired, reversed, unknown) or wrong amount
+        API-->>K: Kassa error code (nothing written)
+    else payable
+        API->>DB: kassa row + attempt created → pending
+        API-->>K: OK
+    end
+
+    U->>K: Pays
+    K->>API: Perform / complete / confirm
+    API->>DB: Lock top-up, then kassa row, re-check state
+    alt top-up already credited (another kassa or sibling row)
+        API->>DB: Kassa row closed (cancelled / failed), committed
+        API-->>K: Refused (Click −4, Payme −31008, Uzum 10008): no second charge
+    else first success
+        API->>DB: settle: attempt succeeded, top-up succeeded,<br/>ledger topup D user_wallet / C provider_clearing (key topup:{id})
+        API-->>K: OK
+    end
+    K-->>Web: Customer returns to /account/balance/topups/T…
+
+    loop every 3 s while pending (refetch on focus)
+        Web->>API: GET /wallet/topups/T…
+        API-->>Web: status
+    end
+    Web-->>U: «Баланс пополнен на …» → «К балансу»
+
+    opt nobody paid
+        S->>DB: Kassa sweeps close stale kassa rows (Click / Uzum 30 min, Payme 12 h)
+        S->>DB: Top-up sweep (every 5 min): pending past expires_at, no live attempt → expired
+        Web-->>U: «Время на оплату вышло. Создайте новое пополнение.»
+    end
+
+    opt refund started in the kassa's cabinet (Payme, Uzum)
+        K->>API: Cancel / reverse
+        alt amount still on the balance
+            API->>DB: ledger topup_reversal (key topup_reversal:{id}), attempt refunded, top-up reversed
+            API-->>K: OK
+        else balance no longer covers it
+            API-->>K: Refused (Payme −31007, Uzum 10017), nothing changes
+        end
+    end

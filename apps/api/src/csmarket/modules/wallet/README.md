@@ -1,7 +1,8 @@
 # wallet
 
-The double-entry ledger behind every soʻm balance (spec §5, rulings R1, R2). Ported by
-allow-list (ADR-0002): UZS only, no currency column, whole soʻm.
+The double-entry ledger behind every soʻm balance (spec §5, rulings R1, R2; ADR-0006).
+Ported by allow-list (ADR-0002): UZS only, no currency column, whole soʻm. Operations
+(reading a history, adjusting, refused reversals): `docs/runbooks/wallet.md`.
 
 **Owns:** tables `wallet_accounts`, `wallet_transactions` and `wallet_postings`
 (migration `0006_wallet_ledger`).

@@ -104,6 +104,8 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
 - **Direction:** `admin` imports `users`, `wallet`, `payments` and `auth` (through their
   `api`); none of them imports `admin.users_*` (`tests/unit/test_import_order.py`).
 - Tests: `tests/integration/test_admin_users.py`, `test_wallet_admin_adjust.py`.
+- Operating the card (reading a history, adjusting with a reason, refused clawbacks):
+  `docs/runbooks/wallet.md`; design: ADR-0006.
 
 ## Payments and audit (M3)
 
@@ -136,6 +138,8 @@ Read-only, `require_admin` on each router (401 / 403 as above), newest first wit
 - **Direction:** `admin` imports `click`, `payme`, `uzum` and `payments` through their `api`;
   none imports `admin.payments_*` / `admin.audit_*` (`tests/unit/test_import_order.py`).
 - Tests: `tests/integration/test_admin_payments.py`, `test_admin_audit_routes.py`.
+- Reading a payment when a customer says "paid, not credited": `docs/runbooks/click.md`,
+  `payme.md`, `uzum.md`, section **Customer paid, balance not credited**.
 
 ## Public interface
 

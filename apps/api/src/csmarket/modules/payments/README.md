@@ -1,8 +1,9 @@
 # payments
 
 Balance top-ups and the attempts to pay them through a kassa (spec §5, rulings R3–R6,
-R10, R11). Builds on `wallet` (credits and reversals go through `wallet.api`); `wallet`
-never imports `payments`.
+R10, R11; ADR-0006). Builds on `wallet` (credits and reversals go through `wallet.api`);
+`wallet` never imports `payments`. Operations: `docs/runbooks/kassa-setup.md`; flow:
+`docs/product/flows/balance-topup.md`.
 
 **Owns:** tables `wallet_topups` and `payments` (migration `0007_payments_topups`).
 
@@ -152,6 +153,13 @@ It imports nothing from the `payme` module.
 pair (production or sandbox); its intent URL is
 `{uzum_open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our top-up page>` — no
 amount: Uzum's app prefills it from our `/check`. It imports nothing from the `uzum` module.
+
+## Not here (M4)
+
+`purpose='order'` in the hooks (they raise `NotImplementedError`), the `wallet` gateway (pay
+from the balance), the order FK on `payments`, and order payments in the kassas' timeout
+sweeps. Admin "settle a stuck payment", a kassa kill-switch and card refunds from admin are
+not planned (ruling R12).
 
 **Tests:** `tests/unit/test_payment_fsm.py`, `tests/unit/test_payment_gateways.py`,
 `tests/integration/test_payable_resolver.py`, `tests/integration/test_payment_hooks.py`
