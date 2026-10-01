@@ -30,6 +30,7 @@ from csmarket.modules.payments.gateways import PaymentGateway, available_provide
 from csmarket.modules.payments.hooks import cancel_pending, ensure_attempt, mark_pending, settle
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable, resolve
+from csmarket.modules.wallet.api import WALLET
 
 log = get_logger("csmarket.payments.topups")
 
@@ -74,7 +75,7 @@ def _gateway(provider: str) -> PaymentGateway:
 
 def _gateway_or_none(provider: str) -> PaymentGateway | None:
     """``provider``'s gateway while it is available; else ``None`` (also for ``wallet``)."""
-    if provider == "wallet" or provider not in available_providers():
+    if provider == WALLET or provider not in available_providers():
         return None
     return get_gateway(provider)
 

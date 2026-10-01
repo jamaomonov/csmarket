@@ -31,7 +31,7 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `move`, `ORDERS_CHANNEL` (`NOTIFY orders` wakes the worker), the response shapes `OrderOut`,
 `OrderStatusOut`, `SkinTradeOut` and `order_out`, `skin_trade_out`, `effective_status`,
 `is_expired`, `mark_paid`, and the refunds (`refund_to_balance`, `in_flight`,
-`admin_refund`, `ADMIN_REFUNDABLE`, `RefundStatus`). `api.py` never imports `payments`
+`admin_refund`, `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`). `api.py` never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
 
@@ -148,7 +148,11 @@ module's models and FSM — never `payments`.
   `failure_reason = reason`, `csmarket_order_refunds_total{reason}` + 1, log
   `orders.refunded` (number, amount, reason, status — never the buyer) → `True`. Flushes,
   never commits. A `to_status` or `reason` outside its set is a `ValueError` (caller bug);
-  an order with no `paid_with` is 409 `order_not_paid`; an FSM edge that does not exist
+  an order with no `paid_with` is 409 `order_not_paid`; an order whose trade has an
+  unresolved `buy_unconfirmed`, `ambiguous_trade`, `rolled_back` or `audit_divergence`
+  (`BLOCKS_REFUND`, R3: unknown or spent outcome) is 409 `order_needs_attention`, nothing
+  written — `waxpeer_forbidden` does not block (nothing was bought), and a resolved
+  attention no longer blocks; the trade is read under the caller's order lock; an FSM edge that does not exist
   raises `InvalidOrderTransitionError` before anything is booked. The payment row stays
   `succeeded` (the money stays with us, now as balance).
 - `in_flight(order, trade) -> bool` — `paid`, `buying`, `trade_sent`, and a `delivered`

@@ -40,6 +40,12 @@ _REFUND_STATUSES: frozenset[str] = frozenset({"failed", "returned"})
 ADMIN_REFUNDABLE: frozenset[str] = frozenset(
     {"buy_unconfirmed", "ambiguous_trade", "waxpeer_forbidden"}
 )
+#: Attention reasons whose outcome is unknown or spent (R3): while one is unresolved no
+#: refund is booked, by any path. ``waxpeer_forbidden`` is not here — nothing was bought, so
+#: a later sold-out or low-balance refund must still go through.
+BLOCKS_REFUND: frozenset[str] = frozenset(
+    {"buy_unconfirmed", "ambiguous_trade", "rolled_back", "audit_divergence"}
+)
 
 
 def in_flight(order: Order, trade: SkinTrade | None) -> bool:
@@ -62,6 +68,22 @@ def in_flight(order: Order, trade: SkinTrade | None) -> bool:
     )
 
 
+async def _trade_of(db: AsyncSession, order: Order) -> SkinTrade | None:
+    """``order``'s trade, read fresh under the order lock the caller holds."""
+    return await db.scalar(
+        select(SkinTrade)
+        .where(SkinTrade.order_id == order.id)
+        .execution_options(populate_existing=True)
+    )
+
+
+async def _refuse_while_unresolved(db: AsyncSession, order: Order) -> None:
+    """409 ``order_needs_attention`` while the trade's outcome is unknown or spent (R3)."""
+    trade = await _trade_of(db, order)
+    if trade is not None and trade.attention_reason in BLOCKS_REFUND and trade.resolved_at is None:
+        raise ConflictError("this order waits for an admin's check", code="order_needs_attention")
+
+
 async def refund_to_balance(
     db: AsyncSession,
     *,
@@ -75,7 +97,9 @@ async def refund_to_balance(
     Books ``wallet.credit_order_refund`` (balance-paid: the purchase undone; kassa-paid:
     the kassa's money becomes balance), moves the order along the FSM, and stamps
     ``refunded_at``, ``refunded_to="balance"`` and ``failure_reason``. Logs the number,
-    amount and reason, never the buyer. Flushes, never commits.
+    amount and reason, never the buyer. Flushes, never commits. Refused while the order's
+    trade has an unresolved attention in :data:`BLOCKS_REFUND` (R3: the outcome is unknown
+    or the skin may be spent — an admin resolves it first).
 
     Args:
         db: Session; the caller holds ``order`` ``FOR UPDATE`` and commits.
@@ -91,8 +115,13 @@ async def refund_to_balance(
 
     Raises:
         ValueError: ``to_status`` or ``reason`` outside their sets — a caller bug.
-        ConflictError: ``code="order_not_paid"`` — the order has no payment to give back.
+        ConflictError: ``code="order_not_paid"`` — the order has no payment to give back;
+            ``code="order_needs_attention"`` — an unresolved unknown or spent outcome (R3).
+            Nothing written.
         InvalidOrderTransitionError: the FSM has no edge to ``to_status``; nothing written.
+
+        On any error the caller must roll back: the order is moved in memory before the
+        refund is booked, so a failure after the move leaves the row changed in the session.
     """
     if to_status not in _REFUND_STATUSES:
         raise ValueError(f"to_status {to_status!r} is not a refund status")
@@ -102,6 +131,7 @@ async def refund_to_balance(
         return False
     if order.paid_with is None:
         raise ConflictError("this order was never paid", code="order_not_paid")
+    await _refuse_while_unresolved(db, order)
     move(order, to_status)
     await credit_order_refund(
         db,
@@ -143,12 +173,7 @@ async def _locked(db: AsyncSession, number: str) -> tuple[Order, SkinTrade | Non
     )
     if order is None:
         raise NotFoundError("order not found")
-    trade = await db.scalar(
-        select(SkinTrade)
-        .where(SkinTrade.order_id == order.id)
-        .execution_options(populate_existing=True)
-    )
-    return order, trade
+    return order, await _trade_of(db, order)
 
 
 def _admin_refundable(order: Order, trade: SkinTrade | None) -> bool:
@@ -197,4 +222,11 @@ async def admin_refund(db: AsyncSession, *, number: str, admin_id: str) -> Order
     return order
 
 
-__all__ = ["ADMIN_REFUNDABLE", "RefundStatus", "admin_refund", "in_flight", "refund_to_balance"]
+__all__ = [
+    "ADMIN_REFUNDABLE",
+    "BLOCKS_REFUND",
+    "RefundStatus",
+    "admin_refund",
+    "in_flight",
+    "refund_to_balance",
+]

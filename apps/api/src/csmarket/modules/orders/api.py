@@ -20,6 +20,7 @@ from csmarket.modules.orders.models import (
 from csmarket.modules.orders.paid import ORDERS_CHANNEL, mark_paid
 from csmarket.modules.orders.refunds import (
     ADMIN_REFUNDABLE,
+    BLOCKS_REFUND,
     RefundStatus,
     admin_refund,
     in_flight,
@@ -32,6 +33,7 @@ from csmarket.modules.orders.trade_view import SkinTradeOut, skin_trade_out
 __all__ = [
     "ADMIN_REFUNDABLE",
     "ATTENTION_REASONS",
+    "BLOCKS_REFUND",
     "FAILURE_REASONS",
     "IN_FLIGHT",
     "ORDERS_CHANNEL",

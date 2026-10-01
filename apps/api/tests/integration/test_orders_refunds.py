@@ -259,6 +259,49 @@ async def test_a_caller_bug_is_refused(db_session: AsyncSession) -> None:
     assert await _refunds(db_session, order.id) == []
 
 
+@pytest.mark.parametrize(
+    "reason", ["buy_unconfirmed", "ambiguous_trade", "rolled_back", "audit_divergence"]
+)
+async def test_an_unresolved_unknown_outcome_is_never_refunded(
+    db_session: AsyncSession, reason: str
+) -> None:
+    """R3: a buy we cannot see or a skin that may be spent waits for an admin."""
+    order = await _wallet_paid(db_session)
+    await make_trade(db_session, order, attention_reason=reason)
+    rows = await _ledger_rows(db_session)
+    locked = await _locked(db_session, order.id)
+    assert await _code(
+        refund_to_balance(
+            db_session, order=locked, to_status="failed", reason="sold_out", actor="orders"
+        )
+    ) == (409, "order_needs_attention")
+    assert (locked.status, locked.refunded_at) == ("buying", None)
+    assert await _ledger_rows(db_session) == rows
+
+
+async def test_a_forbidden_buy_does_not_block_a_later_refund(db_session: AsyncSession) -> None:
+    """``waxpeer_forbidden`` bought nothing: a sold-out refund still goes through."""
+    order = await _wallet_paid(db_session)
+    await make_trade(db_session, order, attention_reason="waxpeer_forbidden")
+    locked = await _locked(db_session, order.id)
+    assert await refund_to_balance(
+        db_session, order=locked, to_status="failed", reason="sold_out", actor="orders"
+    )
+    await db_session.commit()
+    assert len(await _refunds(db_session, order.id)) == 1
+
+
+async def test_a_resolved_unknown_outcome_can_be_refunded(db_session: AsyncSession) -> None:
+    order = await _wallet_paid(db_session)
+    await make_trade(db_session, order, attention_reason="ambiguous_trade", resolved_at=clock.now())
+    locked = await _locked(db_session, order.id)
+    assert await refund_to_balance(
+        db_session, order=locked, to_status="failed", reason="sold_out", actor="orders"
+    )
+    await db_session.commit()
+    assert len(await _refunds(db_session, order.id)) == 1
+
+
 # --- in_flight -----------------------------------------------------------------------------
 
 
