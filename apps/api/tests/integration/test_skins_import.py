@@ -36,7 +36,9 @@ async def test_second_import_writes_nothing(db_session: AsyncSession) -> None:
     assert await upsert_items(db_session, _rows()) == 0
 
 
-async def test_changed_image_is_written_and_prices_survive(db_session: AsyncSession) -> None:
+async def test_changed_image_is_written_and_prices_and_hidden_survive(
+    db_session: AsyncSession,
+) -> None:
     await upsert_items(db_session, _rows())
     await db_session.commit()
     row = (
@@ -47,6 +49,7 @@ async def test_changed_image_is_written_and_prices_survive(db_session: AsyncSess
     row.min_auto_units = 27867
     row.count_auto = 49
     row.active = True
+    row.hidden = True
     await db_session.commit()
 
     from dataclasses import replace
@@ -68,6 +71,8 @@ async def test_changed_image_is_written_and_prices_survive(db_session: AsyncSess
     assert row.image_url is not None
     assert row.image_url.endswith("/new")
     assert (row.min_auto_units, row.count_auto, row.active) == (27867, 49, True)
+    # The row was really rewritten (its image changed), and ``hidden`` still survived.
+    assert row.hidden is True
 
 
 def _mock_upstream(router: respx.MockRouter) -> None:
