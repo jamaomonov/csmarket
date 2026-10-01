@@ -80,6 +80,17 @@
       "topup": "Toʻldirish",
       "topup_reversal": "Toʻldirish bekor qilindi",
       "admin_adjust": "Tuzatish"
+    },
+    "topup": {
+      "waiting": "Toʻlov kutilmoqda",
+      "pay": "Toʻlovga oʻtish",
+      "payTest": "Toʻlash (test)",
+      "refresh": "Yangilash",
+      "done": "Balans {amount}ga toʻldirildi",
+      "toBalance": "Balansga qaytish",
+      "expired": "Toʻlov vaqti tugadi. Yangi toʻldirish yarating.",
+      "reversed": "Toʻldirish bekor qilindi.",
+      "notFound": "Toʻldirish topilmadi."
     }
   },
   "skins": {

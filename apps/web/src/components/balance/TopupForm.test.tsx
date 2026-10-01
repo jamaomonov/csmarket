@@ -137,6 +137,60 @@ describe("TopupForm", () => {
     expect(mocks.push).not.toHaveBeenCalled();
   });
 
+  it("a second submit while the first request is in flight opens nothing more", async () => {
+    let finish: (t: Topup) => void = () => undefined;
+    mocks.createTopup.mockReturnValue(
+      new Promise<Topup>((resolve) => {
+        finish = resolve;
+      }),
+    );
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
+    const form = field().closest("form");
+    if (!form) throw new Error("no form");
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    fireEvent.click(submit());
+    expect(submit()).toBeDisabled();
+    finish(TOPUP);
+    await waitFor(() => {
+      expect(mocks.push).toHaveBeenCalledTimes(1);
+    });
+    expect(mocks.createTopup).toHaveBeenCalledTimes(1);
+  });
+
+  it("is usable again if the page stays after going to the top-up", async () => {
+    mocks.createTopup.mockResolvedValue(TOPUP);
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
+    fireEvent.click(submit());
+    await waitFor(() => {
+      expect(mocks.push).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(submit()).toBeEnabled();
+    });
+  });
+
+  it("a rate-limited request reads as a failure to start", async () => {
+    mocks.createTopup.mockRejectedValue(
+      new SessionApiError(429, "Too Many Requests", { code: "rate_limited" }),
+    );
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
+    fireEvent.click(submit());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Не получилось начать оплату. Попробуйте ещё раз.",
+    );
+    expect(submit()).toBeEnabled();
+  });
+
+  it("a paste never shows more digits than the field holds", () => {
+    setup();
+    fireEvent.paste(field(), { clipboardData: { getData: () => "12345678901234567890" } });
+    expect(field()).toHaveValue(groupDigits("123456789012", "ru"));
+  });
+
   it("shows kassa names as brands and the dev kassa as a test payment", () => {
     setup([{ slug: "click" }, { slug: "payme" }, { slug: "uzum" }, { slug: "mock" }]);
     for (const name of ["Click", "Payme", "Uzum", "Тестовая оплата"]) {

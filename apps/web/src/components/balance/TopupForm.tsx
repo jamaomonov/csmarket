@@ -4,7 +4,14 @@ import { SessionApiError } from "@csmarket/api-client";
 import { Button, cn } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
 import { useTranslations } from "next-intl";
-import { useId, useLayoutEffect, useRef, useState, type SyntheticEvent } from "react";
+import {
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+  type SyntheticEvent,
+} from "react";
 
 import type { Locale } from "@csmarket/i18n";
 
@@ -36,6 +43,12 @@ const KASSA_NAMES: Readonly<Record<string, string>> = {
 
 type FormError = "badAmount" | "failed";
 
+/**
+ * The field's length, separators included. Past ~16 digits `Number()` rounds and the
+ * field would show digits nobody typed; a paste is clamped to the same count.
+ */
+const FIELD_MAX = String(TOPUP_MAX).length + 4;
+
 interface TopupFormProps {
   locale: Locale;
   /** The kassas open now; `undefined` while the list loads. */
@@ -55,6 +68,12 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
   const [chosen, setChosen] = useState<string | null>(null);
   const [error, setError] = useState<FormError | null>(null);
   const [busy, setBusy] = useState(false);
+  // `busy` disables the button from the next render; this blocks a second submit
+  // that lands before it.
+  const inFlight = useRef(false);
+  // Pending while the router moves to the top-up's page: the button stays disabled
+  // for exactly as long as the page is changing, and no longer.
+  const [navigating, startNavigation] = useTransition();
   // Survives re-renders so a second submit after a failed first one replays that
   // request instead of opening another top-up.
   const attempt = useRef<AttemptStore["current"]>(null);
@@ -81,30 +100,34 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
   const outOfRange = typed > TOPUP_MAX || (error === "badAmount" && typed < TOPUP_MIN);
 
   const edit = (digits: string): void => {
-    setAmount(digits);
+    setAmount(digits.slice(0, FIELD_MAX));
     setError(null);
   };
 
   async function submit(e: SyntheticEvent): Promise<void> {
     e.preventDefault();
-    if (busy || method === null || typed === 0) return;
+    if (inFlight.current || busy || navigating || method === null || typed === 0) return;
     if (typed < TOPUP_MIN || typed > TOPUP_MAX) {
       setError("badAmount");
       return;
     }
     setError(null);
+    inFlight.current = true;
     setBusy(true);
     try {
       const topup = await createTopup(
         { amount_uzs: typed, provider: method, locale },
         topupAttemptKey(attempt, `${typed.toString()}:${method}`),
       );
-      // Stay busy: the page is changing.
-      router.push(`/account/balance/topups/${encodeURIComponent(topup.number)}?go=1`);
+      startNavigation(() => {
+        router.push(`/account/balance/topups/${encodeURIComponent(topup.number)}?go=1`);
+      });
     } catch (err) {
-      setBusy(false);
       const code = err instanceof SessionApiError ? err.code : undefined;
       setError(code === "topup_amount" ? "badAmount" : "failed");
+    } finally {
+      inFlight.current = false;
+      setBusy(false);
     }
   }
 
@@ -142,8 +165,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
               e.preventDefault();
               edit(pastedDigits(e.clipboardData.getData("text")));
             }}
-            // Past ~16 digits `Number()` rounds and the field shows digits nobody typed.
-            maxLength={String(TOPUP_MAX).length + 4}
+            maxLength={FIELD_MAX}
             aria-invalid={outOfRange}
             aria-describedby={rangeId}
             className="border-border bg-surface focus:border-accent h-14 w-full rounded-md border px-4 text-2xl font-bold tabular-nums outline-none"
@@ -213,7 +235,11 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
           </p>
         ) : null}
 
-        <Button type="submit" size="lg" disabled={busy || method === null || typed === 0}>
+        <Button
+          type="submit"
+          size="lg"
+          disabled={busy || navigating || method === null || typed === 0}
+        >
           {typed === 0 ? t("enterAmount") : t("submit", { amount: formatUzs(locale, typed) })}
         </Button>
       </form>

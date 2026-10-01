@@ -80,6 +80,17 @@
       "topup": "Top-up",
       "topup_reversal": "Top-up cancelled",
       "admin_adjust": "Adjustment"
+    },
+    "topup": {
+      "waiting": "Waiting for payment",
+      "pay": "Go to payment",
+      "payTest": "Pay (test)",
+      "refresh": "Refresh",
+      "done": "Balance topped up by {amount}",
+      "toBalance": "Back to balance",
+      "expired": "Time to pay has run out. Start a new top-up.",
+      "reversed": "Top-up cancelled.",
+      "notFound": "Top-up not found."
     }
   },
   "skins": {
