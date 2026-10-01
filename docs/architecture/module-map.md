@@ -12,7 +12,7 @@ allow-list — ADR-0002). Tables and columns are spec §5; scope per module is s
 | `users`         | `users`                                                   | M1 (built)                   | `modules/users/` — `steam_id` is the identity; trade link lives here                                                                                                                  |
 | `admin`         | `admin_audit_log` (with the first admin action, M3)       | M1 (gate) →                  | `modules/admin/` (deps) + the skins admin routes; M1 ships the role gate and `GET /admin/me`, the audit log comes with the first admin action, pages with each milestone              |
 | `skins`         | `skin_items`, `skin_pricing_rules`, `skin_search_aliases` | M1 (Waxpeer client only), M2 | `modules/skins/` + the Waxpeer client (M1: `check_tradelink` only), listings, trades and sweeps from `modules/fulfillment/` + scheduler jobs `skins_*.py`                             |
-| `fx`            | `fx_snapshots`                                            | M3                           | `modules/fx/` — CBU rate, a snapshot per order                                                                                                                                        |
+| `fx`            | `fx_snapshots`                                            | M2 (built)                   | new, small (not a port) — CBU rate, `fx_snapshots`, Redis copy `fx:usd_uzs`; hourly scheduler job `fx.refresh`; M4 orders point at a snapshot                                         |
 | `wallet`        | `wallet_accounts`, `ledger_entries`, `wallet_topups`      | M3                           | `modules/wallet/` — double-entry ledger, `NORMAL_SIDE` per kind, `post()` invariant                                                                                                   |
 | `payments`      | `payments`                                                | M3                           | `modules/payments/` — FSM, idempotency, gateways (base, click, payme, uzum, wallet, mock). Not paynet, octo                                                                           |
 | `click`         | `click_webhooks`                                          | M3                           | `modules/click/` — webhook twin                                                                                                                                                       |
@@ -42,9 +42,9 @@ keys: [`cache-keys.md`](./cache-keys.md). Decision: [ADR-0004](../decisions/0004
 
 ## Processes outside the API
 
-| App              | Package              | Arrives in | Notes                                                                                                          |
-| ---------------- | -------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `apps/worker`    | `csmarket_worker`    | M0 (shell) | `consumer._queues()` is empty until M4 adds the `orders` queue                                                 |
-| `apps/scheduler` | `csmarket_scheduler` | M0 (shell) | Jobs: `purge_stale_refresh_tokens` (M1, daily); catalogue import, price sync (M2); expire, trades, audits (M4) |
-| `apps/web`       | `@csmarket/web`      | M0 (hello) | Catalogue M2, account M1, wallet M3, orders M4                                                                 |
-| `apps/admin`     | `@csmarket/admin`    | M0 (shell) | Steam sign-in and role gate (M1); catalogue M2; users, wallet, payments M3; trades, pricing M4                 |
+| App              | Package              | Arrives in | Notes                                                                                                                                     |
+| ---------------- | -------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/worker`    | `csmarket_worker`    | M0 (shell) | `consumer._queues()` is empty until M4 adds the `orders` queue                                                                            |
+| `apps/scheduler` | `csmarket_scheduler` | M0 (shell) | Jobs: `purge_stale_refresh_tokens` (M1, daily); `fx.refresh` (M2, hourly); catalogue import, price sync (M2); expire, trades, audits (M4) |
+| `apps/web`       | `@csmarket/web`      | M0 (hello) | Catalogue M2, account M1, wallet M3, orders M4                                                                                            |
+| `apps/admin`     | `@csmarket/admin`    | M0 (shell) | Steam sign-in and role gate (M1); catalogue M2; users, wallet, payments M3; trades, pricing M4                                            |

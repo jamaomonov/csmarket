@@ -8,10 +8,13 @@ import signal
 from csmarket_scheduler.main import build_scheduler, run
 
 
-def test_build_scheduler_is_utc_with_the_m1_jobs() -> None:
+def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
     scheduler = build_scheduler()
     assert str(scheduler.timezone) == "UTC"
-    assert [job.id for job in scheduler.get_jobs()] == ["auth.purge_refresh_tokens"]
+    assert [job.id for job in scheduler.get_jobs()] == [
+        "auth.purge_refresh_tokens",
+        "fx.refresh",
+    ]
 
 
 async def test_run_stops_on_signal() -> None:
