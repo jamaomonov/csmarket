@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import common from "@csmarket/i18n/locales/ru/common.json";
 import messages from "@csmarket/i18n/locales/ru/web.json";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { expect, it, vi } from "vitest";
 
@@ -121,4 +121,49 @@ it("resets only the panel's filters, keeping the category, and hides with none s
   unmount();
   renderFilters("rifles", [], 0);
   expect(screen.queryByRole("link", { name: /Сбросить/ })).not.toBeInTheDocument();
+});
+
+it("clears the price boxes when the URL drops the bounds (Reset, back)", () => {
+  const facets = { categories: [], weapons: [], exteriors: [], rarities: [] };
+  const view = (query: Parameters<typeof SkinFilters>[0]["query"]) => (
+    <NextIntlClientProvider locale="ru" messages={{ web: messages, common }}>
+      <SkinFilters query={query} facets={facets} />
+    </NextIntlClientProvider>
+  );
+  const { container, rerender } = render(view({ sort: "-price", minUzs: 100000, maxUzs: 500000 }));
+  const box = (name: string) => container.querySelector<HTMLInputElement>(`input[name='${name}']`);
+  expect(box("min")?.value).toBe("100000");
+  expect(box("max")?.value).toBe("500000");
+  rerender(view({ sort: "-price" }));
+  expect(box("min")?.value).toBe("");
+  expect(box("max")?.value).toBe("");
+});
+
+it("keeps the box (focus, typed digits) when its own price comes back in the URL", () => {
+  vi.useFakeTimers();
+  try {
+    const facets = { categories: [], weapons: [], exteriors: [], rarities: [] };
+    const view = (query: Parameters<typeof SkinFilters>[0]["query"]) => (
+      <NextIntlClientProvider locale="ru" messages={{ web: messages, common }}>
+        <SkinFilters query={query} facets={facets} />
+      </NextIntlClientProvider>
+    );
+    const { container, rerender } = render(view({ sort: "-price" }));
+    const box = () => container.querySelector<HTMLInputElement>("input[name='min']");
+    const typedInto = box();
+    if (!typedInto) throw new Error("no min box");
+    typedInto.focus();
+    fireEvent.change(typedInto, { target: { value: "100000" } });
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+    // The buyer keeps typing while the page for 100 000 loads, then it arrives.
+    fireEvent.change(typedInto, { target: { value: "1000000" } });
+    rerender(view({ sort: "-price", minUzs: 100000 }));
+    expect(box()).toBe(typedInto);
+    expect(document.activeElement).toBe(typedInto);
+    expect(box()?.value).toBe("1000000");
+  } finally {
+    vi.useRealTimers();
+  }
 });

@@ -12,9 +12,17 @@ import { HOME } from "@/lib/paths";
 /** Long enough to type a number, short enough not to feel like waiting. */
 export const PRICE_APPLY_DELAY_MS = 500;
 
+const bound = (v: string) => (v.trim() === "" ? undefined : Math.max(0, Number(v)));
+const boundsKey = (min: number | undefined, max: number | undefined) =>
+  `${String(min ?? "")}-${String(max ?? "")}`;
+
 /**
  * The price range, applied as the buyer types — half a second after they stop, no
  * «Применить» to press. Still a GET form, so Enter (or a page without JS) submits it.
+ *
+ * When the URL's bounds change from elsewhere (Reset, back, the other copy of the panel)
+ * the boxes take them; when the change is the one this box just pushed they are left
+ * alone, so the buyer keeps focus and whatever they typed meanwhile.
  */
 export function SkinPriceFilter({ query }: { query: SkinQuery }) {
   const t = useTranslations("web.skins");
@@ -22,11 +30,24 @@ export function SkinPriceFilter({ query }: { query: SkinQuery }) {
   const [min, setMin] = useState(query.minUzs?.toString() ?? "");
   const [max, setMax] = useState(query.maxUzs?.toString() ?? "");
   const typed = useRef(false);
+  const urlBounds = boundsKey(query.minUzs, query.maxUzs);
+  const [seen, setSeen] = useState(urlBounds);
+  const [pushed, setPushed] = useState<string | null>(null);
+  if (seen !== urlBounds) {
+    // Adjusting state to a prop change during render (react.dev "you might not need an effect").
+    setSeen(urlBounds);
+    if (urlBounds !== pushed) {
+      setMin(query.minUzs?.toString() ?? "");
+      setMax(query.maxUzs?.toString() ?? "");
+    }
+  }
 
   useEffect(() => {
     if (!typed.current) return;
     const timer = setTimeout(() => {
-      const bound = (v: string) => (v.trim() === "" ? undefined : Math.max(0, Number(v)));
+      const next = boundsKey(bound(min), bound(max));
+      if (next === urlBounds) return;
+      setPushed(next);
       router.replace(HOME + skinQueryString(query, { minUzs: bound(min), maxUzs: bound(max) }), {
         scroll: false,
       });
