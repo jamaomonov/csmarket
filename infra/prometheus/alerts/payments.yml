@@ -10,7 +10,7 @@ groups:
       # names which kassa and which kind of refusal. Spec §12.
       - alert: KassaRejectionsSpike
         expr: increase(csmarket_kassa_rejections_total{job="api"}[15m]) > 20
-        labels: { severity: warning }
+        labels: { severity: warn }
         annotations:
           summary: '{{ $labels.provider }} webhooks refused ({{ $labels.reason }}): {{ $value | printf "%.0f" }} in 15 min'
           description: >

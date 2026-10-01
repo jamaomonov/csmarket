@@ -203,7 +203,7 @@ async def _answer(request: Request, db: AsyncSession) -> tuple[object, Params, R
         return None, {}, {"error": unauthorized().to_rpc_error(), "id": None}
     try:
         payload = json.loads(await request.body())
-    except ValueError:  # JSONDecodeError and undecodable bytes alike
+    except (ValueError, RecursionError):  # bad JSON, undecodable bytes, or absurd nesting
         record_kassa_rejection(provider="payme", reason="malformed")
         return None, {}, {"error": bad_json().to_rpc_error(), "id": None}
     envelope: dict[str, Any] = payload if isinstance(payload, dict) else {}

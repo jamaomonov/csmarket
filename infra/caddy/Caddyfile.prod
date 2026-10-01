@@ -27,15 +27,14 @@
 # PII — the owner's rule is "never log Steam ID, email, IP, trade-link token", and
 # promtail ships Caddy's stdout to Loki. Caddy's request object carries the
 # visitor's address (remote_ip, client_ip), every header (Cf-Connecting-Ip,
-# X-Forwarded-For, Cookie, User-Agent, Referer) and the full URI, whose query
-# string carries the Steam ID on the OpenID callback from M1. Dropping every header
-# also drops ``Authorization``, which on the kassa webhooks is the acquirer's Basic
+# X-Forwarded-For, Cookie, User-Agent, Referer) and the full URI, whose query string
+# carries the Steam ID on the OpenID callback from M1. Dropping every header also
+# drops ``Authorization``, which on the kassa webhooks is the acquirer's Basic
 # credential (Payme ``Paycom:<key>``, Uzum login:password) — a secret, not just PII.
-# This filter keeps
-# method, host, path, status, size and duration and drops the rest. It is
-# applied to the access log AND to Caddy's default logger: handler errors
-# (``http.log.error.*`` — an upstream refusing a connection, say) go there with
-# the same unfiltered request object.
+# This filter keeps method, host, path, status, size and duration and drops the
+# rest. It is applied to the access log AND to Caddy's default logger: handler
+# errors (``http.log.error.*`` — an upstream refusing a connection, say) go there
+# with the same unfiltered request object.
 (pii_filter) {
 	format filter {
 		wrap json

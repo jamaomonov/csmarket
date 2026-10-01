@@ -176,8 +176,9 @@ offered with the service id and a whole pair; otherwise the tile is hidden and e
 ## Metrics
 
 `csmarket_kassa_rejections_total{provider="uzum", reason}` (`docs/architecture/metrics.md`) counts
-webhooks refused before business logic. Counted: `10001` as `reason="auth"`; `10002` (including a `RecursionError` body) and `10005` as
-`"malformed"`, once each, in `routes.py`. Every other code counts nothing.
+webhooks refused before business logic. Counted: `10001` as `reason="auth"`; `10002` (including a
+`RecursionError` body) and `10005` as `"malformed"`, once each, in `routes.py`. Every other code
+counts nothing.
 
 ## Not here
 

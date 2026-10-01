@@ -107,9 +107,10 @@ every callback is `-1`.
 
 ## Metrics
 
-`csmarket_kassa_rejections_total{provider="click", reason}` (`docs/architecture/metrics.md`) counts
-webhooks refused before business logic. Counted: `-1` as `reason="signature"`, `-8` as `"malformed"` (a body that is not Click's form, a
-missing or non-numeric field, a stray non-POST), once each, in `routes.py`. Every other code counts nothing.
+`csmarket_kassa_rejections_total{provider="click", reason}` (`docs/architecture/metrics.md`)
+counts webhooks refused before business logic. Counted: `-1` as `reason="signature"`, `-8` as
+`"malformed"` (a body that is not Click's form, a missing or non-numeric field, a stray non-POST),
+once each, in `routes.py`. Every other code counts nothing.
 
 ## Not here
 

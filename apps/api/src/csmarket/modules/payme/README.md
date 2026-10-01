@@ -155,9 +155,11 @@ offered with the merchant id and either key; otherwise the tile is hidden and ev
 
 ## Metrics
 
-`csmarket_kassa_rejections_total{provider="payme", reason}` (`docs/architecture/metrics.md`) counts
-webhooks refused before business logic. Counted: `-32504` as `reason="auth"`; `-32700` and `-32600` (envelope or a handler's parameter
-extractor) as `"malformed"`, once each, in `routes.py`. Every other code counts nothing.
+`csmarket_kassa_rejections_total{provider="payme", reason}` (`docs/architecture/metrics.md`)
+counts webhooks refused before business logic. Counted: `-32504` as `reason="auth"`; `-32700` (bad
+JSON, including a body nested deeply enough to raise `RecursionError`) and `-32600` (envelope or a
+handler's parameter extractor) as `"malformed"`, once each, in `routes.py`. Every other code
+counts nothing.
 
 ## Not here
 

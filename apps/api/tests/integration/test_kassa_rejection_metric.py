@@ -146,6 +146,9 @@ async def test_payme_rejections_count_once_each(integration_client: AsyncClient)
     # -32700: not JSON
     r = await integration_client.post(PAYME, headers=good, content=b"{not json")
     assert r.json()["error"]["code"] == -32700
+    # -32700: nested deep enough to raise RecursionError in the JSON parser
+    r = await integration_client.post(PAYME, headers=good, content=b"[" * 200_000 + b"]" * 200_000)
+    assert (r.status_code, r.json()["error"]["code"]) == (200, -32700)
     # -32600: envelope without a method; params not an object
     r = await integration_client.post(PAYME, headers=good, json={"id": 1})
     assert r.json()["error"]["code"] == -32600
@@ -163,7 +166,7 @@ async def test_payme_rejections_count_once_each(integration_client: AsyncClient)
 
     assert await _delta(integration_client, before) == {
         ("payme", "auth"): 3.0,
-        ("payme", "malformed"): 4.0,
+        ("payme", "malformed"): 5.0,
     }
 
 
