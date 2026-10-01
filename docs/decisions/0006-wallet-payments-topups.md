@@ -123,7 +123,8 @@ records both, so M4 builds on them instead of rediscovering them.
   `csmarket_kassa_rejections_total{provider, reason}` and alerted by `KassaRejectionsSpike`.
 - **Admin writes** (ban, unban, adjust) require `Idempotency-Key`, lock the target `users`
   row `FOR NO KEY UPDATE`, and are audited with the operator's reason. An admin may adjust any
-  balance, including their own (every adjust is audited). Ban refuses oneself, an admin, and an
+  balance, including their own (every adjust is audited; confirmed by the owner on
+  2026-10-01 — test buys in M5 need it). Ban refuses oneself, an admin, and an
   already banned account; unban refuses an account that is not banned.
 - **A banned account is told why.** The ban is checked before the session blocklist (403
   `account-suspended`, not 401); `refresh_tokens.revoked_reason` (`rotated`, `logout`,
