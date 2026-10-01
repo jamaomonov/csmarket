@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from csmarket.modules.skins.pricing import DEFAULT_RULES, quote, to_uzs
+from csmarket.modules.skins.pricing import (
+    DEFAULT_RULES,
+    max_usd_for_uzs,
+    min_usd_for_uzs,
+    quote,
+    to_uzs,
+)
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -40,3 +46,31 @@ def test_uzs_rounds_up_to_a_hundred(usd: Decimal, rate: Decimal) -> None:
     assert uzs % 100 == 0
     assert uzs >= usd * rate
     assert uzs - usd * rate < 100
+
+
+cents = st.decimals(min_value=Decimal("0.01"), max_value=Decimal("100000"), places=2)
+rates = st.one_of(
+    st.integers(min_value=8000, max_value=20000).map(Decimal),  # whole, like the dev rate
+    st.decimals(min_value=Decimal("8000"), max_value=Decimal("20000"), places=2),  # CBU
+)
+bounds = st.integers(min_value=0, max_value=2_000_000_000).map(Decimal)
+
+
+@given(usd=cents, rate=rates, bound=bounds)
+def test_uzs_bounds_select_exactly_the_cards_that_show_inside_them(
+    usd: Decimal, rate: Decimal, bound: Decimal
+) -> None:
+    """A soʻm bound turned into a USD bound keeps an item iff its card (rounded up to
+    100) is inside the bound: the filter agrees with what the customer sees."""
+    card = to_uzs(usd, rate, round_to=100)
+    assert (usd >= min_usd_for_uzs(bound, rate, round_to=100)) == (card >= bound)
+    assert (usd <= max_usd_for_uzs(bound, rate, round_to=100)) == (card <= bound)
+
+
+def test_uzs_bounds_on_the_boundary() -> None:
+    rate = Decimal("12700")
+    # 7.87 $ is 99 949 soʻm, shown as 100 000.
+    assert to_uzs(Decimal("7.87"), rate, round_to=100) == Decimal(100000)
+    assert min_usd_for_uzs(Decimal(100000), rate, round_to=100) == Decimal("7.87")
+    assert max_usd_for_uzs(Decimal(99950), rate, round_to=100) == Decimal("7.86")
+    assert min_usd_for_uzs(Decimal(0), rate, round_to=100) == Decimal(0)

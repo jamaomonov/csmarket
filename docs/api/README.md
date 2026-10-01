@@ -67,7 +67,8 @@ Public, no sign-in. Under `/skins`:
 - `GET /skins/catalog` — filters `category`, `weapon`, `exterior`, `stattrak`, `souvenir`,
   `rarity`, `team`, `min_uzs`, `max_uzs`, `q`; `sort` (`price`, `-price` default, `discount`,
   `popular`); `limit` 1..100 (48); `cursor`. The cursor is **opaque**: pass back `next_cursor`
-  as given. A malformed cursor is 422.
+  as given. A malformed cursor is 422. `min_uzs` / `max_uzs` compare with the soʻm a card
+  shows (rounded up to 100), bounds included; without a CBU rate they are ignored.
 - `GET /skins/facets?category=` — counts for the filters; an unknown category is 422.
 - `GET /skins/suggest?q=` — search-box suggestions.
 - `GET /skins/{slug}` — one item with its wears and cheapest offers; 404 for an unknown or

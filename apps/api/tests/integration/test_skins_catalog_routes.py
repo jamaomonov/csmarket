@@ -361,3 +361,36 @@ async def test_a_page_is_served_from_cache_until_the_version_moves(
     assert (await integration_client.get("/api/v1/skins/catalog")).json() == first
     await bump_catalog_version(get_redis())
     assert (await integration_client.get("/api/v1/skins/catalog")).json()["items"] == []
+
+
+async def test_uzs_bounds_match_the_rounded_card_price(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """Cards round soʻm up to 100, so the bounds compare with that number: 7.87 $ at
+    12 700 is 99 949 soʻm and shows as 100 000; 10.00 $ is exactly 127 000."""
+    await _rate(db_session)
+    prices = {
+        "P250 | Sand Dune (Field-Tested)": Decimal("7.87"),  # card 100 000
+        "P250 | Boreal Forest (Field-Tested)": Decimal("7.86"),  # card 99 900
+        "P250 | Mehndi (Field-Tested)": Decimal("10.00"),  # card 127 000
+    }
+    rows = [_item(name, category="pistols", units=1, count=1) for name in prices]
+    for row in rows:
+        row.sell_price_usd = prices[row.market_hash_name]
+    db_session.add_all(rows)
+    await db_session.commit()
+
+    async def slugs(**params: str) -> list[str]:
+        r = await integration_client.get("/api/v1/skins/catalog", params=params)
+        assert r.status_code == 200
+        return sorted(i["slug"] for i in r.json()["items"])
+
+    sand = "p250-sand-dune-field-tested"
+    boreal = "p250-boreal-forest-field-tested"
+    mehndi = "p250-mehndi-field-tested"
+    assert await slugs(min_uzs="100000", max_uzs="100000") == [sand]
+    assert await slugs(min_uzs="99901", max_uzs="100000") == [sand]
+    assert await slugs(max_uzs="99999") == [boreal]
+    assert await slugs(min_uzs="127000") == [mehndi]
+    assert await slugs(min_uzs="127050") == []
+    assert await slugs(max_uzs="126999") == [boreal, sand]

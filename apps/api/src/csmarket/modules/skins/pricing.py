@@ -26,7 +26,7 @@ exactly what the storefront showed.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import ROUND_CEILING, Decimal
+from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal
 from itertools import pairwise
 from typing import Literal
 
@@ -218,6 +218,27 @@ def to_uzs(price_usd: Decimal, rate: Decimal, *, round_to: int) -> Decimal:
     return (raw / step).quantize(Decimal(1), rounding=ROUND_CEILING) * step
 
 
+def min_usd_for_uzs(min_uzs: Decimal, rate: Decimal, *, round_to: int) -> Decimal:
+    """The smallest whole-cent USD price whose card (:func:`to_uzs`) shows ≥ ``min_uzs``.
+
+    A card shows ``ceil(x / step) * step`` for ``x = usd * rate``, so it reaches the bound
+    exactly when ``x`` is above the step just below it. The result is whole cents, like
+    ``sell_price_usd``, so the comparison in SQL is exact.
+    """
+    if min_uzs <= 0:
+        return Decimal(0)
+    step = Decimal(round_to)
+    below = ((min_uzs / step).quantize(Decimal(1), rounding=ROUND_CEILING) - 1) * step
+    return (below / rate).quantize(_CENT, rounding=ROUND_FLOOR) + _CENT
+
+
+def max_usd_for_uzs(max_uzs: Decimal, rate: Decimal, *, round_to: int) -> Decimal:
+    """The largest whole-cent USD price whose card (:func:`to_uzs`) shows ≤ ``max_uzs``."""
+    step = Decimal(round_to)
+    ceiling = (max_uzs / step).quantize(Decimal(1), rounding=ROUND_FLOOR) * step
+    return max(Decimal(0), (ceiling / rate).quantize(_CENT, rounding=ROUND_FLOOR))
+
+
 __all__ = [
     "DEFAULT_RULES",
     "Applied",
@@ -227,6 +248,8 @@ __all__ = [
     "Quote",
     "bracket_margin",
     "liquidity_pp",
+    "max_usd_for_uzs",
+    "min_usd_for_uzs",
     "quote",
     "to_uzs",
 ]

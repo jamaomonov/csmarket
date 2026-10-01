@@ -126,8 +126,9 @@ rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..
   `GET /{slug}` (card + `cheapest` from the last tick's ten cheapest auto listings, re-quoted
   with the live rules, + `family`). Cards show the stored `sell_price_usd` and, at the CBU rate
   (`usd_uzs_rate` -> `fx.api.current_usd_uzs`), `price_uzs` rounded up to `uzs_round_to`.
-  **Without a fresh rate** `price_uzs` is `null` and soʻm bounds are ignored, not guessed
-  (ruling Q3). Image hosts are rewritten to `CSMARKET_SKINS_IMAGE_HOST`.
+  `min_uzs` / `max_uzs` keep exactly the cards whose rounded-up `price_uzs` is inside them
+  (`pricing.min_usd_for_uzs` / `max_usd_for_uzs`, whole cents). **Without a fresh rate**
+  `price_uzs` is `null` and soʻm bounds are ignored, not guessed (ruling Q3). Image hosts are rewritten to `CSMARKET_SKINS_IMAGE_HOST`.
 - **Page cache:** catalogue, facets and suggest bodies sit 60 s in Redis under
   `skins:{catalog|facets|suggest}:{ver}:{sha1}` — `ver` is the catalogue version, so a price tick
   or a hide expires them all at once; the digest covers the query and the rate. Every Redis error

@@ -29,7 +29,13 @@ from csmarket.modules.skins.cachekeys import catalog_version
 from csmarket.modules.skins.images import steam_image, steam_image_only
 from csmarket.modules.skins.listings import listings_for, steam_inspect_url
 from csmarket.modules.skins.models import SkinItem
-from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
+from csmarket.modules.skins.pricing import (
+    PricingRules,
+    max_usd_for_uzs,
+    min_usd_for_uzs,
+    quote,
+    to_uzs,
+)
 from csmarket.modules.skins.schemas import (
     FacetOut,
     RarityFacetOut,
@@ -154,10 +160,16 @@ async def get_catalog(
 ) -> SkinsPageOut:
     """One page of on-sale items, dearest first by default; ``q`` ranks by match."""
     rate = await usd_uzs_rate(db)
-    # Bounds arrive in soʻm (what the customer typed) and compare with our
-    # USD sell price. Without a rate the bounds are dropped, not guessed.
-    min_usd = None if min_uzs is None or rate is None else min_uzs / rate
-    max_usd = None if max_uzs is None or rate is None else max_uzs / rate
+    # Bounds arrive in soʻm (what the customer typed) and compare with our USD sell
+    # price, turned into the cents whose rounded-up card is inside them (a card at
+    # exactly the bound is kept). Without a rate the bounds are dropped, not guessed.
+    min_usd = max_usd = None
+    if rate is not None and (min_uzs is not None or max_uzs is not None):
+        round_to = (await load_rules(db)).uzs_round_to
+        if min_uzs is not None:
+            min_usd = min_usd_for_uzs(min_uzs, rate, round_to=round_to)
+        if max_uzs is not None:
+            max_usd = max_usd_for_uzs(max_uzs, rate, round_to=round_to)
     query = CatalogQuery(
         category=category,
         weapon=weapon,
