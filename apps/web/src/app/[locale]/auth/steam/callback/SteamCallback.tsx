@@ -16,8 +16,12 @@ export function SteamCallback() {
   const { completeSteamSignIn, signInHref } = useAuth();
   const [failed, setFailed] = useState(false);
   const started = useRef(false);
-  const requested = search.get("locale");
-  const locale = hasLocale(routing.locales, requested) ? requested : routing.defaultLocale;
+  // Frozen on first render: stripping the query below re-renders with empty search
+  // params, which would otherwise send the retry link back to the default locale.
+  const [locale] = useState(() => {
+    const requested = search.get("locale");
+    return hasLocale(routing.locales, requested) ? requested : routing.defaultLocale;
+  });
 
   useEffect(() => {
     if (started.current) return;
