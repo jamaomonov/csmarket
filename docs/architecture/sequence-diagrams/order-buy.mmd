@@ -1,0 +1,55 @@
+sequenceDiagram
+    autonumber
+    participant DB as Postgres
+    participant W as Worker (orders queue)
+    participant S as Scheduler (reconcile, Task 9)
+    participant X as Waxpeer
+
+    Note over DB,W: Payment commits: order paid + NOTIFY orders
+    DB-->>W: NOTIFY orders (or the poll tick)
+    W->>DB: claim paid orders oldest first (FOR UPDATE SKIP LOCKED)<br/>→ buying, claimed_at/by, skin_trades (project_id = order id, buy_pending)
+    W->>DB: commit
+
+    loop each claimed order (its own transactions; one failure never stops the batch)
+        W->>DB: read unlocked: buying and buy_pending? else nothing to do
+        W->>DB: take the lease (next_check_at = now + 5 min, only if due)
+        alt trade link does not parse
+            W->>DB: lock order → trade, re-check; failed + refund to balance (invalid_trade_link)
+        else
+            W->>X: check-many-project-id [order id]  (no lock held)
+            alt 403
+                W->>DB: lock, re-check; attention waxpeer_forbidden, buy_pending kept
+            else unavailable / 429 / refused
+                Note over W: lookup_later — nothing sent, retried next tick
+            else a trade under our project_id
+                W->>DB: lock, re-check; mirror it, buy_pending = false (adopted, never rebought)
+            else several live trades
+                W->>DB: lock, re-check; attention ambiguous_trade, buy_pending = false
+            else none
+                W->>X: buy-one-p2p (listing, paid_units, trade link, project_id)
+                alt accepted
+                    W->>DB: lock, re-check; waxpeer_id, bought_units, status 0, buy_pending = false
+                else 403
+                    W->>DB: attention waxpeer_forbidden, buy_pending kept (no refund)
+                else 429
+                    Note over W: rate_limited — buy_pending kept, next tick retries
+                else lost answer / unreadable / 5xx
+                    W->>DB: buy_unconfirmed_at, buy_pending = false (resolved by lookup, R3)
+                else refused (sold, price moved, 4xx)
+                    W->>X: GET /v1/user when the refusal does not name low balance
+                    alt low balance
+                        W->>DB: failed + refund to balance (waxpeer_low_balance)
+                    else first refusal
+                        W->>X: listings (cached, budgeted read): cheapest other auto ≤ paid × 1.03
+                        W->>X: buy-one-p2p (the substitute), once
+                    end
+                    opt nothing bought
+                        W->>DB: failed + refund to balance (sold_out)
+                    end
+                end
+            end
+        end
+        W->>DB: release the lease (next_check_at = now)
+    end
+
+    S->>DB: due buying orders with buy_pending → the same attempt (lease first)

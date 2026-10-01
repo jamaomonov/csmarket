@@ -31,7 +31,8 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `move`, `ORDERS_CHANNEL` (`NOTIFY orders` wakes the worker), the response shapes `OrderOut`,
 `OrderStatusOut`, `SkinTradeOut` and `order_out`, `skin_trade_out`, `effective_status`,
 `is_expired`, `mark_paid`, and the refunds (`refund_to_balance`, `in_flight`,
-`admin_refund`, `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`). `api.py` never imports `payments`
+`admin_refund`, `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`), and the buy
+(`drain_paid`, `attempt_buy`). `api.py` never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
 
@@ -167,6 +168,61 @@ module's models and FSM — never `payments`.
   (settled with nothing to give back: unpaid, cancelled, delivered). Unknown or malformed
   number → 404. Flushes, never commits: the admin route writes its audit row in the same
   transaction (Task 12).
+
+## Buying (`buying.py`, `buy_writes.py`, `trades.py`, rulings R3, R4, R6, K)
+
+The worker's `orders` queue (`apps/worker`, two drainers) buys each paid order at Waxpeer,
+at most once: `skin_trades.project_id` = the order id, every buy is preceded by a
+`check-many-project-id` lookup, and a lost answer is resolved by lookup, never by buying
+again. Flow: `docs/architecture/sequence-diagrams/order-buy.mmd`.
+
+- `drain_paid(db, *, client=None, settings=None, limit=10) -> int` — the queue's drain:
+  claims up to `limit` `paid` orders by `paid_at` (`FOR UPDATE SKIP LOCKED`), moves them to
+  `buying`, stamps `claimed_at`, `claimed_by` (`hostname:pid`) and `next_check_at = now`,
+  opens their trade (`listing_id`, `paid_units = cost_units`, `buy_pending`), commits, then
+  runs `attempt_buy` per order. An exception in one order is rolled back and logged
+  (`orders.buy.crashed`, the type only); the order stays `buying` with `buy_pending` and the
+  reconcile sweep retries it once its lease lapses. Builds the purchase client
+  (`skins.api.trade_client`) only when it claimed something. Returns the number claimed.
+- `attempt_buy(db, client, *, order_id, settings) -> str` — the one buy path (the worker and
+  the reconcile sweep for a `buy_pending` trade). Reads unlocked; `nothing_to_do` unless the
+  order is `buying` and the trade `buy_pending`. Then takes the order's **lease**: one
+  `UPDATE … SET next_check_at = now + 5 min WHERE status = 'buying' AND next_check_at <= now`
+  — a second attempt (the sweep racing the worker) finds it held and does nothing, so two
+  attempts never buy the same order; the lease is released (`next_check_at = now`) when the
+  attempt ends, and lapses on its own if the process dies mid-way. Outcomes:
+
+  | Case                                                        | Outcome        | Writes                                                                 |
+  | ----------------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
+  | trade link does not parse                                   | `invalid_link` | `failed` + refund `invalid_trade_link`                                 |
+  | lookup: 429, unavailable, a refusal                         | `lookup_later` | nothing (`buy_pending` kept; no buy without a lookup)                  |
+  | lookup or buy: HTTP 403                                     | `forbidden`    | attention `waxpeer_forbidden` (once), `buy_pending` kept               |
+  | lookup finds our trade (`orders.trades.pick_trade`)         | `adopted`      | `mirror`, `bought_units`, `buy_pending = false` — never rebought       |
+  | lookup finds several live trades                            | `ambiguous`    | attention `ambiguous_trade`, `buy_pending = false` (no refund)         |
+  | buy accepted                                                | `bought`       | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0` |
+  | buy: 429                                                    | `rate_limited` | nothing (`buy_pending` kept, next tick)                                |
+  | buy: unavailable / unreadable / 5xx                         | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)          |
+  | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`  | `failed` + refund `waxpeer_low_balance`                                |
+  | buy refused (sold, price moved, a 4xx), no substitute       | `sold_out`     | `failed` + refund `sold_out`                                           |
+
+  A refusal that is not low balance is retried **once** with the cheapest other `auto`
+  listing of the item at most `paid_units × (1 + order_substitute_ceiling)` units, read
+  through `skins.listings_for` (cached, budgeted; Waxpeer's spelling, phase included);
+  Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy
+  or adoption ends a `waxpeer_forbidden` attention (cleared with its resolution: the access
+  question is moot, and an admin refund must not see a "nothing bought" order that bought).
+  `csmarket_order_buys_total{outcome}` counts every outcome but `lookup_later` and
+  `nothing_to_do`; the log line `orders.buy` carries the order number and the outcome only.
+
+- **Writes** (`buy_writes.py`): each locks the order, then the trade (ruling K), re-checks
+  `status == "buying"` and `buy_pending`, writes and commits; when a sweep moved the rows
+  during the Waxpeer call it writes nothing (`orders.buy.stale`, outcome `nothing_to_do`).
+  No lock or transaction is held across a Waxpeer call.
+- `trades.mirror(trade, wt)` copies a lookup onto the row without ever blanking a known
+  value (`accepted_at` stamped the first time a `release_date` appears; `is_released` never
+  goes back); `trades.pick_trade(trades, waxpeer_id)` picks ours by Waxpeer's id, else the
+  only one, else the only live one, else (all failed) the last — several live ones raise
+  `AmbiguousTradeError`. The trade sweeps (Task 9) extend `trades.py`.
 
 ## Lock order
 

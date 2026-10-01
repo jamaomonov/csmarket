@@ -1,0 +1,159 @@
+"""The buy's writes (``orders.buying``): lock the order, then its trade (ruling K), re-check
+``status == "buying"`` and ``buy_pending``, write, commit — and write nothing when a sweep
+moved the rows during the Waxpeer call. Each returns the attempt's outcome.
+"""
+
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from csmarket.core.clock import now
+from csmarket.core.logging import get_logger
+from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.refunds import refund_to_balance
+from csmarket.modules.orders.trades import FAILED_STATUS, mirror
+from csmarket.modules.skins.api import WaxpeerBuy, WaxpeerTrade
+
+log = get_logger("csmarket.orders.buying")
+
+_ACTOR = "orders"
+#: Refund reason → outcome.
+_REFUND_OUTCOMES: dict[str, str] = {
+    "invalid_trade_link": "invalid_link",
+    "sold_out": "sold_out",
+    "waxpeer_low_balance": "low_balance",
+}
+
+
+class BuySnapshot(BaseModel):
+    """What a buy needs of the order, read unlocked before Waxpeer is called."""
+
+    model_config = ConfigDict(frozen=True)
+
+    order_id: str
+    number: str
+    skin_item_id: str
+    listing_id: int
+    paid_units: int
+
+
+async def _locked(db: AsyncSession, snap: BuySnapshot) -> tuple[Order, SkinTrade] | None:
+    """The order and its trade ``FOR UPDATE`` if still ``buying`` with a buy pending."""
+    order = await db.scalar(
+        select(Order)
+        .where(Order.id == snap.order_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    trade = await db.scalar(
+        select(SkinTrade)
+        .where(SkinTrade.order_id == snap.order_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if order is None or trade is None or order.status != "buying" or not trade.buy_pending:
+        await db.commit()  # nothing written: just let the locks go
+        return None
+    return order, trade
+
+
+def _stale(snap: BuySnapshot, outcome: str) -> str:
+    """Someone moved the rows during the Waxpeer call: write nothing."""
+    log.warning("orders.buy.stale", number=snap.number, outcome=outcome)
+    return "nothing_to_do"
+
+
+def _settle(trade: SkinTrade) -> None:
+    """The buy is no longer pending; a ``waxpeer_forbidden`` attention is moot now."""
+    trade.buy_pending = False
+    if trade.attention_reason == "waxpeer_forbidden":
+        trade.attention_reason = None
+        trade.resolved_at = trade.resolved_by = trade.resolved_note = None
+    trade.updated_at = now()
+
+
+async def record_bought(
+    db: AsyncSession, snap: BuySnapshot, bought: WaxpeerBuy, *, listing_id: int, units: int
+) -> str:
+    """Waxpeer accepted the buy: its id, the listing and units actually bought."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return _stale(snap, "bought")
+    _, trade = pair
+    trade.listing_id, trade.paid_units = listing_id, units
+    trade.waxpeer_id, trade.bought_units, trade.status = bought.id, bought.price_units, 0
+    _settle(trade)
+    await db.commit()
+    return "bought"
+
+
+async def adopt(db: AsyncSession, snap: BuySnapshot, found: WaxpeerTrade) -> str:
+    """A lookup found an earlier purchase under our ``project_id``: mirror it, never rebuy."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return _stale(snap, "adopted")
+    _, trade = pair
+    mirror(trade, found)
+    if trade.bought_units is None and found.status != FAILED_STATUS and found.price_units > 0:
+        trade.bought_units = found.price_units
+    _settle(trade)
+    await db.commit()
+    return "adopted"
+
+
+async def unconfirmed(db: AsyncSession, snap: BuySnapshot) -> str:
+    """The buy's answer was lost: resolve by lookup (R3), never by buying again."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return _stale(snap, "unconfirmed")
+    _, trade = pair
+    _settle(trade)
+    trade.buy_unconfirmed_at = now()
+    await db.commit()
+    return "unconfirmed"
+
+
+async def attention(
+    db: AsyncSession, snap: BuySnapshot, reason: str, *, outcome: str, settle: bool = False
+) -> str:
+    """Flag the trade for an admin (once); ``settle`` ends the pending buy too."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return _stale(snap, outcome)
+    _, trade = pair
+    if settle:
+        _settle(trade)
+    if trade.attention_reason is None:
+        trade.attention_reason = reason
+        trade.resolved_at = trade.resolved_by = trade.resolved_note = None
+        trade.updated_at = now()
+    await db.commit()
+    return outcome
+
+
+async def refund(db: AsyncSession, snap: BuySnapshot, reason: str) -> str:
+    """Nothing was bought: ``failed`` and the money back to the balance (R9)."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return _stale(snap, _REFUND_OUTCOMES[reason])
+    order, trade = pair
+    try:
+        _settle(trade)
+        await refund_to_balance(db, order=order, to_status="failed", reason=reason, actor=_ACTOR)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise
+    return _REFUND_OUTCOMES[reason]
+
+
+__all__ = [
+    "BuySnapshot",
+    "adopt",
+    "attention",
+    "record_bought",
+    "refund",
+    "unconfirmed",
+]

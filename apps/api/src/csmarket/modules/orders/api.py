@@ -7,6 +7,7 @@ reaches orders only through this file, so it must never import ``csmarket.module
 
 from __future__ import annotations
 
+from csmarket.modules.orders.buying import attempt_buy, drain_paid
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
 from csmarket.modules.orders.models import (
     ATTENTION_REASONS,
@@ -48,6 +49,8 @@ __all__ = [
     "SkinTrade",
     "SkinTradeOut",
     "admin_refund",
+    "attempt_buy",
+    "drain_paid",
     "effective_status",
     "in_flight",
     "is_expired",

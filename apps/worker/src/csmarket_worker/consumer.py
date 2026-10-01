@@ -1,11 +1,11 @@
 """The worker: drain the Postgres-native queues.
 
-One queue in the product (M4): ``orders`` -- rows in ``paid`` are claimable
+One queue in the product (M4a): ``orders`` -- rows in ``paid`` are claimable
 (``FOR UPDATE SKIP LOCKED``), the transaction that writes ``paid`` also
-``NOTIFY orders``. Everything here is parameterised by :class:`Queue` so a
-second queue is one more entry in ``_queues()``, never a copy of the loop.
-**M0 ships with no queues registered**: the process starts, listens for SIGTERM
-and exits 0 -- that is what lets the container run from the first deploy.
+``NOTIFY orders``; its drain buys each claimed order at Waxpeer
+(``orders.buying.drain_paid``). Everything here is parameterised by
+:class:`Queue` so a second queue is one more entry in ``_queues()``, never a
+copy of the loop.
 
 Each queue runs in its **own task**, on its own loop, so a slow queue delays
 only itself. That is not tidiness: ``asyncio.gather`` returns with its slowest
@@ -42,6 +42,18 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.db import get_engine
 from csmarket.core.logging import configure_logging, get_logger
 from csmarket.core.observability import init_sentry
+
+# Every model the ``orders`` drain may touch, so the mappers and foreign keys resolve.
+from csmarket.modules.auth import models as _auth_models  # noqa: F401
+from csmarket.modules.click import models as _click_models  # noqa: F401
+from csmarket.modules.fx import models as _fx_models  # noqa: F401
+from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_paid
+from csmarket.modules.payme import models as _payme_models  # noqa: F401
+from csmarket.modules.payments import models as _payments_models  # noqa: F401
+from csmarket.modules.skins import models as _skins_models  # noqa: F401
+from csmarket.modules.users import models as _users_models  # noqa: F401
+from csmarket.modules.uzum import models as _uzum_models  # noqa: F401
+from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from csmarket_worker import shutdown
@@ -74,14 +86,24 @@ class Queue:
     concurrency: int
 
 
-def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- used from M4
+async def _drain_orders(db: AsyncSession) -> int:
+    """Claim paid orders and buy them at Waxpeer.
+
+    ``drain_paid`` builds the process's purchase client (``skins.api.trade_client``) only
+    when it claimed something, so an empty poll costs one query and no client.
+    """
+    return await drain_paid(db)
+
+
+def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may read settings
     """The queues this process drains, in the order a wake drains them.
 
-    Empty in M0. M4 registers ``orders`` here, importing its channel constant
-    from ``csmarket.modules.orders.api`` — a channel spelled twice is a queue
-    nobody drains and no test fails.
+    ``orders``: two drainers, so one Waxpeer call that hangs to its timeout stalls one
+    drainer, not every paid order. Its channel constant comes from
+    ``csmarket.modules.orders.api`` — a channel spelled twice is a queue nobody drains
+    and no test fails.
     """
-    return ()
+    return (Queue(name="orders", channel=ORDERS_CHANNEL, drain=_drain_orders, concurrency=2),)
 
 
 def raw_dsn(url: str) -> str:
@@ -347,7 +369,7 @@ async def run() -> int:
     log.info(
         "worker.consumer.started",
         poll_seconds=cfg.worker_poll_seconds,
-        # A name -> concurrency map, one entry per registered queue (empty in M0).
+        # A name -> concurrency map, one entry per registered queue.
         queues={queue.name: queue.concurrency for queue in queues},
     )
 

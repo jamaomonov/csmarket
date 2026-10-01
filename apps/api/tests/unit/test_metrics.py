@@ -134,3 +134,15 @@ def test_order_refunds_count_by_a_closed_reason() -> None:
     record_order_refund("sold_out")
     record_order_refund("a-user-id")  # type: ignore[arg-type]  # a bug cannot mint a series
     assert (_refunds("sold_out"), _refunds("other")) == (before + 1, other + 1)
+
+
+def test_order_buys_count_by_a_closed_outcome() -> None:
+    from csmarket.core.metrics import ORDER_BUYS, record_order_buy
+
+    def _buys(outcome: str) -> float:
+        return ORDER_BUYS.labels(outcome=outcome)._value.get()  # type: ignore[no-any-return]
+
+    before, other = _buys("forbidden"), _buys("other")
+    record_order_buy("forbidden")
+    record_order_buy("lookup_later")  # type: ignore[arg-type]  # a bug cannot mint a series
+    assert (_buys("forbidden"), _buys("other")) == (before + 1, other + 1)

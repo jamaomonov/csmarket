@@ -1,7 +1,7 @@
 """Unit tests for the Postgres-queue consumer's pure seams.
 
-Fakes only, no DB. M0 registers no queues, so every queue here is a fake
-:class:`Queue`; a module's real drain (claim/execute/commit under
+Fakes only, no DB. Every queue here is a fake :class:`Queue` except where the
+registered ``orders`` queue itself is checked; a module's real drain (claim/execute/commit under
 concurrency) is proven end-to-end in that module's own integration tests. This
 file owns only the consumer loop's own logic: the wake/tick race, the
 listener's never-raise reconnect contract, the fan-out to K independent
@@ -12,6 +12,7 @@ wires together.
 from __future__ import annotations
 
 import asyncio
+import functools
 import signal
 import time
 from typing import Any
@@ -365,17 +366,49 @@ async def test_an_empty_queue_costs_one_query_and_returns() -> None:
     assert calls == 1
 
 
-def test_m0_registers_no_queues() -> None:
-    assert _queues(get_settings()) == ()
+def test_registers_the_orders_queue() -> None:
+    """One queue, on the channel the orders module NOTIFYs, two drainers wide."""
+    from csmarket.modules.orders.api import ORDERS_CHANNEL
+
+    (orders,) = _queues(get_settings())
+    assert (orders.name, orders.channel, orders.concurrency) == ("orders", ORDERS_CHANNEL, 2)
+    assert orders.drain is consumer._drain_orders
 
 
-async def test_run_with_no_queues_idles_until_stopped() -> None:
-    """An empty worker must not crash-loop on the first deploy.
+async def test_the_orders_drain_is_the_orders_modules(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``_drain_orders`` hands its session to ``orders.drain_paid`` and returns its count."""
+    seen: list[Any] = []
 
-    ``run()`` is awaited directly, not through ``asyncio.wait_for``: that would
-    run it in a second task, and ``shutdown.await_stray_tasks`` would then see
-    this test's own task as a stray and wait out the whole budget.
+    async def fake_drain_paid(db: Any) -> int:
+        seen.append(db)
+        return 3
+
+    monkeypatch.setattr(consumer, "drain_paid", fake_drain_paid)
+    session = object()
+    assert await consumer._drain_orders(session) == 3  # type: ignore[arg-type]
+    assert seen == [session]
+
+
+async def test_run_with_the_orders_queue_idles_until_stopped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The worker with its real queue starts, waits on the tick and stops on SIGTERM.
+
+    Its LISTEN connection is refused (no database is reached from a unit test): the
+    listener must degrade to polling, never crash the loop. ``run()`` is awaited
+    directly, not through ``asyncio.wait_for``: that would run it in a second task, and
+    ``shutdown.await_stray_tasks`` would then see this test's own task as a stray and
+    wait out the whole budget.
     """
+
+    async def refused(dsn: str) -> Any:
+        raise OSError("no database in a unit test")
+
+    monkeypatch.setattr(
+        consumer, "ListenerManager", functools.partial(ListenerManager, connect=refused)
+    )
+    monkeypatch.setattr(consumer, "get_engine", lambda: None)
+    monkeypatch.setattr(consumer, "async_sessionmaker", lambda *a, **k: _FakeSessionFactory())
     asyncio.get_running_loop().call_later(0.2, signal.raise_signal, signal.SIGTERM)
     assert await run() == 0
 

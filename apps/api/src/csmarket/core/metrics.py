@@ -107,6 +107,41 @@ def _inc(counter: Counter, name: str, labels: dict[str, str]) -> None:
         log.warning("metrics.increment_failed", metric=name, error=type(exc).__name__)
 
 
+#: How one buy attempt of an order ended (``orders.buying.attempt_buy``). ``forbidden`` =
+#: HTTP 403 from Waxpeer (the key's IP whitelist) — the alert ``WaxpeerForbidden``.
+OrderBuyOutcome = Literal[
+    "bought",
+    "adopted",
+    "sold_out",
+    "low_balance",
+    "forbidden",
+    "rate_limited",
+    "unconfirmed",
+    "invalid_link",
+    "ambiguous",
+]
+
+_ORDER_BUY_OUTCOMES = frozenset(
+    (
+        "bought",
+        "adopted",
+        "sold_out",
+        "low_balance",
+        "forbidden",
+        "rate_limited",
+        "unconfirmed",
+        "invalid_link",
+        "ambiguous",
+    )
+)
+
+ORDER_BUYS = Counter(
+    "csmarket_order_buys_total",
+    "Order buy attempts at Waxpeer, by outcome (alert: WaxpeerForbidden).",
+    ("outcome",),
+)
+
+
 def record_steam_web_api_call(
     *, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer, outcome: SteamApiOutcome
 ) -> None:
@@ -161,6 +196,18 @@ def record_order_refund(reason: OrderRefundReason) -> None:
     )
 
 
+def record_order_buy(outcome: OrderBuyOutcome) -> None:
+    """Count one order buy attempt by how it ended.
+
+    A value outside the closed set becomes ``"other"``. Never raises.
+    """
+    _inc(
+        ORDER_BUYS,
+        "csmarket_order_buys_total",
+        {"outcome": outcome if outcome in _ORDER_BUY_OUTCOMES else "other"},
+    )
+
+
 @contextmanager
 def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer) -> Iterator[None]:
     """Count the keyed Steam call made in the block, however it ends.
@@ -178,11 +225,13 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 __all__ = [
     "KASSA_REJECTIONS",
+    "ORDER_BUYS",
     "ORDER_REFUNDS",
     "STEAM_WEB_API_CALLS",
     "WAXPEER_CALLS",
     "KassaProvider",
     "KassaRejectionReason",
+    "OrderBuyOutcome",
     "OrderRefundReason",
     "SteamApiConsumer",
     "SteamApiEndpoint",
@@ -190,6 +239,7 @@ __all__ = [
     "WaxpeerEndpoint",
     "WaxpeerOutcome",
     "record_kassa_rejection",
+    "record_order_buy",
     "record_order_refund",
     "record_steam_web_api_call",
     "record_waxpeer_call",
