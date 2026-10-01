@@ -2761,6 +2761,7 @@
               "anyOf": [
                 {
                   "maxLength": 64,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -2778,6 +2779,7 @@
               "anyOf": [
                 {
                   "maxLength": 64,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -2795,6 +2797,7 @@
               "anyOf": [
                 {
                   "maxLength": 64,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -2812,6 +2815,7 @@
               "anyOf": [
                 {
                   "maxLength": 64,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -2957,6 +2961,7 @@
               "anyOf": [
                 {
                   "maxLength": 32,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {
@@ -3609,6 +3614,7 @@
               "anyOf": [
                 {
                   "maxLength": 80,
+                  "pattern": "^[^\\x00]*$",
                   "type": "string"
                 },
                 {

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.modules.admin import payments_service as svc
 from csmarket.modules.admin.deps import require_admin
+from csmarket.modules.admin.filters import text_filter
 from csmarket.modules.admin.payments_schemas import (
     AdminPaymentDetail,
     AdminPaymentsOut,
@@ -30,7 +31,7 @@ Db = Annotated[AsyncSession, Depends(db_session)]
 async def list_payments(
     db: Db,
     *,
-    q: Annotated[str | None, Query(max_length=32)] = None,
+    q: Annotated[str | None, text_filter(32)] = None,
     status: PaymentStatus | None = None,
     provider: Provider | None = None,
     purpose: Purpose | None = None,

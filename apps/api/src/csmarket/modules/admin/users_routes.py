@@ -18,6 +18,7 @@ from csmarket.core.errors import ValidationError
 from csmarket.core.idempotency import IDEMPOTENCY_HEADER, normalize_idempotency_key
 from csmarket.modules.admin import users_service as svc
 from csmarket.modules.admin.deps import require_admin
+from csmarket.modules.admin.filters import text_filter
 from csmarket.modules.admin.users_schemas import (
     AdminAdjustIn,
     AdminReasonIn,
@@ -67,7 +68,7 @@ async def _finish(
 @router.get("", response_model=AdminUsersOut, summary="Find users")
 async def list_users(
     db: Db,
-    q: Annotated[str | None, Query(max_length=80)] = None,
+    q: Annotated[str | None, text_filter(80)] = None,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AdminUsersOut:

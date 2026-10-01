@@ -173,7 +173,16 @@ async def test_list_pages_newest_first_without_duplicates(
     assert stamps == sorted(stamps, reverse=True)
 
 
-@pytest.mark.parametrize("params", [{"limit": 0}, {"limit": 101}, {"cursor": "%%%nope"}])
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"limit": 0},
+        {"limit": 101},
+        {"cursor": "%%%nope"},
+        {"q": "ann\x00"},  # Postgres refuses NUL in a text parameter: 422, never a 500
+        {"q": "\x00"},
+    ],
+)
 async def test_list_refuses_bad_paging(
     integration_client: AsyncClient, admin_headers: Headers, params: dict[str, str | int]
 ) -> None:

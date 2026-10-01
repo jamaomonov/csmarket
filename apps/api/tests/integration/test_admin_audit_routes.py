@@ -128,7 +128,18 @@ async def test_filters_combine(
 
 
 @pytest.mark.parametrize(
-    "params", [{"actor_id": "not-a-uuid"}, {"limit": 0}, {"limit": 101}, {"cursor": "%%%nope"}]
+    "params",
+    [
+        {"actor_id": "not-a-uuid"},
+        {"limit": 0},
+        {"limit": 101},
+        {"cursor": "%%%nope"},
+        # Postgres refuses NUL in a text parameter: a 422 here, never a 500.
+        {"action": "users.ban\x00"},
+        {"target_type": "\x00"},
+        {"target_id": "u-1\x00"},
+        {"actor_id": "\x00"},
+    ],
 )
 async def test_bad_params_are_422(
     integration_client: AsyncClient, admin_headers: Headers, params: dict[str, str | int]

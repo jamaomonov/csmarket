@@ -187,6 +187,7 @@ async def test_list_filters_by_status_provider_and_purpose(
         {"limit": 0},
         {"limit": 101},
         {"cursor": "%%%nope"},
+        {"q": "T7K\x00"},  # Postgres refuses NUL in a text parameter: 422, never a 500
     ],
 )
 async def test_list_refuses_bad_params(

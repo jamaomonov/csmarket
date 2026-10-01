@@ -182,8 +182,9 @@ error codes and the replay rule: `apps/api/src/csmarket/modules/admin/README.md`
 
 - `GET /admin/users?q=&cursor=&limit=` → `{items: [{id, display_name, avatar_url, steam_id,
 roles, banned_at, created_at, balance_uzs}], next_cursor}` — newest first; `q` = part of the
-  display name or an exact 17-digit Steam ID; `limit` 1..100 (20); a bad cursor is 422
-  `cursor`.
+  display name or an exact 17-digit Steam ID (≤ 80 chars); `limit` 1..100 (20); a bad cursor
+  is 422 `cursor`. Free-text admin filters (`q` here and on payments; `action`,
+  `target_type`, `target_id` on audit) refuse a NUL byte with 422.
 - `GET /admin/users/{id}` → `AdminUserCard {user: {id, steam_id, display_name, avatar_url,
 email, locale, roles, banned_at, ban_reason, created_at, trade_link_masked,
 trade_link_verdict, trade_link_reason, trade_link_checked_at}, balance_uzs, entries: [{id,
@@ -207,7 +208,7 @@ first, keyset on `(created_at DESC, id DESC)`, `limit` 1..100 (20), a bad cursor
 
 - `GET /admin/payments?q=&status=&provider=&purpose=&cursor=&limit=` → `{items: [{id, number,
 purpose, provider, amount_uzs, status, created_at, succeeded_at, user: {id, display_name}}],
-next_cursor}`. `q` = a full or partial number, any case, matched from the start (`T7K`).
+next_cursor}`. `q` = a full or partial number (≤ 32 chars), any case, matched from the start (`T7K`).
   `status`, `provider`, `purpose` are enums (422 otherwise).
 - `GET /admin/payments/{id}` → `{payment: row + {provider_ref, metadata}, topup: {number,
 amount_uzs, status, expires_at, succeeded_at} | null, kassa: [{provider, external_id, status,
@@ -216,7 +217,7 @@ amount, amount_unit: "soum"|"tiyin", times: {created, performed, cancelled}, ext
   (`+998••••••67`), never whole.
 - `GET /admin/audit?action=&target_type=&target_id=&actor_id=&cursor=&limit=` → `{items: [{id,
 created_at, action, target_type, target_id, actor: {id, display_name}, payload}],
-next_cursor}`. Filters are exact matches; a non-UUID `actor_id` is 422 `actor_id`.
+next_cursor}`. Filters are exact matches (≤ 64 chars each); a non-UUID `actor_id` is 422 `actor_id`.
 
 ### Admin catalogue (M2)
 

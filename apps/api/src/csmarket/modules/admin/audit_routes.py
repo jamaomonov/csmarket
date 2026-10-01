@@ -11,11 +11,12 @@ from csmarket.api.v1.deps import db_session
 from csmarket.modules.admin.audit_schemas import AuditOut
 from csmarket.modules.admin.audit_service import list_audit
 from csmarket.modules.admin.deps import require_admin
+from csmarket.modules.admin.filters import text_filter
 
 router = APIRouter(prefix="/admin/audit", tags=["admin"], dependencies=[Depends(require_admin)])
 
 Db = Annotated[AsyncSession, Depends(db_session)]
-_Filter = Query(max_length=64)
+_Filter = text_filter(64)
 
 
 @router.get("", response_model=AuditOut, summary="The audit log")

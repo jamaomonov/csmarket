@@ -78,7 +78,9 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
 
 - **List:** newest first, keyset on `(created_at DESC, id DESC)` with an opaque cursor;
   `limit` 1..100 (20). `q` matches the display name (case-insensitive substring, `%` and `_`
-  literal) or an exact 17-digit Steam ID. The balance is a correlated subquery
+  literal) or an exact 17-digit Steam ID. Free-text filters here, on payments and on audit
+  go through `filters.text_filter` (a length cap and no NUL byte: asyncpg refuses `\x00`
+  in a text parameter, so it is a 422, not a 500). The balance is a correlated subquery
   (`wallet.user_balance_column`): one statement per page, whatever its size.
 - **Card:** the profile, the balance, the latest 20 ledger lines (`wallet.entries_for_admin`,
   with `actor` and `reason`) and the latest 20 top-ups. The trade link leaves only masked
