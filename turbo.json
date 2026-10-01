@@ -36,7 +36,7 @@
       "outputs": ["coverage/**"]
     },
     "gen:api": {
-      "inputs": ["../../docs/api/openapi.json", "src/generated/.gitkeep"],
+      "inputs": ["../../docs/api/openapi.json"],
       "outputs": ["src/generated/**"]
     }
   }
