@@ -15,14 +15,18 @@ regenerate (notably `CSMARKET_APP_ENC_KEY`: rotating it makes every encrypted ro
 cd ~/opt/csmarket          # the checkout
 install -d -m 0700 secrets
 
-# Copy the templates in, then fill in real values:
+# Copy every template in (compose wants all the files to exist), then fill in real
+# values for the seven M0 needs:
 cp infra/secrets-example/*.env secrets/
-$EDITOR secrets/postgres.env secrets/api.env secrets/caddy.env secrets/grafana.env secrets/backup.env
+$EDITOR secrets/postgres.env secrets/postgres-exporter.env secrets/redis.env \
+  secrets/api.env secrets/web.env secrets/caddy.env secrets/grafana.env
 chmod 600 secrets/*.env
-
-# Sanity check — must return nothing:
-grep -RIn 'CHANGE_ME' secrets/
 ```
+
+`backup.env` and `alertmanager.env` are M5: the `backup` and `alertmanager` services are in
+the `ops` compose profile and stay off until `COMPOSE_PROFILES=ops` is added to the
+checkout's `.env` (`docs/runbooks/first-deploy.md`, step 9). Until then their placeholders
+are harmless.
 
 ## What lives where
 
@@ -35,8 +39,8 @@ grep -RIn 'CHANGE_ME' secrets/
 | `web.env`               | `web` (Next.js storefront) — bundled into the JS, public                                      |
 | `caddy.env`             | `caddy` — ACME email + Grafana basic-auth hash                                                |
 | `grafana.env`           | `grafana` admin credentials                                                                   |
-| `alertmanager.env`      | `alertmanager` — Telegram bot token + chat id for alerts                                      |
-| `backup.env`            | nightly `pg_dump → age → rclone` pipeline                                                     |
+| `alertmanager.env`      | `alertmanager` (`ops` profile, M5) — Telegram bot token + chat id for alerts                  |
+| `backup.env`            | `backup` (`ops` profile, M5) — nightly `pg_dump → age → rclone` pipeline                      |
 
 ## Generating the bits inside
 
@@ -109,13 +113,18 @@ docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-b
 
 ## Validation
 
-Before the first `docker compose up`, sanity-check that nothing still
-says `CHANGE_ME`:
+Before the first `docker compose up`, sanity-check that none of the M0 files still says
+`CHANGE_ME`:
 
 ```bash
 cd ~/opt/csmarket
-grep -RIn 'CHANGE_ME' secrets/  # must return nothing
+for f in postgres postgres-exporter redis api web caddy grafana; do
+  grep -Hn 'CHANGE_ME' "secrets/$f.env"
+done   # must print nothing
 ```
+
+Before enabling the `ops` profile (M5), the whole directory must be clean:
+`grep -RIn 'CHANGE_ME' secrets/` prints nothing.
 
 ## Applying a changed secret
 
@@ -124,7 +133,9 @@ container; `restart` reuses the existing one, so the process comes back with the
 nothing tells you. Verified on the box: after editing `api.env`, `restart` left the container id
 unchanged and the new variable absent, while `up -d` replaced the container and picked it up.
 
-Use `up -d` (it recreates any service whose config hash changed):
+Use `up -d` (it recreates any service whose config hash changed). The image tag comes from
+`IMAGE_TAG` in the checkout's `.env`, written by every deploy — never `export` one by hand
+(`docs/runbooks/deploy.md`):
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d api worker scheduler

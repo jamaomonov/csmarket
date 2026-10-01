@@ -17,12 +17,16 @@ Target: **csmarket.uz** on one VPS (4 vCPU / 8 GB RAM / ≥ 80 GB SSD), the whol
 - [ ] VPS ordered: Ubuntu 24.04, public IPv4 known, provider snapshots on.
 - [ ] An SSH keypair on the operator's laptop.
 - [ ] GitHub repo `jamaomonov/csmarket` exists, `main` pushed.
+- [ ] Sentry project for csmarket and its DSN (optional for M0; empty disables Sentry).
+
+Not needed for M0 — they belong to M5 (launch) and switch on the `ops` compose profile
+([step 9](#9-backups-and-alerts-m5)):
+
 - [ ] An **age keypair for backups**, made on the operator's laptop, never on the server:
       `age-keygen -o ~/csmarket-backup.key`. The public `age1…` line goes to the server; the
       `AGE-SECRET-KEY-…` line stays offline — without it no backup can be read.
 - [ ] Cloudflare R2 bucket **`csmarket-backups`** and an R2 API token scoped to that bucket
       only (details: `infra/secrets-example/README.md`).
-- [ ] Sentry project for csmarket and its DSN (optional for M0; empty disables Sentry).
 - [ ] Ops Telegram chat id and an alert bot token whose bot is a member of that chat.
 
 ---
@@ -159,10 +163,16 @@ echo '<token>' | docker login ghcr.io -u jamaomonov --password-stdin
 cd ~/opt/csmarket
 install -d -m 0700 secrets
 cp infra/secrets-example/*.env secrets/
-$EDITOR secrets/*.env               # replace every CHANGE_ME
+# M0 needs these seven; replace every CHANGE_ME in them:
+M0_SECRETS="postgres postgres-exporter redis api web caddy grafana"
+for f in $M0_SECRETS; do $EDITOR "secrets/$f.env"; done
 chmod 600 secrets/*.env
-grep -RIn 'CHANGE_ME' secrets/      # must print nothing
+for f in $M0_SECRETS; do grep -Hn 'CHANGE_ME' "secrets/$f.env"; done   # must print nothing
 ```
+
+`backup.env` and `alertmanager.env` keep their placeholders until M5: the services that read
+them are in the `ops` profile and do not start before step 9 enables it. Compose still wants
+the files to exist, so copy them anyway.
 
 Keep an offline copy of `CSMARKET_APP_ENC_KEY`: the server holds the only one, and losing it
 makes every encrypted row unreadable.
@@ -186,7 +196,9 @@ makes every encrypted row unreadable.
 
 ```bash
 cd ~/opt/csmarket
-export IMAGE_TAG=sha-1a2b3c4        # the tag from step 4 — never leave it unset
+# Pin the tag from step 4 in the checkout's git-ignored .env; compose reads it on every
+# command, and refuses to run without it. Every later deploy rewrites this line.
+printf 'IMAGE_TAG=%s\n' sha-1a2b3c4 > .env
 
 docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml run --rm api alembic upgrade head
@@ -282,28 +294,44 @@ block.
 
 ---
 
-## 9. Backups and alerts
+## 9. Backups and alerts (M5)
 
-The `backup` service runs `pg_backup.sh` every night at `BACKUP_HOUR_UTC` (02:00 UTC by
-default). Run it once now and look at the result:
+Not part of M0. `backup` and `alertmanager` sit in the compose profile `ops`, because on
+placeholder secrets Alertmanager crash-loops and the nightly backup fails. Until then
+Prometheus keeps evaluating the rules and just logs that it cannot reach Alertmanager.
 
-```bash
-cd ~/opt/csmarket
-docker compose -f docker-compose.prod.yml exec -T backup bash /scripts/pg_backup.sh
-docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-backups
-```
+At M5, with the age key, the R2 bucket and token, and the Telegram bot from step 0:
 
-Prometheus targets must all be up, and a test alert must reach the ops chat with the
-`[csmarket]` prefix:
+1. Fill in `secrets/backup.env` and `secrets/alertmanager.env`; `chmod 600`;
+   `grep -RIn 'CHANGE_ME' secrets/` must now print nothing at all.
+2. Turn the profile on in the same `.env` that pins the tag (deploys keep this line), and
+   start the two services:
 
-```bash
-docker compose -f docker-compose.prod.yml exec -T prometheus \
-  wget -qO- http://localhost:9090/api/v1/targets | grep -o '"health":"[a-z]*"' | sort | uniq -c
-docker compose -f docker-compose.prod.yml exec -T alertmanager \
-  amtool alert add csmarket_first_deploy_test severity=warn --alertmanager.url=http://localhost:9093
-```
+   ```bash
+   cd ~/opt/csmarket
+   echo 'COMPOSE_PROFILES=ops' >> .env
+   docker compose -f docker-compose.prod.yml up -d
+   ```
 
-The test alert resolves by itself after a few minutes.
+3. The `backup` service runs `pg_backup.sh` every night at `BACKUP_HOUR_UTC` (02:00 UTC by
+   default). Run it once now and look at the result:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml exec -T backup bash /scripts/pg_backup.sh
+   docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-backups
+   ```
+
+4. Prometheus targets must all be up, and a test alert must reach the ops chat with the
+   `[csmarket]` prefix:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml exec -T prometheus \
+     wget -qO- http://localhost:9090/api/v1/targets | grep -o '"health":"[a-z]*"' | sort | uniq -c
+   docker compose -f docker-compose.prod.yml exec -T alertmanager \
+     amtool alert add csmarket_first_deploy_test severity=warn --alertmanager.url=http://localhost:9093
+   ```
+
+   The test alert resolves by itself after a few minutes.
 
 ---
 
@@ -312,7 +340,7 @@ The test alert resolves by itself after a few minutes.
 - Five hostnames serve valid certificates through Cloudflare (Full (strict)).
 - `/healthz` and `/readyz` answer; the storefront serves the hello page; admin loads.
 - The API sees the visitor's real address and nothing else.
-- A backup sits in R2; alerts reach the ops Telegram chat.
+- From M5 (step 9): a backup sits in R2; alerts reach the ops Telegram chat.
 
 Next: routine releases — [`deploy.md`](deploy.md); something slow — [`traffic-surge.md`](traffic-surge.md);
 something broken — open an incident from [`incident-template.md`](incident-template.md).

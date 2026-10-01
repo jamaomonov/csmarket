@@ -4,8 +4,15 @@ name: csmarket-prod
 # checkout on the server. ``infra/secrets-example/`` documents every key. Memory
 # limits are ceilings sized for 8 GB with no swap.
 #
-# Start with ``IMAGE_TAG=<sha> docker compose -f docker-compose.prod.yml up -d``:
-# without IMAGE_TAG the images resolve to ``:main``, which may be stale.
+# IMAGE_TAG is pinned in the checkout's git-ignored ``.env`` (compose reads it
+# for interpolation on every command); deploy.yml writes it on each deploy.
+# Without it every command here fails instead of silently resolving a stale
+# cached ``:main`` — see docs/runbooks/deploy.md.
+#
+# Profiles: ``backup`` and ``alertmanager`` are in the ``ops`` profile. They need
+# M5 inputs (R2 bucket, age key, Telegram bot) and would fail on placeholder
+# secrets, so they start only once ``COMPOSE_PROFILES=ops`` is in the same
+# ``.env`` (docs/runbooks/first-deploy.md, step 9).
 
 x-app-env: &app-env
   CSMARKET_ENVIRONMENT: prod
@@ -134,7 +141,7 @@ services:
       - redis
 
   api:
-    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-api:${IMAGE_TAG:-main}
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-api:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
     mem_limit: 1g
     # From M4 every open WebSocket costs two descriptors (the socket plus its
@@ -155,7 +162,7 @@ services:
     # ships its own HEALTHCHECK.
 
   worker:
-    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-worker:${IMAGE_TAG:-main}
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-worker:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
     mem_limit: 512m
     restart: unless-stopped
@@ -165,7 +172,7 @@ services:
     depends_on: [postgres, redis]
 
   scheduler:
-    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-scheduler:${IMAGE_TAG:-main}
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-scheduler:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
     mem_limit: 384m
     restart: unless-stopped
@@ -175,7 +182,7 @@ services:
     depends_on: [postgres, redis]
 
   web:
-    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-web:${IMAGE_TAG:-main}
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-web:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
     mem_limit: 1g
     # Same inherited 1024 default; Next.js holds sockets for SSR fetches and
@@ -200,7 +207,7 @@ services:
       api: { condition: service_started }
 
   admin:
-    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-admin:${IMAGE_TAG:-main}
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-admin:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
     mem_limit: 128m
     restart: unless-stopped
@@ -266,6 +273,8 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.28.1
+    # M5: needs a real Telegram bot token; enabled by COMPOSE_PROFILES=ops.
+    profiles: [ops]
     logging: *default-logging
     mem_limit: 128m
     restart: unless-stopped
@@ -328,6 +337,10 @@ services:
 
   backup:
     image: alpine:3.20
+    # M5: needs the R2 bucket and the age recipient; enabled by
+    # COMPOSE_PROFILES=ops. ``make backup`` / ``make restore`` name the service
+    # explicitly, which runs it regardless of the profile.
+    profiles: [ops]
     logging: *default-logging
     mem_limit: 256m
     # Long-running: run_nightly.sh sleeps until BACKUP_HOUR_UTC (default 02:00)
