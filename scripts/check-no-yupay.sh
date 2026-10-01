@@ -15,7 +15,8 @@ set -euo pipefail
 
 script_dir="$(cd "$(dirname "$0")" && pwd)"
 root="${1:-$(cd "$script_dir/.." && pwd)}"
-allow_file="$script_dir/check-no-yupay.allow"
+# CHECK_NO_YUPAY_ALLOW overrides the allow-list location (used by the tests).
+allow_file="${CHECK_NO_YUPAY_ALLOW:-$script_dir/check-no-yupay.allow}"
 
 scopes=(
   apps/api/src apps/worker/src apps/scheduler/src
@@ -42,6 +43,12 @@ if [ -f "$allow_file" ]; then
 fi
 export ALLOW_REGEX="$allow_regex"
 
+# A broken allow regex must fail the guard, not silently disable the scan.
+if ! perl -e 'qr/$ENV{ALLOW_REGEX}/i' 2> /dev/null; then
+  echo "check-no-yupay: invalid regex in $allow_file" >&2
+  exit 2
+fi
+
 # Reads one file; prints "line: token" per hit.
 scan='
   BEGIN {
@@ -54,21 +61,34 @@ scan='
   print "$.: @m\n" if @m;
 '
 
+list="$(mktemp)"
+trap 'rm -f "$list"' EXIT
+
 status=0
 for scope in "${scopes[@]}"; do
   dir="$root/$scope"
   [ -d "$dir" ] || continue
+  # Exclusions are matched by name BELOW the scope dir, never against $root's
+  # own ancestors (a checkout under .../dist/ must still be scanned). The list
+  # goes through a file, not a process substitution, so a find failure is seen.
+  if ! find "$dir" -mindepth 1 \
+      \( -name node_modules -o -name generated -o -name .next -o -name dist \) -prune -o \
+      -type f -not -name '*.png' -not -name '*.jpg' -not -name '*.svg' -print0 > "$list"; then
+    echo "check-no-yupay: find failed in $dir" >&2
+    exit 2
+  fi
   while IFS= read -r -d '' file; do
-    hits="$(perl -ne "$scan" "$file" || true)"
+    if ! hits="$(perl -ne "$scan" "$file")"; then
+      echo "check-no-yupay: scan failed for ${file#"$root"/}" >&2
+      exit 2
+    fi
     if [ -n "$hits" ]; then
       status=1
       while IFS= read -r hit; do
         printf '%s:%s\n' "${file#"$root"/}" "$hit"
       done <<< "$hits"
     fi
-  done < <(find "$dir" -type f \
-      -not -path '*/node_modules/*' -not -path '*/generated/*' -not -path '*/.next/*' \
-      -not -path '*/dist/*' -not -name '*.png' -not -name '*.jpg' -not -name '*.svg' -print0)
+  done < "$list"
 done
 
 if [ "$status" -ne 0 ]; then
