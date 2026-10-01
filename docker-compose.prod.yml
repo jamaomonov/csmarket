@@ -1,0 +1,360 @@
+name: csmarket-prod
+#
+# Secrets live in ``./secrets/*.env``, git-ignored, next to this file inside the
+# checkout on the server. ``infra/secrets-example/`` documents every key. Memory
+# limits are ceilings sized for 8 GB with no swap.
+#
+# Start with ``IMAGE_TAG=<sha> docker compose -f docker-compose.prod.yml up -d``:
+# without IMAGE_TAG the images resolve to ``:main``, which may be stale.
+
+x-app-env: &app-env
+  CSMARKET_ENVIRONMENT: prod
+  CSMARKET_DEBUG: "false"
+  CSMARKET_LOG_LEVEL: INFO
+  CSMARKET_LOG_JSON: "true"
+
+# Bound every container's json-file logs. Without this the driver keeps an
+# unbounded log per container, which fills the disk and gets replayed on every
+# promtail restart. Promtail already ships everything to Loki, so a small local
+# buffer is all we need: 10 MB x 3 files = 30 MB per container at most.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Memory ceilings on every container. The box has NO swap, so memory pressure
+# goes straight to the kernel OOM killer, which picks its victim by size. These
+# are ceilings, not reservations: each is roughly 3-4x the expected steady state,
+# so the point is to stop runaway growth, not to pack the box. Too tight and the
+# container exits 137 into a restart loop (for postgres, repeated crash
+# recovery) — err loose. Deliberately no cpu quotas: a hard quota caps
+# throughput during exactly the spike it was provisioned for.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    logging: *default-logging
+    mem_limit: 2g
+    # Parallel-query results go through shared memory and Docker's default
+    # /dev/shm is 64 MB; larger tables then fail with "could not resize shared
+    # memory segment".
+    shm_size: 512m
+    restart: unless-stopped
+    # Sized for the 4 vCPU / 8 GB box and the 2 GB container limit above, not
+    # for the host: the two must not be confused, or the OOM killer settles it.
+    command:
+      - postgres
+      # A quarter of the container limit; the rest covers connections, work_mem
+      # and maintenance.
+      - "-c"
+      - "shared_buffers=512MB"
+      # A planner hint, not an allocation: shared_buffers plus the host page cache.
+      - "-c"
+      - "effective_cache_size=2GB"
+      # Per sort, per connection — kept modest.
+      - "-c"
+      - "work_mem=8MB"
+      - "-c"
+      - "maintenance_work_mem=128MB"
+      # SSD: the default of 4 biases the planner towards sequential scans.
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      # Pools reach api 20 + worker 20 + scheduler 20; the rest is headroom for
+      # psql and migrations.
+      - "-c"
+      - "max_connections=100"
+      # Safety net for a connection leaked inside a transaction (an upstream
+      # call made while holding one), not a policy for slow work.
+      - "-c"
+      - "idle_in_transaction_session_timeout=600s"
+      # Query-level evidence for "the database got slow".
+      - "-c"
+      - "shared_preload_libraries=pg_stat_statements"
+      - "-c"
+      - "pg_stat_statements.track=top"
+    env_file: ./secrets/postgres.env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # $$ defers expansion to the container shell — POSTGRES_USER/DB come
+      # from the env_file at runtime, not from compose interpolation. A bare
+      # ``pg_isready`` probes as OS user root and spams the server log with
+      # ``FATAL: role "root" does not exist`` every interval.
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-postgres}"]
+      interval: 10s
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.19.1
+    logging: *default-logging
+    mem_limit: 64m
+    restart: unless-stopped
+    env_file: ./secrets/postgres-exporter.env
+    depends_on:
+      - postgres
+
+  redis:
+    image: redis:7-alpine
+    logging: *default-logging
+    mem_limit: 384m
+    restart: unless-stopped
+    # requirepass: Redis holds rate-limit counters and caches, so it must not be
+    # an open door to anything that gets a foothold on the docker network. $$
+    # defers expansion to the container shell; REDIS_PASSWORD comes from the
+    # env file.
+    env_file: ./secrets/redis.env
+    # --maxmemory bounds it; the eviction policy stays `noeviction` ON PURPOSE.
+    # `allkeys-lru` looks like the safe default and is the dangerous one here:
+    # evicting a rate-limit counter silently weakens the limit. Refusing writes
+    # is the correct failure — paired with an alert at 70% so a human steps in
+    # first. mem_limit is deliberately higher than maxmemory, so Redis hits its
+    # own ceiling before the OOM killer sees it.
+    command:
+      [
+        "sh",
+        "-c",
+        'exec redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction --requirepass "$$REDIS_PASSWORD"',
+      ]
+    volumes:
+      - redis-data:/data
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.86.0
+    logging: *default-logging
+    mem_limit: 64m
+    restart: unless-stopped
+    # Reads REDIS_PASSWORD straight from the shared redis.env.
+    env_file: ./secrets/redis.env
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    depends_on:
+      - redis
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-api:${IMAGE_TAG:-main}
+    logging: *default-logging
+    mem_limit: 1g
+    # From M4 every open WebSocket costs two descriptors (the socket plus its
+    # Redis pub/sub connection). The inherited default is 1024 — a hard wall past
+    # which uvicorn stops accepting ANY connection, HTTP included.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    env_file: ./secrets/api.env
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_started }
+    # No compose-level healthcheck: the image (infra/docker/api.Dockerfile)
+    # ships its own HEALTHCHECK.
+
+  worker:
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-worker:${IMAGE_TAG:-main}
+    logging: *default-logging
+    mem_limit: 512m
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    env_file: ./secrets/api.env
+    depends_on: [postgres, redis]
+
+  scheduler:
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-scheduler:${IMAGE_TAG:-main}
+    logging: *default-logging
+    mem_limit: 384m
+    restart: unless-stopped
+    environment:
+      <<: *app-env
+    env_file: ./secrets/api.env
+    depends_on: [postgres, redis]
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-web:${IMAGE_TAG:-main}
+    logging: *default-logging
+    mem_limit: 1g
+    # Same inherited 1024 default; Next.js holds sockets for SSR fetches and
+    # keep-alives.
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    restart: unless-stopped
+    environment:
+      # Server Components and ISR revalidation talk to the API directly over
+      # the compose network. Without this they fall back to the public hostname,
+      # so every server render would leave the box, cross Cloudflare and Caddy,
+      # and come back — arriving with the VPS's own address as its client IP,
+      # which collapses all server rendering into one per-IP rate-limit bucket.
+      # Not a secret: it is an internal hostname, so it belongs here rather than
+      # in secrets/web.env (public-only, since NEXT_PUBLIC_* is inlined into the
+      # browser bundle).
+      API_INTERNAL_URL: http://api:8000
+    env_file: ./secrets/web.env
+    depends_on:
+      api: { condition: service_started }
+
+  admin:
+    image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-admin:${IMAGE_TAG:-main}
+    logging: *default-logging
+    mem_limit: 128m
+    restart: unless-stopped
+    # admin is a static Vite build served by nginx — no env file
+    # because every config is baked into the build at CI time.
+
+  caddy:
+    image: caddy:2-alpine
+    logging: *default-logging
+    mem_limit: 256m
+    restart: unless-stopped
+    # The stack's own edge: Caddy owns 80/443 on this box and terminates TLS
+    # (Cloudflare proxies every hostname in front of it).
+    ports:
+      - "80:80"
+      - "443:443"
+    # ACME_EMAIL and GRAFANA_BASIC_AUTH_HASH, substituted into the Caddyfile.
+    env_file: ./secrets/caddy.env
+    volumes:
+      - ./infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [api, web, admin]
+
+  prometheus:
+    image: prom/prometheus:v3.12.0
+    logging: *default-logging
+    mem_limit: 512m
+    restart: unless-stopped
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alerts:/etc/prometheus/alerts:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=30d"
+
+  node-exporter:
+    image: prom/node-exporter:v1.11.1
+    logging: *default-logging
+    mem_limit: 64m
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
+    logging: *default-logging
+    mem_limit: 256m
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    logging: *default-logging
+    mem_limit: 128m
+    restart: unless-stopped
+    # ALERT_BOT_TOKEN / ALERT_CHAT_ID: see infra/secrets-example/alertmanager.env.
+    env_file: ./secrets/alertmanager.env
+    volumes:
+      - ./infra/alertmanager/alertmanager.tmpl.yml:/etc/alertmanager/alertmanager.tmpl.yml:ro
+      - alertmanager-data:/alertmanager
+    # Alertmanager does no env expansion of its own, so the template's two
+    # placeholders are rendered here at start-up. The result goes to the
+    # private volume, never to the bind mount, so the credentials stay out of
+    # the repo and out of the image. `chat_id` is unquoted on purpose —
+    # Alertmanager wants an integer there.
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        sed -e "s|__ALERT_BOT_TOKEN__|$$ALERT_BOT_TOKEN|"
+        -e "s|__ALERT_CHAT_ID__|$$ALERT_CHAT_ID|"
+        /etc/alertmanager/alertmanager.tmpl.yml > /alertmanager/alertmanager.yml &&
+        exec /bin/alertmanager --config.file=/alertmanager/alertmanager.yml
+        --storage.path=/alertmanager
+
+  grafana:
+    image: grafana/grafana:13.0.2
+    logging: *default-logging
+    mem_limit: 384m
+    restart: unless-stopped
+    env_file: ./secrets/grafana.env
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on: [prometheus, loki]
+
+  loki:
+    image: grafana/loki:3.7.2
+    logging: *default-logging
+    mem_limit: 768m
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki-config.yml"]
+    volumes:
+      - ./infra/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.6.11
+    logging: *default-logging
+    mem_limit: 192m
+    restart: unless-stopped
+    command: ["-config.file=/etc/promtail/promtail-config.yml"]
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      # Read-only: promtail only enumerates containers. A writable docker.sock
+      # is host root — an RCE/supply-chain compromise of this image would
+      # otherwise escalate to full host takeover.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./infra/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+    depends_on: [loki]
+
+  backup:
+    image: alpine:3.20
+    logging: *default-logging
+    mem_limit: 256m
+    # Long-running: run_nightly.sh sleeps until BACKUP_HOUR_UTC (default 02:00)
+    # and runs pg_backup.sh daily. unless-stopped keeps the schedule alive
+    # across reboots. One-off runs override the command (see `make backup`).
+    restart: unless-stopped
+    env_file: ./secrets/backup.env
+    volumes:
+      - ./infra/backup:/scripts:ro
+      - backup-tmp:/tmp/backup
+    depends_on: [postgres]
+    entrypoint:
+      [
+        "/bin/sh",
+        "-c",
+        'apk add --no-cache postgresql-client age rclone bash >/dev/null && exec "$@"',
+        "--",
+      ]
+    command: ["/bin/sh", "/scripts/run_nightly.sh"]
+
+volumes:
+  postgres-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+  prometheus-data:
+  grafana-data:
+  alertmanager-data:
+  loki-data:
+  backup-tmp:

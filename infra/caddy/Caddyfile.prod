@@ -1,0 +1,106 @@
+# Caddy — production: the stack's own edge. It owns :80/:443 on the VPS (csmarket is
+# alone on its box — ADR-0003), terminates TLS with Let's Encrypt, and routes by host.
+#
+#   csmarket.uz, www.csmarket.uz → web (Next.js)
+#   admin.csmarket.uz            → admin (nginx + static Vite build)
+#   api.csmarket.uz              → FastAPI (+ WebSocket from M4)
+#   grafana.csmarket.uz          → Grafana, gated by basic-auth
+#
+# Cloudflare proxies every hostname (SSL mode "Full (strict)"). ACME HTTP-01
+# passes through the proxy, so certificates are ordinary Let's Encrypt.
+#
+# CLIENT IP — load-bearing. FastAPI's ``client_ip()`` trusts the FIRST entry of
+# X-Forwarded-For (rate limiter, and ip_guard from M1). So this file must hand it
+# exactly one value, the real visitor: ``trusted_proxies`` names Cloudflare's
+# ranges, ``client_ip_headers`` tells Caddy to read Cf-Connecting-Ip from those
+# peers only, and every upstream block OVERWRITES X-Forwarded-For with
+# {client_ip}. A direct hit from a non-Cloudflare address gets its socket peer and
+# cannot inject a chain. If this is ever changed to append, both guards are
+# worthless — see the comment in apps/api/src/csmarket/core/client_ip.py.
+#
+# Ranges from https://www.cloudflare.com/ips-v4 and /ips-v6 (2026-10-01). A new
+# range simply falls through as its own edge IP; refresh the list when CF publishes.
+#
+# Editing this file on prod needs ``up -d --force-recreate caddy``: it is a
+# single-file bind mount and ``git checkout`` swaps the inode under a reload.
+
+{
+	email {$ACME_EMAIL}
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers Cf-Connecting-Ip
+	}
+}
+
+(upstream) {
+	# Hold and retry across a container restart instead of answering 502:
+	# deploys are stop-then-start and the gap is 5–15 s.
+	reverse_proxy {args[0]} {
+		header_up X-Forwarded-For {client_ip}
+		lb_try_duration 15s
+		lb_try_interval 250ms
+	}
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Permissions-Policy "interest-cohort=()"
+	}
+}
+
+(access_log) {
+	# Caddy logs no request lines by default; promtail ships stdout to Loki.
+	log {
+		output stdout
+		format json
+	}
+}
+
+# ---------- storefront ----------
+csmarket.uz, www.csmarket.uz {
+	encode zstd gzip
+	import security_headers
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.csmarket.uz wss://api.csmarket.uz; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	@www host www.csmarket.uz
+	redir @www https://csmarket.uz{uri} permanent
+	import access_log
+	import upstream web:3000
+}
+
+# ---------- admin ----------
+admin.csmarket.uz {
+	encode zstd gzip
+	import security_headers
+	import access_log
+	import upstream admin:80
+}
+
+# ---------- api ----------
+api.csmarket.uz {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+	# CORS is FastAPI's job (CSMARKET_CORS_ALLOW_ORIGINS); doing it here too
+	# produces two Access-Control-Allow-Origin values and the browser rejects both.
+
+	# Prometheus scrapes api:8000 on the internal network; never from the public host.
+	@metrics path /metrics /metrics/*
+	respond @metrics 404
+
+	# Rate limiting lives in FastAPI (slowapi); Caddy's rate_limit needs a custom
+	# build. Volumetric abuse is Cloudflare's WAF.
+	import access_log
+	import upstream api:8000
+}
+
+# ---------- grafana (operators only) ----------
+grafana.csmarket.uz {
+	encode zstd gzip
+	basic_auth {
+		ops {$GRAFANA_BASIC_AUTH_HASH}
+	}
+	reverse_proxy grafana:3000
+}

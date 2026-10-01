@@ -1,0 +1,149 @@
+groups:
+  - name: api
+    rules:
+      # Saturation first. With a single uvicorn process the event loop is one
+      # core, so CPU is the signal that leads every symptom by minutes —
+      # latency and errors are what it looks like once it is already too late.
+      # If --workers is ever set, divide the threshold by the worker count.
+      - alert: ApiSaturated
+        expr: rate(process_cpu_seconds_total{job="api"}[5m]) > 0.85
+        for: 3m
+        labels: { severity: page }
+        annotations:
+          summary: "API process is using >85% of a core"
+          description: >
+            One uvicorn process means one event loop on one core. Past this the
+            queue grows and everything behind it slows together.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+
+      # A hard wall, not a slowdown: at the limit uvicorn stops accepting every
+      # connection, HTTP included, and does not recover on its own. From M4 each
+      # open WebSocket holds a descriptor (plus a Redis pub/sub connection) for
+      # its whole life, so this climbs with concurrent sessions.
+      - alert: ApiFileDescriptorsHigh
+        expr: process_open_fds{job="api"} / process_max_fds{job="api"} > 0.7
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "API has used >70% of its file descriptors"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+
+      - alert: ApiDown
+        expr: up{job="api"} == 0
+        for: 1m
+        labels: { severity: page }
+        annotations:
+          summary: "API is not being scraped"
+
+      # 2%, not 5%. Customers feel one request in fifty; five in a hundred is
+      # an outage that has been running for a while. The instrumentator labels
+      # responses by class (status="5xx"), not by code.
+      - alert: ApiHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="api",status="5xx"}[5m]))
+            / clamp_min(sum(rate(http_requests_total{job="api"}[5m])), 0.001) > 0.02
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "API 5xx rate > 2%"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/incident-template.md"
+
+      # The histogram has buckets past 1 s, so a threshold above 1 s is reachable.
+      #
+      # Waxpeer-bound handlers are excluded, and that is the point of the rule
+      # rather than an excuse. They are slow by design — they wait on Waxpeer —
+      # and mixing them into one global quantile means a burst of listing
+      # lookups pages somebody about a checkout that was never slow. One alert
+      # over both populations can only be wrong about one of them. See
+      # `ApiSupplierLatency` below for the other half.
+      #
+      # The list names the two Waxpeer-touching routes (spec §7.2–7.3). Adding a
+      # third means adding it here too, or this alert starts crying wolf.
+      - alert: ApiHighLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(
+              rate(
+                http_request_duration_seconds_bucket{
+                  job="api",
+                  handler!~".*(/skins/.*/listings|/tradelink/check)"
+                }[5m]
+              )
+            ) by (le)
+          ) > 1.5
+        for: 10m
+        labels: { severity: warn }
+        annotations:
+          summary: "API p95 latency > 1.5s (excluding Waxpeer-bound routes)"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+
+      # The other half: the Waxpeer-bound routes, watched on their own terms.
+      # Not excluded from monitoring, just from a threshold built for our own
+      # database. The histogram's top finite bucket is 10s, and
+      # histogram_quantile can never report above the top bucket it has
+      # observations in — so a threshold at 10s is unreachable, not strict.
+      # 5s sits well above a healthy p95 for short-timeout upstream calls
+      # while still being inside the histogram's range.
+      - alert: ApiSupplierLatency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(
+              rate(
+                http_request_duration_seconds_bucket{
+                  job="api",
+                  handler=~".*(/skins/.*/listings|/tradelink/check)"
+                }[5m]
+              )
+            ) by (le)
+          ) > 5
+        for: 15m
+        labels: { severity: warn }
+        annotations:
+          summary: "Waxpeer-bound routes p95 > 5s — upstream is degraded"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+
+      # The pool is 20 connections per process and it is shared by every
+      # request; an upstream call holds one for its whole round trip. Exhaustion
+      # surfaces as 500s everywhere at once, which is hard to read as a
+      # connection problem unless something says so.
+      - alert: PostgresConnectionsHigh
+        expr: |
+          sum(pg_stat_database_numbackends) / max(pg_settings_max_connections) > 0.8
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "Postgres is above 80% of max_connections"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+
+      # Redis holds rate-limit counters, caches and (from M4) pub/sub — no work
+      # queue. It still wants `noeviction`: silently evicting live guard state
+      # would just as silently weaken it, so refusing writes is the correct
+      # failure and still needs a human before it happens, not after.
+      - alert: RedisMemoryHigh
+        # Guarded on maxmemory being set at all. Unset it reports 0, and
+        # `used / 0` is +Inf — so without the guard this rule fires
+        # continuously on any stack that has not configured a ceiling, which
+        # is a false alarm about the one thing it is supposed to detect.
+        expr: |
+          redis_memory_max_bytes > 0
+            and redis_memory_used_bytes / redis_memory_max_bytes > 0.7
+        for: 5m
+        labels: { severity: page }
+        annotations:
+          summary: "Redis is above 70% of maxmemory"
+          description: >
+            Policy is noeviction: at 100% Redis refuses writes. Check for a
+            worker backlog before raising the ceiling.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+
+      - alert: RedisCeilingUnset
+        # The companion to the rule above: a Redis with no ceiling on a host
+        # with no swap grows until the OOM killer intervenes.
+        expr: redis_memory_max_bytes == 0
+        for: 30m
+        labels: { severity: warn }
+        annotations:
+          summary: "Redis has no maxmemory configured"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"

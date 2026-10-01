@@ -1,0 +1,35 @@
+groups:
+  - name: infra
+    rules:
+      - alert: DiskSpaceLow
+        # 20%, not 10%: a full disk wedges Loki and Postgres together, and by
+        # the time 10% is left there is no room to manoeuvre.
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.20
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: "Root filesystem < 20% free"
+
+      - alert: HostHighMemory
+        # The host has NO swap, so there is no grace period between pressure
+        # and the OOM killer — which picks its victim by size, and the largest
+        # process is Postgres.
+        expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.20
+        for: 15m
+        labels: { severity: warn }
+        annotations:
+          summary: "Host memory available < 20%"
+
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "Postgres exporter not scrapeable"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels: { severity: page }
+        annotations:
+          summary: "Redis exporter not scrapeable"
