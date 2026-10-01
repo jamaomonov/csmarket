@@ -52,7 +52,9 @@ There is no refund from our admin. Uzum calls `/reverse`:
 ## Auth (10001)
 
 - The header must be `Authorization: Basic base64(login:password)` and match the production
-  **or** the sandbox pair. A pair with a blank half never matches.
+  **or** the sandbox pair. A pair with a blank half never matches. In prod the sandbox pair
+  counts only while `CSMARKET_KASSA_SANDBOX_ENABLED=true` (sandbox pass;
+  [`kassa-setup.md`](./kassa-setup.md)); after go-live a sandbox call is 10001 by design.
 - 10001 on every call means a pair in `secrets/api.env` differs from what Uzum sends, or is
   blank after a deploy. The alert `KassaRejectionsSpike` (`reason="auth"`) fires on it.
 - A 10001 answer carries no `serviceId` / `transId`: auth is checked before the body is read.

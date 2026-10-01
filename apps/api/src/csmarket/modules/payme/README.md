@@ -29,10 +29,13 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS       -32300 (never a 405)
   status as `-32400`. A commit failure is `-32400`, never a 500. The request `id` is echoed
   (`null` when the body was not parsed).
 - **Auth, before the body is read:** `Authorization: Basic base64("Paycom:<key>")`. The login
-  is `payme_login` (default `Paycom`); the key is `payme_key` (production) **or**
-  `payme_test_key` (sandbox), so one endpoint serves the sandbox and live traffic. Compared
-  as UTF-8 bytes in constant time across both keys; a blank configured key never matches; a
-  non-ASCII or undecodable credential fails closed. Failure → `-32504`.
+  is `payme_login` (default `Paycom`); the key is one of `Settings.payme_keys()`: `payme_key`
+  (production) **or** `payme_test_key` (sandbox), so one endpoint serves the sandbox and live
+  traffic. **In prod the test key counts only with `kassa_sandbox_enabled`** (off by default;
+  startup warns `kassa.sandbox_enabled_in_prod` while it is on): a sandbox key must never
+  credit a real balance. Compared as UTF-8 bytes in constant time across the usable keys; a
+  blank configured key never matches; a non-ASCII or undecodable credential fails closed.
+  Failure → `-32504`.
 - Parameters are checked by type (`amount`, `time`, `reason`, `from`, `to` integers — not
   `bool`, not floats; `id` a string of 1..64; `account`, `fiscal_data` objects) → `-32600`.
 - Exempt from slowapi (`bootstrap._exempt_self_authenticating_routes`). Payme's source range
@@ -151,9 +154,10 @@ Messages are trilingual (ru / uz / en); Uzbek uses ʻ (U+02BB).
 
 `CSMARKET_PAYME_MERCHANT_ID`, `CSMARKET_PAYME_KEY`, `CSMARKET_PAYME_TEST_KEY` (both keys
 redacted from logs), `CSMARKET_PAYME_LOGIN` (default `Paycom`), `CSMARKET_PAYME_CHECKOUT_URL`
-(default `https://checkout.paycom.uz`; `https://test.paycom.uz` for the sandbox). Payme is
-offered with the merchant id and either key; otherwise the tile is hidden and every call is
-`-32504`.
+(default `https://checkout.paycom.uz`; `https://test.paycom.uz` for the sandbox),
+`CSMARKET_KASSA_SANDBOX_ENABLED` (prod only; default `false`). Payme is offered with the
+merchant id and a usable key (the production key, or the test key outside prod / with the
+opt-in); otherwise the tile is hidden and every call is `-32504`.
 
 ## Metrics
 

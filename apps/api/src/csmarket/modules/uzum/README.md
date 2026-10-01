@@ -33,10 +33,12 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS on any of them   10003 at HTTP 400 (never a 40
   `{"status": "FAILED", "errorCode", "serviceId", "transId"?}` — `serviceId` and `transId`
   echoed when the body was parsed. Never a 401, 405, 422 or 500: a commit failure is `99999`.
 - **Auth, before the body is read:** `Authorization: Basic base64("<login>:<password>")`
-  matching the production pair (`uzum_login` / `uzum_password`) **or** the sandbox pair
-  (`uzum_test_login` / `uzum_test_password`), so one endpoint serves both. Compared as UTF-8
-  bytes in constant time across both pairs; a pair with a blank half never matches; a
-  non-ASCII or undecodable credential fails closed. Failure → `10001`.
+  matching one of `Settings.uzum_pairs()`: the production pair (`uzum_login` /
+  `uzum_password`) **or** the sandbox pair (`uzum_test_login` / `uzum_test_password`), so one
+  endpoint serves both. **In prod the sandbox pair counts only with `kassa_sandbox_enabled`**
+  (off by default; startup warns `kassa.sandbox_enabled_in_prod` while it is on). Compared as
+  UTF-8 bytes in constant time across the usable pairs; a pair with a blank half never
+  matches; a non-ASCII or undecodable credential fails closed. Failure → `10001`.
 - **Body:** a JSON object, else `10002` — also for a body nested deeply enough to raise
   `RecursionError`.
 - **`serviceId`:** must be exactly the configured `uzum_service_id` (an integer, not a
@@ -169,7 +171,8 @@ a callback holds is skipped until the next tick; one failing row is logged
 `CSMARKET_UZUM_SERVICE_ID`, `CSMARKET_UZUM_LOGIN`, `CSMARKET_UZUM_PASSWORD`,
 `CSMARKET_UZUM_TEST_LOGIN`, `CSMARKET_UZUM_TEST_PASSWORD` (both passwords redacted from
 logs), `CSMARKET_UZUM_OPEN_SERVICE_URL` (default `https://uzumbank.uz/open-service`). Uzum is
-offered with the service id and a whole pair; otherwise the tile is hidden and every call is
+offered with the service id and a whole usable pair (the sandbox pair in prod only with
+`CSMARKET_KASSA_SANDBOX_ENABLED=true`); otherwise the tile is hidden and every call is
 `10001` (or `10006` without a service id). The checkout link is
 `{open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our top-up page>` — no amount.
 

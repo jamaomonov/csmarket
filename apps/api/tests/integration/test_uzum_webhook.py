@@ -407,6 +407,31 @@ async def test_the_production_pair_works_too(
     assert r.status_code == 200
 
 
+@pytest.mark.parametrize(("opt_in", "status"), [("false", 400), ("true", 200)])
+async def test_prod_ignores_the_sandbox_pair_unless_opted_in(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    opt_in: str,
+    status: int,
+) -> None:
+    topup = await make_topup(db_session)
+    monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")
+    monkeypatch.setenv("CSMARKET_KASSA_SANDBOX_ENABLED", opt_in)
+    get_settings.cache_clear()
+    sandbox = await _post(integration_client, "check", _check_body(topup.number))
+    assert sandbox.status_code == status
+    if status == 400:
+        assert sandbox.json() == {"status": "FAILED", "errorCode": 10001}
+    live = await _post(
+        integration_client,
+        "check",
+        _check_body(topup.number),
+        headers=_auth(PROD_LOGIN, PROD_PASSWORD),
+    )
+    assert live.status_code == 200
+
+
 @pytest.mark.parametrize(
     "headers",
     [

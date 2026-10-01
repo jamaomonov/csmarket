@@ -23,12 +23,12 @@ class UzumGateway:
 
     @property
     def available(self) -> bool:
-        """With the service id and a whole production or sandbox login/password pair."""
+        """With the service id and a whole usable login/password pair (``Settings.uzum_pairs()``).
+
+        The sandbox pair counts in prod only with ``kassa_sandbox_enabled``.
+        """
         s = get_settings()
-        return bool(
-            s.uzum_service_id
-            and ((s.uzum_login and s.uzum_password) or (s.uzum_test_login and s.uzum_test_password))
-        )
+        return bool(s.uzum_service_id and s.uzum_pairs())
 
     def intent_url(self, *, payable: Payable, locale: str) -> str:
         """``{uzum_open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our page>``.

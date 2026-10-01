@@ -23,9 +23,12 @@ class PaymeGateway:
 
     @property
     def available(self) -> bool:
-        """With the merchant id and the production or the sandbox key set."""
+        """With the merchant id and a usable key (``Settings.payme_keys()``).
+
+        The sandbox key counts in prod only with ``kassa_sandbox_enabled``.
+        """
         s = get_settings()
-        return bool(s.payme_merchant_id and (s.payme_key or s.payme_test_key))
+        return bool(s.payme_merchant_id and s.payme_keys())
 
     def intent_url(self, *, payable: Payable, locale: str) -> str:
         """``{payme_checkout_url}/{base64("m=<id>;ac.order=<number>;a=<tiyin>;c=<back>;l=<locale>")}``.

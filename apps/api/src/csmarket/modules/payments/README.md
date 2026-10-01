@@ -144,13 +144,15 @@ an unknown or unavailable one. Every intent returns the customer to our own page
 `{click_pay_url}?service_id=&merchant_id=&amount=<soʻm>&transaction_param=<number>&return_url=`.
 It imports nothing from the `click` module (which imports `payments`).
 
-`payme` (`gateways/payme.py`) is available with `payme_merchant_id` and `payme_key` or
-`payme_test_key`; its intent URL is `{payme_checkout_url}/{base64(params)}` with
+`payme` (`gateways/payme.py`) is available with `payme_merchant_id` and a key from
+`Settings.payme_keys()` (`payme_key`, or `payme_test_key` outside prod or with
+`kassa_sandbox_enabled`); its intent URL is `{payme_checkout_url}/{base64(params)}` with
 `params = "m=<merchant id>;ac.order=<number>;a=<tiyin>;c=<our top-up page>;l=<ru|uz|en>"`.
 It imports nothing from the `payme` module.
 
 `uzum` (`gateways/uzum.py`) is available with `uzum_service_id` and a whole login/password
-pair (production or sandbox); its intent URL is
+pair from `Settings.uzum_pairs()` (production, or sandbox outside prod or with
+`kassa_sandbox_enabled`); its intent URL is
 `{uzum_open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our top-up page>` — no
 amount: Uzum's app prefills it from our `/check`. It imports nothing from the `uzum` module.
 

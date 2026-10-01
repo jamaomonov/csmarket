@@ -67,11 +67,12 @@ _ENVELOPE_KEYS = frozenset({"serviceId", "timestamp", "transId"})
 
 
 def _is_authorized(header: str) -> bool:
-    """``Basic base64("<login>:<password>")`` matching the production or the sandbox pair.
+    """``Basic base64("<login>:<password>")`` matching one of ``Settings.uzum_pairs()``.
 
-    Compared as UTF-8 bytes in constant time across every configured pair, so a non-ASCII
-    credential cannot raise and timing does not tell which pair matched. A pair with a blank
-    half never matches; with no pair configured every call fails.
+    That is the production pair, plus the sandbox pair outside prod (in prod only with
+    ``kassa_sandbox_enabled``). Compared as UTF-8 bytes in constant time across every usable
+    pair, so a non-ASCII credential cannot raise and timing does not tell which pair matched.
+    A pair with a blank half never matches; with no usable pair every call fails.
     """
     settings = get_settings()
     scheme, _, encoded = header.partition(" ")
@@ -85,14 +86,10 @@ def _is_authorized(header: str) -> bool:
     if not sep:
         return False
     ok = False
-    for valid_login, valid_password in (
-        (settings.uzum_login, settings.uzum_password),
-        (settings.uzum_test_login, settings.uzum_test_password),
-    ):
-        if valid_login and valid_password:
-            login_ok = hmac.compare_digest(login.encode(), valid_login.encode())
-            password_ok = hmac.compare_digest(password.encode(), valid_password.encode())
-            ok |= login_ok and password_ok
+    for valid_login, valid_password in settings.uzum_pairs():
+        login_ok = hmac.compare_digest(login.encode(), valid_login.encode())
+        password_ok = hmac.compare_digest(password.encode(), valid_password.encode())
+        ok |= login_ok and password_ok
     return ok
 
 

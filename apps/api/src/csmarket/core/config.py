@@ -240,6 +240,14 @@ class Settings(BaseSettings):
     uzum_test_login: str = Field(default="", description="Sandbox Basic-auth login.")
     uzum_test_password: str = Field(default="", description="Sandbox Basic-auth password.")
     uzum_open_service_url: str = Field(default="https://uzumbank.uz/open-service")
+    kassa_sandbox_enabled: bool = Field(
+        default=False,
+        description=(
+            "Prod only: accept the Payme test key and the Uzum sandbox pair. Off → prod ignores "
+            "them (a sandbox credential must never credit a real balance). On only for the "
+            "R14 sandbox pass, then off again; startup logs a warning while it is on."
+        ),
+    )
 
     @field_validator("click_merchant_id", "click_service_id", "uzum_service_id", mode="before")
     @classmethod
@@ -278,6 +286,29 @@ class Settings(BaseSettings):
     def is_test(self) -> bool:
         """Whether we are running under pytest."""
         return self.environment == "test"
+
+    @property
+    def kassa_sandbox_active(self) -> bool:
+        """Sandbox kassa credentials count: always outside prod, in prod only when opted in."""
+        return not self.is_prod or self.kassa_sandbox_enabled
+
+    def payme_keys(self) -> tuple[str, ...]:
+        """The Payme keys that authenticate a call; blank keys are left out.
+
+        The production key, plus the test key while :attr:`kassa_sandbox_active`.
+        """
+        keys = (self.payme_key, self.payme_test_key if self.kassa_sandbox_active else "")
+        return tuple(key for key in keys if key)
+
+    def uzum_pairs(self) -> tuple[tuple[str, str], ...]:
+        """The Uzum ``(login, password)`` pairs that authenticate a call; half-blank pairs left out.
+
+        The production pair, plus the sandbox pair while :attr:`kassa_sandbox_active`.
+        """
+        pairs = [(self.uzum_login, self.uzum_password)]
+        if self.kassa_sandbox_active:
+            pairs.append((self.uzum_test_login, self.uzum_test_password))
+        return tuple((login, pw) for login, pw in pairs if login and pw)
 
     @property
     def dev_login_active(self) -> bool:

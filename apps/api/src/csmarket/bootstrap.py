@@ -75,6 +75,29 @@ def missing_prod_settings(settings: Settings) -> list[str]:
     ]
 
 
+def warn_if_kassa_sandbox_in_prod(settings: Settings) -> bool:
+    """Log a startup warning when prod accepts the kassas' sandbox credentials.
+
+    ``CSMARKET_KASSA_SANDBOX_ENABLED`` is for the R14 sandbox pass only: while it is on, the
+    Payme test key and the Uzum sandbox pair credit real balances. The line names the flag,
+    never a credential.
+
+    Args:
+        settings: The resolved application settings.
+
+    Returns:
+        Whether the warning was logged.
+    """
+    if not (settings.is_prod and settings.kassa_sandbox_enabled):
+        return False
+    get_logger("csmarket.bootstrap").warning(
+        "kassa.sandbox_enabled_in_prod",
+        hint="sandbox credentials credit real balances; unset CSMARKET_KASSA_SANDBOX_ENABLED "
+        "after the sandbox pass (docs/runbooks/kassa-setup.md)",
+    )
+    return True
+
+
 def _build_limiter(settings: Settings) -> Limiter:
     """Coarse per-IP, per-route limiter (the ADR-0028 shape from the source project).
 
@@ -150,6 +173,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             impact=reasons,
             hint="apply secrets with `docker compose up -d`, not `restart` — restart keeps the old env_file values",
         )
+    warn_if_kassa_sandbox_in_prod(settings)
     try:
         yield
     finally:

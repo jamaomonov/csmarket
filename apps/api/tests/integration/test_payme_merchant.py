@@ -321,6 +321,30 @@ async def test_the_production_key_works_too(
     assert body["result"] == {"allow": True}
 
 
+@pytest.mark.parametrize(("opt_in", "allowed"), [("false", False), ("true", True)])
+async def test_prod_ignores_the_test_key_unless_opted_in(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    opt_in: str,
+    allowed: bool,
+) -> None:
+    topup = await make_topup(db_session)
+    monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")
+    monkeypatch.setenv("CSMARKET_KASSA_SANDBOX_ENABLED", opt_in)
+    get_settings.cache_clear()
+    params = {"amount": TIYIN, "account": {"order": topup.number}}
+    sandbox = await _call(integration_client, "CheckPerformTransaction", params)
+    if allowed:
+        assert sandbox["result"] == {"allow": True}
+    else:
+        assert _code(sandbox) == -32504
+    live = await _call(
+        integration_client, "CheckPerformTransaction", params, headers=_auth(key=PROD_KEY)
+    )
+    assert live["result"] == {"allow": True}
+
+
 @pytest.mark.parametrize(
     "headers",
     [

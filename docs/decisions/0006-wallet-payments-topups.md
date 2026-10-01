@@ -87,7 +87,9 @@ records both, so M4 builds on them instead of rediscovering them.
 - **R13 — An admin clawback cannot go below zero** (409 `balance_too_low`). YuPay allowed it.
 - **R14 — The real-kassa check moves to the first deploy.** It needs a public URL and the
   owner's kassa credentials; M3 is complete locally with sandbox-shaped tests and the mock
-  kassa. The runbook lists the check.
+  kassa. The runbook lists the check. **Prod ignores sandbox credentials** (Payme test key,
+  Uzum sandbox pair) unless `CSMARKET_KASSA_SANDBOX_ENABLED=true`, set only for the sandbox
+  pass and logged at startup: a fake-money tool must never credit a real balance.
 
 ### Rulings refined during execution
 

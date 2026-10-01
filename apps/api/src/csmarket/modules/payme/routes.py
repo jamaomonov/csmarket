@@ -59,11 +59,12 @@ _INVALID_REQUEST = -32600
 
 
 def _is_authorized(header: str) -> bool:
-    """``Basic base64("<payme_login>:<key>")`` with ``key`` = ``payme_key`` or ``payme_test_key``.
+    """``Basic base64("<payme_login>:<key>")`` with ``key`` one of ``Settings.payme_keys()``.
 
-    Compared as UTF-8 bytes in constant time across every configured key, so a non-ASCII
-    key cannot raise and timing does not tell which key matched. A blank configured key
-    never matches; with no key configured every call fails.
+    That is ``payme_key``, plus ``payme_test_key`` outside prod (in prod only with
+    ``kassa_sandbox_enabled``). Compared as UTF-8 bytes in constant time across every usable
+    key, so a non-ASCII key cannot raise and timing does not tell which key matched. A blank
+    configured key never matches; with no usable key every call fails.
     """
     settings = get_settings()
     scheme, _, encoded = header.partition(" ")
@@ -78,9 +79,8 @@ def _is_authorized(header: str) -> bool:
         return False
     login_ok = hmac.compare_digest(login.encode(), settings.payme_login.encode())
     key_ok = False
-    for valid in (settings.payme_key, settings.payme_test_key):
-        if valid:
-            key_ok |= hmac.compare_digest(key.encode(), valid.encode())
+    for valid in settings.payme_keys():
+        key_ok |= hmac.compare_digest(key.encode(), valid.encode())
     return login_ok and key_ok
 
 

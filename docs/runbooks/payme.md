@@ -8,12 +8,17 @@ Top-ups only in M3. Setup: [`kassa-setup.md`](./kassa-setup.md); reference:
 
 ## Quick checks
 
-- **Payme tile missing.** `CSMARKET_PAYME_MERCHANT_ID` and `CSMARKET_PAYME_KEY` or
-  `CSMARKET_PAYME_TEST_KEY` must be set. `curl -s https://api.csmarket.uz/api/v1/payments/providers`.
+- **Payme tile missing.** `CSMARKET_PAYME_MERCHANT_ID` and `CSMARKET_PAYME_KEY` must be set.
+  In prod `CSMARKET_PAYME_TEST_KEY` counts only while `CSMARKET_KASSA_SANDBOX_ENABLED=true`
+  (sandbox pass; [`kassa-setup.md`](./kassa-setup.md)).
+  `curl -s https://api.csmarket.uz/api/v1/payments/providers`.
+- **Sandbox suite gets −32504 in prod.** Prod ignores the test key unless
+  `CSMARKET_KASSA_SANDBOX_ENABLED=true`; after go-live that is the intended answer.
 - **Always HTTP 200** with `{result}` or `{error}`. A bare **403** (no JSON body) is Caddy's
   IP allowlist (`185.234.113.0/28`), not the app — see
-  [`kassa-setup.md#rejections`](./kassa-setup.md#rejections). Payme's sandbox runs from the
-  same range; a test from any other network 403s by design.
+  [`kassa-setup.md#rejections`](./kassa-setup.md#rejections). A test from any other network
+  403s by design. Confirm with Payme which addresses its sandbox calls from: if they are
+  outside `185.234.113.0/28`, widen the allowlist for the sandbox pass only.
 - **Wrong checkout host.** The sandbox needs `CSMARKET_PAYME_CHECKOUT_URL=https://test.paycom.uz`;
   production must not have it (default `checkout.paycom.uz`).
 
@@ -100,4 +105,4 @@ either is a bug: stop and escalate.
 - Never credit a balance in SQL or insert ledger rows by hand; use the admin adjustment with a
   reason (`wallet.md`).
 - Never change a `payme_transactions` row by hand: Payme's CheckTransaction reads it.
-- Never paste a key into chat or a ticket.
+- Never paste a key into chat or a ticket; delete the test key after go-live.
