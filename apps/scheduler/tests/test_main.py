@@ -14,6 +14,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
     assert [job.id for job in scheduler.get_jobs()] == [
         "auth.purge_refresh_tokens",
         "fx.refresh",
+        "skins.catalog_import",
     ]
 
 

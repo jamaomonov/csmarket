@@ -18,6 +18,7 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
 | `users:tradelink:breaker`                                         | 60 s                                          | `users.tradelink.check_trade_link` on any upstream failure                           | `users.tradelink.check_trade_link`                        | No                                                                     |
 | `skins:pricing`                                                   | 3600 s                                        | `skins.settings.load_rules` (on a miss), `publish_rules`                             | `skins.settings.load_rules`                               | No: the pricing rules document                                         |
 | `fx:usd_uzs`                                                      | 86 400 s                                      | `fx.service.refresh_usd_uzs` (scheduler `fx.refresh`), `current_usd_uzs` (on a miss) | `fx.service.current_usd_uzs`                              | No: the rate, snapshot id, fetch time and source                       |
+| `skins:job:{import\|price_sync}`                                  | none (overwritten each run)                   | `skins.job_status.record_job` (scheduler `skins.catalog_import`, price sync)         | `skins.job_status.read_job` (admin status card)           | No: finished_at, ok, counters, our own error label                     |
 
 ## Notes
 

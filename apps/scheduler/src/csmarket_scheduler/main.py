@@ -14,9 +14,10 @@ from csmarket.core.observability import init_sentry
 # must be registered before any job opens a session (AGENTS.md §4).
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
+from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.users import models as _users_models  # noqa: F401
 
-from csmarket_scheduler.jobs import fx_refresh, purge_refresh_tokens
+from csmarket_scheduler.jobs import fx_refresh, purge_refresh_tokens, skins_catalog_import
 
 configure_logging()
 log = get_logger("csmarket.scheduler")
@@ -31,6 +32,7 @@ def build_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone="UTC")
     purge_refresh_tokens.register(scheduler)
     fx_refresh.register(scheduler)
+    skins_catalog_import.register(scheduler)
     return scheduler
 
 

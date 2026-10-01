@@ -43,3 +43,23 @@ first call**; M2 adds the catalogue, import, price sync and listings; buying arr
 - **`settings`** — `load_rules` (Redis `skins:pricing`, TTL 3600 -> `skin_pricing_rules`
   row 1 -> defaults), `save_rules` (Postgres only; the caller `publish_rules` after commit),
   `enabled_categories`.
+
+## Catalogue import (M2)
+
+- **`bymykel`** — the daily import from ByMykel/CSGO-API: eleven JSON files (`skins_not_grouped`
+  plus the non-skin files in `taxonomy.FILE_CATEGORIES`) become `CatalogRow`s and are upserted by
+  `(market_hash_name, phase)` in batches of 1 000, one transaction per file.
+  `upsert_items` writes metadata columns only: **never** `slug` (a URL, assigned on insert),
+  `hidden` (the admin's flag) or any price column, so a re-import can run at any time. An
+  unchanged catalogue reports `changed = 0`. A non-200 answer raises (`fetch_file` calls
+  `raise_for_status`); nothing is written for the failed file onward.
+- **`job_status`** — the last outcome of the catalogue jobs (`JOB_IMPORT`, `JOB_PRICE_SYNC`)
+  in Redis `skins:job:{job}` (JSON, no TTL, Redis errors swallowed). `error` is our own label
+  (the exception type name), never upstream text. The scheduler's `skins.catalog_import`
+  writes it; the admin status card reads it.
+- **Scheduler job** `skins.catalog_import` runs every `CSMARKET_SKINS_IMPORT_INTERVAL_HOURS`
+  (24), first run 120 s after start, and is skipped while `CSMARKET_SKINS_SYNC_ENABLED` is
+  false. It never raises: a failure is logged and recorded.
+- **Tests:** `tests/unit/test_skins_bymykel.py`, `tests/integration/test_skins_import.py`
+  (respx, never the real GitHub), `tests/integration/test_skins_job_status.py`;
+  `apps/scheduler/tests/test_skins_catalog_import.py`.
