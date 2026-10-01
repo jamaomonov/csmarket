@@ -37,3 +37,23 @@ async def test_idempotent_responses_exists_with_its_unique_key(db_engine) -> Non
     async with db_engine.connect() as conn:
         names = await conn.run_sync(_uniques)
     assert "uq_idempotent_responses_scope_key" in names
+
+
+async def test_payments_number_index_serves_a_prefix_search(db_engine) -> None:
+    """``ix_payments_number`` uses ``text_pattern_ops``: the admin search's ``LIKE 'T7K%'``
+    can use it whatever the database collation."""
+    async with db_engine.connect() as conn:
+        indexdef = await conn.scalar(
+            text("SELECT indexdef FROM pg_indexes WHERE indexname = 'ix_payments_number'")
+        )
+        assert indexdef is not None
+        assert "text_pattern_ops" in indexdef
+        await conn.execute(text("SET LOCAL enable_seqscan = off"))
+        plan = "\n".join(
+            row[0]
+            for row in await conn.execute(
+                text("EXPLAIN SELECT id FROM payments WHERE number LIKE 'T7K%'")
+            )
+        )
+        await conn.rollback()
+    assert "ix_payments_number" in plan

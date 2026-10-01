@@ -146,7 +146,9 @@ class Payment(Base):
             unique=True,
             postgresql_where=text("idempotency_key IS NOT NULL"),
         ),
-        Index("ix_payments_number", "number"),
+        # text_pattern_ops: the admin search's prefix LIKE ('T7K%') uses it under any
+        # collation (a plain btree only under C); equality still uses it too.
+        Index("ix_payments_number", "number", postgresql_ops={"number": "text_pattern_ops"}),
         Index("ix_payments_topup", "topup_id"),
         Index("ix_payments_status_created", "status", text("created_at DESC")),
         Index("ix_payments_created", text("created_at DESC"), text("id DESC")),

@@ -5,7 +5,9 @@ R10, R11; ADR-0006). Builds on `wallet` (credits and reversals go through `walle
 `wallet` never imports `payments`. Operations: `docs/runbooks/kassa-setup.md`; flow:
 `docs/product/flows/balance-topup.md`.
 
-**Owns:** tables `wallet_topups` and `payments` (migration `0007_payments_topups`).
+**Owns:** tables `wallet_topups` and `payments` (migration `0007_payments_topups`;
+`0012_payments_number_pattern_ops` rebuilds `ix_payments_number` with `text_pattern_ops` so
+the admin search's prefix `LIKE` uses it under any collation).
 
 - `wallet_topups` — what the customer pays: `number` (`T` + 7 Crockford chars, unique),
   `user_id`, `amount_uzs numeric(14,0) > 0`, `status` `pending` | `succeeded` | `expired` |
