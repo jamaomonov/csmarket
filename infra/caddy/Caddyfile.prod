@@ -130,5 +130,10 @@ grafana.csmarket.uz {
 	basic_auth {
 		ops {$GRAFANA_BASIC_AUTH_HASH}
 	}
-	reverse_proxy grafana:3000
+	# Strip Caddy's basic-auth credentials before they reach Grafana: Grafana
+	# would try them as its own basic auth and answer 401 (the two passwords
+	# differ on purpose). Grafana then shows its own login form.
+	reverse_proxy grafana:3000 {
+		header_up -Authorization
+	}
 }
