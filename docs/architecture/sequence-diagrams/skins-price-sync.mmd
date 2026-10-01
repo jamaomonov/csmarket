@@ -1,0 +1,25 @@
+sequenceDiagram
+    autonumber
+    participant S as Scheduler (skins.price_sync, every 5 min)
+    participant WP as Waxpeer
+    participant DB as Postgres
+    participant R as Redis
+
+    S->>S: skip unless sync enabled and key set
+    S->>WP: GET /v1/prices/snapshot?format=csv (streamed)
+    WP-->>S: ~1.2 M rows (item_id, name, price, auto)
+    S->>S: aggregate to one row per (name, phase); only auto listings set a price
+    S->>WP: GET /v1/prices?minified=0 (type, rarity, image for new names)
+    WP-->>S: names with taxonomy
+    S->>DB: advisory xact lock (pricing)
+    alt snapshot names fewer than half of the active catalogue
+        S->>R: skins:job:price_sync = {ok: false, error: thin_snapshot}
+        Note over S,DB: nothing written, previous prices stand
+    else normal snapshot
+        S->>DB: apply: update rows whose price_hash changed, deactivate absent rows, insert stubs
+        S->>DB: reprice all active rows (rules read fresh from Postgres) -> sell_price_usd, discount_percent
+        S->>DB: COMMIT
+        S->>R: INCR skins:catalog:ver (cached pages expire)
+        S->>R: skins:job:price_sync = {ok: true, changed, deactivated, stubs}
+    end
+    Note over S,WP: A Waxpeer error or crash is logged by exception type name only and recorded as ok: false

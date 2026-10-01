@@ -46,6 +46,12 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - **Roles** are in `users.roles`. `grant_admin` prints one word and never the Steam ID.
 - **Admin audit log** (`admin_audit_log`, M2): the actor is `actor_user_id` (our uuid); the
   `payload` names things only (slugs, aliases) — never a Steam ID, email or IP.
+- **Catalogue and rate (M2) hold no personal data.** The catalogue, price sync and listings
+  carry items and prices only; CBU calls carry nothing about a person. Waxpeer's API key rides
+  the query string, so a Waxpeer URL and `httpx` exception text are never logged: only the
+  method, path, status and the exception type name (`skins.prices.failed error=…`). The listings
+  route's `ip_guard` bucket keys on `hash_short(ip)` like the others; cached listings and
+  catalogue pages are public data.
 
 ## Where each may appear
 

@@ -14,19 +14,19 @@
 - **Milestones** (spec §15), each with its own plan written with `superpowers:writing-plans`
   and saved to `docs/superpowers/plans/`, and its own deploy:
 
-  | #   | Scope                                                            | Plan                                                 |
-  | --- | ---------------------------------------------------------------- | ---------------------------------------------------- |
-  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`   |
-  | M1  | `auth` (Steam), `users`, roles, account page, trade link         | `docs/superpowers/plans/2026-10-01-m1-auth-users.md` |
-  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO | not written yet                                      |
-  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | not written yet                                      |
-  | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                      |
-  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                      |
+  | #   | Scope                                                            | Plan                                                      |
+  | --- | ---------------------------------------------------------------- | --------------------------------------------------------- |
+  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`        |
+  | M1  | `auth` (Steam), `users`, roles, account page, trade link         | `docs/superpowers/plans/2026-10-01-m1-auth-users.md`      |
+  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO | `docs/superpowers/plans/2026-10-01-m2-skins-catalogue.md` |
+  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | not written yet                                           |
+  | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                           |
+  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                           |
 
-- **Where things stand:** M0 and M1 (Steam sign-in, users, trade link, admin gate) are
-  merged on local `main`. There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
-  `https://csmarket.uz/` answers the hello page from CI-built images. Next: the M2 plan, when
-  the owner asks for it.
+- **Where things stand:** M0–M1 merged on local `main`; M2 on branch `m2-skins-catalogue` until
+  the owner says to merge. There is no git remote yet; nothing is pushed or deployed. M0 is
+  done for good when `https://csmarket.uz/` answers the hello page from CI-built images. Next:
+  the M3 plan, when the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). Everything later is listed in spec §16.
@@ -295,8 +295,9 @@ csmarket/
 
 - No synchronous external HTTP in request handlers on the money path. **One advisory
   carve-out**: `GET /skins/{slug}/listings` (M2) calls Waxpeer search-by-name on a cache
-  miss — 90 s fresh / 1 h stale cache, process-wide budget under Waxpeer's 20/min, 2-min
-  breaker, degrades to the 5-min snapshot with `degraded: true`, own `ip_guard` bucket. A
+  miss — 90 s fresh / 1 h stale cache, process-wide budget 18/min (under Waxpeer's 20/min),
+  2-min breaker, 4 s timeout, degrades to the 5-min snapshot with `degraded: true`, own
+  `ip_guard` bucket. A
   second carve-out: `POST /me/trade-link/check` (M1; Waxpeer `check-tradelink` + Steam
   `GetTradeHoldDurations`), advisory, 4 s timeouts, 10-min Redis cache keyed by a hash of
   the link. A new one needs an ADR and a line here — and its route in the `handler` regexes

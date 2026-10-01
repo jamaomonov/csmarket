@@ -60,6 +60,30 @@ Steam OpenID is the only sign-in (ADR-0004). The flow, in short:
   when the check was unavailable; `reason` is `invalid`, `private`, `trade_ban`, `hold` or
   `unavailable`. Cached 10 minutes; 4 s upstream timeouts.
 
+### Skins catalogue (M2)
+
+Public, no sign-in. Under `/skins`:
+
+- `GET /skins/catalog` — filters `category`, `weapon`, `exterior`, `stattrak`, `souvenir`,
+  `rarity`, `team`, `min_uzs`, `max_uzs`, `q`; `sort` (`price`, `-price` default, `discount`,
+  `popular`); `limit` 1..100 (48); `cursor`. The cursor is **opaque**: pass back `next_cursor`
+  as given. A malformed cursor is 422.
+- `GET /skins/facets?category=` — counts for the filters; an unknown category is 422.
+- `GET /skins/suggest?q=` — search-box suggestions.
+- `GET /skins/{slug}` — one item with its wears and cheapest offers; 404 for an unknown or
+  hidden slug.
+- `GET /skins/{slug}/listings` — live offers `{items, degraded}`. `degraded: true` means the
+  answer is the last cached or last snapshot offers because Waxpeer could not answer; it is
+  not an error. Rate-limited per IP in its own bucket (`skins-listings`); 429 carries
+  `Retry-After`. Offers carry a numeric `listing_id` (opaque; M4 checkout will need it).
+- `GET /skins/seo/slugs?offset&limit` (≤ 5 000) — slugs for the sitemap.
+
+Conventions: **money is a string** (`price_usd` with 2 decimals, `price_uzs` whole soʻm
+rounded up to 100). **`price_uzs` is `null` without a fresh CBU rate** (clients show dollars
+and soʻm filters are ignored). Hidden items and categories outside
+`CSMARKET_SKINS_CATEGORIES` never appear. Nothing in a response names Waxpeer. These are `GET`s:
+no `Idempotency-Key`. Bodies of the catalogue, facets and suggest are cached 60 s.
+
 ### Admin catalogue (M2)
 
 All under `/admin/skins`, admin only (401 without a token, 403 for a customer).
@@ -71,6 +95,6 @@ All under `/admin/skins`, admin only (401 without a token, 403 for a customer).
 - `GET /admin/skins/aliases`, `PUT /admin/skins/aliases/{alias}` `{text}`,
   `DELETE /admin/skins/aliases/{alias}` (204) — search aliases; alias 1..64 letters, digits,
   spaces or hyphens, text 1..128, both stored lower-case.
-- Writes take an optional `Idempotency-Key` (≥ 16 chars): a repeat replays the first response
+- `PATCH`, `PUT` and `DELETE` take an `Idempotency-Key` (≥ 16 chars, optional here): a repeat replays the first response
   and writes nothing, including no second audit row. Every write is audited in
   `admin_audit_log`.

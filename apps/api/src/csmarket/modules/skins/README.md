@@ -1,10 +1,23 @@
 # skins
 
-The CS2 catalogue and everything Waxpeer (spec §3.2). **M1 shipped the Waxpeer client's
-first call**; M2 adds the catalogue, import, price sync and listings; buying arrives in M4.
+The CS2 catalogue and everything Waxpeer (spec §3.2). M1 shipped the Waxpeer client's first
+call; **M2 is the browsable catalogue** (import, price sync, stored sell prices, read API,
+listings, admin); buying arrives in M4. Decisions: [ADR-0005](../../../../../../docs/decisions/0005-skins-catalogue-fx-and-indexing.md).
+
+## What the module owns
+
+| Table                 | Holds                                                                                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skin_items`          | One row per `(market_hash_name, phase)`: ByMykel metadata, our `slug` (a URL, assigned once), the Waxpeer price columns, `active`, `hidden`, the stored `sell_price_usd` / `discount_percent` |
+| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4); absent = `DEFAULT_RULES`                                                                                  |
+| `skin_search_aliases` | Admin-edited search aliases (alias -> text), none seeded                                                                                                                                      |
+
+Migration `0003_skins_catalog`. `hidden` is the admin's flag and is never written by the
+import or the price sync. `phase` is `''` when an item has none, never NULL.
 
 - **Public interface:** `skins.api` — `WaxpeerClient`, `WaxpeerError`,
-  `WaxpeerUnavailableError`, `WaxpeerRateLimitedError`, `SnapshotRow`. Other modules import nothing else from here.
+  `WaxpeerUnavailableError`, `WaxpeerRateLimitedError`, `SnapshotRow`. Other modules import
+  nothing else from here; the catalogue is reached through HTTP routes, not through `api.py`.
 - **`waxpeer.WaxpeerClient`** — transport only, async `httpx`, inject `client=` in tests.
   `check_tradelink(url) -> str | None` (`POST /v1/check-tradelink`):
   `None` when the link works, else Waxpeer's reason text (`info` on `success: true`,
@@ -18,7 +31,7 @@ first call**; M2 adds the catalogue, import, price sync and listings; buying arr
 - **`prices()`** — `GET /v1/prices?minified=0`: one dict per Waxpeer name (type, rarity,
   image) — the sync's source for the first-seen taxonomy.
 - **`search_listings(names)`** — `GET /v2/search-items-by-name` with `delivery_details=1`,
-  at most 50 names; returns Waxpeer's `items` map (name -> listings). 20 calls a minute.
+  at most 50 names; returns Waxpeer's `items` map (name -> list of listings). 20 calls a minute.
 - **`WaxpeerRateLimitedError`** (HTTP 429, `retry_after_seconds`) subclasses
   `WaxpeerUnavailableError`: a rate limit is an outage to callers that do not care which.
 - **The API key rides the query string** (`?api=…`), so a request URL is never logged —
@@ -120,7 +133,10 @@ rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..
 - **`seo_routes`** (`/skins/seo`, mounted before `/skins` in `api/v1/router.py`):
   `GET /slugs?offset&limit` (≤ 5 000) -> `SkinSlugsOut {items, total}`, alphabetical, the same
   set the catalogue shows — the sitemap source.
-- **`schemas`** — the public DTOs; nothing in them names Waxpeer.
+- **`schemas`** — the public DTOs; nothing in them names Waxpeer. Money is a string.
+- **Slugs** (`naming.slug_for`, `slugs.resolve`): lower-case ASCII; a name whose plain slug is
+  already taken by a different item gets six hex characters of its own identity appended. A
+  slug is assigned once on insert and never changes, because it is a URL.
 - **Tests:** `tests/unit/test_skins_cursor.py`, `tests/integration/test_skins_catalog_routes.py`,
   `test_skins_facets_scoped.py`, `test_skins_catalog_resilience.py` (no rate, Redis down).
 
@@ -170,3 +186,27 @@ soʻm at the CBU rate; sticker images use `CSMARKET_SKINS_IMAGE_HOST`. The route
 `ip_guard` bucket `skins-listings` (60 per window); an unknown or hidden slug is a 404 before any
 Waxpeer call. Redis keys: `docs/architecture/cache-keys.md`. Tests:
 `tests/unit/test_skins_listings.py`, `tests/integration/test_skins_listings_route.py`.
+
+## Cache keys
+
+All in [`docs/architecture/cache-keys.md`](../../../../../../docs/architecture/cache-keys.md); none
+holds PII. Owned here: `skins:pricing`, `skins:catalog:ver`,
+`skins:{catalog|facets|suggest}:{ver}:{sha1}`, `skins:listings:{slug}` (+ `:stale`),
+`skins:wax:breaker`, `skins:wax:budget:{minute}`, `skins:job:{import|price_sync}`, and the
+`ip_guard` bucket `skins-listings`. Redis is never required for a page to render.
+
+## Dev seed
+
+`make seed-skins` (`python -m csmarket.scripts.seed_skins_dev`) loads about 60 curated ByMykel
+items from `csmarket/scripts/dev_skins/*.json` with deterministic fake listings through the real `apply_prices`
+and `reprice_rows`, and writes a `source='dev'` rate of 12 700 soʻm if there is none. The Waxpeer
+key works only from the prod IP, so local work and e2e use this. It is repeatable, refuses to run
+in prod, and treats the fake snapshot as the whole market: other catalogue rows go inactive, so
+use it on a dev database only.
+
+## Tests and fixtures
+
+Unit: `tests/unit/test_skins_*.py`. Integration: `tests/integration/test_skins_*.py` (Postgres and
+Redis testcontainers; respx for GitHub and Waxpeer, never the real ones). Contract: respx
+recordings of Waxpeer's shapes in `tests/fixtures/skins/`, used by `tests/contract/`. A fixture
+never holds a real trade-link token. Scheduler jobs: `apps/scheduler/tests/test_skins_*.py`.
