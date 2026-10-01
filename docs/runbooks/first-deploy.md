@@ -50,23 +50,36 @@ cannot serve before it has a certificate.
 
 ## 2. Server bootstrap
 
-As `root` (or the provider's sudo user):
+Everything that needs root happens **as root, before** the switch to `deploy`. `deploy` gets
+no sudo at all: it runs Docker through the `docker` group, and nothing later in this runbook
+or in `deploy.yml` needs more.
+
+Keep this root session open until step 2c says otherwise.
+
+### 2a. As root: user, Docker, firewall
 
 ```bash
-ssh root@<VPS_IP>
+ssh root@<VPS_IP>          # or the provider's user, then `sudo -i`
 
-# Non-root deploy user with your key.
+# Non-root deploy user, logging in with the same key you used for root
+# (for a provider user, copy /home/<that user>/.ssh/authorized_keys instead).
 adduser --disabled-password --gecos "" deploy
-usermod -aG sudo deploy
 install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
-install -m 600 -o deploy -g deploy ~/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
+install -m 600 -o deploy -g deploy /root/.ssh/authorized_keys /home/deploy/.ssh/authorized_keys
 
-# No passwords, no root over SSH.
-sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
-sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-systemctl restart ssh
+# Docker Engine with the Compose plugin.
+apt-get update
+apt-get install -y ca-certificates curl gnupg git
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" \
+  > /etc/apt/sources.list.d/docker.list
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+usermod -aG docker deploy
 
-# Firewall: SSH, HTTP, HTTPS only.
+# Firewall: SSH, HTTP, HTTPS only. 22 is allowed before enabling, so this session survives.
 ufw default deny incoming
 ufw default allow outgoing
 ufw allow 22/tcp
@@ -75,22 +88,41 @@ ufw allow 443/tcp
 ufw --force enable
 ```
 
-Log in again as `deploy` and install Docker with the Compose plugin:
+### 2b. Second terminal: confirm `deploy` works
+
+Leave the root session open. In a **new** terminal on your laptop:
 
 ```bash
-sudo apt-get update
-sudo apt-get install -y ca-certificates curl gnupg git
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu noble stable" \
-  | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-sudo apt-get update
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-sudo usermod -aG docker deploy
-newgrp docker
+ssh deploy@<VPS_IP>
+docker ps                  # an empty table, no "permission denied"
 docker compose version
 ```
+
+Do not go on until both commands work. If the login fails, fix it from the root session
+(`authorized_keys` ownership and mode are the usual cause).
+
+### 2c. Back in the root session: harden SSH
+
+Only now turn off root and password logins. A drop-in under `sshd_config.d/` named `00-…`
+wins over the image's own drop-ins (sshd keeps the first value it reads, and Ubuntu cloud
+images ship `50-cloud-init.conf`, which may enable passwords):
+
+```bash
+cat > /etc/ssh/sshd_config.d/00-csmarket.conf <<'CFG'
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+CFG
+sshd -t                                            # must print nothing
+sshd -T | grep -Ei '^(permitrootlogin|passwordauthentication) '   # both "no"
+systemctl restart ssh
+```
+
+From the second terminal, open one more fresh `ssh deploy@<VPS_IP>` to prove the restarted
+daemon still lets `deploy` in. Only then close the root session. From here on, work as
+`deploy`.
+
+### 2d. As `deploy`: the checkout
 
 Clone the repo with a **read-only deploy key** (GitHub → repo → Settings → Deploy keys), so a
 compromised box cannot push:
