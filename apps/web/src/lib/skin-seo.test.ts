@@ -58,6 +58,16 @@ describe("skinFaq", () => {
     expect(text).not.toMatch(/Click|Payme|Uzum/);
   });
 
+  it("writes the Steam price in dollars and cents, as the API's units can carry more", () => {
+    const at = (steam: string) =>
+      skinFaq({ ...ITEM, steam_price_usd: steam }, t, "ru")
+        .map((f) => f.answer)
+        .join("\n");
+    expect(at("43.794")).toMatch(/\$43\.79[^\d]/);
+    expect(at("4.1")).toMatch(/\$4\.10[^\d]/);
+    expect(at("12")).toMatch(/\$12\.00[^\d]/);
+  });
+
   it("does not claim Steam is dearer when it is not, nor a price it does not have", () => {
     const faq = skinFaq(
       { ...ITEM, discount_percent: 0, price_usd: null, price_uzs: null },

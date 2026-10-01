@@ -66,7 +66,11 @@ export function skinFaq(item: SkinDetail, t: SkinsT, locale: string): FaqEntry[]
   if (item.steam_price_usd && item.discount_percent && item.discount_percent > 0) {
     out.push({
       question: t("faq.steamQ", { name }),
-      answer: t("faq.steamA", { steam: item.steam_price_usd, percent: item.discount_percent }),
+      answer: t("faq.steamA", {
+        // The API keeps Waxpeer's tenths of a cent ("43.794"); a price reads in cents.
+        steam: Number(item.steam_price_usd).toFixed(2),
+        percent: item.discount_percent,
+      }),
     });
   }
   const range = wearFloatRange(item);
