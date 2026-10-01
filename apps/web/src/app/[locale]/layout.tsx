@@ -5,6 +5,8 @@ import { getMessages, getTranslations, setRequestLocale } from "next-intl/server
 
 import type { Metadata } from "next";
 
+import { Header } from "@/components/Header";
+import { Providers } from "@/components/Providers";
 import { routing } from "@/i18n/routing";
 import { SITE } from "@/lib/site";
 
@@ -64,7 +66,10 @@ export default async function LocaleLayout({
     >
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
+          <Providers>
+            <Header locale={locale} />
+            {children}
+          </Providers>
         </NextIntlClientProvider>
       </body>
     </html>

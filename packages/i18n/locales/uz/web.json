@@ -15,5 +15,17 @@
   "error": {
     "title": "Sahifa yuklanmadi",
     "body": "Bizning tomonda xatolik. Yangilab koʻring."
+  },
+  "nav": {
+    "signIn": "Steam orqali kirish",
+    "account": "Hisob"
+  },
+  "auth": {
+    "callback": {
+      "working": "Steam orqali kiryapmiz…",
+      "failed": "Steam orqali kirib boʻlmadi.",
+      "retry": "Qayta urinish"
+    },
+    "suspended": "Hisob bloklangan."
   }
 }

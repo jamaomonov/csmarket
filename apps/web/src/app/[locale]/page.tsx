@@ -14,7 +14,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   return (
     <main
       id="main-content"
-      className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center px-6 py-24"
+      className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-2xl flex-col justify-center px-6 py-24"
     >
       <p className="text-fg-muted font-mono text-sm uppercase tracking-widest">{common("brand")}</p>
       <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{t("title")}</h1>

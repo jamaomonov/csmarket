@@ -1,0 +1,246 @@
+/**
+ * Browser session client shared by the storefront and the admin SPA.
+ *
+ * Keeps the access JWT in memory (never localStorage, so an XSS payload can't
+ * read it), attaches it as a Bearer header and surfaces non-2xx answers as
+ * {@link SessionApiError}. The 30-day refresh token rides an HttpOnly cookie
+ * (`credentials: "include"` on every call); on load the app re-mints the access
+ * token from it with {@link SessionClient.refreshAccessToken}.
+ *
+ * A `401` triggers one refresh and one replay of the original request. The
+ * refresh is single-flight: parallel 401s share one in-flight promise in the
+ * tab, and the Web Locks API serialises tabs, so the rotating refresh token is
+ * never presented twice at once (the server treats reuse as theft).
+ *
+ * Everything is closed over per client: two clients never share a token.
+ */
+
+export interface SessionClientOptions {
+  /** API origin, e.g. `https://api.csmarket.uz`; empty for same-origin. */
+  baseUrl: string;
+  /** `localStorage` key of the non-secret "a session may exist" flag. */
+  hintKey: string;
+  /** Web Locks name serialising refreshes across this app's tabs. */
+  lockName: string;
+}
+
+export interface SessionRequestOptions {
+  method?: string;
+  /** JSON-encoded when present. */
+  body?: unknown;
+  headers?: HeadersInit;
+  /** Omit the Authorization header even if a token is held. */
+  anonymous?: boolean;
+  /** Sent as `Idempotency-Key` (≥ 16 chars on state-changing endpoints). */
+  idempotencyKey?: string;
+  signal?: AbortSignal;
+}
+
+export interface SessionWriteOptions {
+  anonymous?: boolean;
+  idempotencyKey?: string;
+}
+
+export type SessionReadOptions = Omit<SessionRequestOptions, "method" | "body">;
+
+export interface SessionClient {
+  api: <T = unknown>(path: string, init?: SessionRequestOptions) => Promise<T>;
+  apiGet: <T = unknown>(path: string, options?: SessionReadOptions) => Promise<T>;
+  apiPost: <T = unknown>(path: string, body: unknown, options?: SessionWriteOptions) => Promise<T>;
+  apiPatch: <T = unknown>(path: string, body: unknown, options?: SessionWriteOptions) => Promise<T>;
+  apiPut: <T = unknown>(path: string, body: unknown, options?: SessionWriteOptions) => Promise<T>;
+  getAccessToken: () => string | null;
+  /** Hold `token` in memory and set the session hint. */
+  setAccessToken: (token: string) => void;
+  /** Forget the token and hint; revoke the server session (fire-and-forget). */
+  clearSession: () => void;
+  /** Whether a prior session may exist — the gate for a silent refresh on load. */
+  hasSessionHint: () => boolean;
+  /** Re-mint the access token from the refresh cookie; `true` on success. */
+  refreshAccessToken: () => Promise<boolean>;
+  /** Called when a refresh is refused (the session is dead). Returns an unsubscribe. */
+  onAuthLost: (cb: () => void) => () => void;
+}
+
+export class SessionApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly statusText: string,
+    public readonly body: unknown,
+  ) {
+    super(`${status.toString()} ${statusText}`);
+    this.name = "SessionApiError";
+  }
+
+  /** problem+json `code` (e.g. "trade_link_not_yours"), when the API sent one. */
+  get code(): string | undefined {
+    // Narrowing an unknown JSON body to the problem+json shape we read.
+    const b = this.body as { code?: unknown } | null;
+    return typeof b?.code === "string" ? b.code : undefined;
+  }
+
+  /** problem+json `type` URI. */
+  get type(): string | undefined {
+    // Narrowing an unknown JSON body to the problem+json shape we read.
+    const b = this.body as { type?: unknown } | null;
+    return typeof b?.type === "string" ? b.type : undefined;
+  }
+}
+
+async function readErrorBody(response: Response): Promise<unknown> {
+  const text = await response.text().catch(() => "");
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
+/** Build a session client; see the module docstring for the mechanics. */
+export function createSessionClient(opts: SessionClientOptions): SessionClient {
+  const baseUrl = opts.baseUrl.replace(/\/+$/, "");
+  let accessToken: string | null = null;
+  let refreshInFlight: Promise<boolean> | null = null;
+  const lostListeners = new Set<() => void>();
+
+  const writeHint = (on: boolean): void => {
+    try {
+      if (on) localStorage.setItem(opts.hintKey, "1");
+      else localStorage.removeItem(opts.hintKey);
+    } catch {
+      /* storage blocked — the in-memory token still works for this tab */
+    }
+  };
+
+  const setAccessToken = (token: string): void => {
+    accessToken = token;
+    writeHint(true);
+  };
+
+  const clearSession = (): void => {
+    accessToken = null;
+    writeHint(false);
+    // JS can't delete the HttpOnly cookie; the server revokes and expires it.
+    // Fire-and-forget: signing out must never block or throw.
+    fetch(`${baseUrl}/api/v1/auth/logout`, { method: "POST", credentials: "include" }).catch(() => {
+      /* offline or already revoked — nothing to do */
+    });
+  };
+
+  const authLost = (): void => {
+    clearSession();
+    for (const cb of lostListeners) cb();
+  };
+
+  const doRefresh = async (): Promise<boolean> => {
+    let response: Response;
+    try {
+      response = await fetch(`${baseUrl}/api/v1/auth/refresh`, {
+        method: "POST",
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+    } catch {
+      // Network error: keep the session — the visitor may just be offline.
+      return false;
+    }
+    // Any refusal (401 / 403 / 422 / 5xx) means the session is dead or absent.
+    const body = response.ok
+      ? ((await response.json().catch(() => null)) as { access_token?: unknown } | null)
+      : null;
+    if (typeof body?.access_token !== "string" || !body.access_token) {
+      authLost();
+      return false;
+    }
+    setAccessToken(body.access_token);
+    return true;
+  };
+
+  const refreshAccessToken = (): Promise<boolean> => {
+    if (refreshInFlight !== null) return refreshInFlight;
+    const run =
+      typeof navigator !== "undefined" && "locks" in navigator
+        ? () => navigator.locks.request(opts.lockName, doRefresh)
+        : doRefresh;
+    refreshInFlight = Promise.resolve(run()).finally(() => {
+      refreshInFlight = null;
+    });
+    return refreshInFlight;
+  };
+
+  const request = async <T>(
+    path: string,
+    init: SessionRequestOptions,
+    allowRefresh: boolean,
+  ): Promise<T> => {
+    const { anonymous, idempotencyKey, body, headers, method, signal } = init;
+    const url = path.startsWith("http") ? path : `${baseUrl}${path}`;
+    const h = new Headers(headers);
+    h.set("Accept", "application/json");
+    if (body !== undefined && !h.has("Content-Type")) h.set("Content-Type", "application/json");
+    if (idempotencyKey) h.set("Idempotency-Key", idempotencyKey);
+    const sentToken = anonymous ? null : accessToken;
+    if (sentToken) h.set("Authorization", `Bearer ${sentToken}`);
+
+    const response = await fetch(url, {
+      method: method ?? "GET",
+      headers: h,
+      credentials: "include",
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(signal ? { signal } : {}),
+    });
+
+    if (response.status === 401 && allowRefresh && !anonymous && !path.includes("/auth/refresh")) {
+      // A parallel call may have rotated the token already: replay with it.
+      const ok =
+        accessToken !== null && accessToken !== sentToken ? true : await refreshAccessToken();
+      if (ok) return request<T>(path, init, false);
+    }
+
+    if (!response.ok) {
+      throw new SessionApiError(
+        response.status,
+        response.statusText,
+        await readErrorBody(response),
+      );
+    }
+    // 204 carries no body; callers type such endpoints as `undefined`.
+    if (response.status === 204) return undefined as T;
+    // The API's JSON contract is the caller's `T`.
+    return (await response.json()) as T;
+  };
+
+  const api = <T = unknown>(path: string, init: SessionRequestOptions = {}): Promise<T> =>
+    request<T>(path, init, true);
+
+  const write =
+    (method: "POST" | "PATCH" | "PUT") =>
+    <T = unknown>(path: string, body: unknown, options: SessionWriteOptions = {}): Promise<T> =>
+      api<T>(path, { ...options, method, body });
+
+  return {
+    api,
+    apiGet: <T = unknown>(path: string, options: SessionReadOptions = {}) => api<T>(path, options),
+    apiPost: write("POST"),
+    apiPatch: write("PATCH"),
+    apiPut: write("PUT"),
+    getAccessToken: () => accessToken,
+    setAccessToken,
+    clearSession,
+    hasSessionHint: () => {
+      try {
+        return localStorage.getItem(opts.hintKey) === "1";
+      } catch {
+        return false;
+      }
+    },
+    refreshAccessToken,
+    onAuthLost: (cb) => {
+      lostListeners.add(cb);
+      return () => {
+        lostListeners.delete(cb);
+      };
+    },
+  };
+}

@@ -15,5 +15,17 @@
   "error": {
     "title": "The page did not load",
     "body": "Something went wrong on our side. Try refreshing."
+  },
+  "nav": {
+    "signIn": "Sign in with Steam",
+    "account": "Account"
+  },
+  "auth": {
+    "callback": {
+      "working": "Signing you in with Steam…",
+      "failed": "Couldn't sign you in with Steam.",
+      "retry": "Try again"
+    },
+    "suspended": "This account is suspended."
   }
 }

@@ -12,5 +12,12 @@ export default defineConfig({
   // via SWC); Vite/esbuild reads that as "classic" and needs `React` in
   // scope unless told to use the automatic runtime here.
   esbuild: { jsx: "automatic" },
-  test: { environment: "node", globals: true, include: ["src/**/*.test.{ts,tsx}"] },
+  // Node by default; component tests opt into jsdom per file
+  // (`// @vitest-environment jsdom`).
+  test: {
+    environment: "node",
+    globals: true,
+    include: ["src/**/*.test.{ts,tsx}"],
+    setupFiles: ["./src/test/setup.ts"],
+  },
 });
