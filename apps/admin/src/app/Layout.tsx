@@ -24,6 +24,9 @@ export function Layout() {
           <NavLink to="/catalogue" className={navClass}>
             Каталог
           </NavLink>
+          <NavLink to="/users" className={navClass}>
+            Пользователи
+          </NavLink>
         </nav>
         <div className="flex items-center gap-3">
           <span className="text-fg-muted text-sm">{me?.display_name ?? "Администратор"}</span>

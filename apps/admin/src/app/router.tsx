@@ -10,6 +10,8 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SteamCallback } from "@/features/auth/SteamCallback";
 import { CataloguePage } from "@/features/catalogue/CataloguePage";
+import { UserCard } from "@/features/users/UserCard";
+import { UsersPage } from "@/features/users/UsersPage";
 import { DashboardPage } from "@/routes/Dashboard";
 import { NotFoundPage } from "@/routes/NotFound";
 
@@ -24,6 +26,8 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <DashboardPage /> },
           { path: "/catalogue", element: <CataloguePage /> },
+          { path: "/users", element: <UsersPage /> },
+          { path: "/users/:id", element: <UserCard /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

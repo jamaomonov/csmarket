@@ -27,7 +27,10 @@ Vite dev server proxies `/api/*` to the backend on `:8100` (`VITE_DEV_API_TARGET
 
 ## Routes
 
-| Path | What                    |
-| ---- | ----------------------- |
-| `/`  | Dashboard (placeholder) |
-| `*`  | 404                     |
+| Path         | What                                                       |
+| ------------ | ---------------------------------------------------------- |
+| `/`          | Dashboard (placeholder)                                    |
+| `/catalogue` | Catalogue status, hide/show items, search aliases          |
+| `/users`     | Users: search by name or Steam ID                          |
+| `/users/:id` | User card: profile, balance, history, top-ups; ban, adjust |
+| `*`          | 404                                                        |

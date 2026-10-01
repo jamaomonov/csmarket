@@ -2,30 +2,18 @@
 import { Button } from "@csmarket/ui";
 import { steamImageSize } from "@csmarket/utils/skins";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { type AdminSkinItem, findItems, setHidden } from "./api";
 
 import { ApiError, formatApiError } from "@/lib/api";
+import { useDebounced } from "@/lib/useDebounced";
 
 const MIN_QUERY = 2;
 const DEBOUNCE_MS = 300;
 
 function errorText(err: unknown): string {
   return err instanceof ApiError ? formatApiError(err) : "Не получилось. Попробуйте ещё раз.";
-}
-
-function useDebounced(value: string, ms: number): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setDebounced(value);
-    }, ms);
-    return () => {
-      clearTimeout(t);
-    };
-  }, [value, ms]);
-  return debounced;
 }
 
 interface ItemRowProps {
