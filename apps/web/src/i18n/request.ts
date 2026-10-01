@@ -15,8 +15,13 @@ const CATALOGS = {
   en: { common: enCommon, web: enWeb },
 } as const;
 
-export default getRequestConfig(async ({ requestLocale }) => {
-  const requested = await requestLocale;
-  const locale = hasLocale(routing.locales, requested) ? requested : routing.defaultLocale;
-  return { locale, messages: CATALOGS[locale] };
-});
+export default getRequestConfig(
+  async ({
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
+    requestLocale,
+  }) => {
+    const requested = await requestLocale;
+    const locale = hasLocale(routing.locales, requested) ? requested : routing.defaultLocale;
+    return { locale, messages: CATALOGS[locale] };
+  },
+);

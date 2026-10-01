@@ -32,6 +32,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) return {};
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
   const t = await getTranslations("web.meta");
   return {
@@ -40,6 +41,7 @@ export async function generateMetadata({
     description: t("description"),
     // Pre-launch: keep the hello page out of search (M2 lifts this).
     robots: { index: false, follow: false },
+    icons: { icon: "/favicon.svg" },
   };
 }
 
@@ -52,6 +54,7 @@ export default async function LocaleLayout({
 }) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
+  // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
   const messages = await getMessages();
   return (

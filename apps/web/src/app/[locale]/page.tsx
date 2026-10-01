@@ -5,7 +5,10 @@ import { routing } from "@/i18n/routing";
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  if (hasLocale(routing.locales, locale)) setRequestLocale(locale);
+  if (hasLocale(routing.locales, locale)) {
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
+    setRequestLocale(locale);
+  }
   const t = await getTranslations("web.home");
   const common = await getTranslations("common");
   return (
