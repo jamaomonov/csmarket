@@ -114,17 +114,24 @@ async def test_two_workers_draining_concurrently_claim_disjoint_orders(
 async def test_an_exception_inside_one_buy_does_not_stop_the_drain(
     db_session: AsyncSession, settings: Settings
 ) -> None:
-    poisoned = await _paid(db_session, minutes_ago=2, listing_id=1_001)
+    poisoned = await _paid(db_session, minutes_ago=3)
+    unsure = await _paid(db_session, minutes_ago=2, listing_id=1_001)
     healthy = await _paid(db_session, minutes_ago=1, listing_id=1_002)
     fake = FakeTradeClient()
-    fake.refuse(1_001, RuntimeError("a bug"))
-    assert await drain_paid(db_session, client=fake, settings=settings) == 2
+    fake.lookup_fails_for(poisoned.id, RuntimeError("a bug before any buy"))
+    fake.refuse(1_001, RuntimeError("a bug after the buy was sent"))
+    assert await drain_paid(db_session, client=fake, settings=settings) == 3
     assert [b[2] for b in fake.bought] == [healthy.id]
-    row = await _order(db_session, poisoned)
+    # Nothing was sent: still buying with the buy pending (the sweep retries after the lease).
     trade = await _trade(db_session, poisoned)
-    assert row.status == "buying"
+    assert (await _order(db_session, poisoned)).status == "buying"
     assert trade is not None
     assert trade.buy_pending
+    # The buy may have reached Waxpeer: unconfirmed, resolved by lookup, never rebought.
+    trade = await _trade(db_session, unsure)
+    assert trade is not None
+    assert trade.buy_pending is False
+    assert trade.buy_unconfirmed_at is not None
     assert (await _order(db_session, healthy)).status == "buying"
 
 

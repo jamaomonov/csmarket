@@ -440,7 +440,21 @@ async def test_a_broken_trade_link_is_refunded_without_calling_waxpeer(
 # --- a write after someone else moved the rows ---------------------------------------------
 
 
-async def test_a_buy_answer_after_the_sweep_adopted_the_trade_writes_nothing(
+async def test_a_buy_the_sweep_already_recorded_is_the_same_purchase(
+    db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
+) -> None:
+    async def adopted_meanwhile() -> None:
+        _, trade = await load(db_session, buying_order)
+        trade.buy_pending, trade.waxpeer_id = False, 50_000_002  # the id this buy returns
+        await db_session.commit()
+
+    fake.before_buy = adopted_meanwhile
+    assert await _attempt(db_session, fake, buying_order, settings) == "bought"
+    _, trade = await load(db_session, buying_order)
+    assert trade.attention_reason is None
+
+
+async def test_a_buy_landing_on_moved_rows_is_flagged_never_silent(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
     async def adopted_meanwhile() -> None:
@@ -449,9 +463,13 @@ async def test_a_buy_answer_after_the_sweep_adopted_the_trade_writes_nothing(
         await db_session.commit()
 
     fake.before_buy = adopted_meanwhile
-    assert await _attempt(db_session, fake, buying_order, settings) == "nothing_to_do"
+    before = metric("stale_bought")
+    assert await _attempt(db_session, fake, buying_order, settings) == "stale_bought"
     _, trade = await load(db_session, buying_order)
     assert (trade.waxpeer_id, trade.bought_units) == (999, None)
+    assert trade.attention_reason == "ambiguous_trade"
+    assert trade.resolved_at is None
+    assert metric("stale_bought") == before + 1
 
 
 async def test_a_refusal_after_the_order_left_buying_refunds_nothing(
@@ -474,7 +492,6 @@ async def test_a_refusal_after_the_order_left_buying_refunds_nothing(
     "case",
     [
         ("before_lookup", "adopt"),
-        ("before_buy", "unconfirmed"),
         ("before_buy", "forbidden"),
     ],
 )
@@ -495,8 +512,6 @@ async def test_no_write_lands_on_an_order_that_left_buying_meanwhile(
     setattr(fake, hook, delivered_meanwhile)
     if script == "adopt":
         fake.lookup_returns([waxpeer_trade(buying_order.id, status=4)])
-    elif script == "unconfirmed":
-        fake.buy_raises(WaxpeerUnavailableError("timeout"))
     else:
         fake.buy_raises(WaxpeerForbiddenError())
     assert await _attempt(db_session, fake, buying_order, settings) == "nothing_to_do"
@@ -505,6 +520,21 @@ async def test_no_write_lands_on_an_order_that_left_buying_meanwhile(
     assert trade.waxpeer_id is None
     assert trade.attention_reason is None
     assert trade.buy_unconfirmed_at is None
+
+
+async def test_a_lost_answer_on_an_order_that_left_buying_is_flagged(
+    db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
+) -> None:
+    async def delivered_meanwhile() -> None:
+        order, _ = await load(db_session, buying_order)
+        order.status = "delivered"
+        await db_session.commit()
+
+    fake.before_buy = delivered_meanwhile
+    fake.buy_raises(WaxpeerUnavailableError("timeout"))
+    assert await _attempt(db_session, fake, buying_order, settings) == "stale_bought"
+    _, trade = await load(db_session, buying_order)
+    assert trade.attention_reason == "ambiguous_trade"
 
 
 async def test_a_refund_that_cannot_be_booked_writes_nothing(

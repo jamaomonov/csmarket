@@ -2,8 +2,9 @@
 
 Every call is counted; each endpoint answers what the test scripted last:
 
-- ``lookup_returns([...])`` / ``lookup_raises(exc)`` — ``check_project_ids`` (only the
-  scripted trades whose ``project_id`` was asked for come back);
+- ``lookup_returns([...])`` / ``lookup_raises(exc)`` / ``lookup_fails_for(id, exc)`` —
+  ``check_project_ids`` (only the scripted trades whose ``project_id`` was asked for come
+  back);
 - ``buy_returns(WaxpeerBuy)`` / ``buy_raises(exc)`` — ``buy_one_p2p``; ``refuse(listing_id,
   exc)`` makes one listing raise whatever the default script says. With nothing scripted a
   buy succeeds at the offered price;
@@ -51,6 +52,7 @@ class FakeTradeClient:
     def __init__(self) -> None:
         self._trades: list[WaxpeerTrade] = []
         self._lookup_error: BaseException | None = None
+        self._lookup_failures: dict[str, BaseException] = {}
         self._buy: WaxpeerBuy | BaseException | None = None
         self._refused: dict[int, BaseException] = {}
         self._balance: int | BaseException = 10_000_000
@@ -75,6 +77,10 @@ class FakeTradeClient:
     def lookup_raises(self, exc: BaseException) -> None:
         """Lookups raise ``exc``."""
         self._lookup_error = exc
+
+    def lookup_fails_for(self, project_id: str, exc: BaseException) -> None:
+        """A lookup that asks for ``project_id`` raises ``exc``."""
+        self._lookup_failures[project_id] = exc
 
     def buy_returns(self, bought: WaxpeerBuy) -> None:
         """Buys answer ``bought``."""
@@ -118,6 +124,8 @@ class FakeTradeClient:
         if self._lookup_error is not None:
             raise self._lookup_error
         wanted = set(project_ids)
+        for project_id in wanted & self._lookup_failures.keys():
+            raise self._lookup_failures[project_id]
         return [t for t in self._trades if t.project_id in wanted]
 
     async def buy_one_p2p(

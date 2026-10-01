@@ -28,10 +28,11 @@ number and the outcome, never the trade link, its partner or token, or a Waxpeer
 
 from __future__ import annotations
 
+import asyncio
 import os
 import socket
-from datetime import timedelta
-from typing import Any, cast
+from datetime import datetime, timedelta
+from typing import cast
 
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,7 +42,7 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
-from csmarket.core.redis import get_redis
+from csmarket.modules.orders.buy_rules import low_balance, substitute
 from csmarket.modules.orders.buy_writes import (
     BuySnapshot,
     adopt,
@@ -54,14 +55,12 @@ from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.trades import AmbiguousTradeError, pick_trade
 from csmarket.modules.skins.api import (
-    SkinItem,
     TradeClient,
+    WaxpeerBuy,
     WaxpeerError,
     WaxpeerForbiddenError,
     WaxpeerRateLimitedError,
     WaxpeerUnavailableError,
-    listings_budget,
-    listings_for,
     trade_client,
 )
 from csmarket.modules.users.api import TradeLink, parse_tradelink
@@ -72,7 +71,8 @@ log = get_logger("csmarket.orders.buying")
 #: attempt (six Waxpeer calls at ``waxpeer_buy_timeout_seconds``); an attempt that dies
 #: mid-way leaves the order to the reconcile sweep once it lapses.
 BUY_LEASE = timedelta(minutes=5)
-_LOW_BALANCE_HINTS = ("not enough balance", "insufficient balance", "insufficient funds")
+#: An attempt's time budget: it ends before its lease does.
+ATTEMPT_BUDGET = BUY_LEASE - timedelta(seconds=30)
 #: Outcomes that are not a buy attempt's result (nothing was tried, or nothing written).
 _UNCOUNTED = frozenset({"nothing_to_do", "lookup_later"})
 
@@ -154,6 +154,11 @@ async def attempt_buy(
 ) -> str:
     """Buy order ``order_id`` at Waxpeer, unless it was bought or is being bought.
 
+    The lease comes first (one atomic UPDATE that also requires ``buy_pending``), the
+    snapshot is read after it: a second attempt can never act on a ``buy_pending`` it read
+    before the first one settled the buy. The attempt is bounded by
+    :data:`ATTEMPT_BUDGET`, so it never outlives its lease.
+
     Args:
         db: Session; each step commits its own short transaction.
         client: Waxpeer.
@@ -163,18 +168,40 @@ async def attempt_buy(
     Returns:
         The outcome: ``bought``, ``adopted``, ``sold_out``, ``low_balance``,
         ``invalid_link``, ``forbidden``, ``rate_limited``, ``unconfirmed``, ``ambiguous``,
-        ``lookup_later`` or ``nothing_to_do``.
+        ``stale_bought``, ``lookup_later`` or ``nothing_to_do``.
     """
+    lease = await _take_lease(db, order_id)
+    if lease is None:
+        return "nothing_to_do"
     read = await _read(db, order_id)
-    if read is None or not await _take_lease(db, order_id):
+    if read is None:
+        await _release(db, order_id, lease)
         return "nothing_to_do"
     snap, raw_link = read
-    outcome = await _attempt(db, client, snap=snap, raw_link=raw_link, settings=settings)
-    await _release(db, order_id)
+    try:
+        async with asyncio.timeout(ATTEMPT_BUDGET.total_seconds()):
+            outcome = await _attempt(db, client, snap=snap, raw_link=raw_link, settings=settings)
+    except TimeoutError:
+        outcome = await _after_timeout(db, snap)
+    await _release(db, order_id, lease)
     if outcome not in _UNCOUNTED:
         record_order_buy(cast(OrderBuyOutcome, outcome))  # every other outcome is in the set
     log.info("orders.buy", number=snap.number, outcome=outcome)
     return outcome
+
+
+async def _after_timeout(db: AsyncSession, snap: BuySnapshot) -> str:
+    """The attempt ran out of time: ``unconfirmed`` if its buy was sent (and recorded so),
+    else nothing was sent and the next tick tries again."""
+    await db.rollback()
+    trade = await db.scalar(
+        select(SkinTrade)
+        .where(SkinTrade.order_id == snap.order_id)
+        .execution_options(populate_existing=True)
+    )
+    sent = trade is not None and trade.buy_unconfirmed_at is not None and not trade.buy_pending
+    await db.commit()
+    return "unconfirmed" if sent else "lookup_later"
 
 
 async def _read(db: AsyncSession, order_id: str) -> tuple[BuySnapshot, str] | None:
@@ -201,27 +228,39 @@ async def _read(db: AsyncSession, order_id: str) -> tuple[BuySnapshot, str] | No
     return result
 
 
-async def _take_lease(db: AsyncSession, order_id: str) -> bool:
-    """Hold the order for :data:`BUY_LEASE`; ``False`` when another attempt holds it."""
+async def _take_lease(db: AsyncSession, order_id: str) -> datetime | None:
+    """Hold a ``buying`` order whose buy is pending for :data:`BUY_LEASE`.
+
+    Returns:
+        The lease (the ``next_check_at`` this attempt wrote), or ``None`` when the order is
+        not buying, its buy is no longer pending, or another attempt holds it.
+    """
     at = now()
-    held = await db.execute(
+    pending = (
+        select(SkinTrade.order_id)
+        .where(SkinTrade.order_id == Order.id, SkinTrade.buy_pending.is_(True))
+        .exists()
+    )
+    lease = await db.scalar(
         update(Order)
         .where(
             Order.id == order_id,
             Order.status == "buying",
+            pending,
             or_(Order.next_check_at.is_(None), Order.next_check_at <= at),
         )
         .values(next_check_at=at + BUY_LEASE)
+        .returning(Order.next_check_at)
     )
     await db.commit()
-    return bool(getattr(held, "rowcount", 0) == 1)
+    return lease
 
 
-async def _release(db: AsyncSession, order_id: str) -> None:
-    """Make the order due again: the next sweep tick looks at it."""
+async def _release(db: AsyncSession, order_id: str, lease: datetime) -> None:
+    """Make the order due again — only if the lease is still this attempt's."""
     await db.execute(
         update(Order)
-        .where(Order.id == order_id, Order.status == "buying")
+        .where(Order.id == order_id, Order.status == "buying", Order.next_check_at == lease)
         .values(next_check_at=now())
     )
     await db.commit()
@@ -259,12 +298,8 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
         listing_id, units = queue.pop(0)
         tried.add(listing_id)
         try:
-            bought = await client.buy_one_p2p(
-                item_id=listing_id,
-                price_units=units,
-                partner=link.partner,
-                token=link.token,
-                project_id=snap.order_id,
+            bought = await _send_buy(
+                db, client, snap=snap, link=link, item_id=listing_id, units=units
             )
         except WaxpeerForbiddenError:
             return await attention(db, snap, "waxpeer_forbidden", outcome="forbidden")
@@ -275,11 +310,11 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
         except WaxpeerError as err:  # a refusal (incl. WaxpeerBuyRefusedError) or HTTP error
             if err.status >= 500:
                 return await unconfirmed(db, snap)  # a 5xx may have bought it
-            if await _low_balance(client, err, units):
+            if await low_balance(client, err, units):
                 return await refund(db, snap, "waxpeer_low_balance")
             log.info("orders.buy.refused", number=snap.number, status=err.status)
             if len(tried) == 1:
-                nxt = await _substitute(
+                nxt = await substitute(
                     db, client, snap=snap, ceiling=ceiling, tried=tried, settings=settings
                 )
                 if nxt is not None:
@@ -289,68 +324,38 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
     return await refund(db, snap, "sold_out")
 
 
-async def _low_balance(client: TradeClient, err: WaxpeerError, units: int) -> bool:
-    """Waxpeer named low balance, or our Waxpeer wallet holds less than ``units``.
-
-    A balance call that fails counts as "not low": the refusal then reads as sold.
-    """
-    text = f"{err} {err.body}".lower()
-    if any(hint in text for hint in _LOW_BALANCE_HINTS):
-        return True
-    try:
-        return await client.balance_units() < units
-    except (WaxpeerError, WaxpeerUnavailableError):
-        return False
-
-
-class _Search:
-    """A :class:`TradeClient` as the listings read's ``SearchClient``."""
-
-    def __init__(self, client: TradeClient) -> None:
-        self._client = client
-
-    async def search_listings(
-        self,
-        names: list[str],
-        *,
-        game: str = "csgo",  # noqa: ARG002 -- SearchClient's signature; we only buy CS2
-    ) -> dict[str, list[dict[str, Any]]]:  # Any: raw Waxpeer listing rows
-        """Live listings by name (CS2 only, whatever ``game`` says)."""
-        return await self._client.search_listings(names)
-
-
-async def _substitute(
+async def _send_buy(
     db: AsyncSession,
     client: TradeClient,
     *,
     snap: BuySnapshot,
-    ceiling: int,
-    tried: set[int],
-    settings: Settings,
-) -> tuple[int, int] | None:
-    """The cheapest other ``auto`` listing of the item at most ``ceiling`` units, if any.
+    link: TradeLink,
+    item_id: int,
+    units: int,
+) -> WaxpeerBuy:
+    """``buy-one-p2p``; anything but a classified Waxpeer answer leaves the buy unconfirmed.
 
-    Read through the item page's cached, budgeted listings read (Waxpeer's spelling of the
-    name, phase included).
+    An unexpected exception (an unreadable answer the client did not classify, a timeout or
+    a shutdown cancelling the call) may come after the request reached Waxpeer: the trade
+    is marked unconfirmed — resolved by lookup, never rebought — before it propagates.
     """
-    item = await db.get(SkinItem, snap.skin_item_id)
-    if item is not None:
-        db.expunge(item)  # read below with no transaction open
-    await db.commit()
-    if item is None:  # pragma: no cover - a foreign key
-        return None
-    rows, _ = await listings_for(
-        item,
-        client=_Search(client),
-        redis=get_redis(),
-        budget_per_minute=listings_budget(settings),
-    )
-    fits = sorted(
-        (row.price_units, row.listing_id)
-        for row in rows
-        if row.listing_id not in tried and 0 < row.price_units <= ceiling
-    )
-    return (fits[0][1], fits[0][0]) if fits else None
+    try:
+        return await client.buy_one_p2p(
+            item_id=item_id,
+            price_units=units,
+            partner=link.partner,
+            token=link.token,
+            project_id=snap.order_id,
+        )
+    except (WaxpeerError, WaxpeerUnavailableError):
+        raise
+    except BaseException:
+        try:
+            await db.rollback()
+            await unconfirmed(db, snap)
+        except Exception as exc:  # noqa: BLE001 -- the original error is the one to raise
+            log.error("orders.buy.unconfirm_failed", number=snap.number, error=type(exc).__name__)  # noqa: TRY400
+        raise
 
 
-__all__ = ["BUY_LEASE", "attempt_buy", "drain_paid", "worker_id"]
+__all__ = ["ATTEMPT_BUDGET", "BUY_LEASE", "attempt_buy", "drain_paid", "worker_id"]

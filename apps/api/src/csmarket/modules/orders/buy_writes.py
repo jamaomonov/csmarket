@@ -60,9 +60,56 @@ async def _locked(db: AsyncSession, snap: BuySnapshot) -> tuple[Order, SkinTrade
 
 
 def _stale(snap: BuySnapshot, outcome: str) -> str:
-    """Someone moved the rows during the Waxpeer call: write nothing."""
+    """Someone moved the rows during the Waxpeer call, and nothing was bought: write nothing."""
     log.warning("orders.buy.stale", number=snap.number, outcome=outcome)
     return "nothing_to_do"
+
+
+def _flag(trade: SkinTrade, reason: str) -> None:
+    """Set attention ``reason`` unless an open one is already there.
+
+    A resolved attention (or an open ``waxpeer_forbidden``, the mildest) gives way, and a
+    new or re-opened attention never keeps an earlier resolution: it must not look settled.
+    """
+    open_reason = trade.attention_reason if trade.resolved_at is None else None
+    if open_reason is not None and not (
+        open_reason == "waxpeer_forbidden" and reason != open_reason
+    ):
+        return
+    trade.attention_reason = reason
+    trade.resolved_at = trade.resolved_by = trade.resolved_note = None
+    trade.updated_at = now()
+
+
+async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int | None) -> str:
+    """A buy that may have gone through landed on rows someone else moved: never silent.
+
+    The same purchase already on record (same Waxpeer id) is fine. Otherwise a second
+    purchase may exist outside our record: the trade gets the ``ambiguous_trade`` attention
+    (which also blocks any automatic refund, R3) and an error is logged — number only.
+    """
+    order = await db.scalar(
+        select(Order)
+        .where(Order.id == snap.order_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    trade = await db.scalar(
+        select(SkinTrade)
+        .where(SkinTrade.order_id == snap.order_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    if order is None or trade is None:  # pragma: no cover - a foreign key
+        await db.commit()
+        return "stale_bought"
+    if waxpeer_id is not None and trade.waxpeer_id == waxpeer_id:
+        await db.commit()
+        return "bought"
+    _flag(trade, "ambiguous_trade")
+    await db.commit()
+    log.error("orders.buy.stale_purchase", number=snap.number)
+    return "stale_bought"
 
 
 def _settle(trade: SkinTrade) -> None:
@@ -80,10 +127,11 @@ async def record_bought(
     """Waxpeer accepted the buy: its id, the listing and units actually bought."""
     pair = await _locked(db, snap)
     if pair is None:
-        return _stale(snap, "bought")
+        return await _stale_purchase(db, snap, bought.id)
     _, trade = pair
     trade.listing_id, trade.paid_units = listing_id, units
-    trade.waxpeer_id, trade.bought_units, trade.status = bought.id, bought.price_units, 0
+    trade.waxpeer_id, trade.status = bought.id, 0
+    trade.bought_units = bought.price_units or units  # Waxpeer may answer ``price: 0``
     _settle(trade)
     await db.commit()
     return "bought"
@@ -104,10 +152,13 @@ async def adopt(db: AsyncSession, snap: BuySnapshot, found: WaxpeerTrade) -> str
 
 
 async def unconfirmed(db: AsyncSession, snap: BuySnapshot) -> str:
-    """The buy's answer was lost: resolve by lookup (R3), never by buying again."""
+    """The buy's answer was lost: resolve by lookup (R3), never by buying again.
+
+    Rows moved meanwhile: the lost request may still have bought — flagged, never silent.
+    """
     pair = await _locked(db, snap)
     if pair is None:
-        return _stale(snap, "unconfirmed")
+        return await _stale_purchase(db, snap, None)
     _, trade = pair
     _settle(trade)
     trade.buy_unconfirmed_at = now()
@@ -118,17 +169,19 @@ async def unconfirmed(db: AsyncSession, snap: BuySnapshot) -> str:
 async def attention(
     db: AsyncSession, snap: BuySnapshot, reason: str, *, outcome: str, settle: bool = False
 ) -> str:
-    """Flag the trade for an admin (once); ``settle`` ends the pending buy too."""
+    """Flag the trade for an admin; ``settle`` ends the pending buy too.
+
+    Once per open attention: a resolved one with the same reason is re-opened (a 403 after
+    an operator resolved it means the access is still broken — an admin refund must not
+    treat the order as settled).
+    """
     pair = await _locked(db, snap)
     if pair is None:
         return _stale(snap, outcome)
     _, trade = pair
     if settle:
         _settle(trade)
-    if trade.attention_reason is None:
-        trade.attention_reason = reason
-        trade.resolved_at = trade.resolved_by = trade.resolved_note = None
-        trade.updated_at = now()
+    _flag(trade, reason)
     await db.commit()
     return outcome
 

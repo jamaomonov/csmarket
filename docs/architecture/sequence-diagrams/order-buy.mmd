@@ -11,8 +11,9 @@ sequenceDiagram
     W->>DB: commit
 
     loop each claimed order (its own transactions; one failure never stops the batch)
-        W->>DB: read unlocked: buying and buy_pending? else nothing to do
-        W->>DB: take the lease (next_check_at = now + 5 min, only if due)
+        W->>DB: take the lease first: UPDATE next_check_at = now + 5 min<br/>WHERE buying AND buy_pending AND due RETURNING (else nothing to do)
+        W->>DB: read the snapshot (still buying + buy_pending? else release, nothing to do)
+        Note over W: the attempt runs under asyncio.timeout(lease − 30 s)
         alt trade link does not parse
             W->>DB: lock order → trade, re-check; failed + refund to balance (invalid_trade_link)
         else
@@ -33,7 +34,7 @@ sequenceDiagram
                     W->>DB: attention waxpeer_forbidden, buy_pending kept (no refund)
                 else 429
                     Note over W: rate_limited — buy_pending kept, next tick retries
-                else lost answer / unreadable / 5xx
+                else lost answer / unreadable / 5xx / any unexpected error or timeout
                     W->>DB: buy_unconfirmed_at, buy_pending = false (resolved by lookup, R3)
                 else refused (sold, price moved, 4xx)
                     W->>X: GET /v1/user when the refusal does not name low balance
@@ -49,7 +50,8 @@ sequenceDiagram
                 end
             end
         end
-        W->>DB: release the lease (next_check_at = now)
+        Note over W,DB: a buy that went through but finds the rows moved → attention ambiguous_trade (stale_bought)
+        W->>DB: release the lease (next_check_at = now, only if still this attempt's)
     end
 
     S->>DB: due buying orders with buy_pending → the same attempt (lease first)

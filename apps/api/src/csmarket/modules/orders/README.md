@@ -169,7 +169,7 @@ module's models and FSM — never `payments`.
   number → 404. Flushes, never commits: the admin route writes its audit row in the same
   transaction (Task 12).
 
-## Buying (`buying.py`, `buy_writes.py`, `trades.py`, rulings R3, R4, R6, K)
+## Buying (`buying.py`, `buy_writes.py`, `buy_rules.py`, `trades.py`, rulings R3, R4, R6, K)
 
 The worker's `orders` queue (`apps/worker`, two drainers) buys each paid order at Waxpeer,
 at most once: `skin_trades.project_id` = the order id, every buy is preceded by a
@@ -185,12 +185,16 @@ again. Flow: `docs/architecture/sequence-diagrams/order-buy.mmd`.
   reconcile sweep retries it once its lease lapses. Builds the purchase client
   (`skins.api.trade_client`) only when it claimed something. Returns the number claimed.
 - `attempt_buy(db, client, *, order_id, settings) -> str` — the one buy path (the worker and
-  the reconcile sweep for a `buy_pending` trade). Reads unlocked; `nothing_to_do` unless the
-  order is `buying` and the trade `buy_pending`. Then takes the order's **lease**: one
-  `UPDATE … SET next_check_at = now + 5 min WHERE status = 'buying' AND next_check_at <= now`
-  — a second attempt (the sweep racing the worker) finds it held and does nothing, so two
-  attempts never buy the same order; the lease is released (`next_check_at = now`) when the
-  attempt ends, and lapses on its own if the process dies mid-way. Outcomes:
+  the reconcile sweep for a `buy_pending` trade). It takes the order's **lease first**: one
+  `UPDATE … SET next_check_at = now + 5 min WHERE status = 'buying' AND <its trade is
+buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then reads the
+  snapshot (`nothing_to_do`, lease released, unless still `buying` with a buy pending). A
+  second attempt (the sweep racing the worker) finds the lease held, or the buy no longer
+  pending, so it can never act on a `buy_pending` it read before the first attempt settled
+  the buy. The release (`next_check_at = now`) is owner-checked (`WHERE next_check_at =
+<this attempt's lease>`); an attempt is bounded by `ATTEMPT_BUDGET` (lease − 30 s), so it
+  never outlives its lease — a timeout after the buy was sent is `unconfirmed`, before it
+  `lookup_later`. A lease left by a dead process lapses by itself. Outcomes:
 
   | Case                                                        | Outcome        | Writes                                                                 |
   | ----------------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
@@ -204,6 +208,7 @@ again. Flow: `docs/architecture/sequence-diagrams/order-buy.mmd`.
   | buy: unavailable / unreadable / 5xx                         | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)          |
   | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`  | `failed` + refund `waxpeer_low_balance`                                |
   | buy refused (sold, price moved, a 4xx), no substitute       | `sold_out`     | `failed` + refund `sold_out`                                           |
+  | a buy accepted or lost, but the rows moved during the call  | `stale_bought` | attention `ambiguous_trade` (unless it is the purchase on record)      |
 
   A refusal that is not low balance is retried **once** with the cheapest other `auto`
   listing of the item at most `paid_units × (1 + order_substitute_ceiling)` units, read
@@ -211,12 +216,23 @@ again. Flow: `docs/architecture/sequence-diagrams/order-buy.mmd`.
   Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy
   or adoption ends a `waxpeer_forbidden` attention (cleared with its resolution: the access
   question is moot, and an admin refund must not see a "nothing bought" order that bought).
+  Any unexpected exception from the buy call itself (an unclassified error, a timeout, a
+  shutdown's `CancelledError`) marks the trade unconfirmed before it propagates — the request
+  may have reached Waxpeer. `bought_units` falls back to the units offered when Waxpeer
+  answers `price: 0`. A 403 on an order whose `waxpeer_forbidden` attention was resolved
+  re-opens it (resolution cleared): an admin refund must not see a still-forbidden order as
+  settled.
   `csmarket_order_buys_total{outcome}` counts every outcome but `lookup_later` and
   `nothing_to_do`; the log line `orders.buy` carries the order number and the outcome only.
 
 - **Writes** (`buy_writes.py`): each locks the order, then the trade (ruling K), re-checks
   `status == "buying"` and `buy_pending`, writes and commits; when a sweep moved the rows
-  during the Waxpeer call it writes nothing (`orders.buy.stale`, outcome `nothing_to_do`).
+  during the Waxpeer call it writes nothing (`orders.buy.stale`, outcome `nothing_to_do`) —
+  except after a buy that may have gone through: then the trade gets `ambiguous_trade`
+  (which blocks any automatic refund), an error `orders.buy.stale_purchase` (number only) is
+  logged and the outcome is `stale_bought`. An attention is set once per open attention; a
+  new or re-opened one always clears an earlier resolution. `buy_rules.py` holds the low
+  balance test and the substitute pick.
   No lock or transaction is held across a Waxpeer call.
 - `trades.mirror(trade, wt)` copies a lookup onto the row without ever blanking a known
   value (`accepted_at` stamped the first time a `release_date` appears; `is_released` never

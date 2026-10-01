@@ -108,7 +108,9 @@ def _inc(counter: Counter, name: str, labels: dict[str, str]) -> None:
 
 
 #: How one buy attempt of an order ended (``orders.buying.attempt_buy``). ``forbidden`` =
-#: HTTP 403 from Waxpeer (the key's IP whitelist) — the alert ``WaxpeerForbidden``.
+#: HTTP 403 from Waxpeer (the key's IP whitelist) — the alert ``WaxpeerForbidden``;
+#: ``stale_bought`` = a buy that may have gone through landed on rows someone else moved
+#: (attention ``ambiguous_trade``).
 OrderBuyOutcome = Literal[
     "bought",
     "adopted",
@@ -119,6 +121,7 @@ OrderBuyOutcome = Literal[
     "unconfirmed",
     "invalid_link",
     "ambiguous",
+    "stale_bought",
 ]
 
 _ORDER_BUY_OUTCOMES = frozenset(
@@ -132,6 +135,7 @@ _ORDER_BUY_OUTCOMES = frozenset(
         "unconfirmed",
         "invalid_link",
         "ambiguous",
+        "stale_bought",
     )
 )
 
