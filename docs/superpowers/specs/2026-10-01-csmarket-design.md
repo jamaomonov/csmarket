@@ -239,8 +239,10 @@ prefix. Sequential numbers are rejected: a competitor could count our sales.
 
 User pastes the link once (`PUT /me/trade-link`). Parsed (`partner`, `token`), must belong to
 the signed-in `steam_id`; advisory checks: Waxpeer `POST /v1/check-tradelink` and Steam
-`GetTradeHoldDurations` (a non-zero escrow → verdict `warn` with the reason: no mobile
-authenticator; the buy panel explains, does not block — owner may tighten to `bad` later).
+`GetTradeHoldDurations` (a non-zero escrow → verdict `bad` with the reason: no mobile
+authenticator for 7 days; checkout is refused and the buy panel says how to fix it — owner
+decision 2026-10-01, as in YuPay: a held trade can roll back after the sale, and a
+buyer-fault rollback costs a 30 % Waxpeer penalty and risks P2P suspension).
 Verdict cached 10 min in Redis keyed by a hash of the link; the token is never logged.
 Without a link the buy button leads to the account page.
 
@@ -440,9 +442,8 @@ balance, buy via mocked acquirer, refund on `returned`. `check-no-yupay.sh` in C
 
 ## 17. Open questions (not blocking M0–M2)
 
-- Trade-hold links: `warn` (explain, allow) or `bad` (refuse)? YuPay refuses; default here is
-  `warn` pending the owner.
-- Email provider (Resend vs Postmark) — copy YuPay's choice.
+- ~~Trade-hold links: `warn` or `bad`?~~ Decided 2026-10-01: `bad` (refuse), as in YuPay (§7.2).
+- ~~Email provider?~~ Decided 2026-10-01: Resend.
 - Paynet: only if the owner opens a kassa; the twin exists in YuPay and can be ported later.
 - Sell side (skinslink): API shape unknown yet; the only MVP hooks are the `sell` module slot
   and the `sell_payout` ledger kind.
