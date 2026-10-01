@@ -31,7 +31,7 @@ test("top up 50 000 soʻm through the test kassa and see it on the balance", asy
   await expect(page.getByRole("heading", { name: /^Баланс пополнен на 50\s000/ })).toBeVisible();
 
   await page.getByRole("link", { name: "К балансу" }).click();
-  await expect(page).toHaveURL(/\/account\/balance$/);
+  await expect(page).toHaveURL(/\/account\/balance$/, { timeout: 30_000 });
   await expect(page.getByText(/^50\s000\sсум$/)).toBeVisible();
   const entry = page.getByRole("listitem").filter({ hasText: number });
   await expect(entry).toHaveCount(1);

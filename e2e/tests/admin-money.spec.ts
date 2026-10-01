@@ -77,7 +77,9 @@ test("an admin credits, refuses an over-clawback, bans, and the audit shows it",
     await expect(ban).toHaveCount(1);
     await expect(ban).toContainText("причина: Тест блокировки");
 
-    // The customer's storefront says the account is blocked.
+    // The customer's storefront says the account is blocked. `devLogin`'s init script
+    // re-sets the session hint on every navigation, so this reload does not prove that the
+    // hint survives a suspended refresh; `packages/api-client` unit tests cover that.
     await customer.reload();
     await expect(customer.getByText("Аккаунт заблокирован.")).toBeVisible();
   } finally {
