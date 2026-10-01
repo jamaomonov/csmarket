@@ -99,11 +99,12 @@ def _redact_pii(
 ) -> MutableMapping[str, Any]:
     """Replace values for any blocklisted key with ``"<redacted>"``.
 
-    Matches the exact blocklist plus PII *stems* — any key containing ``email``
-    or ``phone``, or an IP field (``ip`` / ``*_ip``) — so aliases like
-    ``customer_email`` / ``client_ip`` are caught without a reviewer having to
-    add each variant. The stems are deliberately narrow so safe keys the app
-    logs on purpose (``order_id``, ``amount``, ``language_code``) are untouched.
+    Matches the exact blocklist plus PII and credential *stems* — any key containing
+    ``email``, ``phone``, ``secret``, ``password`` or ``authorization``, or an IP field
+    (``ip`` / ``*_ip``) — so aliases like ``customer_email`` / ``client_ip`` /
+    ``click_secret_key`` are caught without a reviewer having to add each variant. The stems
+    are deliberately narrow so safe keys the app logs on purpose (``order_id``, ``amount``,
+    ``language_code``) are untouched.
     """
     for key in list(event_dict):
         k = key.lower()
@@ -119,6 +120,11 @@ def _is_pii_stem(key: str) -> bool:
         or "phone" in key
         or "steamid" in key
         or key == "ip"
+        # Acquirer and API credentials under any alias (``click_secret_key``,
+        # ``uzum_test_password``, ``authorization_header``…).
+        or "secret" in key
+        or "password" in key
+        or "authorization" in key
         or key.endswith(("_ip", "_token"))
     )
 

@@ -123,3 +123,38 @@ def test_skins_and_fx_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.fx_timeout_seconds == 5.0
     assert (s.fx_refresh_interval_minutes, s.fx_max_age_days) == (60, 7)
     assert s.auth_ip_guard_bucket_max["skins-listings"] == 60
+
+
+def test_money_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "CSMARKET_CLICK_SERVICE_ID",
+        "CSMARKET_CLICK_MERCHANT_ID",
+        "CSMARKET_CLICK_SECRET_KEY",
+        "CSMARKET_UZUM_SERVICE_ID",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert (s.topup_min_uzs, s.topup_max_uzs, s.topup_expiry_minutes) == (1000, 10_000_000, 30)
+    assert s.click_service_id is None
+    assert s.click_secret_key == ""
+    assert s.payme_login == "Paycom"
+    assert s.payme_checkout_url == "https://checkout.paycom.uz"
+    assert s.uzum_service_id is None
+    assert s.uzum_open_service_url == "https://uzumbank.uz/open-service"
+
+
+def test_blank_int_ids_are_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("CLICK_MERCHANT_ID", "CLICK_SERVICE_ID", "UZUM_SERVICE_ID"):
+        monkeypatch.setenv(f"CSMARKET_{name}", "")
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert s.click_merchant_id is None
+    assert s.click_service_id is None
+    assert s.uzum_service_id is None
+
+
+def test_numeric_int_ids_are_parsed(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CSMARKET_CLICK_SERVICE_ID", "12345")
+    monkeypatch.setenv("CSMARKET_UZUM_SERVICE_ID", " 67 ")
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert s.click_service_id == 12345
+    assert s.uzum_service_id == 67

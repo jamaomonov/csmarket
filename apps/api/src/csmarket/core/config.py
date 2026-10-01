@@ -202,6 +202,57 @@ class Settings(BaseSettings):
         default=7, ge=1, description="A rate snapshot older than this counts as no rate."
     )
 
+    # --- money (M3) ---
+    # Kassa credentials are prod-only; tests and dev use the mock provider. An empty
+    # credential means that kassa is unavailable: its webhook refuses and its tile is hidden.
+    topup_min_uzs: int = Field(default=1000, ge=1, description="Smallest top-up, whole soʻm.")
+    topup_max_uzs: int = Field(default=10_000_000, ge=1, description="Largest top-up, whole soʻm.")
+    topup_expiry_minutes: int = Field(
+        default=30,
+        ge=1,
+        description="A top-up no kassa has touched expires after this many minutes.",
+    )
+    click_merchant_id: int | None = Field(
+        default=None, description="Click merchant id. Empty → Click unavailable."
+    )
+    click_service_id: int | None = Field(
+        default=None, description="Click service id. Empty → Click unavailable."
+    )
+    click_secret_key: str = Field(
+        default="", description="Click SECRET_KEY of the service (signs every webhook)."
+    )
+    click_pay_url: str = Field(default="https://my.click.uz/services/pay")
+    payme_merchant_id: str = Field(
+        default="", description="Payme cabinet merchant id. Empty → Payme unavailable."
+    )
+    payme_key: str = Field(default="", description="Payme cabinet «Ключ» (production Basic auth).")
+    payme_test_key: str = Field(
+        default="", description="Payme cabinet «Тестовый ключ» (sandbox Basic auth)."
+    )
+    payme_login: str = Field(default="Paycom", description="Basic-auth login Payme sends.")
+    payme_checkout_url: str = Field(default="https://checkout.paycom.uz")
+    uzum_service_id: int | None = Field(
+        default=None, description="Uzum service id. Empty → Uzum unavailable."
+    )
+    uzum_login: str = Field(default="", description="Basic-auth login Uzum sends.")
+    uzum_password: str = Field(default="", description="Basic-auth password Uzum sends.")
+    uzum_test_login: str = Field(default="", description="Sandbox Basic-auth login.")
+    uzum_test_password: str = Field(default="", description="Sandbox Basic-auth password.")
+    uzum_open_service_url: str = Field(default="https://uzumbank.uz/open-service")
+
+    @field_validator("click_merchant_id", "click_service_id", "uzum_service_id", mode="before")
+    @classmethod
+    def _blank_int_to_none(cls, v: object) -> object:
+        """Treat an empty or whitespace-only numeric env var as "not set".
+
+        Compose passes unset variables as ``""``; without this the documented "leave empty to
+        disable" convention would raise a ``ValidationError`` at startup. ``v`` is ``object``
+        (raw pre-coercion input); integers, numeric strings and ``None`` pass through.
+        """
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
+
     # --- worker ---
     worker_poll_seconds: int = Field(
         default=5,
