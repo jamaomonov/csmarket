@@ -23,6 +23,7 @@ from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.users import models as _users_models  # noqa: F401
+from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
