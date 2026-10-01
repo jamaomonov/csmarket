@@ -12,7 +12,7 @@ echo "[bootstrap] pnpm install"
 pnpm install --frozen-lockfile=false
 
 echo "[bootstrap] uv sync"
-uv sync || echo "uv not installed; install from https://docs.astral.sh/uv/"
+uv sync --all-packages --all-groups || echo "uv not installed; install from https://docs.astral.sh/uv/"
 
 echo "[bootstrap] pre-commit install"
 pre-commit install || echo "pre-commit not installed; install with: uv tool install pre-commit"

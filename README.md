@@ -27,7 +27,8 @@
 make bootstrap   # deps + pre-commit + api client
 make dev         # full stack via docker compose
 make test        # Python + TS
-make lint        # ruff + mypy + eslint + tsc + prettier + check-no-yupay
+make lint        # ruff + eslint + prettier + check-no-yupay
+make typecheck   # mypy + tsc
 make gen-api     # openapi.json + TS client
 make migrate     # alembic upgrade head
 ```

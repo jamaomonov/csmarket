@@ -23,7 +23,7 @@ bootstrap: ## Install all deps (pnpm + uv) + pre-commit + gen api client
 	corepack enable
 	corepack prepare pnpm@9.12.0 --activate
 	pnpm install --frozen-lockfile=false
-	uv sync
+	uv sync --all-packages --all-groups
 	pnpm exec husky install || true
 	pre-commit install || echo "pre-commit not on PATH; install with: uv tool install pre-commit"
 	$(MAKE) gen-api || echo "gen-api skipped: api app not yet scaffolded"
@@ -88,7 +88,7 @@ psql: ## Open a psql shell inside the postgres container
 lint: lint-py lint-ts ## Lint everything
 
 .PHONY: lint-py
-lint-py: ## Ruff check + format check
+lint-py: ## Ruff check + format check + check-no-yupay
 	uv run ruff check apps
 	uv run ruff format --check apps
 	bash scripts/check-no-yupay.sh
