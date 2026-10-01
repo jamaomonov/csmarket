@@ -9,6 +9,7 @@ import { Layout } from "./Layout";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SteamCallback } from "@/features/auth/SteamCallback";
+import { CataloguePage } from "@/features/catalogue/CataloguePage";
 import { DashboardPage } from "@/routes/Dashboard";
 import { NotFoundPage } from "@/routes/NotFound";
 
@@ -22,6 +23,7 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { path: "/", element: <DashboardPage /> },
+          { path: "/catalogue", element: <CataloguePage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

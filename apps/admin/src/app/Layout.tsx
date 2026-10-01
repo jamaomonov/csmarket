@@ -4,6 +4,10 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/authStore";
 
+function navClass({ isActive }: { isActive: boolean }): string {
+  return isActive ? "text-fg font-medium" : "text-fg-muted hover:text-fg";
+}
+
 export function Layout() {
   const me = useAuthStore((s) => s.me);
   const signOut = useAuthStore((s) => s.signOut);
@@ -13,7 +17,15 @@ export function Layout() {
         <NavLink to="/" className="font-mono text-sm font-bold uppercase tracking-widest">
           csmarket admin
         </NavLink>
-        <div className="ml-auto flex items-center gap-3">
+        <nav className="ml-auto flex items-center gap-4 text-sm">
+          <NavLink to="/" end className={navClass}>
+            Дашборд
+          </NavLink>
+          <NavLink to="/catalogue" className={navClass}>
+            Каталог
+          </NavLink>
+        </nav>
+        <div className="flex items-center gap-3">
           <span className="text-fg-muted text-sm">{me?.display_name ?? "Администратор"}</span>
           <Button variant="ghost" size="sm" onClick={signOut}>
             Выйти
