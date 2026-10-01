@@ -107,11 +107,14 @@ def _exempt_self_authenticating_routes(limiter: Limiter) -> None:
     handler's ``module.name``, which is what the middleware resolves per request.
     """
     from csmarket.modules.click.routes import click_complete, click_prepare
+    from csmarket.modules.payme.routes import payme_merchant
 
     for endpoint in (
         # Click Shop API: MD5 ``sign_string`` over the raw form fields, per service secret.
         click_prepare,
         click_complete,
+        # Payme Merchant API: HTTP Basic ``Paycom:<key>`` (production or sandbox key).
+        payme_merchant,
     ):
         # slowapi ships no types for this decorator; the side effect on the exempt set is
         # the point, the returned wrapper is discarded.

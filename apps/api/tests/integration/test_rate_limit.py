@@ -76,6 +76,14 @@ async def test_the_click_callbacks_are_exempt(limited_client: AsyncClient) -> No
             assert r.json()["error"] == -8
 
 
+async def test_the_payme_merchant_endpoint_is_exempt(limited_client: AsyncClient) -> None:
+    # Basic auth is the gate; a 429 would read to Payme as a transport failure.
+    for _ in range(10):
+        r = await limited_client.post("/api/v1/payments/payme/merchant", json={"id": 1})
+        assert r.status_code == 200
+        assert r.json()["error"]["code"] == -32504
+
+
 async def test_rate_limit_off_by_default_in_tests(integration_client: AsyncClient) -> None:
     for _ in range(10):
         assert (await integration_client.get("/openapi.json")).status_code == 200

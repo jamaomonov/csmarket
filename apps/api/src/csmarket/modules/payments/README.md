@@ -143,6 +143,11 @@ an unknown or unavailable one. Every intent returns the customer to our own page
 `{click_pay_url}?service_id=&merchant_id=&amount=<soʻm>&transaction_param=<number>&return_url=`.
 It imports nothing from the `click` module (which imports `payments`).
 
+`payme` (`gateways/payme.py`) is available with `payme_merchant_id` and `payme_key` or
+`payme_test_key`; its intent URL is `{payme_checkout_url}/{base64(params)}` with
+`params = "m=<merchant id>;ac.order=<number>;a=<tiyin>;c=<our top-up page>;l=<ru|uz|en>"`.
+It imports nothing from the `payme` module.
+
 **Tests:** `tests/unit/test_payment_fsm.py`, `tests/unit/test_payment_gateways.py`,
 `tests/integration/test_payable_resolver.py`, `tests/integration/test_payment_hooks.py`
 (including real races: two kassas settling one top-up, a create racing a settle, a create

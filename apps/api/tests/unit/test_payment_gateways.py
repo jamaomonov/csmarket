@@ -45,6 +45,10 @@ def test_prod_offers_exactly_the_configured_kassas(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("CSMARKET_CLICK_SECRET_KEY", "fake-click-secret")
     get_settings.cache_clear()
     assert available_providers() == ["click"]
+    monkeypatch.setenv("CSMARKET_PAYME_MERCHANT_ID", "6a1faaca155c8e168e2a0000")
+    monkeypatch.setenv("CSMARKET_PAYME_KEY", "fake-payme-key")
+    get_settings.cache_clear()
+    assert available_providers() == ["click", "payme"]
 
 
 def test_an_unknown_provider_is_not_found() -> None:

@@ -138,6 +138,20 @@ Called by Click, not by our clients; anonymous, exempt from the per-IP limiter.
   complete on our `merchant_prepare_id` (a replay is `-4`). `merchant_trans_id` is the
   top-up number. Details: `apps/api/src/csmarket/modules/click/README.md`.
 
+### Kassa callbacks: Payme (M3)
+
+Called by Payme, not by our clients; anonymous, exempt from the per-IP limiter.
+
+- `POST /payments/payme/merchant` — Payme's Merchant API, JSON-RPC 2.0
+  (`CheckPerformTransaction`, `CreateTransaction`, `PerformTransaction`, `CancelTransaction`,
+  `CheckTransaction`, `GetStatement`, `SetFiscalData`). Authenticated by HTTP Basic
+  `Paycom:<key>` (the production or the sandbox key), checked before the body is read.
+  **Always HTTP 200** with `{result, id}` or `{error: {code, message: {ru, uz, en}, data}, id}`;
+  any other HTTP method is `-32300`. Amounts are tiyin (soʻm × 100); the account field is
+  `account.order` = the top-up number.
+- No `Idempotency-Key`: every method is idempotent on Payme's transaction `id`. Codes and
+  states: `apps/api/src/csmarket/modules/payme/README.md`.
+
 ### Admin catalogue (M2)
 
 All under `/admin/skins`, admin only (401 without a token, 403 for a customer).

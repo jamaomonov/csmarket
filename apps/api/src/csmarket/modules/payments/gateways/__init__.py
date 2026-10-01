@@ -21,8 +21,9 @@ def registry() -> dict[str, PaymentGateway]:
     """Every gateway this build knows, by provider slug (available or not)."""
     from csmarket.modules.payments.gateways.click import ClickGateway
     from csmarket.modules.payments.gateways.mock import MockGateway
+    from csmarket.modules.payments.gateways.payme import PaymeGateway
 
-    gateways: list[PaymentGateway] = [ClickGateway(), MockGateway()]
+    gateways: list[PaymentGateway] = [ClickGateway(), PaymeGateway(), MockGateway()]
     return {gateway.provider: gateway for gateway in gateways}
 
 

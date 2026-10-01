@@ -143,6 +143,7 @@ _EMPTY_IN_ORDER: tuple[str, ...] = (
     "skin_search_aliases",
     "skin_items",
     "click_transactions",
+    "payme_transactions",
     "payments",
     "wallet_topups",
     "wallet_postings",

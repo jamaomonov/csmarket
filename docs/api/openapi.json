@@ -2773,6 +2773,30 @@
         ]
       }
     },
+    "/api/v1/payments/payme/merchant": {
+      "post": {
+        "description": "One Payme Merchant API call: ``{\"method\", \"params\", \"id\"}`` \u2192 ``result`` or ``error``.\n\nAuthenticated by HTTP Basic (``Paycom:<key>``) before the body is read; always HTTP 200\n(see the module docstring). Idempotent on Payme's transaction ``id``, so no\n``Idempotency-Key``. The request ``id`` is echoed (``null`` when absent or unparsed).",
+        "operationId": "payme_merchant_api_v1_payments_payme_merchant_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Payme Merchant Api V1 Payments Payme Merchant Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Payme Merchant API (JSON-RPC 2.0)",
+        "tags": [
+          "payme"
+        ]
+      }
+    },
     "/api/v1/payments/providers": {
       "get": {
         "description": "Anonymous: the storefront shows these tiles on the balance page.",
