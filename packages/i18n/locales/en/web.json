@@ -70,7 +70,7 @@
       "description": "CS2 skins with instant delivery: weapons, knives, gloves, agents and cases. Pay in soʻm.",
       "itemTitle": "{name} — buy in Uzbekistan for {price}",
       "itemTitleNoPrice": "{name} — buy in Uzbekistan for soʻm",
-      "itemDescription": "Buy {name} in Uzbekistan: from {price}, {count, plural, one {# offer} other {# offers}}. Pay in soʻm with Click, Payme, Uzum; the skin arrives in Steam.",
+      "itemDescription": "Buy {name} in Uzbekistan: from {price}, {count, plural, one {# offer} other {# offers}}. Pay in soʻm; the skin arrives in Steam.",
       "itemDescriptionNoPrice": "{name} — CS2 skin, buy in soʻm with instant delivery."
     },
     "title": "CS2 skins",
@@ -137,7 +137,7 @@
       "weaponH1": "{weapon} skins",
       "categoryTitle": "CS2 {name} — buy in Uzbekistan for soʻm",
       "categoryH1": "CS2 {name}",
-      "intro": "{items} from {price}. Pay in soʻm with Click, Payme, Uzum; the skin arrives in Steam.",
+      "intro": "{items} from {price}. Pay in soʻm; the skin arrives in Steam.",
       "description": "Buy {name} in Uzbekistan: {items} from {price}. Pay in soʻm; the skin arrives in Steam.",
       "all": "All, with filters",
       "weapons": "Weapons",

@@ -67,10 +67,10 @@
   "skins": {
     "meta": {
       "title": "Скины КС2 (CS2) — купить в Узбекистане за сумы",
-      "description": "Скины КС2 с моментальной доставкой: оружие, ножи, перчатки, агенты и кейсы CS2. Оплата в сумах через Click, Payme, Uzum.",
+      "description": "Скины КС2 с моментальной доставкой: оружие, ножи, перчатки, агенты и кейсы CS2. Оплата в сумах.",
       "itemTitle": "{name} — купить в Узбекистане за {price}",
       "itemTitleNoPrice": "{name} — купить в Узбекистане за сумы",
-      "itemDescription": "Купить {name} в Узбекистане: от {price}, {count, plural, one {# предложение} few {# предложения} many {# предложений} other {# предложения}}. Оплата в сумах через Click, Payme, Uzum, скин приходит в Steam.",
+      "itemDescription": "Купить {name} в Узбекистане: от {price}. {count, plural, one {# предложение} few {# предложения} many {# предложений} other {# предложения}}. Оплата в сумах. Скин приходит в Steam.",
       "itemDescriptionNoPrice": "{name} — скин CS2, купить за сумы с моментальной доставкой."
     },
     "title": "Скины КС2 (CS2)",
@@ -134,11 +134,11 @@
     "belowSteam": "−{percent}% к Steam",
     "landing": {
       "weaponTitle": "Скины {weapon} КС2 (CS2) — купить в Узбекистане за сумы",
-      "weaponH1": "Скины {weapon} КС2",
+      "weaponH1": "Скины {weapon} КС2 (CS2)",
       "categoryTitle": "{name} КС2 (CS2) — купить в Узбекистане за сумы",
-      "categoryH1": "{name} КС2",
-      "intro": "{items} от {price}. Оплата в сумах через Click, Payme, Uzum, скин приходит в Steam.",
-      "description": "Купить {name} в Узбекистане: {items} от {price}. Оплата в сумах, скин приходит в Steam.",
+      "categoryH1": "{name} КС2 (CS2)",
+      "intro": "{items} от {price}. Оплата в сумах. Скин приходит в Steam.",
+      "description": "Купить {name} в Узбекистане: {items} от {price}. Оплата в сумах. Скин приходит в Steam.",
       "all": "Все с фильтрами",
       "weapons": "Оружие",
       "categories": "Разделы",
