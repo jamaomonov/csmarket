@@ -63,5 +63,107 @@
       "saved": "Сохранено.",
       "invalid": "Проверьте адрес."
     }
+  },
+  "skins": {
+    "meta": {
+      "title": "Скины КС2 (CS2) — купить в Узбекистане за сумы",
+      "description": "Скины КС2 с моментальной доставкой: оружие, ножи, перчатки, агенты и кейсы CS2. Оплата в сумах через Click, Payme, Uzum.",
+      "itemTitle": "{name} — купить в Узбекистане за {price}",
+      "itemTitleNoPrice": "{name} — купить в Узбекистане за сумы",
+      "itemDescription": "Купить {name} в Узбекистане: от {price}, {count, plural, one {# предложение} few {# предложения} many {# предложений} other {# предложения}}. Оплата в сумах через Click, Payme, Uzum, скин приходит в Steam.",
+      "itemDescriptionNoPrice": "{name} — скин CS2, купить за сумы с моментальной доставкой."
+    },
+    "title": "Скины КС2 (CS2)",
+    "searchPlaceholder": "Название скина…",
+    "filters": "Фильтры",
+    "price": "Цена, сум",
+    "from": "От",
+    "to": "До",
+    "reset": "Сбросить",
+    "wear": "Качество",
+    "rarity": "Редкость",
+    "stattrak": "Только StatTrak™",
+    "sortLabel": "Сортировка",
+    "sort": {
+      "price": "Сначала дешевле",
+      "-price": "Сначала дороже",
+      "discount": "Выгоднее Steam",
+      "popular": "Популярные"
+    },
+    "all": "Все",
+    "category": {
+      "rifles": "Винтовки",
+      "pistols": "Пистолеты",
+      "smgs": "ПП",
+      "heavy": "Тяжёлое",
+      "knives": "Ножи",
+      "gloves": "Перчатки",
+      "agents": "Агенты",
+      "cases": "Кейсы",
+      "keys": "Ключи",
+      "music-kits": "Музыка",
+      "charms": "Брелоки"
+    },
+    "exterior": {
+      "FN": "Прямо с завода",
+      "MW": "Немного поношенное",
+      "FT": "После полевых",
+      "WW": "Поношенное",
+      "BS": "Закалённое в боях"
+    },
+    "soldOut": "Нет в наличии",
+    "loadMore": "Показать ещё",
+    "loading": "Загружаем…",
+    "empty": "Ничего не нашлось. Попробуйте другое название или сбросьте фильтры.",
+    "fromPrice": "от {price}",
+    "steamPrice": "Цена в Steam",
+    "offers": "Предложения",
+    "inspect": "Осмотр в игре",
+    "seed": "Seed",
+    "float": "Float",
+    "stickers": "Наклейки",
+    "market": "Маркет",
+    "otherWears": "Другие качества",
+    "noOffers": "Сейчас нет предложений",
+    "vanilla": "Ванильный",
+    "resetFilters": "Сбросить фильтры",
+    "done": "Готово",
+    "inStock": "В наличии",
+    "pieces": "{count, number} шт.",
+    "close": "Закрыть",
+    "belowSteam": "−{percent}% к Steam",
+    "landing": {
+      "weaponTitle": "Скины {weapon} КС2 (CS2) — купить в Узбекистане за сумы",
+      "weaponH1": "Скины {weapon} КС2",
+      "categoryTitle": "{name} КС2 (CS2) — купить в Узбекистане за сумы",
+      "categoryH1": "{name} КС2",
+      "intro": "{items} от {price}. Оплата в сумах через Click, Payme, Uzum, скин приходит в Steam.",
+      "description": "Купить {name} в Узбекистане: {items} от {price}. Оплата в сумах, скин приходит в Steam.",
+      "all": "Все с фильтрами",
+      "weapons": "Оружие",
+      "categories": "Разделы",
+      "popular": "Популярное оружие",
+      "skinsOf": "скины {weapon}",
+      "categoryInline": "{name} КС2",
+      "count": "{unit, select, cases {{count, plural, one {# кейс} few {# кейса} many {# кейсов} other {# кейса}}} keys {{count, plural, one {# ключ} few {# ключа} many {# ключей} other {# ключа}}} agents {{count, plural, one {# агент} few {# агента} many {# агентов} other {# агента}}} charms {{count, plural, one {# брелок} few {# брелока} many {# брелоков} other {# брелока}}} music {{count, plural, one {# набор музыки} few {# набора музыки} many {# наборов музыки} other {# набора музыки}}} other {{count, plural, one {# скин} few {# скина} many {# скинов} other {# скина}}}}",
+      "cheapestKnifeQ": "Сколько стоит самый дешёвый нож в КС2?",
+      "cheapestKnifeA": "Самый дешёвый нож CS2 у нас сейчас — {name} за {price}. Всего в наличии {items}.",
+      "agentsInline": "агентов КС2"
+    },
+    "team": {
+      "title": "Сторона",
+      "all": "Все агенты",
+      "ct": "Спецназ",
+      "t": "Террористы"
+    },
+    "faq": {
+      "title": "Частые вопросы",
+      "priceQ": "Сколько стоит {name} в Узбекистане?",
+      "priceA": "{name} на csmarket стоит от {price} — это самое дешёвое из {count, plural, one {# предложения} other {# предложений}}.",
+      "steamQ": "{name} дешевле, чем в Steam?",
+      "steamA": "Да: на торговой площадке Steam он стоит ${steam}, у нас сейчас на {percent} % дешевле.",
+      "floatQ": "Какой флоат у {name}?",
+      "floatA": "{exterior}: флоат от {min} до {max}. Точный флоат каждого предложения — в списке выше."
+    }
   }
 }

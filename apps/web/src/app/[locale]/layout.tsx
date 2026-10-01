@@ -39,7 +39,7 @@ export async function generateMetadata({
   const t = await getTranslations("web.meta");
   return {
     metadataBase: new URL(SITE),
-    title: t("title"),
+    title: { default: t("title"), template: "%s — csmarket" },
     description: t("description"),
     // Pre-launch: keep the hello page out of search (M2 lifts this).
     robots: { index: false, follow: false },

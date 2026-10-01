@@ -63,5 +63,107 @@
       "saved": "Saqlandi.",
       "invalid": "Manzilni tekshiring."
     }
+  },
+  "skins": {
+    "meta": {
+      "title": "CS2 skinlari (CS2 skins) — Oʻzbekistonda soʻmga sotib olish",
+      "description": "CS2 skinlari tezkor yetkazib berish bilan: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Soʻmda toʻlov.",
+      "itemTitle": "{name} — Oʻzbekistonda {price} ga sotib olish",
+      "itemTitleNoPrice": "{name} — Oʻzbekistonda soʻmga sotib olish",
+      "itemDescription": "{name} ni Oʻzbekistonda sotib oling: {price} dan, {count} ta taklif. Click, Payme, Uzum orqali soʻmda toʻlov, skin Steamʼga keladi.",
+      "itemDescriptionNoPrice": "{name} — CS2 skini, soʻmda tezkor yetkazib berish bilan sotib oling."
+    },
+    "title": "CS2 skinlari bozori",
+    "searchPlaceholder": "Skin nomi…",
+    "filters": "Filtrlar",
+    "price": "Narx, soʻm",
+    "from": "Dan",
+    "to": "Gacha",
+    "reset": "Tozalash",
+    "wear": "Sifat",
+    "rarity": "Nodirlik",
+    "stattrak": "Faqat StatTrak™",
+    "sortLabel": "Saralash",
+    "sort": {
+      "price": "Avval arzonlari",
+      "-price": "Avval qimmatlari",
+      "discount": "Steamʼdan foydaliroq",
+      "popular": "Ommabop"
+    },
+    "all": "Hammasi",
+    "category": {
+      "rifles": "Miltiqlar",
+      "pistols": "Toʻpponchalar",
+      "smgs": "Avtomatlar",
+      "heavy": "Ogʻir",
+      "knives": "Pichoqlar",
+      "gloves": "Qoʻlqoplar",
+      "agents": "Agentlar",
+      "cases": "Keyslar",
+      "keys": "Kalitlar",
+      "music-kits": "Musiqa",
+      "charms": "Brelok"
+    },
+    "exterior": {
+      "FN": "Zavoddan yangi",
+      "MW": "Biroz eskirgan",
+      "FT": "Dala sinovidan",
+      "WW": "Eskirgan",
+      "BS": "Jangda chiniqqan"
+    },
+    "soldOut": "Mavjud emas",
+    "loadMore": "Yana koʻrsatish",
+    "loading": "Yuklanmoqda…",
+    "empty": "Hech narsa topilmadi. Boshqa nom bilan qidiring yoki filtrlarni tozalang.",
+    "fromPrice": "{price} dan",
+    "steamPrice": "Steamʼdagi narx",
+    "offers": "Takliflar",
+    "inspect": "Oʻyinda koʻrish",
+    "seed": "Seed",
+    "float": "Float",
+    "stickers": "Stikerlar",
+    "market": "Bozor",
+    "otherWears": "Boshqa sifatlar",
+    "noOffers": "Hozircha takliflar yoʻq",
+    "vanilla": "Vanilla",
+    "resetFilters": "Filtrlarni tozalash",
+    "done": "Tayyor",
+    "inStock": "Mavjud",
+    "pieces": "{count, number} dona",
+    "close": "Yopish",
+    "belowSteam": "Steamʼdan −{percent}%",
+    "landing": {
+      "weaponTitle": "{weapon} skinlari CS2 — Oʻzbekistonda soʻmga sotib olish",
+      "weaponH1": "{weapon} skinlari",
+      "categoryTitle": "CS2 {name} — Oʻzbekistonda soʻmga sotib olish",
+      "categoryH1": "CS2 {name}",
+      "intro": "{items} {price} dan. Click, Payme, Uzum orqali soʻmda toʻlov, skin Steamʼga keladi.",
+      "description": "{name}ni Oʻzbekistonda sotib oling: {items} {price} dan. Soʻmda toʻlov, skin Steamʼga keladi.",
+      "all": "Hammasi, filtrlar bilan",
+      "weapons": "Qurollar",
+      "categories": "Boʻlimlar",
+      "popular": "Mashhur qurollar",
+      "skinsOf": "{weapon} skinlari",
+      "categoryInline": "CS2 {name}",
+      "count": "{unit, select, cases {{count} ta keys} keys {{count} ta kalit} agents {{count} ta agent} charms {{count} ta brelok} music {{count} ta musiqa toʻplami} other {{count} ta skin}}",
+      "cheapestKnifeQ": "Eng arzon CS2 pichogʻi qancha turadi?",
+      "cheapestKnifeA": "Hozir eng arzon CS2 pichogʻi — {name}, {price}. Jami {items} mavjud.",
+      "agentsInline": "CS2 agentlar"
+    },
+    "team": {
+      "title": "Tomon",
+      "all": "Barcha agentlar",
+      "ct": "Maxsus kuchlar",
+      "t": "Terrorchilar"
+    },
+    "faq": {
+      "title": "Koʻp soʻraladigan savollar",
+      "priceQ": "{name} Oʻzbekistonda qancha turadi?",
+      "priceA": "{name} csmarketʼda {price} dan — {count} ta taklifning eng arzoni.",
+      "steamQ": "{name} Steamʼdagidan arzonmi?",
+      "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda hozir {percent} % arzonroq.",
+      "floatQ": "{name} floati qanday?",
+      "floatA": "{exterior}: float {min} dan {max} gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
+    }
   }
 }

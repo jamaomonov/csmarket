@@ -63,5 +63,107 @@
       "saved": "Saved.",
       "invalid": "Please check the address."
     }
+  },
+  "skins": {
+    "meta": {
+      "title": "CS2 skins in soʻm — buy in Uzbekistan",
+      "description": "CS2 skins with instant delivery: weapons, knives, gloves, agents and cases. Pay in soʻm.",
+      "itemTitle": "{name} — buy in Uzbekistan for {price}",
+      "itemTitleNoPrice": "{name} — buy in Uzbekistan for soʻm",
+      "itemDescription": "Buy {name} in Uzbekistan: from {price}, {count, plural, one {# offer} other {# offers}}. Pay in soʻm with Click, Payme, Uzum; the skin arrives in Steam.",
+      "itemDescriptionNoPrice": "{name} — CS2 skin, buy in soʻm with instant delivery."
+    },
+    "title": "CS2 skins",
+    "searchPlaceholder": "Skin name…",
+    "filters": "Filters",
+    "price": "Price, soʻm",
+    "from": "From",
+    "to": "To",
+    "reset": "Reset",
+    "wear": "Wear",
+    "rarity": "Rarity",
+    "stattrak": "StatTrak™ only",
+    "sortLabel": "Sort",
+    "sort": {
+      "price": "Cheapest first",
+      "-price": "Most expensive first",
+      "discount": "Best vs Steam",
+      "popular": "Popular"
+    },
+    "all": "All",
+    "category": {
+      "rifles": "Rifles",
+      "pistols": "Pistols",
+      "smgs": "SMGs",
+      "heavy": "Heavy",
+      "knives": "Knives",
+      "gloves": "Gloves",
+      "agents": "Agents",
+      "cases": "Cases",
+      "keys": "Keys",
+      "music-kits": "Music kits",
+      "charms": "Charms"
+    },
+    "exterior": {
+      "FN": "Factory New",
+      "MW": "Minimal Wear",
+      "FT": "Field-Tested",
+      "WW": "Well-Worn",
+      "BS": "Battle-Scarred"
+    },
+    "soldOut": "Out of stock",
+    "loadMore": "Show more",
+    "loading": "Loading…",
+    "empty": "Nothing found. Try another name or reset the filters.",
+    "fromPrice": "from {price}",
+    "steamPrice": "Steam price",
+    "offers": "Offers",
+    "inspect": "Inspect in game",
+    "seed": "Seed",
+    "float": "Float",
+    "stickers": "Stickers",
+    "market": "Market",
+    "otherWears": "Other wears",
+    "noOffers": "No offers right now",
+    "vanilla": "Vanilla",
+    "resetFilters": "Reset filters",
+    "done": "Done",
+    "inStock": "In stock",
+    "pieces": "{count, number} pcs",
+    "close": "Close",
+    "belowSteam": "−{percent}% vs Steam",
+    "landing": {
+      "weaponTitle": "{weapon} skins CS2 — buy in Uzbekistan for soʻm",
+      "weaponH1": "{weapon} skins",
+      "categoryTitle": "CS2 {name} — buy in Uzbekistan for soʻm",
+      "categoryH1": "CS2 {name}",
+      "intro": "{items} from {price}. Pay in soʻm with Click, Payme, Uzum; the skin arrives in Steam.",
+      "description": "Buy {name} in Uzbekistan: {items} from {price}. Pay in soʻm; the skin arrives in Steam.",
+      "all": "All, with filters",
+      "weapons": "Weapons",
+      "categories": "Sections",
+      "popular": "Popular weapons",
+      "skinsOf": "{weapon} skins",
+      "categoryInline": "CS2 {name}",
+      "count": "{unit, select, cases {{count, plural, one {# case} other {# cases}}} keys {{count, plural, one {# key} other {# keys}}} agents {{count, plural, one {# agent} other {# agents}}} charms {{count, plural, one {# charm} other {# charms}}} music {{count, plural, one {# music kit} other {# music kits}}} other {{count, plural, one {# skin} other {# skins}}}}",
+      "cheapestKnifeQ": "How much is the cheapest CS2 knife?",
+      "cheapestKnifeA": "The cheapest CS2 knife here right now is {name} at {price}, out of {items} in stock.",
+      "agentsInline": "CS2 agents"
+    },
+    "team": {
+      "title": "Team",
+      "all": "All agents",
+      "ct": "Counter-Terrorists",
+      "t": "Terrorists"
+    },
+    "faq": {
+      "title": "FAQ",
+      "priceQ": "How much is {name} in Uzbekistan?",
+      "priceA": "{name} costs from {price} on csmarket — the cheapest of {count, plural, one {# offer} other {# offers}}.",
+      "steamQ": "Is {name} cheaper than on Steam?",
+      "steamA": "Yes: on the Steam Community Market it costs ${steam}; here it is {percent} % cheaper right now.",
+      "floatQ": "What float does {name} have?",
+      "floatA": "{exterior}: float from {min} to {max}. Each offer's exact float is in the list above."
+    }
   }
 }
