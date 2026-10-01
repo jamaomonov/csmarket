@@ -246,9 +246,13 @@ async def create_transaction(
     """
     number = _account_number(account)
     payable = await resolve(db, number, lock=True)
-    existing = await _txn_by_payme_id(db, payme_id, lock=True)
-    if existing is not None:
-        return _replay_create(existing, number=number, amount=amount)
+    seen = await _txn_by_payme_id(db, payme_id)
+    if seen is not None:
+        # Another account's row is refused from this unlocked read: its top-up is not the one
+        # we hold, so locking the row here would step outside the global lock order.
+        if seen.account != number:
+            raise operation_not_permitted()
+        return _replay_create(await _lock_txn(db, seen.id), number=number, amount=amount)
     _check_payable(payable, amount)
     busy = (
         await db.execute(

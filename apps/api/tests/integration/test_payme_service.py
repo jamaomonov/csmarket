@@ -328,6 +328,31 @@ async def test_create_insert_race_for_another_account_leaves_no_pending_attempt(
     assert (await _txn(db_session, "pt-race")).account == winner_number
 
 
+async def test_create_replay_for_another_account_never_waits_on_that_row(
+    db_engine: AsyncEngine,
+) -> None:
+    """A replayed id under another account is refused −31008 from an unlocked read: it must
+    not lock (or wait on) a Payme row whose top-up it never took."""
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    async with factory() as setup:
+        owner, other = await make_topup(setup), await make_topup(setup)
+        await _create(setup, owner, "pt-foreign")
+    async with factory() as holder, factory() as caller:
+        await holder.execute(
+            select(PaymeTransaction.id)
+            .where(PaymeTransaction.payme_id == "pt-foreign")
+            .with_for_update()
+        )
+        call = payme_svc.create_transaction(
+            caller, payme_id="pt-foreign", time=TIME, amount=TIYIN, account={"order": other.number}
+        )
+        with pytest.raises(PaymeError) as exc:
+            await asyncio.wait_for(call, timeout=3)
+        assert exc.value.code == -31008
+        await caller.rollback()
+        await holder.rollback()
+
+
 async def test_create_insert_race_for_the_same_account_answers_the_winner(
     db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
