@@ -219,6 +219,38 @@ async def test_awaiting_kassa_tells_a_held_topup_from_an_expired_one(
     assert (paid["status"], paid["awaiting_kassa"]) == ("succeeded", False)
 
 
+@pytest.mark.parametrize(
+    "case",
+    [
+        ({"CSMARKET_AUTH_IP_GUARD_BUCKET_MAX": '{"topup-create": 3}'}, 3),  # per IP
+        ({"CSMARKET_AUTH_IP_GUARD_SUBJECT_MAX": "2"}, 2),  # per IP and account
+    ],
+    ids=["ip", "ip-and-account"],
+)
+async def test_topup_create_bucket_answers_429_with_retry_after(
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+    case: tuple[dict[str, str], int],
+) -> None:
+    """The route charges the ``topup-create`` bucket (a typo'd name would fall back to the
+    default ceiling and never trip at 3); past it, 429 with ``Retry-After`` and no top-up."""
+    env, limit = case
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    cfg.get_settings.cache_clear()
+    h = {**await customer_headers(), "X-Forwarded-For": f"203.0.113.{100 + limit}"}
+    for _ in range(limit):
+        assert (await _create(integration_client, h)).status_code == 201
+    r = await _create(integration_client, h)
+    assert r.status_code == 429, r.text
+    assert r.headers["retry-after"] == str(cfg.get_settings().auth_ip_guard_window_seconds)
+    assert await db_session.scalar(select(func.count()).select_from(WalletTopup)) == limit
+    other = {**h, "X-Forwarded-For": "198.51.100.200"}
+    assert (await _create(integration_client, other)).status_code == 201
+
+
 async def test_the_same_key_from_another_user_is_a_new_topup(
     integration_client: AsyncClient, customer_headers: Headers, admin_headers: Headers
 ) -> None:
