@@ -59,6 +59,29 @@
       "invalid": "Please check the address."
     }
   },
+  "balance": {
+    "title": "Balance",
+    "signedOut": "Sign in with Steam to open your balance.",
+    "amount": "Your balance",
+    "topUpTitle": "Top up",
+    "amountLabel": "Amount",
+    "amountRange": "From {min} to {max}",
+    "methodLabel": "Payment method",
+    "methodTest": "Test payment",
+    "methodNone": "Top-ups aren't available right now.",
+    "submit": "Top up {amount}",
+    "enterAmount": "Enter an amount",
+    "badAmount": "Enter {min} to {max}, whole amounts only.",
+    "failed": "Couldn't start the payment. Please try again.",
+    "historyTitle": "History",
+    "historyEmpty": "Nothing here yet.",
+    "historyMore": "Show more",
+    "kind": {
+      "topup": "Top-up",
+      "topup_reversal": "Top-up cancelled",
+      "admin_adjust": "Adjustment"
+    }
+  },
   "skins": {
     "meta": {
       "title": "CS2 skins in soʻm — buy in Uzbekistan",

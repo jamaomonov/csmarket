@@ -1,11 +1,13 @@
 "use client";
 
 import { Button } from "@csmarket/ui";
+import { ChevronRight, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { EmailForm } from "./EmailForm";
 import { TradeLinkForm } from "./TradeLinkForm";
 
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 
 interface AccountViewProps {
@@ -16,6 +18,7 @@ export function AccountView({ locale }: AccountViewProps) {
   const t = useTranslations("web.account");
   const auth = useTranslations("web.auth");
   const nav = useTranslations("web.nav");
+  const balance = useTranslations("web.balance");
   const { status, user, signInHref, signOut, refreshMe } = useAuth();
 
   if (status === "loading") {
@@ -46,6 +49,14 @@ export function AccountView({ locale }: AccountViewProps) {
         ) : null}
         <p className="text-xl font-bold">{user.display_name ?? "Steam"}</p>
       </div>
+      <Link
+        href="/account/balance"
+        className="border-border hover:border-border-strong flex items-center gap-3 rounded-lg border p-5 font-bold"
+      >
+        <Wallet aria-hidden className="text-accent h-5 w-5" />
+        <span className="flex-1">{balance("title")}</span>
+        <ChevronRight aria-hidden className="text-fg-dim h-5 w-5" />
+      </Link>
       <TradeLinkForm
         initial={{
           trade_link: user.trade_link,

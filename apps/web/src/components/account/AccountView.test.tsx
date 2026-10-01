@@ -7,9 +7,16 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AccountView } from "./AccountView";
 
+import type { ReactNode } from "react";
+
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
 vi.mock("@/lib/api", () => ({ session: { apiPut: vi.fn(), apiPost: vi.fn(), apiPatch: vi.fn() } }));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({ href, children }: { href: string; children: ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
 
 function renderView() {
   return render(
@@ -55,5 +62,9 @@ describe("AccountView", () => {
     expect(screen.getByText("Ссылка на обмен", { selector: "h2" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("p@example.com")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Выйти" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Баланс/ })).toHaveAttribute(
+      "href",
+      "/account/balance",
+    );
   });
 });

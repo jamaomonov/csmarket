@@ -59,6 +59,29 @@
       "invalid": "Manzilni tekshiring."
     }
   },
+  "balance": {
+    "title": "Balans",
+    "signedOut": "Balansni ochish uchun Steam orqali kiring.",
+    "amount": "Balansda",
+    "topUpTitle": "Toʻldirish",
+    "amountLabel": "Summa",
+    "amountRange": "{min}dan {max}gacha",
+    "methodLabel": "Toʻlov usuli",
+    "methodTest": "Test toʻlovi",
+    "methodNone": "Hozir balansni toʻldirib boʻlmaydi.",
+    "submit": "{amount}ga toʻldirish",
+    "enterAmount": "Summani kiriting",
+    "badAmount": "Summa {min}dan {max}gacha, tiyinsiz.",
+    "failed": "Toʻlovni boshlab boʻlmadi. Qayta urinib koʻring.",
+    "historyTitle": "Tarix",
+    "historyEmpty": "Hozircha boʻsh.",
+    "historyMore": "Yana koʻrsatish",
+    "kind": {
+      "topup": "Toʻldirish",
+      "topup_reversal": "Toʻldirish bekor qilindi",
+      "admin_adjust": "Tuzatish"
+    }
+  },
   "skins": {
     "meta": {
       "title": "CS2 skinlari (CS2 skins) — Oʻzbekistonda soʻmga sotib olish",

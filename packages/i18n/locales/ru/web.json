@@ -59,6 +59,29 @@
       "invalid": "Проверьте адрес."
     }
   },
+  "balance": {
+    "title": "Баланс",
+    "signedOut": "Войдите через Steam, чтобы открыть баланс.",
+    "amount": "На балансе",
+    "topUpTitle": "Пополнить",
+    "amountLabel": "Сумма",
+    "amountRange": "От {min} до {max}",
+    "methodLabel": "Способ оплаты",
+    "methodTest": "Тестовая оплата",
+    "methodNone": "Пополнение сейчас недоступно.",
+    "submit": "Пополнить на {amount}",
+    "enterAmount": "Введите сумму",
+    "badAmount": "Сумма от {min} до {max}, без тийинов.",
+    "failed": "Не получилось начать оплату. Попробуйте ещё раз.",
+    "historyTitle": "История",
+    "historyEmpty": "Пока пусто.",
+    "historyMore": "Показать ещё",
+    "kind": {
+      "topup": "Пополнение",
+      "topup_reversal": "Пополнение отменено",
+      "admin_adjust": "Корректировка"
+    }
+  },
   "skins": {
     "meta": {
       "title": "Скины КС2 (CS2) — купить в Узбекистане за сумы",
