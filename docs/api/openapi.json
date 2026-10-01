@@ -1,10 +1,327 @@
 {
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "SteamCallbackIn": {
+        "additionalProperties": false,
+        "description": "The ``openid.*`` params exactly as Steam appended them, and which app asked.",
+        "properties": {
+          "app": {
+            "enum": [
+              "web",
+              "admin"
+            ],
+            "title": "App",
+            "type": "string"
+          },
+          "params": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 32,
+            "minProperties": 4,
+            "title": "Params",
+            "type": "object"
+          }
+        },
+        "required": [
+          "app",
+          "params"
+        ],
+        "title": "SteamCallbackIn",
+        "type": "object"
+      },
+      "TokensOut": {
+        "description": "Response for any endpoint that opens or rotates a session.\n\nThe refresh token is intentionally absent: it is delivered as an ``HttpOnly`` cookie\n(see :mod:`csmarket.modules.auth.cookies`) so JS cannot read it. Only the short-lived\naccess token \u2014 which the app attaches as a Bearer header \u2014 is returned in the body.",
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "token_type": {
+            "default": "Bearer",
+            "title": "Token Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "access_token",
+          "expires_in"
+        ],
+        "title": "TokensOut",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
   "info": {
     "title": "csmarket API",
     "version": "0.0.1"
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "Revoke this session and clear the cookie.\n\nIdempotent: unknown or already-revoked tokens succeed silently, which is also why it\ntakes no ``Idempotency-Key``.",
+        "operationId": "logout_route_api_v1_auth_logout_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "cookie",
+            "name": "csmarket_refresh",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Csmarket Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sign out",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Rotate-on-use; the reuse trip-wire lives in the service.\n\nKeyless: rotation is inherently single-use, a replay is the attack it detects. Must\nwrite nothing before :func:`refresh_session` \u2014 on reuse the service commits its\nburn-down, which would commit any earlier pending write too.",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "parameters": [
+          {
+            "in": "cookie",
+            "name": "csmarket_refresh",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Csmarket Refresh"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokensOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rotate the refresh cookie",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/steam": {
+      "post": {
+        "description": "Verify the callback with Steam and open a session.\n\nKeyless by design: replaying an OpenID assertion is refused by Steam itself\n(``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.",
+        "operationId": "steam_complete_api_v1_auth_steam_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SteamCallbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokensOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Complete a Steam sign-in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/steam/start": {
+      "get": {
+        "description": "Send the browser to Steam.\n\n``return_to`` is the app's own callback page; realm is the app's origin. Both come\nfrom settings \u2014 the query only picks which app, so the redirect cannot be aimed\nanywhere else.",
+        "operationId": "steam_start_api_v1_auth_steam_start_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "app",
+            "required": false,
+            "schema": {
+              "default": "web",
+              "enum": [
+                "web",
+                "admin"
+              ],
+              "title": "App",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "title": "Locale",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Begin a Steam sign-in (302 to steamcommunity.com)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/healthz": {
       "get": {
         "description": "Return ``{\"status\": \"ok\"}`` if the process is alive.",

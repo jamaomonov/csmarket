@@ -39,6 +39,8 @@ def _test_env() -> Iterator[None]:
         .decode(),
         "CSMARKET_JWT_KID": "test",
         "CSMARKET_DEV_LOGIN_ENABLED": "true",
+        # The storefront's dev origin (R12), so Steam callbacks match what dev serves.
+        "CSMARKET_WEB_BASE_URL": "http://localhost:3100",
         "CSMARKET_STEAM_API_KEY": "",
         "CSMARKET_WAXPEER_API_KEY": "",
     }

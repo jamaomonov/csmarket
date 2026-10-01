@@ -1,6 +1,7 @@
 """Sessions for Steam-signed-in users: open, rotate (with the reuse trip-wire), revoke, resolve.
 
-The Steam flow lives in ``steam_login`` (Task 4).
+The Steam flow lives in :func:`steam_login`; :func:`dev_login` is its Steam-less twin for
+local work and e2e (ruling P6), reachable only when ``settings.dev_login_active``.
 
 A session is a ``refresh_tokens`` row; its id is the ``sid`` claim of every access token
 minted from it. Revoking a session writes ``revoked_at`` and drops a Redis marker
@@ -12,8 +13,10 @@ which commits its burn-down itself (see :func:`refresh_session`).
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import timedelta
+from typing import Literal
 
 from redis.exceptions import RedisError
 from sqlalchemy import delete, or_, select, update
@@ -26,9 +29,10 @@ from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth import jwt as authjwt
+from csmarket.modules.auth import steam
 from csmarket.modules.auth.models import RefreshToken
 from csmarket.modules.auth.security import hash_token, new_refresh_token
-from csmarket.modules.users.api import User, get_user_by_id
+from csmarket.modules.users.api import User, get_user_by_id, set_roles, upsert_user_by_steam
 
 log = get_logger("csmarket.auth.service")
 
@@ -39,6 +43,14 @@ SESSION_RETENTION_DAYS = 7
 
 #: Rows deleted per sweep — bounded so one DELETE never holds locks for long.
 _PURGE_BATCH = 5000
+
+#: Which app a Steam sign-in returns to; each has its own origin and callback page.
+AppName = Literal["web", "admin"]
+
+#: ``verify_callback``'s shape, injectable for tests.
+SteamVerifier = Callable[..., Awaitable[int]]
+#: ``fetch_persona``'s shape, injectable for tests.
+PersonaFetcher = Callable[..., Awaitable[tuple[str | None, str | None]]]
 
 
 @dataclass(frozen=True)
@@ -96,6 +108,89 @@ async def open_session(
         refresh_expires_in=s.jwt_refresh_ttl_seconds,
         user=user,
     )
+
+
+def callback_url(settings: Settings, app: AppName) -> str:
+    """Where Steam returns the browser for ``app`` — also the only accepted ``return_to``."""
+    origin = settings.admin_base_url if app == "admin" else settings.web_base_url
+    return f"{origin.rstrip('/')}/auth/steam/callback"
+
+
+async def steam_login(
+    db: AsyncSession,
+    params: dict[str, str],
+    *,
+    app: AppName,
+    settings: Settings | None = None,
+    verifier: SteamVerifier | None = None,
+    persona: PersonaFetcher | None = None,
+) -> SessionTokens:
+    """Verify a Steam OpenID callback for ``app`` and open a session.
+
+    Nothing is written until Steam has said yes: a refused assertion leaves no user row.
+    The persona (name, avatar) is fetched only with a Steam Web API key and is
+    best-effort — a failure signs the user in nameless.
+
+    Args:
+        db: The request's session; flushed, not committed.
+        params: The ``openid.*`` params exactly as Steam appended them.
+        app: Which app asked; its callback is the only ``return_to`` accepted.
+        settings: Overrides the process settings; for tests.
+        verifier: Replaces :func:`steam.verify_callback`; for tests.
+        persona: Replaces :func:`steam.fetch_persona`; for tests.
+
+    Returns:
+        The new session's tokens.
+
+    Raises:
+        UnauthorizedError: Verification failed (foreign ``return_to``, bad
+            ``claimed_id``, Steam said no, Steam unreachable).
+        AccountSuspendedError: The account is banned.
+    """
+    s = settings or get_settings()
+    verify = verifier or steam.verify_callback
+    try:
+        steam_id = await verify(params, expected_return_prefix=callback_url(s, app))
+    except steam.SteamAuthError as exc:
+        # The message never carries the steamid or the params (see steam.SteamAuthError).
+        log.info("auth.steam.rejected", reason=str(exc), app=app)
+        raise UnauthorizedError("steam verification failed") from exc
+    name: str | None = None
+    avatar: str | None = None
+    if s.steam_api_key:
+        fetch = persona or steam.fetch_persona
+        name, avatar = await fetch(steam_id, api_key=s.steam_api_key)
+    user = await upsert_user_by_steam(
+        db, steam_id=str(steam_id), display_name=name, avatar_url=avatar
+    )
+    return await open_session(db, user=user, settings=s)
+
+
+async def dev_login(
+    db: AsyncSession, *, steam_id: str, display_name: str | None, admin: bool
+) -> SessionTokens:
+    """Open a session for ``steam_id`` without Steam — dev and e2e only (ruling P6).
+
+    The route refuses unless ``settings.dev_login_active``; this function trusts it.
+
+    Args:
+        db: The request's session; flushed, not committed.
+        steam_id: The steamid64 to sign in as, as text.
+        display_name: Optional name for the account.
+        admin: Grant the ``admin`` role (added to any roles the account has).
+
+    Returns:
+        The new session's tokens.
+
+    Raises:
+        AccountSuspendedError: The account is banned.
+    """
+    user = await upsert_user_by_steam(
+        db, steam_id=steam_id, display_name=display_name, avatar_url=None
+    )
+    if admin:
+        await set_roles(db, user, [*user.roles, "admin"])
+    return await open_session(db, user=user)
 
 
 async def refresh_session(

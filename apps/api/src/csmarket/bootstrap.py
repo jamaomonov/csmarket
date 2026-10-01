@@ -19,7 +19,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from csmarket.api.v1 import router as v1_router
+from csmarket.api.v1.router import router as v1_router
 from csmarket.core import health
 from csmarket.core.cache_headers import NoStoreByDefault
 from csmarket.core.client_ip import client_ip as _client_ip

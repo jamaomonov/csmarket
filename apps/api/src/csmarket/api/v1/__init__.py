@@ -1,11 +1,6 @@
-"""``/api/v1`` — public API mount.
+"""``/api/v1`` — public API package.
 
-Modules register their routers here. Keep the imports alphabetical for diff
-readability. Empty in M0; M1 mounts ``auth`` and ``users``.
+Deliberately empty: module routes and dependencies import ``csmarket.api.v1.deps``, and
+importing a submodule runs this file first. A router that imports those modules here
+would close a cycle back to them. Routers are mounted in :mod:`csmarket.api.v1.router`.
 """
-
-from __future__ import annotations
-
-from fastapi import APIRouter
-
-router = APIRouter()
