@@ -229,6 +229,42 @@ async def test_prepare_concurrent_insert_race_returns_winners_id(
     assert count == 1
 
 
+async def test_prepare_insert_race_for_another_account_leaves_no_pending_attempt(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two first-time prepares with one ``click_trans_id`` but different accounts lock
+    different top-ups, so both reach the insert. The loser answers the winner's row (Click's
+    replay contract) and its own attempt is not left ``pending`` with no Click row holding it
+    (the attempt work sits in the insert's SAVEPOINT)."""
+    winner_topup, loser_topup = await make_topup(db_session), await make_topup(db_session)
+    loser_id = loser_topup.id
+    winner = await _prepare(db_session, winner_topup, 1004)
+    opened_id = (await _attempt(db_session, loser_topup)).id
+
+    real = click_svc._txn_by_click
+    calls = {"n": 0}
+
+    async def first_call_misses(*args: Any, **kwargs: Any) -> ClickTransaction | None:
+        calls["n"] += 1
+        return None if calls["n"] == 1 else await real(*args, **kwargs)
+
+    monkeypatch.setattr(click_svc, "_txn_by_click", first_call_misses)
+    result = await _prepare(db_session, loser_topup, 1004)
+    assert result == winner
+    attempts = (
+        (
+            await db_session.execute(
+                select(Payment)
+                .where(Payment.topup_id == loser_id)
+                .execution_options(populate_existing=True)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert [(p.id, p.status) for p in attempts] == [(opened_id, "created")]
+
+
 @pytest.mark.parametrize("amount", ["49999.00", "50001", "abc", "NaN", "Infinity", "sNaN"])
 async def test_prepare_wrong_amount_is_minus2(db_session: AsyncSession, amount: str) -> None:
     topup = await make_topup(db_session)

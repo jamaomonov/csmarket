@@ -59,6 +59,26 @@ async def test_replay_by_key_posts_once(db_session: AsyncSession) -> None:
     assert await user_balance(db_session, uid) == Decimal(1000)
 
 
+async def test_replay_of_a_key_under_another_kind_is_a_conflict(db_session: AsyncSession) -> None:
+    uid = await _user(db_session)
+    w = await user_account(db_session, uid)
+    c = await ensure_account(
+        db_session, owner_type="provider", owner_id="click", kind="provider_clearing"
+    )
+    legs = [Leg(w.id, "D", Decimal(1000)), Leg(c.id, "C", Decimal(1000))]
+    await post(db_session, kind="topup", legs=legs, idempotency_key="kind-clash")
+    with pytest.raises(ConflictError) as exc:
+        await post(
+            db_session,
+            kind="topup_reversal",
+            legs=[Leg(c.id, "D", Decimal(1000)), Leg(w.id, "C", Decimal(1000))],
+            idempotency_key="kind-clash",
+        )
+    assert exc.value.extra["code"] == "idempotency_mismatch"
+    await db_session.commit()
+    assert await user_balance(db_session, uid) == Decimal(1000)
+
+
 LegsFn = Callable[[str, str], list[Leg]]
 
 

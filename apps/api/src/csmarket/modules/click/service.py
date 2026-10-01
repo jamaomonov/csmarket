@@ -201,26 +201,28 @@ async def prepare(
     _check_payable(payable)
     if not _amount_is(amount, payable.amount_uzs):
         raise incorrect_amount()
-    try:
-        payment = await ensure_attempt(db, payable=payable, provider=PROVIDER)
-    except AlreadyPaidError:  # pragma: no cover - _check_payable refused it under the same lock
-        raise already_paid() from None
-    await mark_pending(db, payment=payment)
-    txn = ClickTransaction(
-        click_trans_id=click_trans_id,
-        service_id=service_id,
-        payment_id=payment.id,
-        account=payable.number,
-        amount=payable.amount_uzs,
-        status=PREPARED,
-        click_paydoc_id=click_paydoc_id,
-        prepare_time=now(),
-    )
     # SAVEPOINT: two first-time prepares with one (click_trans_id, service_id) but different
     # accounts lock different top-ups, so both can reach this insert; the loser re-reads the
-    # winner's row and answers the same success (Click's replay contract).
+    # winner's row and answers the same success (Click's replay contract). The attempt work
+    # sits inside it too, so the loser's top-up is not left with a ``pending`` attempt that no
+    # Click row holds (no sweep would ever release it).
     try:
         async with db.begin_nested():
+            try:
+                payment = await ensure_attempt(db, payable=payable, provider=PROVIDER)
+            except AlreadyPaidError:  # pragma: no cover - _check_payable refused it under the lock
+                raise already_paid() from None
+            await mark_pending(db, payment=payment)
+            txn = ClickTransaction(
+                click_trans_id=click_trans_id,
+                service_id=service_id,
+                payment_id=payment.id,
+                account=payable.number,
+                amount=payable.amount_uzs,
+                status=PREPARED,
+                click_paydoc_id=click_paydoc_id,
+                prepare_time=now(),
+            )
             db.add(txn)
             await db.flush()
     except IntegrityError:

@@ -170,6 +170,20 @@ async def _transaction_by_key(db: AsyncSession, idempotency_key: str) -> WalletT
     return (await db.execute(stmt)).scalar_one_or_none()
 
 
+def _replay(existing: WalletTransaction, kind: str) -> WalletTransaction:
+    """``existing`` when it is a replay of a ``kind`` post; else 409 ``idempotency_mismatch``.
+
+    Insurance for M4's callers: a key reused for another kind of event is a caller bug, and
+    answering the other event's transaction as if it were this one would hide it.
+    """
+    if existing.kind != kind:
+        raise ConflictError(
+            "this idempotency key was used for another kind of transaction",
+            code="idempotency_mismatch",
+        )
+    return existing
+
+
 async def _check_accounts(db: AsyncSession, legs: list[Leg]) -> None:
     """Every leg's account exists and is ``active``."""
     ids = {leg.account_id for leg in legs}
@@ -194,21 +208,22 @@ async def post(
 ) -> WalletTransaction:
     """Post one balanced transaction, all or nothing; flushes, never commits.
 
-    A key already used returns that transaction unchanged (replay), whatever the legs —
-    callers derive the key from the business event (``topup:{topup_id}``, …), so the
-    second call is the same event. A concurrent post of the same key loses inside a
-    SAVEPOINT and also returns the winner's transaction; the caller's transaction is
-    untouched.
+    A key already used for the same ``kind`` returns that transaction unchanged (replay),
+    whatever the legs — callers derive the key from the business event
+    (``topup:{topup_id}``, …), so the second call is the same event. A concurrent post of
+    the same key loses inside a SAVEPOINT and also returns the winner's transaction; the
+    caller's transaction is untouched.
 
     Raises:
         ValidationError: unknown kind, fewer than two legs, a leg that is not a positive
             whole soʻm, or ``SUM(D) != SUM(C)``.
         NotFoundError: a leg names an account that does not exist.
-        ConflictError: a leg's account is frozen.
+        ConflictError: a leg's account is frozen, or ``code="idempotency_mismatch"`` — the
+            key already booked a transaction of another kind.
     """
     existing = await _transaction_by_key(db, idempotency_key)
     if existing is not None:
-        return existing
+        return _replay(existing, kind)
     if kind not in TX_KINDS:
         raise ValidationError("unknown wallet transaction kind", kind=kind)
     _validate_legs(legs)
@@ -242,7 +257,7 @@ async def post(
         winner = await _transaction_by_key(db, idempotency_key)
         if winner is None:  # the integrity error was something else
             raise
-        return winner
+        return _replay(winner, kind)
     total = sum((leg.amount for leg in legs if leg.direction == "D"), Decimal(0))
     log.info("wallet.posted", kind=kind, transaction_id=txn.id, amount=str(total))
     return txn

@@ -38,7 +38,8 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
   account exists (`NotFoundError`) and is `active` (`ConflictError`).
 - **One idempotency key per business event.** A key already used returns the stored
   transaction unchanged; a concurrent post of the same key loses inside a SAVEPOINT and
-  returns the winner's — the caller's own work in that transaction survives.
+  returns the winner's — the caller's own work in that transaction survives. A key that
+  booked another `kind` raises `ConflictError(code="idempotency_mismatch")` instead.
   `ensure_account` is race-safe the same way.
 - **Balance = SUM on the normal side − SUM on the other side**, per account.
   `user_balance` is `0` when the user has no wallet yet and never creates one.
