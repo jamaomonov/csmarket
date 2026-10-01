@@ -86,19 +86,19 @@ replaced (`yupay` → `csmarket`). GHCR images: `csmarket-{api,worker,scheduler,
 
 ### 3.2 Backend modules (`apps/api/src/csmarket/modules/`)
 
-| Module | Ported from (YuPay path under `apps/api/src/yupay/`) | Changes |
-|---|---|---|
-| `core/` | `core/` (db, config, redis, logging, metrics, money, idempotency, ids, errors, clock, crypto, cache_headers, client_ip, events, outbox) | drop `outbound*` (merchant-webhook delivery) |
-| `auth` | `modules/auth/` (`steam.py`, `jwt.py`, `cookies.py`, `deps.py`, `security.py`, `ip_guard.py`, `service.py`) | keep Steam OpenID + EdDSA JWT (15 min) + rotating refresh (30 d) + blocklist + ip_guard; drop `google.py`, `telegram.py`, `dev_login.py`, password paths |
-| `users` | `modules/users/` | `steam_id` is the identity; email optional; trade link lives here; no password/delivery_email/display_currency |
-| `payments` + `click`, `payme`, `uzum` | `modules/payments/` (FSM, idempotency, gateways/base, click, payme, uzum, wallet, mock, _stub) + `modules/click`, `payme`, `uzum` (webhook twins) | as is; `purpose: order | topup`; own kassa credentials; `paynet`/`octo` not ported |
-| `wallet` | `modules/wallet/` | as is: double-entry ledger, `NORMAL_SIDE` per kind, `post()` invariant, `admin.adjust` the only manual mutation |
-| `fx` | `modules/fx/` | CBU rate, snapshot per order |
-| `skins` | `modules/skins/` (all files) + `modules/fulfillment/suppliers/waxpeer_client.py`, `waxpeer_skins.py`, `waxpeer_trades.py`, `modules/fulfillment/skin_sweeps.py` + scheduler jobs `skins_*.py` | one module; the Waxpeer client lives here; **no `Fulfiller` protocol, no SKU, no supplier mapping** |
-| `orders` | **new, thin** | order = one skin, one offer; statuses, money, trade (§5, §7) |
-| `admin` | `modules/admin/` (deps, audit) + skins admin routes (`admin.py`, `admin_ops.py`, `admin_reports.py`, `admin_trades.py`) | no catalog / suppliers / brands / merchants |
-| `notifications` | `modules/notifications/` | email only (receipt, "trade sent", "refunded"); Telegram later |
-| `realtime` | `modules/realtime/` | WS order status for the order page |
+| Module                                | Ported from (YuPay path under `apps/api/src/yupay/`)                                                                                                                                          | Changes                                                                                                                                                  |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core/`                               | `core/` (db, config, redis, logging, metrics, money, idempotency, ids, errors, clock, crypto, cache_headers, client_ip, events, outbox)                                                       | drop `outbound*` (merchant-webhook delivery)                                                                                                             |
+| `auth`                                | `modules/auth/` (`steam.py`, `jwt.py`, `cookies.py`, `deps.py`, `security.py`, `ip_guard.py`, `service.py`)                                                                                   | keep Steam OpenID + EdDSA JWT (15 min) + rotating refresh (30 d) + blocklist + ip_guard; drop `google.py`, `telegram.py`, `dev_login.py`, password paths |
+| `users`                               | `modules/users/`                                                                                                                                                                              | `steam_id` is the identity; email optional; trade link lives here; no password/delivery_email/display_currency                                           |
+| `payments` + `click`, `payme`, `uzum` | `modules/payments/` (FSM, idempotency, gateways/base, click, payme, uzum, wallet, mock, _stub) + `modules/click`, `payme`, `uzum` (webhook twins)                                             | as is; `purpose: order                                                                                                                                   | topup`; own kassa credentials; `paynet`/`octo` not ported |
+| `wallet`                              | `modules/wallet/`                                                                                                                                                                             | as is: double-entry ledger, `NORMAL_SIDE` per kind, `post()` invariant, `admin.adjust` the only manual mutation                                          |
+| `fx`                                  | `modules/fx/`                                                                                                                                                                                 | CBU rate, snapshot per order                                                                                                                             |
+| `skins`                               | `modules/skins/` (all files) + `modules/fulfillment/suppliers/waxpeer_client.py`, `waxpeer_skins.py`, `waxpeer_trades.py`, `modules/fulfillment/skin_sweeps.py` + scheduler jobs `skins_*.py` | one module; the Waxpeer client lives here; **no `Fulfiller` protocol, no SKU, no supplier mapping**                                                      |
+| `orders`                              | **new, thin**                                                                                                                                                                                 | order = one skin, one offer; statuses, money, trade (§5, §7)                                                                                             |
+| `admin`                               | `modules/admin/` (deps, audit) + skins admin routes (`admin.py`, `admin_ops.py`, `admin_reports.py`, `admin_trades.py`)                                                                       | no catalog / suppliers / brands / merchants                                                                                                              |
+| `notifications`                       | `modules/notifications/`                                                                                                                                                                      | email only (receipt, "trade sent", "refunded"); Telegram later                                                                                           |
+| `realtime`                            | `modules/realtime/`                                                                                                                                                                           | WS order status for the order page                                                                                                                       |
 
 Not ported: `catalog`, `gifts`, `blog`, `merchants`, `integrations`, `sourcing`, `inventory`,
 `promo`, `promotions`, `affiliate`, `reviews`, `broadcasts`, `stats`, `delivery`, `evidence`,
@@ -138,21 +138,25 @@ Money: `Decimal`, minor units where a table says so; USD with 6 decimals as YuPa
 Waxpeer prices (units = $0.001).
 
 ### users
+
 `id uuid pk, steam_id text unique, display_name, avatar_url, email citext null,
 email_verified_at null, locale (ru|uz|en), trade_link text null, trade_link_checked_at null,
 trade_link_verdict (ok|warn|bad|null), roles text[] (`admin`), banned_at, ban_reason,
 created_at, updated_at, deleted_at`.
 
 ### refresh_tokens
+
 As YuPay `auth`: `id, user_id, token_hash, expires_at, revoked_at, created_at` (blocklist by
 hash).
 
 ### skin_items, skin_pricing_rules, skin_search_aliases
+
 1:1 with YuPay `skins/models.py` (item = market hash name + Doppler phase, slug, taxonomy,
 image URL, stored 5-min price, per-item overrides; rules row 1 = the pricing document;
 aliases for search).
 
 ### orders
+
 `id uuid pk, number char(8) unique (§6), user_id, status, skin_item_id, market_hash_name,
 waxpeer_item_id bigint, cost_usd numeric(12,6) (Waxpeer price at checkout), price_usd
 numeric(12,6), price_uzs numeric(14,0), fx_snapshot_id, trade_link text (snapshot),
@@ -161,15 +165,15 @@ refunded_at, refunded_to (balance|null), failure_reason text null, claimed_at, c
 
 Statuses and transitions:
 
-| From | To | Trigger |
-|---|---|---|
-| `pending` | `paid` | balance debit, or acquirer webhook success |
-| `pending` | `cancelled` | `expires_at` passed (scheduler) or user cancel |
-| `paid` | `buying` | worker claim (`FOR UPDATE SKIP LOCKED`) |
-| `buying` | `trade_sent` | Waxpeer `buy-one-p2p` success (→ `skin_trades` row) |
-| `buying` | `failed` | no offer ≤ cost, Waxpeer balance low, hard error → **refund to balance** + ops alert |
-| `trade_sent` | `delivered` | Waxpeer status 4 **with `release_date` set** (buyer accepted) |
-| `trade_sent` | `returned` | Waxpeer status 6 (declined / not accepted / cancelled) → **refund to balance** |
+| From         | To           | Trigger                                                                              |
+| ------------ | ------------ | ------------------------------------------------------------------------------------ |
+| `pending`    | `paid`       | balance debit, or acquirer webhook success                                           |
+| `pending`    | `cancelled`  | `expires_at` passed (scheduler) or user cancel                                       |
+| `paid`       | `buying`     | worker claim (`FOR UPDATE SKIP LOCKED`)                                              |
+| `buying`     | `trade_sent` | Waxpeer `buy-one-p2p` success (→ `skin_trades` row)                                  |
+| `buying`     | `failed`     | no offer ≤ cost, Waxpeer balance low, hard error → **refund to balance** + ops alert |
+| `trade_sent` | `delivered`  | Waxpeer status 4 **with `release_date` set** (buyer accepted)                        |
+| `trade_sent` | `returned`   | Waxpeer status 6 (declined / not accepted / cancelled) → **refund to balance**       |
 
 `failed` and `returned` are terminal; the refund is posted in the **same transaction** that
 sets them, recorded by `refunded_at` / `refunded_to` (there is no separate `refunded` status).
@@ -181,12 +185,14 @@ Waxpeer response is resolved by `check-many-project-id` (project_id = order id),
 buying again.
 
 ### skin_trades
+
 `order_id pk/fk, waxpeer_trade_id, project_id (= order id), status int, escrow_status,
 is_released bool, release_date, send_until, steam_trade_id, seller_name, seller_avatar,
 seller_level, seller_since, reason, penalties jsonb, last_polled_at, attention bool,
 resolved_at, note, created_at, updated_at`.
 
 ### payments
+
 `id, number (for top-ups: `T` + 7 chars; for orders the order number is the acquirer id),
 purpose (order|topup), order_id null, topup_id null, user_id, provider (click|payme|uzum|wallet),
 provider_ref, amount_uzs, status (FSM as YuPay: created → pending → succeeded | failed |
@@ -194,16 +200,20 @@ cancelled | refunded), idempotency_key, created_at, updated_at, succeeded_at`. P
 webhook logs: `click_webhooks`, `payme_transactions`, `uzum_transactions` as in YuPay's twins.
 
 ### wallet_accounts, ledger_entries
+
 As YuPay `wallet`: one account per user (UZS), entries with `kind` ∈ `topup, purchase, refund,
 admin_adjust` (later `sell_payout`), `NORMAL_SIDE` per kind, `post()` keeps debits = credits.
 
 ### wallet_topups
+
 `id, number ('T'+7), user_id, amount_uzs, payment_id, status, created_at, succeeded_at`.
 
 ### fx_snapshots
+
 `id, usd_uzs numeric(12,4), source (cbu), fetched_at`.
 
 ### admin_audit_log
+
 `id, actor_user_id, action, target_type, target_id, payload jsonb, created_at`.
 
 ## 6. Order number
@@ -218,6 +228,7 @@ prefix. Sequential numbers are rejected: a competitor could count our sales.
 ## 7. Flows
 
 ### 7.1 Sign-in (Steam OpenID 2.0)
+
 `GET /auth/steam/start` → Steam → `GET /auth/steam/callback` (verify OpenID, fetch
 `GetPlayerSummaries` with the csmarket Steam Web API key) → upsert user by `steam_id` → cookies
 (access 15 min EdDSA JWT, refresh 30 d rotating). Admin SPA uses the same flow with a
@@ -225,6 +236,7 @@ prefix. Sequential numbers are rejected: a competitor could count our sales.
 `ip_guard`.
 
 ### 7.2 Trade link (account)
+
 User pastes the link once (`PUT /me/trade-link`). Parsed (`partner`, `token`), must belong to
 the signed-in `steam_id`; advisory checks: Waxpeer `POST /v1/check-tradelink` and Steam
 `GetTradeHoldDurations` (a non-zero escrow → verdict `warn` with the reason: no mobile
@@ -233,6 +245,7 @@ Verdict cached 10 min in Redis keyed by a hash of the link; the token is never l
 Without a link the buy button leads to the account page.
 
 ### 7.3 Item page and offers
+
 `GET /skins/{slug}` from Postgres; `GET /skins/{slug}/listings` → Waxpeer search-by-name from
 the handler on a cache miss (90 s fresh / 1 h stale), process-wide budget under Waxpeer's
 20/min, 2-min breaker, **degrades** to the 5-min snapshot with `degraded: true`; own
@@ -240,6 +253,7 @@ the handler on a cache miss (90 s fresh / 1 h stale), process-wide budget under 
 as such in AGENTS.md §10 of this repo.)
 
 ### 7.4 Checkout
+
 `POST /orders` (Idempotency-Key, signed in, trade link present): body `{item_id, offer_id}`.
 Server re-prices: `check-availability` for the live Waxpeer price; ±2 % tolerance to the
 client's quote; if the offer is gone, the cheapest `auto` offer of the same item at ≤ paid
@@ -249,6 +263,7 @@ acquirer minimum is 1 000). Order `pending`, `expires_at = now + 15 min`. **One 
 order.**
 
 ### 7.5 Payment
+
 Balance covers it → ledger `purchase` debit, payment `provider=wallet` succeeded, order `paid`
 — one transaction, then `NOTIFY orders`. Otherwise `POST /orders/{number}/pay {provider}`
 creates the `payments` row and returns the redirect; the acquirer webhook (signature verified
@@ -257,6 +272,7 @@ is pre-selected in the UI when it covers the order (YuPay `prefer-balance` behav
 payment (balance + card) in MVP.
 
 ### 7.6 Worker: buy at Waxpeer
+
 Claim `paid → buying`. `GET /v1/buy-one-p2p` with `item_id`, `price = cost_usd` (Waxpeer refuses
 with `new_price` if it rose — our drift guard), `partner`/`token`, `project_id = order.id`.
 Lost response → `check-many-project-id` first; only a confirmed absence is a retry. Refused on
@@ -265,6 +281,7 @@ price → `failed` at once + ops alert (owner's YuPay choice: refund immediately
 Success → `trade_sent`, `skin_trades` row, WS event, email if the user has one.
 
 ### 7.7 Scheduler: trades
+
 - `trades_reconcile` every 2–3 min over `trade_sent` orders via `check-many-project-id`:
   status 4 + `release_date` set → `delivered` (keep "protected until release_date" on the trade
   row); status 6 → `returned` → refund; `penalties` present → keep the money spent, alert.
@@ -274,12 +291,14 @@ Success → `trade_sent`, `skin_trades` row, WS event, email if the user has one
 - `expire_pending` every minute: `pending` past `expires_at` → `cancelled`.
 
 ### 7.8 Refund to balance
+
 `failed` / `returned` → ledger `refund` credit to the user's wallet, `refunded_to = balance`,
 `refunded_at`, WS event `order.refunded`, email. Money guards ported from YuPay: while a skin is
 in flight (`buying`, `trade_sent`) an acquirer cancel and an admin refund are refused; a retry
 of a refunded order is refused; admin manual refund only from `failed`/`returned`/`attention`.
 
 ### 7.9 Balance top-up
+
 `POST /wallet/topups {amount_uzs, provider}` → `wallet_topups` + `payments(purpose=topup)` →
 redirect → webhook → ledger `topup` credit. Minimum 1 000 soʻm. No withdrawal in MVP.
 
@@ -290,7 +309,7 @@ redirect → webhook → ledger `topup` credit. Minimum 1 000 soʻm. No withdraw
 - `buy-one-p2p` answers at once with `{success, id, price}`; `project_id` round-trips through
   `check-many-project-id`; an unknown `project_id` answers `{"success": true, "trades": []}`.
 - Status axis: `0 processing → 1 creating → 2 seller confirm → 4 sent, buyer can accept → 5
-  completed`, `6 declined/refunded`; `escrow_status`, `is_released`/`release_date` (7-day Steam
+completed`, `6 declined/refunded`; `escrow_status`, `is_released`/`release_date` (7-day Steam
   trade protection after accept), `send_until` (+5 min at 0, +10 at 2, +30 at 4),
   `trade_id` (Steam offer, deep link `https://steamcommunity.com/tradeoffer/{trade_id}/`),
   `seller_*`, `reason`, `penalties` (`rollback_fee` 20 % + `rollback_penalty` 10 % on
@@ -320,6 +339,7 @@ liquid mid items, 4–5 % on expensive, ~3 % expenses + 1–5 % margin on cheap.
 ## 10. Storefront and admin
 
 ### Web (`csmarket.uz`, ru/uz/en)
+
 - `/` — the catalogue: search + category tiles strip, then the grid with URL-state filters
   (category, weapon, wear, rarity, StatTrak/Souvenir, price, team for agents), sort `-price`,
   infinite scroll.
@@ -342,6 +362,7 @@ SEO wording (from YuPay's 2026-09-30 keyword research): Uzbekistan searches in G
 beside; UZ hub title carries «CS2 skins»; EN H1 «CS2 skins». Rarity names stay English.
 
 ### Admin (`admin.csmarket.uz`)
+
 - Dashboard: sales day/week, margin, Waxpeer balance, orders needing attention.
 - Trades: attention queue + «Разобрано», refund / retry, note.
 - Pricing: rules document + preview, per-item override.
@@ -400,14 +421,14 @@ balance, buy via mocked acquirer, refund on `returned`. `check-no-yupay.sh` in C
 
 ## 15. Milestones (each = its own plan, its own deploy)
 
-| # | Scope | Done when |
-|---|---|---|
-| M0 | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, `AGENTS.md` (full YuPay-style), `check-no-yupay.sh` | `csmarket.uz` answers a hello page from CI-built images |
-| M1 | `auth` (Steam), `users`, roles, account page, trade link + advisory checks; admin shell with role gate | a user signs in and saves a trade link; an admin steam_id opens the admin |
-| M2 | `skins`: tables, ByMykel import, price sync, read API, `/`, `/item`, landings, sitemaps, SEO; admin catalogue page | the catalogue is browsable, no buying |
-| M3 | `fx`, `wallet`, `payments` + Click/Payme/Uzum, top-ups; admin users/wallet/payments | a balance is topped up through a real kassa |
-| M4 | `orders`, worker buy, trades reconcile/audit, refunds, order page + WS, emails; admin trades/pricing/dashboard | first real sale end to end |
-| M5 | Launch: VPS, secrets, backups, alerts, runbooks, Waxpeer whitelist, pricing seed, test buys (declined + accepted) | prod, owner sign-off |
+| #   | Scope                                                                                                              | Done when                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, `AGENTS.md` (full YuPay-style), `check-no-yupay.sh`    | `csmarket.uz` answers a hello page from CI-built images                   |
+| M1  | `auth` (Steam), `users`, roles, account page, trade link + advisory checks; admin shell with role gate             | a user signs in and saves a trade link; an admin steam_id opens the admin |
+| M2  | `skins`: tables, ByMykel import, price sync, read API, `/`, `/item`, landings, sitemaps, SEO; admin catalogue page | the catalogue is browsable, no buying                                     |
+| M3  | `fx`, `wallet`, `payments` + Click/Payme/Uzum, top-ups; admin users/wallet/payments                                | a balance is topped up through a real kassa                               |
+| M4  | `orders`, worker buy, trades reconcile/audit, refunds, order page + WS, emails; admin trades/pricing/dashboard     | first real sale end to end                                                |
+| M5  | Launch: VPS, secrets, backups, alerts, runbooks, Waxpeer whitelist, pricing seed, test buys (declined + accepted)  | prod, owner sign-off                                                      |
 
 ## 16. Owner to-dos before M5
 

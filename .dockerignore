@@ -1,0 +1,27 @@
+**/.git
+**/.gitignore
+**/.DS_Store
+**/node_modules
+**/.next
+**/.turbo
+**/dist
+**/build
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/coverage
+**/htmlcov
+**/.coverage
+**/.env
+**/.env.*
+!**/.env.example
+**/Dockerfile
+**/docker-compose*.yml
+# apps/api/pyproject.toml has `readme = "README.md"` — READMEs must stay in the context.
+docs/
+!docs/api/openapi.json
+e2e/
+playwright-report/
+test-results/
