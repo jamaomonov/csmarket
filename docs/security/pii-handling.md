@@ -25,23 +25,17 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 
 ## Where each may appear
 
-| Channel                | Rule                                                                                                                                                                                                                                                  |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Application logs       | **Never.** `core/logging.py` redacts by key (`steam_id`, `email`, `ip`, `trade_link`, `partner`, `token`, `user_id`, …) and by stem (`*email*`, `*steamid*`, `*_ip`, `*_token`). Use `hash_short()` when a log needs to correlate one person's events |
-| Prometheus metrics     | **Never as a label.** Labels are bounded `Literal`s (`core/metrics.py`, rule 1)                                                                                                                                                                       |
-| Sentry                 | `send_default_pii=False` (no bodies, headers, cookies, user) and `include_local_variables=False` (no stack-frame locals) — `core/observability.py`                                                                                                    |
-| Traces, locals in logs | Off: structlog renders tracebacks with `show_locals=False`                                                                                                                                                                                            |
-| URLs and query strings | Never carry a trade link or token — the edge logs full URLs. Advisory lookups that take one are `POST`                                                                                                                                                |
-| Chat, docs, tests      | Never a real trade-link token or a real person's Steam ID; use redrawn / fake values                                                                                                                                                                  |
-| Admin UI               | Shows what an operator needs to resolve an order (M1+); every admin action is audited in `admin_audit_log`                                                                                                                                            |
-| Third parties          | Waxpeer receives the trade link to check it (M1) and its `partner` and `token` to deliver (M4); acquirers receive the order number and amount, not the Steam ID                                                                                       |
-
-## Open gaps
-
-- **Caddy access log.** `infra/caddy/Caddyfile.prod` logs every request as JSON to stdout,
-  which Promtail ships to Loki — including the client address fields. That contradicts the
-  rule above and must be filtered before the first production deploy. Remove this line when
-  it is.
+| Channel                | Rule                                                                                                                                                                                                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Application logs       | **Never.** `core/logging.py` redacts by key (`steam_id`, `email`, `ip`, `trade_link`, `partner`, `token`, `user_id`, …) and by stem (`*email*`, `*steamid*`, `*_ip`, `*_token`). Use `hash_short()` when a log needs to correlate one person's events                                   |
+| Prometheus metrics     | **Never as a label.** Labels are bounded `Literal`s (`core/metrics.py`, rule 1)                                                                                                                                                                                                         |
+| Sentry                 | `send_default_pii=False` (no bodies, headers, cookies, user) and `include_local_variables=False` (no stack-frame locals) — `core/observability.py`                                                                                                                                      |
+| Traces, locals in logs | Off: structlog renders tracebacks with `show_locals=False`                                                                                                                                                                                                                              |
+| URLs and query strings | Never carry a trade link or token. Advisory lookups that take one are `POST`. Our own logs drop query strings (below), but Cloudflare and browsers still see full URLs                                                                                                                  |
+| Edge and access logs   | Caddy's access log and its error log pass a filter (`(pii_filter)` in `infra/caddy/Caddyfile.prod`): it keeps method, host, path, status, size and duration and deletes the client address, every request and response header and the query string. uvicorn runs with `--no-access-log` |
+| Chat, docs, tests      | Never a real trade-link token or a real person's Steam ID; use redrawn / fake values                                                                                                                                                                                                    |
+| Admin UI               | Shows what an operator needs to resolve an order (M1+); every admin action is audited in `admin_audit_log`                                                                                                                                                                              |
+| Third parties          | Waxpeer receives the trade link to check it (M1) and its `partner` and `token` to deliver (M4); acquirers receive the order number and amount, not the Steam ID                                                                                                                         |
 
 ## Retention
 

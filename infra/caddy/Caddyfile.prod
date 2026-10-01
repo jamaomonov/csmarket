@@ -24,8 +24,35 @@
 # Editing this file on prod needs ``up -d --force-recreate caddy``: it is a
 # single-file bind mount and ``git checkout`` swaps the inode under a reload.
 
+# PII — the owner's rule is "never log Steam ID, email, IP, trade-link token", and
+# promtail ships Caddy's stdout to Loki. Caddy's request object carries the
+# visitor's address (remote_ip, client_ip), every header (Cf-Connecting-Ip,
+# X-Forwarded-For, Cookie, User-Agent, Referer) and the full URI, whose query
+# string carries the Steam ID on the OpenID callback from M1. This filter keeps
+# method, host, path, status, size and duration and drops the rest. It is
+# applied to the access log AND to Caddy's default logger: handler errors
+# (``http.log.error.*`` — an upstream refusing a connection, say) go there with
+# the same unfiltered request object.
+(pii_filter) {
+	format filter {
+		wrap json
+		fields {
+			request>remote_ip delete
+			request>remote_port delete
+			request>client_ip delete
+			request>headers delete
+			request>uri regexp \?.*$ ""
+			resp_headers delete
+		}
+	}
+}
+
 {
 	email {$ACME_EMAIL}
+	log default {
+		output stdout
+		import pii_filter
+	}
 	servers {
 		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
 		client_ip_headers Cf-Connecting-Ip
@@ -54,9 +81,10 @@
 
 (access_log) {
 	# Caddy logs no request lines by default; promtail ships stdout to Loki.
+	# Filtered: see (pii_filter) at the top.
 	log {
 		output stdout
-		format json
+		import pii_filter
 	}
 }
 

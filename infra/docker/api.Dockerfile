@@ -37,4 +37,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 RUN groupadd --system app && useradd --system --gid app --no-create-home app
 USER app
 
-CMD ["uvicorn", "csmarket.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --no-access-log: uvicorn's access line carries the client address and the full
+# path + query (the Steam ID on the OpenID callback from M1), and stdout goes to
+# Loki — the owner's rule is never to log either. Caddy keeps a filtered one.
+CMD ["uvicorn", "csmarket.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
