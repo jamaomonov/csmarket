@@ -192,6 +192,25 @@ reason: 4..500}` → card. 409 `balance_too_low` for a clawback beyond the balan
   the stored card and writes nothing; the same key with another body or user is 409
   `idempotency_mismatch`. Audited: `users.ban`, `users.unban`, `wallet.adjust`.
 
+### Admin payments and audit (M3)
+
+Admin only (401 without a token, 403 for a customer); read-only, so no `Idempotency-Key`. Newest
+first, keyset on `(created_at DESC, id DESC)`, `limit` 1..100 (20), a bad cursor is 422
+`cursor`. Details: `apps/api/src/csmarket/modules/admin/README.md`, **Payments and audit**.
+
+- `GET /admin/payments?q=&status=&provider=&purpose=&cursor=&limit=` → `{items: [{id, number,
+purpose, provider, amount_uzs, status, created_at, succeeded_at, user: {id, display_name}}],
+next_cursor}`. `q` = a full or partial number, any case, matched from the start (`T7K`).
+  `status`, `provider`, `purpose` are enums (422 otherwise).
+- `GET /admin/payments/{id}` → `{payment: row + {provider_ref, metadata}, topup: {number,
+amount_uzs, status, expires_at, succeeded_at} | null, kassa: [{provider, external_id, status,
+amount, amount_unit: "soum"|"tiyin", times: {created, performed, cancelled}, extra}]}`. Unknown
+  or malformed id → 404. `extra` is an allow-listed string map; Uzum's payer phone is masked
+  (`+998••••••67`), never whole.
+- `GET /admin/audit?action=&target_type=&target_id=&actor_id=&cursor=&limit=` → `{items: [{id,
+created_at, action, target_type, target_id, actor: {id, display_name}, payload}],
+next_cursor}`. Filters are exact matches; a non-UUID `actor_id` is 422 `actor_id`.
+
 ### Admin catalogue (M2)
 
 All under `/admin/skins`, admin only (401 without a token, 403 for a customer).

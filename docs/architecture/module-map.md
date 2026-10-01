@@ -51,8 +51,9 @@ keys: [`cache-keys.md`](./cache-keys.md). Decision: [ADR-0004](../decisions/0004
   Order-time snapshots are M4.
 - **`admin`** — the role gate plus `admin_audit_log`, written by `admin.api.record()`; no
   audit UI yet. M3 adds the users API (`admin.users_routes`: list, card, ban/unban, audited
-  balance adjustment); `admin` imports `users`, `wallet`, `payments`, `auth`, never the
-  reverse.
+  balance adjustment), the payments API (`admin.payments_routes`: search, detail with the
+  Click / Payme / Uzum transactions) and the audit-log read (`admin.audit_routes`); `admin`
+  imports `users`, `wallet`, `payments`, `click`, `payme`, `uzum`, `auth`, never the reverse.
 
 Flows: [`sequence-diagrams/skins-price-sync.mmd`](./sequence-diagrams/skins-price-sync.mmd),
 [`../product/flows/skins-browse.md`](../product/flows/skins-browse.md). Runbook:

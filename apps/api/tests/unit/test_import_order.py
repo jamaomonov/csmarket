@@ -18,7 +18,14 @@ import pytest
     [
         "csmarket.modules.admin.api",
         "csmarket.modules.admin.audit",
+        "csmarket.modules.admin.audit_routes",
+        "csmarket.modules.admin.audit_schemas",
+        "csmarket.modules.admin.audit_service",
         "csmarket.modules.admin.deps",
+        "csmarket.modules.admin.payments_kassa",
+        "csmarket.modules.admin.payments_routes",
+        "csmarket.modules.admin.payments_schemas",
+        "csmarket.modules.admin.payments_service",
         "csmarket.modules.admin.routes",
         "csmarket.modules.admin.users_routes",
         "csmarket.modules.admin.users_schemas",
@@ -115,3 +122,21 @@ def test_no_domain_module_imports_the_admin_users_routes() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
     )
     assert result.returncode == 0, result.stderr or "a domain module imported admin.users_*"
+
+
+def test_no_domain_module_imports_the_admin_payments_or_audit_readers() -> None:
+    """One direction only: ``admin`` reads ``click``, ``payme``, ``uzum`` and ``payments``."""
+    code = (
+        "import sys, csmarket.modules.click.api, csmarket.modules.click.routes, "
+        "csmarket.modules.payme.api, csmarket.modules.payme.routes, "
+        "csmarket.modules.uzum.api, csmarket.modules.uzum.routes, "
+        "csmarket.modules.payments.api, csmarket.modules.payments.routes, "
+        "csmarket.modules.payments.dev_routes, csmarket.modules.wallet.routes, "
+        "csmarket.modules.users.routes, csmarket.modules.skins.admin_routes; "
+        "sys.exit(any(m.startswith(('csmarket.modules.admin.payments', "
+        "'csmarket.modules.admin.audit_')) for m in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
+    )
+    assert result.returncode == 0, result.stderr or "a domain module imported an admin reader"

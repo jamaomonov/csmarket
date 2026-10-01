@@ -12,10 +12,6 @@ The top-up number is read through a bare ``table()`` clause, not ``payments``' m
 
 from __future__ import annotations
 
-import base64
-import binascii
-import json
-import uuid
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -37,6 +33,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
+from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.errors import ValidationError
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
 
@@ -77,21 +74,6 @@ class EntriesPage:
 
     items: list[Entry]
     next_cursor: str | None
-
-
-def _encode_cursor(created_at: datetime, posting_id: str) -> str:
-    raw = json.dumps([created_at.isoformat(), posting_id], separators=(",", ":")).encode()
-    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
-
-
-def _decode_cursor(token: str) -> tuple[datetime, str]:
-    """Inverse of :func:`_encode_cursor`; anything else is a 422, not a 500."""
-    try:
-        padded = token + "=" * (-len(token) % 4)
-        stamp, posting_id = json.loads(base64.urlsafe_b64decode(padded).decode())
-        return datetime.fromisoformat(stamp), str(uuid.UUID(posting_id))
-    except (binascii.Error, ValueError, UnicodeDecodeError, TypeError) as exc:
-        raise ValidationError("invalid cursor", code="cursor") from exc
 
 
 async def _topup_numbers(db: AsyncSession, topup_ids: set[str]) -> dict[str, str]:
@@ -160,7 +142,7 @@ async def entries_for_user(
     """
     if not 1 <= limit <= MAX_LIMIT:
         raise ValidationError("limit out of range", code="limit")
-    after = _decode_cursor(cursor) if cursor is not None else None
+    after = decode_cursor(cursor) if cursor is not None else None
     account_id = await _user_wallet_id(db, user_id)
     if account_id is None:
         return EntriesPage(items=[], next_cursor=None)
@@ -169,7 +151,7 @@ async def entries_for_user(
     last = page[-1][0] if more else None
     return EntriesPage(
         items=[_entry(p, t, numbers) for p, t in page],
-        next_cursor=_encode_cursor(last.created_at, last.id) if last is not None else None,
+        next_cursor=encode_cursor(last.created_at, last.id) if last is not None else None,
     )
 
 

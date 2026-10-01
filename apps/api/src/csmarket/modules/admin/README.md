@@ -60,7 +60,7 @@ Every admin write records one `admin_audit_log` row (spec §5, ruling Q5), migra
   `skins.alias.delete` (`skin_alias` / alias, `{"alias"}`); M3: `users.ban`, `users.unban`
   (`user` / user id, `{"reason"}`), `wallet.adjust` (`user` / user id,
   `{"amount_uzs", "reason"}` — signed integer soʻm). The reason is the operator's own words.
-- There is no audit UI or read endpoint yet; read it with `make psql`.
+- Read it through `GET /admin/audit` (below), or `make psql`.
 - Tests: `tests/integration/test_admin_audit.py`, `test_skins_admin_catalogue.py`.
 
 ## Users (M3)
@@ -103,6 +103,38 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
 - **Direction:** `admin` imports `users`, `wallet`, `payments` and `auth` (through their
   `api`); none of them imports `admin.users_*` (`tests/unit/test_import_order.py`).
 - Tests: `tests/integration/test_admin_users.py`, `test_wallet_admin_adjust.py`.
+
+## Payments and audit (M3)
+
+Read-only, `require_admin` on each router (401 / 403 as above), newest first with the shared
+`core.cursor` keyset `(created_at DESC, id DESC)`; `limit` 1..100 (20); a bad cursor is 422
+`cursor`.
+
+| Route                                                                       | Answer               |
+| --------------------------------------------------------------------------- | -------------------- |
+| `GET /admin/payments?q=&status=&provider=&purpose=&cursor=&limit=`          | `AdminPaymentsOut`   |
+| `GET /admin/payments/{id}`                                                  | `AdminPaymentDetail` |
+| `GET /admin/audit?action=&target_type=&target_id=&actor_id=&cursor=&limit=` | `AuditOut`           |
+
+- **Files:** `payments_routes.py`, `payments_service.py`, `payments_schemas.py`,
+  `payments_kassa.py` (the three acquirers' rows), `audit_routes.py`, `audit_service.py`,
+  `audit_schemas.py`.
+- **Search:** `q` is upper-cased and matched as a prefix of `payments.number` (`%`, `_`
+  literal), so `T7K` finds every attempt of that top-up. Filters combine with AND. One
+  statement per page: the payer's name is a join.
+- **Detail:** the attempt (`provider_ref`, scalar `metadata`), its top-up and the kassas'
+  transactions for it (`kassa`, oldest first). Amount is soʻm for Click, **tiyin** for Payme
+  and Uzum (`amount_unit`); `times` are UTC, an unset kassa time is `null`. Payme status is
+  `created` / `performed` / `cancelled` / `cancelled_after_perform`.
+- **`extra` is an allow-list** of strings: `account`; Click `service_id`, `click_paydoc_id`;
+  Payme `reason`; Uzum `service_id`, `source` (`paymentSource`, cut at 32 characters) and
+  `phone` masked to `+998••••••XX` (`mask_phone`: only the last two digits show). Nothing
+  else of `payment_source` and no Payme fiscal data is returned.
+- **Audit:** exact-match filters; a non-UUID `actor_id` is 422 `actor_id`. `payload` is the
+  stored object as written by `record` (names of things, no PII).
+- **Direction:** `admin` imports `click`, `payme`, `uzum` and `payments` through their `api`;
+  none imports `admin.payments_*` / `admin.audit_*` (`tests/unit/test_import_order.py`).
+- Tests: `tests/integration/test_admin_payments.py`, `test_admin_audit_routes.py`.
 
 ## Public interface
 

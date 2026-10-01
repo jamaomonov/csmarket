@@ -96,6 +96,274 @@
         "title": "AdminEntryOut",
         "type": "object"
       },
+      "AdminPaymentDetail": {
+        "description": "A payment with its top-up and the kassas' transactions.",
+        "properties": {
+          "kassa": {
+            "items": {
+              "$ref": "#/components/schemas/KassaTxnOut"
+            },
+            "title": "Kassa",
+            "type": "array"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/AdminPaymentFull"
+          },
+          "topup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminTopupInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "payment",
+          "topup",
+          "kassa"
+        ],
+        "title": "AdminPaymentDetail",
+        "type": "object"
+      },
+      "AdminPaymentFull": {
+        "description": "The list row plus our reference at the kassa and the attempt's scalar metadata.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Metadata",
+            "type": "object"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "provider_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Ref"
+          },
+          "purpose": {
+            "enum": [
+              "topup",
+              "order"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "pending",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "refunded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "succeeded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Succeeded At"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminPaymentUser"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "purpose",
+          "provider",
+          "amount_uzs",
+          "status",
+          "created_at",
+          "succeeded_at",
+          "user",
+          "provider_ref",
+          "metadata"
+        ],
+        "title": "AdminPaymentFull",
+        "type": "object"
+      },
+      "AdminPaymentRow": {
+        "description": "One payment attempt in the list.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "purpose": {
+            "enum": [
+              "topup",
+              "order"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "pending",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "refunded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "succeeded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Succeeded At"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminPaymentUser"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "purpose",
+          "provider",
+          "amount_uzs",
+          "status",
+          "created_at",
+          "succeeded_at",
+          "user"
+        ],
+        "title": "AdminPaymentRow",
+        "type": "object"
+      },
+      "AdminPaymentUser": {
+        "description": "Who the payment belongs to.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "AdminPaymentUser",
+        "type": "object"
+      },
+      "AdminPaymentsOut": {
+        "description": "A page of payments, newest first, and the cursor for the next (``null`` on the last).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminPaymentRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminPaymentsOut",
+        "type": "object"
+      },
       "AdminReasonIn": {
         "additionalProperties": false,
         "description": "Ban or unban: why, in a few words.",
@@ -251,6 +519,55 @@
           "items"
         ],
         "title": "AdminSkinItemsOut",
+        "type": "object"
+      },
+      "AdminTopupInfo": {
+        "description": "The top-up the payment pays for.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "succeeded",
+              "expired",
+              "reversed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "succeeded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Succeeded At"
+          }
+        },
+        "required": [
+          "number",
+          "amount_uzs",
+          "status",
+          "expires_at",
+          "succeeded_at"
+        ],
+        "title": "AdminTopupInfo",
         "type": "object"
       },
       "AdminTopupOut": {
@@ -669,6 +986,106 @@
         "title": "AliasesOut",
         "type": "object"
       },
+      "AuditActor": {
+        "description": "The admin who acted.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "AuditActor",
+        "type": "object"
+      },
+      "AuditOut": {
+        "description": "A page of audit rows, newest first, and the cursor for the next (``null`` on the last).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AuditOut",
+        "type": "object"
+      },
+      "AuditRow": {
+        "description": "One ``admin_audit_log`` row.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/AuditActor"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "target_id": {
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "action",
+          "target_type",
+          "target_id",
+          "actor",
+          "payload"
+        ],
+        "title": "AuditRow",
+        "type": "object"
+      },
       "BalanceOut": {
         "description": "The customer's spendable balance.",
         "properties": {
@@ -934,6 +1351,109 @@
           "error"
         ],
         "title": "JobOut",
+        "type": "object"
+      },
+      "KassaTimes": {
+        "description": "When the kassa created, performed and cancelled the transaction (``null`` = not yet).",
+        "properties": {
+          "cancelled": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled"
+          },
+          "created": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created"
+          },
+          "performed": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Performed"
+          }
+        },
+        "required": [
+          "created",
+          "performed",
+          "cancelled"
+        ],
+        "title": "KassaTimes",
+        "type": "object"
+      },
+      "KassaTxnOut": {
+        "description": "One transaction the kassa holds for this payment.",
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "amount_unit": {
+            "enum": [
+              "soum",
+              "tiyin"
+            ],
+            "title": "Amount Unit",
+            "type": "string"
+          },
+          "external_id": {
+            "title": "External Id",
+            "type": "string"
+          },
+          "extra": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Extra",
+            "type": "object"
+          },
+          "provider": {
+            "enum": [
+              "click",
+              "payme",
+              "uzum"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "times": {
+            "$ref": "#/components/schemas/KassaTimes"
+          }
+        },
+        "required": [
+          "provider",
+          "external_id",
+          "status",
+          "amount",
+          "amount_unit",
+          "times",
+          "extra"
+        ],
+        "title": "KassaTxnOut",
         "type": "object"
       },
       "MeOut": {
@@ -2223,6 +2743,152 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/audit": {
+      "get": {
+        "description": "Newest first; each filter is an exact match and they combine with AND.",
+        "operationId": "get_audit_api_v1_admin_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "actor_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Actor Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The audit log",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/me": {
       "get": {
         "description": "200 for an admin, 403 for anyone else signed in, 401 without a token.",
@@ -2268,6 +2934,226 @@
           }
         },
         "summary": "The signed-in admin",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments": {
+      "get": {
+        "description": "Newest first; ``q`` = a full or partial number (any case), matched from the start.",
+        "operationId": "list_payments_api_v1_admin_payments_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "created",
+                    "pending",
+                    "succeeded",
+                    "failed",
+                    "cancelled",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "click",
+                    "payme",
+                    "uzum",
+                    "mock"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider"
+            }
+          },
+          {
+            "in": "query",
+            "name": "purpose",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "topup",
+                    "order"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Purpose"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPaymentsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Find payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/{payment_id}": {
+      "get": {
+        "description": "The attempt, its top-up and every transaction the kassas hold for it.",
+        "operationId": "get_payment_api_v1_admin_payments__payment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "title": "Payment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminPaymentDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A payment",
         "tags": [
           "admin"
         ]

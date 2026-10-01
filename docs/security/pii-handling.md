@@ -7,14 +7,14 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 
 ## Inventory
 
-| Data                     | Stored in                                                  | Arrives in | Notes                                                                                                                                                                                                                 |
-| ------------------------ | ---------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Steam ID (SteamID64)     | `users.steam_id`                                           | M1         | The identity. Public on Steam, still personal here: it links a person to purchases. Never logged (redactor key `steam_id` and stem `*steamid*`)                                                                       |
-| Display name, avatar URL | `users.display_name`, `users.avatar_url`                   | M1         | Copied from Steam at sign-in                                                                                                                                                                                          |
-| Email                    | `users.email` (optional)                                   | M1         | Only for receipts and order emails (M4). Unverified until then (`email_verified_at` is null). Never logged                                                                                                            |
-| Trade link               | `users.trade_link`; a snapshot in `orders.trade_link` (M4) | M1         | Its `token` is a **credential**: anyone holding it can send that account offers. `partner` is the account id. Returned only to its owner (`GET /me`); never logged                                                    |
-| Client IP                | **not stored** in Postgres                                 | M0         | Rate-limit counters only (below)                                                                                                                                                                                      |
-| Payer phone, card type   | `uzum_transactions.payment_source` (jsonb)                 | M3         | What Uzum's `/confirm` sends besides the envelope (`phone`, `cardType`, `paymentSource`, …). Stored for reconciliation; never logged (redactor key `payment_source`, stem `*phone*`); admin shows it masked (Task 10) |
+| Data                     | Stored in                                                  | Arrives in | Notes                                                                                                                                                                                                                                                                                            |
+| ------------------------ | ---------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Steam ID (SteamID64)     | `users.steam_id`                                           | M1         | The identity. Public on Steam, still personal here: it links a person to purchases. Never logged (redactor key `steam_id` and stem `*steamid*`)                                                                                                                                                  |
+| Display name, avatar URL | `users.display_name`, `users.avatar_url`                   | M1         | Copied from Steam at sign-in                                                                                                                                                                                                                                                                     |
+| Email                    | `users.email` (optional)                                   | M1         | Only for receipts and order emails (M4). Unverified until then (`email_verified_at` is null). Never logged                                                                                                                                                                                       |
+| Trade link               | `users.trade_link`; a snapshot in `orders.trade_link` (M4) | M1         | Its `token` is a **credential**: anyone holding it can send that account offers. `partner` is the account id. Returned only to its owner (`GET /me`); never logged                                                                                                                               |
+| Client IP                | **not stored** in Postgres                                 | M0         | Rate-limit counters only (below)                                                                                                                                                                                                                                                                 |
+| Payer phone, card type   | `uzum_transactions.payment_source` (jsonb)                 | M3         | What Uzum's `/confirm` sends besides the envelope (`phone`, `cardType`, `paymentSource`, …). Stored for reconciliation; never logged (redactor key `payment_source`, stem `*phone*`); admin shows only the source label and the phone masked (`+998••••••67`, `admin.payments_kassa.mask_phone`) |
 
 ### Client IP
 
@@ -55,6 +55,11 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   `wallet_transactions.metadata` and reaches admin views only (`entries_for_admin`); the
   customer's `/wallet/entries` never carries `actor` or `metadata`. Nothing here is logged
   with a user id (`wallet.posted` carries kind, transaction id and amount only).
+- **Admin payments API (M3):** the payment page shows the payer's display name and our ids. A
+  kassa's row reaches the operator through an allow-list (`account`, `service_id`,
+  `click_paydoc_id`, Payme `reason`, Uzum `source` and a masked `phone`); `payment_source`
+  is never passed through whole, Payme fiscal receipts are not shown, and the audit-log read
+  returns payloads exactly as `audit.record` stored them (names of things, no PII).
 - **Catalogue and rate (M2) hold no personal data.** The catalogue, price sync and listings
   carry items and prices only; CBU calls carry nothing about a person. Waxpeer's API key rides
   the query string, so a Waxpeer URL and `httpx` exception text are never logged: only the

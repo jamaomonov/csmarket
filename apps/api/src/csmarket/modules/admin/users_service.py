@@ -11,12 +11,8 @@ Audit payloads carry the operator's reason and the amount, never a Steam ID, ema
 
 from __future__ import annotations
 
-import base64
-import binascii
-import json
 import re
 import uuid
-from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -24,7 +20,8 @@ from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
-from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
+from csmarket.core.cursor import decode_cursor, encode_cursor
+from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.idempotency import load_replay, save_replay
 from csmarket.core.money import wire_uzs
 from csmarket.modules.admin.audit import record
@@ -79,21 +76,6 @@ def _like_escape(needle: str) -> str:
     return needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _encode_cursor(created_at: datetime, user_id: str) -> str:
-    raw = json.dumps([created_at.isoformat(), user_id], separators=(",", ":")).encode()
-    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
-
-
-def _decode_cursor(token: str) -> tuple[datetime, str]:
-    """Inverse of :func:`_encode_cursor`; anything else is a 422, not a 500."""
-    try:
-        padded = token + "=" * (-len(token) % 4)
-        stamp, user_id = json.loads(base64.urlsafe_b64decode(padded).decode())
-        return datetime.fromisoformat(stamp), str(uuid.UUID(user_id))
-    except (binascii.Error, ValueError, UnicodeDecodeError, TypeError) as exc:
-        raise ValidationError("invalid cursor", code="cursor") from exc
-
-
 async def list_users(
     db: AsyncSession, *, q: str | None, cursor: str | None, limit: int
 ) -> tuple[list[AdminUserRow], str | None]:
@@ -112,7 +94,7 @@ async def list_users(
             or_(by_name, User.steam_id == needle) if _STEAM_ID.fullmatch(needle) else by_name
         )
     if cursor is not None:
-        stamp, last_id = _decode_cursor(cursor)
+        stamp, last_id = decode_cursor(cursor)
         stmt = stmt.where(
             or_(User.created_at < stamp, and_(User.created_at == stamp, User.id < last_id))
         )
@@ -132,7 +114,7 @@ async def list_users(
         for u, b in page
     ]
     last = page[-1][0] if more else None
-    return items, (_encode_cursor(last.created_at, last.id) if last is not None else None)
+    return items, (encode_cursor(last.created_at, last.id) if last is not None else None)
 
 
 async def _topups(db: AsyncSession, user_id: str) -> list[AdminTopupOut]:
