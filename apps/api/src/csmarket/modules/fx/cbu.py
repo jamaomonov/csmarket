@@ -62,6 +62,7 @@ async def fetch_usd_uzs(
         rate = Decimal(str(row["Rate"])) / Decimal(str(row.get("Nominal") or "1"))
     except (KeyError, InvalidOperation, ZeroDivisionError) as exc:
         raise CbuError("bad rate") from exc
-    if not _PLAUSIBLE[0] <= rate <= _PLAUSIBLE[1]:
+    # ``NaN`` parses as a Decimal and would raise on the comparison below.
+    if not rate.is_finite() or not _PLAUSIBLE[0] <= rate <= _PLAUSIBLE[1]:
         raise CbuError("implausible rate")
     return rate.quantize(Decimal("0.0001"))
