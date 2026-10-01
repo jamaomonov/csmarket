@@ -136,7 +136,12 @@ class Settings(BaseSettings):
     auth_ip_guard_window_seconds: int = Field(default=60)
     auth_ip_guard_subject_max: int = Field(default=10)
     auth_ip_guard_bucket_max: dict[str, int] = Field(
-        default_factory=lambda: {"steam-login": 60, "trade-link-check": 60, "dev-login": 60},
+        default_factory=lambda: {
+            "steam-login": 60,
+            "trade-link-check": 60,
+            "dev-login": 60,
+            "skins-listings": 60,
+        },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "
             "one address, so these are crowd-sized; values <= 0 fall back to auth_ip_guard_max."
@@ -148,6 +153,54 @@ class Settings(BaseSettings):
     def _decode_pem(cls, v: str) -> str:
         """Accept base64-encoded PEM blobs (single-line, .env-friendly)."""
         return _maybe_decode_pem(v)
+
+    # --- skins (M2) ---
+    skins_sync_enabled: bool = Field(
+        default=False,
+        description="Scheduler runs the ByMykel import and the Waxpeer price sync (prod only).",
+    )
+    skins_categories: str = Field(
+        default="rifles,pistols,smgs,heavy,knives,gloves,agents,cases,keys,music-kits,charms",
+        description="Comma-separated allow-list of categories visible in the catalogue.",
+    )
+    skins_image_host: str = Field(
+        default="community.fastly.steamstatic.com",
+        description="Host that Steam image URLs are rewritten to on the way out.",
+    )
+    bymykel_base_url: str = Field(
+        default="https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en",
+        description="Base URL of the ByMykel/CSGO-API English JSON files.",
+    )
+    skins_import_interval_hours: int = Field(
+        default=24, ge=1, description="Hours between catalogue imports."
+    )
+    skins_snapshot_interval_minutes: int = Field(
+        default=5, ge=1, description="Minutes between Waxpeer price snapshots."
+    )
+    skins_listings_budget_per_minute: int = Field(
+        default=18,
+        ge=0,
+        description="Process-wide Waxpeer search-by-name calls per minute (limit is 20).",
+    )
+    skins_listings_timeout_seconds: float = Field(
+        default=4.0, description="Timeout of the live-listings Waxpeer call."
+    )
+    waxpeer_request_timeout_seconds: float = Field(
+        default=20.0, description="Timeout of bulk Waxpeer calls (price sync)."
+    )
+
+    # --- fx (M2) ---
+    fx_cbu_url: str = Field(
+        default="https://cbu.uz/ru/arkhiv-kursov-valyut/json/USD/",
+        description="Central Bank of Uzbekistan USD rate endpoint.",
+    )
+    fx_timeout_seconds: float = Field(default=5.0, description="Timeout of the CBU request.")
+    fx_refresh_interval_minutes: int = Field(
+        default=60, ge=5, description="Minutes between CBU rate refreshes."
+    )
+    fx_max_age_days: int = Field(
+        default=7, ge=1, description="A rate snapshot older than this counts as no rate."
+    )
 
     # --- worker ---
     worker_poll_seconds: int = Field(

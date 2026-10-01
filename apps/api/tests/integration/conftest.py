@@ -134,7 +134,14 @@ async def _reset_realtime_redis() -> AsyncIterator[None]:
 #: Every table a test may write, **children before parents**. `db_engine` empties them
 #: with plain `DELETE` (fast on empty tables); a wrong order raises and falls back to
 #: `TRUNCATE … CASCADE`. A new table goes in front of whatever it references.
-_EMPTY_IN_ORDER: tuple[str, ...] = ("idempotent_responses", "refresh_tokens", "users")
+_EMPTY_IN_ORDER: tuple[str, ...] = (
+    "idempotent_responses",
+    "refresh_tokens",
+    "skin_pricing_rules",
+    "skin_search_aliases",
+    "skin_items",
+    "users",
+)
 
 
 @pytest.fixture

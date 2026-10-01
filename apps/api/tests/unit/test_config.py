@@ -102,3 +102,24 @@ def test_dev_login_is_never_active_in_prod() -> None:
     assert Settings(environment="dev", dev_login_enabled=True).dev_login_active is True
     assert Settings(environment="prod", dev_login_enabled=True).dev_login_active is False
     assert Settings(environment="dev", dev_login_enabled=False).dev_login_active is False
+
+
+def test_skins_and_fx_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "CSMARKET_SKINS_SYNC_ENABLED",
+        "CSMARKET_SKINS_CATEGORIES",
+        "CSMARKET_AUTH_IP_GUARD_BUCKET_MAX",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings(environment="dev")
+    assert s.skins_sync_enabled is False
+    assert s.skins_categories.split(",")[:3] == ["rifles", "pistols", "smgs"]
+    assert s.skins_image_host == "community.fastly.steamstatic.com"
+    assert s.bymykel_base_url.endswith("/ByMykel/CSGO-API/main/public/api/en")
+    assert (s.skins_import_interval_hours, s.skins_snapshot_interval_minutes) == (24, 5)
+    assert (s.skins_listings_budget_per_minute, s.skins_listings_timeout_seconds) == (18, 4.0)
+    assert s.waxpeer_request_timeout_seconds == 20.0
+    assert s.fx_cbu_url == "https://cbu.uz/ru/arkhiv-kursov-valyut/json/USD/"
+    assert s.fx_timeout_seconds == 5.0
+    assert (s.fx_refresh_interval_minutes, s.fx_max_age_days) == (60, 7)
+    assert s.auth_ip_guard_bucket_max["skins-listings"] == 60
