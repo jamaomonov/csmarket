@@ -20,10 +20,10 @@ Same Steam sign-in as the storefront with a `return_to` on this host; `/admin/*`
 ```bash
 make dev                # full stack
 # then open
-open http://localhost:3002
+open http://localhost:3102
 ```
 
-Vite dev server proxies `/api/*` to the backend on `:8000` (`VITE_DEV_API_TARGET` overrides).
+Vite dev server proxies `/api/*` to the backend on `:8100` (`VITE_DEV_API_TARGET` overrides).
 
 ## Routes
 

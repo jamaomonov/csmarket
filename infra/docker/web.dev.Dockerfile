@@ -29,7 +29,7 @@ COPY packages/config-tsconfig/package.json packages/config-tsconfig/package.json
 COPY packages/config-tailwind/package.json packages/config-tailwind/package.json
 
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile=false
+    pnpm install --frozen-lockfile
 
 # 2) Copy sources. compose overlays bind-mounts on top of these at runtime; the
 #    initial COPY exists so the image is usable without a mount too.

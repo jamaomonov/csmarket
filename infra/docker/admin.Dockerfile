@@ -15,7 +15,7 @@ COPY packages/config-eslint/package.json packages/config-eslint/package.json
 COPY packages/config-tsconfig/package.json packages/config-tsconfig/package.json
 COPY packages/config-tailwind/package.json packages/config-tailwind/package.json
 RUN --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm install --frozen-lockfile=false
+    pnpm install --frozen-lockfile
 
 FROM base AS builder
 # Vite reads VITE_* env at build time and inlines them into the bundle. Pass them as

@@ -9,10 +9,10 @@ import { defineConfig } from "vite";
 // VITE_DEV_API_TARGET if you proxy to a different backend.
 const apiTarget =
   process.env.VITE_DEV_API_TARGET ??
-  (process.env.DOCKER_CONTAINER ? "http://api:8000" : "http://localhost:8000");
+  (process.env.DOCKER_CONTAINER ? "http://api:8000" : "http://localhost:8100");
 
 // Public host the browser uses to reach this dev server — required for HMR
-// over a reverse proxy on HTTPS. Leave unset for plain ``localhost:3002``.
+// over a reverse proxy on HTTPS. Leave unset for plain ``localhost:3102``.
 const hmrHost = process.env.VITE_HMR_HOST?.trim() || null;
 const hmrProtocol = process.env.VITE_HMR_PROTOCOL?.trim() || "wss";
 const hmrClientPort = Number(process.env.VITE_HMR_CLIENT_PORT ?? 443);
