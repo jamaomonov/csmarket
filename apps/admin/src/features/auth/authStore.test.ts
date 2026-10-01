@@ -31,7 +31,7 @@ describe("authStore", () => {
     vi.spyOn(session, "getAccessToken").mockReturnValue("tok");
     const get = vi.spyOn(session, "apiGet");
     get.mockRejectedValueOnce(
-      new ApiError(403, "Forbidden", { type: "https://csmarket.uz/problems/account-suspended" }),
+      new ApiError(403, "Forbidden", { type: "https://csmarket.uz/errors/account-suspended" }),
     );
     await useAuthStore.getState().bootstrap();
     expect(useAuthStore.getState().status).toBe("suspended");
