@@ -32,6 +32,11 @@ export interface Topup {
   expires_at: string;
   /** Where to pay; `null` once the top-up cannot be paid (or for the dev `mock` kassa). */
   intent_url: string | null;
+  /**
+   * `pending` and a kassa holds an attempt: it may still settle after `expires_at`, so a
+   * pending top-up without `intent_url` is being checked, not expired.
+   */
+  awaiting_kassa: boolean;
 }
 
 export type EntryKind = "topup" | "topup_reversal" | "admin_adjust";

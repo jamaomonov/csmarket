@@ -83,6 +83,8 @@
     },
     "topup": {
       "waiting": "Toʻlov kutilmoqda",
+      "checking": "Toʻlov tekshirilmoqda",
+      "checkingNote": "Toʻlagan boʻlsangiz, balans oʻzi toʻldiriladi. Yangi toʻldirish shart emas.",
       "pay": "Toʻlovga oʻtish",
       "payTest": "Toʻlash (test)",
       "refresh": "Yangilash",

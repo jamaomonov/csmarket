@@ -30,6 +30,7 @@ const TOPUP: Topup = {
   status: "pending",
   expires_at: "2026-10-01T12:30:00Z",
   intent_url: "https://kassa.example/pay",
+  awaiting_kassa: false,
 };
 
 function setup(providers: Provider[] | undefined = [{ slug: "click" }, { slug: "mock" }]) {

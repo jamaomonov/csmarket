@@ -26,13 +26,21 @@ const MAX_POLLS = 40;
  */
 const AUTO_OPEN_BUDGET_MS = 8_000;
 
-/** What the customer sees; a pending top-up with nothing to pay reads as expired. */
-type View = "pending" | "succeeded" | "expired" | "reversed";
+/**
+ * What the customer sees. A pending top-up with nothing to pay is being checked while a
+ * kassa holds it (it may still settle), else it reads as expired.
+ */
+type View = "pending" | "checking" | "succeeded" | "expired" | "reversed";
 
 function viewOf(topup: Topup): View {
-  if (topup.status === "pending" && topup.intent_url === null) return "expired";
+  if (topup.status === "pending" && topup.intent_url === null) {
+    return topup.awaiting_kassa ? "checking" : "expired";
+  }
   return topup.status;
 }
+
+/** Views that can still change: the page keeps polling. */
+const isOpen = (view: View): boolean => view === "pending" || view === "checking";
 
 /** The kassa page to send the customer to, or `null` (nothing payable, or the dev kassa). */
 function kassaUrl(topup: Topup): string | null {
@@ -70,7 +78,7 @@ export function TopupStatus({ locale, number }: TopupStatusProps) {
     refetchOnWindowFocus: true,
     refetchInterval: (query) => {
       const data = query.state.data;
-      if (data && viewOf(data) !== "pending") return false;
+      if (data && !isOpen(viewOf(data))) return false;
       if (!data && isNotFound(query.state.error)) return false;
       return polls.count > MAX_POLLS ? false : POLL_MS;
     },
@@ -131,9 +139,24 @@ export function TopupStatus({ locale, number }: TopupStatusProps) {
       return <Outcome view="expired" title={t("topup.expired")} />;
     case "reversed":
       return <Outcome view="reversed" title={t("topup.reversed")} />;
+    case "checking":
+      return (
+        <Waiting
+          view="checking"
+          amount={amount}
+          kassa={null}
+          stopped={polls.count > MAX_POLLS}
+          onRefresh={() => {
+            setPolls({ stamp, count: 0 });
+            void topup.refetch();
+          }}
+          devPay={null}
+        />
+      );
     case "pending":
       return (
         <Waiting
+          view="pending"
           amount={amount}
           kassa={kassaUrl(data)}
           stopped={polls.count > MAX_POLLS}
@@ -206,7 +229,7 @@ function FetchFailed({ onRetry }: FetchFailedProps) {
 }
 
 interface OutcomeProps {
-  view: Exclude<View, "pending"> | "notFound";
+  view: Exclude<View, "pending" | "checking"> | "notFound";
   title: string;
 }
 
@@ -224,6 +247,8 @@ function Outcome({ view, title }: OutcomeProps) {
 }
 
 interface WaitingProps {
+  /** `checking`: a kassa holds the top-up past its time; nothing to pay, keep waiting. */
+  view: "pending" | "checking";
   amount: string;
   /** The kassa's page; `null` for the dev kassa. */
   kassa: string | null;
@@ -233,14 +258,15 @@ interface WaitingProps {
   devPay: { busy: boolean; failed: boolean; run: () => void } | null;
 }
 
-function Waiting({ amount, kassa, stopped, onRefresh, devPay: test }: WaitingProps) {
+function Waiting({ view, amount, kassa, stopped, onRefresh, devPay: test }: WaitingProps) {
   const t = useTranslations("web.balance.topup");
   const common = useTranslations("common");
   return (
-    <Panel view="pending">
+    <Panel view={view}>
       <div>
-        <h1 className="text-2xl font-bold">{t("waiting")}</h1>
+        <h1 className="text-2xl font-bold">{t(view === "checking" ? "checking" : "waiting")}</h1>
         <p className="mt-2 text-3xl font-bold tabular-nums">{amount}</p>
+        {view === "checking" ? <p className="text-fg-muted mt-2">{t("checkingNote")}</p> : null}
       </div>
       {test ? (
         <Button size="lg" disabled={test.busy} onClick={test.run}>

@@ -24,6 +24,9 @@ it arrives with orders (M4). Design: ADR-0006; operations: `docs/runbooks/kassa-
 Other endings on the top-up page:
 
 - **Not paid in 30 minutes:** «Время на оплату вышло. Создайте новое пополнение.»
+- **Past 30 minutes, but the kassa is still processing it** (`awaiting_kassa`): «Проверяем
+  оплату» with «Если вы оплатили, баланс пополнится сам. Новое пополнение не нужно.»; the page
+  keeps checking and turns into «Баланс пополнен на …» when the kassa confirms.
 - **Refunded by the kassa:** «Пополнение отменено.», and the history shows «Пополнение
   отменено» with a minus.
 - **Someone else's or unknown number:** «Пополнение не найдено.» (the API answers 404, never
@@ -80,7 +83,10 @@ sequenceDiagram
 
     loop every 3 s while pending (refetch on focus)
         Web->>API: GET /wallet/topups/T…
-        API-->>Web: status
+        API-->>Web: status, intent_url, awaiting_kassa
+        opt pending, no intent_url, awaiting_kassa (a kassa holds it past expires_at)
+            Web-->>U: «Проверяем оплату» (keeps checking)
+        end
     end
     Web-->>U: «Баланс пополнен на …» → «К балансу»
 

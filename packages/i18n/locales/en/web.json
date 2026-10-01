@@ -83,6 +83,8 @@
     },
     "topup": {
       "waiting": "Waiting for payment",
+      "checking": "Checking your payment",
+      "checkingNote": "If you paid, your balance will be topped up on its own. No need to start a new top-up.",
       "pay": "Go to payment",
       "payTest": "Pay (test)",
       "refresh": "Refresh",

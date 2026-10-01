@@ -41,6 +41,7 @@ function topup(overrides: Partial<Topup> = {}): Topup {
     status: "pending",
     expires_at: "2026-10-01T12:30:00Z",
     intent_url: KASSA,
+    awaiting_kassa: false,
     ...overrides,
   };
 }
@@ -205,6 +206,32 @@ describe("TopupStatus", () => {
     expect(screen.queryByRole("link", { name: "Перейти к оплате" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Оплатить (тест)" })).toBeNull();
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("a top-up a kassa still holds past its time is being checked, not expired", async () => {
+    vi.useFakeTimers();
+    at("?go=1");
+    const held = topup({ intent_url: null, awaiting_kassa: true });
+    api.getTopup
+      .mockResolvedValueOnce(held)
+      .mockResolvedValueOnce(held)
+      .mockResolvedValue(topup({ status: "succeeded", intent_url: null }));
+    view();
+    await tick();
+    expect(screen.getByRole("heading", { name: "Проверяем оплату" })).toBeInTheDocument();
+    expect(
+      screen.getByText("Если вы оплатили, баланс пополнится сам. Новое пополнение не нужно."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("topup-status")).toHaveAttribute("data-state", "checking");
+    expect(screen.queryByRole("link", { name: "Перейти к оплате" })).toBeNull();
+    expect(screen.queryByText(/Время на оплату вышло/)).toBeNull();
+    expect(assign).not.toHaveBeenCalled();
+    await tick(3_000);
+    expect(api.getTopup).toHaveBeenCalledTimes(2);
+    await tick(3_000);
+    expect(screen.getByRole("heading", { name: /^Баланс пополнен на/ })).toBeInTheDocument();
+    await tick(30_000);
+    expect(api.getTopup).toHaveBeenCalledTimes(3);
   });
 
   it("a reversed top-up says it was cancelled", async () => {
