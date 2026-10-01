@@ -49,9 +49,12 @@ export function getSkinFacets(category?: string): Promise<SkinFacets | null> {
   return apiGetOrNull<SkinFacets>(`/skins/facets${qs}`);
 }
 
-/** One item with its family and cheapest stored offers. `null` only when the API says 404. */
+/**
+ * One item with its family and cheapest stored offers. `null` only when the API says 404.
+ * Not data-cached: an item page is cheap, and hiding an item (admin) must 404 it at once.
+ */
 export function getSkinDetail(slug: string): Promise<SkinDetail | null> {
-  return apiGetOrNull<SkinDetail>(`/skins/${encodeURIComponent(slug)}`);
+  return apiGetOrNull<SkinDetail>(`/skins/${encodeURIComponent(slug)}`, { noStore: true });
 }
 
 /** A page of item slugs for the sitemap. */

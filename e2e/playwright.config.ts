@@ -5,6 +5,7 @@ const ADMIN = process.env["ADMIN_BASE_URL"] ?? "http://localhost:3102";
 
 export default defineConfig({
   testDir: "./tests",
+  globalSetup: "./global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env["CI"],
   retries: process.env["CI"] ? 2 : 0,
@@ -21,7 +22,7 @@ export default defineConfig({
   projects: [
     {
       name: "web-chromium",
-      testMatch: /(home|auth)\.spec\.ts/,
+      testMatch: /(^|\/)(home|auth|catalogue)\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], baseURL: WEB },
     },
     {
@@ -31,7 +32,7 @@ export default defineConfig({
     },
     {
       name: "admin-chromium",
-      testMatch: /admin\.spec\.ts/,
+      testMatch: /(^|\/)admin(-catalogue)?\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], baseURL: ADMIN },
     },
   ],

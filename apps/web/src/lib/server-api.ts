@@ -28,13 +28,17 @@ export interface ApiGetOptions {
   revalidate?: number;
   /** Cache tags for on-demand invalidation (default `["skins"]`). */
   tags?: string[];
+  /** Skip the data cache: the answer is as fresh as the API (an admin hide shows at once). */
+  noStore?: boolean;
 }
 
 /** GET `/api/v1${path}` and parse the JSON. Throws {@link ApiError} on a non-2xx answer. */
 export async function apiGet<T>(path: string, opts: ApiGetOptions = {}): Promise<T> {
   const res = await fetch(`${ORIGIN}/api/v1${path}`, {
     headers: { Accept: "application/json" },
-    next: { revalidate: opts.revalidate ?? 60, tags: opts.tags ?? ["skins"] },
+    ...(opts.noStore
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: opts.revalidate ?? 60, tags: opts.tags ?? ["skins"] } }),
   });
   if (!res.ok) throw new ApiError(res.status, path);
   return (await res.json()) as T; // the caller names the DTO it asked for

@@ -8,5 +8,5 @@
     // resolves to an error type and every access through it goes unchecked.
     "lib": ["ES2022", "DOM", "DOM.Iterable"]
   },
-  "include": ["tests/**/*", "playwright.config.ts"]
+  "include": ["tests/**/*", "playwright.config.ts", "global-setup.ts"]
 }
