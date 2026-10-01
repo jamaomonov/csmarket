@@ -27,5 +27,41 @@
       "retry": "Try again"
     },
     "suspended": "This account is suspended."
+  },
+  "account": {
+    "title": "Account",
+    "signedOut": "Sign in with Steam to open your account.",
+    "signOut": "Sign out",
+    "tradeLink": {
+      "title": "Trade link",
+      "hint": "The seller sends your skin here. Save it once.",
+      "whereToFind": "Where do I find it?",
+      "steps": "In Steam open Inventory → Trade Offers → \"Who can send me Trade Offers?\". Copy the link from the \"Trade URL\" field.",
+      "openSteam": "Open the page in Steam",
+      "save": "Save",
+      "saving": "Saving…",
+      "check": "Check again",
+      "checking": "Checking the link…",
+      "status": {
+        "ok": "The link works — your skin arrives right away.",
+        "hold": "Steam will hold the trade: Steam Guard Mobile Authenticator is off on this account. Turn it on in the Steam app and the skin arrives right away.",
+        "invalid": "The link doesn't work. Copy it again from Steam.",
+        "private": "Your inventory is private. Make it public in Steam privacy settings.",
+        "trade_ban": "This account has a Steam trade restriction. A skin can't be sent to it.",
+        "unavailable": "We couldn't check it right now. The link is saved — we'll check before you buy."
+      },
+      "errors": {
+        "trade_link_invalid": "That isn't a Steam trade link. It starts with https://steamcommunity.com/tradeoffer/new/",
+        "trade_link_not_yours": "That link belongs to another Steam account. Use the one you signed in with.",
+        "generic": "Couldn't save it. Please try again."
+      }
+    },
+    "email": {
+      "title": "Email",
+      "hint": "For receipts and order updates. Optional.",
+      "save": "Save",
+      "saved": "Saved.",
+      "invalid": "Please check the address."
+    }
   }
 }

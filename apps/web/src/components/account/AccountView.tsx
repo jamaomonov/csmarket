@@ -1,0 +1,76 @@
+"use client";
+
+import { Button } from "@csmarket/ui";
+import { useTranslations } from "next-intl";
+
+import { EmailForm } from "./EmailForm";
+import { TradeLinkForm } from "./TradeLinkForm";
+
+import { useAuth } from "@/lib/auth";
+
+interface AccountViewProps {
+  locale: string;
+}
+
+export function AccountView({ locale }: AccountViewProps) {
+  const t = useTranslations("web.account");
+  const auth = useTranslations("web.auth");
+  const nav = useTranslations("web.nav");
+  const { status, user, signInHref, signOut, refreshMe } = useAuth();
+
+  if (status === "loading") {
+    return <div aria-busy className="bg-surface h-40 animate-pulse rounded-lg" />;
+  }
+  if (status === "suspended") {
+    return <p className="text-danger">{auth("suspended")}</p>;
+  }
+  if (status !== "signed_in" || !user) {
+    return (
+      <div className="flex flex-col items-start gap-4">
+        <p className="text-fg-muted">{t("signedOut")}</p>
+        <a
+          href={signInHref(locale)}
+          className="bg-accent text-accent-fg rounded-md px-5 py-3 font-semibold"
+        >
+          {nav("signIn")}
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center gap-4">
+        {user.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element -- Steam CDN avatar, 56px; next/image would need a remote-pattern allow-list for no gain
+          <img src={user.avatar_url} alt="" width={56} height={56} className="rounded-full" />
+        ) : null}
+        <p className="text-xl font-bold">{user.display_name ?? "Steam"}</p>
+      </div>
+      <TradeLinkForm
+        initial={{
+          trade_link: user.trade_link,
+          verdict: user.trade_link_verdict,
+          reason: user.trade_link_reason,
+        }}
+        onChange={() => {
+          void refreshMe();
+        }}
+      />
+      <EmailForm
+        email={user.email}
+        onChange={() => {
+          void refreshMe();
+        }}
+      />
+      <Button
+        variant="ghost"
+        onClick={() => {
+          void signOut();
+        }}
+        className="self-start"
+      >
+        {t("signOut")}
+      </Button>
+    </div>
+  );
+}

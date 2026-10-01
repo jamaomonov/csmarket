@@ -27,5 +27,41 @@
       "retry": "Qayta urinish"
     },
     "suspended": "Hisob bloklangan."
+  },
+  "account": {
+    "title": "Hisob",
+    "signedOut": "Hisobni ochish uchun Steam orqali kiring.",
+    "signOut": "Chiqish",
+    "tradeLink": {
+      "title": "Almashuv havolasi",
+      "hint": "Sotuvchi skinni shu havolaga yuboradi. Havolani bir marta saqlash kifoya.",
+      "whereToFind": "Qayerdan olaman?",
+      "steps": "Steamʼda Inventar → Almashuv takliflari → «Menga kim almashuv taklifini yubora oladi?» boʻlimini oching. «Almashuv havolasi» maydonidagi havolani nusxalang.",
+      "openSteam": "Steamʼda sahifani ochish",
+      "save": "Saqlash",
+      "saving": "Saqlanmoqda…",
+      "check": "Yana tekshirish",
+      "checking": "Havola tekshirilmoqda…",
+      "status": {
+        "ok": "Havola ishlaydi — skin darhol keladi.",
+        "hold": "Steam almashuvni kechiktiradi: hisobda Steam Guard mobil autentifikatori yoqilmagan. Uni Steam ilovasida yoqing — skin darhol keladi.",
+        "invalid": "Havola ishlamaydi. Uni Steamʼdan qaytadan nusxalang.",
+        "private": "Inventar yashirilgan. Uni Steam maxfiylik sozlamalarida oching.",
+        "trade_ban": "Hisobda Steam almashuv cheklovi bor. Skin unga kelmaydi.",
+        "unavailable": "Hozir tekshirib boʻlmadi. Havola saqlandi — xariddan oldin tekshiramiz."
+      },
+      "errors": {
+        "trade_link_invalid": "Bu Steam almashuv havolasi emas. U https://steamcommunity.com/tradeoffer/new/ bilan boshlanadi",
+        "trade_link_not_yours": "Bu boshqa Steam hisobining havolasi. Siz kirgan hisobning havolasi kerak.",
+        "generic": "Saqlab boʻlmadi. Qayta urinib koʻring."
+      }
+    },
+    "email": {
+      "title": "Email",
+      "hint": "Cheklar va buyurtma xabarlari uchun. Ixtiyoriy.",
+      "save": "Saqlash",
+      "saved": "Saqlandi.",
+      "invalid": "Manzilni tekshiring."
+    }
   }
 }
