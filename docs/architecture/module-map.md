@@ -18,13 +18,13 @@ allow-list — ADR-0002). Tables and columns are spec §5; scope per module is s
 | `click`         | `click_transactions`                                             | M3 (built)                                                         | `modules/click/` — Click Shop API (prepare / complete, MD5 sign), 30-min timeout sweep; money through `payments` hooks                                                                                                                                            |
 | `payme`         | `payme_transactions`                                             | M3 (built)                                                         | `modules/payme/` — Payme Merchant API (JSON-RPC, seven methods), 12-h timeout sweep; money through `payments` hooks                                                                                                                                               |
 | `uzum`          | `uzum_transactions`                                              | M3 (built)                                                         | `modules/uzum/` — Uzum Merchant API (check / create / confirm / reverse / status), its state machine, 30-min timeout sweep; money through `payments` hooks                                                                                                        |
-| `orders`        | `orders` (the queue), `skin_trades`                              | M4                                                                 | **new, thin** — one skin, one offer; statuses, money, trade                                                                                                                                                                                                       |
+| `orders`        | `orders` (the queue), `skin_trades`                              | M4a (built: tables, FSM)                                           | **new, thin** — one skin, one offer; statuses (`orders.fsm`), money, the Waxpeer purchase and trade (`skin_trades`, YuPay's load-bearing columns, R2)                                                                                                             |
 | `realtime`      | —                                                                | M4                                                                 | `modules/realtime/` — WebSocket order status                                                                                                                                                                                                                      |
 | `notifications` | —                                                                | M4                                                                 | `modules/notifications/` — email only (receipt, trade sent, refunded)                                                                                                                                                                                             |
 | `sell`          | —                                                                | after MVP                                                          | not ported — skinslink sell side; the MVP only reserves the slot and the `sell_payout` ledger kind                                                                                                                                                                |
 
-`skin_trades` is keyed by `order_id`; whether `orders` or `skins` owns the model is settled by
-the M4 plan.
+`skin_trades` is keyed by `order_id` and owned by `orders` (M4a plan); `payments.order_id`
+points at `orders` (migration `0013_orders_skin_trades`).
 
 Not ported from YuPay, by design: `catalog`, `gifts`, `blog`, `merchants`, `integrations`,
 `sourcing`, `inventory`, `promo`, `promotions`, `affiliate`, `reviews`, `broadcasts`, `stats`,
@@ -84,6 +84,16 @@ Flow: [`sequence-diagrams/topup.mmd`](./sequence-diagrams/topup.mmd),
 [`payme`](../runbooks/payme.md), [`uzum`](../runbooks/uzum.md),
 [`wallet`](../runbooks/wallet.md). Metric: [`metrics.md`](./metrics.md). Decision:
 [ADR-0006](../decisions/0006-wallet-payments-topups.md).
+
+## Built in M4a
+
+- **`orders`** — `orders` (the customer's purchase and the worker's queue) and `skin_trades`
+  (the Waxpeer purchase and Steam trade behind one order); the order FSM in `orders.fsm` is
+  the only place an order's status changes. `orders` may import `payments`, `wallet`,
+  `skins`, `users` and `fx`; `payments` reaches `orders` only through `orders.api` (its
+  models module imports `orders.models` once, to register the `payments.order_id` target);
+  `wallet` imports neither. The ledger gains the `purchase` and `refund` kinds. Checkout,
+  payment, buying, trades and refunds land in the following M4a tasks.
 
 ## Processes outside the API
 

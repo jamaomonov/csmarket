@@ -56,7 +56,9 @@
             "enum": [
               "topup",
               "topup_reversal",
-              "admin_adjust"
+              "admin_adjust",
+              "purchase",
+              "refund"
             ],
             "title": "Kind",
             "type": "string"
@@ -1229,7 +1231,9 @@
             "enum": [
               "topup",
               "topup_reversal",
-              "admin_adjust"
+              "admin_adjust",
+              "purchase",
+              "refund"
             ],
             "title": "Kind",
             "type": "string"

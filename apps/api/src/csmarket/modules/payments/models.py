@@ -32,6 +32,11 @@ from sqlalchemy.orm import Mapped, mapped_column
 from csmarket.core.db import Base
 from csmarket.core.ids import new_id
 
+# Registers ``orders``, the target of ``payments.order_id``: a flush resolves every foreign
+# key, so a process that writes payments must know the table. ``orders.models`` imports
+# nothing from ``payments``; everything else of orders is reached through ``orders.api``.
+from csmarket.modules.orders import models as _orders_models  # noqa: F401
+
 PURPOSES = ("topup", "order")
 PAYMENT_STATUSES = ("created", "pending", "succeeded", "failed", "cancelled", "refunded")
 TOPUP_STATUSES = ("pending", "succeeded", "expired", "reversed")
@@ -90,23 +95,26 @@ class WalletTopup(Base):
 
 
 class Payment(Base):
-    """One attempt to pay a payable (a top-up now, an order from M4) through one kassa."""
+    """One attempt to pay a payable (a top-up or an order) through one kassa or the balance."""
 
     __tablename__ = "payments"
 
     id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=new_id)
-    #: The payable's public number (a top-up's ``T…``, an order's from M4).
+    #: The payable's public number (a top-up's ``T…``, an order's).
     number: Mapped[str] = mapped_column(String(8), nullable=False)
     purpose: Mapped[str] = mapped_column(String(8), nullable=False)
-    #: The paid order (M4 adds the foreign key with the ``orders`` table).
-    order_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), nullable=True)
+    #: The paid order (``purpose = 'order'``).
+    order_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("orders.id", ondelete="RESTRICT"), nullable=True
+    )
     topup_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("wallet_topups.id", ondelete="RESTRICT"), nullable=True
     )
     user_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("users.id"), nullable=False
     )
-    #: Gateway slug: ``click``, ``payme``, ``uzum`` or ``mock``.
+    #: Gateway slug: ``click``, ``payme``, ``uzum`` or ``mock``; ``wallet`` for an order paid
+    #: from the balance (ruling R8 — written directly, never a registered gateway).
     provider: Mapped[str] = mapped_column(String(16), nullable=False)
     #: Our reference at the kassa (``<provider>:<number>``, suffixed on a retry).
     provider_ref: Mapped[str | None] = mapped_column(String(160), nullable=True)
@@ -133,6 +141,7 @@ class Payment(Base):
         CheckConstraint(f"status IN {_in(PAYMENT_STATUSES)}", name="status"),
         CheckConstraint("amount_uzs > 0", name="amount_positive"),
         CheckConstraint("(purpose = 'topup') = (topup_id IS NOT NULL)", name="purpose_topup"),
+        CheckConstraint("(purpose = 'order') = (order_id IS NOT NULL)", name="purpose_order"),
         Index(
             "uq_payments_provider_ref",
             "provider",

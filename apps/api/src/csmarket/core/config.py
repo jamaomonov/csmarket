@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -261,6 +262,40 @@ class Settings(BaseSettings):
         if isinstance(v, str) and v.strip() == "":
             return None
         return v
+
+    # --- orders (M4a) ---
+    skins_buy_enabled: bool = Field(
+        default=False,
+        description="Buying is on: the item page shows the buy panel and POST /orders works.",
+    )
+    order_expiry_minutes: int = Field(
+        default=15, ge=1, description="An unpaid order is cancelled after this many minutes."
+    )
+    order_price_tolerance: Decimal = Field(
+        default=Decimal("0.02"),
+        ge=0,
+        description="Checkout refuses an offer whose price moved more than this share.",
+    )
+    order_substitute_ceiling: Decimal = Field(
+        default=Decimal("0.03"),
+        ge=0,
+        description="A gone offer is replaced only by one within the paid price plus this share.",
+    )
+    order_unconfirmed_minutes: int = Field(
+        default=10,
+        ge=1,
+        description="A lost buy answer still unseen after this long needs an admin.",
+    )
+    trades_reconcile_seconds: int = Field(
+        default=10, ge=1, description="Seconds between Waxpeer trade-status sweeps."
+    )
+    waxpeer_buy_timeout_seconds: float = Field(
+        default=20.0, description="Timeout of the Waxpeer buy call."
+    )
+    waxpeer_fake: bool = Field(
+        default=False,
+        description="Dev and e2e: an in-process fake Waxpeer (trades in Redis). Never in prod.",
+    )
 
     # --- worker ---
     worker_poll_seconds: int = Field(

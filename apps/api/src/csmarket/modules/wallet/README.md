@@ -59,15 +59,15 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
 
 ## Transaction kinds and keys
 
-| Kind             | Legs                                                                  | Idempotency key                  |
-| ---------------- | --------------------------------------------------------------------- | -------------------------------- |
-| `topup`          | D `user_wallet` / C `provider_clearing`                               | `topup:{topup_id}`               |
-| `topup_reversal` | D `provider_clearing` / C `user_wallet`                               | `topup_reversal:{topup_id}`      |
-| `admin_adjust`   | credit: D `user_wallet` / C `house_adjustments`; clawback: the mirror | `admin_adjust:{idempotency_key}` |
-| `purchase` (M4)  | D `house_payments_received` / C `user_wallet`                         | `purchase:{order_id}`            |
-| `refund` (M4)    | D `user_wallet` / C `house_payments_received`                         | `refund:{order_id}`              |
+| Kind             | Legs                                                                                                                        | Idempotency key                  |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `topup`          | D `user_wallet` / C `provider_clearing`                                                                                     | `topup:{topup_id}`               |
+| `topup_reversal` | D `provider_clearing` / C `user_wallet`                                                                                     | `topup_reversal:{topup_id}`      |
+| `admin_adjust`   | credit: D `user_wallet` / C `house_adjustments`; clawback: the mirror                                                       | `admin_adjust:{idempotency_key}` |
+| `purchase`       | D `house_payments_received` / C `user_wallet` (an order paid from the balance)                                              | `purchase:order:{order_id}`      |
+| `refund`         | balance-paid order: D `user_wallet` / C `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing` (R9) | `refund:order:{order_id}`        |
 
-M4 adds `purchase` and `refund` to `TX_KINDS`.
+`purchase` and `refund` are in `TX_KINDS` since M4a; `orders` books them (one each per order).
 
 `credit_topup(db, *, user_id, topup_id, amount, provider)` and `reverse_topup(...)` (same
 arguments) book the first two rows; `payments.hooks` calls them. `reverse_topup` answers a

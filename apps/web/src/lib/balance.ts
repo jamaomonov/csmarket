@@ -39,7 +39,7 @@ export interface Topup {
   awaiting_kassa: boolean;
 }
 
-export type EntryKind = "topup" | "topup_reversal" | "admin_adjust";
+export type EntryKind = "topup" | "topup_reversal" | "admin_adjust" | "purchase" | "refund";
 
 /** `EntryOut`: one line of the balance history. */
 export interface Entry {

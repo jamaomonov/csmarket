@@ -89,8 +89,7 @@ class AdminEntryOut(BaseModel):
     """One balance-history line with who booked it and why."""
 
     id: str
-    #: M4 adds ``purchase`` and ``refund``.
-    kind: Literal["topup", "topup_reversal", "admin_adjust"]
+    kind: Literal["topup", "topup_reversal", "admin_adjust", "purchase", "refund"]
     #: Signed whole soʻm: ``+50000`` credited, ``-10000`` debited.
     amount_uzs: str
     created_at: datetime

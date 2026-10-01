@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+from decimal import Decimal
 
 import pytest
 from cryptography.hazmat.primitives import serialization
@@ -158,3 +159,28 @@ def test_numeric_int_ids_are_parsed(monkeypatch: pytest.MonkeyPatch) -> None:
     s = Settings(_env_file=None)  # type: ignore[call-arg]
     assert s.click_service_id == 12345
     assert s.uzum_service_id == 67
+
+
+def test_orders_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in ("CSMARKET_SKINS_BUY_ENABLED", "CSMARKET_WAXPEER_FAKE"):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert s.skins_buy_enabled is False
+    assert s.order_expiry_minutes == 15
+    assert s.order_price_tolerance == Decimal("0.02")
+    assert s.order_substitute_ceiling == Decimal("0.03")
+    assert isinstance(s.order_price_tolerance, Decimal)
+    assert s.order_unconfirmed_minutes == 10
+    assert s.trades_reconcile_seconds == 10
+    assert s.waxpeer_buy_timeout_seconds == 20.0
+    assert s.waxpeer_fake is False
+
+
+def test_orders_settings_are_read_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CSMARKET_SKINS_BUY_ENABLED", "true")
+    monkeypatch.setenv("CSMARKET_ORDER_PRICE_TOLERANCE", "0.05")
+    monkeypatch.setenv("CSMARKET_WAXPEER_FAKE", "true")
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    assert s.skins_buy_enabled is True
+    assert s.order_price_tolerance == Decimal("0.05")
+    assert s.waxpeer_fake is True

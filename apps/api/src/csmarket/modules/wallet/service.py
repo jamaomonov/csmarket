@@ -42,8 +42,8 @@ NORMAL_SIDE: dict[str, Direction] = {
     "house_adjustments": "D",
 }
 
-#: Transaction kinds (spec §5). M4 adds ``purchase`` and ``refund``.
-TX_KINDS: tuple[str, ...] = ("topup", "topup_reversal", "admin_adjust")
+#: Transaction kinds (spec §5): ``purchase`` and ``refund`` book an order (M4a).
+TX_KINDS: tuple[str, ...] = ("topup", "topup_reversal", "admin_adjust", "purchase", "refund")
 
 #: ``numeric(14,0)`` holds at most 14 digits.
 _MAX_AMOUNT = Decimal(10) ** 14

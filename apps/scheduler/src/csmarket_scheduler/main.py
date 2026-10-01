@@ -11,11 +11,13 @@ from csmarket.core.logging import configure_logging, get_logger
 from csmarket.core.observability import init_sentry
 
 # Imported for their side effect: ``RefreshToken`` relates to ``User``, ``payments``' rows
-# reference ``users`` and the wallet's, and ``click``'s, ``payme``'s and ``uzum``'s reference
-# ``payments``, so every mapper must be registered before any job opens a session (AGENTS.md §4).
+# reference ``users``, ``orders`` and the wallet's, ``orders`` reference ``skin_items`` and
+# ``fx_snapshots``, and ``click``'s, ``payme``'s and ``uzum``'s reference ``payments``, so
+# every mapper must be registered before any job opens a session (AGENTS.md §4).
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
+from csmarket.modules.orders import models as _orders_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401

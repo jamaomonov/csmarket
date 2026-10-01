@@ -79,7 +79,9 @@
     "kind": {
       "topup": "Пополнение",
       "topup_reversal": "Пополнение отменено",
-      "admin_adjust": "Корректировка"
+      "admin_adjust": "Корректировка",
+      "purchase": "Покупка",
+      "refund": "Возврат на баланс"
     },
     "topup": {
       "waiting": "Ждём оплату",

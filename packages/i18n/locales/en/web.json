@@ -79,7 +79,9 @@
     "kind": {
       "topup": "Top-up",
       "topup_reversal": "Top-up cancelled",
-      "admin_adjust": "Adjustment"
+      "admin_adjust": "Adjustment",
+      "purchase": "Purchase",
+      "refund": "Refund to balance"
     },
     "topup": {
       "waiting": "Waiting for payment",

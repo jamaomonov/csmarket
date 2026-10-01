@@ -15,9 +15,11 @@ the admin search's prefix `LIKE` uses it under any collation).
   that succeeded; `ON DELETE SET NULL`), `succeeded_at`. A top-up is a _payable_, so it
   lives here; the ledger stays in `wallet`.
 - `payments` — one attempt to pay a payable through one kassa: `number`, `purpose`
-  `topup` | `order` (`topup_id` set iff `topup`; `order_id` gets its key in M4), `user_id`,
-  `provider`, `provider_ref` (unique per provider when set), `amount_uzs`, `status`,
-  `idempotency_key` (unique when set), `metadata` (kassa event ids, never PII),
+  `topup` | `order` (`topup_id` set iff `topup`, `order_id → orders` set iff `order` —
+  migration `0013_orders_skin_trades`), `user_id`, `provider` (a kassa slug, or `wallet` for
+  an order paid from the balance — never a registered gateway), `provider_ref` (unique per
+  provider when set), `amount_uzs`, `status`, `idempotency_key` (unique when set),
+  `metadata` (kassa event ids, never PII),
   `created_at`, `updated_at`, `succeeded_at`. A top-up has 1..N attempts, at most one live
   (`created`/`pending`) per provider.
 

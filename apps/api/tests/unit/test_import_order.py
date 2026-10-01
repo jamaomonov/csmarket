@@ -39,6 +39,10 @@ import pytest
         "csmarket.modules.click.routes",
         "csmarket.modules.click.service",
         "csmarket.modules.click.signature",
+        "csmarket.modules.orders",
+        "csmarket.modules.orders.api",
+        "csmarket.modules.orders.fsm",
+        "csmarket.modules.orders.models",
         "csmarket.modules.payme.api",
         "csmarket.modules.payme.errors",
         "csmarket.modules.payme.models",
@@ -140,3 +144,17 @@ def test_no_domain_module_imports_the_admin_payments_or_audit_readers() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
     )
     assert result.returncode == 0, result.stderr or "a domain module imported an admin reader"
+
+
+def test_the_api_registers_every_foreign_key_target() -> None:
+    """A flush sorts the mapped tables, which resolves every foreign key: a key to a table
+    whose model the API process never imported fails each write with
+    ``NoReferencedTableError`` (``payments.order_id`` → ``orders`` before orders had routes)."""
+    code = (
+        "import csmarket.api.v1.router; import csmarket.modules.payments.models as p; "
+        "from sqlalchemy import inspect; inspect(p.Payment)._sorted_tables"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
+    )
+    assert result.returncode == 0, result.stderr

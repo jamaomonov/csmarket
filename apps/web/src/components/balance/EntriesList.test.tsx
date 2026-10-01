@@ -68,6 +68,19 @@ describe("EntriesList", () => {
     expect(mocks.getEntries).toHaveBeenCalledWith(undefined);
   });
 
+  it("labels order purchases and refunds", async () => {
+    mocks.getEntries.mockResolvedValue({
+      items: [
+        entry({ id: "p", kind: "purchase", amount_uzs: "-171800", reference_number: null }),
+        entry({ id: "r", kind: "refund", amount_uzs: "+171800", reference_number: null }),
+      ],
+      next_cursor: null,
+    });
+    setup();
+    expect(await screen.findByText("Покупка")).toBeInTheDocument();
+    expect(screen.getByText("Возврат на баланс")).toBeInTheDocument();
+  });
+
   it("«Показать ещё» fetches the next page with the cursor", async () => {
     mocks.getEntries
       .mockResolvedValueOnce({ items: [entry({ id: "a" })], next_cursor: "CUR1" })

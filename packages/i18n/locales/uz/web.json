@@ -79,7 +79,9 @@
     "kind": {
       "topup": "Toʻldirish",
       "topup_reversal": "Toʻldirish bekor qilindi",
-      "admin_adjust": "Tuzatish"
+      "admin_adjust": "Tuzatish",
+      "purchase": "Xarid",
+      "refund": "Balansga qaytarish"
     },
     "topup": {
       "waiting": "Toʻlov kutilmoqda",

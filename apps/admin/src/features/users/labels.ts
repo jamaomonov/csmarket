@@ -38,6 +38,8 @@ const KINDS: Record<string, string> = {
   topup: "Пополнение",
   topup_reversal: "Отмена пополнения",
   admin_adjust: "Изменение администратором",
+  purchase: "Покупка",
+  refund: "Возврат на баланс",
 };
 
 export function kindLabel(kind: string): string {

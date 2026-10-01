@@ -34,7 +34,8 @@ from csmarket.modules.wallet.models import WalletTransaction
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from tests.integration.payments_factory import make_topup, make_user
+from tests.integration.orders_factory import make_order
+from tests.integration.payments_factory import make_topup
 
 
 async def _attempt(
@@ -283,11 +284,12 @@ async def test_order_payables_are_not_implemented(db_session: AsyncSession) -> N
         await ensure_attempt(
             db_session, payable=await resolve(db_session, "7K3M9QX2"), provider="payme"
         )
-    user = await make_user(db_session)
+    order_row = await make_order(db_session)
     order = Payment(
-        number="7K3M9QX2",
+        number=order_row.number,
         purpose="order",
-        user_id=user.id,
+        order_id=order_row.id,
+        user_id=order_row.user_id,
         provider="payme",
         amount_uzs=Decimal(1000),
         status="pending",

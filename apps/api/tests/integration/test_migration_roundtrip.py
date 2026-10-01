@@ -74,3 +74,52 @@ def test_0011_refresh_revoked_reason_downgrades_and_upgrades(
         monkeypatch.setenv("CSMARKET_DATABASE_URL", admin)
         app_config.get_settings.cache_clear()
         asyncio.run(_admin(admin, f"DROP DATABASE IF EXISTS {_SCRATCH} WITH (FORCE)"))
+
+
+async def _orders_schema(url: str) -> tuple[list[str], list[str]]:
+    """The order tables present, and the ``payments`` constraints that tie payments to them."""
+    engine = create_async_engine(url)
+    async with engine.connect() as conn:
+        tables = await conn.execute(
+            text(
+                "SELECT table_name FROM information_schema.tables"
+                " WHERE table_name IN ('orders', 'skin_trades') ORDER BY table_name"
+            )
+        )
+        constraints = await conn.execute(
+            text(
+                "SELECT conname FROM pg_constraint WHERE conname IN"
+                " ('ck_payments_purpose_order', 'fk_payments_order_id_orders') ORDER BY conname"
+            )
+        )
+        found = ([r[0] for r in tables], [r[0] for r in constraints])
+    await engine.dispose()
+    return found
+
+
+def test_0013_orders_skin_trades_downgrades_and_upgrades(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    shared = make_url(os.environ["CSMARKET_DATABASE_URL"])
+    scratch = shared.set(database=_SCRATCH).render_as_string(hide_password=False)
+    admin = shared.render_as_string(hide_password=False)
+    present = (
+        ["orders", "skin_trades"],
+        ["ck_payments_purpose_order", "fk_payments_order_id_orders"],
+    )
+    asyncio.run(_admin(admin, f"DROP DATABASE IF EXISTS {_SCRATCH}"))
+    asyncio.run(_admin(admin, f"CREATE DATABASE {_SCRATCH}"))
+    monkeypatch.setenv("CSMARKET_DATABASE_URL", scratch)
+    app_config.get_settings.cache_clear()
+    try:
+        cfg = _alembic(scratch)
+        command.upgrade(cfg, "head")
+        assert asyncio.run(_orders_schema(scratch)) == present
+        command.downgrade(cfg, "0012_payments_number_pattern_ops")
+        assert asyncio.run(_orders_schema(scratch)) == ([], [])
+        command.upgrade(cfg, "head")
+        assert asyncio.run(_orders_schema(scratch)) == present
+    finally:
+        monkeypatch.setenv("CSMARKET_DATABASE_URL", admin)
+        app_config.get_settings.cache_clear()
+        asyncio.run(_admin(admin, f"DROP DATABASE IF EXISTS {_SCRATCH} WITH (FORCE)"))
