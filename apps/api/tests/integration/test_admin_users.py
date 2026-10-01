@@ -215,7 +215,9 @@ async def test_list_query_count_is_constant(
         assert r.status_code == 200
         return len(statements)
 
-    assert await _count(5) == await _count(25)
+    five = await _count(5)
+    assert five > 0
+    assert five == await _count(25)
 
 
 # --- card -------------------------------------------------------------------------------
@@ -305,8 +307,9 @@ async def test_ban_suspends_the_account_revokes_its_sessions_and_is_audited(
     assert me.status_code == 403
     assert me.json()["type"].endswith("/account-suspended")
     refresh = await integration_client.post("/api/v1/auth/refresh")
-    # Its refresh row was revoked by the ban: the refresh dies (and signs the app out).
-    assert refresh.status_code == 401, refresh.text
+    # Its refresh row was revoked by the ban: the refresh says why, not "reuse".
+    assert refresh.status_code == 403, refresh.text
+    assert refresh.json()["type"].endswith("/account-suspended")
 
     (row,) = await _audit(db_session, "users.ban")
     admin = await _by_steam(db_session, ADMIN_STEAM_ID)
@@ -539,3 +542,17 @@ async def test_adjust_refuses_a_bad_body(
     assert r.status_code == 422, r.text
     count = await db_session.scalar(select(func.count()).select_from(AdminAuditLog))
     assert count == 0
+
+
+async def test_openapi_marks_the_idempotency_key_required_on_every_write(
+    integration_client: AsyncClient,
+) -> None:
+    spec = (await integration_client.get("/openapi.json")).json()
+    for path in (
+        "/api/v1/admin/users/{user_id}/ban",
+        "/api/v1/admin/users/{user_id}/unban",
+        "/api/v1/admin/users/{user_id}/wallet/adjust",
+    ):
+        params = spec["paths"][path]["post"]["parameters"]
+        (header,) = [p for p in params if p["name"] == "Idempotency-Key"]
+        assert (header["in"], header["required"]) == ("header", True), path

@@ -247,3 +247,16 @@ async def test_a_banned_account_with_revoked_sessions_hears_suspended_not_revoke
     await db_session.commit()
     with pytest.raises(AccountSuspendedError):
         await resolve_current_user(db_session, tokens.access_token)
+
+
+async def test_a_banned_users_revoked_refresh_is_suspended_not_reuse(
+    db_session: AsyncSession,
+) -> None:
+    user = await _user(db_session)
+    tokens = await open_session(db_session, user=user)
+    await db_session.commit()
+    await revoke_all_sessions(db_session, user.id)
+    user.banned_at = now()
+    await db_session.commit()
+    with pytest.raises(AccountSuspendedError):
+        await refresh_session(db_session, tokens.refresh_token)

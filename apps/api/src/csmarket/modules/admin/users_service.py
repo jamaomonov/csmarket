@@ -4,7 +4,7 @@ Every write is audited in ``admin_audit_log`` in the same transaction as the cha
 route then stores the replay and commits (the ``skins.admin_routes`` order). Writes lock the
 target's ``users`` row first, so two requests on one account — a replayed key included —
 run one after the other: the second sees the first's replay row, never a half-done state.
-Lock order: ``users`` row, then (adjust) the user's wallet account.
+Lock order: ``users`` row (``FOR NO KEY UPDATE``), then (adjust) the user's wallet account.
 
 Audit payloads carry the operator's reason and the amount, never a Steam ID, email or IP.
 """
@@ -66,7 +66,9 @@ async def get_user(db: AsyncSession, user_id: str, *, lock: bool = False) -> Use
         raise NotFoundError("user not found") from exc
     stmt = select(User).where(User.id == user_id)
     if lock:
-        stmt = stmt.with_for_update().execution_options(populate_existing=True)
+        # FOR NO KEY UPDATE: a refresh rotating mid-ban inserts a ``refresh_tokens`` row whose
+        # FK takes KEY SHARE on this user; FOR UPDATE would block it (and can deadlock).
+        stmt = stmt.with_for_update(key_share=True).execution_options(populate_existing=True)
     user = (await db.execute(stmt)).scalar_one_or_none()
     if user is None:
         raise NotFoundError("user not found")

@@ -190,3 +190,24 @@ async def test_entries_refuse_a_limit_out_of_range(db_session: AsyncSession, lim
         await entries_for_admin(db_session, user.id, limit=limit)
     with pytest.raises(ValidationError):
         await entries_for_user(db_session, user.id, limit=limit)
+
+
+async def test_a_key_won_by_another_users_adjustment_in_a_race_is_409(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The pre-check missed (a concurrent request held the key): post() returns the winner."""
+    from csmarket.modules.wallet import adjust as adjust_mod
+
+    winner = await make_user(db_session)
+    loser = await make_user(db_session)
+    await _adjust(db_session, winner.id, 7000, "adjust-key-race-00001")
+    await db_session.commit()
+
+    async def _missed(_db: AsyncSession, _key: str) -> None:
+        return None
+
+    monkeypatch.setattr(adjust_mod, "_transaction_by_key", _missed)
+    with pytest.raises(ConflictError) as caught:
+        await _adjust(db_session, loser.id, 7000, "adjust-key-race-00001")
+    assert caught.value.extra["code"] == "idempotency_mismatch"
+    assert await user_balance(db_session, loser.id) == Decimal(0)

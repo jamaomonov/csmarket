@@ -34,10 +34,12 @@ Admin = Annotated[User, Depends(require_admin)]
 _MAX_KEY_LENGTH = 160
 
 
-def _required_key(
-    value: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
-) -> str:
-    """The ``Idempotency-Key`` every admin write must carry: 16 to 160 characters."""
+def _required_key(value: Annotated[str, Header(alias=IDEMPOTENCY_HEADER)]) -> str:
+    """The ``Idempotency-Key`` every admin write must carry: 16 to 160 characters.
+
+    Declared required, so the schema says so and a missing header is FastAPI's 422; one
+    present but too short or too long is our 422 ``validation`` naming the header.
+    """
     key = normalize_idempotency_key(value)
     if key is None or len(key) > _MAX_KEY_LENGTH:
         raise ValidationError(

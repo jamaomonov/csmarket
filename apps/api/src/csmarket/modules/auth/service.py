@@ -227,7 +227,8 @@ async def refresh_session(
 
     Raises:
         UnauthorizedError: Unknown, reused or expired token, or the user is gone.
-        AccountSuspendedError: The account is banned.
+        AccountSuspendedError: The account is banned (also when its token was revoked by
+            the ban).
     """
     s = settings or get_settings()
     # FOR UPDATE closes the rotation TOCTOU: without the row lock two requests with the
@@ -247,6 +248,10 @@ async def refresh_session(
         await db.commit()
         for sid in revoked:
             await _blocklist_session_id(sid, settings=s)
+        # An admin ban revokes every session; tell the app why rather than "reuse".
+        owner = await get_user_by_id(db, row.user_id)
+        if owner is not None and owner.banned_at is not None:
+            raise AccountSuspendedError("this account has been suspended")
         raise UnauthorizedError("refresh token reuse detected")
 
     if row.expires_at <= now():

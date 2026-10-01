@@ -57,6 +57,17 @@ async def _signed_user_leg(db: AsyncSession, txn: WalletTransaction, account_id:
     return Decimal(total or 0)
 
 
+async def _same_adjustment(
+    db: AsyncSession, txn: WalletTransaction, wallet_id: str, amount: Decimal
+) -> WalletTransaction:
+    """``txn`` when it is this adjustment (kind, this wallet, this signed amount); else 409."""
+    if txn.kind != "admin_adjust" or await _signed_user_leg(db, txn, wallet_id) != amount:
+        raise ConflictError(
+            "this Idempotency-Key was used for another adjustment", code="idempotency_mismatch"
+        )
+    return txn
+
+
 async def admin_adjust(
     db: AsyncSession,
     *,
@@ -77,8 +88,8 @@ async def admin_adjust(
     Raises:
         ValidationError: ``code="adjust_amount"`` (zero, fractional, non-finite or beyond
             ``ADMIN_ADJUST_MAX``) or ``code="adjust_reason"`` (blank).
-        ConflictError: ``code="idempotency_mismatch"`` — the key already booked another
-            user's or another amount's adjustment.
+        ConflictError: ``code="idempotency_mismatch"`` — the key already booked (or a
+            concurrent request just booked) another user's or another amount's adjustment.
         InsufficientBalanceError: ``code="balance_too_low"`` — the clawback exceeds the
             balance.
     """
@@ -87,15 +98,7 @@ async def admin_adjust(
     wallet = await user_account(db, user_id, lock=True)
     existing = await _transaction_by_key(db, key)
     if existing is not None:
-        same = existing.kind == "admin_adjust" and (
-            await _signed_user_leg(db, existing, wallet.id) == amount
-        )
-        if not same:
-            raise ConflictError(
-                "this Idempotency-Key was used for another adjustment",
-                code="idempotency_mismatch",
-            )
-        return existing
+        return await _same_adjustment(db, existing, wallet.id, amount)
     house = await ensure_account(db, owner_type="house", owner_id="house", kind="house_adjustments")
     size = abs(amount)
     if amount < 0 and await balance(db, wallet.id) < size:
@@ -107,7 +110,7 @@ async def admin_adjust(
         if amount > 0
         else [Leg(house.id, "D", size), Leg(wallet.id, "C", size)]
     )
-    return await post(
+    txn = await post(
         db,
         kind="admin_adjust",
         legs=legs,
@@ -115,6 +118,8 @@ async def admin_adjust(
         actor=f"admin:{admin_id}",
         metadata={"reason": reason.strip()},
     )
+    # ``post`` returns a concurrent winner of the same key — possibly another user's.
+    return await _same_adjustment(db, txn, wallet.id, amount)
 
 
 __all__ = ["ADMIN_ADJUST_MAX", "admin_adjust"]

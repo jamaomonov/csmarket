@@ -9,7 +9,7 @@ allow-list (ADR-0002): UZS only, no currency column, whole soʻm.
 - `wallet_accounts` — one per `(owner_type, owner_id, kind)`; `owner_type` is `user`,
   `house` or `provider`; `status` `active` | `frozen` (a frozen account takes no postings).
 - `wallet_transactions` — one business event; `idempotency_key` is unique; `reference_*`
-  says what it is about; `actor` who did it; `metadata` jsonb (never PII).
+  says what it is about; `actor` who did it; `metadata` jsonb (scalars such as the provider or an admin's reason — operator text; no personal data by convention).
 - `wallet_postings` — the legs: `direction` `D` | `C`, `amount numeric(14,0) > 0`.
   Append-only; deleted only by `CASCADE` from their transaction.
 
