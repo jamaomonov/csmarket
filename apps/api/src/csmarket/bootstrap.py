@@ -101,10 +101,21 @@ def _build_limiter(settings: Settings) -> Limiter:
 def _exempt_self_authenticating_routes(limiter: Limiter) -> None:
     """Take machine-to-machine surfaces out of the coarse limiter.
 
-    Nothing to exempt in M0. M3 lists the Click / Payme / Uzum webhook handlers
-    here: they authenticate their own caller, and a 429 to an acquirer costs
-    money and buys nothing.
+    The acquirer callbacks authenticate their own caller, and a 429 to an acquirer costs
+    money and buys nothing: it reads as a transport failure, retries, and the top-up sits
+    unpaid. One audited list, not decorators spread over modules; ``exempt()`` keys off the
+    handler's ``module.name``, which is what the middleware resolves per request.
     """
+    from csmarket.modules.click.routes import click_complete, click_prepare
+
+    for endpoint in (
+        # Click Shop API: MD5 ``sign_string`` over the raw form fields, per service secret.
+        click_prepare,
+        click_complete,
+    ):
+        # slowapi ships no types for this decorator; the side effect on the exempt set is
+        # the point, the returned wrapper is discarded.
+        limiter.exempt(endpoint)  # type: ignore[no-untyped-call]
 
 
 @asynccontextmanager

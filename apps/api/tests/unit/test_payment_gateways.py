@@ -25,15 +25,26 @@ def prod(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 def test_mock_is_offered_outside_prod() -> None:
-    assert available_providers() == ["mock"]
+    # Kassas join the list only with their credentials (none in the test env); mock is last.
+    assert available_providers()[-1] == "mock"
     assert isinstance(get_gateway("mock"), MockGateway)
 
 
 @pytest.mark.usefixtures("prod")
 def test_mock_is_never_offered_in_prod() -> None:
-    assert available_providers() == []
+    assert "mock" not in available_providers()
     with pytest.raises(NotFoundError):
         get_gateway("mock")
+
+
+@pytest.mark.usefixtures("prod")
+def test_prod_offers_exactly_the_configured_kassas(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert available_providers() == []
+    monkeypatch.setenv("CSMARKET_CLICK_MERCHANT_ID", "5000")
+    monkeypatch.setenv("CSMARKET_CLICK_SERVICE_ID", "108149")
+    monkeypatch.setenv("CSMARKET_CLICK_SECRET_KEY", "fake-click-secret")
+    get_settings.cache_clear()
+    assert available_providers() == ["click"]
 
 
 def test_an_unknown_provider_is_not_found() -> None:

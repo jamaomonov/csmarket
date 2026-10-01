@@ -19,9 +19,10 @@ _ORDER = ("click", "payme", "uzum", "mock")
 @cache
 def registry() -> dict[str, PaymentGateway]:
     """Every gateway this build knows, by provider slug (available or not)."""
+    from csmarket.modules.payments.gateways.click import ClickGateway
     from csmarket.modules.payments.gateways.mock import MockGateway
 
-    gateways: list[PaymentGateway] = [MockGateway()]
+    gateways: list[PaymentGateway] = [ClickGateway(), MockGateway()]
     return {gateway.provider: gateway for gateway in gateways}
 
 

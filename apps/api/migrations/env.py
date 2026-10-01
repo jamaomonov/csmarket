@@ -20,6 +20,7 @@ from csmarket.core.db import metadata
 from csmarket.core import idempotency as _idempotency_models  # noqa: F401
 from csmarket.modules.admin import models as _admin_models  # noqa: F401
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
+from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401

@@ -124,6 +124,20 @@ amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount
 
 Money is a string of whole soʻm digits (`balance_uzs`, `amount_uzs`).
 
+### Kassa callbacks: Click (M3)
+
+Called by Click, not by our clients; anonymous, exempt from the per-IP limiter.
+
+- `POST /payments/click/prepare` and `POST /payments/click/complete` — Click's Shop API.
+  Body `application/x-www-form-urlencoded` (anything else is `-8`); authenticated by the MD5
+  `sign_string` over the raw fields and our service's `SECRET_KEY`, checked before anything
+  else. **Always HTTP 200** with `{error, error_note, …}`: `0` success, `-1` signature, `-2`
+  amount (soʻm), `-3` action, `-4` already paid, `-5` unknown number, `-6` unknown
+  transaction, `-7` internal, `-8` malformed or not POST, `-9` cancelled or not payable.
+- No `Idempotency-Key`: prepare is idempotent on Click's `(click_trans_id, service_id)`,
+  complete on our `merchant_prepare_id` (a replay is `-4`). `merchant_trans_id` is the
+  top-up number. Details: `apps/api/src/csmarket/modules/click/README.md`.
+
 ### Admin catalogue (M2)
 
 All under `/admin/skins`, admin only (401 without a token, 403 for a customer).

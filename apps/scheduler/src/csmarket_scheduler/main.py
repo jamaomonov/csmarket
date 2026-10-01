@@ -10,10 +10,11 @@ from csmarket.core.config import get_settings
 from csmarket.core.logging import configure_logging, get_logger
 from csmarket.core.observability import init_sentry
 
-# Imported for their side effect: ``RefreshToken`` relates to ``User``, and ``payments``'
-# rows reference ``users`` and the wallet's, so every mapper must be registered before any
-# job opens a session (AGENTS.md §4).
+# Imported for their side effect: ``RefreshToken`` relates to ``User``, ``payments``' rows
+# reference ``users`` and the wallet's, and ``click``'s reference ``payments``, so every
+# mapper must be registered before any job opens a session (AGENTS.md §4).
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
+from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
@@ -21,6 +22,7 @@ from csmarket.modules.users import models as _users_models  # noqa: F401
 from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 
 from csmarket_scheduler.jobs import (
+    click_timeout,
     fx_refresh,
     purge_refresh_tokens,
     skins_catalog_import,
@@ -44,6 +46,7 @@ def build_scheduler() -> AsyncIOScheduler:
     skins_catalog_import.register(scheduler)
     skins_price_sync.register(scheduler)
     topup_expiry.register(scheduler)
+    click_timeout.register(scheduler)
     return scheduler
 
 

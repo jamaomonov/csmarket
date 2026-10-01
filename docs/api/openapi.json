@@ -2707,6 +2707,72 @@
         ]
       }
     },
+    "/api/v1/payments/click/complete": {
+      "post": {
+        "description": "Click's ``/complete`` (``action=1``): Click debited the customer; credit the top-up.\n\nAuthenticated by the MD5 ``sign_string``; always HTTP 200. Idempotent on our\n``merchant_prepare_id`` (a replay is ``-4``), so no ``Idempotency-Key``.",
+        "operationId": "click_complete_api_v1_payments_click_complete_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "title": "Response Click Complete Api V1 Payments Click Complete Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Click Shop API: complete",
+        "tags": [
+          "click"
+        ]
+      }
+    },
+    "/api/v1/payments/click/prepare": {
+      "post": {
+        "description": "Click's ``/prepare`` (``action=0``): check the top-up, allocate a transaction.\n\nAuthenticated by the MD5 ``sign_string``; always HTTP 200 (see the module docstring).\nIdempotent on Click's ``(click_trans_id, service_id)``, so no ``Idempotency-Key``.",
+        "operationId": "click_prepare_api_v1_payments_click_prepare_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  "title": "Response Click Prepare Api V1 Payments Click Prepare Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Click Shop API: prepare",
+        "tags": [
+          "click"
+        ]
+      }
+    },
     "/api/v1/payments/providers": {
       "get": {
         "description": "Anonymous: the storefront shows these tiles on the balance page.",

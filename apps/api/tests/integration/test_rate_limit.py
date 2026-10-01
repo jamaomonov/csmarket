@@ -67,6 +67,15 @@ async def test_health_probes_are_exempt(limited_client: AsyncClient) -> None:
         assert (await limited_client.get("/readyz")).status_code == 200
 
 
+async def test_the_click_callbacks_are_exempt(limited_client: AsyncClient) -> None:
+    # A 429 to an acquirer reads as a transport failure; the signature is the gate.
+    for _ in range(10):
+        for path in ("/api/v1/payments/click/prepare", "/api/v1/payments/click/complete"):
+            r = await limited_client.post(path, data={"click_trans_id": "1"})
+            assert r.status_code == 200
+            assert r.json()["error"] == -8
+
+
 async def test_rate_limit_off_by_default_in_tests(integration_client: AsyncClient) -> None:
     for _ in range(10):
         assert (await integration_client.get("/openapi.json")).status_code == 200

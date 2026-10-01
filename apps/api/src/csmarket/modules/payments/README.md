@@ -138,6 +138,11 @@ an unknown or unavailable one. Every intent returns the customer to our own page
 `mock` is available everywhere but production; its intent URL is the top-up page with
 `?mock=1`, from which the dev-only pay route drives the real `settle`.
 
+`click` (`gateways/click.py`) is available with `click_merchant_id`, `click_service_id` and
+`click_secret_key` all set; its intent URL is
+`{click_pay_url}?service_id=&merchant_id=&amount=<soʻm>&transaction_param=<number>&return_url=`.
+It imports nothing from the `click` module (which imports `payments`).
+
 **Tests:** `tests/unit/test_payment_fsm.py`, `tests/unit/test_payment_gateways.py`,
 `tests/integration/test_payable_resolver.py`, `tests/integration/test_payment_hooks.py`
 (including real races: two kassas settling one top-up, a create racing a settle, a create
