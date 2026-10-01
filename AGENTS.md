@@ -300,7 +300,7 @@ csmarket/
   second carve-out: `POST /me/trade-link/check` (M1; Waxpeer `check-tradelink` + Steam
   `GetTradeHoldDurations`), advisory, 4 s timeouts, 10-min Redis cache keyed by a hash of
   the link. A new one needs an ADR and a line here — and its route in the `handler` regexes
-  of `ApiHighLatency` / `ApiSupplierLatency` (`infra/prometheus/alerts/api.yml`).
+  of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.
 - One uvicorn process per API container: CPU an endpoint burns is a ceiling for the whole API.

@@ -1,6 +1,6 @@
 # Runbook — a traffic surge
 
-`ApiSaturated`, `ApiFileDescriptorsHigh`, `ApiHighLatency`, `ApiSupplierLatency`,
+`ApiSaturated`, `ApiFileDescriptorsHigh`, `ApiHighLatency`, `ApiWaxpeerLatency`,
 `PostgresConnectionsHigh`, `RedisMemoryHigh` and `RedisCeilingUnset`
 (`infra/prometheus/alerts/api.yml`) link here. What limits throughput on this stack is
 software, not hardware — read the ceilings first.
@@ -46,7 +46,7 @@ In order:
 
 **Two latency alerts, and which one you have.** `ApiHighLatency` (p95 > 1.5 s for 10 min)
 excludes the Waxpeer-bound routes — `/skins/{slug}/listings` (M2) and the trade-link check
-(M1). If it fires, something **we** own is slow. `ApiSupplierLatency` (p95 > 5 s for 15 min)
+(M1). If it fires, something **we** own is slow. `ApiWaxpeerLatency` (p95 > 5 s for 15 min)
 watches only those routes and means Waxpeer or Steam is degraded — check them before touching
 anything here. A new upstream-bound route must be added to both `handler` regexes, or the
 first alert starts crying wolf.

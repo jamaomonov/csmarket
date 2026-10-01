@@ -55,7 +55,7 @@ groups:
       # and mixing them into one global quantile means a burst of listing
       # lookups pages somebody about a checkout that was never slow. One alert
       # over both populations can only be wrong about one of them. See
-      # `ApiSupplierLatency` below for the other half.
+      # `ApiWaxpeerLatency` below for the other half.
       #
       # The list names the two Waxpeer-touching routes (spec §7.2–7.3). Adding a
       # third means adding it here too, or this alert starts crying wolf.
@@ -67,7 +67,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler!~".*(/skins/.*/listings|/tradelink/check)"
+                  handler!~".*(/skins/.*/listings|/trade-?link/check)"
                 }[5m]
               )
             ) by (le)
@@ -85,7 +85,7 @@ groups:
       # observations in — so a threshold at 10s is unreachable, not strict.
       # 5s sits well above a healthy p95 for short-timeout upstream calls
       # while still being inside the histogram's range.
-      - alert: ApiSupplierLatency
+      - alert: ApiWaxpeerLatency
         expr: |
           histogram_quantile(
             0.95,
@@ -93,7 +93,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler=~".*(/skins/.*/listings|/tradelink/check)"
+                  handler=~".*(/skins/.*/listings|/trade-?link/check)"
                 }[5m]
               )
             ) by (le)
