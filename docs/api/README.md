@@ -93,8 +93,8 @@ All under `/admin/skins`, admin only (401 without a token, 403 for a customer).
 - `GET /admin/skins/items?q=&hidden=&limit=` — find items, hidden ones included.
 - `PATCH /admin/skins/items/{slug}` `{hidden}` — hide or show an item everywhere public.
 - `GET /admin/skins/aliases`, `PUT /admin/skins/aliases/{alias}` `{text}`,
-  `DELETE /admin/skins/aliases/{alias}` (204) — search aliases; alias 1..64 letters, digits,
-  spaces or hyphens, text 1..128, both stored lower-case.
+  `DELETE /admin/skins/aliases/{alias}` (204) — search aliases; alias one word of 1..64
+  letters, digits or hyphens (no spaces), text 1..128, both stored lower-case.
 - `PATCH`, `PUT` and `DELETE` take an `Idempotency-Key` (≥ 16 chars, optional here): a repeat replays the first response
   and writes nothing, including no second audit row. Every write is audited in
   `admin_audit_log`.

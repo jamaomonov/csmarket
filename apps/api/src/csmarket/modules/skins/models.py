@@ -143,7 +143,7 @@ class SkinPricingRules(Base):
 
 
 class SkinSearchAlias(Base):
-    """``alias`` (lower-case, one token or a phrase) -> ``text`` substituted into a query."""
+    """``alias`` (lower-case, one word) -> ``text`` substituted into a query."""
 
     __tablename__ = "skin_search_aliases"
 

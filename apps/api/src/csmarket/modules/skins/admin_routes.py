@@ -54,8 +54,9 @@ Db = Annotated[AsyncSession, Depends(db_session)]
 Admin = Annotated[User, Depends(require_admin)]
 IdemKey = Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)]
 
-#: Letters (any script), digits, space and hyphen; ``\w`` also admits ``_``, refused apart.
-_ALIAS_RE = re.compile(r"^[\w\- ]{1,64}$", re.UNICODE)
+#: One word: letters (any script), digits and hyphen; ``\w`` also admits ``_``, refused
+#: apart. No space: ``expand_aliases`` substitutes whole words, so a phrase never matches.
+_ALIAS_RE = re.compile(r"^[\w\-]{1,64}$", re.UNICODE)
 
 
 def normalize_alias(raw: str) -> str:
@@ -63,7 +64,7 @@ def normalize_alias(raw: str) -> str:
     alias = raw.strip().lower()
     if "_" in alias or _ALIAS_RE.fullmatch(alias) is None:
         raise ValidationError(
-            "alias must be 1-64 letters, digits, spaces or hyphens", code="alias_invalid"
+            "alias must be one word: 1-64 letters, digits or hyphens", code="alias_invalid"
         )
     return alias
 

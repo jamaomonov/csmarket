@@ -229,7 +229,7 @@ async def test_delete_unknown_alias_is_404(
 
 async def test_bad_alias_is_422(integration_client: AsyncClient, admin_headers: Headers) -> None:
     h = await admin_headers() | {"Idempotency-Key": KEY}
-    for alias in ("a_b", "a.b", "x" * 65):
+    for alias in ("a_b", "a.b", "ak 47", "x" * 65):
         r = await integration_client.put(
             f"/api/v1/admin/skins/aliases/{alias}", json={"text": "x"}, headers=h
         )

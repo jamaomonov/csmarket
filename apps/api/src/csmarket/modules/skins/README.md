@@ -158,9 +158,9 @@ rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..
   once, still priced by the sync, so unhiding is instant. Unknown slug: 404.
 - `GET /aliases`, `PUT /aliases/{alias}` `{text}` -> `AliasOut`, `DELETE /aliases/{alias}` ->
   204 (404 if absent). Ruling Q13: admin-edited, none seeded. The alias is trimmed and
-  lower-cased, 1..64 letters, digits, spaces or hyphens (no `_`); the text is trimmed and
-  lower-cased, 1..128. `expand_aliases` substitutes whole words, so a one-word alias is what
-  matches.
+  lower-cased, one word of 1..64 letters, digits or hyphens (no space, no `_`: `expand_aliases`
+  substitutes whole words, so a phrase would never match); the text is trimmed and
+  lower-cased, 1..128.
 - **Every write** takes an optional `Idempotency-Key` (`core.idempotency`, scopes
   `admin.skins.item:{item id}`, `admin.skins.alias:{alias}`, `admin.skins.alias.delete:{alias}`),
   records one `admin_audit_log` row (`admin/README.md`), commits, then bumps
