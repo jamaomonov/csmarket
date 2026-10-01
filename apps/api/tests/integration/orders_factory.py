@@ -25,7 +25,7 @@ from csmarket.modules.orders.api import ORDERS_CHANNEL
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.users.models import User
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.payments_factory import make_user
@@ -108,6 +108,20 @@ async def make_trade(db: AsyncSession, order: Order, **overrides: object) -> Ski
     db.add(trade)
     await db.commit()
     return trade
+
+
+async def cancel_while_held(db: AsyncSession, order: Order) -> None:
+    """Cancel ``order`` while a kassa still holds its attempt; commit.
+
+    The expiry sweep never does this (it keeps a kassa-held order), so this stands in for
+    any other cancel: a late settle of the held attempt must still be refused.
+    """
+    await db.execute(
+        update(Order)
+        .where(Order.id == order.id)
+        .values(status="cancelled", cancelled_at=clock.now())
+    )
+    await db.commit()
 
 
 async def saved_trade_link(

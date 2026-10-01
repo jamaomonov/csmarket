@@ -28,11 +28,15 @@ from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 from csmarket_scheduler.jobs import (
     click_timeout,
     fx_refresh,
+    orders_expiry,
     payme_timeout,
     purge_refresh_tokens,
     skins_catalog_import,
     skins_price_sync,
     topup_expiry,
+    trades_audit,
+    trades_protection,
+    trades_reconcile,
     uzum_timeout,
 )
 
@@ -55,6 +59,10 @@ def build_scheduler() -> AsyncIOScheduler:
     click_timeout.register(scheduler)
     payme_timeout.register(scheduler)
     uzum_timeout.register(scheduler)
+    orders_expiry.register(scheduler)
+    trades_reconcile.register(scheduler)
+    trades_protection.register(scheduler)
+    trades_audit.register(scheduler)
     return scheduler
 
 

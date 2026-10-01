@@ -18,7 +18,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.integration.orders_factory import make_order
+from tests.integration.orders_factory import cancel_while_held, make_order
 from tests.integration.test_uzum_webhook import (  # M3's builders and env
     SERVICE_ID,
     STAMP,
@@ -132,3 +132,15 @@ async def test_expired_order_is_not_payable(
         assert await _fail(integration_client, "check", _check_body(order.number)) == 10009
         body = _create(order.number, f"u-x-{order.number}")
         assert await _fail(integration_client, "create", body) == 10009
+
+
+async def test_a_cancelled_orders_late_confirm_is_refused(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order = await make_order(db_session, price_uzs=PRICE)
+    await _ok(integration_client, "create", _create(order.number, "u-late"))
+    await cancel_while_held(db_session, order)
+    assert await _fail(integration_client, "confirm", _confirm_body("u-late")) == 10008
+    assert (await _txn(db_session, "u-late")).status == "FAILED"
+    late = await _order(db_session, order.id)
+    assert (late.status, late.paid_with) == ("cancelled", None)

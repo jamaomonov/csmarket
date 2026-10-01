@@ -19,7 +19,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.integration.orders_factory import make_order
+from tests.integration.orders_factory import cancel_while_held, make_order
 from tests.integration.test_click_webhook import (  # M3's builders and env
     COMPLETE_URL,
     PREPARE_URL,
@@ -141,3 +141,29 @@ async def test_expired_order_is_not_payable(
     assert await _prepare(integration_client, late.number, "7006") == -9
     assert await _prepare(integration_client, cancelled.number, "7007") == -9
     assert await _prepare(integration_client, "K7M3Q9X2", "7008") == -5  # no such order
+
+
+async def test_a_cancelled_orders_late_complete_is_refused(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order = await make_order(db_session, price_uzs=PRICE)
+    prepared = await _post(
+        integration_client,
+        PREPARE_URL,
+        _prepare_body(click_trans_id="7009", merchant_trans_id=order.number, amount=PRICE_STR),
+    )
+    await cancel_while_held(db_session, order)
+    completed = await _post(
+        integration_client,
+        COMPLETE_URL,
+        _complete_body(
+            click_trans_id="7009",
+            merchant_trans_id=order.number,
+            merchant_prepare_id=str(prepared["merchant_prepare_id"]),
+            amount=PRICE_STR,
+        ),
+    )
+    assert completed["error"] == -4
+    assert (await _txn(db_session, 7009)).status == "CANCELLED"
+    late = await _order(db_session, order.id)
+    assert (late.status, late.paid_with) == ("cancelled", None)

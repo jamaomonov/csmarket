@@ -99,6 +99,22 @@ ORDER_REFUNDS = Counter(
 )
 
 
+#: Why a trade waits for an admin (``skin_trades.attention_reason``, ruling R3).
+TradeAttentionReason = Literal[
+    "buy_unconfirmed", "ambiguous_trade", "rolled_back", "waxpeer_forbidden", "audit_divergence"
+]
+
+_TRADE_ATTENTION_REASONS = frozenset(
+    ("buy_unconfirmed", "ambiguous_trade", "rolled_back", "waxpeer_forbidden", "audit_divergence")
+)
+
+TRADE_ATTENTIONS = Counter(
+    "csmarket_trade_attention_total",
+    "Trades flagged for an admin, by reason (each attention once; each audit verdict once).",
+    ("reason",),
+)
+
+
 def _inc(counter: Counter, name: str, labels: dict[str, str]) -> None:
     """Increment one labelled counter, swallowing anything the registry throws."""
     try:
@@ -212,6 +228,18 @@ def record_order_buy(outcome: OrderBuyOutcome) -> None:
     )
 
 
+def record_trade_attention(reason: TradeAttentionReason) -> None:
+    """Count one attention opened on a trade (or one new history-audit verdict).
+
+    A value outside the closed set becomes ``"other"``. Never raises.
+    """
+    _inc(
+        TRADE_ATTENTIONS,
+        "csmarket_trade_attention_total",
+        {"reason": reason if reason in _TRADE_ATTENTION_REASONS else "other"},
+    )
+
+
 @contextmanager
 def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer) -> Iterator[None]:
     """Count the keyed Steam call made in the block, however it ends.
@@ -232,6 +260,7 @@ __all__ = [
     "ORDER_BUYS",
     "ORDER_REFUNDS",
     "STEAM_WEB_API_CALLS",
+    "TRADE_ATTENTIONS",
     "WAXPEER_CALLS",
     "KassaProvider",
     "KassaRejectionReason",
@@ -240,12 +269,14 @@ __all__ = [
     "SteamApiConsumer",
     "SteamApiEndpoint",
     "SteamApiOutcome",
+    "TradeAttentionReason",
     "WaxpeerEndpoint",
     "WaxpeerOutcome",
     "record_kassa_rejection",
     "record_order_buy",
     "record_order_refund",
     "record_steam_web_api_call",
+    "record_trade_attention",
     "record_waxpeer_call",
     "steam_web_api_call",
 ]

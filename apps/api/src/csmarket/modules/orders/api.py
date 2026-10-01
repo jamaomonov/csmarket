@@ -29,6 +29,12 @@ from csmarket.modules.orders.refunds import (
 )
 from csmarket.modules.orders.schemas import OrderOut, OrderStatusOut
 from csmarket.modules.orders.service import effective_status, is_expired, order_out
+from csmarket.modules.orders.sweeps import (
+    audit_recent,
+    expire_pending,
+    reconcile,
+    watch_protected,
+)
 from csmarket.modules.orders.trade_view import SkinTradeOut, skin_trade_out
 
 __all__ = [
@@ -50,13 +56,17 @@ __all__ = [
     "SkinTradeOut",
     "admin_refund",
     "attempt_buy",
+    "audit_recent",
     "drain_paid",
     "effective_status",
+    "expire_pending",
     "in_flight",
     "is_expired",
     "mark_paid",
     "move",
     "order_out",
+    "reconcile",
     "refund_to_balance",
     "skin_trade_out",
+    "watch_protected",
 ]

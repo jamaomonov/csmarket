@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.logging import get_logger
+from csmarket.core.metrics import TradeAttentionReason
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.refunds import refund_to_balance
-from csmarket.modules.orders.trades import FAILED_STATUS, mirror
+from csmarket.modules.orders.trades import FAILED_STATUS, flag, mirror
 from csmarket.modules.skins.api import WaxpeerBuy, WaxpeerTrade
 
 log = get_logger("csmarket.orders.buying")
@@ -71,22 +72,6 @@ def _stale(snap: BuySnapshot, outcome: str) -> str:
     return "nothing_to_do"
 
 
-def _flag(trade: SkinTrade, reason: str) -> None:
-    """Set attention ``reason`` unless an open one is already there.
-
-    A resolved attention (or an open ``waxpeer_forbidden``, the mildest) gives way, and a
-    new or re-opened attention never keeps an earlier resolution: it must not look settled.
-    """
-    open_reason = trade.attention_reason if trade.resolved_at is None else None
-    if open_reason is not None and not (
-        open_reason == "waxpeer_forbidden" and reason != open_reason
-    ):
-        return
-    trade.attention_reason = reason
-    trade.resolved_at = trade.resolved_by = trade.resolved_note = None
-    trade.updated_at = now()
-
-
 async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int | None) -> str:
     """A buy that may have gone through landed on rows someone else moved: never silent.
 
@@ -101,7 +86,7 @@ async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int |
     if waxpeer_id is not None and trade.waxpeer_id == waxpeer_id:
         await db.commit()
         return "bought"
-    _flag(trade, "ambiguous_trade")
+    flag(trade, "ambiguous_trade", reopen=True)
     await db.commit()
     log.error("orders.buy.stale_purchase", number=snap.number)
     return "stale_bought"
@@ -132,7 +117,7 @@ async def secure_sent(db: AsyncSession, snap: BuySnapshot) -> bool:
         _settle(trade)
         trade.buy_unconfirmed_at = now()
         if order.status != "buying":
-            _flag(trade, "ambiguous_trade")
+            flag(trade, "ambiguous_trade", reopen=True)
     await db.commit()
     return marked
 
@@ -183,7 +168,12 @@ async def unconfirmed(db: AsyncSession, snap: BuySnapshot) -> str:
 
 
 async def attention(
-    db: AsyncSession, snap: BuySnapshot, reason: str, *, outcome: str, settle: bool = False
+    db: AsyncSession,
+    snap: BuySnapshot,
+    reason: TradeAttentionReason,
+    *,
+    outcome: str,
+    settle: bool = False,
 ) -> str:
     """Flag the trade for an admin; ``settle`` ends the pending buy too.
 
@@ -197,7 +187,7 @@ async def attention(
     _, trade = pair
     if settle:
         _settle(trade)
-    _flag(trade, reason)
+    flag(trade, reason, reopen=True)
     await db.commit()
     return outcome
 

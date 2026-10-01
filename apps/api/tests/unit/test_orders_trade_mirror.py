@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from csmarket.modules.orders.models import SkinTrade
-from csmarket.modules.orders.trades import AmbiguousTradeError, mirror, pick_trade
+from csmarket.modules.orders.trades import AmbiguousTradeError, flag, mirror, pick_trade
 from csmarket.modules.skins.api import WaxpeerSeller, WaxpeerTrade
 
 NOW = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
@@ -87,3 +87,45 @@ def test_mirror_follows_the_offer_and_never_blanks_a_known_value() -> None:
     assert trade.release_date == release
     assert trade.is_released is True
     assert trade.penalties == {"fee": 1}
+
+
+def _flagged(reason: str | None = None, *, resolved: bool = False) -> SkinTrade:
+    row = SkinTrade(order_id="o-1", project_id="o-1", listing_id=1, paid_units=1_000, seller={})
+    row.attention_reason = reason
+    if resolved:
+        row.resolved_at, row.resolved_by, row.resolved_note = NOW, "admin:1", "checked"
+    return row
+
+
+def _resolution(row: SkinTrade) -> tuple[object, object, object]:
+    """Read through a call, so an earlier assertion does not narrow the read."""
+    return row.resolved_at, row.resolved_by, row.resolved_note
+
+
+def test_flag_opens_an_attention_once() -> None:
+    row = _flagged()
+    assert flag(row, "rolled_back") is True
+    assert (row.attention_reason, row.resolved_at) == ("rolled_back", None)
+    assert flag(row, "rolled_back") is False
+    assert flag(row, "buy_unconfirmed") is False  # an open attention is never replaced
+    assert row.attention_reason == "rolled_back"
+
+
+def test_flag_lets_a_forbidden_attention_give_way() -> None:
+    row = _flagged("waxpeer_forbidden")
+    assert flag(row, "ambiguous_trade") is True
+    assert row.attention_reason == "ambiguous_trade"
+
+
+def test_a_resolved_attention_stands_unless_reopened() -> None:
+    row = _flagged("rolled_back", resolved=True)
+    assert flag(row, "rolled_back") is False
+    assert row.resolved_by == "admin:1"
+    assert flag(row, "rolled_back", reopen=True) is True
+    assert _resolution(row) == (None, None, None)
+
+
+def test_a_new_reason_reopens_a_resolved_trade_without_its_resolution() -> None:
+    row = _flagged("buy_unconfirmed", resolved=True)
+    assert flag(row, "rolled_back") is True
+    assert (row.attention_reason, row.resolved_at, row.resolved_by) == ("rolled_back", None, None)

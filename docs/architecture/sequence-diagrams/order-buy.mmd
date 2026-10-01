@@ -2,7 +2,7 @@ sequenceDiagram
     autonumber
     participant DB as Postgres
     participant W as Worker (orders queue)
-    participant S as Scheduler (reconcile, Task 9)
+    participant S as Scheduler (trades.reconcile)
     participant X as Waxpeer
 
     Note over DB,W: Payment commits: order paid + NOTIFY orders

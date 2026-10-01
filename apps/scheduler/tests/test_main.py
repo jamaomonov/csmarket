@@ -20,6 +20,10 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "click.timeout",
         "payme.timeout",
         "uzum.timeout",
+        "orders.expiry",
+        "trades.reconcile",
+        "trades.protection",
+        "trades.audit",
     ]
 
 

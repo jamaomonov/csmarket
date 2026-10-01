@@ -1,6 +1,6 @@
 """A scriptable :class:`~csmarket.modules.skins.api.TradeClient` for the orders suites.
 
-Every call is counted; each endpoint answers what the test scripted last:
+Every call is counted (a lookup's ids in ``asked``); each endpoint answers what the test scripted last:
 
 - ``lookup_returns([...])`` / ``lookup_raises(exc)`` / ``lookup_fails_for(id, exc)`` —
   ``check_project_ids`` (only the scripted trades whose ``project_id`` was asked for come
@@ -22,7 +22,7 @@ from collections.abc import Awaitable, Callable, Sequence
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from csmarket.modules.skins.api import WaxpeerBuy, WaxpeerSeller, WaxpeerTrade
+from csmarket.modules.skins.api import LOOKUP_MAX_IDS, WaxpeerBuy, WaxpeerSeller, WaxpeerTrade
 
 
 def waxpeer_trade(project_id: str, *, status: int = 0, **overrides: Any) -> WaxpeerTrade:
@@ -58,6 +58,8 @@ class FakeTradeClient:
         self._balance: int | BaseException = 10_000_000
         self._listings: dict[str, list[dict[str, Any]]] = {}
         self.lookup_calls = 0
+        #: The ids of every lookup, in order (one list per call).
+        self.asked: list[list[str]] = []
         self.buy_calls = 0
         self.balance_calls = 0
         self.search_calls = 0
@@ -117,8 +119,11 @@ class FakeTradeClient:
     # --- TradeClient -------------------------------------------------------------------
 
     async def check_project_ids(self, project_ids: Sequence[str]) -> list[WaxpeerTrade]:
-        """The scripted trades under ``project_ids``."""
+        """The scripted trades under ``project_ids`` (at most 100, as Waxpeer's)."""
+        if len(project_ids) > LOOKUP_MAX_IDS:
+            raise ValueError(f"at most {LOOKUP_MAX_IDS} project ids per lookup")
         self.lookup_calls += 1
+        self.asked.append(list(project_ids))
         if self.before_lookup is not None:
             await self.before_lookup()
         if self._lookup_error is not None:

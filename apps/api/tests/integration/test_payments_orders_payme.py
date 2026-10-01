@@ -18,7 +18,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.integration.orders_factory import make_order
+from tests.integration.orders_factory import cancel_while_held, make_order
 from tests.integration.test_payme_merchant import (  # M3's builders and env
     TIME,
     _call,
@@ -140,3 +140,17 @@ async def test_expired_order_is_not_payable(
             integration_client, "CreateTransaction", _params(order.number, f"x-{order.number}")
         )
         assert _code(create) == -31051
+
+
+async def test_a_cancelled_orders_late_perform_is_refused(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    order = await make_order(db_session, price_uzs=PRICE)
+    await _call(integration_client, "CreateTransaction", _params(order.number, "late"))
+    await cancel_while_held(db_session, order)
+    body = await _call(integration_client, "PerformTransaction", {"id": "late"})
+    assert _code(body) == -31008
+    txn = await _txn(db_session, "late")
+    assert (txn.state, txn.reason) == (-1, 3)
+    late = await _order(db_session, order.id)
+    assert (late.status, late.paid_with) == ("cancelled", None)

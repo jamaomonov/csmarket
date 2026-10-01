@@ -146,3 +146,15 @@ def test_order_buys_count_by_a_closed_outcome() -> None:
     record_order_buy("forbidden")
     record_order_buy("lookup_later")  # type: ignore[arg-type]  # a bug cannot mint a series
     assert (_buys("forbidden"), _buys("other")) == (before + 1, other + 1)
+
+
+def test_trade_attentions_count_by_a_closed_reason() -> None:
+    from csmarket.core.metrics import TRADE_ATTENTIONS, record_trade_attention
+
+    def _attentions(reason: str) -> float:
+        return TRADE_ATTENTIONS.labels(reason=reason)._value.get()  # type: ignore[no-any-return]
+
+    before, other = _attentions("rolled_back"), _attentions("other")
+    record_trade_attention("rolled_back")
+    record_trade_attention("an-order-id")  # type: ignore[arg-type]  # a bug cannot mint a series
+    assert (_attentions("rolled_back"), _attentions("other")) == (before + 1, other + 1)

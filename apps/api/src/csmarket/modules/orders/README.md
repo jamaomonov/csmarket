@@ -31,8 +31,9 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `move`, `ORDERS_CHANNEL` (`NOTIFY orders` wakes the worker), the response shapes `OrderOut`,
 `OrderStatusOut`, `SkinTradeOut` and `order_out`, `skin_trade_out`, `effective_status`,
 `is_expired`, `mark_paid`, and the refunds (`refund_to_balance`, `in_flight`,
-`admin_refund`, `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`), and the buy
-(`drain_paid`, `attempt_buy`). `api.py` never imports `payments`
+`admin_refund`, `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`), the buy
+(`drain_paid`, `attempt_buy`), and the trade sweeps (`reconcile`, `expire_pending`,
+`watch_protected`, `audit_recent`; the scheduler's jobs import `orders.sweeps` directly). `api.py` never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
 
@@ -243,7 +244,76 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   value (`accepted_at` stamped the first time a `release_date` appears; `is_released` never
   goes back); `trades.pick_trade(trades, waxpeer_id)` picks ours by Waxpeer's id, else the
   only one, else the only live one, else (all failed) the last — several live ones raise
-  `AmbiguousTradeError`. The trade sweeps (Task 9) extend `trades.py`.
+  `AmbiguousTradeError`. `trades.flag` and `trades.apply` are below.
+
+## Trade sweeps (`sweeps.py`, `expiry.py`, `trade_audit.py`, `sweep_base.py`, `trades.py`, rulings R3, R5, K, M)
+
+Timed by the scheduler (`apps/scheduler/src/csmarket_scheduler/jobs/`, which import
+`orders.sweeps`: it re-exports `expire_pending` from `expiry.py` and `audit_recent` from
+`trade_audit.py`); the logic is here, `sweep_base.py` holds the shared locked re-read and
+chunked lookup.
+Flow: `docs/architecture/sequence-diagrams/trade-reconcile.mmd`. Every write locks the order,
+then its trade, re-checks, writes and commits in its own transaction; no lock or
+transaction is held across a Waxpeer call, and lookups ask at most 100 ids
+(`skins.api.LOOKUP_MAX_IDS`).
+
+| Job (id)            | When                                           | Function                                     |
+| ------------------- | ---------------------------------------------- | -------------------------------------------- |
+| `orders.expiry`     | every 60 s, first run 220 s after start        | `expire_pending(db, *, batch=500)`           |
+| `trades.reconcile`  | every `trades_reconcile_seconds` (10 s), 240 s | `reconcile(db_factory, client, *, settings)` |
+| `trades.protection` | hourly, first run 280 s after start            | `watch_protected(db, client)`                |
+| `trades.audit`      | cron 23:30 UTC (04:30 Tashkent), coalesced     | `audit_recent(db, client, *, days=14)`       |
+
+The three trade jobs do nothing without `waxpeer_api_key` (or `waxpeer_fake`); every job's
+`run()` logs and swallows any failure.
+
+- `reconcile` — the ≤ 100 oldest due orders (`buying` / `trade_sent`, `next_check_at` null
+  or `<= now`). Those whose buy is no longer pending are looked up in one call; each is then
+  locked (order → trade), re-checked (still followed, not `buy_pending`, still due), moved
+  by `trades.apply` and given `next_check_at = now + trades_reconcile_seconds`. No trade
+  under our `project_id`: a buy whose answer was lost (`buy_unconfirmed_at`) waits
+  `order_unconfirmed_minutes` (10), then gets the attention `buy_unconfirmed` — never a
+  refund (R3). Several live trades and no Waxpeer id: attention `ambiguous_trade`. A trade
+  still `buy_pending` goes to `attempt_buy` (after the poll), whose lease is the only writer
+  of its `next_check_at` (ruling M). A failed lookup writes nothing: every row stays due.
+  One order's failure is rolled back and logged (type only); the sweep never raises.
+- `trades.apply(db, *, order, trade, wt)` — `mirror`, then:
+
+  | Waxpeer reports                                                                            | Order                                                 |
+  | ------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+  | 0, 1, 2, −1                                                                                | unchanged                                             |
+  | 4 without `release_date` (the offer is out)                                                | `buying → trade_sent`                                 |
+  | 4 with `release_date` (accepted), 5, or `is_released`                                      | `buying` / `trade_sent → delivered`                   |
+  | 6 on a `delivered` order, or after acceptance (`accepted_at`), released, or with penalties | unchanged; attention `rolled_back` — money spent (R3) |
+  | 6 otherwise (declined, expired, a refused attempt adopted by the buy)                      | `returned` + refund `not_accepted`                    |
+
+  A refund an open attention blocks (`refund_to_balance` → `order_needs_attention`) leaves the
+  order as it is (`held`): an admin resolves first, and the next tick refunds.
+
+- `trades.flag(trade, reason, *, reopen=False) -> bool` — opens an attention unless one is
+  open (an open `waxpeer_forbidden` gives way); a new attention clears any earlier
+  resolution and counts `csmarket_trade_attention_total{reason}` once. A resolved attention
+  with the same reason stays resolved (the sweeps see the same state every tick) unless
+  `reopen` — the buy re-opens `waxpeer_forbidden` on a new 403.
+- `expire_pending` — `pending` orders past `expires_at` with no `pending` (or `succeeded`)
+  payment attempt, locked `FOR UPDATE SKIP LOCKED`, attempts re-read under the lock: their
+  `created` attempts → `payments.cancel_pending` (imported inside the function: `payments`
+  imports `orders.api`), the order → `cancelled`. A kassa-held attempt keeps its order
+  (M3 R8); its kassa's timeout sweep releases it and a later tick expires the order. Flushes;
+  the job commits.
+- `watch_protected` — `delivered` orders whose trade is 4 with `release_date`, not released,
+  in batches of 100: `apply` (5 → released; 6 → attention `rolled_back`, the order stays
+  `delivered`, nothing refunded). Several live trades: logged, nothing mirrored. A lookup
+  failure ends the run.
+- `audit_recent` — trades of the last `days` that we consider settled (status 5 or 6,
+  released, or the order `failed` / `returned`), all looked up first (any Waxpeer error →
+  0, nothing written). Verdicts: `unknown` (Waxpeer has no record of a trade we saw —
+  `status` not null), `rolled_back` (Waxpeer 6, the order `delivered`, not refunded, our row
+  not already 6), `delivered_refunded` (refunded, Waxpeer 4/5), `ambiguous`. A changed
+  verdict is stored in `audit_verdict`; a new one opens (or re-opens) `audit_divergence`
+  when no graver attention is open and counts the metric **once per verdict**; agreement
+  clears `audit_verdict` (the attention waits for an admin). The audit changes no other
+  trade or order state.
 
 ## Lock order
 

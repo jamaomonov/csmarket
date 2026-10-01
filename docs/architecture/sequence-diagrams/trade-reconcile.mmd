@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    participant S as Scheduler (trades.reconcile, every 10 s)
+    participant DB as Postgres
+    participant X as Waxpeer
+
+    S->>DB: read ≤ 100 oldest due orders (buying / trade_sent, next_check_at ≤ now) + their trade
+    S->>DB: end the read transaction (no lock held across Waxpeer)
+    S->>X: check-many-project-id [polled orders' ids]  (≤ 100 per call)
+    alt lookup fails (unavailable, 429, 403, refusal)
+        Note over S: nothing written — every row stays due for the next tick
+    else answered
+        loop each polled order (its own transaction; one failure never stops the tick)
+            S->>DB: lock order, then trade (FOR UPDATE); re-check: still followed, not buy_pending, still due
+            alt several live trades, no Waxpeer id
+                S->>DB: attention ambiguous_trade (once; no refund)
+            else no trade under our project_id
+                Note over S,DB: buy_unconfirmed_at older than 10 min → attention buy_unconfirmed (once; no refund, R3)
+            else our trade (picked by Waxpeer id)
+                S->>DB: mirror it, then apply the status
+                Note over DB: 4 → trade_sent · 4 + release_date / 5 / released → delivered<br/>6 after acceptance / penalties → attention rolled_back (money spent)<br/>6 otherwise → returned + refund to the balance (not_accepted)
+            end
+            S->>DB: next_check_at = now + 10 s; commit
+        end
+    end
+    loop each due order still buy_pending
+        S->>S: attempt_buy — takes the order's lease or does nothing (order-buy.mmd)
+    end
+
+    Note over S,X: trades.protection (hourly): delivered trades at 4 + release_date — 5 → released, 6 → attention rolled_back
+    Note over S,X: trades.audit (23:30 UTC): settled trades of 14 days — a new divergence → audit_verdict + attention audit_divergence, once per verdict
+    Note over S,DB: orders.expiry (every 60 s): pending past expires_at, no kassa-held attempt → cancelled (created attempts cancelled)

@@ -286,7 +286,9 @@ async def complete(
         raise await _refuse_second_charge(db, txn)
     try:
         await settle(db, payment=payment, event_id=f"click:{click_trans_id}")
-    except AlreadyPaidError:  # pragma: no cover - refused above under the same owner lock
+    # A cancelled order resolves as "expired", which the check above lets through (a held
+    # attempt past ``expires_at`` still pays): ``settle`` refuses it under the owner lock.
+    except AlreadyPaidError:
         raise await _refuse_second_charge(db, txn) from None
     txn.status = CONFIRMED
     txn.complete_time = now()

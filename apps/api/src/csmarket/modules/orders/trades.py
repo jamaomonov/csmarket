@@ -1,9 +1,21 @@
-"""An order's Waxpeer trade as we keep it: :func:`mirror` a lookup onto ``skin_trades`` and
-:func:`pick_trade` ours among the trades under one ``project_id``.
+"""An order's Waxpeer trade as we keep it: :func:`mirror` a lookup onto ``skin_trades``,
+:func:`pick_trade` ours among the trades under one ``project_id``, :func:`apply` what the
+trade's status means for the order, and :func:`flag` a trade for an admin.
 
 Shared by the buy (``orders.buying``: a lookup that finds an earlier purchase adopts it) and
-the trade sweeps (M4a Task 9 adds ``apply`` here). Callers hold the order row and then the
-trade row ``FOR UPDATE`` (ruling K) before :func:`mirror` writes.
+the trade sweeps (``orders.sweeps``). Callers hold the order row and then the trade row
+``FOR UPDATE`` (ruling K) before anything here writes.
+
+Waxpeer's status → what :func:`apply` does (rulings R1, R3):
+
+=====================================================  ======================================
+0, 1, 2, −1 (buying, unparsable)                        nothing
+4 without ``release_date`` (offer sent)                 ``buying → trade_sent``
+4 with ``release_date``, 5, or ``is_released``          ``buying | trade_sent → delivered``
+6 on a delivered order, after acceptance, or with       attention ``rolled_back``; the status
+penalties                                               stays; the money is spent (R3)
+6 otherwise (the offer was declined or never sent)      ``returned`` + refund ``not_accepted``
+=====================================================  ======================================
 """
 
 from __future__ import annotations
@@ -11,12 +23,25 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from csmarket.core.clock import now
-from csmarket.modules.orders.models import SkinTrade
+from csmarket.core.errors import ConflictError
+from csmarket.core.logging import get_logger
+from csmarket.core.metrics import TradeAttentionReason, record_trade_attention
+from csmarket.modules.orders.fsm import TRANSITIONS, move
+from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.refunds import refund_to_balance
 from csmarket.modules.skins.api import WaxpeerTrade
+
+log = get_logger("csmarket.orders.trades")
 
 #: Waxpeer's status of a failed or returned trade.
 FAILED_STATUS = 6
+#: Waxpeer's status of a sent offer (accepted once ``release_date`` is set).
+SENT_STATUS = 4
+#: Waxpeer's status of a trade out of Steam's protection (released to the buyer).
+RELEASED_STATUS = 5
 
 
 class AmbiguousTradeError(Exception):
@@ -91,4 +116,113 @@ def mirror(trade: SkinTrade, wt: WaxpeerTrade) -> None:
     trade.updated_at = at
 
 
-__all__ = ["FAILED_STATUS", "AmbiguousTradeError", "mirror", "pick_trade"]
+def flag(trade: SkinTrade, reason: TradeAttentionReason, *, reopen: bool = False) -> bool:
+    """Open attention ``reason`` on ``trade`` unless an open one is already there.
+
+    An open ``waxpeer_forbidden`` (the mildest) gives way to any other reason. A new
+    attention never keeps an earlier resolution (it must not look settled), and is counted
+    once (``csmarket_trade_attention_total``). A resolved attention with the same reason
+    stays resolved unless ``reopen`` — the sweeps see the same Waxpeer state every tick and
+    an admin's decision must stand; the buy re-opens a ``waxpeer_forbidden`` on a new 403.
+
+    Args:
+        trade: The trade, locked after its order.
+        reason: One of ``orders.models.ATTENTION_REASONS``.
+        reopen: Re-open a resolved attention with the same reason.
+
+    Returns:
+        Whether an attention was opened now.
+    """
+    open_reason = trade.attention_reason if trade.resolved_at is None else None
+    if open_reason is not None and not (
+        open_reason == "waxpeer_forbidden" and reason != open_reason
+    ):
+        return False
+    if open_reason is None and trade.attention_reason == reason and not reopen:
+        return False
+    trade.attention_reason = reason
+    trade.resolved_at = trade.resolved_by = trade.resolved_note = None
+    trade.updated_at = now()
+    record_trade_attention(reason)
+    return True
+
+
+def _spent(order: Order, trade: SkinTrade) -> bool:
+    """A failed trade whose skin may have reached the buyer: never refunded by the app."""
+    return (
+        order.status == "delivered"
+        or trade.accepted_at is not None
+        or trade.is_released
+        or bool(trade.penalties)
+    )
+
+
+async def _returned(db: AsyncSession, order: Order) -> str:
+    """The offer came back unaccepted: ``returned`` and the money to the balance."""
+    try:
+        await refund_to_balance(
+            db, order=order, to_status="returned", reason="not_accepted", actor="orders"
+        )
+    except ConflictError as exc:
+        if exc.extra.get("code") != "order_needs_attention":
+            raise
+        log.warning("orders.trade.refund_held", number=order.number)
+        return "held"  # an open attention (R3): an admin decides first
+    return "returned"
+
+
+async def _failed(db: AsyncSession, order: Order, trade: SkinTrade) -> str:
+    """Waxpeer 6: money spent (attention) when the skin may have reached the buyer, else
+    ``returned`` and the refund."""
+    if _spent(order, trade):
+        if flag(trade, "rolled_back"):
+            log.error("orders.trade.rolled_back", number=order.number)
+        return "rolled_back"
+    if order.status not in ("buying", "trade_sent"):
+        return "unchanged"
+    return await _returned(db, order)
+
+
+async def apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: WaxpeerTrade) -> str:
+    """Mirror Waxpeer's report onto ``trade`` and move ``order`` as the status says.
+
+    See the module docstring for the mapping. A ``returned`` is refunded in the same
+    transaction; a refund an open attention blocks (``order_needs_attention``, R3) leaves
+    the order as it is (``held``). Flushes nothing itself; never commits.
+
+    Args:
+        db: Session; the caller holds ``order``, then ``trade``, ``FOR UPDATE`` and commits.
+        order: The order, locked.
+        trade: Its trade, locked.
+        wt: Waxpeer's report of the trade (picked with :func:`pick_trade`).
+
+    Returns:
+        ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``rolled_back`` (also
+        when the attention was already open) or ``held``.
+    """
+    mirror(trade, wt)
+    if wt.status == FAILED_STATUS:
+        return await _failed(db, order, trade)
+    accepted = wt.status == SENT_STATUS and trade.release_date is not None
+    if accepted or wt.status == RELEASED_STATUS or trade.is_released:
+        target = "delivered"
+    elif wt.status == SENT_STATUS:
+        target = "trade_sent"
+    else:
+        return "unchanged"
+    if target not in TRANSITIONS.get(order.status, frozenset()):
+        return "unchanged"  # already there, or settled
+    move(order, target)
+    return target
+
+
+__all__ = [
+    "FAILED_STATUS",
+    "RELEASED_STATUS",
+    "SENT_STATUS",
+    "AmbiguousTradeError",
+    "apply",
+    "flag",
+    "mirror",
+    "pick_trade",
+]
