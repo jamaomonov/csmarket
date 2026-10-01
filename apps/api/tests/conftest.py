@@ -43,12 +43,9 @@ def _test_env() -> Iterator[None]:
 @pytest.fixture
 async def app() -> Any:
     """A fresh FastAPI app per test."""
-    # importlib, not ``from csmarket.bootstrap import ...``: mypy cannot resolve a
-    # module that does not exist yet (it lands in Task 6) and a type-ignore would turn
-    # into an unused-ignore error the day it does.
-    import importlib
+    from csmarket.bootstrap import create_app
 
-    return importlib.import_module("csmarket.bootstrap").create_app()
+    return create_app()
 
 
 @pytest.fixture
