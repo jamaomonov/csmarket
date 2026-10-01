@@ -371,3 +371,75 @@ async def test_settle_and_a_kassa_create_on_one_topup_do_not_deadlock(
         assert settled is not None
         assert settled.status == "succeeded"
         assert await user_balance(check, t.user_id) == Decimal(50000)
+
+
+async def test_ensure_attempt_refuses_a_paid_or_reversed_topup(db_session: AsyncSession) -> None:
+    t, p = await _attempt(db_session)
+    number, topup_id = t.number, t.id
+    await settle(db_session, payment=p, event_id="e1")
+    await db_session.commit()
+    with pytest.raises(AlreadyPaidError):
+        await ensure_attempt(
+            db_session, payable=await resolve(db_session, number, lock=True), provider="click"
+        )
+    await db_session.rollback()
+    await reverse(db_session, payment=p, event_id="r1")
+    await db_session.commit()
+    with pytest.raises(AlreadyPaidError):
+        await ensure_attempt(
+            db_session, payable=await resolve(db_session, number, lock=True), provider="click"
+        )
+    await db_session.rollback()
+    count = await db_session.scalar(
+        select(func.count()).select_from(Payment).where(Payment.topup_id == topup_id)
+    )
+    assert count == 1
+
+
+async def test_ensure_attempt_still_opens_on_an_expired_topup(db_session: AsyncSession) -> None:
+    t = await make_topup(db_session, expires_at=clock.now() - timedelta(minutes=1))
+    payable = await resolve(db_session, t.number, lock=True)
+    assert payable.reason == "expired"
+    p = await ensure_attempt(db_session, payable=payable, provider="mock")
+    await db_session.commit()
+    assert p.status == "created"
+
+
+async def test_mark_pending_then_settle_racing_a_kassa_create_do_not_deadlock(
+    db_engine: AsyncEngine,
+) -> None:
+    """``mark_pending`` locks the top-up first too, so a later ``settle`` in the same
+    transaction never waits on a top-up a concurrent create holds while it waits on us."""
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    async with factory() as setup:
+        t, p = await _attempt(setup)
+    marked = asyncio.Event()
+
+    async def _mark_then_settle() -> str:
+        async with factory() as db:
+            payment = await db.get(Payment, p.id)
+            assert payment is not None
+            await mark_pending(db, payment=payment)
+            marked.set()
+            await asyncio.sleep(0.3)  # the create now queues (or would grab the top-up)
+            await settle(db, payment=payment, event_id="e1")
+            await db.commit()
+            return "settled"
+
+    async def _create() -> str:
+        await marked.wait()
+        async with factory() as db:
+            payable = await resolve(db, t.number, lock=True)
+            try:
+                attempt = await ensure_attempt(db, payable=payable, provider="payme")
+            except AlreadyPaidError:
+                await db.rollback()
+                return "refused"
+            await mark_pending(db, payment=attempt)
+            await db.commit()
+            return "created"
+
+    outcomes = await asyncio.wait_for(asyncio.gather(_mark_then_settle(), _create()), timeout=10)
+    assert list(outcomes) == ["settled", "refused"]
+    async with factory() as check:
+        assert await user_balance(check, t.user_id) == Decimal(50000)

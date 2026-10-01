@@ -36,7 +36,7 @@ Steam OpenID is the only sign-in (ADR-0004). The flow, in short:
 - **Keyless writes.** `/auth/steam`, `/auth/refresh`, `/auth/logout` and
   `/me/trade-link/check` take no `Idempotency-Key`; each says why in its docstring.
   `PATCH /me` and `PUT /me/trade-link` take one.
-- **`/auth/dev-login`** is not in this schema. It exists only when dev login is on and the
+- **`/auth/dev-login`** (and the M3 dev pay route) is not in this schema. It exists only when dev login is on and the
   environment is not prod; 404 otherwise.
 
 ### Errors
@@ -84,6 +84,45 @@ rounded up to 100). **`price_uzs` is `null` without a fresh CBU rate** (clients 
 and soʻm filters are ignored). Hidden items and categories outside
 `CSMARKET_SKINS_CATEGORIES` never appear. Nothing in a response names Waxpeer. These are `GET`s:
 no `Idempotency-Key`. Bodies of the catalogue, facets and suggest are cached 60 s.
+
+### Wallet and top-ups (M3)
+
+Signed in (401 without a token), except the provider list.
+
+- `GET /payments/providers` — anonymous; `{providers: [{slug}]}`, the kassas available now in
+  the order `click, payme, uzum, mock` (`mock` never in prod). The balance page shows these.
+- `POST /wallet/topups` `{amount_uzs, provider, locale}` + **required** `Idempotency-Key`
+  (16..160 chars) → **201** `TopupOut {number, amount_uzs, provider, status, expires_at,
+intent_url}`. `amount_uzs` is a JSON **integer** of whole soʻm, 1 000..10 000 000 (a
+  string, a fraction or a boolean is 422). `locale` `ru|uz|en` picks the kassa page and the
+  page the customer returns to. Send the customer to `intent_url`; every kassa returns them
+  to `/account/balance/topups/{number}`. The same key with the same amount and provider
+  returns the same top-up (201 again); with another amount or provider → 409
+  `code: idempotency_mismatch`. Rate-limited per IP and per account (`topup-create`).
+- `GET /wallet/topups/{number}?locale=` → `TopupOut`. The owner's only: anyone else's, an
+  unknown or a malformed number is a 404 (never 403). `status` is `pending`, `succeeded`,
+  `expired` or `reversed`; `intent_url` is `null` once the top-up cannot be paid. A pending
+  top-up no kassa took up expires after 30 minutes.
+- `GET /wallet` → `{balance_uzs}`.
+- `GET /wallet/entries?cursor=&limit=` (1..100, default 20) → `{items: [{id, kind,
+amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount_uzs` is
+  **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal` or
+  `admin_adjust` (M4 adds `purchase`, `refund`); `reference_number` is the top-up's number
+  for the first two, else `null`. The cursor is opaque; a malformed one is 422.
+- `POST /dev/topups/{number}/pay` is not in this schema: it pays the owner's top-up through
+  the `mock` kassa, exists only when dev login is on and the environment is not prod, and
+  answers 404 otherwise. Keyless (a repeat is a no-op); 409 `code: topup_not_payable` for an
+  expired or reversed top-up.
+
+| Status | `type` suffix | `code`                 | When                                             |
+| ------ | ------------- | ---------------------- | ------------------------------------------------ |
+| 422    | `validation`  | `topup_amount`         | Not a whole soʻm in range (carries `min`, `max`) |
+| 422    | `validation`  | `topup_provider`       | Unknown, unavailable here, or `wallet`           |
+| 422    | `validation`  | —                      | Missing, short or over-long `Idempotency-Key`    |
+| 409    | `conflict`    | `idempotency_mismatch` | The key opened a top-up for another amount/kassa |
+| 409    | `conflict`    | `topup_not_payable`    | Dev pay of an expired or reversed top-up         |
+
+Money is a string of whole soʻm digits (`balance_uzs`, `amount_uzs`).
 
 ### Admin catalogue (M2)
 

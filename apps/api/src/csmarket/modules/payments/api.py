@@ -25,6 +25,13 @@ from csmarket.modules.payments.hooks import (
 )
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable, resolve
+from csmarket.modules.payments.topups import (
+    TopupView,
+    create_topup,
+    expire_stale,
+    owned_topup,
+    topup_view,
+)
 
 __all__ = [
     "LIVE",
@@ -36,16 +43,21 @@ __all__ = [
     "PaymentGateway",
     "Status",
     "TopupSpentError",
+    "TopupView",
     "WalletTopup",
     "available_providers",
     "cancel_pending",
+    "create_topup",
     "ensure_attempt",
+    "expire_stale",
     "get_gateway",
     "mark_pending",
     "move",
+    "owned_topup",
     "resolve",
     "return_url",
     "reverse",
     "settle",
+    "topup_view",
     "unclaimed_external_id",
 ]

@@ -141,6 +141,7 @@ class Settings(BaseSettings):
             "trade-link-check": 60,
             "dev-login": 60,
             "skins-listings": 60,
+            "topup-create": 60,
         },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "

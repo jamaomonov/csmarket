@@ -27,19 +27,28 @@ import pytest
         "csmarket.modules.users.routes",
         "csmarket.modules.users.tradelink",
         "csmarket.modules.payments.api",
+        "csmarket.modules.payments.dev_routes",
+        "csmarket.modules.payments.external_ids",
         "csmarket.modules.payments.fsm",
         "csmarket.modules.payments.gateways",
+        "csmarket.modules.payments.gateways.base",
         "csmarket.modules.payments.gateways.mock",
         "csmarket.modules.payments.hooks",
         "csmarket.modules.payments.models",
         "csmarket.modules.payments.payable",
+        "csmarket.modules.payments.routes",
+        "csmarket.modules.payments.schemas",
+        "csmarket.modules.payments.topups",
         "csmarket.modules.skins.admin_routes",
         "csmarket.modules.skins.api",
         "csmarket.modules.skins.routes",
         "csmarket.modules.skins.seo_routes",
         "csmarket.modules.skins.service",
         "csmarket.modules.wallet.api",
+        "csmarket.modules.wallet.entries",
         "csmarket.modules.wallet.models",
+        "csmarket.modules.wallet.routes",
+        "csmarket.modules.wallet.schemas",
         "csmarket.modules.wallet.service",
         "csmarket.api.v1.deps",
         "csmarket.api.v1.router",
@@ -60,7 +69,8 @@ def test_module_imports_first_without_a_cycle(module: str) -> None:
 def test_wallet_never_imports_payments() -> None:
     """One direction only: ``payments`` builds on ``wallet``, never the reverse."""
     code = (
-        "import sys, csmarket.modules.wallet.api, csmarket.modules.wallet.service; "
+        "import sys, csmarket.modules.wallet.api, csmarket.modules.wallet.service, "
+        "csmarket.modules.wallet.routes; "
         "sys.exit(any(m.startswith('csmarket.modules.payments') for m in sys.modules))"
     )
     result = subprocess.run(

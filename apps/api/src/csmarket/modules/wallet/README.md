@@ -14,8 +14,13 @@ allow-list (ADR-0002): UZS only, no currency column, whole soʻm.
   Append-only; deleted only by `CASCADE` from their transaction.
 
 **Interface (`api.py`):** `post`, `ensure_account`, `user_account`, `balance`,
-`user_balance`, `credit_topup`, `reverse_topup`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`,
-`InsufficientBalanceError`, and the three models. `wallet` imports no other domain
+`user_balance`, `credit_topup`, `reverse_topup`, `entries_for_user`, `Entry`, `EntriesPage`,
+`Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`, `InsufficientBalanceError`, and
+the three models.
+
+**Routes (`routes.py`):** `GET /wallet` → `{balance_uzs}` and `GET /wallet/entries` for
+the signed-in customer. The top-up routes under `/wallet/topups` are mounted from
+`payments.routes`. `wallet` imports no other domain
 module — `payments` (and M4 `orders`) build on it, never the reverse.
 
 ## Rules
@@ -62,9 +67,22 @@ arguments) book the first two rows; `payments.hooks` calls them. `reverse_topup`
 replayed key first, then locks the user's wallet and raises `InsufficientBalanceError` when
 the balance is below the amount.
 
+## Customer entries (`entries.py`)
+
+`entries_for_user(db, user_id, *, cursor=None, limit=20)` — only the customer's
+`user_wallet` leg of each transaction, newest first, keyset-paged on
+`(posting.created_at DESC, posting.id DESC)` with an opaque base64 cursor (a malformed one
+is a 422); `limit` 1..100. Each line: the transaction id, `kind`, the **signed** amount (+
+when the leg is D — the account's normal side — − when C) and, for `topup` /
+`topup_reversal`, the top-up's `T…` number. **Never the actor or the metadata** — an
+admin's identity and reason stay in admin views. The number is read through a bare
+`table("wallet_topups")` clause, so `wallet` still imports nothing from `payments`. No
+wallet yet → an empty page (none is created).
+
 **Logs:** `csmarket.wallet.service` writes `wallet.posted` (kind, transaction id, amount) —
 no user id, so a log line never ties a person to money.
 
 **Tests:** `tests/integration/test_wallet_ledger.py` (postings, replay, refused legs,
 frozen and missing accounts, both SAVEPOINT races) and `test_wallet_ledger_props.py`
-(hypothesis: `SUM(D) == SUM(C)` over random top-up series).
+(hypothesis: `SUM(D) == SUM(C)` over random top-up series), `test_wallet_routes.py`
+(balance, signed entries, redaction, keyset paging, owner only).

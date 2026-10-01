@@ -41,4 +41,19 @@ def format_amount(amount: Decimal, currency: str) -> str:
     return f"{amount:,.{digits}f}".replace(",", " ")
 
 
-__all__ = ["WHOLE_UNIT_CURRENCIES", "format_amount"]
+def wire_uzs(amount: Decimal) -> str:
+    """Whole soʻm as plain digits for an API body: no exponent, no separator, no decimals.
+
+    Postgres ``numeric`` can come back as ``Decimal("5E+4")``, whose ``str`` is not what a
+    client should parse.
+
+    Examples:
+        >>> wire_uzs(Decimal("5E+4"))
+        '50000'
+        >>> wire_uzs(Decimal("-10000"))
+        '-10000'
+    """
+    return f"{amount.quantize(Decimal(1)):f}"
+
+
+__all__ = ["WHOLE_UNIT_CURRENCIES", "format_amount", "wire_uzs"]

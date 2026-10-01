@@ -193,6 +193,20 @@
         "title": "AliasesOut",
         "type": "object"
       },
+      "BalanceOut": {
+        "description": "The customer's spendable balance.",
+        "properties": {
+          "balance_uzs": {
+            "title": "Balance Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "balance_uzs"
+        ],
+        "title": "BalanceOut",
+        "type": "object"
+      },
       "CatalogStatusOut": {
         "description": "The admin status card: catalogue size, job outcomes, rate and switches.",
         "properties": {
@@ -271,6 +285,82 @@
           "waxpeer_key_set"
         ],
         "title": "CatalogStatusOut",
+        "type": "object"
+      },
+      "EntriesOut": {
+        "description": "A page of entries, newest first, and the cursor for the next (``null`` on the last).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EntryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "EntriesOut",
+        "type": "object"
+      },
+      "EntryOut": {
+        "description": "One line of the balance history. No actor, no metadata (customer view).",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "topup",
+              "topup_reversal",
+              "admin_adjust"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "reference_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Number"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "amount_uzs",
+          "created_at",
+          "reference_number"
+        ],
+        "title": "EntryOut",
         "type": "object"
       },
       "FacetOut": {
@@ -549,6 +639,37 @@
           }
         },
         "title": "MePatchIn",
+        "type": "object"
+      },
+      "ProviderOut": {
+        "description": "A kassa the storefront may offer.",
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "ProviderOut",
+        "type": "object"
+      },
+      "ProvidersOut": {
+        "description": "The kassas available now, in the order the storefront shows them.",
+        "properties": {
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderOut"
+            },
+            "title": "Providers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "providers"
+        ],
+        "title": "ProvidersOut",
         "type": "object"
       },
       "RarityFacetOut": {
@@ -1398,6 +1519,98 @@
           "expires_in"
         ],
         "title": "TokensOut",
+        "type": "object"
+      },
+      "TopupIn": {
+        "additionalProperties": false,
+        "description": "Open a balance top-up.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "integer"
+          },
+          "locale": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Locale",
+            "type": "string"
+          },
+          "provider": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_uzs",
+          "provider",
+          "locale"
+        ],
+        "title": "TopupIn",
+        "type": "object"
+      },
+      "TopupOut": {
+        "description": "A top-up as its owner sees it.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "intent_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent Url"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "succeeded",
+              "expired",
+              "reversed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "amount_uzs",
+          "provider",
+          "status",
+          "expires_at",
+          "intent_url"
+        ],
+        "title": "TopupOut",
         "type": "object"
       },
       "TradeLinkIn": {
@@ -2494,6 +2707,28 @@
         ]
       }
     },
+    "/api/v1/payments/providers": {
+      "get": {
+        "description": "Anonymous: the storefront shows these tiles on the balance page.",
+        "operationId": "list_providers_api_v1_payments_providers_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProvidersOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kassas available now",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/api/v1/skins/catalog": {
       "get": {
         "description": "One page of on-sale items, dearest first by default; ``q`` ranks by match.",
@@ -2986,6 +3221,284 @@
         "summary": "Live auto listings for one item (cached, rate-budgeted, degradable)",
         "tags": [
           "skins"
+        ]
+      }
+    },
+    "/api/v1/wallet": {
+      "get": {
+        "description": "Spendable so\u02bbm; ``\"0\"`` before the first top-up.",
+        "operationId": "get_balance_api_v1_wallet_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My balance",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/entries": {
+      "get": {
+        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.",
+        "operationId": "get_entries_api_v1_wallet_entries_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntriesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My balance history",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/topups": {
+      "post": {
+        "description": "Open a top-up in the chosen kassa; the response says where to pay.\n\n``Idempotency-Key`` is required. The same key with the same amount and kassa returns\nthe same top-up (201 again); with another amount or kassa it is a 409\n``idempotency_mismatch``.",
+        "operationId": "post_topup_api_v1_wallet_topups_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TopupIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Open a balance top-up",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
+    "/api/v1/wallet/topups/{number}": {
+      "get": {
+        "description": "The owner's top-up; anyone else's (or an unknown number) is a 404, never a 403.",
+        "operationId": "get_topup_api_v1_wallet_topups__number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "title": "Locale",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopupOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One of my top-ups",
+        "tags": [
+          "wallet"
         ]
       }
     },

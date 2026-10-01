@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from csmarket.modules.wallet.entries import EntriesPage, Entry, entries_for_user
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
 from csmarket.modules.wallet.service import (
     NORMAL_SIDE,
@@ -26,6 +27,8 @@ __all__ = [
     "NORMAL_SIDE",
     "TX_KINDS",
     "Direction",
+    "EntriesPage",
+    "Entry",
     "InsufficientBalanceError",
     "Leg",
     "Reference",
@@ -35,6 +38,7 @@ __all__ = [
     "balance",
     "credit_topup",
     "ensure_account",
+    "entries_for_user",
     "post",
     "reverse_topup",
     "user_account",

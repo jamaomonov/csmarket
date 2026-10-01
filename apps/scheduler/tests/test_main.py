@@ -16,6 +16,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "fx.refresh",
         "skins.catalog_import",
         "skins.price_sync",
+        "wallet.topup_expiry",
     ]
 
 

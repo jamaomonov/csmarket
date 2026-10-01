@@ -7,9 +7,11 @@ attempts, and a timeout sweep and a late callback must not both see ``pending``.
 
 **Lock order, everywhere: the top-up, then the payment, then the user's wallet.** A kassa
 opening an attempt resolves the top-up with ``lock=True`` before it touches the attempt
-(``ensure_attempt`` → ``mark_pending``), so :func:`settle` and :func:`reverse` take the
-top-up first too; the other order would let a create and a settle on the same top-up
-deadlock. ``mark_pending`` and ``cancel_pending`` lock only the payment.
+(``ensure_attempt`` → ``mark_pending``), so every hook that moves an attempt —
+:func:`mark_pending`, :func:`settle`, :func:`reverse`, :func:`cancel_pending` — takes the
+top-up first too, whatever else the caller locked in the same transaction; the other order
+would let a create and a settle on the same top-up deadlock. A kassa's own transaction row
+sits between the two (top-up → kassa row → payment → user wallet).
 
 The caller commits; the hooks only flush. Log lines carry the number, provider and amount,
 never the user.
@@ -89,14 +91,20 @@ async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -
     with its id when an earlier attempt of the provider holds that reference (a declined
     card retried in the same kassa). The caller resolved ``payable`` with ``lock=True``, so
     two concurrent calls for one top-up serialise on its row. Payability is the caller's
-    check: the expiry sweep, for one, opens nothing but reads expired top-ups' attempts.
+    check for an expired top-up (a kassa asking about one answers "cannot be paid"); a
+    top-up that already took its one credit is refused here, so no new attempt is ever
+    opened on it.
 
     Raises:
+        AlreadyPaidError: the top-up is ``paid`` or ``reversed``.
         NotImplementedError: ``payable`` is not a top-up (orders arrive in M4).
     """
     topup = payable.topup
     if payable.kind != "topup" or topup is None:
         raise NotImplementedError("orders are paid from M4")
+    if payable.reason in ("paid", "reversed"):
+        log.warning("payments.topup.second_payment_refused", number=topup.number, provider=provider)
+        raise AlreadyPaidError("top-up already paid")
     live_stmt = (
         select(Payment)
         .where(
@@ -134,12 +142,13 @@ async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -
 async def mark_pending(db: AsyncSession, *, payment: Payment) -> None:
     """The kassa now holds a transaction for ``payment``: ``created`` → ``pending``.
 
-    A no-op when already ``pending``.
+    A no-op when already ``pending``. Locks the top-up, then the attempt.
 
     Raises:
         InvalidTransitionError: the attempt is already settled, failed or cancelled.
+        NotImplementedError: an order payment (M4).
     """
-    await db.refresh(payment, with_for_update=True)
+    await _lock_topup_then_payment(db, payment)
     if payment.status == "pending":
         return
     move(payment, "pending")
@@ -234,9 +243,12 @@ async def cancel_pending(db: AsyncSession, *, payment: Payment) -> None:
     """The kassa dropped ``payment`` before money moved: ``created``/``pending`` → ``cancelled``.
 
     A no-op on any other status — an attempt a sibling already settled is never pulled
-    back to ``cancelled`` without a reversal.
+    back to ``cancelled`` without a reversal. Locks the top-up, then the attempt.
+
+    Raises:
+        NotImplementedError: an order payment (M4).
     """
-    await db.refresh(payment, with_for_update=True)
+    await _lock_topup_then_payment(db, payment)
     if payment.status not in LIVE:
         return
     move(payment, "cancelled")
