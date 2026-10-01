@@ -34,7 +34,13 @@ async def _owned_out(db: AsyncSession, user_id: str, number: str) -> OrderOut:
     return order_out(row.order, row.trade, row.image_url)
 
 
-@router.post("", response_model=OrderOut, status_code=201, summary="Buy one skin")
+@router.post(
+    "",
+    response_model=OrderOut,
+    status_code=201,
+    summary="Buy one skin",
+    responses={200: {"model": OrderOut, "description": "replayed key"}},
+)
 async def post_order(
     *,
     body: OrderCreateIn,

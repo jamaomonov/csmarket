@@ -17,3 +17,13 @@ def test_usd_of_rounds_half_up_to_six_places() -> None:
     # 5 / 10 000 000 = 0.0000005: exactly half a millionth rounds up.
     assert usd_of(Decimal(1), Decimal(8)) == Decimal("0.125000")
     assert usd_of(Decimal(5), Decimal(10_000_000)) == Decimal("0.000001")
+
+
+def test_the_replay_200_is_documented() -> None:
+    from csmarket.bootstrap import create_app
+
+    responses = create_app().openapi()["paths"]["/api/v1/orders"]["post"]["responses"]
+    for status in ("200", "201"):
+        schema = responses[status]["content"]["application/json"]["schema"]
+        assert schema == {"$ref": "#/components/schemas/OrderOut"}
+    assert responses["200"]["description"] == "replayed key"

@@ -68,9 +68,9 @@ ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
 unpaid orders hidden; orders, item images and trades in **one** query) and `order_out`. A
 `pending` order past `expires_at` reads `cancelled` (not payable) before the expiry sweep
 writes it. `skin_trade_out(order, trade)` maps the trade to the buyer's five states
-(`buying`, `offer_sent`, `accepted`, `released`, `failed`) and a `reason_code`; an
-unresolved `buy_unconfirmed` / `ambiguous_trade` / `waxpeer_forbidden` attention reads
-`support` (never a refund promise); `refunded_to` only when the order records a refund.
+(`buying`, `offer_sent`, `accepted`, `released`, `failed`) and a `reason_code`; any
+unresolved attention (`ATTENTION_REASONS`, R3) reads `support` whatever the state (never a
+bare failure, never a refund promise); `refunded_to` only when the order records a refund.
 
 ## Status machine (`fsm.py`, ruling R1)
 

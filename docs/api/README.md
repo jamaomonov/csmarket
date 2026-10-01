@@ -161,7 +161,8 @@ Signed in (401 without a token). One skin per order.
 send_until, release_date, seller, refunded_to}`: `state` is `buying`, `offer_sent` (accept
 in Steam before `send_until`), `accepted` (Steam protects it until `release_date`),
 `released` or `failed`; `reason_code` (`not_accepted`, `sold_out`, `try_later`, `support`,
-`other`) is set on `failed`, and `support` also while a purchase is being checked by hand.
+`other`) is set on `failed`; `support` is set whatever the state while a purchase is being
+checked by hand (never promise a refund then).
 
 | Status | `type` suffix      | `code`               | When                                                                                 |
 | ------ | ------------------ | -------------------- | ------------------------------------------------------------------------------------ |

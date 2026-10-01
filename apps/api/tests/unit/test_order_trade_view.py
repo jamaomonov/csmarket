@@ -151,10 +151,22 @@ def test_a_resolved_attention_no_longer_reads_support() -> None:
     assert (failed.reason_code, failed.refunded_to) == ("other", "balance")
 
 
-def test_a_rolled_back_trade_is_failed_without_support_or_refund() -> None:
-    out = skin_trade_out(_order("delivered"), _trade(status=6, attention_reason="rolled_back"))
-    assert out is not None
-    assert (out.state, out.reason_code, out.refunded_to) == ("failed", "other", None)
+@pytest.mark.parametrize("attention", ["rolled_back", "audit_divergence"])
+def test_a_spent_or_divergent_trade_reads_support_without_a_refund(attention: str) -> None:
+    failed = skin_trade_out(_order("delivered"), _trade(status=6, attention_reason=attention))
+    assert failed is not None
+    assert (failed.state, failed.reason_code, failed.refunded_to) == ("failed", "support", None)
+    held = skin_trade_out(
+        _order("delivered"),
+        _trade(status=4, release_date=RELEASE, attention_reason=attention),
+    )
+    assert held is not None
+    assert (held.state, held.reason_code, held.refunded_to) == ("accepted", "support", None)
+    resolved = skin_trade_out(
+        _order("delivered"), _trade(status=6, attention_reason=attention, resolved_at=RELEASE)
+    )
+    assert resolved is not None
+    assert (resolved.state, resolved.reason_code) == ("failed", "other")
 
 
 def test_the_page_promises_a_refund_only_when_one_was_made() -> None:

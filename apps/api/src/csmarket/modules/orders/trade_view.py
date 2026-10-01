@@ -12,9 +12,11 @@ Waxpeer's numbers become five states a customer understands:
 
 ``reason_code`` says why a trade failed: ``not_accepted`` (declined or expired),
 ``sold_out`` (nothing left to buy), ``try_later`` (the purchase could not go through for
-now — a retry in a few minutes may work), ``support`` (an outcome we could not confirm yet;
-a person settles it), ``other``. ``support`` also shows on a trade that has not failed while
-it waits for an admin (ruling R3): the page says «мы проверяем покупку», never a refund.
+now — a retry in a few minutes may work), ``support`` (an unresolved attention — a buy we
+could not confirm, an ambiguous lookup, a rollback after acceptance, a Waxpeer refusal or an
+audit divergence; a person settles it), ``other``. ``support`` shows whatever the state while
+the attention is unresolved (ruling R3): the page says «мы проверяем покупку», never a bare
+failure and never a refund; once resolved, the order's own ``failure_reason`` speaks.
 
 Whether the money came back is never read off the reason: ``refunded_to`` says where a
 refund actually went, from the order, so the page never promises a refund that has not
@@ -29,14 +31,15 @@ from typing import Any, Literal
 import pydantic
 from pydantic import BaseModel
 
-from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.models import ATTENTION_REASONS, Order, SkinTrade
 
 SkinTradeState = Literal["buying", "offer_sent", "accepted", "released", "failed"]
 SkinTradeReason = Literal["not_accepted", "sold_out", "try_later", "support", "other"]
 RefundedTo = Literal["balance"]
 
-#: Attention reasons the buyer reads as «we are checking the purchase».
-_SUPPORT_REASONS = frozenset({"buy_unconfirmed", "ambiguous_trade", "waxpeer_forbidden"})
+#: Attention reasons the buyer reads as «we are checking the purchase» — every one (R3):
+#: an outcome waiting for an admin is never shown as a bare failure.
+_SUPPORT_REASONS = frozenset(ATTENTION_REASONS)
 #: ``orders.failure_reason`` → what the buyer is told.
 _FAILURE_REASONS: dict[str, SkinTradeReason] = {
     "waxpeer_low_balance": "try_later",
