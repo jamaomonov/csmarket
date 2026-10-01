@@ -1,0 +1,58 @@
+{
+  "info": {
+    "title": "csmarket API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "description": "Return ``{\"status\": \"ok\"}`` if the process is alive.",
+        "operationId": "healthz_healthz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Healthz Healthz Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "meta"
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "description": "200 when Postgres and Redis answer; 503 with the failing check named otherwise.",
+        "operationId": "readyz_readyz_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "description": "A dependency is down"
+          }
+        },
+        "summary": "Readiness probe",
+        "tags": [
+          "meta"
+        ]
+      }
+    }
+  }
+}
