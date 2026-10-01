@@ -1,4 +1,4 @@
-"""Users: find-or-create from Steam, look-ups, roles. Flushes, never commits."""
+"""Users: Steam upsert, look-ups, roles, profile, trade link. Flushes, never commits."""
 
 from __future__ import annotations
 
@@ -83,5 +83,44 @@ async def upsert_user_by_steam(
 async def set_roles(db: AsyncSession, user: User, roles: list[str]) -> None:
     """Replace ``user.roles`` (sorted, de-duplicated)."""
     user.roles = sorted(set(roles))
+    user.updated_at = now()
+    await db.flush()
+
+
+async def update_profile(db: AsyncSession, user: User, *, fields: dict[str, object]) -> None:
+    """Apply ``MePatchIn.model_dump(exclude_unset=True)``.
+
+    Setting an email resets verification (ruling P4: verification arrives in M4).
+    """
+    if "locale" in fields and fields["locale"] is not None:
+        user.locale = str(fields["locale"])
+    if "email" in fields:
+        new = fields["email"]
+        if new != user.email:
+            user.email = None if new is None else str(new)
+            user.email_verified_at = None
+    user.updated_at = now()
+    await db.flush()
+
+
+async def save_trade_link(db: AsyncSession, user: User, url: str) -> None:
+    """Store a parsed, owned link; a new link forgets the previous check."""
+    if url != user.trade_link:
+        user.trade_link = url
+        user.trade_link_verdict = None
+        user.trade_link_reason = None
+        user.trade_link_checked_at = None
+    user.updated_at = now()
+    await db.flush()
+
+
+async def record_trade_link_check(
+    db: AsyncSession, user: User, *, verdict: str | None, reason: str | None
+) -> None:
+    """Persist a check. ``unavailable`` (no verdict) leaves ``trade_link_checked_at`` alone."""
+    user.trade_link_verdict = verdict
+    user.trade_link_reason = reason
+    if verdict is not None:
+        user.trade_link_checked_at = now()
     user.updated_at = now()
     await db.flush()

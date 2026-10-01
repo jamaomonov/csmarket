@@ -25,6 +25,7 @@ dependencies = [
     "uuid-utils>=0.10",
     "orjson>=3.10",
     "pyjwt[crypto]>=2.10",
+    "email-validator>=2.2",
 ]
 
 [dependency-groups]

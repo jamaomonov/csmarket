@@ -1,4 +1,9 @@
-"""Public interface of the ``users`` module — other modules import from here only."""
+"""Public interface of the ``users`` module — other modules import from here only.
+
+The ``/me`` router is not re-exported here: ``auth`` imports this module for ``User`` and
+the upsert, and ``users.routes`` imports ``auth.api`` for ``current_user`` — re-exporting
+the router would close that cycle. ``api/v1/router.py`` mounts ``users.routes.router``.
+"""
 
 from __future__ import annotations
 

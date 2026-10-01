@@ -14,13 +14,14 @@ import os
 # unit-shaped integration tests. Disable before importing the testcontainers package.
 os.environ.setdefault("TESTCONTAINERS_RYUK_DISABLED", "true")
 
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncIterator, Callable, Iterator
 from pathlib import Path
 
 import pytest
 from alembic import command
 from alembic.config import Config
 from csmarket.core import config as cfg
+from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -180,9 +181,16 @@ async def db_session(db_engine) -> AsyncIterator[AsyncSession]:
 
 
 @pytest.fixture
-async def integration_client(db_engine) -> AsyncIterator[AsyncClient]:
-    """An ASGI HTTP client wired to a fresh FastAPI app + truncated DB."""
+def integration_app() -> FastAPI:
+    """The FastAPI app ``integration_client`` talks to (for ``dependency_overrides``)."""
     from csmarket.bootstrap import create_app
+
+    return create_app()
+
+
+@pytest.fixture
+async def integration_client(db_engine, integration_app: FastAPI) -> AsyncIterator[AsyncClient]:
+    """An ASGI HTTP client wired to a fresh FastAPI app + truncated DB."""
     from csmarket.core import db as core_db
     from csmarket.core import redis as core_redis
 
@@ -197,8 +205,7 @@ async def integration_client(db_engine) -> AsyncIterator[AsyncClient]:
     # a different loop" errors for the second Redis-using test in a session.
     core_redis._client = None  # type: ignore[attr-defined]
 
-    app = create_app()
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=integration_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 
@@ -206,3 +213,38 @@ async def integration_client(db_engine) -> AsyncIterator[AsyncClient]:
     core_db._session_factory = None  # type: ignore[attr-defined]
     # Close the Redis client so its connection pool doesn't linger on this loop.
     await core_redis.close_redis()
+
+
+class _FakeWaxpeer:
+    """Stands in for ``WaxpeerClient.check_tradelink``."""
+
+    def __init__(self, info: str | None) -> None:
+        self.info = info
+
+    async def check_tradelink(self, url: str) -> str | None:
+        return self.info
+
+
+class _FakeHold:
+    """Stands in for Steam's ``GetTradeHoldDurations``."""
+
+    def __init__(self, days: int | None) -> None:
+        self.days = days
+
+    async def trade_hold_days(self, steam_id: str, token: str) -> int | None:
+        return self.days
+
+
+@pytest.fixture
+def app_overrides(integration_app: FastAPI) -> Iterator[Callable[..., None]]:
+    """Swap the trade-link checkers for fakes: ``app_overrides(hold_days=7)``."""
+    from csmarket.modules.users.routes import tradelink_checkers
+
+    def _set(hold_days: int | None = 0, waxpeer_info: str | None = None) -> None:
+        integration_app.dependency_overrides[tradelink_checkers] = lambda: (
+            _FakeWaxpeer(waxpeer_info),
+            _FakeHold(hold_days),
+        )
+
+    yield _set
+    integration_app.dependency_overrides.clear()
