@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>csmarket admin</title>
+    <!--
+      Anti-FOUC: resolve the theme synchronously before any stylesheet or
+      script loads. Sets data-theme on <html> so the first paint already has
+      the right palette. Keep this script tiny and free of imports — every
+      branch must run in a single tick.
+    -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("csmarket.admin.theme") || "dark";
+          document.documentElement.setAttribute("data-theme", stored);
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
