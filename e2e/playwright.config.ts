@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const WEB = process.env["WEB_BASE_URL"] ?? "http://localhost:3100";
+const ADMIN = process.env["ADMIN_BASE_URL"] ?? "http://localhost:3102";
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -12,12 +15,24 @@ export default defineConfig({
   // resulting `page.goto` timeouts look like product failures and are not.
   timeout: 90_000,
   use: {
-    baseURL: process.env["WEB_BASE_URL"] ?? "http://localhost:3100",
     trace: "on-first-retry",
     navigationTimeout: 60_000,
   },
   projects: [
-    { name: "chromium", use: devices["Desktop Chrome"] },
-    { name: "iphone", use: devices["iPhone 14"] },
+    {
+      name: "web-chromium",
+      testMatch: /(home|auth)\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: WEB },
+    },
+    {
+      name: "web-iphone",
+      testMatch: /home\.spec\.ts/,
+      use: { ...devices["iPhone 14"], baseURL: WEB },
+    },
+    {
+      name: "admin-chromium",
+      testMatch: /admin\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"], baseURL: ADMIN },
+    },
   ],
 });
