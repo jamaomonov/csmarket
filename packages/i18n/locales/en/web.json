@@ -254,6 +254,7 @@
       "protectedUntil": "Steam protects the trade until {date}",
       "refunded": "The trade didn't happen — the money is back on your balance.",
       "tryLater": "Couldn't buy the skin — the money is on your balance. Try again in a few minutes.",
+      "tradeLink": "The trade link didn't work — check it in your account. The money is on your balance.",
       "support": "We're checking the purchase. The status will update on this page.",
       "toBalance": "Open balance"
     }

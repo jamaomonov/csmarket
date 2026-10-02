@@ -124,6 +124,24 @@ describe("SkinTradeCard", () => {
     expect(screen.getByRole("link", { name: "Открыть баланс" })).toBeInTheDocument();
   });
 
+  it("names the trade link when it was the reason, with the money on the balance", () => {
+    card({ state: "failed", reason_code: "trade_link", refunded_to: "balance" });
+    expect(
+      screen.getByText("Трейд-ссылка не подошла — проверьте её в профиле. Деньги на балансе."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Обмен не состоялся/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Открыть баланс" })).toBeInTheDocument();
+  });
+
+  it("never says the money is on the balance for a link refusal without a refund", () => {
+    card({ state: "failed", reason_code: "trade_link", refunded_to: null });
+    expect(screen.queryByText(/Трейд-ссылка не подошла/)).toBeNull();
+    expect(screen.queryByText(/Деньги на балансе/)).toBeNull();
+    expect(
+      screen.getByText("Мы проверяем покупку. Статус обновится на этой странице."),
+    ).toBeInTheDocument();
+  });
+
   it("does not promise a refund that has not landed", () => {
     card({ state: "failed", reason_code: "not_accepted", refunded_to: null });
     expect(screen.queryByText(/вернулись/)).toBeNull();

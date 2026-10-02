@@ -122,7 +122,8 @@ returns the fake under the flag, so the worker's buys and every sweep run agains
 unpaid orders hidden; orders, item images and trades in **one** query) and `order_out`. A
 `pending` order past `expires_at` reads `cancelled` (not payable) before the expiry sweep
 writes it. `skin_trade_out(order, trade)` maps the trade to the buyer's five states
-(`buying`, `offer_sent`, `accepted`, `released`, `failed`) and a `reason_code`; any
+(`buying`, `offer_sent`, `accepted`, `released`, `failed`) and a `reason_code` (a refund
+`invalid_trade_link` reads `trade_link`: the buyer fixes the link in their profile); any
 unresolved attention (`ATTENTION_REASONS`, R3) reads `support` whatever the state (never a
 bare failure, never a refund promise); `refunded_to` only when the order records a refund.
 
@@ -241,30 +242,34 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   second attempt (the sweep racing the worker) finds the lease held, or the buy no longer
   pending, so it can never act on a `buy_pending` it read before the first attempt settled
   the buy. The release (`next_check_at = now`; `now + 60 s` after `forbidden`, `now + 20 s`
-  after `rate_limited` — `RELEASE_BACKOFF` bounds the lookups a 403/429 storm causes) is
+  after `rate_limited` and `lookup_later`, or a 429's own `retry_after` when longer, capped
+  at `MAX_RETRY_AFTER` = the lease — `RELEASE_BACKOFF` bounds the lookups a 403/429 storm or
+  an outage causes) is
   owner-checked (`WHERE next_check_at =
 <this attempt's lease>`); an attempt is bounded by `ATTEMPT_BUDGET` (lease − 30 s), so it
-  never outlives its lease — a timeout after the buy was sent is `unconfirmed`, before it
+  never outlives its lease — a timeout after the buy was sent is `unconfirmed` (or
+  `unrecorded` when even that mark cannot be written: the lease lapses), before it
   `lookup_later`. A lease left by a dead process lapses by itself. Outcomes:
 
   | Case                                                        | Outcome         | Writes                                                                  |
   | ----------------------------------------------------------- | --------------- | ----------------------------------------------------------------------- |
   | trade link does not parse                                   | `invalid_link`  | `failed` + refund `invalid_trade_link`                                  |
-  | lookup: 429, unavailable, a refusal                         | `lookup_later`  | nothing (`buy_pending` kept; no buy without a lookup)                   |
+  | lookup: 429, unavailable, a refusal                         | `lookup_later`  | nothing (`buy_pending` kept; no buy without a lookup); due in 20 s      |
   | lookup or buy: HTTP 403                                     | `forbidden`     | attention `waxpeer_forbidden` (once), `buy_pending` kept                |
   | lookup finds our trade (`orders.trades.pick_trade`)         | `adopted`       | `mirror`, `bought_units`, `buy_pending = false` — never rebought        |
   | lookup finds only failed (6) trades, none accepted          | (buys)          | never adopted: refused attempts, nothing live was bought — buy as usual |
-  | … the same after a lost answer (`buy_unconfirmed_at`)       | `nothing_to_do` | `buy_pending = false`; reconcile's unconfirmed rule decides (R3)        |
+  | a lost answer on record (`buy_unconfirmed_at`), any lookup  | `nothing_to_do` | `buy_pending = false`; reconcile's unconfirmed rule decides (R3); belt  |
   | … one of them accepted, released or with penalties          | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false`; nothing bought      |
   | lookup finds several live trades                            | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false` (no refund)          |
   | buy accepted                                                | `bought`        | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0`  |
   | buy: 429                                                    | `rate_limited`  | nothing (`buy_pending` kept, next tick)                                 |
   | buy: unavailable / unreadable / 5xx                         | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
+  | buy refused, the message names the trade link               | `invalid_link`  | `failed` + refund `invalid_trade_link` (no substitute)                  |
   | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `waxpeer_low_balance`                                 |
   | buy refused (sold, price moved, a 4xx), no substitute       | `sold_out`      | `failed` + refund `sold_out`                                            |
-  | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (unless it is the purchase on record)       |
+  | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (the purchase on record: `adopted`)         |
 
-  A refusal that is not low balance is retried **once** with the cheapest other `auto`
+  A refusal that names neither the trade link nor low balance is retried **once** with the cheapest other `auto`
   listing of the item at most `paid_units × (1 + order_substitute_ceiling)` units, read
   through `skins.listings_for` (cached, budgeted; Waxpeer's spelling, phase included);
   Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy

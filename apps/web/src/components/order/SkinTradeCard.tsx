@@ -13,7 +13,7 @@ import {
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState } from "react";
 
-import type { SkinTradeOut } from "@/lib/orders";
+import type { SkinTradeOut, TradeReason } from "@/lib/orders";
 
 import { Link } from "@/i18n/navigation";
 import { BALANCE } from "@/lib/paths";
@@ -69,7 +69,7 @@ export function SkinTradeCard({ trade, locale }: SkinTradeCardProps) {
         </p>
       ) : null}
       {refunded ? (
-        <Refunded tryLater={!review && trade.reason_code === "try_later"} />
+        <Refunded reason={review ? null : trade.reason_code} />
       ) : trade.state === "failed" && !review ? (
         // Failed with no refund on record: nothing is promised.
         <p>{t("support")}</p>
@@ -155,11 +155,19 @@ function OfferSent({ trade, locale }: SkinTradeCardProps) {
   );
 }
 
-function Refunded({ tryLater }: { tryLater: boolean }) {
+interface RefundedProps {
+  /** Why the trade failed (`null` while a purchase is checked); picks the line shown. */
+  reason: TradeReason | null;
+}
+
+/** The money is back on the balance: why, in the buyer's terms, and a way to it. */
+function Refunded({ reason }: RefundedProps) {
   const t = useTranslations("web.orders.trade");
+  const line =
+    reason === "try_later" ? "tryLater" : reason === "trade_link" ? "tradeLink" : "refunded";
   return (
     <div className="flex flex-col items-start gap-2">
-      <p>{t(tryLater ? "tryLater" : "refunded")}</p>
+      <p>{t(line)}</p>
       <Link
         href={BALANCE}
         className="text-accent inline-flex items-center gap-1.5 text-sm font-semibold"
