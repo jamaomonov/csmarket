@@ -23,8 +23,8 @@ def _report(tmp_path: Path, percents: dict[str, tuple[int, int]]) -> Path:
             "a.py": (min(covered, half), half),
             "b.py": (covered - min(covered, half), total - half),
         }.items():
-            path = f"apps/api/src/csmarket/modules/{module}/{name}"
-            files[path] = {"summary": {"covered_lines": c, "num_statements": t}}
+            source = f"apps/api/src/csmarket/modules/{module}/{name}"
+            files[source] = {"summary": {"covered_lines": c, "num_statements": t}}
     files["apps/api/src/csmarket/core/config.py"] = {
         "summary": {"covered_lines": 0, "num_statements": 50}
     }
