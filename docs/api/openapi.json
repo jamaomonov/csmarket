@@ -98,6 +98,340 @@
         "title": "AdminEntryOut",
         "type": "object"
       },
+      "AdminOrderDetail": {
+        "description": "The order page: the order, its buyer, its trade, its payments and what may be done.",
+        "properties": {
+          "can_refund": {
+            "title": "Can Refund",
+            "type": "boolean"
+          },
+          "can_retry": {
+            "title": "Can Retry",
+            "type": "boolean"
+          },
+          "order": {
+            "$ref": "#/components/schemas/AdminOrderFull"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderPaymentOut"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminTradeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminOrderUser"
+          }
+        },
+        "required": [
+          "order",
+          "user",
+          "trade",
+          "payments",
+          "can_refund",
+          "can_retry"
+        ],
+        "title": "AdminOrderDetail",
+        "type": "object"
+      },
+      "AdminOrderFull": {
+        "description": "Every ``orders`` column (the trade link masked) plus the money an operator weighs.",
+        "properties": {
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "claimed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "claimed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed By"
+          },
+          "cost_units": {
+            "title": "Cost Units",
+            "type": "integer"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "failed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failed At"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sold_out",
+                  "waxpeer_low_balance",
+                  "invalid_trade_link",
+                  "not_accepted",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "fx_rate": {
+            "title": "Fx Rate",
+            "type": "string"
+          },
+          "fx_snapshot_id": {
+            "title": "Fx Snapshot Id",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "idempotency_key": {
+            "title": "Idempotency Key",
+            "type": "string"
+          },
+          "listing_id": {
+            "title": "Listing Id",
+            "type": "integer"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
+            "type": "string"
+          },
+          "market_hash_name": {
+            "title": "Market Hash Name",
+            "type": "string"
+          },
+          "next_check_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Check At"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "paid_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid With"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "refunded_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded At"
+          },
+          "refunded_to": {
+            "anyOf": [
+              {
+                "const": "balance",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refunded To"
+          },
+          "skin_item_id": {
+            "title": "Skin Item Id",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "buying",
+              "trade_sent",
+              "delivered",
+              "cancelled",
+              "failed",
+              "returned"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade_link_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Masked"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "user_id",
+          "status",
+          "skin_item_id",
+          "market_hash_name",
+          "phase",
+          "slug",
+          "listing_id",
+          "cost_units",
+          "cost_usd",
+          "price_usd",
+          "price_uzs",
+          "fx_snapshot_id",
+          "fx_rate",
+          "margin_usd",
+          "trade_link_masked",
+          "idempotency_key",
+          "paid_with",
+          "created_at",
+          "updated_at",
+          "expires_at",
+          "paid_at",
+          "delivered_at",
+          "cancelled_at",
+          "failed_at",
+          "refunded_at",
+          "refunded_to",
+          "failure_reason",
+          "claimed_at",
+          "claimed_by",
+          "next_check_at"
+        ],
+        "title": "AdminOrderFull",
+        "type": "object"
+      },
       "AdminOrderInfo": {
         "description": "The order the payment pays for.",
         "properties": {
@@ -130,6 +464,196 @@
           "price_uzs"
         ],
         "title": "AdminOrderInfo",
+        "type": "object"
+      },
+      "AdminOrderPaymentOut": {
+        "description": "One payment attempt of the order (open it at ``/admin/payments/{id}``).",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "created",
+              "pending",
+              "succeeded",
+              "failed",
+              "cancelled",
+              "refunded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "status",
+          "amount_uzs",
+          "created_at"
+        ],
+        "title": "AdminOrderPaymentOut",
+        "type": "object"
+      },
+      "AdminOrderRow": {
+        "description": "One line of the orders list (also the user card's orders).",
+        "properties": {
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_unconfirmed",
+                  "ambiguous_trade",
+                  "rolled_back",
+                  "waxpeer_forbidden",
+                  "audit_divergence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "paid_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid With"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "buying",
+              "trade_sent",
+              "delivered",
+              "cancelled",
+              "failed",
+              "returned"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminOrderUser"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "name",
+          "phase",
+          "price_uzs",
+          "paid_with",
+          "user",
+          "created_at",
+          "attention_reason"
+        ],
+        "title": "AdminOrderRow",
+        "type": "object"
+      },
+      "AdminOrderUser": {
+        "description": "Who placed the order.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "AdminOrderUser",
+        "type": "object"
+      },
+      "AdminOrdersOut": {
+        "description": "A page of orders, newest first, and the cursor for the next (``null`` on the last).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminOrdersOut",
         "type": "object"
       },
       "AdminPaymentDetail": {
@@ -428,6 +952,26 @@
         "title": "AdminReasonIn",
         "type": "object"
       },
+      "AdminResolveIn": {
+        "additionalProperties": false,
+        "description": "\u00ab\u0420\u0430\u0437\u043e\u0431\u0440\u0430\u043d\u043e\u00bb: what the operator found, optional.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "AdminResolveIn",
+        "type": "object"
+      },
       "AdminSkinItemOut": {
         "description": "One row of the admin item search.",
         "properties": {
@@ -678,6 +1222,480 @@
         "title": "AdminTopupOut",
         "type": "object"
       },
+      "AdminTradeCounts": {
+        "description": "The tab badges (they ignore ``q``).",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "attention": {
+            "title": "Attention",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "attention"
+        ],
+        "title": "AdminTradeCounts",
+        "type": "object"
+      },
+      "AdminTradeOut": {
+        "description": "The order's ``skin_trades`` row as the operator needs it.",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_unconfirmed",
+                  "ambiguous_trade",
+                  "rolled_back",
+                  "waxpeer_forbidden",
+                  "audit_divergence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "audit_verdict": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audit Verdict"
+          },
+          "bought_units": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bought Units"
+          },
+          "buy_pending": {
+            "title": "Buy Pending",
+            "type": "boolean"
+          },
+          "buy_unconfirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Unconfirmed At"
+          },
+          "escrow_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escrow Status"
+          },
+          "is_released": {
+            "title": "Is Released",
+            "type": "boolean"
+          },
+          "last_polled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Polled At"
+          },
+          "listing_id": {
+            "title": "Listing Id",
+            "type": "integer"
+          },
+          "offer_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Url"
+          },
+          "paid_units": {
+            "title": "Paid Units",
+            "type": "integer"
+          },
+          "penalties": {
+            "title": "Penalties"
+          },
+          "project_id": {
+            "title": "Project Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved By"
+          },
+          "resolved_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Note"
+          },
+          "seller": {
+            "additionalProperties": true,
+            "title": "Seller",
+            "type": "object"
+          },
+          "send_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send Until"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "trade_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Id"
+          },
+          "waxpeer_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waxpeer Id"
+          }
+        },
+        "required": [
+          "project_id",
+          "waxpeer_id",
+          "listing_id",
+          "paid_units",
+          "bought_units",
+          "status",
+          "escrow_status",
+          "trade_id",
+          "offer_url",
+          "send_until",
+          "release_date",
+          "accepted_at",
+          "is_released",
+          "reason",
+          "penalties",
+          "seller",
+          "buy_pending",
+          "buy_unconfirmed_at",
+          "attention_reason",
+          "audit_verdict",
+          "last_polled_at",
+          "resolved_at",
+          "resolved_by",
+          "resolved_note"
+        ],
+        "title": "AdminTradeOut",
+        "type": "object"
+      },
+      "AdminTradeRow": {
+        "description": "One line of the trades page: the order row and its trade.",
+        "properties": {
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_unconfirmed",
+                  "ambiguous_trade",
+                  "rolled_back",
+                  "waxpeer_forbidden",
+                  "audit_divergence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "paid_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid With"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "buying",
+              "trade_sent",
+              "delivered",
+              "cancelled",
+              "failed",
+              "returned"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade": {
+            "$ref": "#/components/schemas/AdminTradeSummary"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminOrderUser"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "name",
+          "phase",
+          "price_uzs",
+          "paid_with",
+          "user",
+          "created_at",
+          "attention_reason",
+          "trade"
+        ],
+        "title": "AdminTradeRow",
+        "type": "object"
+      },
+      "AdminTradeSummary": {
+        "description": "The trade behind a row of the trades page.",
+        "properties": {
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_unconfirmed",
+                  "ambiguous_trade",
+                  "rolled_back",
+                  "waxpeer_forbidden",
+                  "audit_divergence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "send_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send Until"
+          },
+          "state": {
+            "enum": [
+              "buying",
+              "offer_sent",
+              "accepted",
+              "released",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "status",
+          "state",
+          "attention_reason",
+          "send_until"
+        ],
+        "title": "AdminTradeSummary",
+        "type": "object"
+      },
+      "AdminTradesOut": {
+        "description": "A page of trades, the tab counts, and the cursor for the next page.",
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/AdminTradeCounts"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTradeRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "counts",
+          "next_cursor"
+        ],
+        "title": "AdminTradesOut",
+        "type": "object"
+      },
       "AdminUserCard": {
         "description": "Everything the user page shows: the account, its balance, the latest 20 of each.",
         "properties": {
@@ -690,6 +1708,13 @@
               "$ref": "#/components/schemas/AdminEntryOut"
             },
             "title": "Entries",
+            "type": "array"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRow"
+            },
+            "title": "Orders",
             "type": "array"
           },
           "topups": {
@@ -707,7 +1732,8 @@
           "user",
           "balance_uzs",
           "entries",
-          "topups"
+          "topups",
+          "orders"
         ],
         "title": "AdminUserCard",
         "type": "object"
@@ -3417,6 +4443,439 @@
         ]
       }
     },
+    "/api/v1/admin/orders": {
+      "get": {
+        "description": "Newest first; ``q`` = a number prefix (any case) or part of the item's name.",
+        "operationId": "list_orders_api_v1_admin_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "paid",
+                    "buying",
+                    "trade_sent",
+                    "delivered",
+                    "cancelled",
+                    "failed",
+                    "returned"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrdersOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Find orders",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{number}": {
+      "get": {
+        "description": "The order (trade link masked), its buyer, trade, payments, and what may be done.",
+        "operationId": "get_order_api_v1_admin_orders__number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such order"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "An order",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{number}/refund": {
+      "post": {
+        "description": "Only a ``buying`` order whose resolved attention says nothing was bought\n(``can_refund``); the order becomes ``failed`` (reason ``admin``).",
+        "operationId": "refund_api_v1_admin_orders__number__refund_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such order"
+          },
+          "409": {
+            "description": "Conflict; `code` is one of:\n\n- `already_refunded` \u2014 the money is already on the balance.\n- `order_in_flight` \u2014 the skin may still reach the buyer (or the attention is unresolved, or not a \u00abnothing was bought\u00bb case).\n- `order_not_refundable` \u2014 settled with nothing to give back (unpaid, cancelled, delivered).\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refund the order to the buyer's balance",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{number}/resolve": {
+      "post": {
+        "description": "\u00ab\u0420\u0430\u0437\u043e\u0431\u0440\u0430\u043d\u043e\u00bb: stamps ``resolved_at/by/note`` once; already resolved \u2192 unchanged.",
+        "operationId": "resolve_api_v1_admin_orders__number__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminResolveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such order"
+          },
+          "409": {
+            "description": "Conflict; `code` is one of:\n\n- `nothing_to_resolve` \u2014 the order has no trade, or its trade no attention.\n- `idempotency_mismatch` \u2014 the key answered another request."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark the trade's attention as checked",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/orders/{number}/retry": {
+      "post": {
+        "description": "Clears the resolved attention and makes the buy due now (``can_retry``); the next\nattempt looks the project id up first, so a purchase Waxpeer made is adopted.",
+        "operationId": "retry_api_v1_admin_orders__number__retry_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminOrderDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such order"
+          },
+          "409": {
+            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retry the order's buy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/payments": {
       "get": {
         "description": "Newest first; ``q`` = a full or partial number (any case), matched from the start.",
@@ -4065,6 +5524,117 @@
           }
         },
         "summary": "Hide or show an item",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/trades": {
+      "get": {
+        "description": "Orders with a trade, newest first: ``all``, ``active`` or ``attention``; the tab\ncounts ignore ``q``.",
+        "operationId": "list_trades_api_v1_admin_trades_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "active",
+                "attention"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTradesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trades and the attention queue",
         "tags": [
           "admin"
         ]

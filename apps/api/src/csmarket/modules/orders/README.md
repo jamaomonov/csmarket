@@ -30,9 +30,10 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `ATTENTION_REASONS`, `FAILURE_REASONS`, `TRANSITIONS`, `InvalidOrderTransitionError`,
 `move`, `ORDERS_CHANNEL` (`NOTIFY orders` wakes the worker), the response shapes `OrderOut`,
 `OrderStatusOut`, `SkinTradeOut` and `order_out`, `skin_trade_out`, `effective_status`,
-`is_expired`, `mark_paid`, and the refunds (`refund_to_balance`, `in_flight`,
-`admin_refund`, `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`), the buy
-(`drain_paid`, `attempt_buy`), and the trade sweeps (`reconcile`, `expire_pending`,
+`is_expired`, `mark_paid`, `trade_state`, and the refunds (`refund_to_balance`, `in_flight`,
+`ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`), the admin actions (`admin_refund`,
+`resolve_attention`, `retry_buy`, `can_refund`, `can_retry`, `buy_running`, `lock_order`,
+`RETRYABLE`, `CONFLICTS`), the buy (`drain_paid`, `attempt_buy`), and the trade sweeps (`reconcile`, `expire_pending`,
 `watch_protected`, `audit_recent`; the scheduler's jobs import `orders.sweeps` directly). `api.py` never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
@@ -169,15 +170,40 @@ module's models and FSM — never `payments`.
 - `in_flight(order, trade) -> bool` — `paid`, `buying`, `trade_sent`, and a `delivered`
   order whose trade has an unresolved `attention_reason` (e.g. `rolled_back`): the skin may
   be on its way or already with the buyer, so nothing refunds.
-- `admin_refund(db, *, number, admin_id) -> Order` — locks the order (then reads its trade
-  under that lock). Refunds (`failed`, reason `admin`, actor `admin:<id>`) only a `buying`
-  order whose trade carries `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden`
-  (`ADMIN_REFUNDABLE`) **and** is resolved — an operator checked Waxpeer: nothing was
-  bought. Refusals, all 409: `already_refunded`; `order_in_flight` (in flight by the rule
-  above, including an unresolved or "something may be bought" attention); `order_not_refundable`
-  (settled with nothing to give back: unpaid, cancelled, delivered). Unknown or malformed
-  number → 404. Flushes, never commits: the admin route writes its audit row in the same
-  transaction (Task 12).
+- The admin's refund (`admin_refund`) lives in `admin_actions.py` (below) and books
+  through `refund_to_balance`.
+
+## Admin actions (`admin_actions.py`, rulings R3, K, M)
+
+What `/admin/orders/{number}/…` does (`admin.orders_routes` audits each and commits). Every
+action locks the order, then its trade (`lock_order`, ruling K), re-checks under the locks
+and flushes — never commits. Unknown, malformed or `T…` number → `NotFoundError`.
+
+- `refund_refusal(order, trade, at)` / `retry_refusal(order, trade, at)` → the 409 code or
+  `None`; `can_refund(order, trade, at=None)` / `can_retry(…)` are `… is None` — the admin
+  page's flags and the actions run the same rule.
+- `buy_running(order, trade, at)` — `buy_pending` and `next_check_at > at`: a buy attempt may
+  hold the lease (`buy_lease.take_lease`), so a buy may be on the wire (or a 403/429 backoff
+  of ≤ 60 s is running) → 409 `order_busy`.
+- `admin_refund(db, *, number, admin_id) -> Order` — only a `buying`, unrefunded order whose
+  trade carries a **resolved** attention in `ADMIN_REFUNDABLE` (`buy_unconfirmed`,
+  `ambiguous_trade`, `waxpeer_forbidden`: an operator checked Waxpeer, nothing was bought)
+  and no running attempt. Turns `buy_pending` off under the lock (a racing `take_lease`
+  waits on the order row and then finds the order `failed`), then `refund_to_balance`
+  (`failed`, reason `admin`, actor `admin:<id>`). 409, in this order: `already_refunded`;
+  `order_in_flight` (`in_flight`, including an unresolved or "something may be bought"
+  attention); `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`.
+- `retry_buy(db, *, number, admin_id) -> str` — a `buying`, unrefunded order whose trade
+  carries a **resolved** attention in `RETRYABLE` (the same three) and no running attempt:
+  clears `attention_reason`, `buy_unconfirmed_at` and `resolved_*`, sets `buy_pending`,
+  `next_check_at = now`. The reconcile sweep's next `attempt_buy` looks the `project_id` up
+  first, so a purchase Waxpeer did make is adopted, never repeated. Returns the cleared
+  reason (audited). 409 `not_retryable`, `order_busy`.
+- `resolve_attention(db, *, number, admin_id, note) -> str | None` — stamps `resolved_at`,
+  `resolved_by` (admin id), `resolved_note` once; returns the reason, or `None` when it was
+  already resolved (nothing written). 409 `nothing_to_resolve` without a trade or an
+  attention. A sweep that flags the trade again clears `resolved_*` (`trades.flag`).
+- `CONFLICTS` — every 409 code above → its `detail`.
 
 ## Buying (`buying.py`, `buy_lease.py`, `buy_writes.py`, `buy_rules.py`, `trades.py`, rulings R3, R4, R6, K)
 

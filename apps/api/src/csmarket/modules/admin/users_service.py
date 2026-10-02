@@ -26,6 +26,7 @@ from csmarket.core.idempotency import load_replay, save_replay
 from csmarket.core.money import wire_uzs
 from csmarket.modules.admin.audit import record
 from csmarket.modules.admin.deps import has_role
+from csmarket.modules.admin.orders_service import recent_orders
 from csmarket.modules.admin.users_schemas import (
     AdminEntryOut,
     AdminTopupOut,
@@ -147,13 +148,14 @@ async def _topups(db: AsyncSession, user_id: str) -> list[AdminTopupOut]:
 
 
 async def user_card(db: AsyncSession, user: User) -> AdminUserCard:
-    """The user page: profile, balance, the latest 20 ledger lines and top-ups."""
+    """The user page: profile, balance, the latest 20 ledger lines, top-ups and orders."""
     entries = await entries_for_admin(db, user.id, limit=CARD_ROWS)
     return AdminUserCard(
         user=AdminUserDetail.of(user),
         balance_uzs=wire_uzs(await user_balance(db, user.id)),
         entries=[AdminEntryOut.of(e) for e in entries],
         topups=await _topups(db, user.id),
+        orders=await recent_orders(db, user.id),
     )
 
 

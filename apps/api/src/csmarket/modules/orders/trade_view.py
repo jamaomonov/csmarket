@@ -71,7 +71,8 @@ class SkinTradeOut(BaseModel):
     refunded_to: RefundedTo | None = None
 
 
-def _state(order: Order, trade: SkinTrade | None) -> SkinTradeState:
+def trade_state(order: Order, trade: SkinTrade | None) -> SkinTradeState:
+    """The trade's state as the buyer reads it (also the admin trades list's ``state``)."""
     status = None if trade is None else trade.status
     if status == 6 or order.status in ("failed", "returned"):
         return "failed"
@@ -121,7 +122,7 @@ def skin_trade_out(order: Order, trade: SkinTrade | None) -> SkinTradeOut | None
     """
     if order.status in _NO_TRADE:
         return None
-    state = _state(order, trade)
+    state = trade_state(order, trade)
     reason: SkinTradeReason | None = None
     if state == "failed":
         reason = _reason(order, trade)
@@ -146,4 +147,5 @@ __all__ = [
     "SkinTradeReason",
     "SkinTradeState",
     "skin_trade_out",
+    "trade_state",
 ]

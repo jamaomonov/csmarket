@@ -6,9 +6,10 @@
   make a second call a no-op.
 - :func:`in_flight` — whether the order's skin may still reach the buyer, or may already
   have: no refund then (Waxpeer cannot recall an offer we paid for).
-- :func:`admin_refund` — the admin's manual refund. ``failed`` and ``returned`` orders are
-  refunded automatically, so the only case left is an attention order (R3) whose Waxpeer
-  side an operator checked and resolved: nothing was bought.
+- :data:`ADMIN_REFUNDABLE` — the attention reasons under which an admin may refund
+  (``orders.admin_actions.admin_refund``): ``failed`` and ``returned`` orders are refunded
+  automatically, so the only case left is an attention order (R3) whose Waxpeer side an
+  operator checked and resolved: nothing was bought.
 
 Imports ``wallet`` and the module's own models and FSM — never ``payments`` (ruling A;
 ``orders.api`` exports this module).
@@ -22,10 +23,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
-from csmarket.core.errors import ConflictError, NotFoundError
+from csmarket.core.errors import ConflictError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderRefundReason, record_order_refund
-from csmarket.core.numbers import is_number, is_topup_number
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import FAILURE_REASONS, IN_FLIGHT, Order, SkinTrade
 from csmarket.modules.wallet.api import credit_order_refund
@@ -157,76 +157,10 @@ async def refund_to_balance(
     return True
 
 
-async def _locked(db: AsyncSession, number: str) -> tuple[Order, SkinTrade | None]:
-    """Order ``number`` locked ``FOR UPDATE`` and its trade (read under that lock).
-
-    Raises:
-        NotFoundError: malformed, a top-up's, or unknown.
-    """
-    if not is_number(number) or is_topup_number(number):
-        raise NotFoundError("order not found")
-    order = await db.scalar(
-        select(Order)
-        .where(Order.number == number)
-        .with_for_update()
-        .execution_options(populate_existing=True)
-    )
-    if order is None:
-        raise NotFoundError("order not found")
-    return order, await _trade_of(db, order)
-
-
-def _admin_refundable(order: Order, trade: SkinTrade | None) -> bool:
-    """A ``buying`` order an operator found nothing bought for (see :data:`ADMIN_REFUNDABLE`)."""
-    return (
-        order.status == "buying"
-        and trade is not None
-        and trade.attention_reason in ADMIN_REFUNDABLE
-        and trade.resolved_at is not None
-    )
-
-
-async def admin_refund(db: AsyncSession, *, number: str, admin_id: str) -> Order:
-    """An admin refunds order ``number`` to the balance (``failed``, reason ``admin``).
-
-    Only a ``buying`` order whose trade carries ``buy_unconfirmed``, ``ambiguous_trade`` or
-    ``waxpeer_forbidden`` **and** was resolved (an operator checked Waxpeer: nothing was
-    bought). Flushes, never commits: the caller writes its audit row in the same
-    transaction.
-
-    Args:
-        db: Session; the order is locked here.
-        number: The order's public number.
-        admin_id: The admin's user id (booked as actor ``admin:<id>``, never logged).
-
-    Returns:
-        The refunded order.
-
-    Raises:
-        NotFoundError: no such order.
-        ConflictError: ``already_refunded``; ``order_in_flight`` — the skin may be on its
-            way or delivered (:func:`in_flight`), or the attention is unresolved or not a
-            "nothing bought" case; ``order_not_refundable`` — settled with nothing to give
-            back (unpaid, cancelled, delivered).
-    """
-    order, trade = await _locked(db, number)
-    if order.refunded_at is not None:
-        raise ConflictError("this order was already refunded", code="already_refunded")
-    if not _admin_refundable(order, trade):
-        if in_flight(order, trade):
-            raise ConflictError("the skin may still reach the buyer", code="order_in_flight")
-        raise ConflictError("this order has nothing to refund", code="order_not_refundable")
-    await refund_to_balance(
-        db, order=order, to_status="failed", reason="admin", actor=f"admin:{admin_id}"
-    )
-    return order
-
-
 __all__ = [
     "ADMIN_REFUNDABLE",
     "BLOCKS_REFUND",
     "RefundStatus",
-    "admin_refund",
     "in_flight",
     "refund_to_balance",
 ]

@@ -71,6 +71,12 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   log), and the runbook asks for no personal data in it (`docs/runbooks/wallet.md`). The
   admin card shows the trade link masked. Metric `csmarket_kassa_rejections_total` is labelled
   by kassa and reason only.
+- **Admin orders API (M4a):** the order page shows the order's trade-link snapshot only
+  masked (`trade_link_masked`, `users.mask_trade_link`), never `orders.trade_link`; the list
+  rows carry no link at all. The order actions' audit payloads are an attention reason or an
+  amount (`orders.trade.resolve` `{reason}`, `orders.buy.retry` `{reason}`, `orders.refund`
+  `{amount_uzs}`), target the order number; the operator's resolve note lives only in
+  `skin_trades.resolved_note` (admin views only; operator text, no personal data in it).
 - **Catalogue and rate (M2) hold no personal data.** The catalogue, price sync and listings
   carry items and prices only; CBU calls carry nothing about a person. Waxpeer's API key rides
   the query string, so a Waxpeer URL and `httpx` exception text are never logged: only the

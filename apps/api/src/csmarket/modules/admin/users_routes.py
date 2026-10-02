@@ -10,14 +10,12 @@ from __future__ import annotations
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
-from csmarket.core.errors import ValidationError
-from csmarket.core.idempotency import IDEMPOTENCY_HEADER, normalize_idempotency_key
 from csmarket.modules.admin import users_service as svc
-from csmarket.modules.admin.deps import require_admin
+from csmarket.modules.admin.deps import require_admin, required_key
 from csmarket.modules.admin.filters import text_filter
 from csmarket.modules.admin.users_schemas import (
     AdminAdjustIn,
@@ -31,26 +29,7 @@ router = APIRouter(prefix="/admin/users", tags=["admin"], dependencies=[Depends(
 
 Db = Annotated[AsyncSession, Depends(db_session)]
 Admin = Annotated[User, Depends(require_admin)]
-#: ``idempotent_responses.idempotency_key`` is ``varchar(160)``.
-_MAX_KEY_LENGTH = 160
-
-
-def _required_key(value: Annotated[str, Header(alias=IDEMPOTENCY_HEADER)]) -> str:
-    """The ``Idempotency-Key`` every admin write must carry: 16 to 160 characters.
-
-    Declared required, so the schema says so and a missing header is FastAPI's 422; one
-    present but too short or too long is our 422 ``validation`` naming the header.
-    """
-    key = normalize_idempotency_key(value)
-    if key is None or len(key) > _MAX_KEY_LENGTH:
-        raise ValidationError(
-            f"{IDEMPOTENCY_HEADER} header of 16 to {_MAX_KEY_LENGTH} characters is required",
-            header=IDEMPOTENCY_HEADER,
-        )
-    return key
-
-
-Key = Annotated[str, Depends(_required_key)]
+Key = Annotated[str, Depends(required_key)]
 
 
 async def _finish(

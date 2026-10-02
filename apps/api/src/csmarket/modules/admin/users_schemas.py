@@ -13,6 +13,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 from csmarket.core.money import wire_uzs
+from csmarket.modules.admin.orders_schemas import AdminOrderRow
 from csmarket.modules.users.api import User, mask_trade_link
 from csmarket.modules.wallet.api import ADMIN_ADJUST_MAX, AdminEntry
 
@@ -135,6 +136,8 @@ class AdminUserCard(BaseModel):
     balance_uzs: str
     entries: list[AdminEntryOut]
     topups: list[AdminTopupOut]
+    #: Newest first; open one at ``/admin/orders/{number}``.
+    orders: list[AdminOrderRow]
 
 
 class AdminReasonIn(BaseModel):

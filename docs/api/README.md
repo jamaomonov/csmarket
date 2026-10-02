@@ -270,8 +270,8 @@ roles, banned_at, created_at, balance_uzs}], next_cursor}` — newest first; `q`
 email, locale, roles, banned_at, ban_reason, created_at, trade_link_masked,
 trade_link_verdict, trade_link_reason, trade_link_checked_at}, balance_uzs, entries: [{id,
 kind, amount_uzs, created_at, reference_number, actor, reason}], topups: [{number,
-amount_uzs, status, provider, created_at, succeeded_at}]}` — the latest 20 of each. Unknown
-  or malformed id → 404.
+amount_uzs, status, provider, created_at, succeeded_at}], orders: [AdminOrderRow] (M4a)}` —
+  the latest 20 of each. Unknown or malformed id → 404.
 - `POST /admin/users/{id}/ban` `{reason: 3..500}` → card. 409 `ban_self`, `ban_admin`,
   `already_banned`. Ends every session of the user.
 - `POST /admin/users/{id}/unban` `{reason: 3..500}` → card. 409 `not_banned`.
@@ -280,6 +280,33 @@ reason: 4..500}` → card. 409 `balance_too_low` for a clawback beyond the balan
 - Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise). A replay returns
   the stored card and writes nothing; the same key with another body or user is 409
   `idempotency_mismatch`. Audited: `users.ban`, `users.unban`, `wallet.adjust`.
+
+### Admin orders and trades (M4a)
+
+Admin only (401 without a token, 403 for a customer). Newest first, keyset on
+`(created_at DESC, id DESC)`, `limit` 1..100 (20), a bad cursor is 422 `cursor`. Unknown or
+malformed number → 404. Details: `apps/api/src/csmarket/modules/admin/README.md`,
+**Orders and trades**.
+
+- `GET /admin/orders?q=&status=&user_id=&cursor=&limit=` → `{items: [AdminOrderRow {number,
+status, name, phase, price_uzs, paid_with, user: {id, display_name}, created_at,
+attention_reason}], next_cursor}`. `q` (≤ 100 chars) = a number prefix (any case, ≤ 8 chars)
+  or part of the item name; `attention_reason` is the **open** one (unresolved), else `null`.
+- `GET /admin/trades?view=all|active|attention&q=&cursor=&limit=` → `{items: [AdminOrderRow +
+{trade: {status, state, attention_reason, send_until}}], counts: {active, attention},
+next_cursor}` — orders with a trade; `active` = `buying`/`trade_sent`, `attention` = an
+  unresolved attention; the counts ignore `q`.
+- `GET /admin/orders/{number}` → `AdminOrderDetail {order: {every orders column but
+trade_link, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
+payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
+- `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
+  `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
+- `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,
+  `order_in_flight`, `order_not_refundable`, `order_busy`.
+- `POST /admin/orders/{number}/retry` (no body) → detail. 409 `not_retryable`, `order_busy`.
+- Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise); a replay returns
+  the stored page and writes nothing; the same key on another request is 409
+  `idempotency_mismatch`. Audited: `orders.trade.resolve`, `orders.refund`, `orders.buy.retry`.
 
 ### Admin payments and audit (M3)
 

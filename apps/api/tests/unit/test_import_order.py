@@ -22,6 +22,9 @@ import pytest
         "csmarket.modules.admin.audit_schemas",
         "csmarket.modules.admin.audit_service",
         "csmarket.modules.admin.deps",
+        "csmarket.modules.admin.orders_routes",
+        "csmarket.modules.admin.orders_schemas",
+        "csmarket.modules.admin.orders_service",
         "csmarket.modules.admin.payments_kassa",
         "csmarket.modules.admin.payments_routes",
         "csmarket.modules.admin.payments_schemas",
@@ -40,6 +43,7 @@ import pytest
         "csmarket.modules.click.service",
         "csmarket.modules.click.signature",
         "csmarket.modules.orders",
+        "csmarket.modules.orders.admin_actions",
         "csmarket.modules.orders.api",
         "csmarket.modules.orders.buy_lease",
         "csmarket.modules.orders.buy_rules",
@@ -167,6 +171,21 @@ def test_no_domain_module_imports_the_admin_payments_or_audit_readers() -> None:
         [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
     )
     assert result.returncode == 0, result.stderr or "a domain module imported an admin reader"
+
+
+def test_no_domain_module_imports_the_admin_orders_readers() -> None:
+    """One direction only: ``admin`` builds on ``orders``; ``orders`` never imports
+    ``admin.orders_*`` (its admin actions live in ``orders.admin_actions``)."""
+    code = (
+        "import sys, csmarket.modules.orders.api, csmarket.modules.orders.routes, "
+        "csmarket.modules.orders.dev_routes, csmarket.modules.payments.api, "
+        "csmarket.modules.users.routes; "
+        "sys.exit(any(m.startswith('csmarket.modules.admin') for m in sys.modules))"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=False, timeout=60
+    )
+    assert result.returncode == 0, result.stderr or "a domain module imported admin"
 
 
 def test_the_api_registers_every_foreign_key_target() -> None:

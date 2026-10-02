@@ -113,6 +113,13 @@ Flow: [`sequence-diagrams/topup.mmd`](./sequence-diagrams/topup.mmd),
   −31007, Uzum 10017 — ruling R7). The kassas' timeout sweeps cover order attempts and lock
   the owner first, `SKIP LOCKED`, per row. Lock order for orders: order → kassa row →
   payment → wallet. The admin payment detail carries an `order` block.
+- **`admin` learns orders** — `admin.orders_routes` (`/admin/orders`, `/admin/trades`):
+  search, the order page (trade link masked), the trades page with its attention queue, and
+  three audited, idempotent actions — resolve, refund to the balance, retry the buy. The
+  writes are `orders`' own (`orders.admin_actions`, exported by `orders.api`: lock order →
+  trade, refused while a buy attempt holds the lease); `admin` reads `orders.api`,
+  `payments.api` and `fx.api`, and `orders` never imports `admin`. The admin user card lists
+  the user's latest 20 orders.
 
 ## Processes outside the API
 

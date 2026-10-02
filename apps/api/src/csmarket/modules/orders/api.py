@@ -7,6 +7,17 @@ reaches orders only through this file, so it must never import ``csmarket.module
 
 from __future__ import annotations
 
+from csmarket.modules.orders.admin_actions import (
+    CONFLICTS,
+    RETRYABLE,
+    admin_refund,
+    buy_running,
+    can_refund,
+    can_retry,
+    lock_order,
+    resolve_attention,
+    retry_buy,
+)
 from csmarket.modules.orders.buying import attempt_buy, drain_paid
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
 from csmarket.modules.orders.health import Health, measure
@@ -24,7 +35,6 @@ from csmarket.modules.orders.refunds import (
     ADMIN_REFUNDABLE,
     BLOCKS_REFUND,
     RefundStatus,
-    admin_refund,
     in_flight,
     refund_to_balance,
 )
@@ -36,16 +46,23 @@ from csmarket.modules.orders.sweeps import (
     reconcile,
     watch_protected,
 )
-from csmarket.modules.orders.trade_view import SkinTradeOut, skin_trade_out
+from csmarket.modules.orders.trade_view import (
+    SkinTradeOut,
+    SkinTradeState,
+    skin_trade_out,
+    trade_state,
+)
 
 __all__ = [
     "ADMIN_REFUNDABLE",
     "ATTENTION_REASONS",
     "BLOCKS_REFUND",
+    "CONFLICTS",
     "FAILURE_REASONS",
     "IN_FLIGHT",
     "ORDERS_CHANNEL",
     "ORDER_STATUSES",
+    "RETRYABLE",
     "TERMINAL",
     "TRANSITIONS",
     "Health",
@@ -56,20 +73,28 @@ __all__ = [
     "RefundStatus",
     "SkinTrade",
     "SkinTradeOut",
+    "SkinTradeState",
     "admin_refund",
     "attempt_buy",
     "audit_recent",
+    "buy_running",
+    "can_refund",
+    "can_retry",
     "drain_paid",
     "effective_status",
     "expire_pending",
     "in_flight",
     "is_expired",
+    "lock_order",
     "mark_paid",
     "measure",
     "move",
     "order_out",
     "reconcile",
     "refund_to_balance",
+    "resolve_attention",
+    "retry_buy",
     "skin_trade_out",
+    "trade_state",
     "watch_protected",
 ]

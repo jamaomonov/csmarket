@@ -9,9 +9,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, Header
 
-from csmarket.core.errors import ForbiddenError
+from csmarket.core.errors import ForbiddenError, ValidationError
+from csmarket.core.idempotency import IDEMPOTENCY_HEADER, normalize_idempotency_key
 from csmarket.modules.auth.api import current_user
 from csmarket.modules.users.models import User
 
@@ -32,4 +33,23 @@ async def require_admin(user: Annotated[User, Depends(current_user)]) -> User:
     return user
 
 
-__all__ = ["has_role", "require_admin"]
+#: ``idempotent_responses.idempotency_key`` is ``varchar(160)``.
+_MAX_KEY_LENGTH = 160
+
+
+def required_key(value: Annotated[str, Header(alias=IDEMPOTENCY_HEADER)]) -> str:
+    """The ``Idempotency-Key`` every admin write must carry: 16 to 160 characters.
+
+    Declared required, so the schema says so and a missing header is FastAPI's 422; one
+    present but too short or too long is our 422 ``validation`` naming the header.
+    """
+    key = normalize_idempotency_key(value)
+    if key is None or len(key) > _MAX_KEY_LENGTH:
+        raise ValidationError(
+            f"{IDEMPOTENCY_HEADER} header of 16 to {_MAX_KEY_LENGTH} characters is required",
+            header=IDEMPOTENCY_HEADER,
+        )
+    return key
+
+
+__all__ = ["has_role", "require_admin", "required_key"]

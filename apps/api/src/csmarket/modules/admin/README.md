@@ -3,7 +3,9 @@
 The admin role gate, the admin audit trail and the admin users API. M1 shipped the gate and
 one probe, `GET /api/v1/admin/me`; M2 adds `admin_audit_log` with the first admin actions
 (hiding a catalogue item, editing search aliases — `skins/README.md`, **Admin catalogue**);
-M3 adds the users list and card, ban/unban and the audited balance adjustment.
+M3 adds the users list and card, ban/unban and the audited balance adjustment; M4a the
+orders and trades API (search, the order page, the attention queue, resolve / refund /
+retry).
 
 ## Role model
 
@@ -60,6 +62,9 @@ Every admin write records one `admin_audit_log` row (spec §5, ruling Q5), migra
   `skins.alias.delete` (`skin_alias` / alias, `{"alias"}`); M3: `users.ban`, `users.unban`
   (`user` / user id, `{"reason"}`), `wallet.adjust` (`user` / user id,
   `{"amount_uzs", "reason"}` — signed integer soʻm). The reason is the operator's own words.
+  M4a (`order` / order number): `orders.trade.resolve` (`{"reason"}` — the attention
+  reason), `orders.refund` (`{"amount_uzs"}`), `orders.buy.retry` (`{"reason"}` — the
+  attention the retry cleared).
 - Read it through `GET /admin/audit` (below), or `make psql`.
 - Tests: `tests/integration/test_admin_audit.py`, `test_skins_admin_catalogue.py`.
 
@@ -109,6 +114,66 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
 - Operating the card (reading a history, adjusting with a reason, refused clawbacks):
   `docs/runbooks/wallet.md`; design: ADR-0006.
 
+## Orders and trades (M4a)
+
+`orders_routes.py` (router), `orders_service.py` (reads), `orders_schemas.py` (wire shapes).
+The writes are `orders`' own: `orders.admin_actions` (exported by `orders.api`). All under
+`/api/v1/admin`, `require_admin` on the router (401 / 403 as above).
+
+| Route                                                             | Body                    | Answer             |
+| ----------------------------------------------------------------- | ----------------------- | ------------------ |
+| `GET /admin/orders?q=&status=&user_id=&cursor=&limit=`            | —                       | `AdminOrdersOut`   |
+| `GET /admin/trades?view=all\|active\|attention&q=&cursor=&limit=` | —                       | `AdminTradesOut`   |
+| `GET /admin/orders/{number}`                                      | —                       | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/resolve`                             | `{note?: 0..500\|null}` | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/refund`                              | —                       | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/retry`                               | —                       | `AdminOrderDetail` |
+
+- **Lists:** newest first, keyset `(created_at DESC, id DESC)`, `limit` 1..100 (20); one
+  statement per page (the trade and the buyer's name are joins; the trades page adds one
+  for the counts). `q` (≤ 100 chars, no NUL) = a number prefix (upper-cased, `%`/`_`
+  literal, tried only up to 8 characters) **or** part of the item name (case-insensitive).
+  A row's `attention_reason` is the **open** attention only (set, `resolved_at` unset).
+- **Trades page:** orders that have a `skin_trades` row. `view=active` = `buying` /
+  `trade_sent`; `view=attention` = an unresolved attention; `counts {active, attention}`
+  ignore `q`. Each row adds `trade {status (Waxpeer's code), state (the buyer's reading:
+buying / offer_sent / accepted / released / failed), attention_reason, send_until}`.
+- **Order page:** every `orders` column except `trade_link` (`trade_link_masked` instead),
+  `cost_usd` / `price_usd` (6 decimals), `fx_rate` (the snapshot's rate), `margin_usd` =
+  `price_usd` − what Waxpeer charged (`bought_units` / 1000), else − `cost_usd`; the buyer
+  `{id, display_name}`; the trade (every column an operator needs, `offer_url` built from
+  `trade_id`; `attention_reason` whether resolved or not); the payment attempts, oldest
+  first; `can_refund`, `can_retry`.
+- **`can_refund` / `can_retry`** are `orders.api.can_refund` / `can_retry` — the same
+  functions (`refund_refusal`, `retry_refusal`) the actions run under the locks, so the
+  button and the action agree (`test_the_flags_say_what_the_action_does`).
+- **Resolve («Разобрано»):** stamps `resolved_at`, `resolved_by` (admin id),
+  `resolved_note` once; an already resolved attention stays as it was (200, no audit row).
+  409 `nothing_to_resolve` without a trade or an attention.
+- **Refund:** only a `buying`, unrefunded order whose trade carries a **resolved**
+  `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` (an operator checked Waxpeer:
+  nothing was bought) and no running buy attempt. Under the locks `buy_pending` goes off
+  (no new attempt can start), then `orders.refund_to_balance` books it (`failed`, reason
+  `admin`, actor `admin:<id>`). 409: `already_refunded`; `order_in_flight` (the skin may be
+  on its way or delivered, or the attention is unresolved or not a "nothing bought" case);
+  `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`.
+- **Retry:** the same eligibility, minus the refund — clears `attention_reason`,
+  `buy_unconfirmed_at` and `resolved_*`, sets `buy_pending`, makes the order due now. The
+  reconcile sweep's next `attempt_buy` looks the `project_id` up first: a purchase Waxpeer did
+  make is adopted, never repeated. 409: `not_retryable`, `order_busy`.
+- **The buy lease:** `order_busy` = a buy attempt may hold the order (`buy_pending` and
+  `next_check_at` in the future: the lease, or a 403/429 backoff of ≤ 60 s). Try again once
+  it lapses.
+- **Idempotency:** every write requires `Idempotency-Key` (16..160 chars). Order: lock the
+  order, then its trade (ruling K) → replay lookup → the change → `audit.record` → replay
+  row → commit. Scopes `admin.orders.resolve`, `admin.orders.refund`, `admin.orders.retry`;
+  the replay row keeps `{request, response}` (request = `{number}` or `{number, note}`).
+- **User card:** `orders` — the user's latest 20 orders as list rows.
+- **Direction:** `admin` imports `orders`, `payments`, `fx` and `users` through their `api`;
+  `orders` never imports `admin` (`tests/unit/test_import_order.py`).
+- Tests: `tests/integration/test_admin_orders.py` (reads), `test_admin_orders_actions.py`
+  (actions, the lease race, the flag/action pin), `test_admin_users.py` (card orders).
+
 ## Payments and audit (M3)
 
 Read-only, `require_admin` on each router (401 / 403 as above), newest first with the shared
@@ -146,5 +211,8 @@ Read-only, `require_admin` on each router (401 / 403 as above), newest first wit
 ## Public interface
 
 `admin.api`: `require_admin` (dependency returning the `User`), `has_role`, `record` (audit).
-The routers are mounted from `api/v1/router.py` via `admin.routes` and `admin.users_routes`,
+`admin.deps.required_key` is the `Idempotency-Key` dependency of every admin write (users,
+orders).
+The routers are mounted from `api/v1/router.py` via `admin.routes`, `admin.users_routes`,
+`admin.payments_routes`, `admin.audit_routes` and `admin.orders_routes`,
 like `users`; the skins admin routes live in `skins.admin_routes`.

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
+from csmarket.core import clock
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.users.api import set_roles
 from csmarket.modules.users.models import User
@@ -16,6 +18,7 @@ from sqlalchemy import event, func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from tests.integration.conftest import ADMIN_STEAM_ID, CUSTOMER_STEAM_ID
+from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.payments_factory import make_topup, make_user
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
@@ -276,6 +279,34 @@ async def test_card_shows_the_profile_balance_entries_and_topups_with_a_masked_l
         "created_at": t["created_at"],
         "succeeded_at": None,
     }
+    assert card["orders"] == []
+
+
+async def test_card_lists_the_latest_20_orders_newest_first(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    user = await _named(db_session, "Frank")
+    numbers = []
+    for i in range(22):
+        order = await make_order(
+            db_session,
+            user=user,
+            trade_link=FAKE_LINK,
+            created_at=clock.now() - timedelta(minutes=30 - i),
+        )
+        numbers.append(order.number)
+    await make_trade(db_session, order, attention_reason="buy_unconfirmed")
+    await make_order(db_session)  # someone else's
+
+    r = await integration_client.get(f"{BASE}/{user.id}", headers=h)
+    assert r.status_code == 200, r.text
+    assert "QwErTy" not in r.text
+    orders = r.json()["orders"]
+    assert [o["number"] for o in orders] == numbers[::-1][:20]
+    assert orders[0]["user"] == {"id": user.id, "display_name": "Frank"}
+    assert orders[0]["attention_reason"] == "buy_unconfirmed"
+    assert orders[1]["attention_reason"] is None
 
 
 @pytest.mark.parametrize("bad_id", ["00000000-0000-4000-8000-0000000000ff", "not-a-uuid"])
