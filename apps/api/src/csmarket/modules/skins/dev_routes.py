@@ -13,7 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from csmarket.api.v1.deps import dev_gate
 from csmarket.modules.auth.api import current_user
-from csmarket.modules.skins.waxpeer_fake import FakeTradeClient, fake_client
+from csmarket.modules.skins.waxpeer import WaxpeerUnavailableError
+from csmarket.modules.skins.waxpeer_fake import FakeTradeClient, FakeUnavailableError, fake_client
 from csmarket.modules.users.api import User
 
 router = APIRouter(prefix="/dev/waxpeer", tags=["dev"], dependencies=[Depends(dev_gate)])
@@ -36,9 +37,13 @@ async def dev_set_balance(
     """Set the fake Waxpeer balance; any signed-in account (dev only).
 
     Keyless on purpose: dev-only, and it sets an absolute value, so a repeat changes nothing.
+    A Redis failure is a 503.
     """
     await fake.set_balance(body.units)
-    return DevBalanceIn(units=await fake.balance_units())
+    try:
+        return DevBalanceIn(units=await fake.balance_units())
+    except WaxpeerUnavailableError as exc:
+        raise FakeUnavailableError("the dev Waxpeer fake is unavailable") from exc
 
 
 __all__ = ["router"]

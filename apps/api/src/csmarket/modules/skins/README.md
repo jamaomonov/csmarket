@@ -48,7 +48,9 @@ import or the price sync. `phase` is `''` when an item has none, never NULL.
 ## Buying at Waxpeer (M4a)
 
 - **`waxpeer_trades.WaxpeerTradeClient(WaxpeerClient)`**, behind the `TradeClient` protocol;
-  `trade_client(settings)` builds it with `waxpeer_buy_timeout_seconds`.
+  `trade_client(settings)` builds it with `waxpeer_buy_timeout_seconds` (or `timeout_seconds=`);
+  `request_trade_client()` — a FastAPI dependency — with `REQUEST_LOOKUP_TIMEOUT_SECONDS` (4 s)
+  for the one request-path lookup (the admin refund, ADR-0007 Y).
   - `buy_one_p2p(item_id=, price_units=, partner=, token=, project_id=) -> WaxpeerBuy(id,
 price_units)` — `GET /v1/buy-one-p2p`, never over `price_units`; `project_id` is our
     order id. A success without an integer `id` / `price` is `WaxpeerUnavailableError`.
@@ -87,8 +89,9 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
 
 - **On with `CSMARKET_WAXPEER_FAKE=true`** (the dev compose default); `Settings` refuses it in
   prod and `fake_active(settings)` re-checks `is_prod`. Then `trade_client()` (worker buys,
-  scheduler sweeps and gauges), `listings.search_client()` (item page, checkout) and
-  `users.routes.tradelink_checkers()` all return `FakeTradeClient(get_redis())`.
+  scheduler sweeps and gauges), `request_trade_client()` (the admin refund's lookup, 4 s),
+  `listings.search_client()` (item page, checkout) and `users.routes.tradelink_checkers()`
+  all return `FakeTradeClient(get_redis())`.
 - **`FakeTradeClient(redis)`** implements `TradeClient`, `SearchClient` and the trade-link
   checker. `buy_one_p2p` always succeeds: a trade with a random id, `status=0`, `price` = the
   asked units, kept in `skins:waxpeer:fake:trade:{project_id}` (hash, 7 days); a second buy
@@ -98,7 +101,8 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   with `send_until` 30 min after the offer went out (6 s). `balance_units` reads
   `skins:waxpeer:fake:balance` (default 10 000 000 = $10 000; a buy does not spend it).
   `search_listings` is always `WaxpeerUnavailableError` (the snapshot serves), and
-  `check_tradelink` always passes. Redis down reads as a Waxpeer outage.
+  `check_tradelink` always passes. Redis down reads as a Waxpeer outage; under the dev
+  routes (set the balance, accept / decline / roll back) it is a 503 (`FakeUnavailableError`).
 - **Dev routes** (404 unless dev login is on and the fake is on): `act()` behind
   `POST /dev/orders/{number}/trade` — `accept` sets `release_date` = now + 7 days on a status-4
   trade, `decline` sets 6 + `reason="Buyer failed to accept"`, `rollback` sets 6 +

@@ -16,7 +16,8 @@ never undo a dev action): status 0, then 2 with a 10-digit ``trade_id`` after
 
 Neither the trade link nor the buyer's Steam ID is stored. A Redis failure reads as a
 Waxpeer outage (``WaxpeerUnavailableError``), which every caller already treats as
-"unknown, resolve by lookup".
+"unknown, resolve by lookup"; on the dev routes (:meth:`FakeTradeClient.set_balance`,
+:meth:`FakeTradeClient.act`) it is a 503 (:class:`FakeUnavailableError`), not a 500.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from redis.exceptions import RedisError
 
 from csmarket.core import clock
 from csmarket.core.config import Settings, get_settings
-from csmarket.core.errors import ConflictError, NotFoundError
+from csmarket.core.errors import AppError, ConflictError, NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.core.redis import get_redis
 from csmarket.modules.skins.waxpeer import WaxpeerUnavailableError
@@ -62,6 +63,14 @@ DECLINE_REASON = "Buyer failed to accept"
 FakeAction = Literal["accept", "decline", "rollback"]
 
 _UNACCEPTED = (0, 2, 4)
+
+
+class FakeUnavailableError(AppError):
+    """The fake's Redis failed under a dev route: 503, try again (never a 500)."""
+
+    status_code = 503
+    type_uri = "https://csmarket.uz/errors/fake-unavailable"
+    title = "Dev Waxpeer fake unavailable"
 
 
 def fake_active(settings: Settings) -> bool:
@@ -176,8 +185,15 @@ class FakeTradeClient:
             raise WaxpeerUnavailableError("fake: balance") from exc
 
     async def set_balance(self, units: int) -> None:
-        """Set the fake balance (the dev route; no TTL)."""
-        await self._redis.set(BALANCE_KEY, str(units))
+        """Set the fake balance (the dev route; no TTL).
+
+        Raises:
+            FakeUnavailableError: Redis failed (503).
+        """
+        try:
+            await self._redis.set(BALANCE_KEY, str(units))
+        except RedisError as exc:
+            raise FakeUnavailableError("the dev Waxpeer fake is unavailable") from exc
 
     async def search_listings(
         self, names: Sequence[str], *, game: str = "csgo"
@@ -205,8 +221,12 @@ class FakeTradeClient:
         Raises:
             ConflictError: ``fake_trade_missing`` (nothing bought yet) or
                 ``fake_trade_state`` (e.g. accept before the offer is out).
+            FakeUnavailableError: Redis failed (503).
         """
-        docs = await self._docs(project_id)
+        try:
+            docs = await self._docs(project_id)
+        except WaxpeerUnavailableError as exc:
+            raise FakeUnavailableError("the dev Waxpeer fake is unavailable") from exc
         doc = next((d for d in docs if int(d["id"]) == waxpeer_id), None) if waxpeer_id else None
         doc = doc or (docs[-1] if docs else None)
         if doc is None:
@@ -214,7 +234,10 @@ class FakeTradeClient:
         moved = _moved(doc, action)
         if moved is not doc:
             key = TRADE_KEY.format(project_id)
-            await self._redis.hset(key, str(doc["id"]), json.dumps(moved))
+            try:
+                await self._redis.hset(key, str(doc["id"]), json.dumps(moved))
+            except RedisError as exc:
+                raise FakeUnavailableError("the dev Waxpeer fake is unavailable") from exc
             log.info("skins.waxpeer_fake.acted", project_id=project_id, action=action)
         return parse_trade(moved)
 
@@ -262,6 +285,7 @@ __all__ = [
     "TRADE_KEY",
     "FakeAction",
     "FakeTradeClient",
+    "FakeUnavailableError",
     "fake_active",
     "fake_client",
 ]

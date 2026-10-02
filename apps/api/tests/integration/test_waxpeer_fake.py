@@ -25,6 +25,7 @@ from csmarket.modules.skins.api import (
     trade_client,
 )
 from csmarket.modules.skins.waxpeer import WaxpeerClient
+from csmarket.modules.skins.waxpeer_fake import FakeUnavailableError, fake_client
 from csmarket.modules.users.models import User
 from csmarket.modules.users.routes import tradelink_checkers
 from httpx import ASGITransport, AsyncClient
@@ -215,6 +216,49 @@ async def test_redis_down_reads_as_a_waxpeer_outage() -> None:
         await dead.check_project_ids(["o"])
     with pytest.raises(WaxpeerUnavailableError):
         await dead.balance_units()
+
+
+async def test_redis_down_under_a_dev_route_is_a_503_not_a_500() -> None:
+    dead = FakeTradeClient(_DeadRedis())  # type: ignore[arg-type]  # a stand-in that only fails
+    with pytest.raises(FakeUnavailableError) as setting:
+        await dead.set_balance(1)
+    with pytest.raises(FakeUnavailableError) as acting:
+        await dead.act("o", "accept", waxpeer_id=None)
+    assert setting.value.status_code == acting.value.status_code == 503
+
+
+async def test_a_failed_write_of_an_action_is_a_503(
+    wax: FakeTradeClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await wax.buy_one_p2p(item_id=1, price_units=1, partner=1, token="x", project_id="o-503")
+
+    async def down(*_args: object, **_kwargs: object) -> None:
+        raise RedisConnectionError("down")
+
+    monkeypatch.setattr(get_redis(), "hset", down)
+    with pytest.raises(FakeUnavailableError):
+        await wax.act("o-503", "decline", waxpeer_id=None)
+
+
+async def test_the_dev_routes_answer_503_when_the_fake_is_down(
+    integration_client: AsyncClient,
+    integration_app: Any,
+    headers: dict[str, str],
+    to_buy: Order,
+) -> None:
+    dead = FakeTradeClient(_DeadRedis())  # type: ignore[arg-type]  # a stand-in that only fails
+    integration_app.dependency_overrides[fake_client] = lambda: dead
+    try:
+        r = await integration_client.post(
+            "/api/v1/dev/waxpeer/balance", headers=headers, json={"units": 1}
+        )
+        assert r.status_code == 503, r.text
+        r = await integration_client.post(
+            f"/api/v1/dev/orders/{to_buy.number}/trade", headers=headers, json={"action": "accept"}
+        )
+        assert r.status_code == 503, r.text
+    finally:
+        integration_app.dependency_overrides.pop(fake_client, None)
 
 
 async def test_the_balance_is_ten_thousand_dollars_until_set(wax: FakeTradeClient) -> None:
