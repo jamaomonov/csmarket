@@ -213,7 +213,9 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 skip_covered = false
-# Spec §14 floor. Raise as coverage lands above it; money modules get their own 95 % gate in M3.
+# Spec §14 floor. Raise as coverage lands above it. The money modules (orders, payments,
+# wallet, skins) have their own 95 % gate: scripts/check-module-coverage.py on coverage.json,
+# run by `make test-py` and CI `test-py` (AGENTS §9).
 fail_under = 80
 exclude_lines = [
     "pragma: no cover",

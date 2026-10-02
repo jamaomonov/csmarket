@@ -345,28 +345,28 @@ csmarket/
 All entrypoints live in the root `Makefile` (`make help` lists them). **Prefer `make` targets
 over raw tools.**
 
-| Target                                            | What it does                                                                        |
-| ------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `make bootstrap`                                  | Install deps (pnpm + `uv sync --all-packages --all-groups`), pre-commit, API client |
-| `make dev` / `make dev-detached`                  | Dev stack via `docker-compose.yml` (foreground / background)                        |
-| `make down`                                       | Stop the dev stack                                                                  |
-| `make dev-api`                                    | API as a host process on `:8100` (needs dev Postgres + Redis up)                    |
-| `make dev-worker` / `make dev-scheduler`          | Worker / scheduler as host processes                                                |
-| `make dev-web` / `make dev-admin`                 | Storefront (`next dev`, `:3100`) / admin (Vite, `:3102`) as host processes          |
-| `make logs service=api`                           | Tail one dev service                                                                |
-| `make migrate`                                    | `alembic upgrade head` inside the dev `api` container                               |
-| `make seed-skins`                                 | Dev only: a priced ~60-item catalogue (refuses in prod)                             |
-| `make migration name=add_x`                       | Autogenerate an Alembic revision inside the dev `api` container                     |
-| `make psql`                                       | psql into the dev database                                                          |
-| `make test`                                       | `test-py` + `test-ts`                                                               |
-| `make test-py` / `make test-ts` / `make test-e2e` | pytest `-n auto` / Vitest via turbo / Playwright (needs the dev stack)              |
-| `make lint` / `make lint-fix`                     | ruff + check-no-yupay + eslint + prettier / autofix                                 |
-| `make check-no-yupay`                             | The port guard on its own                                                           |
-| `make typecheck`                                  | mypy + tsc                                                                          |
-| `make gen-api`                                    | Regenerate `docs/api/openapi.json` + `packages/api-client`                          |
-| `make build`                                      | Build the dev compose images                                                        |
-| `make deploy tag=sha-xxxxxxx`                     | Dispatch `deploy.yml` to production with that image tag (`docs/runbooks/deploy.md`) |
-| `make backup` / `make restore file=… identity=…`  | One-off backup / restore against the **prod** compose (run on the server)           |
+| Target                                            | What it does                                                                            |
+| ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `make bootstrap`                                  | Install deps (pnpm + `uv sync --all-packages --all-groups`), pre-commit, API client     |
+| `make dev` / `make dev-detached`                  | Dev stack via `docker-compose.yml` (foreground / background)                            |
+| `make down`                                       | Stop the dev stack                                                                      |
+| `make dev-api`                                    | API as a host process on `:8100` (needs dev Postgres + Redis up)                        |
+| `make dev-worker` / `make dev-scheduler`          | Worker / scheduler as host processes                                                    |
+| `make dev-web` / `make dev-admin`                 | Storefront (`next dev`, `:3100`) / admin (Vite, `:3102`) as host processes              |
+| `make logs service=api`                           | Tail one dev service                                                                    |
+| `make migrate`                                    | `alembic upgrade head` inside the dev `api` container                                   |
+| `make seed-skins`                                 | Dev only: a priced ~60-item catalogue (refuses in prod)                                 |
+| `make migration name=add_x`                       | Autogenerate an Alembic revision inside the dev `api` container                         |
+| `make psql`                                       | psql into the dev database                                                              |
+| `make test`                                       | `test-py` + `test-ts`                                                                   |
+| `make test-py` / `make test-ts` / `make test-e2e` | pytest `-n auto` + coverage gates / Vitest via turbo / Playwright (needs the dev stack) |
+| `make lint` / `make lint-fix`                     | ruff + check-no-yupay + eslint + prettier / autofix                                     |
+| `make check-no-yupay`                             | The port guard on its own                                                               |
+| `make typecheck`                                  | mypy + tsc                                                                              |
+| `make gen-api`                                    | Regenerate `docs/api/openapi.json` + `packages/api-client`                              |
+| `make build`                                      | Build the dev compose images                                                            |
+| `make deploy tag=sha-xxxxxxx`                     | Dispatch `deploy.yml` to production with that image tag (`docs/runbooks/deploy.md`)     |
+| `make backup` / `make restore file=… identity=…`  | One-off backup / restore against the **prod** compose (run on the server)               |
 
 Auth helpers (not `make` targets; `docs/onboarding/local-setup.md`, `docs/runbooks/admin-bootstrap.md`):
 

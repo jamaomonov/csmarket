@@ -124,8 +124,9 @@ typecheck: ## mypy + tsc
 test: test-py test-ts ## All tests (Python + TS)
 
 .PHONY: test-py
-test-py: ## Python unit + integration tests
-	COVERAGE_CORE=sysmon uv run pytest -n auto
+test-py: ## Python unit + integration tests, the 80 % floor and the money modules' 95 % gate
+	COVERAGE_CORE=sysmon uv run pytest -n auto --cov=apps --cov-report=json
+	uv run python scripts/check-module-coverage.py coverage.json
 
 .PHONY: test-ts
 test-ts: ## TS tests across all packages and apps
