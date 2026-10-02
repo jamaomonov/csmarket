@@ -116,6 +116,8 @@ describe("OrderPay", () => {
     });
     expect(m.pay.mock.calls[0]?.[1]).toEqual({ provider: "click", locale: "ru" });
     expect(onPaid).not.toHaveBeenCalled();
+    // The page is leaving for the kassa: the button stays busy, no second tap.
+    expect(screen.getByRole("button", { name: /^Оплатить 381\s000 сум$/ })).toBeDisabled();
   });
 
   it("keeps the kassa chosen on the item page even when the balance covers", async () => {
@@ -146,6 +148,26 @@ describe("OrderPay", () => {
     expect(m.devPay).toHaveBeenCalledWith("/api/v1/dev/orders/A100/pay");
     expect(m.pay).not.toHaveBeenCalled();
     expect(assign).not.toHaveBeenCalled();
+  });
+
+  it("a test payment refused because the order moved on re-reads the order", async () => {
+    m.devPay.mockRejectedValue(conflict({ code: "order_not_payable", reason: "expired" }));
+    setup("mock");
+    fireEvent.click(await screen.findByRole("button", { name: "Оплатить (тест)" }));
+    await waitFor(() => {
+      expect(onPaid).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("a failed test payment says so in our words", async () => {
+    m.devPay.mockRejectedValue(new SessionApiError(500, "Internal", null));
+    setup("mock");
+    fireEvent.click(await screen.findByRole("button", { name: "Оплатить (тест)" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Что-то пошло не так. Попробуйте ещё раз.",
+    );
+    expect(onPaid).not.toHaveBeenCalled();
   });
 
   it("a double click pays once", async () => {

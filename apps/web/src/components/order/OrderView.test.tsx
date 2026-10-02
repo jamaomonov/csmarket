@@ -1,17 +1,12 @@
 // @vitest-environment jsdom
 import { SessionApiError } from "@csmarket/api-client";
-import common from "@csmarket/i18n/locales/ru/common.json";
-import ru from "@csmarket/i18n/locales/ru/web.json";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
+import { fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-
-import { OrderView } from "./OrderView";
 
 import type { OrderOut } from "@/lib/orders";
 import type { ReactNode } from "react";
 
+import { orderState as state, renderOrderView, tick } from "@/test/order-view";
 import { orderOut, tradeOut } from "@/test/orders";
 
 interface Opts {
@@ -49,7 +44,6 @@ vi.mock("@/i18n/navigation", () => ({
   ),
 }));
 
-const KASSA = "https://kassa.example/pay?id=1";
 const assign = vi.fn<(url: string) => void>();
 let seq = 0;
 let number = "A1";
@@ -58,26 +52,7 @@ function at(search: string): void {
   vi.stubGlobal("location", { pathname: `/orders/${number}`, search, hash: "", assign });
 }
 
-function view() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const tree = (
-    <QueryClientProvider client={client}>
-      <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-        <OrderView locale="ru" number={number} />
-      </NextIntlClientProvider>
-    </QueryClientProvider>
-  );
-  return { ...render(tree), client };
-}
-
-const state = () => screen.getByTestId("order-status").getAttribute("data-state");
-
-/** Run `ms` of fake time, plus the 0 ms timers a query's answer rides on. */
-async function tick(ms = 0): Promise<void> {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms + 20);
-  });
-}
+const view = () => renderOrderView(number);
 
 beforeEach(() => {
   seq += 1;
@@ -95,122 +70,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
-
-describe("OrderView — paying", () => {
-  it("a pending order shows the skin, its price and the way to pay", async () => {
-    m.get.mockResolvedValue(orderOut(number, { phase: "Phase 2" }));
-    view();
-    expect(
-      await screen.findByRole("heading", { level: 1, name: `Заказ #${number}` }),
-    ).toBeInTheDocument();
-    expect(state()).toBe("pending");
-    expect(screen.getByText("Ждёт оплаты")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "AK-47 | Redline (Field-Tested)" })).toHaveAttribute(
-      "href",
-      "/item/ak-47-redline-field-tested",
-    );
-    expect(screen.getByText("Phase 2")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: /^Оплатить 381\s000 сум$/ })).toBeVisible();
-    expect(m.get).toHaveBeenCalledWith(`/api/v1/orders/${number}`);
-    expect(m.pay).not.toHaveBeenCalled();
-    expect(assign).not.toHaveBeenCalled();
-  });
-
-  it("with ?go=1 opens the chosen kassa once, strips the flag and never again in this tab", async () => {
-    const replace = vi.spyOn(window.history, "replaceState");
-    at("?go=1&via=click");
-    m.get.mockResolvedValue(orderOut(number));
-    m.pay.mockResolvedValue({ order: orderOut(number), intent_url: KASSA });
-    const first = view();
-    await screen.findByRole("heading", { level: 1 });
-    await vi.waitFor(() => {
-      expect(assign).toHaveBeenCalledWith(KASSA);
-    });
-    expect(m.pay).toHaveBeenCalledTimes(1);
-    const [path, body, key] = m.pay.mock.calls[0] ?? [];
-    expect(path).toBe(`/api/v1/orders/${number}/pay`);
-    expect(body).toEqual({ provider: "click", locale: "ru" });
-    expect(key?.length).toBeGreaterThanOrEqual(16);
-    expect(replace).toHaveBeenCalledWith(null, "", `/orders/${number}?via=click`);
-    await act(() => first.client.refetchQueries());
-    first.unmount();
-    // A reload that still carries the flag (the strip never landed).
-    view();
-    await screen.findByRole("heading", { level: 1 });
-    expect(assign).toHaveBeenCalledTimes(1);
-    expect(m.pay).toHaveBeenCalledTimes(1);
-  });
-
-  it("opens nothing when the answer comes too late to be part of the tap", async () => {
-    vi.useFakeTimers();
-    at("?go=1&via=click");
-    m.get.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => {
-            resolve(orderOut(number));
-          }, 9_000);
-        }),
-    );
-    view();
-    await tick(9_000);
-    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(m.pay).not.toHaveBeenCalled();
-    expect(assign).not.toHaveBeenCalled();
-  });
-
-  it("opens nothing for an order already paid", async () => {
-    at("?go=1&via=click");
-    m.get.mockResolvedValue(orderOut(number, { status: "buying", payable: false }));
-    view();
-    await screen.findByRole("heading", { level: 1 });
-    expect(state()).toBe("buying");
-    expect(m.pay).not.toHaveBeenCalled();
-    expect(assign).not.toHaveBeenCalled();
-  });
-
-  it.each([["?go=1&via=mock"], ["?mock=1"]])(
-    "the test kassa (%s) pays from the page, never navigates, then the order is read again",
-    async (search) => {
-      at(search);
-      m.get
-        .mockResolvedValueOnce(orderOut(number))
-        .mockResolvedValue(orderOut(number, { status: "paid", payable: false }));
-      m.devPay.mockResolvedValue(orderOut(number, { status: "paid", payable: false }));
-      view();
-      const pay = await screen.findByRole("button", { name: "Оплатить (тест)" });
-      expect(m.pay).not.toHaveBeenCalled();
-      expect(assign).not.toHaveBeenCalled();
-      fireEvent.click(pay);
-      await vi.waitFor(() => {
-        expect(state()).toBe("paid");
-      });
-      expect(m.devPay).toHaveBeenCalledWith(`/api/v1/dev/orders/${number}/pay`);
-      expect(screen.getByText("Покупаем скин — обмен придёт в Steam через минуту.")).toBeVisible();
-      expect(assign).not.toHaveBeenCalled();
-    },
-  );
-
-  it("an order past its time to pay says so and offers nothing to pay", async () => {
-    at("?go=1&via=click");
-    m.get.mockResolvedValue(orderOut(number, { payable: false }));
-    view();
-    expect(await screen.findByText("Время на оплату вышло.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Оплатить/ })).toBeNull();
-    expect(m.pay).not.toHaveBeenCalled();
-    expect(assign).not.toHaveBeenCalled();
-  });
-
-  it("a cancelled order says so", async () => {
-    m.get.mockResolvedValue(orderOut(number, { status: "cancelled", payable: false }));
-    view();
-    expect(await screen.findByText("Заказ отменён.")).toBeInTheDocument();
-    expect(state()).toBe("cancelled");
-    expect(screen.queryByRole("button", { name: /Оплатить/ })).toBeNull();
-    expect(screen.queryByText("Обмен в Steam")).toBeNull();
-  });
-});
-
 describe("OrderView — the trade", () => {
   const sent = tradeOut({
     state: "offer_sent",
@@ -218,7 +77,7 @@ describe("OrderView — the trade", () => {
     send_until: new Date(Date.now() + 25 * 60_000).toISOString(),
   });
 
-  it.each<[string, Partial<OrderOut>, string | RegExp]>([
+  it.each<[OrderOut["status"], Partial<OrderOut>, string | RegExp]>([
     ["paid", { trade: null }, "Покупаем скин — обмен придёт в Steam через минуту."],
     ["buying", { trade: tradeOut() }, "Покупаем скин — обмен придёт в Steam через минуту."],
     ["trade_sent", { trade: sent }, "Обмен отправлен — примите его в Steam."],
@@ -245,9 +104,7 @@ describe("OrderView — the trade", () => {
       "Мы проверяем покупку. Статус обновится на этой странице.",
     ],
   ])("a %s order shows the trade card", async (status, over, text) => {
-    m.get.mockResolvedValue(
-      orderOut(number, { status: status as OrderOut["status"], payable: false, ...over }),
-    );
+    m.get.mockResolvedValue(orderOut(number, { status, payable: false, ...over }));
     view();
     expect(await screen.findByText(text)).toBeInTheDocument();
     expect(state()).toBe(status);

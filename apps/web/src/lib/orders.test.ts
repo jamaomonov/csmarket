@@ -179,6 +179,11 @@ describe("reads and dev helpers", () => {
       action: "accept",
     });
   });
+
+  it("a dev pay of an order that moved on is a typed refusal", async () => {
+    api.apiPost.mockRejectedValueOnce(conflict({ code: "order_not_payable", reason: "expired" }));
+    await expect(devPayOrder("A1")).rejects.toBeInstanceOf(OrderNotPayableError);
+  });
 });
 
 describe("createAndPay", () => {

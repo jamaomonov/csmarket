@@ -133,7 +133,7 @@ describe("SkinTradeCard", () => {
     ).toBeInTheDocument();
   });
 
-  it.each<[SkinTradeOut["state"]]>([["buying"], ["offer_sent"], ["accepted"], ["failed"]])(
+  it.each<[SkinTradeOut["state"]]>([["buying"], ["accepted"], ["failed"]])(
     "a purchase under review reads «мы проверяем» in state %s, and promises nothing",
     (state) => {
       card({
@@ -152,6 +152,34 @@ describe("SkinTradeCard", () => {
       expect(screen.queryByRole("link", { name: "Открыть баланс" })).toBeNull();
     },
   );
+
+  it("a purchase under review never hides an offer the buyer can accept", () => {
+    card({
+      state: "offer_sent",
+      reason_code: "support",
+      offer_url: OFFER,
+      send_until: new Date(Date.now() + 25 * 60_000).toISOString(),
+      seller: { name: "seller-one", avatar_url: null, level: null, joined_at: null },
+    });
+    expect(screen.getByText("Обмен отправлен — примите его в Steam.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Открыть обмен в Steam" })).toHaveAttribute(
+      "href",
+      OFFER,
+    );
+    expect(screen.getByText(/^Примите до/)).toBeInTheDocument();
+    expect(screen.getByText("seller-one")).toBeInTheDocument();
+    expect(
+      screen.getByText("Мы проверяем покупку. Статус обновится на этой странице."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/вернулись/)).toBeNull();
+    expect(screen.queryByRole("link", { name: "Открыть баланс" })).toBeNull();
+  });
+
+  it("an offer under review with no link yet reads «мы проверяем» only", () => {
+    card({ state: "offer_sent", reason_code: "support" });
+    expect(screen.getByText(/Мы проверяем покупку/)).toBeInTheDocument();
+    expect(screen.queryByText(/Обмен отправлен/)).toBeNull();
+  });
 
   it("a purchase under review that was refunded by hand says where the money went", () => {
     card({ state: "failed", reason_code: "support", refunded_to: "balance" });

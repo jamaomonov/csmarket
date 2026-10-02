@@ -15,13 +15,18 @@ import { useArrivalKassa, useKassaAutoOpen } from "./useOrderArrival";
 
 import type { Locale } from "@csmarket/i18n";
 
-import { ORDERS_KEY } from "@/components/account/OrdersList";
 import { ENTRIES_KEY } from "@/components/balance/EntriesList";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY } from "@/lib/balance";
 import { orderPollInterval } from "@/lib/order-poll";
-import { getOrder, type OrderOut, type PayProvider, type SkinTradeOut } from "@/lib/orders";
+import {
+  getOrder,
+  ORDERS_KEY,
+  type OrderOut,
+  type PayProvider,
+  type SkinTradeOut,
+} from "@/lib/orders";
 import { ORDERS } from "@/lib/paths";
 
 const isNotFound = (err: unknown): boolean => err instanceof SessionApiError && err.status === 404;
@@ -149,7 +154,12 @@ function OrderBody({ order, locale, kassa, onPaid }: OrderBodyProps) {
         <p className="text-lg font-semibold">{t("expired")}</p>
       );
     case "cancelled":
-      return <p className="text-lg font-semibold">{t("cancelled")}</p>;
+      // Only the expiry sweep cancels an order; one never paid simply ran out of time.
+      return (
+        <p className="text-lg font-semibold">
+          {t(order.paid_at === null ? "expired" : "cancelled")}
+        </p>
+      );
     case "paid":
     case "buying":
     case "trade_sent":

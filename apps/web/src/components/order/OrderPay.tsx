@@ -53,19 +53,21 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   const inFlight = useRef(false);
   const test = provider === "mock";
 
-  async function run(method: PayProvider): Promise<void> {
+  /** Pays; `true` when the page is now leaving for the kassa. */
+  async function run(method: PayProvider): Promise<boolean> {
     if (method === "mock") {
       await devPayOrder(order.number);
       onPaid();
-      return;
+      return false;
     }
     const out = await payOrder(order.number, { provider: method, locale }, mintPayKey());
     if (method !== WALLET && out.intent_url !== null) {
       window.location.assign(out.intent_url);
-      return;
+      return true;
     }
     void qc.invalidateQueries({ queryKey: BALANCE_KEY });
     onPaid();
+    return false;
   }
 
   async function pay(): Promise<void> {
@@ -73,8 +75,9 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
     inFlight.current = true;
     setBusy(true);
     setFailed(false);
+    let leaving = false;
     try {
-      await run(provider);
+      leaving = await run(provider);
     } catch (err) {
       if (err instanceof BalanceTooLowError) {
         // The tile turns red with what is missing once the balance is read again.
@@ -86,8 +89,11 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
         setFailed(true);
       }
     } finally {
-      inFlight.current = false;
-      setBusy(false);
+      // Leaving for the kassa: stay busy until the page goes, so a second tap pays nothing.
+      if (!leaving) {
+        inFlight.current = false;
+        setBusy(false);
+      }
     }
   }
 

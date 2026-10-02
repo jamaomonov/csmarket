@@ -41,13 +41,16 @@ interface SkinTradeCardProps {
  * The Steam trade on the order page: buying → the offer (open it in Steam, from whom,
  * accept by when) → received, protected by Steam until a date; or, failed, where the
  * money went. A purchase we are checking (`reason_code: "support"`) says so whatever its
- * state, and a refund is mentioned only when `refunded_to` says it happened.
+ * state — under the offer when there is one to accept, instead of the state otherwise —
+ * and a refund is mentioned only when `refunded_to` says it happened.
  */
 export function SkinTradeCard({ trade, locale }: SkinTradeCardProps) {
   const t = useTranslations("web.orders.trade");
   useMinuteTick(trade.state === "offer_sent");
   const review = trade.reason_code === "support";
   const refunded = trade.refunded_to === "balance";
+  // An offer the buyer can still accept is never hidden, even while we check the purchase.
+  const actionable = trade.state === "offer_sent" && trade.offer_url !== null;
   const titleId = useId();
 
   return (
@@ -58,14 +61,13 @@ export function SkinTradeCard({ trade, locale }: SkinTradeCardProps) {
       <h2 id={titleId} className="text-fg-dim text-xs font-semibold uppercase tracking-wider">
         {t("title")}
       </h2>
+      {review && !actionable ? null : <TradeBody trade={trade} locale={locale} />}
       {review ? (
         <p className="flex items-center gap-2">
           <SearchCheck aria-hidden className="text-accent h-4 w-4 shrink-0" />
           {t("support")}
         </p>
-      ) : (
-        <TradeBody trade={trade} locale={locale} />
-      )}
+      ) : null}
       {refunded ? (
         <Refunded tryLater={!review && trade.reason_code === "try_later"} />
       ) : trade.state === "failed" && !review ? (

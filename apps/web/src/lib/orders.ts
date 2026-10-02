@@ -234,15 +234,28 @@ export function getOrder(number: string): Promise<OrderOut> {
   return session.apiGet<OrderOut>(`/api/v1/orders/${encodeURIComponent(number)}`);
 }
 
+/** Query key of «Мои заказы», for whoever needs to invalidate it. */
+export const ORDERS_KEY = ["orders", "list"] as const;
+
 /** `GET /me/orders`: one page, newest first; pass `next_cursor` back for the next. */
 export function listOrders(cursor?: string): Promise<OrdersPage> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
   return session.apiGet<OrdersPage>(`/api/v1/me/orders${query}`);
 }
 
-/** Dev only (404 in prod): settle the order through the test kassa. A repeat is a no-op. */
-export function devPayOrder(number: string): Promise<OrderOut> {
-  return session.apiPost<OrderOut>(`/api/v1/dev/orders/${encodeURIComponent(number)}/pay`, {});
+/**
+ * Dev only (404 in prod): settle the order through the test kassa. A repeat is a no-op;
+ * an order that expired meanwhile is `OrderNotPayableError`.
+ */
+export async function devPayOrder(number: string): Promise<OrderOut> {
+  try {
+    return await session.apiPost<OrderOut>(
+      `/api/v1/dev/orders/${encodeURIComponent(number)}/pay`,
+      {},
+    );
+  } catch (err) {
+    throw orderError(err);
+  }
 }
 
 export type DevTradeAction = "accept" | "decline" | "rollback";

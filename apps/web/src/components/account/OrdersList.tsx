@@ -4,15 +4,13 @@ import { Button, buttonVariants } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
 import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
+import { useMemo } from "react";
 
 import { OrderItem } from "@/components/order/OrderItem";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { listOrders, type OrderOut, type OrdersPage } from "@/lib/orders";
+import { listOrders, ORDERS_KEY, type OrderOut, type OrdersPage } from "@/lib/orders";
 import { HOME, orderPath } from "@/lib/paths";
-
-/** Query key of «Мои заказы», for whoever needs to invalidate it. */
-export const ORDERS_KEY = ["orders", "list"] as const;
 
 interface OrdersListProps {
   locale: string;
@@ -38,6 +36,10 @@ export function OrdersList({ locale }: OrdersListProps) {
     getNextPageParam: (last) => last.next_cursor,
     enabled: signedIn,
   });
+  const when = useMemo(
+    () => new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
+    [locale],
+  );
 
   if (status === "loading") return <Skeleton />;
   if (status === "suspended") return <p className="text-danger">{authT("suspended")}</p>;
@@ -70,7 +72,7 @@ export function OrdersList({ locale }: OrdersListProps) {
       <ul className="flex flex-col gap-3">
         {items.map((order) => (
           <li key={order.number}>
-            <OrderCard order={order} locale={locale} />
+            <OrderCard order={order} locale={locale} when={when} />
           </li>
         ))}
       </ul>
@@ -93,11 +95,12 @@ export function OrdersList({ locale }: OrdersListProps) {
 interface OrderCardProps {
   order: OrderOut;
   locale: string;
+  /** The order date's format, built once per list. */
+  when: Intl.DateTimeFormat;
 }
 
-function OrderCard({ order, locale }: OrderCardProps) {
+function OrderCard({ order, locale, when }: OrderCardProps) {
   const t = useTranslations("web.orders");
-  const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   return (
     <Link
       href={orderPath(order.number)}

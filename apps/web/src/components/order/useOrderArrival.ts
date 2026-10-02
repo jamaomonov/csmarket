@@ -45,8 +45,14 @@ export function useKassaAutoOpen(
 ): void {
   const latch = useRef(false);
   const arrivedAt = useRef<number | null>(null);
+  // Cleared on unmount: a pay answer that lands after the buyer left opens nothing.
+  const alive = useRef(true);
   useEffect(() => {
+    alive.current = true;
     arrivedAt.current = Date.now();
+    return () => {
+      alive.current = false;
+    };
   }, []);
   useEffect(() => {
     if (!order || latch.current) return;
@@ -63,7 +69,9 @@ export function useKassaAutoOpen(
     }
     payOrder(number, { provider: kassa, locale }, mintPayKey()).then(
       (out) => {
-        if (out.intent_url !== null && !late()) window.location.assign(out.intent_url);
+        if (alive.current && out.intent_url !== null && !late()) {
+          window.location.assign(out.intent_url);
+        }
       },
       () => {
         // Nothing opens; the page shows the method and the button.

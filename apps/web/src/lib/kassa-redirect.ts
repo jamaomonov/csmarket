@@ -1,15 +1,18 @@
 /**
- * Opening the kassa once, from the top-up's own page.
+ * Opening the kassa once, from the payment's own page: a top-up's
+ * (`/account/balance/topups/{number}`) or an order's (`/orders/{number}`).
  *
  * On a phone the kassa's `https://` link opens the bank's app, not a page in this tab, and
- * no kassa brings the customer back. So the form goes to the top-up's page first
- * (`?go=1`), and that page opens the kassa. Whatever happens next, the tab the customer
- * returns to is their top-up, with its status and a pay button.
+ * no kassa brings the customer back. So the form (the top-up form, the buy panel) goes to
+ * the payment's page first (`?go=1`), and that page opens the kassa. Whatever happens
+ * next, the tab the customer returns to is their top-up or order, with its status and a
+ * pay button.
  *
  * The flag must fire at most once, or coming back from the bank would throw the customer
  * straight back into it. Three guards, any one of which is enough: a `useRef` latch in the
  * component (re-renders, polls, StrictMode), a per-tab mark here (a reload, a restored
- * tab), and the flag stripped from the address (a new session, a bookmark).
+ * tab), and the flag stripped from the address (a new session, a bookmark). Marks are
+ * keyed by number; top-up numbers (`T…`) and order numbers never collide.
  */
 
 const GO_PARAM = "go";
@@ -41,7 +44,7 @@ export function shouldAutoOpen(number: string, search: string): boolean {
   return !openedHere.has(number) && !storedMark(number);
 }
 
-/** Spend the one-shot for this top-up in this tab. Never throws. */
+/** Spend the one-shot for this top-up or order in this tab. Never throws. */
 export function markOpened(number: string): void {
   openedHere.add(number);
   try {
