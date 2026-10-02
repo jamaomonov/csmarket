@@ -1,0 +1,17 @@
+groups:
+  - name: notifications
+    rules:
+      # A letter gave up: rejected by Resend (a bad address, a domain problem) or out of its
+      # six attempts (Resend down or the key wrong for ~14 h). Money and orders are untouched;
+      # the customer simply got no email. The counter comes from the worker (the only sender)
+      # and is pre-created at 0 in core/metrics.py, so the first failure after a restart is a
+      # 0 -> 1 step that increase() can see.
+      - alert: EmailsFailing
+        expr: sum by (kind) (increase(csmarket_emails_total{outcome="failed",job="worker"}[30m])) > 0
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} {{ $labels.kind }} letter(s) failed in 30 min'
+          description: >
+            The worker gave up on email(s). Check the Resend dashboard and the worker's
+            `notifications.email` log lines (outcome=failed, last_error_code on the row).
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/email.md#failing"

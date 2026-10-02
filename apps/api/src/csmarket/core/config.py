@@ -146,6 +146,15 @@ class Settings(BaseSettings):
     realtime_auth_timeout_seconds: float = Field(
         default=5, gt=0, description="Seconds a new order WebSocket has to send its auth frame."
     )
+    email_transport: Literal["resend", "dev"] = Field(
+        default="dev",
+        description="resend sends real mail; dev keeps the last letters in Redis (prod: resend).",
+    )
+    resend_api_key: str = Field(default="")
+    resend_base_url: str = Field(default="https://api.resend.com")
+    email_from: str = Field(default="noreply@csmarket.uz")
+    email_from_name: str = Field(default="CS Market")
+    email_send_timeout_seconds: float = Field(default=10, gt=0)
     auth_ip_guard_bucket_max: dict[str, int] = Field(
         default_factory=lambda: {
             "steam-login": 60,
@@ -352,6 +361,17 @@ class Settings(BaseSettings):
         """Refuse to start prod with the fake Waxpeer: its buys spend nothing and send nothing."""
         if self.waxpeer_fake and self.is_prod:
             raise ValueError("CSMARKET_WAXPEER_FAKE must be off in prod")
+        return self
+
+    @model_validator(mode="after")
+    def _no_dev_mail_in_prod(self) -> Self:
+        """Send real mail in prod: an unset transport resolves to ``resend`` there, and an
+        explicit ``dev`` refuses to start (its letters never leave Redis)."""
+        if not self.is_prod or self.email_transport == "resend":
+            return self
+        if "email_transport" in self.model_fields_set:
+            raise ValueError("CSMARKET_EMAIL_TRANSPORT must be resend in prod")
+        self.email_transport = "resend"
         return self
 
     @model_validator(mode="after")

@@ -246,6 +246,34 @@ def ws_connected(delta: int) -> None:
         )
 
 
+#: Which letter (``notifications`` outbox kinds) and how one send attempt of it ended:
+#: ``sent``; ``skipped`` (no verified address to send to); ``retry`` (rescheduled);
+#: ``failed`` (rejected, or out of attempts — the alert ``EmailsFailing``).
+EmailKind = Literal["receipt", "trade_sent", "refunded", "verify"]
+EmailOutcome = Literal["sent", "skipped", "retry", "failed"]
+_EMAIL_KINDS = frozenset(("receipt", "trade_sent", "refunded", "verify", "other"))
+_EMAIL_OUTCOMES = frozenset(("sent", "skipped", "retry", "failed"))
+
+EMAILS = Counter(
+    "csmarket_emails_total",
+    "Outbox letters by kind and send outcome (alert: EmailsFailing).",
+    ("kind", "outcome"),
+)
+_precreate(EMAILS, kind=_EMAIL_KINDS, outcome=_EMAIL_OUTCOMES)
+
+
+def record_email(kind: str, outcome: EmailOutcome) -> None:
+    """Count one send attempt of an outbox letter. An unknown kind becomes ``"other"``.
+
+    Never raises.
+    """
+    _inc(
+        EMAILS,
+        "csmarket_emails_total",
+        {"kind": kind if kind in _EMAIL_KINDS else "other", "outcome": outcome},
+    )
+
+
 def record_ws_nudges(count: int) -> None:
     """Count ``count`` nudges sent to sockets. Never raises."""
     if count <= 0:
@@ -423,6 +451,7 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 
 __all__ = [
+    "EMAILS",
     "KASSA_REJECTIONS",
     "ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP",
     "ORDERS_STUCK",
@@ -437,6 +466,8 @@ __all__ = [
     "WAXPEER_CALLS",
     "WS_CONNECTIONS",
     "WS_NUDGES",
+    "EmailKind",
+    "EmailOutcome",
     "KassaProvider",
     "KassaRejectionReason",
     "OrderBuyOutcome",
@@ -449,6 +480,7 @@ __all__ = [
     "WaxpeerEndpoint",
     "WaxpeerOutcome",
     "mark_orders_health_success",
+    "record_email",
     "record_kassa_rejection",
     "record_order_buy",
     "record_order_refund",

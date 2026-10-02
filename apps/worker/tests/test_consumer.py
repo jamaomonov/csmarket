@@ -372,13 +372,32 @@ async def test_an_empty_queue_costs_one_query_and_returns() -> None:
     assert calls == 1
 
 
-def test_registers_the_orders_queue() -> None:
-    """One queue, on the channel the orders module NOTIFYs, two drainers wide."""
+def test_registers_the_orders_and_emails_queues() -> None:
+    """Orders two drainers wide, emails one, each on the channel its module NOTIFYs."""
+    from csmarket.modules.notifications.api import EMAILS_CHANNEL
     from csmarket.modules.orders.api import ORDERS_CHANNEL
 
-    (orders,) = _queues(get_settings())
+    orders, emails = _queues(get_settings())
     assert (orders.name, orders.channel, orders.concurrency) == ("orders", ORDERS_CHANNEL, 2)
     assert orders.drain is consumer._drain_orders
+    assert (emails.name, emails.channel, emails.concurrency) == ("emails", EMAILS_CHANNEL, 1)
+    assert emails.drain is consumer._drain_emails
+
+
+async def test_the_emails_drain_is_the_notifications_modules(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``_drain_emails`` hands its session to ``notifications.drain_emails``."""
+    seen: list[Any] = []
+
+    async def fake_drain_emails(db: Any) -> int:
+        seen.append(db)
+        return 2
+
+    monkeypatch.setattr(consumer, "drain_emails", fake_drain_emails)
+    session = object()
+    assert await consumer._drain_emails(session) == 2  # type: ignore[arg-type]
+    assert seen == [session]
 
 
 async def test_the_orders_drain_is_the_orders_modules(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -78,6 +78,7 @@ def test_missing_prod_settings_names_auth_keys(monkeypatch: pytest.MonkeyPatch) 
         "CSMARKET_JWT_PUBLIC_KEY",
         "CSMARKET_STEAM_API_KEY",
         "CSMARKET_WAXPEER_API_KEY",
+        "CSMARKET_RESEND_API_KEY",
     ):
         monkeypatch.delenv(name, raising=False)
     missing = missing_prod_settings(Settings(environment="prod"))
@@ -86,4 +87,5 @@ def test_missing_prod_settings_names_auth_keys(monkeypatch: pytest.MonkeyPatch) 
         "CSMARKET_JWT_PUBLIC_KEY",
         "CSMARKET_STEAM_API_KEY",
         "CSMARKET_WAXPEER_API_KEY",
+        "CSMARKET_RESEND_API_KEY",
     ]

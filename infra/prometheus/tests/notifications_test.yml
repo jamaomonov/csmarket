@@ -1,0 +1,40 @@
+# Unit tests for ../alerts/notifications.yml. Run from the repo root:
+#
+#   docker run --rm -v "$PWD/infra/prometheus:/p" --entrypoint promtool \
+#     prom/prometheus test rules /p/tests/notifications_test.yml
+rule_files:
+  - ../alerts/notifications.yml
+
+evaluation_interval: 1m
+
+tests:
+  # The pre-created series steps 0 -> 1: the first failed letter alerts.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_emails_total{job="worker",kind="receipt",outcome="failed"}'
+        values: "0 0 0 1 1 1"
+      - series: 'csmarket_emails_total{job="worker",kind="receipt",outcome="sent"}'
+        values: "0 1 2 3 4 5"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: EmailsFailing
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              kind: receipt
+            exp_annotations:
+              summary: "1 receipt letter(s) failed in 30 min"
+              description: "The worker gave up on email(s). Check the Resend dashboard and the worker's `notifications.email` log lines (outcome=failed, last_error_code on the row).\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/email.md#failing"
+
+  # Sent and retried letters never alert.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_emails_total{job="worker",kind="verify",outcome="retry"}'
+        values: "0 1 2 3 4 5"
+      - series: 'csmarket_emails_total{job="worker",kind="verify",outcome="failed"}'
+        values: "0 0 0 0 0 0"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: EmailsFailing
+        exp_alerts: []

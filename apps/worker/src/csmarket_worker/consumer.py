@@ -1,9 +1,11 @@
 """The worker: drain the Postgres-native queues.
 
-One queue in the product (M4a): ``orders`` -- rows in ``paid`` are claimable
+Two queues in the product: ``orders`` (M4a) -- rows in ``paid`` are claimable
 (``FOR UPDATE SKIP LOCKED``), the transaction that writes ``paid`` also
 ``NOTIFY orders``; its drain buys each claimed order at Waxpeer
-(``orders.buying.drain_paid``). Everything here is parameterised by
+(``orders.buying.drain_paid``) -- and ``emails`` (M4b) -- due ``email_outbox`` rows,
+``NOTIFY emails`` with each insert; its drain sends them
+(``notifications.sender.drain_emails``). Everything here is parameterised by
 :class:`Queue` so a second queue is one more entry in ``_queues()``, never a
 copy of the loop.
 
@@ -43,10 +45,11 @@ from csmarket.core.db import get_engine
 from csmarket.core.logging import configure_logging, get_logger
 from csmarket.core.observability import init_sentry
 
-# Every model the ``orders`` drain may touch, so the mappers and foreign keys resolve.
+# Every model the drains may touch, so the mappers and foreign keys resolve.
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
+from csmarket.modules.notifications.api import EMAILS_CHANNEL, drain_emails
 from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_paid
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
@@ -96,15 +99,24 @@ async def _drain_orders(db: AsyncSession) -> int:
     return await drain_paid(db)
 
 
+async def _drain_emails(db: AsyncSession) -> int:
+    """Send due letters from the email outbox (``notifications.sender.drain_emails``)."""
+    return await drain_emails(db)
+
+
 def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may read settings
     """The queues this process drains, in the order a wake drains them.
 
     ``orders``: two drainers, so one Waxpeer call that hangs to its timeout stalls one
-    drainer, not every paid order. Its channel constant comes from
-    ``csmarket.modules.orders.api`` — a channel spelled twice is a queue nobody drains
-    and no test fails.
+    drainer, not every paid order. ``emails``: one drainer — letters are not urgent to the
+    second, and one sender keeps the provider's rate limit far away. Each channel constant
+    comes from the producing module's ``api`` — a channel spelled twice is a queue nobody
+    drains and no test fails.
     """
-    return (Queue(name="orders", channel=ORDERS_CHANNEL, drain=_drain_orders, concurrency=2),)
+    return (
+        Queue(name="orders", channel=ORDERS_CHANNEL, drain=_drain_orders, concurrency=2),
+        Queue(name="emails", channel=EMAILS_CHANNEL, drain=_drain_emails, concurrency=1),
+    )
 
 
 def raw_dsn(url: str) -> str:

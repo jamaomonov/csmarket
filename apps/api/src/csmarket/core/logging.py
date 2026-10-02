@@ -71,6 +71,11 @@ REDACTED_KEYS = frozenset(
         "for_steamid64",
         "seller_steam_id",
         "steam_api_key",
+        # Email (M4b): the Resend key and a letter's recipient under any name.
+        "resend_api_key",
+        "address",
+        "recipient",
+        "to",
         # Generic terms worth blocking wherever they appear as a literal key —
         # e.g. an acquirer's raw webhook JSON replayed into the admin audit feed.
         "card",

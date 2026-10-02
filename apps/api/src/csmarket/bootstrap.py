@@ -55,6 +55,7 @@ _REQUIRED_IN_PROD: tuple[tuple[str, str, str], ...] = (
         "accounts sign in nameless; trade-hold check skipped",
     ),
     ("CSMARKET_WAXPEER_API_KEY", "waxpeer_api_key", "trade-link check always 'unavailable'"),
+    ("CSMARKET_RESEND_API_KEY", "resend_api_key", "no letter is sent: every email fails"),
 )
 
 

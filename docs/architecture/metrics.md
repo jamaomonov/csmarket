@@ -37,6 +37,12 @@ by the scheduler.
 | `csmarket_ws_connections`  | none   | Order WebSockets open in this API process (`realtime.routes`): +1 when a socket authenticates, −1 when it ends.               | None  |
 | `csmarket_ws_nudges_total` | none   | Order nudges delivered to open sockets, one per socket reached (`realtime.registry.publish`); a socket that fails is dropped. | None  |
 
+## Email (worker, M4b)
+
+| Metric                  | Labels                                                                                                                   | Meaning                                                                                                                                                                                                                 | Alert                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `csmarket_emails_total` | `kind` = `receipt` / `trade_sent` / `refunded` / `verify` / `other`; `outcome` = `sent` / `skipped` / `retry` / `failed` | One send attempt of an outbox letter (`notifications.sender`): `skipped` = no verified address to send to, `retry` = rescheduled after a retryable error, `failed` = rejected or out of six attempts. Pre-created at 0. | `EmailsFailing` (any `failed` in 30 min) |
+
 ## Order-health gauges (scheduler job `orders.health`)
 
 Set every 60 s by `apps/scheduler/src/csmarket_scheduler/jobs/orders_health.py` from

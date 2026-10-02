@@ -22,6 +22,7 @@ from csmarket.modules.admin import models as _admin_models  # noqa: F401
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
+from csmarket.modules.notifications import models as _notifications_models  # noqa: F401
 from csmarket.modules.orders import models as _orders_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
