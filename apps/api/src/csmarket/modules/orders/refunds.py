@@ -28,6 +28,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderRefundReason, record_order_refund
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import FAILURE_REASONS, IN_FLIGHT, Order, SkinTrade
+from csmarket.modules.realtime.api import nudge
 from csmarket.modules.wallet.api import credit_order_refund
 
 log = get_logger("csmarket.orders.refunds")
@@ -145,6 +146,7 @@ async def refund_to_balance(
     order.refunded_to = "balance"
     order.failure_reason = reason
     await db.flush()
+    await nudge(db, user_id=order.user_id, number=order.number)
     refund_reason: OrderRefundReason = reason  # type: ignore[assignment] # FAILURE_REASONS
     record_order_refund(refund_reason)
     log.info(

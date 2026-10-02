@@ -136,6 +136,16 @@ class Settings(BaseSettings):
     auth_ip_guard_max: int = Field(default=10)
     auth_ip_guard_window_seconds: int = Field(default=60)
     auth_ip_guard_subject_max: int = Field(default=10)
+    realtime_enabled: bool = Field(
+        default=True,
+        description="The API process listens for order events and serves the order WebSocket.",
+    )
+    realtime_ping_seconds: float = Field(
+        default=25, gt=0, description="Seconds between pings on an order WebSocket."
+    )
+    realtime_auth_timeout_seconds: float = Field(
+        default=5, gt=0, description="Seconds a new order WebSocket has to send its auth frame."
+    )
     auth_ip_guard_bucket_max: dict[str, int] = Field(
         default_factory=lambda: {
             "steam-login": 60,
@@ -145,6 +155,7 @@ class Settings(BaseSettings):
             "topup-create": 60,
             "order-create": 60,
             "order-pay": 60,
+            "ws-connect": 60,
         },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "

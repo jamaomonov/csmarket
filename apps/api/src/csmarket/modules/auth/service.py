@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Literal, NoReturn
 
 from redis.exceptions import RedisError
@@ -427,6 +427,29 @@ async def _is_blocklisted(key: str, *, kind: str) -> bool:
     except RedisError:
         log.exception("auth.blocklist_unreadable", blocklist=kind)
         return False
+
+
+@dataclass(frozen=True)
+class AuthenticatedUser:
+    """Who an access token belongs to, and until when it may be trusted."""
+
+    user_id: str
+    expires_at: datetime
+
+
+async def authenticate(
+    db: AsyncSession, access_token: str, *, settings: Settings | None = None
+) -> AuthenticatedUser:
+    """:func:`resolve_current_user` plus the token's expiry — for a long-lived connection
+    (the order WebSocket) that must end when the token does.
+
+    Raises:
+        UnauthorizedError: As :func:`resolve_current_user`.
+        AccountSuspendedError: As :func:`resolve_current_user`.
+    """
+    claims = authjwt.verify(access_token, expected_kind="access", settings=settings)
+    user = await resolve_current_user(db, access_token, settings=settings)
+    return AuthenticatedUser(user_id=user.id, expires_at=claims.exp)
 
 
 async def resolve_current_user(

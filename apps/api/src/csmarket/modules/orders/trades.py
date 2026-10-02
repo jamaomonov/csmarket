@@ -37,6 +37,7 @@ from csmarket.core.metrics import TradeAttentionReason, record_trade_attention
 from csmarket.modules.orders.fsm import TRANSITIONS, move
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.refunds import refund_to_balance
+from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skins.api import WaxpeerTrade
 
 log = get_logger("csmarket.orders.trades")
@@ -227,6 +228,17 @@ async def apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: Waxpeer
         ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``rolled_back`` (also
         when the attention was already open) or ``held``.
     """
+    outcome = await _apply(db, order=order, trade=trade, wt=wt)
+    if outcome in _NUDGED:
+        await nudge(db, user_id=order.user_id, number=order.number)
+    return outcome
+
+
+#: Outcomes that change what the buyer sees; a ``returned`` is nudged by its refund.
+_NUDGED = frozenset({"trade_sent", "delivered", "rolled_back"})
+
+
+async def _apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: WaxpeerTrade) -> str:
     first_seen = trade.status != FAILED_STATUS
     mirror(trade, wt)
     if wt.status == FAILED_STATUS:

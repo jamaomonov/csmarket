@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import Order
+from csmarket.modules.realtime.api import nudge
 
 #: ``NOTIFY`` channel the worker listens on for paid orders.
 ORDERS_CHANNEL = "orders"
@@ -34,6 +35,7 @@ async def mark_paid(db: AsyncSession, order: Order, *, provider: str) -> None:
     order.paid_with = provider
     await db.flush()
     await db.execute(select(func.pg_notify(ORDERS_CHANNEL, order.number)))
+    await nudge(db, user_id=order.user_id, number=order.number)
 
 
 __all__ = ["ORDERS_CHANNEL", "mark_paid"]

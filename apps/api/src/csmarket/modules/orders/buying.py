@@ -67,6 +67,7 @@ from csmarket.modules.orders.buy_writes import (
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.trades import FAILED_STATUS, AmbiguousTradeError, pick_trade
+from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skins.api import (
     TradeClient,
     WaxpeerError,
@@ -128,6 +129,8 @@ async def _claim(db: AsyncSession, *, limit: int) -> list[str]:
                 seller={},
             )
         )
+    for order in orders:
+        await nudge(db, user_id=order.user_id, number=order.number)
     claimed = [order.id for order in orders]
     await db.commit()
     return claimed

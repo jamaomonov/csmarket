@@ -26,7 +26,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 
-from fastapi import Request
+from starlette.requests import HTTPConnection
 
 from csmarket.core.client_ip import client_ip
 from csmarket.core.config import Settings, get_settings
@@ -99,7 +99,7 @@ async def hit_counter(key: str, *, limit: int, window: int) -> bool:
     return int(count) > limit
 
 
-async def guard_ip(request: Request, *, bucket: str, subject: str | None = None) -> None:
+async def guard_ip(request: HTTPConnection, *, bucket: str, subject: str | None = None) -> None:
     """Throttle this attempt; raise ``RateLimitedError`` past a threshold.
 
     Args:

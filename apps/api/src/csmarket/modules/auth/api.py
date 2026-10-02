@@ -6,12 +6,19 @@ from csmarket.modules.auth.deps import current_user
 from csmarket.modules.auth.ip_guard import guard_ip
 from csmarket.modules.auth.routes import router
 from csmarket.modules.auth.schemas import TokensOut
-from csmarket.modules.auth.service import SessionTokens, revoke_all_sessions
+from csmarket.modules.auth.service import (
+    AuthenticatedUser,
+    SessionTokens,
+    authenticate,
+    revoke_all_sessions,
+)
 from csmarket.modules.auth.steam import trade_hold_days
 
 __all__ = [
+    "AuthenticatedUser",
     "SessionTokens",
     "TokensOut",
+    "authenticate",
     "current_user",
     "guard_ip",
     "revoke_all_sessions",

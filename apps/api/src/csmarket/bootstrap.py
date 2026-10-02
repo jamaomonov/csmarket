@@ -29,6 +29,7 @@ from csmarket.core.errors import AppError, app_error_handler
 from csmarket.core.logging import configure_logging, get_logger
 from csmarket.core.observability import init_sentry
 from csmarket.core.redis import close_redis
+from csmarket.modules.realtime.listener import OrderEventsListener
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -174,9 +175,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
             hint="apply secrets with `docker compose up -d`, not `restart` — restart keeps the old env_file values",
         )
     warn_if_kassa_sandbox_in_prod(settings)
+    listener = OrderEventsListener(settings.database_url) if settings.realtime_enabled else None
+    if listener is not None:
+        await listener.start()
     try:
         yield
     finally:
+        if listener is not None:
+            await listener.stop()
         await close_redis()
         await dispose_engine()
         logger.info("shutdown")

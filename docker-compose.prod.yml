@@ -144,9 +144,9 @@ services:
     image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-api:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
     mem_limit: 1g
-    # From M4 every open WebSocket costs two descriptors (the socket plus its
-    # Redis pub/sub connection). The inherited default is 1024 — a hard wall past
-    # which uvicorn stops accepting ANY connection, HTTP included.
+    # From M4b every open order WebSocket costs a descriptor (the process shares one
+    # Postgres LISTEN connection for all of them, ADR-0008). The inherited default is
+    # 1024 — a hard wall past which uvicorn stops accepting ANY connection, HTTP included.
     ulimits:
       nofile:
         soft: 65536

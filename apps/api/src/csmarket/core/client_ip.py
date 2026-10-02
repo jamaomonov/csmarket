@@ -31,7 +31,7 @@ become worthless -- that comment and this one are load-bearing together.
 
 from __future__ import annotations
 
-from fastapi import Request
+from starlette.requests import HTTPConnection
 
 #: Recorded when the peer cannot be determined at all (ASGI without a client,
 #: e.g. some test transports). Kept as a literal rather than None so callers
@@ -39,7 +39,7 @@ from fastapi import Request
 UNKNOWN_IP = "unknown"
 
 
-def client_ip(request: Request) -> str:
+def client_ip(request: HTTPConnection) -> str:
     """The client's address, or ``UNKNOWN_IP`` when there is no peer to read."""
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:

@@ -9,6 +9,7 @@ from csmarket.core.clock import now
 from csmarket.core.logging import get_logger
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import Order
+from csmarket.modules.realtime.api import nudge
 
 log = get_logger("csmarket.orders.expiry")
 
@@ -69,6 +70,7 @@ async def expire_pending(db: AsyncSession, *, batch: int = 500) -> int:
             if attempt.status == "created":
                 await cancel_pending(db, payment=attempt)
         move(order, "cancelled")
+        await nudge(db, user_id=order.user_id, number=order.number)
         expired += 1
         log.info("orders.expired", number=order.number)
     await db.flush()

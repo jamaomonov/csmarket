@@ -347,3 +347,13 @@ All under `/admin/skins`, admin only (401 without a token, 403 for a customer).
 - `PATCH`, `PUT` and `DELETE` take an `Idempotency-Key` (≥ 16 chars, optional here): a repeat replays the first response
   and writes nothing, including no second audit row. Every write is audited in
   `admin_audit_log`.
+
+## Live order updates (M4b)
+
+`WS /api/v1/realtime/orders` is not in OpenAPI. After the socket opens, send
+`{"type":"auth","token":"<access token>"}` within 5 s; the server then sends
+`{"type":"order.changed","number":"…"}` whenever one of your orders moves, and
+`{"type":"ping"}` every 25 s. Close codes: **4401** — bad, revoked or expired token (at the
+latest when the token expires; reconnect with a fresh one), **4429** — the `ws-connect`
+ip_guard bucket (60 per minute per IP). A nudge carries no data: re-read
+`GET /orders/{number}`. Keep polling as the fallback.

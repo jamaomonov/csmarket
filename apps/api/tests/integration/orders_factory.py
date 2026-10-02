@@ -211,13 +211,20 @@ class OrdersListener:
 
 
 @asynccontextmanager
-async def listen_orders() -> AsyncIterator[OrdersListener]:
-    """LISTEN on the orders channel on its own connection for the ``with`` block."""
+async def listen_channel(channel: str) -> AsyncIterator[OrdersListener]:
+    """LISTEN on ``channel`` on its own connection for the ``with`` block."""
     dsn = os.environ["CSMARKET_DATABASE_URL"].replace("postgresql+asyncpg://", "postgresql://")
     conn = await asyncpg.connect(dsn)
     listener = OrdersListener(conn)
-    await conn.add_listener(ORDERS_CHANNEL, listener.on_notify)
+    await conn.add_listener(channel, listener.on_notify)
     try:
         yield listener
     finally:
         await conn.close()
+
+
+@asynccontextmanager
+async def listen_orders() -> AsyncIterator[OrdersListener]:
+    """LISTEN on the orders channel on its own connection for the ``with`` block."""
+    async with listen_channel(ORDERS_CHANNEL) as listener:
+        yield listener

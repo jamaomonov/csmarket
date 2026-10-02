@@ -226,6 +226,38 @@ WAXPEER_BALANCE_READ_TIMESTAMP.set(time.time())
 ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(time.time())
 
 
+WS_CONNECTIONS = Gauge(
+    "csmarket_ws_connections",
+    "Order-update WebSockets open in this API process (M4b, realtime).",
+)
+WS_NUDGES = Counter(
+    "csmarket_ws_nudges_total",
+    "Order nudges delivered to open sockets (one per socket reached).",
+)
+
+
+def ws_connected(delta: int) -> None:
+    """Move the open-socket gauge by ``delta`` (+1 on register, -1 on close). Never raises."""
+    try:
+        WS_CONNECTIONS.inc(delta)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_ws_connections", error=type(exc).__name__
+        )
+
+
+def record_ws_nudges(count: int) -> None:
+    """Count ``count`` nudges sent to sockets. Never raises."""
+    if count <= 0:
+        return
+    try:
+        WS_NUDGES.inc(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.inc_failed", metric="csmarket_ws_nudges_total", error=type(exc).__name__
+        )
+
+
 def set_orders_stuck(state: OrderStuckState, count: int) -> None:
     """Set the stuck-orders gauge of one state. Never raises."""
     try:
@@ -403,6 +435,8 @@ __all__ = [
     "WAXPEER_BALANCE_THRESHOLD_USD",
     "WAXPEER_BALANCE_USD",
     "WAXPEER_CALLS",
+    "WS_CONNECTIONS",
+    "WS_NUDGES",
     "KassaProvider",
     "KassaRejectionReason",
     "OrderBuyOutcome",
@@ -421,10 +455,12 @@ __all__ = [
     "record_steam_web_api_call",
     "record_trade_attention",
     "record_waxpeer_call",
+    "record_ws_nudges",
     "serve_metrics",
     "set_orders_stuck",
     "set_trades_attention",
     "set_waxpeer_balance",
     "set_waxpeer_balance_threshold",
     "steam_web_api_call",
+    "ws_connected",
 ]
