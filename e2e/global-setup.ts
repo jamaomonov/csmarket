@@ -16,6 +16,9 @@ const WEB_ROUTES = [
   "/weapon/ak-47",
   "/item/ak-47-redline-field-tested",
   "/item/warm-up-404",
+  "/item/mp9-starlight-protector-minimal-wear",
+  "/item/desert-eagle-blaze-factory-new",
+  "/item/negev-mjolnir-battle-scarred",
   "/account",
   "/en/account",
   "/account/balance",
@@ -28,7 +31,7 @@ const WEB_ROUTES = [
   "/robots.txt",
   "/warm-up-404",
 ];
-const ADMIN_ROUTES = ["/", "/catalogue", "/users", "/audit"];
+const ADMIN_ROUTES = ["/", "/catalogue", "/users", "/audit", "/orders", "/trades"];
 
 async function warm(origin: string, path: string): Promise<void> {
   try {

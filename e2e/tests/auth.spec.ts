@@ -19,8 +19,8 @@ test("signed in: account, trade link save and check, sign out", async ({ page })
 
   await page.getByLabel("Ссылка на обмен").fill(tradeLinkFor(steamId));
   await page.getByRole("button", { name: "Сохранить" }).first().click();
-  // No Waxpeer/Steam keys in dev: the check is advisory and says so.
-  await expect(page.getByText(/Сейчас не получилось проверить/)).toBeVisible();
+  // The dev Waxpeer fake passes every link and there is no Steam key for the hold check.
+  await expect(page.getByText("Ссылка работает — скин придёт сразу.")).toBeVisible();
 
   await page.reload();
   await expect(page.getByLabel("Ссылка на обмен")).toHaveValue(tradeLinkFor(steamId));
