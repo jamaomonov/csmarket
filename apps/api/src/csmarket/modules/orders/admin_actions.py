@@ -105,11 +105,13 @@ def retry_refusal(order: Order, trade: SkinTrade | None, at: datetime) -> str | 
     """Why an admin may not retry ``order``'s buy now (a 409 code), or ``None``.
 
     Only a ``buying``, unrefunded order whose trade carries a **resolved** attention in
-    :data:`RETRYABLE`, with no buy attempt running.
+    :data:`RETRYABLE`, has no purchase on record (``waxpeer_id`` unset — a bought trade that
+    stopped being reported is ``ambiguous_trade`` too, and a retry would buy it twice), with
+    no buy attempt running.
     """
     if order.status != "buying" or order.refunded_at is not None:
         return "not_retryable"
-    if not _resolved_in(trade, RETRYABLE):
+    if not _resolved_in(trade, RETRYABLE) or (trade is not None and trade.waxpeer_id is not None):
         return "not_retryable"
     if buy_running(order, trade, at):
         return "order_busy"

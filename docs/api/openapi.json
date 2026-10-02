@@ -145,7 +145,7 @@
         "type": "object"
       },
       "AdminOrderFull": {
-        "description": "Every ``orders`` column (the trade link masked) plus the money an operator weighs.",
+        "description": "Every ``orders`` column (the trade link masked, the checkout's idempotency key left\nout) plus the money an operator weighs.",
         "properties": {
           "cancelled_at": {
             "anyOf": [
@@ -252,10 +252,6 @@
           },
           "id": {
             "title": "Id",
-            "type": "string"
-          },
-          "idempotency_key": {
-            "title": "Idempotency Key",
             "type": "string"
           },
           "listing_id": {
@@ -413,7 +409,6 @@
           "fx_rate",
           "margin_usd",
           "trade_link_masked",
-          "idempotency_key",
           "paid_with",
           "created_at",
           "updated_at",
@@ -4857,7 +4852,7 @@
             "description": "No such order"
           },
           "409": {
-            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
+            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention and no purchase on record.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
           },
           "422": {
             "content": {

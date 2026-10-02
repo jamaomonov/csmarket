@@ -211,7 +211,7 @@ def _order_full(order: Order, trade: SkinTrade | None, fx_rate: Decimal) -> Admi
         else order.cost_usd
     )
     columns = {c.key: getattr(order, c.key) for c in Order.__table__.columns}
-    del columns["trade_link"]
+    del columns["trade_link"], columns["idempotency_key"]
     return AdminOrderFull.model_validate(
         {
             **columns,

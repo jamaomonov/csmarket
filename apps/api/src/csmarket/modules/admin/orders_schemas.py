@@ -98,7 +98,8 @@ class AdminTradesOut(BaseModel):
 
 
 class AdminOrderFull(BaseModel):
-    """Every ``orders`` column (the trade link masked) plus the money an operator weighs."""
+    """Every ``orders`` column (the trade link masked, the checkout's idempotency key left
+    out) plus the money an operator weighs."""
 
     id: str
     number: str
@@ -122,7 +123,6 @@ class AdminOrderFull(BaseModel):
     margin_usd: str
     #: ``…?partner=<id>&token=••••<last 2>``.
     trade_link_masked: str | None
-    idempotency_key: str
     paid_with: str | None
     created_at: datetime
     updated_at: datetime

@@ -332,6 +332,25 @@ async def test_retry_refusals_write_nothing(
     assert await _audit(db_session, "orders.buy.retry") == []
 
 
+async def test_retry_of_an_order_with_a_purchase_on_record_is_409(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    """A trade we bought stopped being reported (``sweeps._unseen`` → ``ambiguous_trade``):
+    after resolve, a retry would buy it a second time and erase the first purchase's id."""
+    h = await admin_headers()
+    order = await _order(
+        db_session,
+        trade=_attention("ambiguous_trade", resolved=True, waxpeer_id=60_000_001, status=0),
+    )
+    page = (await integration_client.get(f"{BASE}/{order.number}", headers=h)).json()
+    assert page["can_retry"] is False
+    status, body = await _post(integration_client, h, order, "retry")
+    assert (status, body["code"]) == (409, "not_retryable")
+    _, trade = await load(db_session, order)
+    assert (trade.waxpeer_id, trade.buy_pending) == (60_000_001, False)
+    assert await _audit(db_session, "orders.buy.retry") == []
+
+
 # --- the buy lease ----------------------------------------------------------------------
 
 
@@ -391,6 +410,12 @@ _STATES: list[tuple[str, str, dict[str, Any] | None, dict[str, Any]]] = [
         "buying",
         _attention("waxpeer_forbidden", resolved=True, buy_pending=True),
         {"leased": True},
+    ),
+    (
+        "bought_ambiguous",
+        "buying",
+        _attention("ambiguous_trade", resolved=True, waxpeer_id=60_000_001, status=0),
+        {},
     ),
     ("rolled_back", "buying", _attention("rolled_back", resolved=True), {}),
     ("divergence", "delivered", _attention("audit_divergence", resolved=True), {}),

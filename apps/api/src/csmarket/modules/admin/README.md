@@ -138,7 +138,8 @@ The writes are `orders`' own: `orders.admin_actions` (exported by `orders.api`).
   `trade_sent`; `view=attention` = an unresolved attention; `counts {active, attention}`
   ignore `q`. Each row adds `trade {status (Waxpeer's code), state (the buyer's reading:
 buying / offer_sent / accepted / released / failed), attention_reason, send_until}`.
-- **Order page:** every `orders` column except `trade_link` (`trade_link_masked` instead),
+- **Order page:** every `orders` column except `trade_link` (`trade_link_masked` instead) and
+  `idempotency_key`,
   `cost_usd` / `price_usd` (6 decimals), `fx_rate` (the snapshot's rate), `margin_usd` =
   `price_usd` − what Waxpeer charged (`bought_units` / 1000), else − `cost_usd`; the buyer
   `{id, display_name}`; the trade (every column an operator needs, `offer_url` built from
@@ -157,13 +158,17 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   `admin`, actor `admin:<id>`). 409: `already_refunded`; `order_in_flight` (the skin may be
   on its way or delivered, or the attention is unresolved or not a "nothing bought" case);
   `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`.
-- **Retry:** the same eligibility, minus the refund — clears `attention_reason`,
+- **Retry:** the same eligibility, minus the refund, and no purchase on record (`waxpeer_id`
+  unset: a bought trade that stopped being reported is `ambiguous_trade` too, and a retry
+  would buy it twice) — clears `attention_reason`,
   `buy_unconfirmed_at` and `resolved_*`, sets `buy_pending`, makes the order due now. The
   reconcile sweep's next `attempt_buy` looks the `project_id` up first: a purchase Waxpeer did
   make is adopted, never repeated. 409: `not_retryable`, `order_busy`.
 - **The buy lease:** `order_busy` = a buy attempt may hold the order (`buy_pending` and
   `next_check_at` in the future: the lease, or a 403/429 backoff of ≤ 60 s). Try again once
-  it lapses.
+  it lapses. While Waxpeer keeps answering 403, refund/retry of a `waxpeer_forbidden` order answer
+  `order_busy` during each 60 s backoff: fix the IP whitelist first — the sweep then buys by
+  itself.
 - **Idempotency:** every write requires `Idempotency-Key` (16..160 chars). Order: lock the
   order, then its trade (ruling K) → replay lookup → the change → `audit.record` → replay
   row → commit. Scopes `admin.orders.resolve`, `admin.orders.refund`, `admin.orders.retry`;

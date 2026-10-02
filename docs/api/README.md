@@ -297,13 +297,14 @@ attention_reason}], next_cursor}`. `q` (≤ 100 chars) = a number prefix (any ca
 next_cursor}` — orders with a trade; `active` = `buying`/`trade_sent`, `attention` = an
   unresolved attention; the counts ignore `q`.
 - `GET /admin/orders/{number}` → `AdminOrderDetail {order: {every orders column but
-trade_link, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
+trade_link and idempotency_key, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
 payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,
   `order_in_flight`, `order_not_refundable`, `order_busy`.
-- `POST /admin/orders/{number}/retry` (no body) → detail. 409 `not_retryable`, `order_busy`.
+- `POST /admin/orders/{number}/retry` (no body) → detail. 409 `not_retryable` (also when a
+  purchase is on record), `order_busy`.
 - Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise); a replay returns
   the stored page and writes nothing; the same key on another request is 409
   `idempotency_mismatch`. Audited: `orders.trade.resolve`, `orders.refund`, `orders.buy.retry`.

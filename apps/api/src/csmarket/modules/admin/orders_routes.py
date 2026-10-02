@@ -127,7 +127,7 @@ async def resolve(
     number: str, body: AdminResolveIn, admin: Admin, db: Db, key: Key
 ) -> AdminOrderDetail:
     """«Разобрано»: stamps ``resolved_at/by/note`` once; already resolved → unchanged."""
-    await lock_order(db, number)
+    await lock_order(db, number)  # serialises same-key replays; the action re-locks
     note = body.note or None
     request = {"number": number, "note": note}
     scope = "admin.orders.resolve"
@@ -163,7 +163,7 @@ async def resolve(
 async def refund(number: str, admin: Admin, db: Db, key: Key) -> AdminOrderDetail:
     """Only a ``buying`` order whose resolved attention says nothing was bought
     (``can_refund``); the order becomes ``failed`` (reason ``admin``)."""
-    await lock_order(db, number)
+    await lock_order(db, number)  # serialises same-key replays; the action re-locks
     request = {"number": number}
     scope = "admin.orders.refund"
     if (hit := await replayed(db, scope=scope, key=key, request=request)) is not None:
@@ -185,7 +185,8 @@ async def refund(number: str, admin: Admin, db: Db, key: Key) -> AdminOrderDetai
     response_model=AdminOrderDetail,
     responses=_conflicts(
         "`not_retryable` — not a `buying`, unrefunded order with a resolved "
-        "`buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention.",
+        "`buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention and no "
+        "purchase on record.",
         "`order_busy` — a buy attempt is running; try again in a few minutes.",
         _IDEMPOTENCY,
     ),
@@ -194,7 +195,7 @@ async def refund(number: str, admin: Admin, db: Db, key: Key) -> AdminOrderDetai
 async def retry(number: str, admin: Admin, db: Db, key: Key) -> AdminOrderDetail:
     """Clears the resolved attention and makes the buy due now (``can_retry``); the next
     attempt looks the project id up first, so a purchase Waxpeer made is adopted."""
-    await lock_order(db, number)
+    await lock_order(db, number)  # serialises same-key replays; the action re-locks
     request = {"number": number}
     scope = "admin.orders.retry"
     if (hit := await replayed(db, scope=scope, key=key, request=request)) is not None:

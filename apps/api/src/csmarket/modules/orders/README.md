@@ -184,7 +184,9 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
   page's flags and the actions run the same rule.
 - `buy_running(order, trade, at)` — `buy_pending` and `next_check_at > at`: a buy attempt may
   hold the lease (`buy_lease.take_lease`), so a buy may be on the wire (or a 403/429 backoff
-  of ≤ 60 s is running) → 409 `order_busy`.
+  of ≤ 60 s is running) → 409 `order_busy`. While Waxpeer keeps answering 403, refund/retry
+  of a `waxpeer_forbidden` order answer `order_busy` during each 60 s backoff: fix the IP
+  whitelist first — the sweep then buys by itself.
 - `admin_refund(db, *, number, admin_id) -> Order` — only a `buying`, unrefunded order whose
   trade carries a **resolved** attention in `ADMIN_REFUNDABLE` (`buy_unconfirmed`,
   `ambiguous_trade`, `waxpeer_forbidden`: an operator checked Waxpeer, nothing was bought)
@@ -194,7 +196,9 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
   `order_in_flight` (`in_flight`, including an unresolved or "something may be bought"
   attention); `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`.
 - `retry_buy(db, *, number, admin_id) -> str` — a `buying`, unrefunded order whose trade
-  carries a **resolved** attention in `RETRYABLE` (the same three) and no running attempt:
+  carries a **resolved** attention in `RETRYABLE` (the same three), no purchase on record
+  (`waxpeer_id` unset — `sweeps` also flags a bought trade that stopped being reported
+  `ambiguous_trade`, and a retry would buy it twice) and no running attempt:
   clears `attention_reason`, `buy_unconfirmed_at` and `resolved_*`, sets `buy_pending`,
   `next_check_at = now`. The reconcile sweep's next `attempt_buy` looks the `project_id` up
   first, so a purchase Waxpeer did make is adopted, never repeated. Returns the cleared
