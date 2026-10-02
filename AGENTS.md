@@ -27,7 +27,7 @@
 - **Where things stand:** M0–M4a merged on local `main` (M4a: ADR-0007). The real-kassa check is pending the
   first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`), and the first real sale waits
   for the deploy too (the Waxpeer key whitelisted for the VPS IP, `docs/runbooks/waxpeer.md`).
-  There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
+  `main` is pushed to the private repo `github.com/jamaomonov/csmarket` (2026-10-02); nothing is deployed. M0 is done for good when
   `https://csmarket.uz/` answers from CI-built images. Next: the M4b plan, when the owner asks
   for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
