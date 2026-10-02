@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    actor B as Buyer (order page)
+    participant API as API (WS /realtime/orders)
+    participant L as LISTEN order_events (one per API process)
+    participant W as Writer (worker / scheduler / API)
+    participant DB as Postgres
+
+    B->>API: open socket
+    B->>API: {"type":"auth","token":"…"} (within 5 s)
+    alt bad, revoked or expired token
+        API-->>B: close 4401 (the client refreshes once, then backs off)
+    else ok
+        API->>API: registry.add(user, socket)
+    end
+    W->>DB: BEGIN, move the order (paid / buying / trade_sent / delivered / refunded / cancelled)
+    W->>DB: pg_notify('order_events', '<user_id>:<number>')
+    W->>DB: COMMIT
+    DB-->>L: notification (delivered only on commit)
+    L->>API: publish(user, number)
+    API-->>B: {"type":"order.changed","number":"…"}
+    B->>API: GET /orders/{number} (sees the committed state)
+    Note over B,API: ping every 25 s, 60 s of silence → the client reconnects,<br/>polling keeps running as the reconciler
+    API-->>B: close 4401 at the token's expiry

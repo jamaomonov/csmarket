@@ -373,3 +373,27 @@ when the latest one for the current address was queued (`null` once confirmed).
 true}`, also when already confirmed; 422 `email_token_invalid` / `email_token_expired`
   (24 h); 409 `email_token_stale` when the account's email is no longer the token's. The
   `email-verify` bucket (60 a minute per IP) applies.
+
+## Admin pricing and dashboard (M4b)
+
+Admin only (401 without a token, 403 for a customer). Writes need `Idempotency-Key` (16–160);
+a key reused for another body is 409 `idempotency_mismatch`. Details:
+`apps/api/src/csmarket/modules/skins/README.md` «Pricing editor», `docs/runbooks/pricing.md`.
+
+- `GET /admin/skins/pricing` → `PricingOut {rules, updated_at, updated_by: {id,
+display_name} | null, items_active, items_overridden, rate_uzs}`.
+- `PUT /admin/skins/pricing` body `PricingRules` → `PricingOut`. Reprices every active item in
+  the same transaction and publishes the rules after the commit; an invalid document is 422
+  with the validator's reason (brackets ascending from 0, liquidity bands descending to 0).
+- `POST /admin/skins/pricing/preview` `{rules?, slug? | cost_usd + category, weapon?,
+count_auto?, item_pp?, fixed_price_usd?}` → `PreviewOut` (every `Quote` component as a
+  string, `price_uzs` at the current rate or `null`, `applied`). Keyless: it writes nothing.
+  Neither a slug nor a cost and a category → 422; an unknown slug → 404.
+- `PUT /admin/skins/items/{slug}/pricing` `{margin_override_pp: −100..500 | null,
+fixed_price_usd: 0..100000 | null}` (2 decimals) → `AdminSkinItemOut` (now with `cost_usd`,
+  `margin_override_pp`, `fixed_price_usd`). `GET /admin/skins/items?overridden=true` lists the
+  items with either set.
+- `GET /admin/dashboard?days=1|7|30` → `DashboardOut {days, since, sales {count, revenue_uzs,
+revenue_usd, cost_usd, margin_usd, margin_percent}, refunds {count, amount_uzs}, in_flight,
+attention, by_day [{day, sales_count, revenue_uzs, margin_usd}], waxpeer {balance_usd,
+read_at}}`; days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.

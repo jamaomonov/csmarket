@@ -175,7 +175,13 @@ them are in the `ops` profile and do not start before step 9 enables it. Compose
 the files to exist, so copy them anyway.
 
 Keep an offline copy of `CSMARKET_APP_ENC_KEY`: the server holds the only one, and losing it
-makes every encrypted row unreadable.
+makes every encrypted row unreadable (and every email confirmation link in flight).
+
+Email (M4b, owner action): in Resend add the domain `csmarket.uz`, put its SPF and DKIM
+records into Cloudflare DNS (DNS only), and create a key with sending access to that domain;
+put it in `secrets/api.env` as `CSMARKET_RESEND_API_KEY` (`CSMARKET_EMAIL_TRANSPORT=resend`
+is already there). Without a key the API warns at start-up and letters retry, then fail
+(`EmailsFailing`) — money and orders are unaffected. [`email.md`](./email.md).
 
 ---
 

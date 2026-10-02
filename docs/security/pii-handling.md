@@ -103,6 +103,10 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   token sits in the `verify` outbox row's payload until sent; it is never logged. Letters
   never carry a trade link, a Steam ID or the balance. The dev transport files letters in
   Redis by user id, without the address.
+- **Email outbox (M4b):** order letters' rows hold no address (the recipient is resolved
+  when sent); a `verify` row snapshots the address it confirms, and the nightly erase job
+  (`orders.erase_trade_links`) nulls it 7 days after it was queued. Resend, as a processor,
+  receives the recipient address, the subject and the body of each letter it sends.
 
 ## Where each may appear
 

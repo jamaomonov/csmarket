@@ -14,29 +14,30 @@
 - **Milestones** (spec §15), each with its own plan written with `superpowers:writing-plans`
   and saved to `docs/superpowers/plans/`, and its own deploy:
 
-  | #   | Scope                                                              | Plan                                                      |
-  | --- | ------------------------------------------------------------------ | --------------------------------------------------------- |
-  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs   | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`        |
-  | M1  | `auth` (Steam), `users`, roles, account page, trade link           | `docs/superpowers/plans/2026-10-01-m1-auth-users.md`      |
-  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO   | `docs/superpowers/plans/2026-10-01-m2-skins-catalogue.md` |
-  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups         | `docs/superpowers/plans/2026-10-01-m3-wallet-payments.md` |
-  | M4a | Orders & buying: checkout, pay, worker buy, trades, refunds, admin | `docs/superpowers/plans/2026-10-01-m4a-orders-buying.md`  |
-  | M4b | WebSocket, email (Resend), pricing editor, dashboard               | not written yet                                           |
-  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys         | not written yet                                           |
+  | #   | Scope                                                              | Plan                                                          |
+  | --- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs   | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`            |
+  | M1  | `auth` (Steam), `users`, roles, account page, trade link           | `docs/superpowers/plans/2026-10-01-m1-auth-users.md`          |
+  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO   | `docs/superpowers/plans/2026-10-01-m2-skins-catalogue.md`     |
+  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups         | `docs/superpowers/plans/2026-10-01-m3-wallet-payments.md`     |
+  | M4a | Orders & buying: checkout, pay, worker buy, trades, refunds, admin | `docs/superpowers/plans/2026-10-01-m4a-orders-buying.md`      |
+  | M4b | WebSocket, email (Resend), pricing editor, dashboard, erase        | `docs/superpowers/plans/2026-10-02-m4b-live-email-pricing.md` |
+  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys         | not written yet                                               |
 
-- **Where things stand:** M0–M4a merged on local `main` (M4a: ADR-0007). The real-kassa check is pending the
+- **Where things stand:** M0–M4a merged on local `main` (M4a: ADR-0007); M4b (ADR-0008) built
+  on branch `m4b-live-email-pricing`, merge on the owner's word. The real-kassa check is pending the
   first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`), and the first real sale waits
   for the deploy too (the Waxpeer key whitelisted for the VPS IP, `docs/runbooks/waxpeer.md`).
   `main` is pushed to the private repo `github.com/jamaomonov/csmarket` (2026-10-02); nothing is deployed. M0 is done for good when
-  `https://csmarket.uz/` answers from CI-built images. Next: the M4b plan, when the owner asks
-  for it.
+  `https://csmarket.uz/` answers from CI-built images. Next: M5 (launch), when the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
   cabinets and credentials (`docs/runbooks/kassa-setup.md`). M4a's first real sale needs the
   Waxpeer API key whitelisted for the VPS IP and a topped-up Waxpeer balance; the `my-history`
-  probe (M4b) needs the owner's key for their local IP, which the owner puts in their own
-  `.env` — never in chat or the repo. Everything later is listed in spec §16.
+  probe (M5, ADR-0008 R13) needs the owner's key for their local IP, which the owner puts in their own
+  `.env` — never in chat or the repo. M4b's email needs a Resend key and the SPF / DKIM records
+  for `csmarket.uz` in Cloudflare (`docs/runbooks/email.md`). Everything later is listed in spec §16.
 
 ---
 
@@ -72,7 +73,7 @@ not a price war.
 | Monorepo            | pnpm workspaces + Turborepo (TS) + uv workspace (Python) + top-level `Makefile`                      |
 | Reverse proxy / TLS | Caddy 2 (own edge, Let's Encrypt) behind Cloudflare — ADR-0003                                       |
 | Observability       | Prometheus + Alertmanager (Telegram) + Grafana + Loki + Promtail, Sentry SaaS                        |
-| Email               | Resend (M4)                                                                                          |
+| Email               | Resend (M4b): an outbox in Postgres drained by the worker; letters only to a confirmed address       |
 | Secrets             | env files on the server (`secrets/*.env`); sops + age from M5                                        |
 | Backups             | `pg_dump` → age → rclone → Cloudflare R2, nightly                                                    |
 | CI/CD               | GitHub Actions → GHCR (`sha-xxxxxxx` tags) → SSH deploy by image tag                                 |

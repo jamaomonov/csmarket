@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    participant E as Event writer (mark_paid / trades.apply / refund / PATCH /me)
+    participant DB as Postgres
+    participant W as Worker (emails queue)
+    participant R as Resend
+
+    E->>DB: BEGIN, the event + INSERT email_outbox (unique per order and kind) + NOTIFY emails
+    E->>DB: COMMIT (the row and the wake-up land together, or neither)
+    DB-->>W: NOTIFY emails (or the poll tick)
+    W->>DB: claim due rows FOR UPDATE SKIP LOCKED, attempts + 1, book next_attempt_at, COMMIT
+    W->>DB: read the row and the user (verified address? still the same?)
+    alt no verified address
+        W->>DB: status = skipped
+    else
+        W->>R: POST /emails (Idempotency-Key = row id), no lock or transaction held
+        alt sent
+            W->>DB: status = sent, provider id
+        else 4xx (not 429)
+            W->>DB: status = failed (EmailsFailing)
+        else timeout / 429 / 5xx
+            W->>DB: keep pending (retry at the booked time, failed after the 6th)
+        end
+    end

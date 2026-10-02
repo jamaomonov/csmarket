@@ -73,7 +73,9 @@ The queue is the database: the transaction that writes a claimable row also send
 the worker claims with `FOR UPDATE SKIP LOCKED`, and a poll tick catches lost notifications.
 Handlers are idempotent. M0 registers no queues and no jobs; both processes start, idle and
 stop cleanly. M4a adds the `orders` queue (a paid order → one Waxpeer buy) and the trade
-sweeps; the worker and the scheduler expose `/metrics` on internal ports 9101 / 9102.
+sweeps; the worker and the scheduler expose `/metrics` on internal ports 9101 / 9102. M4b
+adds the `emails` queue (an outbox row → one letter) and the API's own `LISTEN order_events`
+connection, which turns committed status changes into WebSocket nudges.
 
 ## Modules by milestone
 
@@ -88,8 +90,10 @@ sweeps; the worker and the scheduler expose `/metrics` on internal ports 9101 / 
 - **M4a** — `orders` (checkout, pay from the balance or a kassa, worker buy at Waxpeer, trade
   reconcile / protection / audit, refunds to the balance), the buy panel and order page
   (polling), admin orders and trades, order alerts. ADR-0007.
-- **M4b** — `realtime` (WebSocket order pushes), `notifications` (email), admin pricing
-  editor and dashboard.
+- **M4b** — `realtime` (order nudges over a WebSocket, fanned out from Postgres
+  `LISTEN order_events`), `notifications` (an email outbox drained by the worker's `emails`
+  queue, Resend; letters only to a confirmed address), the admin pricing editor and
+  dashboard, the nightly trade-link erase. ADR-0008.
 - **M5** — launch: VPS, secrets, backups, alerts, runbooks, test buys.
 
 The module list, tables and sources are in [`module-map.md`](./module-map.md).

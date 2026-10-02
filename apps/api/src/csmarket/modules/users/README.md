@@ -28,8 +28,13 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
   the read transaction before calling Waxpeer and Steam, so no pooled connection is held
   across the upstream calls (AGENTS §11); the verdict is written in a fresh one.
 
-- **Email (ruling P4):** optional, stored lower-domain via `EmailStr`; any change resets
-  `email_verified_at`. Verification arrives with notifications in M4b.
+- **Email (ruling P4, M4b R7):** optional, stored lower-domain via `EmailStr`; any change
+  resets `email_verified_at` and queues a confirmation letter (`email_flow.send_verification`,
+  60 s cooldown in Redis `users:email_verify:cooldown:{user_id}`). The link's token
+  (`email_verify`) is `user_id | email | expiry` sealed with SecretBox, 24 h.
+  `POST /me/email/verification` re-sends; `POST /email/confirm` (anonymous, idempotent;
+  `routes_email`) confirms while the account's email is still the token's. `MeOut` carries
+  `email_verification_sent_at`. Order letters go only to a confirmed address (ADR-0008).
 - **Trade link** (`tradelink.py`, spec §7.2):
   - Only `https://steamcommunity.com/tradeoffer/new/?partner=<digits>&token=<6-16 chars>`
     parses (`422 trade_link_invalid` otherwise). ASCII only (`re.ASCII`): look-alike
