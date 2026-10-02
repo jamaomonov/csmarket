@@ -24,8 +24,7 @@
   | M4b | WebSocket, email (Resend), pricing editor, dashboard               | not written yet                                           |
   | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys         | not written yet                                           |
 
-- **Where things stand:** M0–M3 merged on local `main`; M4a (ADR-0007) is on branch
-  `m4a-orders-buying` until the owner says to merge. The real-kassa check is pending the
+- **Where things stand:** M0–M4a merged on local `main` (M4a: ADR-0007). The real-kassa check is pending the
   first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`), and the first real sale waits
   for the deploy too (the Waxpeer key whitelisted for the VPS IP, `docs/runbooks/waxpeer.md`).
   There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
