@@ -24,6 +24,9 @@ export function Layout() {
           <NavLink to="/catalogue" className={navClass}>
             Каталог
           </NavLink>
+          <NavLink to="/pricing" className={navClass}>
+            Цены
+          </NavLink>
           <NavLink to="/users" className={navClass}>
             Пользователи
           </NavLink>

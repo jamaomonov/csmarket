@@ -15,6 +15,7 @@ import { OrderDetail } from "@/features/orders/OrderDetail";
 import { OrdersPage } from "@/features/orders/OrdersPage";
 import { PaymentDetail } from "@/features/payments/PaymentDetail";
 import { PaymentsPage } from "@/features/payments/PaymentsPage";
+import { PricingPage } from "@/features/pricing/PricingPage";
 import { TradesPage } from "@/features/trades/TradesPage";
 import { UserCard } from "@/features/users/UserCard";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
         children: [
           { path: "/", element: <DashboardPage /> },
           { path: "/catalogue", element: <CataloguePage /> },
+          { path: "/pricing", element: <PricingPage /> },
           { path: "/users", element: <UsersPage /> },
           { path: "/users/:id", element: <UserCard /> },
           { path: "/orders", element: <OrdersPage /> },
