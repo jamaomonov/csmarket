@@ -27,6 +27,11 @@ export interface PayMethods {
   provider: PayProvider | null;
   /** The balance tile; absent when the balance could not be read. */
   wallet: WalletOption | undefined;
+  /**
+   * The balance is still loading: the method shown may still switch to it (it starts
+   * selected once it covers the price), so nothing should be paid yet.
+   */
+  balancePending: boolean;
   /** A tap on a tile: the buyer's own choice, never switched for them. */
   pick: (method: string) => void;
 }
@@ -91,6 +96,7 @@ export function usePayMethods(
     chosen,
     provider,
     wallet,
+    balancePending: balance.isPending,
     pick: (slug) => {
       markPicked();
       setMethod(slug);

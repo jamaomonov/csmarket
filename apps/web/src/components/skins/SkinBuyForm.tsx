@@ -36,6 +36,14 @@ interface SkinBuyFormProps {
   refreshMe: () => Promise<void>;
 }
 
+/** A notice about one offer under one method: shown only while both are still chosen. */
+interface Notice {
+  text: string;
+  /** The offer it is about; `null` when it is about none (nothing left). */
+  listingId: number | null;
+  method: string | null;
+}
+
 const cheapestOf = (list: readonly SkinListing[]): SkinListing | null =>
   list.reduce<SkinListing | null>(
     (a, b) => (a === null || Number(b.price_usd) < Number(a.price_usd) ? b : a),
@@ -52,8 +60,8 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
   const offers = useSkinOffers();
   const { select, reprice, drop } = useSelectedOffer();
   const price = offer.price_uzs;
-  const { kassas, chosen, provider, wallet, pick } = usePayMethods(locale, price);
-  const [notice, setNotice] = useState<string | null>(null);
+  const { kassas, chosen, provider, wallet, balancePending, pick } = usePayMethods(locale, price);
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   // `busy` disables the button from the next render; this blocks a click that lands first.
@@ -64,29 +72,41 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
 
   const verdict = verdictMessage(gate.state);
   const linkBad = verdict?.tone === "bad";
+  // A price or offer notice is about the offer and method it was given for: picking
+  // another one of either makes it stale, so it is no longer shown.
+  const shown =
+    notice !== null &&
+    (notice.listingId === null || notice.listingId === offer.listing_id) &&
+    notice.method === chosen
+      ? notice.text
+      : null;
+  const say = (text: string, listingId: number | null): void => {
+    setNotice({ text, listingId, method: chosen });
+  };
 
   function onFailure(err: unknown, bought: SkinListing): void {
     if (err instanceof PriceChangedError) {
       // Pinned: at its new price it may no longer be the cheapest default.
       select(bought.listing_id);
       reprice(bought.listing_id, err.priceUzs);
-      setNotice(t("priceChanged", { price: formatUzs(locale, err.priceUzs) }));
+      say(t("priceChanged", { price: formatUzs(locale, err.priceUzs) }), bought.listing_id);
     } else if (err instanceof OfferGoneError) {
       const rest = (offers ?? []).filter((o) => o.listing_id !== bought.listing_id);
       const hinted = err.nextOffer;
       drop(bought.listing_id);
       const next = rest.find((o) => o.listing_id === hinted?.listing_id) ?? cheapestOf(rest);
       if (next === null) {
-        setNotice(t("noneLeft"));
+        say(t("noneLeft"), null);
         return;
       }
       const nextPrice = next.listing_id === hinted?.listing_id ? hinted.price_uzs : next.price_uzs;
       if (nextPrice !== next.price_uzs && nextPrice !== null) reprice(next.listing_id, nextPrice);
       select(next.listing_id);
-      setNotice(
+      say(
         t("offerGone", {
           price: nextPrice !== null ? formatUzs(locale, nextPrice) : `$${next.price_usd}`,
         }),
+        next.listing_id,
       );
     } else if (err instanceof TradeLinkError) {
       if (err.code === "trade_link_bad") gate.refuse({ verdict: "bad", reason: err.reason });
@@ -100,7 +120,14 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
   }
 
   async function buy(): Promise<void> {
-    if (inFlight.current || provider === null || price === null || linkBad || gate.checking) {
+    if (
+      inFlight.current ||
+      provider === null ||
+      price === null ||
+      linkBad ||
+      gate.checking ||
+      balancePending
+    ) {
       return;
     }
     inFlight.current = true;
@@ -154,9 +181,9 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
         labels={{ legend: t("methodTitle"), test: t("methodTest"), none: t("methodNone") }}
         {...(wallet ? { wallet } : {})}
       />
-      {notice && (
+      {shown !== null && (
         <p role="status" className="text-sm font-semibold text-amber-400">
-          {notice}
+          {shown}
         </p>
       )}
       {failed && (
@@ -168,7 +195,13 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
         type="button"
         size="lg"
         disabled={
-          busy || navigating || gate.checking || linkBad || provider === null || price === null
+          busy ||
+          navigating ||
+          gate.checking ||
+          linkBad ||
+          balancePending ||
+          provider === null ||
+          price === null
         }
         onClick={() => {
           void buy();

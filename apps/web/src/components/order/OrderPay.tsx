@@ -42,11 +42,13 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   const buy = useTranslations("web.buy");
   const common = useTranslations("common");
   const qc = useQueryClient();
-  const { kassas, chosen, provider, wallet, pick } = usePayMethods(
+  const { kassas, chosen, provider, wallet, balancePending, pick } = usePayMethods(
     locale,
     order.price_uzs,
     initial,
   );
+  // With no method chosen on the item page, the balance may still become the default.
+  const waiting = initial === null && balancePending;
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   // `busy` disables the button from the next render; this blocks a click that lands first.
@@ -71,7 +73,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   }
 
   async function pay(): Promise<void> {
-    if (inFlight.current || provider === null) return;
+    if (inFlight.current || provider === null || waiting) return;
     inFlight.current = true;
     setBusy(true);
     setFailed(false);
@@ -119,7 +121,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
         type="button"
         size="lg"
         className="self-start"
-        disabled={busy || provider === null}
+        disabled={busy || waiting || provider === null}
         onClick={() => {
           void pay();
         }}

@@ -272,6 +272,69 @@ describe("SkinBuyPanel — payment method", () => {
   });
 });
 
+describe("SkinBuyPanel — before anything is known", () => {
+  it("keeps «Купить» off until the balance has loaded", async () => {
+    let answer: (v: unknown) => void = () => undefined;
+    m.balance.mockReturnValue(
+      new Promise((resolve) => {
+        answer = resolve;
+      }),
+    );
+    panel();
+    const button = await buyButton("381 000");
+    await screen.findByRole("button", { name: "Click" }); // the kassas are in
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(m.create).not.toHaveBeenCalled();
+    act(() => {
+      answer({ balance_uzs: "500000" });
+    });
+    // The balance covers the price: it becomes the method, and only now can it be pressed.
+    await waitFor(() => {
+      expect(button).toBeEnabled();
+    });
+    expect(screen.getByRole("button", { name: /Баланс/ })).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("SkinBuyPanel — notices", () => {
+  const moved = () => {
+    m.create.mockRejectedValueOnce(conflict({ code: "price_changed", price_uzs: "400100" }));
+  };
+
+  it("a price notice goes once another offer is picked", async () => {
+    moved();
+    panel();
+    fireEvent.click(await ready("381 000"));
+    expect(await screen.findByRole("status")).toHaveTextContent(/Цена изменилась/);
+    fireEvent.click(screen.getByRole("button", { name: "pick 2" }));
+    await ready("393 700");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("a price notice goes once another method is picked", async () => {
+    moved();
+    panel();
+    fireEvent.click(await ready("381 000"));
+    expect(await screen.findByRole("status")).toHaveTextContent(/Цена изменилась/);
+    fireEvent.click(screen.getByRole("button", { name: "Тестовая оплата" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+  });
+
+  it("an offer-gone notice stays on the offer it moved to", async () => {
+    m.create.mockRejectedValueOnce(
+      conflict({ code: "offer_gone", next_offer: { listing_id: 2, price_uzs: "393700" } }),
+    );
+    panel();
+    fireEvent.click(await ready("381 000"));
+    expect(await screen.findByRole("status")).toHaveTextContent(/Этот лот уже купили/);
+    await ready("393 700");
+    expect(screen.getByRole("status")).toHaveTextContent(/Этот лот уже купили/);
+  });
+});
+
 describe("SkinBuyPanel — buying", () => {
   it("pays from the balance and goes to the order", async () => {
     m.balance.mockResolvedValue({ balance_uzs: "500000" });
