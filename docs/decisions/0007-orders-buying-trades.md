@@ -178,6 +178,11 @@ next_check_at = now + 5 min WHERE buying AND buy_pending AND due` — then reads
   only guard. U — a refund of a resolved `waxpeer_forbidden` order after a dead attempt
   (sent, unrecorded, lease lapsed) — is now caught by the same lookup. The nightly audit's
   `delivered_refunded` fires for any refunded order whose trade is not a 6 (not only 4/5).
+- **Closed in M4b (ruling Z, Z2).** The refund is also refused when a buy answer was lost
+  after the operator resolved the attention (`buy_unconfirmed_at > resolved_at`): the
+  narrow window the final review parked. A refusal reads as the buyer's trade link only
+  when it names the link, or names the buyer together with an account problem; a
+  seller-side «cannot trade» is a refused listing.
 - **Scheduler (O).** First runs 220 s (expiry), 240 s (reconcile), 260 s (health), 280 s
   (protection); the history audit is a pure cron (23:30 UTC), so a deploy never re-runs it.
 - **Signals (S).** `WorkerDown` / `SchedulerDown` (`up == 0`), `WaxpeerBalanceUnknown` (never

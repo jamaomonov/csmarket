@@ -112,7 +112,8 @@ def refund_refusal(order: Order, trade: SkinTrade | None, at: datetime) -> str |
     :data:`~csmarket.modules.orders.refunds.ADMIN_REFUNDABLE` (an operator checked Waxpeer:
     nothing was bought), not refunded yet, with no purchase on record that is not
     conclusively our failed trade (``waxpeer_id`` set and Waxpeer status ≠ 6 — the skin may
-    still arrive; the same guard as :func:`retry_refusal`), with no buy attempt running.
+    still arrive; the same guard as :func:`retry_refusal`), no buy answer lost after the
+    operator's check, with no buy attempt running.
     """
     if order.refunded_at is not None:
         return "already_refunded"
@@ -120,9 +121,21 @@ def refund_refusal(order: Order, trade: SkinTrade | None, at: datetime) -> str |
         return "order_in_flight" if in_flight(order, trade) else "order_not_refundable"
     if trade is not None and trade.waxpeer_id is not None and trade.status != FAILED_STATUS:
         return "order_in_flight"
+    if _lost_after_resolve(trade):
+        return "order_in_flight"
     if buy_running(order, trade, at):
         return "order_busy"
     return None
+
+
+def _lost_after_resolve(trade: SkinTrade | None) -> bool:
+    """A buy whose answer was lost **after** the operator resolved the attention: they checked
+    a Waxpeer that has changed since, so their check no longer covers it (ruling Z)."""
+    return (
+        trade is not None
+        and trade.buy_unconfirmed_at is not None
+        and (trade.resolved_at is None or trade.buy_unconfirmed_at > trade.resolved_at)
+    )
 
 
 def retry_refusal(order: Order, trade: SkinTrade | None, at: datetime) -> str | None:

@@ -489,8 +489,8 @@ async def test_a_broken_trade_link_is_refunded_without_calling_waxpeer(
     "refusal",
     [
         WaxpeerBuyRefusedError("Invalid tradelink", new_price_units=None),
-        WaxpeerBuyRefusedError("Inventory is private", new_price_units=None),
-        WaxpeerError("User has a trade ban", status=400, body="{}"),
+        WaxpeerBuyRefusedError("Your inventory is private", new_price_units=None),
+        WaxpeerError("Buyer has a trade ban", status=400, body="{}"),
     ],
     ids=["invalid", "private", "trade_ban"],
 )

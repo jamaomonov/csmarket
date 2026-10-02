@@ -102,6 +102,15 @@ comes from the same server, so while the whitelist is broken it is refused too
 («Не удалось проверить покупку…») — fix the whitelist first. The nightly audit flags any
 refunded order whose trade is not a failed one as `delivered_refunded`.
 
+A buy answer lost **after** you resolved the attention (`buy_unconfirmed_at` later than
+`resolved_at`) also refuses the refund («Скин ещё в пути…»): your check predates that buy.
+Wait for the next reconcile, look the `project_id` up again, resolve again, then refund.
+
+A Waxpeer refusal is refunded as `invalid_trade_link` only when it names the buyer's link
+(«tradelink», «trade link», «trade url») or names the buyer with an account problem («your
+inventory is private», «buyer has a trade ban»); a seller-side «cannot trade» is a refused
+listing (substitute, then `sold_out`).
+
 While Waxpeer keeps answering 403, refund and retry of a `waxpeer_forbidden` order answer
 `order_busy` during each 60 s backoff: fix the whitelist first.
 

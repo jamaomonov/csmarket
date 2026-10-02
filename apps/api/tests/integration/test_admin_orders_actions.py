@@ -294,6 +294,55 @@ async def test_admin_refund_refused_while_a_purchase_is_on_record(
     assert (row.status, row.refunded_at, trade.waxpeer_id) == ("buying", None, 60_000_001)
 
 
+async def test_a_lost_answer_newer_than_the_resolve_blocks_the_refund(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+) -> None:
+    """A sweep's buy whose answer was lost after the operator's check (``buy_unconfirmed_at``
+    later than ``resolved_at``): the operator checked a Waxpeer that has since changed."""
+    h = await admin_headers()
+    resolved = clock.now() - timedelta(minutes=2)
+    order = await _order(
+        db_session,
+        trade=_attention(
+            "waxpeer_forbidden",
+            resolved=True,
+            resolved_at=resolved,
+            buy_pending=False,
+            buy_unconfirmed_at=resolved + timedelta(minutes=1),
+        ),
+    )
+    page = (await integration_client.get(f"{BASE}/{order.number}", headers=h)).json()
+    assert page["can_refund"] is False
+    status, body = await _post(integration_client, h, order, "refund")
+    assert (status, body["code"]) == (409, "order_in_flight")
+    assert waxpeer.lookup_calls == 0
+    assert await _refunds(db_session, order) == 0
+
+
+async def test_a_lost_answer_older_than_the_resolve_does_not_block_the_refund(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    """The operator resolved after the lost answer: they saw it, the lookup-first path decides."""
+    h = await admin_headers()
+    resolved = clock.now() - timedelta(minutes=1)
+    order = await _order(
+        db_session,
+        trade=_attention(
+            "buy_unconfirmed",
+            resolved=True,
+            resolved_at=resolved,
+            buy_pending=False,
+            buy_unconfirmed_at=resolved - timedelta(minutes=20),
+        ),
+    )
+    status, _ = await _post(integration_client, h, order, "refund")
+    assert status == 200
+    assert await _refunds(db_session, order) == 1
+
+
 async def test_a_purchase_on_record_that_failed_is_refundable(
     integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
 ) -> None:
