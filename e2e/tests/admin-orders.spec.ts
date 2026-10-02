@@ -18,6 +18,8 @@ test("an admin finds a delivered order, its trade, and the trade under «Обм�
   page,
   request,
 }) => {
+  // Two sweep-driven waits (sent, then delivered) before the admin pages: more than 90 s.
+  test.setTimeout(150_000);
   // A fresh customer buys through the API and accepts the offer at the dev Waxpeer fake.
   const custId = uniqueSteamId("7656119807");
   const token = await apiLogin(request, custId, `Cust ${custId.slice(-7)}`);

@@ -45,6 +45,9 @@ async function buy(page: Page): Promise<string> {
 }
 
 test("buy from the balance: the trade arrives and is accepted", async ({ page, request }) => {
+  // Two sweep-driven waits of up to 60 s each, after a top-up and a buy: more than the
+  // config's 90 s per test.
+  test.setTimeout(150_000);
   const steamId = uniqueSteamId(PREFIX);
   await devLogin(page, { steamId, name: "Buyer" });
   // A session of its own for the API calls: the page rotates the browser's session.
@@ -118,6 +121,9 @@ test("buy through the test kassa with an empty balance", async ({ page, request 
 });
 
 test("a declined trade puts the money back on the balance", async ({ page, request }) => {
+  // Two sweep-driven waits of up to 60 s each, after a top-up and a buy: more than the
+  // config's 90 s per test.
+  test.setTimeout(150_000);
   const steamId = uniqueSteamId(PREFIX);
   await devLogin(page, { steamId, name: "Decliner" });
   // A session of its own for the API calls: the page rotates the browser's session.
