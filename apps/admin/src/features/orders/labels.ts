@@ -79,6 +79,7 @@ const ORDER_CODE_MESSAGES: Record<string, string> = {
   order_busy: "Покупка ещё идёт — попробуйте через минуту.",
   nothing_to_resolve: "Здесь нечего разбирать.",
   order_not_refundable: "Этот заказ нельзя вернуть.",
+  waxpeer_unavailable: "Не удалось проверить покупку — попробуйте позже.",
 };
 
 /** Codes that mean the page is stale: the caller refetches the order to show the real state. */
