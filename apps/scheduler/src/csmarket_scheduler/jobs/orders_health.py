@@ -2,7 +2,8 @@
 
 The logic is ``orders.health.measure``; this job times it and writes the gauges. Waxpeer's
 balance is read on every 5th tick (the first one included) — the endpoint is rate-limited
-and a balance moves slowly. A failed tick is logged and the gauges keep their last values; two
+and a balance moves slowly — and each good read is also cached in Redis
+(``orders:waxpeer:balance``, 1 h) for the admin dashboard. A failed tick is logged and the gauges keep their last values; two
 timestamp gauges (last successful tick, last successful balance read) let the alerts tell a
 stale value from a fresh one.
 """
@@ -10,6 +11,7 @@ stale value from a fresh one.
 from __future__ import annotations
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.db import get_session_factory
 from csmarket.core.logging import get_logger
@@ -20,7 +22,8 @@ from csmarket.core.metrics import (
     set_waxpeer_balance,
     set_waxpeer_balance_threshold,
 )
-from csmarket.modules.orders.api import Health, measure
+from csmarket.core.redis import get_redis
+from csmarket.modules.orders.api import Health, cache_balance, measure
 from csmarket.modules.skins.api import TradeClient, trade_client
 
 from csmarket_scheduler.startup import first_run_after
@@ -58,6 +61,9 @@ async def run() -> Health | None:
         threshold = float(settings.waxpeer_balance_alert_usd)
         if health.waxpeer_balance_usd is not None:
             set_waxpeer_balance(float(health.waxpeer_balance_usd), threshold)
+            # The dashboard shows this copy with its age (ruling R10); a failed read keeps
+            # the last one until its hour runs out.
+            await cache_balance(get_redis(), health.waxpeer_balance_usd, at=now())
         else:
             set_waxpeer_balance_threshold(threshold)
         mark_orders_health_success()

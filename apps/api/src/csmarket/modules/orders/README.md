@@ -403,6 +403,16 @@ when an order jumps straight to `delivered`), `refund_to_balance` → `refunded`
 amount; none when held or replayed). The payload snapshots the number and the skin; one
 letter per order and kind.
 
+## Dashboard (`dashboard.py`, M4b rulings R9, R10)
+
+`summary(db, redis, days=1|7|30, at=…)` for `GET /admin/dashboard`: sales (paid in the
+window, not refunded; cost = `COALESCE(bought_units / 1000, cost_usd)`; margin and its
+percent of revenue), refunds by `refunded_at`, orders in flight and open attentions now, one
+row per Tashkent day (zeros included; days cut in Postgres with `AT TIME ZONE
+'Asia/Tashkent'`, the window start in Python at the fixed UTC+5), and the Waxpeer balance the
+`orders.health` job cached (`health.cache_balance`, Redis `orders:waxpeer:balance`, 1 h).
+Four queries whatever the window; `ix_orders_paid_at` / `ix_orders_refunded_at` (0016).
+
 ## Lock order
 
 Order row → kassa transaction row → payment → user wallet (the M3 top-up order with the

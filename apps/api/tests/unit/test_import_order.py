@@ -16,6 +16,8 @@ import pytest
 @pytest.mark.parametrize(
     "module",
     [
+        "csmarket.modules.admin.dashboard_routes",
+        "csmarket.modules.admin.dashboard_schemas",
         "csmarket.modules.admin.api",
         "csmarket.modules.admin.audit",
         "csmarket.modules.admin.audit_routes",
@@ -52,6 +54,7 @@ import pytest
         "csmarket.modules.orders.checkout",
         "csmarket.modules.orders.dev_routes",
         "csmarket.modules.orders.expiry",
+        "csmarket.modules.orders.dashboard",
         "csmarket.modules.orders.fsm",
         "csmarket.modules.orders.letters",
         "csmarket.modules.orders.models",

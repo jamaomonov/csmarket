@@ -19,8 +19,10 @@ from csmarket.modules.orders.admin_actions import (
     retry_buy,
 )
 from csmarket.modules.orders.buying import attempt_buy, drain_paid
+from csmarket.modules.orders.dashboard import Dashboard, Days
+from csmarket.modules.orders.dashboard import summary as dashboard_summary
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
-from csmarket.modules.orders.health import Health, measure
+from csmarket.modules.orders.health import Health, cache_balance, measure
 from csmarket.modules.orders.models import (
     ATTENTION_REASONS,
     FAILURE_REASONS,
@@ -65,6 +67,8 @@ __all__ = [
     "RETRYABLE",
     "TERMINAL",
     "TRANSITIONS",
+    "Dashboard",
+    "Days",
     "Health",
     "InvalidOrderTransitionError",
     "Order",
@@ -78,8 +82,10 @@ __all__ = [
     "attempt_buy",
     "audit_recent",
     "buy_running",
+    "cache_balance",
     "can_refund",
     "can_retry",
+    "dashboard_summary",
     "drain_paid",
     "effective_status",
     "expire_pending",

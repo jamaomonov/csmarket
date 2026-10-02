@@ -120,3 +120,25 @@ async def test_unexpected_balance_error_is_none_too(db: AsyncSession) -> None:
     fake = FakeTradeClient()
     fake.balance_raises(RuntimeError("anything"))
     assert (await _measure(db, fake)).waxpeer_balance_usd is None
+
+
+# --- the cached balance (M4b T9, ruling R10) ----------------------------------------------
+
+
+async def test_the_cached_balance_reads_back() -> None:
+    from csmarket.core.redis import get_redis
+    from csmarket.modules.orders.health import cache_balance, cached_balance
+
+    at = datetime(2026, 10, 2, 9, 0, tzinfo=core_clock.now().tzinfo)
+    await cache_balance(get_redis(), Decimal("123.456"), at=at)
+    assert await cached_balance(get_redis()) == (Decimal("123.456"), at)
+    assert 0 < await get_redis().ttl("orders:waxpeer:balance") <= 3600
+
+
+async def test_no_cached_balance_reads_as_nothing() -> None:
+    from csmarket.core.redis import get_redis
+    from csmarket.modules.orders.health import cached_balance
+
+    assert await cached_balance(get_redis()) == (None, None)
+    await get_redis().set("orders:waxpeer:balance", "not json")
+    assert await cached_balance(get_redis()) == (None, None)

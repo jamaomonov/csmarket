@@ -227,3 +227,8 @@ orders).
 The routers are mounted from `api/v1/router.py` via `admin.routes`, `admin.users_routes`,
 `admin.payments_routes`, `admin.audit_routes` and `admin.orders_routes`,
 like `users`; the skins admin routes live in `skins.admin_routes`.
+
+## Dashboard (M4b)
+
+`GET /admin/dashboard?days=1|7|30` (`dashboard_routes`, `dashboard_schemas`) — the numbers
+come from `orders.api.dashboard_summary`; any other `days` is 422 `dashboard_days`. Reads only.

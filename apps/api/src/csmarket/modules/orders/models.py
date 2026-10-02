@@ -147,6 +147,11 @@ class Order(Base):
         Index("ix_orders_user_created", "user_id", text("created_at DESC")),
         # text_pattern_ops: the admin search's prefix LIKE uses it under any collation.
         Index("ix_orders_number", "number", postgresql_ops={"number": "text_pattern_ops"}),
+        # The dashboard's windows (M4b R9).
+        Index("ix_orders_paid_at", "paid_at", postgresql_where=text("paid_at IS NOT NULL")),
+        Index(
+            "ix_orders_refunded_at", "refunded_at", postgresql_where=text("refunded_at IS NOT NULL")
+        ),
     )
 
 

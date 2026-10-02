@@ -6,10 +6,14 @@ balance call when asked). The scheduler's ``orders.health`` job turns the result
 
 from __future__ import annotations
 
-from datetime import timedelta
-from decimal import Decimal
+import contextlib
+import json
+from datetime import datetime, timedelta
+from decimal import Decimal, InvalidOperation
 
 from pydantic import BaseModel, ConfigDict
+from redis.asyncio import Redis
+from redis.exceptions import RedisError
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,4 +118,31 @@ async def measure(db: AsyncSession, client: TradeClient | None, *, settings: Set
     )
 
 
-__all__ = ["Health", "measure"]
+#: The last good Waxpeer balance read, for the admin dashboard (ruling R10).
+BALANCE_KEY = "orders:waxpeer:balance"
+_BALANCE_TTL_SECONDS = 3600
+
+
+async def cache_balance(redis: Redis, usd: Decimal, *, at: datetime) -> None:
+    """Keep a good balance read for the dashboard (the ``orders.health`` job only).
+
+    A Redis failure is logged and swallowed: the gauges matter more than the copy.
+    """
+    try:
+        value = json.dumps({"usd": str(usd), "read_at": at.isoformat()})
+        await redis.set(BALANCE_KEY, value, ex=_BALANCE_TTL_SECONDS)
+    except RedisError as exc:
+        log.warning("orders.health.balance_cache_failed", error=type(exc).__name__)
+
+
+async def cached_balance(redis: Redis) -> tuple[Decimal | None, datetime | None]:
+    """The last cached balance and when it was read; ``(None, None)`` when unknown."""
+    with contextlib.suppress(RedisError, ValueError, KeyError, TypeError, InvalidOperation):
+        raw = await redis.get(BALANCE_KEY)
+        if raw is not None:
+            data = json.loads(raw)
+            return Decimal(data["usd"]), datetime.fromisoformat(data["read_at"])
+    return None, None
+
+
+__all__ = ["BALANCE_KEY", "Health", "cache_balance", "cached_balance", "measure"]

@@ -2340,6 +2340,85 @@
         "title": "CatalogStatusOut",
         "type": "object"
       },
+      "DashboardOut": {
+        "description": "Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look.",
+        "properties": {
+          "attention": {
+            "title": "Attention",
+            "type": "integer"
+          },
+          "by_day": {
+            "items": {
+              "$ref": "#/components/schemas/DayOut"
+            },
+            "title": "By Day",
+            "type": "array"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "in_flight": {
+            "title": "In Flight",
+            "type": "integer"
+          },
+          "refunds": {
+            "$ref": "#/components/schemas/RefundsOut"
+          },
+          "sales": {
+            "$ref": "#/components/schemas/SalesOut"
+          },
+          "since": {
+            "format": "date-time",
+            "title": "Since",
+            "type": "string"
+          },
+          "waxpeer": {
+            "$ref": "#/components/schemas/WaxpeerOut"
+          }
+        },
+        "required": [
+          "days",
+          "since",
+          "sales",
+          "refunds",
+          "in_flight",
+          "attention",
+          "by_day",
+          "waxpeer"
+        ],
+        "title": "DashboardOut",
+        "type": "object"
+      },
+      "DayOut": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
+            "type": "string"
+          },
+          "revenue_uzs": {
+            "title": "Revenue Uzs",
+            "type": "string"
+          },
+          "sales_count": {
+            "title": "Sales Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "day",
+          "sales_count",
+          "revenue_uzs",
+          "margin_usd"
+        ],
+        "title": "DayOut",
+        "type": "object"
+      },
       "EmailConfirmIn": {
         "additionalProperties": false,
         "description": "The token from a confirmation link.",
@@ -3695,6 +3774,62 @@
         "title": "RarityFacetOut",
         "type": "object"
       },
+      "RefundsOut": {
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "amount_uzs"
+        ],
+        "title": "RefundsOut",
+        "type": "object"
+      },
+      "SalesOut": {
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "margin_percent": {
+            "title": "Margin Percent",
+            "type": "string"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
+            "type": "string"
+          },
+          "revenue_usd": {
+            "title": "Revenue Usd",
+            "type": "string"
+          },
+          "revenue_uzs": {
+            "title": "Revenue Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "revenue_uzs",
+          "revenue_usd",
+          "cost_usd",
+          "margin_usd",
+          "margin_percent"
+        ],
+        "title": "SalesOut",
+        "type": "object"
+      },
       "SkinDetailOut": {
         "description": "The item page: the card plus its cheapest listings and its family.",
         "properties": {
@@ -4930,6 +5065,39 @@
         ],
         "title": "VerificationSentOut",
         "type": "object"
+      },
+      "WaxpeerOut": {
+        "properties": {
+          "balance_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance Usd"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "read_at"
+        ],
+        "title": "WaxpeerOut",
+        "type": "object"
       }
     }
   },
@@ -5084,6 +5252,68 @@
           }
         },
         "summary": "The audit log",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/dashboard": {
+      "get": {
+        "description": "Sales, margin and refunds by Tashkent day, orders in flight, open attentions and the\nlast Waxpeer balance read. Reads only. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.",
+        "operationId": "dashboard_api_v1_admin_dashboard_get",
+        "parameters": [
+          {
+            "description": "1 (today), 7 or 30 Tashkent days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "1 (today), 7 or 30 Tashkent days",
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The dashboard",
         "tags": [
           "admin"
         ]

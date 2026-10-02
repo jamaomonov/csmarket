@@ -45,6 +45,8 @@ def _fresh_ticks(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     monkeypatch.setattr(orders_health, "get_settings", lambda: settings)
     monkeypatch.setattr(orders_health, "trade_client", lambda _settings: object())
+    # No Redis here: the cache write is its own test.
+    monkeypatch.setattr(orders_health, "cache_balance", AsyncMock())
 
 
 def _health(balance: Decimal | None = None) -> Health:
@@ -176,3 +178,25 @@ async def test_timestamps_move_only_on_what_succeeded(monkeypatch: pytest.Monkey
     await orders_health.run()
     assert (_gauge(ts_balance) or 0) > 1.0
     assert (_gauge(ts_tick) or 0) > 1.0
+
+
+async def test_a_good_balance_read_is_cached_for_the_dashboard(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    cached = AsyncMock()
+    monkeypatch.setattr(orders_health, "cache_balance", cached)
+    monkeypatch.setattr(orders_health, "get_redis", lambda: "redis")
+    monkeypatch.setattr(orders_health, "measure", AsyncMock(return_value=_health(Decimal("42.5"))))
+    await orders_health.run()
+    cached.assert_awaited_once()
+    args, kwargs = cached.await_args  # type: ignore[misc]
+    assert args == ("redis", Decimal("42.5"))
+    assert kwargs["at"].tzinfo is not None
+
+
+async def test_a_failed_balance_read_leaves_the_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    cached = AsyncMock()
+    monkeypatch.setattr(orders_health, "cache_balance", cached)
+    monkeypatch.setattr(orders_health, "measure", AsyncMock(return_value=_health(None)))
+    await orders_health.run()
+    cached.assert_not_awaited()
