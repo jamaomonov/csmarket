@@ -198,5 +198,27 @@
       "floatQ": "What float does {name} have?",
       "floatA": "{exterior}: float from {min} to {max}. Each offer's exact float is in the list above."
     }
+  },
+  "buy": {
+    "title": "Buy",
+    "offer": "Offer",
+    "choose": "Choose",
+    "selected": "Selected",
+    "pay": "Buy for {price}",
+    "signIn": "Sign in with Steam to buy",
+    "needLink": "Add your trade link to buy",
+    "addLink": "Add link",
+    "checkingLink": "Checking your trade link…",
+    "methodTitle": "Payment method",
+    "balance": "Balance",
+    "balanceShort": "{amount} short",
+    "topUp": "Top up",
+    "methodTest": "Test payment",
+    "methodNone": "Payment isn't available right now.",
+    "priceChanged": "The price changed: now {price}",
+    "offerGone": "This offer was just bought. Next one — {price}",
+    "noneLeft": "No offers left",
+    "failed": "Couldn't place the order. Please try again.",
+    "howItWorks": "After you pay, the seller sends you a Steam trade offer. Accept it — the skin is yours."
   }
 }

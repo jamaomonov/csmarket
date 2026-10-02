@@ -198,5 +198,27 @@
       "floatQ": "{name} floati qanday?",
       "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
     }
+  },
+  "buy": {
+    "title": "Sotib olish",
+    "offer": "Lot",
+    "choose": "Tanlash",
+    "selected": "Tanlangan",
+    "pay": "{price}ga sotib olish",
+    "signIn": "Sotib olish uchun Steam orqali kiring",
+    "needLink": "Sotib olish uchun almashuv havolasini qoʻshing",
+    "addLink": "Havolani qoʻshish",
+    "checkingLink": "Almashuv havolasi tekshirilmoqda…",
+    "methodTitle": "Toʻlov usuli",
+    "balance": "Balans",
+    "balanceShort": "{amount} yetmaydi",
+    "topUp": "Toʻldirish",
+    "methodTest": "Test toʻlovi",
+    "methodNone": "Hozir toʻlov qilib boʻlmaydi.",
+    "priceChanged": "Narx oʻzgardi: endi {price}",
+    "offerGone": "Bu lotni allaqachon sotib olishdi. Keyingisi — {price}",
+    "noneLeft": "Takliflar tugadi",
+    "failed": "Buyurtmani rasmiylashtirib boʻlmadi. Qayta urinib koʻring.",
+    "howItWorks": "Toʻlovdan keyin sotuvchi Steamʼda almashuv yuboradi. Uni qabul qiling — skin sizniki."
   }
 }

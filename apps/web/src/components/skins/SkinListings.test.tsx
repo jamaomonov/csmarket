@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import messages from "@csmarket/i18n/locales/ru/web.json";
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SkinListings } from "./SkinListings";
-import { SkinOffersProvider } from "./SkinOffers";
+import { SkinOffersProvider, useSelectedOffer } from "./SkinOffers";
 
 import type * as SkinsModule from "@/lib/skins";
 
@@ -18,7 +18,12 @@ vi.mock("@/lib/skins", async (importOriginal) => ({
 }));
 const mocked = vi.mocked(fetchSkinListings);
 
-function renderListings() {
+function Picked() {
+  const { selected } = useSelectedOffer();
+  return <output aria-label="picked">{selected?.listing_id ?? "none"}</output>;
+}
+
+function renderListings(selectable = false) {
   return render(
     <NextIntlClientProvider locale="ru" messages={{ web: messages }}>
       <SkinOffersProvider slug="ak-ft">
@@ -26,7 +31,9 @@ function renderListings() {
           locale="ru"
           exterior="FT"
           image="https://community.fastly.steamstatic.com/economy/image/ak"
+          selectable={selectable}
         />
+        <Picked />
       </SkinOffersProvider>
     </NextIntlClientProvider>,
   );
@@ -100,5 +107,48 @@ describe("SkinListings", () => {
     mocked.mockRejectedValue(new Error("down"));
     renderListings();
     expect(await screen.findByText("Сейчас нет предложений")).toBeInTheDocument();
+  });
+
+  it("offers «Выбрать» on each row when buying is on; the cheapest starts selected", async () => {
+    const row = (id: number, usd: string, uzs: string) => ({
+      listing_id: id,
+      price_usd: usd,
+      price_uzs: uzs,
+      float_value: null,
+      paint_seed: null,
+      stickers: [],
+      inspect_url: null,
+    });
+    mocked.mockResolvedValue({
+      degraded: false,
+      items: [row(2, "31.00", "393700"), row(1, "30.00", "381000")],
+    });
+    renderListings(true);
+    const chosen = await screen.findByRole("button", { name: "Выбран" });
+    expect(chosen).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("picked")).toHaveTextContent("1");
+    fireEvent.click(screen.getByRole("button", { name: "Выбрать" }));
+    expect(screen.getByLabelText("picked")).toHaveTextContent("2");
+    expect(screen.getAllByRole("button", { name: /^Выбра/ })).toHaveLength(2);
+  });
+
+  it("has no «Выбрать» while buying is off", async () => {
+    mocked.mockResolvedValue({
+      degraded: false,
+      items: [
+        {
+          listing_id: 1,
+          price_usd: "30.37",
+          price_uzs: "385700",
+          float_value: null,
+          paint_seed: null,
+          stickers: [],
+          inspect_url: null,
+        },
+      ],
+    });
+    renderListings();
+    await screen.findByText(/385\s?700/);
+    expect(screen.queryByRole("button", { name: /^Выбра/ })).not.toBeInTheDocument();
   });
 });

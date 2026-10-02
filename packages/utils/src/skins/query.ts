@@ -80,6 +80,8 @@ export interface SkinFamilyMember {
 export interface SkinDetail extends SkinItem {
   cheapest: SkinListingSummary[];
   family: SkinFamilyMember[];
+  /** Buying is switched on: the item page shows the buy panel. */
+  buy_enabled: boolean;
 }
 /** One of the cheapest stored offers shown on the item page before live offers load. */
 export interface SkinListingSummary {

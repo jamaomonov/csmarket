@@ -30,6 +30,7 @@ const ITEM: SkinDetail = {
   max_float: "1.00000",
   cheapest: [],
   family: [],
+  buy_enabled: false,
 };
 
 describe("wearFloatRange", () => {

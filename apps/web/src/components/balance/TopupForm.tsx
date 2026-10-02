@@ -15,6 +15,7 @@ import {
 
 import type { Locale } from "@csmarket/i18n";
 
+import { offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
 import { useRouter } from "@/i18n/navigation";
 import {
   amountValue,
@@ -33,13 +34,6 @@ import {
   type AttemptStore,
   type Provider,
 } from "@/lib/balance";
-
-/** Kassa brand names: never translated. The dev `mock` kassa reads as a test payment. */
-const KASSA_NAMES: Readonly<Record<string, string>> = {
-  click: "Click",
-  payme: "Payme",
-  uzum: "Uzum",
-};
 
 type FormError = "badAmount" | "failed";
 
@@ -91,9 +85,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
     el.setSelectionRange(at, at);
   });
 
-  const label = (slug: string): string | null =>
-    slug === "mock" ? t("methodTest") : (KASSA_NAMES[slug] ?? null);
-  const offered = (providers ?? []).filter((p) => label(p.slug) !== null);
+  const offered = offeredKassas(providers);
   const method = offered.find((p) => p.slug === chosen)?.slug ?? offered[0]?.slug ?? null;
   const typed = amountValue(amount);
   const bounds = { min: formatUzs(locale, TOPUP_MIN), max: formatUzs(locale, TOPUP_MAX) };
@@ -198,36 +190,15 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
           </p>
         </div>
 
-        <fieldset>
-          <legend className="text-fg-muted mb-2 text-sm font-semibold">{t("methodLabel")}</legend>
-          {providers === undefined ? (
-            <div aria-busy className="bg-surface h-12 animate-pulse rounded-md" />
-          ) : offered.length === 0 ? (
-            <p className="text-fg-muted text-sm">{t("methodNone")}</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {offered.map((p) => (
-                <button
-                  key={p.slug}
-                  type="button"
-                  aria-pressed={p.slug === method}
-                  onClick={() => {
-                    setChosen(p.slug);
-                    setError(null);
-                  }}
-                  className={cn(
-                    "h-12 rounded-md border px-3 text-sm font-semibold",
-                    p.slug === method
-                      ? "border-accent bg-accent/10"
-                      : "border-border bg-surface hover:border-border-strong",
-                  )}
-                >
-                  {label(p.slug)}
-                </button>
-              ))}
-            </div>
-          )}
-        </fieldset>
+        <PaymentPicker
+          providers={providers}
+          method={method}
+          onPick={(slug) => {
+            setChosen(slug);
+            setError(null);
+          }}
+          labels={{ legend: t("methodLabel"), test: t("methodTest"), none: t("methodNone") }}
+        />
 
         {error ? (
           <p role="alert" className="text-danger text-sm">

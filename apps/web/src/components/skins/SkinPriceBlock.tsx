@@ -11,7 +11,7 @@ import { displayPrice } from "@/lib/skins";
 /**
  * The headline price — the cheapest live offer once offers load, with how much cheaper than
  * Steam it is; the stored price as «от …» before that — and, on a line of its own, the
- * Steam market link for comparison. No buy button in M2: price and offers only.
+ * Steam market link for comparison. Buying lives in `SkinBuyPanel`.
  */
 export function SkinPriceBlock({
   storedUzs,

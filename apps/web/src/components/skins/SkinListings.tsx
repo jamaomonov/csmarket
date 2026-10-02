@@ -1,12 +1,13 @@
 "use client";
 
+import { cn } from "@csmarket/ui";
 import { steamImageSize, wearColor } from "@csmarket/utils/skins";
 import { Eye } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { SkinFloatBar } from "./SkinFloatBar";
-import { useSkinOffers } from "./SkinOffers";
+import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
 
 import { displayPrice } from "@/lib/skins";
 
@@ -16,21 +17,27 @@ const FIRST = 10;
  * The live offers, as a market row: the skin, its wear code and float (and seed), the
  * stickers, then the price and inspect. When the API answers from its fallback the rows
  * simply carry no float/seed/inspect — nothing is said about it (owner rule: no
- * service meta). No buy button in M2.
+ * service meta). With buying on, each row has «Выбрать»: the buy panel buys the selected
+ * offer (the cheapest until another is picked).
  */
 export function SkinListings({
   locale,
   image = null,
   exterior = null,
+  selectable = false,
 }: {
   locale: string;
   /** The item's picture, shown on every row as a market row does. */
   image?: string | null;
   /** The item's wear code (FN…BS), coloured on every row. */
   exterior?: string | null;
+  /** Buying is on: each row can be chosen for the buy panel. */
+  selectable?: boolean;
 }) {
   const t = useTranslations("web.skins");
+  const tb = useTranslations("web.buy");
   const offers = useSkinOffers();
+  const { selected, select } = useSelectedOffer();
   const [all, setAll] = useState(false);
 
   if (offers === null) {
@@ -127,6 +134,23 @@ export function SkinListings({
               {displayPrice(locale, l.price_uzs, l.price_usd)}
             </span>
             <div className="col-start-3 row-start-2 flex items-center justify-end gap-2">
+              {selectable && (
+                <button
+                  type="button"
+                  aria-pressed={selected?.listing_id === l.listing_id}
+                  onClick={() => {
+                    select(l.listing_id);
+                  }}
+                  className={cn(
+                    "h-9 shrink-0 rounded-lg border px-3 text-[13px] font-semibold",
+                    selected?.listing_id === l.listing_id
+                      ? "border-accent bg-accent/10"
+                      : "border-border hover:border-border-strong",
+                  )}
+                >
+                  {selected?.listing_id === l.listing_id ? tb("selected") : tb("choose")}
+                </button>
+              )}
               {l.inspect_url?.startsWith("steam://") && (
                 <a
                   href={l.inspect_url}
