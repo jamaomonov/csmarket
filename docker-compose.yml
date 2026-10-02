@@ -80,6 +80,8 @@ services:
       redis: { condition: service_healthy }
     volumes: ["./apps/api:/app/apps/api"]
     # --no-access-log as in the prod image (PII: client IP, query strings).
+    # --timeout-keep-alive 75: longer than Node's pooled keep-alive, so the storefront's
+    # server-side fetches never reuse a socket uvicorn just closed ("other side closed").
     command:
       [
         "uvicorn",
@@ -90,6 +92,8 @@ services:
         "8000",
         "--reload",
         "--no-access-log",
+        "--timeout-keep-alive",
+        "75",
       ]
 
   worker:
@@ -104,7 +108,14 @@ services:
   scheduler:
     build: { context: ., dockerfile: infra/docker/scheduler.Dockerfile }
     restart: unless-stopped
-    environment: { <<: *app-env, CSMARKET_SERVICE_NAME: csmarket-scheduler }
+    # First runs ÷ 10 (dev only; prod refuses it): the reconcile sweep runs ~24 s after start,
+    # so `make test-e2e` can follow `make dev` within a minute.
+    environment:
+      {
+        <<: *app-env,
+        CSMARKET_SERVICE_NAME: csmarket-scheduler,
+        CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR: "${CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR:-10}",
+      }
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }

@@ -13,21 +13,32 @@ needs only one restart per day to never run.
 So a long-period job gets an explicit first run shortly after boot. The delays
 are staggered rather than shared: several of these jobs call the same upstream
 APIs, and firing them together on every deploy turns a restart into a burst.
+
+Dev and e2e may scale every delay down by ``CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR``
+(the dev compose sets 10: the reconcile sweep runs ~24 s after ``make dev``
+instead of 4 min). ``Settings`` refuses any divisor but 1 in prod.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from csmarket.core.config import get_settings
 
-def first_run_after(seconds: int) -> datetime:
-    """A ``next_run_time`` ``seconds`` from now.
+
+def first_run_after(seconds: int, *, divisor: int | None = None) -> datetime:
+    """A ``next_run_time`` ``seconds`` from now, divided by the dev first-run divisor.
 
     Deliberately not "now": a container that crash-loops faster than this
     would otherwise re-run the job on every attempt, and these jobs talk to
     paid upstreams.
+
+    Args:
+        seconds: The delay in production.
+        divisor: Overrides ``settings.scheduler_first_run_divisor`` (1 in prod).
     """
-    return datetime.now(UTC) + timedelta(seconds=seconds)
+    scale = divisor if divisor is not None else get_settings().scheduler_first_run_divisor
+    return datetime.now(UTC) + timedelta(seconds=seconds / scale)
 
 
 __all__ = ["first_run_after"]

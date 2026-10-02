@@ -116,10 +116,11 @@ hand meanwhile.
 - **With the real key in `.env` and `CSMARKET_WAXPEER_FAKE=false`, a local buy is a REAL
   purchase with the shop's real Waxpeer money**, delivered to whatever trade link the test
   account saved. Do it only on purpose, with a cheap skin and your own trade link.
-- The reconcile sweep's first run is about 240 s after the scheduler starts; run e2e
-  (`make test-e2e`) **at least 4 minutes after `make dev`**, or the buy specs wait out their
-  timeouts. A rollback on a delivered order shows only after the hourly protection watch
-  (first run at 280 s).
+- The reconcile sweep's first run is about 240 s after the scheduler starts — ~24 s under the
+  dev compose, which divides first runs by 10 (`CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR`, dev
+  only; prod refuses it). Run e2e (`make test-e2e`) about a minute after `make dev`. A
+  rollback on a delivered order shows only after the hourly protection watch (first run at
+  280 s, 28 s in the dev compose).
 
 ## Test buys after the deploy (M5)
 

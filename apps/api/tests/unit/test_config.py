@@ -114,6 +114,28 @@ def test_the_waxpeer_fake_is_refused_in_prod() -> None:
     assert Settings(environment="staging", waxpeer_fake=True).waxpeer_fake is True
 
 
+@pytest.mark.parametrize("seconds", [0, -1])
+def test_the_buy_timeout_must_be_positive(seconds: float) -> None:
+    with pytest.raises(ValidationError):
+        Settings(environment="dev", waxpeer_buy_timeout_seconds=seconds)
+
+
+def test_the_first_run_divisor_is_dev_only() -> None:
+    assert Settings(environment="dev").scheduler_first_run_divisor == 1
+    assert (
+        Settings(environment="dev", scheduler_first_run_divisor=10).scheduler_first_run_divisor
+        == 10
+    )
+    assert (
+        Settings(environment="prod", scheduler_first_run_divisor=1).scheduler_first_run_divisor == 1
+    )
+    with pytest.raises(ValidationError, match="FIRST_RUN_DIVISOR"):
+        Settings(environment="prod", scheduler_first_run_divisor=10)
+    for bad in (0, 61):
+        with pytest.raises(ValidationError):
+            Settings(environment="dev", scheduler_first_run_divisor=bad)
+
+
 def test_the_waxpeer_fake_from_env_stops_a_prod_start(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")
     monkeypatch.setenv("CSMARKET_WAXPEER_FAKE", "true")

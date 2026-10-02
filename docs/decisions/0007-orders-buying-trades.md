@@ -215,8 +215,9 @@ next_check_at = now + 5 min WHERE buying AND buy_pending AND due` — then reads
 - **The admin refund carve-out:** one synchronous lookup (4 s) per refund; while Waxpeer is
   down or rate-limits us an operator cannot refund (409 `waxpeer_unavailable`) — the money
   waits, the skin is never given twice.
-- The buyer polls (8 s) until M4b's WebSocket; e2e must start ≥ 4 min after the stack (the
-  reconcile's first run).
+- The buyer polls (8 s) until M4b's WebSocket. Dev and e2e scale the scheduler's first runs
+  down (`CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR=10` in the dev compose; prod refuses any
+  divisor but 1), so e2e can start about a minute after the stack.
 - Orphan buys (a Waxpeer purchase with no order) are not detected until the M4b probe.
 
 ## Validation

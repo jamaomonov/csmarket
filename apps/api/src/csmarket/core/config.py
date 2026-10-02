@@ -292,7 +292,7 @@ class Settings(BaseSettings):
         default=10, ge=1, description="Seconds between Waxpeer trade-status sweeps."
     )
     waxpeer_buy_timeout_seconds: float = Field(
-        default=20.0, description="Timeout of the Waxpeer buy call."
+        default=20.0, gt=0, description="Timeout of the Waxpeer buy call."
     )
     waxpeer_fake: bool = Field(
         default=False,
@@ -319,6 +319,16 @@ class Settings(BaseSettings):
     scheduler_metrics_port: int = Field(
         default=9102, description="The scheduler's /metrics port (internal network only)."
     )
+    scheduler_first_run_divisor: int = Field(
+        default=1,
+        ge=1,
+        le=60,
+        description=(
+            "Dev and e2e only: divides every job's first-run delay after a scheduler start "
+            "(the dev compose sets 10, so the reconcile sweep runs ~24 s after `make dev`). "
+            "Must stay 1 in prod."
+        ),
+    )
 
     # --- observability ---
     sentry_dsn: str | None = Field(default=None)
@@ -331,6 +341,13 @@ class Settings(BaseSettings):
         """Refuse to start prod with the fake Waxpeer: its buys spend nothing and send nothing."""
         if self.waxpeer_fake and self.is_prod:
             raise ValueError("CSMARKET_WAXPEER_FAKE must be off in prod")
+        return self
+
+    @model_validator(mode="after")
+    def _no_first_run_scaling_in_prod(self) -> Self:
+        """Refuse a scaled-down first run in prod: the delays keep paid upstreams from bursts."""
+        if self.scheduler_first_run_divisor != 1 and self.is_prod:
+            raise ValueError("CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR must be 1 in prod")
         return self
 
     @property

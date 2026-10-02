@@ -118,7 +118,9 @@ survives and the app re-mints one on the next load.
 The dev compose runs the API, worker and scheduler with `CSMARKET_WAXPEER_FAKE=true`: a fake
 Waxpeer whose trades live in Redis, so a local buy spends nothing. A paid order is bought at
 once; the fake "sends" the offer 6 s later and the reconcile sweep (every 10 s, first run
-about 4 min after the scheduler starts) moves the order to «обмен отправлен». With the fake
+~24 s after the dev compose's scheduler starts — it divides first runs by 10 with
+`CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR`; about 4 min for `make dev-scheduler` unless `.env`
+sets it) moves the order to «обмен отправлен». With the fake
 on, the trade-link check passes Waxpeer's half for any link. Drive the rest with dev login's
 Bearer token:
 
