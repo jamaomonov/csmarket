@@ -246,8 +246,12 @@ async def test_a_timeout_on_a_lock_wait_while_recording_is_unconfirmed(
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The cancellation lands mid-statement (the order row is locked elsewhere)."""
-    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=300))
+    """The cancellation lands mid-statement (the order row is locked elsewhere).
+
+    The budget must outlast everything before the buy (lease, read, lookup) even on a loaded
+    CI runner, and end while the lock is still held: 1 s of budget, 3 s of lock.
+    """
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(seconds=1))
     order = await _buying(db_session)
     order_id = order.id
     other = async_sessionmaker(bind=db_engine, expire_on_commit=False)()
@@ -257,7 +261,7 @@ async def test_a_timeout_on_a_lock_wait_while_recording_is_unconfirmed(
         await other.execute(select(Order).where(Order.id == order_id).with_for_update())
 
         async def let_go() -> None:
-            await asyncio.sleep(0.8)
+            await asyncio.sleep(3)
             await other.commit()
 
         tasks.append(asyncio.create_task(let_go()))
