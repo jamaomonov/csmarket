@@ -22,7 +22,7 @@ export default defineConfig({
   projects: [
     {
       name: "web-chromium",
-      testMatch: /(^|\/)(home|auth|catalogue|balance|buy)\.spec\.ts$/,
+      testMatch: /(^|\/)(home|auth|catalogue|balance|buy|live|email)\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], baseURL: WEB },
     },
     {
@@ -32,7 +32,7 @@ export default defineConfig({
     },
     {
       name: "admin-chromium",
-      testMatch: /(^|\/)admin(-catalogue|-money|-orders)?\.spec\.ts$/,
+      testMatch: /(^|\/)admin(-catalogue|-money|-orders|-pricing)?\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], baseURL: ADMIN },
     },
   ],

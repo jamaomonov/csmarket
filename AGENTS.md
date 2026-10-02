@@ -248,7 +248,7 @@ csmarket/
 
 - **TDD** when building a module or fixing a reproducible bug: the failing test first.
 - **Coverage gates:** Python ≥ 80 % (enforced: `fail_under = 80` in `pyproject.toml`, CI
-  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins` ≥ 95 % each (enforced:
+  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime` ≥ 95 % each (enforced:
   `scripts/check-module-coverage.py` reads `coverage.json` after `make test-py` and CI
   `test-py`, and fails naming the module under the line). TS ≥ 70 % is a target; no
   threshold is configured yet.

@@ -68,8 +68,9 @@ test("buy from the balance: the trade arrives and is accepted", async ({ page, r
   const status = page.getByTestId("order-status");
   await expect(page.getByRole("heading", { level: 1, name: `Заказ #${number}` })).toBeVisible();
   // Paid from the balance in one step; the worker buys at once. The fake sends the offer
-  // ~6 s later and the reconcile sweep (every 10 s) reads it.
-  await expect(status).toHaveAttribute("data-state", /^(paid|buying)$/);
+  // ~6 s later and the reconcile sweep (every 10 s) reads it; the live page (M4b) may show
+  // the sent offer by the time it has loaded.
+  await expect(status).toHaveAttribute("data-state", /^(paid|buying|trade_sent)$/);
   await expect(status).toHaveAttribute("data-state", "trade_sent", { timeout: 60_000 });
   const trade = page.getByRole("region", { name: "Обмен в Steam" });
   await expect(trade.getByText("Обмен отправлен — примите его в Steam.")).toBeVisible();

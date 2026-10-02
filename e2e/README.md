@@ -4,9 +4,9 @@ Playwright smoke and journeys. Needs the dev stack up (`make dev`, then `make mi
 
 Projects:
 
-- `web-chromium` — storefront (`home`, `auth`, `catalogue`, `balance`, `buy` specs) on `WEB_BASE_URL` (default `http://localhost:3100`).
+- `web-chromium` — storefront (`home`, `auth`, `catalogue`, `balance`, `buy`, `live`, `email` specs) on `WEB_BASE_URL` (default `http://localhost:3100`).
 - `web-iphone` — storefront (`home` spec) on an iPhone 14 viewport.
-- `admin-chromium` — admin SPA (`admin`, `admin-catalogue`, `admin-money`, `admin-orders` specs) on `ADMIN_BASE_URL` (default `http://localhost:3102`).
+- `admin-chromium` — admin SPA (`admin`, `admin-catalogue`, `admin-money`, `admin-orders`, `admin-pricing` specs) on `ADMIN_BASE_URL` (default `http://localhost:3102`).
 
 Signed-in specs use the dev-only login, `POST {API_BASE_URL}/api/v1/auth/dev-login` (default `http://localhost:8100`). It exists only while `CSMARKET_DEV_LOGIN_ENABLED=true` and the environment is not prod; the dev compose enables it by default. `tests/helpers.ts` calls it and sets the apps' session hints in `localStorage`. Trade links in specs are fake (redrawn tokens).
 
@@ -24,3 +24,9 @@ Order specs (M4a) need the dev Waxpeer fake (`CSMARKET_WAXPEER_FAKE`, on by defa
 - The order page moves when the scheduler's reconcile sweep reads the fake (every 10 s). The dev compose divides every first-run delay by 10 (`CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR=10`, dev only — prod refuses it), so the sweep's **first run is ~24 s after the scheduler starts**: start the suite about a minute after `make dev`. A scheduler run as a host process (`make dev-scheduler`) keeps the prod delays (240 s) unless `.env` sets the divisor. The long buy specs allow 150 s each.
 - `order-create` and `order-pay` are rate-limited like `topup-create` (60 a minute per IP, 10 per IP and account). A run opens four orders and four top-ups in all.
 - The trade-link check passes every link under the fake (`auth` expects «Ссылка работает»); without the fake it would say the check is unavailable.
+
+M4b specs:
+
+- `live` buys through the test kassa, waits for `trade_sent`, opens the order page and accepts the offer at the fake: the page must reach «Получено» within 5 s of the socket's `order.changed` frame (a poll would take 8–16 s), with no page reload.
+- `email` sets an email on the account page, reads the `verify` letter through the dev-only `GET /api/v1/dev/emails?kind=verify` (`helpers.devEmails` / `waitForLetter`; the dev transport keeps the last 50 letters in Redis), opens its link («Почта подтверждена», the token gone from the address bar), then a paid order leaves a `receipt` letter. Needs the worker up (it sends from the outbox) and `CSMARKET_EMAIL_TRANSPORT=dev` (the default).
+- `admin-pricing` adds a weapon markup for Nova (no other spec buys a Nova, so parallel prices never move), sees the preview change before saving, saves after the confirm, sees the item's price move, and puts the original document back in a `finally`.

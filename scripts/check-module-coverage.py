@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""The money modules' own coverage gate (AGENTS §9): each of ``orders``, ``payments``,
-``wallet`` and ``skins`` must keep ≥ 95 % line coverage on its own.
+"""The per-module coverage gate (AGENTS §9): each of ``orders``, ``payments``, ``wallet`` and
+``skins`` (the money path) and, since M4b, ``notifications`` and ``realtime`` must keep
+≥ 95 % line coverage on its own.
 
 Reads the ``coverage json`` report that ``make test-py`` and CI ``test-py`` write
 (``coverage.json`` by default) and sums covered lines over statements per module, i.e.
@@ -19,8 +20,8 @@ import json
 import sys
 from pathlib import Path
 
-#: The modules on the money path and their line (percent).
-MODULES = ("orders", "payments", "wallet", "skins")
+#: The gated modules (the money path, then M4b's letters and live updates) and their line.
+MODULES = ("orders", "payments", "wallet", "skins", "notifications", "realtime")
 THRESHOLD = 95.0
 
 

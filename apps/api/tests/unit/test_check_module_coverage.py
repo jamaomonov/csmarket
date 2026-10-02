@@ -11,7 +11,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SCRIPT = REPO_ROOT / "scripts" / "check-module-coverage.py"
-MODULES = ("orders", "payments", "wallet", "skins")
+MODULES = ("orders", "payments", "wallet", "skins", "notifications", "realtime")
 
 
 def _report(tmp_path: Path, percents: dict[str, tuple[int, int]]) -> Path:
@@ -57,7 +57,9 @@ def test_one_module_below_the_line_fails_and_is_named(tmp_path: Path, module: st
 
 
 def test_a_module_missing_from_the_report_is_a_guard_failure(tmp_path: Path) -> None:
-    percents = dict.fromkeys(("orders", "payments", "wallet"), (100, 100))
+    percents = dict.fromkeys(
+        ("orders", "payments", "wallet", "notifications", "realtime"), (100, 100)
+    )
     result = _run(_report(tmp_path, percents))
     assert result.returncode == 2
     assert "skins" in result.stderr

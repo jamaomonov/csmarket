@@ -193,3 +193,60 @@ export async function buyThroughTestKassa(
   expect(paid.status(), "pay order").toBe(200);
   return number;
 }
+
+/** Dev-only sign-in of an admin on an API context alone; returns the access token. */
+export async function apiAdminLogin(request: APIRequestContext, steamId: string): Promise<string> {
+  const r = await request.post(`${API}/api/v1/auth/dev-login`, {
+    data: { steam_id: steamId, display_name: "E2E admin", admin: true },
+  });
+  expect(r.status(), "admin dev-login").toBe(200);
+  // Known-shape JSON from our own dev-login (`TokensOut`).
+  const { access_token: token } = (await r.json()) as { access_token: string };
+  return token;
+}
+
+/** One letter the dev transport kept (`GET /api/v1/dev/emails`). */
+export interface DevLetter {
+  to_user: string;
+  kind: string;
+  subject: string;
+  text: string;
+  html: string;
+  at: string;
+}
+
+/**
+ * The account's letters of `kind` from the dev transport, newest first. The worker sends
+ * them from the outbox moments after the event commits, so callers poll.
+ */
+export async function devEmails(
+  request: APIRequestContext,
+  token: string,
+  kind: string,
+): Promise<DevLetter[]> {
+  const r = await request.get(`${API}/api/v1/dev/emails?kind=${kind}`, { headers: auth(token) });
+  expect(r.status(), "dev emails").toBe(200);
+  // Known-shape JSON from our own dev route (the dev transport's letters).
+  return (await r.json()) as DevLetter[];
+}
+
+/** Wait for the account's first letter of `kind` that satisfies `match`. */
+export async function waitForLetter(
+  request: APIRequestContext,
+  token: string,
+  kind: string,
+  match: (letter: DevLetter) => boolean = () => true,
+): Promise<DevLetter> {
+  let found: DevLetter | undefined;
+  await expect
+    .poll(
+      async () => {
+        found = (await devEmails(request, token, kind)).find(match);
+        return found !== undefined;
+      },
+      { timeout: 30_000, intervals: [500, 1_000] },
+    )
+    .toBe(true);
+  if (found === undefined) throw new Error(`no ${kind} letter`);
+  return found;
+}
