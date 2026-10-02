@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { type AdminOrderRow, type AdminOrdersPage, listOrders, type ListOrdersParams } from "./api";
+import { ORDERS_LIST_KEY } from "./keys";
 import { ORDER_STATUSES } from "./kinds";
 import { STATUS_LABELS } from "./labels";
 import { AttentionBadge, OrderStatusChip } from "./StatusChip";
@@ -72,7 +73,7 @@ export function OrdersPage() {
     readonly unknown[],
     string | null
   >({
-    queryKey: ["admin", "orders", "list", urlQ, status],
+    queryKey: [...ORDERS_LIST_KEY, urlQ, status],
     queryFn: ({ pageParam }) => {
       const params: ListOrdersParams = {
         ...(urlQ !== "" && { q: urlQ }),

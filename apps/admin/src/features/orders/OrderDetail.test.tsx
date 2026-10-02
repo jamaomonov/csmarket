@@ -1,10 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AdminOrderDetail } from "./api";
 import { ATTENTION, DETAIL, RESOLVED } from "./fixtures";
+import { detailKey } from "./keys";
 import { OrderDetail } from "./OrderDetail";
 
 import { ApiError } from "@/lib/api";
@@ -18,7 +19,7 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("./api", () => api);
 
-function renderDetail() {
+function renderDetail(): QueryClient {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -29,6 +30,7 @@ function renderDetail() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return qc;
 }
 
 function conflict(code: string): ApiError {
@@ -164,6 +166,41 @@ describe("OrderDetail", () => {
       expect(screen.getByTestId("order-status")).toHaveTextContent("не получилось");
     });
 
+    it("a double click on «Вернуть» sends one request", async () => {
+      let finish: (d: AdminOrderDetail) => void = () => undefined;
+      api.refundOrder.mockReturnValue(
+        new Promise<AdminOrderDetail>((resolve) => {
+          finish = resolve;
+        }),
+      );
+      renderDetail();
+      fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
+      const confirm = within(screen.getByTestId("order-confirm")).getByRole("button", {
+        name: "Вернуть",
+      });
+      fireEvent.click(confirm);
+      fireEvent.click(confirm);
+      finish({ ...RESOLVED, can_refund: false, can_retry: false });
+      await waitFor(() => {
+        expect(screen.queryByTestId("order-confirm")).toBeNull();
+      });
+      expect(api.refundOrder).toHaveBeenCalledTimes(1);
+    });
+
+    it("closes an open confirm once a refetch says the refund is no longer possible", async () => {
+      const qc = renderDetail();
+      fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
+      expect(screen.getByTestId("order-confirm")).toBeInTheDocument();
+      act(() => {
+        qc.setQueryData(detailKey("O7K2M9QX"), { ...RESOLVED, can_refund: false });
+      });
+      await waitFor(() => {
+        expect(screen.queryByTestId("order-confirm")).toBeNull();
+      });
+      expect(screen.queryByRole("button", { name: "Вернуть" })).toBeNull();
+      expect(api.refundOrder).not.toHaveBeenCalled();
+    });
+
     it("sends nothing when the confirm is cancelled", async () => {
       renderDetail();
       fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
@@ -229,6 +266,25 @@ describe("OrderDetail", () => {
         expect(api.retryOrder).toHaveBeenCalledTimes(1);
       });
       expect(api.retryOrder.mock.calls[0]?.[0]).toBe("O7K2M9QX");
+    });
+
+    it("a second deliberate retry after a success gets a new key", async () => {
+      api.retryOrder.mockResolvedValue(RESOLVED); // still retryable: the page offers it again
+      renderDetail();
+      for (let i = 0; i < 2; i += 1) {
+        fireEvent.click(await screen.findByRole("button", { name: "Повторить покупку" }));
+        fireEvent.click(
+          within(screen.getByTestId("order-confirm")).getByRole("button", { name: "Повторить" }),
+        );
+        await waitFor(() => {
+          expect(api.retryOrder).toHaveBeenCalledTimes(i + 1);
+        });
+        await waitFor(() => {
+          expect(screen.queryByTestId("order-confirm")).toBeNull();
+        });
+      }
+      const [first, second] = api.retryOrder.mock.calls.map((c) => c[1] as string);
+      expect(first).not.toBe(second);
     });
 
     it("answers not_retryable in Russian", async () => {

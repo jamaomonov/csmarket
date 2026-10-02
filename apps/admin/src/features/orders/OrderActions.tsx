@@ -1,13 +1,15 @@
 /**
  * «Разобрано», «Вернуть деньги на баланс», «Повторить покупку». The refund and the retry are
  * offered only when the API says they would succeed (`can_refund` / `can_retry`); each goes
- * through a confirm step and sends one `Idempotency-Key` per confirmed submission.
+ * through a confirm step and sends one `Idempotency-Key` per confirmed submission. An open
+ * confirm step closes by itself when a refetch says its action is no longer possible.
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useRef, useState } from "react";
 
 import { type AdminOrderDetail, refundOrder, resolveOrder, retryOrder } from "./api";
+import { detailKey, ORDERS_LIST_KEY, TRADES_KEY } from "./keys";
 import { isOrderConflict, orderErrorText } from "./labels";
 
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -69,9 +71,9 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
     },
     onSuccess: (next, s) => {
       keys[s.action].reset();
-      qc.setQueryData(["admin", "orders", "detail", number], next);
-      void qc.invalidateQueries({ queryKey: ["admin", "orders", "list"] });
-      void qc.invalidateQueries({ queryKey: ["admin", "trades"] });
+      qc.setQueryData(detailKey(number), next);
+      void qc.invalidateQueries({ queryKey: ORDERS_LIST_KEY });
+      void qc.invalidateQueries({ queryKey: TRADES_KEY });
       setPanel("none");
       setNote("");
       setError(null);
@@ -156,7 +158,7 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
           </Button>
         )}
       </div>
-      {panel === "resolve" && (
+      {panel === "resolve" && needsResolve && (
         <form
           className="border-border bg-surface space-y-3 rounded-lg border p-4"
           data-testid="order-resolve-form"
@@ -187,7 +189,7 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
           </div>
         </form>
       )}
-      {panel === "refund" && (
+      {panel === "refund" && detail.can_refund && (
         <ConfirmBox>
           <p>Вернуть {formatSum(order.price_uzs)} на баланс покупателя?</p>
           <div className="flex gap-2">
@@ -204,7 +206,7 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
           </div>
         </ConfirmBox>
       )}
-      {panel === "retry" && (
+      {panel === "retry" && detail.can_retry && (
         <ConfirmBox>
           <p>
             Сначала проверьте project id в кабинете Waxpeer — повтор купит скин, если покупки там

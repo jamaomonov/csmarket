@@ -4,6 +4,7 @@ import { type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { type AdminOrderDetail, getOrder } from "./api";
+import { detailKey } from "./keys";
 import { FAILURE_LABELS } from "./labels";
 import { OrderActions } from "./OrderActions";
 import { AttentionBadge, OrderStatusChip } from "./StatusChip";
@@ -13,8 +14,6 @@ import { StatusChip as PaymentStatusChip } from "@/features/payments/StatusChip"
 import { errorText, providerLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSum } from "@/lib/format";
-
-const detailKey = (number: string) => ["admin", "orders", "detail", number] as const;
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
