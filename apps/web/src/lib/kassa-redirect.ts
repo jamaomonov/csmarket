@@ -13,6 +13,13 @@
  */
 
 const GO_PARAM = "go";
+
+/**
+ * How long after arriving the page may still open the kassa by itself. Opening the bank
+ * app only reads as the continuation of the customer's tap; ten seconds later, on a slow
+ * connection, it is a hijack. Past this the page shows the button and the customer decides.
+ */
+export const AUTO_OPEN_BUDGET_MS = 8_000;
 const GO_VALUE = "1";
 const KEY_PREFIX = "csmarket.web.kassa_opened.";
 

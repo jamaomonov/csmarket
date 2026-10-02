@@ -66,5 +66,9 @@ describe("AccountView", () => {
       "href",
       "/account/balance",
     );
+    expect(screen.getByRole("link", { name: "Мои заказы" })).toHaveAttribute(
+      "href",
+      "/account/orders",
+    );
   });
 });

@@ -220,5 +220,42 @@
     "noneLeft": "No offers left",
     "failed": "Couldn't place the order. Please try again.",
     "howItWorks": "After you pay, the seller sends you a Steam trade offer. Accept it — the skin is yours."
+  },
+  "orders": {
+    "title": "My orders",
+    "empty": "No orders yet.",
+    "toCatalog": "Browse skins",
+    "more": "Show more",
+    "number": "Order #{number}",
+    "notFound": "Order not found.",
+    "cancelled": "Order cancelled.",
+    "expired": "Time to pay has run out.",
+    "payNow": "Pay {price}",
+    "payTest": "Pay (test)",
+    "signedOut": "Sign in with Steam to see your orders.",
+    "status": {
+      "pending": "Awaiting payment",
+      "paid": "Paid",
+      "buying": "Buying",
+      "trade_sent": "Trade sent",
+      "delivered": "Received",
+      "cancelled": "Cancelled",
+      "failed": "Didn't go through",
+      "returned": "Trade didn't happen"
+    },
+    "trade": {
+      "title": "Steam trade",
+      "buying": "Buying the skin — the trade will arrive in Steam in about a minute.",
+      "offer_sent": "Trade sent — accept it in Steam.",
+      "acceptBy": "Accept by {time}",
+      "openOffer": "Open the trade in Steam",
+      "seller": "Seller",
+      "accepted": "Received",
+      "protectedUntil": "Steam protects the trade until {date}",
+      "refunded": "The trade didn't happen — the money is back on your balance.",
+      "tryLater": "Couldn't buy the skin — the money is on your balance. Try again in a few minutes.",
+      "support": "We're checking the purchase. The status will update on this page.",
+      "toBalance": "Open balance"
+    }
   }
 }

@@ -14,3 +14,14 @@ export function categoryPath(category: string): string {
 export function weaponPath(weaponSlug: string): string {
   return `/weapon/${weaponSlug}`;
 }
+
+/** An order's page; the number is escaped (it is a path segment). */
+export function orderPath(number: string): string {
+  return `/orders/${encodeURIComponent(number)}`;
+}
+
+/** «Мои заказы». */
+export const ORDERS = "/account/orders";
+
+/** The balance page («Открыть баланс», «Пополнить»). */
+export const BALANCE = "/account/balance";

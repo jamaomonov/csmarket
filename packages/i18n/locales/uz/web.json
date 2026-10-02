@@ -220,5 +220,42 @@
     "noneLeft": "Takliflar tugadi",
     "failed": "Buyurtmani rasmiylashtirib boʻlmadi. Qayta urinib koʻring.",
     "howItWorks": "Toʻlovdan keyin sotuvchi Steamʼda almashuv yuboradi. Uni qabul qiling — skin sizniki."
+  },
+  "orders": {
+    "title": "Mening buyurtmalarim",
+    "empty": "Hozircha buyurtmalar yoʻq.",
+    "toCatalog": "Katalogga",
+    "more": "Yana koʻrsatish",
+    "number": "Buyurtma #{number}",
+    "notFound": "Buyurtma topilmadi.",
+    "cancelled": "Buyurtma bekor qilindi.",
+    "expired": "Toʻlov vaqti tugadi.",
+    "payNow": "{price} toʻlash",
+    "payTest": "Toʻlash (test)",
+    "signedOut": "Buyurtmalarni ochish uchun Steam orqali kiring.",
+    "status": {
+      "pending": "Toʻlov kutilmoqda",
+      "paid": "Toʻlandi",
+      "buying": "Sotib olinmoqda",
+      "trade_sent": "Almashuv yuborildi",
+      "delivered": "Olindi",
+      "cancelled": "Bekor qilindi",
+      "failed": "Amalga oshmadi",
+      "returned": "Almashuv boʻlmadi"
+    },
+    "trade": {
+      "title": "Steamʼdagi almashuv",
+      "buying": "Skinni sotib olyapmiz — almashuv bir daqiqada Steamʼga keladi.",
+      "offer_sent": "Almashuv yuborildi — uni Steamʼda qabul qiling.",
+      "acceptBy": "{time} gacha qabul qiling",
+      "openOffer": "Almashuvni Steamʼda ochish",
+      "seller": "Sotuvchi",
+      "accepted": "Olindi",
+      "protectedUntil": "Steam almashuvni {date} gacha himoya qiladi",
+      "refunded": "Almashuv boʻlmadi — pul balansga qaytdi.",
+      "tryLater": "Skinni sotib olib boʻlmadi — pul balansda. Bir necha daqiqadan keyin qayta urinib koʻring.",
+      "support": "Xaridni tekshiryapmiz. Holat shu sahifada yangilanadi.",
+      "toBalance": "Balansni ochish"
+    }
   }
 }

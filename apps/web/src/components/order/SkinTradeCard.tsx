@@ -1,0 +1,180 @@
+"use client";
+
+import { buttonVariants } from "@csmarket/ui";
+import { assertNever } from "@csmarket/utils";
+import {
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  SearchCheck,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useEffect, useId, useState } from "react";
+
+import type { SkinTradeOut } from "@/lib/orders";
+
+import { Link } from "@/i18n/navigation";
+import { BALANCE } from "@/lib/paths";
+
+/** Re-render once a minute while `active`, so time-bound lines stay true. */
+function useMinuteTick(active: boolean): void {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => {
+      setTick((n) => n + 1);
+    }, 60_000);
+    return () => {
+      clearInterval(id);
+    };
+  }, [active]);
+}
+
+interface SkinTradeCardProps {
+  trade: SkinTradeOut;
+  locale: string;
+}
+
+/**
+ * The Steam trade on the order page: buying → the offer (open it in Steam, from whom,
+ * accept by when) → received, protected by Steam until a date; or, failed, where the
+ * money went. A purchase we are checking (`reason_code: "support"`) says so whatever its
+ * state, and a refund is mentioned only when `refunded_to` says it happened.
+ */
+export function SkinTradeCard({ trade, locale }: SkinTradeCardProps) {
+  const t = useTranslations("web.orders.trade");
+  useMinuteTick(trade.state === "offer_sent");
+  const review = trade.reason_code === "support";
+  const refunded = trade.refunded_to === "balance";
+  const titleId = useId();
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      className="border-border bg-surface flex w-full flex-col gap-3 rounded-lg border p-5"
+    >
+      <h2 id={titleId} className="text-fg-dim text-xs font-semibold uppercase tracking-wider">
+        {t("title")}
+      </h2>
+      {review ? (
+        <p className="flex items-center gap-2">
+          <SearchCheck aria-hidden className="text-accent h-4 w-4 shrink-0" />
+          {t("support")}
+        </p>
+      ) : (
+        <TradeBody trade={trade} locale={locale} />
+      )}
+      {refunded ? (
+        <Refunded tryLater={!review && trade.reason_code === "try_later"} />
+      ) : trade.state === "failed" && !review ? (
+        // Failed with no refund on record: nothing is promised.
+        <p>{t("support")}</p>
+      ) : null}
+    </section>
+  );
+}
+
+function TradeBody({ trade, locale }: SkinTradeCardProps) {
+  const t = useTranslations("web.orders.trade");
+  switch (trade.state) {
+    case "buying":
+      return (
+        <p className="flex items-center gap-2">
+          <Loader2 aria-hidden className="text-accent h-4 w-4 shrink-0 animate-spin" />
+          {t("buying")}
+        </p>
+      );
+    case "offer_sent":
+      return <OfferSent trade={trade} locale={locale} />;
+    case "accepted":
+    case "released":
+      return (
+        <div className="flex flex-col gap-1">
+          <p className="text-success flex items-center gap-2 font-semibold">
+            <CheckCircle2 aria-hidden className="h-4 w-4" />
+            {t("accepted")}
+          </p>
+          {trade.state === "accepted" && trade.release_date ? (
+            <p className="text-fg-dim flex items-center gap-1.5 text-sm">
+              <ShieldCheck aria-hidden className="h-4 w-4" />
+              {t("protectedUntil", { date: formatDate(locale, trade.release_date) })}
+            </p>
+          ) : null}
+        </div>
+      );
+    case "failed":
+      // What failed means for the money is said beside it (`Refunded` / no promise).
+      return null;
+    default:
+      return assertNever(trade.state);
+  }
+}
+
+function OfferSent({ trade, locale }: SkinTradeCardProps) {
+  const t = useTranslations("web.orders.trade");
+  const seller = trade.seller?.name ? trade.seller : null;
+  const until = trade.send_until;
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="font-semibold">{t("offer_sent")}</p>
+      {seller ? (
+        <p className="flex items-center gap-2 text-sm">
+          <span className="text-fg-dim">{t("seller")}</span>
+          {seller.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Steam CDN avatar, 20px; next/image adds nothing here
+            <img
+              src={seller.avatar_url}
+              alt=""
+              width={20}
+              height={20}
+              className="h-5 w-5 rounded-full"
+            />
+          ) : null}
+          <span className="font-semibold">{seller.name}</span>
+        </p>
+      ) : null}
+      {trade.offer_url ? (
+        <a
+          href={trade.offer_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonVariants({ size: "lg", className: "self-start" })}
+        >
+          {t("openOffer")}
+          <ExternalLink aria-hidden className="ml-2 h-4 w-4" />
+        </a>
+      ) : null}
+      {until && Date.parse(until) > Date.now() ? (
+        <p className="text-fg-dim text-sm">{t("acceptBy", { time: formatTime(locale, until) })}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function Refunded({ tryLater }: { tryLater: boolean }) {
+  const t = useTranslations("web.orders.trade");
+  return (
+    <div className="flex flex-col items-start gap-2">
+      <p>{t(tryLater ? "tryLater" : "refunded")}</p>
+      <Link
+        href={BALANCE}
+        className="text-accent inline-flex items-center gap-1.5 text-sm font-semibold"
+      >
+        <Wallet aria-hidden className="h-4 w-4" />
+        {t("toBalance")}
+      </Link>
+    </div>
+  );
+}
+
+function formatTime(locale: string, iso: string): string {
+  return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
+    new Date(iso),
+  );
+}
+
+function formatDate(locale: string, iso: string): string {
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(new Date(iso));
+}

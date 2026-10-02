@@ -13,18 +13,17 @@ import { ENTRIES_KEY } from "./EntriesList";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY, devPay, getTopup, type Topup } from "@/lib/balance";
-import { markOpened, searchWithoutGo, shouldAutoOpen } from "@/lib/kassa-redirect";
+import {
+  AUTO_OPEN_BUDGET_MS,
+  markOpened,
+  searchWithoutGo,
+  shouldAutoOpen,
+} from "@/lib/kassa-redirect";
 
 /** Poll cadence while the customer pays: every 3 s… */
 const POLL_MS = 3_000;
 /** …for at most 40 polls (2 min) while the tab is visible; then «Обновить». */
 const MAX_POLLS = 40;
-/**
- * How long after arriving the page may still open the kassa by itself. Opening the bank
- * app only reads as the continuation of the customer's tap; ten seconds later, on a slow
- * connection, it is a hijack. Past this the page shows the button and the customer decides.
- */
-const AUTO_OPEN_BUDGET_MS = 8_000;
 
 /**
  * What the customer sees. A pending top-up with nothing to pay is being checked while a

@@ -20,6 +20,8 @@ const WEB_ROUTES = [
   "/en/account",
   "/account/balance",
   "/account/balance/topups/TZZZZZZZ",
+  "/account/orders",
+  "/orders/AZZZZZZZ",
   "/sitemap.xml",
   "/skins-sitemap/0.xml",
   "/skins-sitemap/landings.xml",

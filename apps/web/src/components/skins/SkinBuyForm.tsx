@@ -2,30 +2,29 @@
 
 import { Button } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 
-import { offeredKassas, PaymentPicker, type WalletOption } from "./PaymentPicker";
+import { PaymentPicker } from "./PaymentPicker";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
+import { usePayMethods } from "./usePayMethods";
 
 import type { TradeLinkGate } from "./useTradeLinkGate";
 import type { Locale } from "@csmarket/i18n";
 import type { SkinListing } from "@csmarket/utils/skins";
 
 import { Link, useRouter } from "@/i18n/navigation";
-import { BALANCE_KEY, getBalance, getProviders } from "@/lib/balance";
+import { BALANCE_KEY } from "@/lib/balance";
+import { orderArrivalPath } from "@/lib/order-arrival";
 import { mintOrderKey, mintPayKey, orderKeyFor, type OrderKey } from "@/lib/order-key";
 import {
   BalanceTooLowError,
   createAndPay,
-  isPayProvider,
   OfferGoneError,
   PriceChangedError,
   TradeLinkError,
-  type PayProvider,
 } from "@/lib/orders";
-import { usePreferBalance, WALLET } from "@/lib/prefer-balance";
 import { verdictMessage } from "@/lib/trade-link";
 
 interface SkinBuyFormProps {
@@ -52,13 +51,8 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
   const qc = useQueryClient();
   const offers = useSkinOffers();
   const { select, reprice, drop } = useSelectedOffer();
-  const balance = useQuery({ queryKey: BALANCE_KEY, queryFn: getBalance });
-  const providers = useQuery({
-    queryKey: ["payments", "providers"],
-    queryFn: getProviders,
-    staleTime: 60_000,
-  });
-  const [method, setMethod] = useState("");
+  const price = offer.price_uzs;
+  const { kassas, chosen, provider, wallet, pick } = usePayMethods(locale, price);
   const [notice, setNotice] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -68,47 +62,8 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
   // Sticky per (offer, link): a retry after a failure replays the order already opened.
   const orderKey = useRef<OrderKey | null>(null);
 
-  // A failed list reads as "nothing open": the picker says so instead of spinning.
-  const kassas = providers.isError ? [] : providers.data;
-  const offered = offeredKassas(kassas);
-  const price = offer.price_uzs;
-  const funds = balance.data ? Number(balance.data.balance_uzs) : null;
-  const covers = funds !== null && price !== null && funds >= Number(price);
-  const markPicked = usePreferBalance(covers, setMethod, offered[0]?.slug ?? "");
-  const chosen =
-    method === WALLET
-      ? covers
-        ? WALLET
-        : null
-      : (offered.find((p) => p.slug === method)?.slug ?? offered[0]?.slug ?? null);
-  const provider: PayProvider | null = chosen !== null && isPayProvider(chosen) ? chosen : null;
   const verdict = verdictMessage(gate.state);
   const linkBad = verdict?.tone === "bad";
-
-  const wallet: WalletOption | undefined = balance.isError
-    ? undefined
-    : {
-        label: t("balance"),
-        detail:
-          funds === null
-            ? null
-            : covers || price === null
-              ? formatUzs(locale, funds)
-              : t("balanceShort", { amount: formatUzs(locale, Number(price) - funds) }),
-        covers,
-        ...(funds !== null && price !== null && !covers
-          ? {
-              action: (
-                <Link
-                  href="/account/balance"
-                  className="text-accent shrink-0 text-sm font-semibold"
-                >
-                  {t("topUp")}
-                </Link>
-              ),
-            }
-          : {}),
-      };
 
   function onFailure(err: unknown, bought: SkinListing): void {
     if (err instanceof PriceChangedError) {
@@ -168,8 +123,8 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
       if (placed === null) throw new Error("order expired twice");
       orderKey.current = null;
       void qc.invalidateQueries({ queryKey: BALANCE_KEY });
-      const go = placed.opened && provider !== WALLET ? "?go=1" : "";
-      const href = `/orders/${encodeURIComponent(placed.number)}${go}`;
+      // A kassa is opened by the order page (once), so the bank app leaves it behind.
+      const href = orderArrivalPath(placed.number, placed.opened ? provider : null);
       startNavigation(() => {
         router.push(href);
       });
@@ -195,10 +150,7 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
       <PaymentPicker
         providers={kassas}
         method={chosen}
-        onPick={(slug) => {
-          markPicked();
-          setMethod(slug);
-        }}
+        onPick={pick}
         labels={{ legend: t("methodTitle"), test: t("methodTest"), none: t("methodNone") }}
         {...(wallet ? { wallet } : {})}
       />

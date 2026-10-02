@@ -304,7 +304,7 @@ describe("SkinBuyPanel — buying", () => {
     panel();
     fireEvent.click(await ready("381 000"));
     await waitFor(() => {
-      expect(m.push).toHaveBeenCalledWith("/orders/A100?go=1");
+      expect(m.push).toHaveBeenCalledWith("/orders/A100?go=1&via=click");
     });
     expect(m.pay.mock.calls[0]?.[1]).toEqual({ provider: "click", locale: "ru" });
   });
@@ -352,7 +352,7 @@ describe("SkinBuyPanel — buying", () => {
     );
     fireEvent.click(await ready("400 100"));
     await waitFor(() => {
-      expect(m.push).toHaveBeenCalledWith("/orders/A100?go=1");
+      expect(m.push).toHaveBeenCalledWith("/orders/A100?go=1&via=click");
     });
     expect(m.create.mock.calls[1]?.[0]).toEqual({ slug: "ak", listing_id: 1, price_uzs: 400100 });
     const [first, second] = createKeys();
@@ -372,7 +372,7 @@ describe("SkinBuyPanel — buying", () => {
     );
     fireEvent.click(await ready("393 700"));
     await waitFor(() => {
-      expect(m.push).toHaveBeenCalledWith("/orders/A200?go=1");
+      expect(m.push).toHaveBeenCalledWith("/orders/A200?go=1&via=click");
     });
     expect(m.create.mock.calls[1]?.[0]).toMatchObject({ listing_id: 2, price_uzs: 393700 });
     const [first, second] = createKeys();
@@ -399,7 +399,7 @@ describe("SkinBuyPanel — buying", () => {
     panel();
     fireEvent.click(await ready("381 000"));
     await waitFor(() => {
-      expect(m.push).toHaveBeenCalledWith("/orders/A300?go=1");
+      expect(m.push).toHaveBeenCalledWith("/orders/A300?go=1&via=click");
     });
     const [first, second] = createKeys();
     expect(m.create).toHaveBeenCalledTimes(2);

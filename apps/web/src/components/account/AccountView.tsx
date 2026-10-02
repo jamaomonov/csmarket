@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@csmarket/ui";
-import { ChevronRight, Wallet } from "lucide-react";
+import { ChevronRight, Package, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { EmailForm } from "./EmailForm";
@@ -9,6 +9,10 @@ import { TradeLinkForm } from "./TradeLinkForm";
 
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
+import { BALANCE, ORDERS } from "@/lib/paths";
+
+const TILE =
+  "border-border hover:border-border-strong flex items-center gap-3 rounded-lg border p-5 font-bold";
 
 interface AccountViewProps {
   locale: string;
@@ -19,6 +23,7 @@ export function AccountView({ locale }: AccountViewProps) {
   const auth = useTranslations("web.auth");
   const nav = useTranslations("web.nav");
   const balance = useTranslations("web.balance");
+  const orders = useTranslations("web.orders");
   const { status, user, signInHref, signOut, refreshMe } = useAuth();
 
   if (status === "loading") {
@@ -49,14 +54,18 @@ export function AccountView({ locale }: AccountViewProps) {
         ) : null}
         <p className="text-xl font-bold">{user.display_name ?? "Steam"}</p>
       </div>
-      <Link
-        href="/account/balance"
-        className="border-border hover:border-border-strong flex items-center gap-3 rounded-lg border p-5 font-bold"
-      >
-        <Wallet aria-hidden className="text-accent h-5 w-5" />
-        <span className="flex-1">{balance("title")}</span>
-        <ChevronRight aria-hidden className="text-fg-dim h-5 w-5" />
-      </Link>
+      <div className="flex flex-col gap-3">
+        <Link href={BALANCE} className={TILE}>
+          <Wallet aria-hidden className="text-accent h-5 w-5" />
+          <span className="flex-1">{balance("title")}</span>
+          <ChevronRight aria-hidden className="text-fg-dim h-5 w-5" />
+        </Link>
+        <Link href={ORDERS} className={TILE}>
+          <Package aria-hidden className="text-accent h-5 w-5" />
+          <span className="flex-1">{orders("title")}</span>
+          <ChevronRight aria-hidden className="text-fg-dim h-5 w-5" />
+        </Link>
+      </div>
       <TradeLinkForm
         initial={{
           trade_link: user.trade_link,
