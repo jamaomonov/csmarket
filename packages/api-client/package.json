@@ -21,7 +21,7 @@
     "@csmarket/config-eslint": "workspace:*",
     "@csmarket/config-tsconfig": "workspace:*",
     "@hey-api/openapi-ts": "^0.61.0",
-    "jsdom": "^25.0.1",
+    "jsdom": "^30.1.1",
     "typescript": "^5.6.3",
     "vitest": "^2.1.4"
   }
