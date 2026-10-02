@@ -110,7 +110,10 @@ An attempt's _owner_ is its top-up or its order.
   top-up: `resolve` refuses it first.
 - **One payment per order**: `settle` refuses an attempt once the order left `pending`, so
   a second kassa's charge is refused (Click −4, Payme −31008, Uzum 10008) and the worker
-  hears one `NOTIFY orders` per order. A kassa-paid order books nothing on the balance.
+  hears one `NOTIFY orders` per order. A charge on a **cancelled** order is refused with
+  the kassa's "cancelled" code instead (`AlreadyPaidError(code="cancelled")`,
+  `.cancelled`: Click −9, Payme −31051, Uzum 10009). A kassa-paid order books nothing on
+  the balance.
 - **A kassa never reverses an order** (R7): the skin is bought at payment and refunds go
   to the balance, so `reverse` raises `OrderReversalRefusedError` before touching anything.
 - **No overdraft**: `reverse_topup` locks the user's wallet and refuses when the balance is

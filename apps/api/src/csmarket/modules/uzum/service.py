@@ -174,14 +174,20 @@ async def _fail_created(db: AsyncSession, txn: UzumTransaction) -> None:
     await _release_attempt(db, txn)
 
 
-async def _refuse_second_charge(db: AsyncSession, txn: UzumTransaction) -> UzumError:
-    """Fail ``txn`` (kept: the route commits) and answer 10008 so Uzum drops the charge."""
+async def _refuse_second_charge(
+    db: AsyncSession, txn: UzumTransaction, *, cancelled: bool = False
+) -> UzumError:
+    """Fail ``txn`` (kept: the route commits) and answer so Uzum drops the charge: 10008
+    when the owner was paid another way, 10009 when the order was cancelled."""
     await _fail_created(db, txn)
     log.warning(
         "uzum.confirm.second_charge_refused",
         number=txn.account,
         amount=wire_uzs(Decimal(txn.amount_tiyin) / 100),
+        cancelled=cancelled,
     )
+    if cancelled:
+        return payment_cancelled(persist=True)
     return payment_already_made(persist=True)
 
 
@@ -275,7 +281,7 @@ async def confirm(db: AsyncSession, *, trans_id: str, payment_source: dict[str, 
 
     Raises:
         UzumError: 10014 unknown, 10016 already confirmed, 10015 reversed / failed,
-            10008 a second charge.
+            10008 a second charge, 10009 the order was cancelled meanwhile.
     """
     payable, txn = await _locked_by_trans_id(db, trans_id)
     if txn.status == STATUS_CONFIRMED:
@@ -290,8 +296,8 @@ async def confirm(db: AsyncSession, *, trans_id: str, payment_source: dict[str, 
         await settle(db, payment=payment, event_id=f"uzum:{trans_id}")
     # A cancelled order resolves as "expired", which the check above lets through (a held
     # attempt past ``expires_at`` still pays): ``settle`` refuses it under the owner lock.
-    except AlreadyPaidError:
-        raise await _refuse_second_charge(db, txn) from None
+    except AlreadyPaidError as exc:
+        raise await _refuse_second_charge(db, txn, cancelled=exc.cancelled) from None
     txn.status = STATUS_CONFIRMED
     txn.confirm_time = now_ms()
     txn.updated_at = now()

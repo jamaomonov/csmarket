@@ -91,18 +91,18 @@ first.
 
 ## Error codes
 
-| Code | Note                          | When                                                                                                   |
-| ---- | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
-| 0    | `Success`                     | —                                                                                                      |
-| -1   | `SIGN CHECK FAILED!`          | Bad signature, another service, or no secret configured                                                |
-| -2   | `Incorrect parameter amount`  | Not the top-up's / order's amount in soʻm (or not a number)                                            |
-| -3   | `Action not found`            | `action` is not 0 (prepare) / 1 (complete)                                                             |
-| -4   | `Already paid`                | Top-up / order paid; complete replayed; second charge refused (row cancelled)                          |
-| -5   | `User does not exist`         | `merchant_trans_id` names no top-up or order                                                           |
-| -6   | `Transaction does not exist`  | Unknown `merchant_prepare_id`, or it does not match the other identifiers                              |
-| -7   | `Failed to update user`       | Internal error or a failed commit                                                                      |
-| -8   | `Error in request from click` | Missing / non-numeric field, not urlencoded, oversized, not POST                                       |
-| -9   | `Transaction cancelled`       | Top-up / order expired, top-up reversed, order cancelled; row cancelled; Click sent a negative `error` |
+| Code | Note                          | When                                                                                                                                    |
+| ---- | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | `Success`                     | —                                                                                                                                       |
+| -1   | `SIGN CHECK FAILED!`          | Bad signature, another service, or no secret configured                                                                                 |
+| -2   | `Incorrect parameter amount`  | Not the top-up's / order's amount in soʻm (or not a number)                                                                             |
+| -3   | `Action not found`            | `action` is not 0 (prepare) / 1 (complete)                                                                                              |
+| -4   | `Already paid`                | Top-up / order paid; complete replayed; second charge refused (row cancelled)                                                           |
+| -5   | `User does not exist`         | `merchant_trans_id` names no top-up or order                                                                                            |
+| -6   | `Transaction does not exist`  | Unknown `merchant_prepare_id`, or it does not match the other identifiers                                                               |
+| -7   | `Failed to update user`       | Internal error or a failed commit                                                                                                       |
+| -8   | `Error in request from click` | Missing / non-numeric field, not urlencoded, oversized, not POST                                                                        |
+| -9   | `Transaction cancelled`       | Top-up / order expired, top-up reversed, order cancelled (at complete too: row cancelled); row cancelled; Click sent a negative `error` |
 
 ## Settings
 

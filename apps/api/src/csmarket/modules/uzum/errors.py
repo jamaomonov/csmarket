@@ -78,9 +78,9 @@ def payment_already_made(*, persist: bool = False) -> UzumError:
     return UzumError(10008, "Payment already made", persist=persist)
 
 
-def payment_cancelled() -> UzumError:
-    """10009: the top-up cannot be paid (expired or reversed)."""
-    return UzumError(10009, "Payment cancelled")
+def payment_cancelled(*, persist: bool = False) -> UzumError:
+    """10009: the top-up or order cannot be paid (expired, reversed or cancelled)."""
+    return UzumError(10009, "Payment cancelled", persist=persist)
 
 
 def transaction_already_created() -> UzumError:

@@ -163,12 +163,20 @@ async def _cancel_locked(db: AsyncSession, txn: ClickTransaction) -> None:
         await cancel_pending(db, payment=await _payment(db, txn.payment_id))
 
 
-async def _refuse_second_charge(db: AsyncSession, txn: ClickTransaction) -> ClickError:
-    """Cancel ``txn`` (kept: the route commits) and answer ``-4`` so Click cancels the charge."""
+async def _refuse_second_charge(
+    db: AsyncSession, txn: ClickTransaction, *, cancelled: bool = False
+) -> ClickError:
+    """Cancel ``txn`` (kept: the route commits) and answer so Click cancels the charge:
+    ``-4`` when the owner was paid another way, ``-9`` when the order was cancelled."""
     await _cancel_locked(db, txn)
     log.warning(
-        "click.complete.second_charge_refused", number=txn.account, amount=wire_uzs(txn.amount)
+        "click.complete.second_charge_refused",
+        number=txn.account,
+        amount=wire_uzs(txn.amount),
+        cancelled=cancelled,
     )
+    if cancelled:
+        return ClickError(code=-9, note="Transaction cancelled", persist=True)
     return ClickError(code=-4, note="Already paid", persist=True)
 
 
@@ -261,7 +269,8 @@ async def complete(
     Raises:
         ClickError: ``-6`` unknown or mismatched, ``-4`` already confirmed or the owner
             already paid (then the row is cancelled and ``persist`` is set), ``-9``
-            cancelled, ``-2`` amount mismatch.
+            cancelled (the row, or the order meanwhile — then also ``persist``), ``-2``
+            amount mismatch.
     """
     seen = await _txn_by_prepare_id(db, merchant_prepare_id)
     if (
@@ -288,8 +297,8 @@ async def complete(
         await settle(db, payment=payment, event_id=f"click:{click_trans_id}")
     # A cancelled order resolves as "expired", which the check above lets through (a held
     # attempt past ``expires_at`` still pays): ``settle`` refuses it under the owner lock.
-    except AlreadyPaidError:
-        raise await _refuse_second_charge(db, txn) from None
+    except AlreadyPaidError as exc:
+        raise await _refuse_second_charge(db, txn, cancelled=exc.cancelled) from None
     txn.status = CONFIRMED
     txn.complete_time = now()
     txn.updated_at = txn.complete_time

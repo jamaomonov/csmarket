@@ -163,7 +163,7 @@ async def test_a_cancelled_orders_late_complete_is_refused(
             amount=PRICE_STR,
         ),
     )
-    assert completed["error"] == -4
+    assert completed["error"] == -9  # cancelled, not "already paid" (final review minor 6)
     assert (await _txn(db_session, 7009)).status == "CANCELLED"
     late = await _order(db_session, order.id)
     assert (late.status, late.paid_with) == ("cancelled", None)

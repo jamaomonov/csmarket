@@ -58,22 +58,22 @@ cabinet; Payme calls our CancelTransaction:
 
 ## Error codes
 
-| Code   | Meaning                                                              | Action                                                             |
-| ------ | -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| −31001 | Amount is not the top-up's × 100 (tiyin)                             | A soʻm amount or a tampered link; the customer starts a new top-up |
-| −31003 | Unknown transaction id                                               | Did CreateTransaction land? Check reachability                     |
-| −31007 | Cancel of a performed top-up whose money was spent                   | Refunds above                                                      |
-| −31008 | Perform on a cancelled transaction; a second charge; another account | Second charge below; otherwise check the row's state               |
-| −31050 | `account.order` missing or unknown                                   | A broken link, or the cabinet field is not named `order`           |
-| −31051 | Top-up paid, expired or reversed                                     | The customer starts a new top-up                                   |
-| −31099 | Another live Payme transaction holds the top-up                      | Payme's rule; the earlier one finishes or times out                |
-| −32001 | SetFiscalData for an unknown transaction                             | As −31003                                                          |
-| −32300 | Not POST                                                             | Not Payme; a stray caller                                          |
-| −32400 | Internal error or a failed commit                                    | `api` logs `payme.merchant.internal_error`; Payme retries          |
-| −32504 | Basic auth failed                                                    | The key in `secrets/api.env` vs the cabinet; alert `reason="auth"` |
-| −32600 | Bad envelope or a mistyped parameter                                 | Not Payme's normal traffic; check the caller                       |
-| −32601 | Unknown method                                                       | —                                                                  |
-| −32700 | Body is not JSON (or over 64 KiB, or nested too deeply)              | A proxy mangling the body, or probing                              |
+| Code   | Meaning                                                                                             | Action                                                             |
+| ------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| −31001 | Amount is not the top-up's × 100 (tiyin)                                                            | A soʻm amount or a tampered link; the customer starts a new top-up |
+| −31003 | Unknown transaction id                                                                              | Did CreateTransaction land? Check reachability                     |
+| −31007 | Cancel of a performed top-up whose money was spent                                                  | Refunds above                                                      |
+| −31008 | Perform on a cancelled transaction; a second charge; another account                                | Second charge below; otherwise check the row's state               |
+| −31050 | `account.order` missing or unknown                                                                  | A broken link, or the cabinet field is not named `order`           |
+| −31051 | Top-up paid, expired or reversed; an order cancelled (at Perform too: the transaction is cancelled) | The customer starts a new top-up or order                          |
+| −31099 | Another live Payme transaction holds the top-up                                                     | Payme's rule; the earlier one finishes or times out                |
+| −32001 | SetFiscalData for an unknown transaction                                                            | As −31003                                                          |
+| −32300 | Not POST                                                                                            | Not Payme; a stray caller                                          |
+| −32400 | Internal error or a failed commit                                                                   | `api` logs `payme.merchant.internal_error`; Payme retries          |
+| −32504 | Basic auth failed                                                                                   | The key in `secrets/api.env` vs the cabinet; alert `reason="auth"` |
+| −32600 | Bad envelope or a mistyped parameter                                                                | Not Payme's normal traffic; check the caller                       |
+| −32601 | Unknown method                                                                                      | —                                                                  |
+| −32700 | Body is not JSON (or over 64 KiB, or nested too deeply)                                             | A proxy mangling the body, or probing                              |
 
 Payme shows the customer «Сервис поставщика услуг недоступен» on −32400. A retry after a
 declined card opens a new attempt (`payme:<number>:<id>`), so a retry is never −32400 by

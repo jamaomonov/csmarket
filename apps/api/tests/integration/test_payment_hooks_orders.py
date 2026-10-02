@@ -120,8 +120,9 @@ async def test_a_second_settle_through_another_attempt_is_refused(
     async with listen_orders() as listener:
         await settle(db_session, payment=payme, event_id="payme:e1")
         await db_session.commit()
-        with pytest.raises(AlreadyPaidError):
+        with pytest.raises(AlreadyPaidError) as paid:
             await settle(db_session, payment=click, event_id="click:e2")
+        assert paid.value.cancelled is False  # paid another way: "already paid"
         await db_session.rollback()
         assert await listener.drain() == [number]
     await db_session.refresh(click)
@@ -134,8 +135,10 @@ async def test_settle_refuses_a_cancelled_order(db_session: AsyncSession) -> Non
     await mark_pending(db_session, payment=p)
     order.status = "cancelled"
     await db_session.commit()
-    with pytest.raises(AlreadyPaidError):
+    with pytest.raises(AlreadyPaidError) as refused:
         await settle(db_session, payment=p, event_id="e1")
+    # A distinct code, so each kassa answers "cancelled" (minor 6).
+    assert (refused.value.cancelled, refused.value.extra) == (True, {"code": "cancelled"})
     await db_session.rollback()
     await db_session.refresh(p)
     assert p.status == "pending"

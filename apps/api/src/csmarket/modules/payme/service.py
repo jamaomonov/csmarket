@@ -205,14 +205,20 @@ async def _cancel_created(db: AsyncSession, txn: PaymeTransaction, *, reason: in
     await _release_attempt(db, txn)
 
 
-async def _refuse_second_charge(db: AsyncSession, txn: PaymeTransaction) -> PaymeError:
-    """Cancel ``txn`` (kept: the route commits) and answer −31008 so Payme cancels it."""
+async def _refuse_second_charge(
+    db: AsyncSession, txn: PaymeTransaction, *, cancelled: bool = False
+) -> PaymeError:
+    """Cancel ``txn`` (kept: the route commits) and answer so Payme cancels it: −31008 when
+    the owner was paid another way, −31051 when the order was cancelled."""
     await _cancel_created(db, txn, reason=REASON_EXECUTION_ERROR)
     log.warning(
         "payme.perform.second_charge_refused",
         number=txn.account,
         amount=wire_uzs(Decimal(txn.amount_tiyin) / 100),
+        cancelled=cancelled,
     )
+    if cancelled:
+        return account_not_payable(persist=True)
     return operation_not_permitted(persist=True)
 
 
@@ -309,7 +315,8 @@ async def perform_transaction(db: AsyncSession, *, payme_id: str) -> Result:
     route commits that.
 
     Raises:
-        PaymeError: −31003 unknown, −31008 cancelled or a second charge.
+        PaymeError: −31003 unknown, −31008 cancelled or a second charge, −31051 the order
+            was cancelled meanwhile (the transaction is cancelled too, ``persist``).
     """
     payable, txn = await _locked_by_payme_id(db, payme_id, missing=transaction_not_found)
     if txn.state == STATE_PERFORMED:
@@ -323,8 +330,8 @@ async def perform_transaction(db: AsyncSession, *, payme_id: str) -> Result:
         await settle(db, payment=payment, event_id=f"payme:{payme_id}")
     # A cancelled order resolves as "expired", which the check above lets through (a held
     # attempt past ``expires_at`` still pays): ``settle`` refuses it under the owner lock.
-    except AlreadyPaidError:
-        raise await _refuse_second_charge(db, txn) from None
+    except AlreadyPaidError as exc:
+        raise await _refuse_second_charge(db, txn, cancelled=exc.cancelled) from None
     txn.state = STATE_PERFORMED
     txn.perform_time = now_ms()
     txn.updated_at = now()

@@ -59,7 +59,7 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS       -32300 (never a 405)
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `CheckPerformTransaction` | `{"allow": true}`                                                                                                                                                     | `-31050` unknown, `-31051` paid / expired / reversed, `-31001` amount                                    |
 | `CreateTransaction`       | `{"create_time", "transaction", "state": 1}`                                                                                                                          | as Check; `-31099` another state-1 transaction holds the top-up or order; `-31008` id of another account |
-| `PerformTransaction`      | `{"transaction", "perform_time", "state": 2}`                                                                                                                         | `-31003` unknown; `-31008` cancelled, or a second charge (below)                                         |
+| `PerformTransaction`      | `{"transaction", "perform_time", "state": 2}`                                                                                                                         | `-31003` unknown; `-31008` cancelled, or a second charge (below); `-31051` the order was cancelled       |
 | `CancelTransaction`       | `{"transaction", "cancel_time", "state": -1 \| -2}`                                                                                                                   | `-31003` unknown; `-31007` the top-up was spent, or a performed order (R7)                               |
 | `CheckTransaction`        | `{create_time, perform_time, cancel_time, transaction, state, reason}`                                                                                                | `-31003`                                                                                                 |
 | `GetStatement`            | `{"transactions": [{id, time, amount, account, create_time, perform_time, cancel_time, transaction, state, reason, receivers: []}]}` by `create_time` in `[from, to]` | —                                                                                                        |
@@ -95,7 +95,10 @@ refusals key on `payable.reason`).
 - **Perform after the owner was paid elsewhere** (another kassa, or a sibling Payme row
   sharing this attempt) → `-31008`, and the transaction is **cancelled and committed**
   (state `-1`, reason `3`, `PaymeError.persist`), so Payme drops this charge instead of
-  retrying it. (Ruling: reason 3, Payme's "execution error".)
+  retrying it. (Ruling: reason 3, Payme's "execution error".) **Perform after the order
+  was cancelled** (a held attempt cannot normally outlive the order, but any cancel is
+  refused) → `-31051` the same way (cancelled and committed): the account is no longer
+  payable, not "already paid".
 - **Cancel of a performed top-up** → `-2` and `payments.reverse` (`topup_reversal`) when the
   amount is still on the balance; otherwise `-31007` and nothing changes (ruling R7, logged
   `payments.topup.reverse_refused`). Refunds start in Payme's cabinet; there is no

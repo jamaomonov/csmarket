@@ -62,24 +62,24 @@ There is no refund from our admin. Uzum calls `/reverse`:
 
 ## Error codes
 
-| Code  | Meaning                                              | Action                                                                                      |
-| ----- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| 10001 | Basic auth failed                                    | Auth above                                                                                  |
-| 10002 | Body is not a JSON object (over 64 KiB, too nested)  | A proxy mangling the body, or probing                                                       |
-| 10003 | Not POST                                             | Not Uzum; a stray caller                                                                    |
-| 10005 | A required field missing or mistyped                 | Compare with the Postman collection; the attribute must be `order` / `orderId` / `order_id` |
-| 10006 | `serviceId` not ours                                 | The service id in env vs Uzum's                                                             |
-| 10007 | Unknown top-up number                                | A broken link or a typo in the number                                                       |
-| 10008 | Already paid; at `/confirm`, a second charge refused | Second charge below                                                                         |
-| 10009 | Top-up expired or reversed                           | The customer starts a new top-up                                                            |
-| 10010 | `transId` already created                            | Uzum's replay signal; harmless                                                              |
-| 10011 | Amount is not the top-up's × 100 (tiyin)             | A soʻm amount sent as tiyin                                                                 |
-| 10014 | Unknown `transId`                                    | Did `/create` land?                                                                         |
-| 10015 | `/confirm` on a reversed or failed transaction       | It was closed first (sweep or reverse)                                                      |
-| 10016 | `/confirm` replay                                    | Harmless                                                                                    |
-| 10017 | `/reverse` of a top-up whose money was spent         | Refunds above                                                                               |
-| 10018 | `/reverse` replay                                    | Harmless                                                                                    |
-| 99999 | Internal error or a failed commit                    | `api` logs `uzum.merchant.internal_error`                                                   |
+| Code  | Meaning                                                                    | Action                                                                                      |
+| ----- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 10001 | Basic auth failed                                                          | Auth above                                                                                  |
+| 10002 | Body is not a JSON object (over 64 KiB, too nested)                        | A proxy mangling the body, or probing                                                       |
+| 10003 | Not POST                                                                   | Not Uzum; a stray caller                                                                    |
+| 10005 | A required field missing or mistyped                                       | Compare with the Postman collection; the attribute must be `order` / `orderId` / `order_id` |
+| 10006 | `serviceId` not ours                                                       | The service id in env vs Uzum's                                                             |
+| 10007 | Unknown top-up number                                                      | A broken link or a typo in the number                                                       |
+| 10008 | Already paid; at `/confirm`, a second charge refused                       | Second charge below                                                                         |
+| 10009 | Top-up expired or reversed; an order cancelled (at `/confirm` too: FAILED) | The customer starts a new top-up or order                                                   |
+| 10010 | `transId` already created                                                  | Uzum's replay signal; harmless                                                              |
+| 10011 | Amount is not the top-up's × 100 (tiyin)                                   | A soʻm amount sent as tiyin                                                                 |
+| 10014 | Unknown `transId`                                                          | Did `/create` land?                                                                         |
+| 10015 | `/confirm` on a reversed or failed transaction                             | It was closed first (sweep or reverse)                                                      |
+| 10016 | `/confirm` replay                                                          | Harmless                                                                                    |
+| 10017 | `/reverse` of a top-up whose money was spent                               | Refunds above                                                                               |
+| 10018 | `/reverse` replay                                                          | Harmless                                                                                    |
+| 99999 | Internal error or a failed commit                                          | `api` logs `uzum.merchant.internal_error`                                                   |
 
 ## Second charge refused
 

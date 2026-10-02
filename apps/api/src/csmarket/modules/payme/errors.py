@@ -108,8 +108,8 @@ def account_not_found() -> PaymeError:
     )
 
 
-def account_not_payable() -> PaymeError:
-    """−31051: already paid, expired or reversed."""
+def account_not_payable(*, persist: bool = False) -> PaymeError:
+    """−31051: already paid, expired or reversed (or an order cancelled before Perform)."""
     return PaymeError(
         -31051,
         {
@@ -118,6 +118,7 @@ def account_not_payable() -> PaymeError:
             "en": "Order is not payable or already paid",
         },
         data=ACCOUNT_FIELD,
+        persist=persist,
     )
 
 

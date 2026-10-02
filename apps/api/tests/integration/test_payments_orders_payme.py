@@ -149,7 +149,7 @@ async def test_a_cancelled_orders_late_perform_is_refused(
     await _call(integration_client, "CreateTransaction", _params(order.number, "late"))
     await cancel_while_held(db_session, order)
     body = await _call(integration_client, "PerformTransaction", {"id": "late"})
-    assert _code(body) == -31008
+    assert _code(body) == -31051  # the order is not payable, not "operation" (minor 6)
     txn = await _txn(db_session, "late")
     assert (txn.state, txn.reason) == (-1, 3)
     late = await _order(db_session, order.id)

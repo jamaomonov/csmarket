@@ -156,26 +156,26 @@ a callback holds is skipped until the next tick; one failing row is logged
 
 ## Error codes
 
-| Code    | When                                                                                 |
-| ------- | ------------------------------------------------------------------------------------ |
-| `10001` | Basic auth failed                                                                    |
-| `10002` | Body is not a JSON object (or over 64 KiB, or too deeply nested)                     |
-| `10003` | Not POST                                                                             |
-| `10005` | A required field is missing or mistyped                                              |
-| `10006` | `serviceId` is not ours, or none is configured                                       |
-| `10007` | Unknown top-up or order number                                                       |
-| `10008` | Top-up / order already paid; at `/confirm`, a second charge (the transaction FAILED) |
-| `10009` | Top-up / order expired, top-up reversed, order cancelled                             |
-| `10010` | `transId` already created (any account)                                              |
-| `10011` | Amount is not the top-up's / order's × 100 (tiyin)                                   |
-| `10012` | Below minimum — reserved, not raised (the top-up's own amount is checked)            |
-| `10013` | Above maximum — reserved, not raised                                                 |
-| `10014` | Unknown `transId`                                                                    |
-| `10015` | `/confirm` on a REVERSED or FAILED transaction                                       |
-| `10016` | `/confirm` replay on a CONFIRMED transaction                                         |
-| `10017` | `/reverse` of a CONFIRMED top-up whose money was spent, or of a CONFIRMED order      |
-| `10018` | `/reverse` replay on a REVERSED transaction                                          |
-| `99999` | Internal error or a failed commit                                                    |
+| Code    | When                                                                                  |
+| ------- | ------------------------------------------------------------------------------------- |
+| `10001` | Basic auth failed                                                                     |
+| `10002` | Body is not a JSON object (or over 64 KiB, or too deeply nested)                      |
+| `10003` | Not POST                                                                              |
+| `10005` | A required field is missing or mistyped                                               |
+| `10006` | `serviceId` is not ours, or none is configured                                        |
+| `10007` | Unknown top-up or order number                                                        |
+| `10008` | Top-up / order already paid; at `/confirm`, a second charge (the transaction FAILED)  |
+| `10009` | Top-up / order expired, top-up reversed, order cancelled (also at `/confirm`: FAILED) |
+| `10010` | `transId` already created (any account)                                               |
+| `10011` | Amount is not the top-up's / order's × 100 (tiyin)                                    |
+| `10012` | Below minimum — reserved, not raised (the top-up's own amount is checked)             |
+| `10013` | Above maximum — reserved, not raised                                                  |
+| `10014` | Unknown `transId`                                                                     |
+| `10015` | `/confirm` on a REVERSED or FAILED transaction                                        |
+| `10016` | `/confirm` replay on a CONFIRMED transaction                                          |
+| `10017` | `/reverse` of a CONFIRMED top-up whose money was spent, or of a CONFIRMED order       |
+| `10018` | `/reverse` replay on a REVERSED transaction                                           |
+| `99999` | Internal error or a failed commit                                                     |
 
 ## Settings
 

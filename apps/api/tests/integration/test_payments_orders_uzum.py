@@ -140,7 +140,8 @@ async def test_a_cancelled_orders_late_confirm_is_refused(
     order = await make_order(db_session, price_uzs=PRICE)
     await _ok(integration_client, "create", _create(order.number, "u-late"))
     await cancel_while_held(db_session, order)
-    assert await _fail(integration_client, "confirm", _confirm_body("u-late")) == 10008
+    # Cancelled, not "already made" (final review minor 6).
+    assert await _fail(integration_client, "confirm", _confirm_body("u-late")) == 10009
     assert (await _txn(db_session, "u-late")).status == "FAILED"
     late = await _order(db_session, order.id)
     assert (late.status, late.paid_with) == ("cancelled", None)

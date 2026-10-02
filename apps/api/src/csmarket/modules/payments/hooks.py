@@ -49,10 +49,16 @@ Owner = WalletTopup | Order
 
 class AlreadyPaidError(ConflictError):
     """The owner was already paid through another attempt (a top-up credited, an order past
-    ``pending``); refuse this charge."""
+    ``pending``), or the order was cancelled (``code="cancelled"``); refuse this charge."""
 
     type_uri = "https://csmarket.uz/errors/already-paid"
     title = "Already paid"
+
+    @property
+    def cancelled(self) -> bool:
+        """The order was cancelled (expired), not paid: kassas answer their "cancelled" code
+        (Click −9, Payme −31051, Uzum 10009) rather than "already paid"."""
+        return self.extra.get("code") == "cancelled"
 
 
 class ReversalRefusedError(ConflictError):
@@ -246,7 +252,8 @@ async def settle(db: AsyncSession, *, payment: Payment, event_id: str) -> None:
 
     Raises:
         AlreadyPaidError: the top-up was already credited, or the order is no longer
-            ``pending`` (paid through another attempt, or cancelled); the kassa refuses
+            ``pending`` (paid through another attempt, or cancelled — then
+            ``cancelled`` is true); the kassa refuses
             this second charge.
         InvalidTransitionError: the attempt is cancelled, failed or refunded.
     """
@@ -291,6 +298,8 @@ async def _settle_order(db: AsyncSession, *, payment: Payment, order: Order, eve
             provider=payment.provider,
             status=order.status,
         )
+        if order.status == "cancelled":
+            raise AlreadyPaidError("order cancelled", code="cancelled")
         raise AlreadyPaidError("order already paid")
     move(payment, "succeeded")
     payment.extra_metadata = {**payment.extra_metadata, "settle_event_id": event_id}
