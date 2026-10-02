@@ -53,10 +53,25 @@
     },
     "email": {
       "title": "Email",
-      "hint": "Cheklar va buyurtma xabarlari uchun. Ixtiyoriy.",
+      "hint": "Buyurtmalar haqida xatlar uchun.",
       "save": "Saqlash",
       "saved": "Saqlandi.",
-      "invalid": "Manzilni tekshiring."
+      "invalid": "Manzilni tekshiring.",
+      "unverified": "Pochta tasdiqlanmagan. {email} manziliga xat yubordik.",
+      "resend": "Yana yuborish",
+      "resendSoon": "Bir daqiqadan soʻng yana yuborish mumkin.",
+      "verified": "Tasdiqlangan",
+      "sent": "Havolali xat yubordik — uni oching.",
+      "confirm": {
+        "title": "Pochtani tasdiqlash",
+        "checking": "Havolani tekshiryapmiz…",
+        "done": "Pochta tasdiqlandi. Endi buyurtmalar haqidagi xatlar unga keladi.",
+        "expired": "Havola eskirgan. Profilda xatni qayta yuboring.",
+        "invalid": "Havola mos emas. Profilda xatni qayta yuboring.",
+        "failed": "Havolani tekshirib boʻlmadi. Yana urinib koʻring.",
+        "retry": "Yana urinib koʻrish",
+        "toProfile": "Profilga"
+      }
     }
   },
   "balance": {

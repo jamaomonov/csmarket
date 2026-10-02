@@ -20,6 +20,9 @@ export function orderPath(number: string): string {
   return `/orders/${encodeURIComponent(number)}`;
 }
 
+/** The account page («В профиль»). */
+export const ACCOUNT = "/account";
+
 /** «Мои заказы». */
 export const ORDERS = "/account/orders";
 

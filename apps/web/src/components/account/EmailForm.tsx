@@ -3,35 +3,64 @@
 import { SessionApiError } from "@csmarket/api-client";
 import { Button } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
-import { useState, type SyntheticEvent } from "react";
+import { useEffect, useState, type SyntheticEvent } from "react";
 
 import { session } from "@/lib/api";
 
+/** A confirmation letter may be asked for again a minute after the last one. */
+const COOLDOWN_MS = 60_000;
+
 interface EmailFormProps {
   email: string | null;
+  /** The saved address is confirmed: order letters go to it. */
+  verified: boolean;
+  /** When the latest confirmation letter was queued (ISO), if any. */
+  sentAt: string | null;
   onChange: () => void;
 }
 
-type Outcome = "saved" | "invalid" | "failed" | null;
+type Outcome = "saved" | "sent" | "invalid" | "failed" | "wait" | null;
 
-export function EmailForm({ email, onChange }: EmailFormProps) {
+/** Milliseconds until a resend is allowed again, from the last send. */
+function waitLeft(lastSent: number | null): number {
+  return lastSent === null ? 0 : Math.max(0, lastSent + COOLDOWN_MS - Date.now());
+}
+
+export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps) {
   const t = useTranslations("web.account.email");
   const generic = useTranslations("web.account.tradeLink.errors");
   const [value, setValue] = useState(email ?? "");
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>(null);
+  const [lastSent, setLastSent] = useState<number | null>(sentAt ? Date.parse(sentAt) : null);
+  const [cooling, setCooling] = useState(() => waitLeft(lastSent) > 0);
+
+  useEffect(() => {
+    const left = waitLeft(lastSent);
+    setCooling(left > 0);
+    if (left === 0) return;
+    const timer = setTimeout(() => {
+      setCooling(false);
+    }, left);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [lastSent]);
 
   async function save(e: SyntheticEvent) {
     e.preventDefault();
     setBusy(true);
     setOutcome(null);
+    const next = value.trim() || null;
     try {
       await session.apiPatch(
         "/api/v1/me",
-        { email: value.trim() || null },
+        { email: next },
         { idempotencyKey: crypto.randomUUID() },
       );
-      setOutcome("saved");
+      const changed = next !== null && next !== email;
+      setOutcome(changed ? "sent" : "saved");
+      if (changed) setLastSent(Date.now());
       onChange();
     } catch (err) {
       setOutcome(err instanceof SessionApiError && err.status === 422 ? "invalid" : "failed");
@@ -40,9 +69,41 @@ export function EmailForm({ email, onChange }: EmailFormProps) {
     }
   }
 
+  async function resend() {
+    setBusy(true);
+    setOutcome(null);
+    try {
+      await session.apiPost(
+        "/api/v1/me/email/verification",
+        {},
+        { idempotencyKey: crypto.randomUUID() },
+      );
+      setOutcome("sent");
+      setLastSent(Date.now());
+    } catch (err) {
+      if (err instanceof SessionApiError && err.status === 429) {
+        setOutcome("wait");
+      } else if (err instanceof SessionApiError && err.code === "email_already_verified") {
+        onChange();
+      } else {
+        setOutcome("failed");
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const unverified = email !== null && !verified;
   return (
     <section className="border-border rounded-lg border p-5">
-      <h2 className="text-lg font-bold">{t("title")}</h2>
+      <div className="flex items-center gap-3">
+        <h2 className="text-lg font-bold">{t("title")}</h2>
+        {email !== null && verified ? (
+          <span className="bg-success text-success-fg rounded px-2 py-0.5 text-xs">
+            {t("verified")}
+          </span>
+        ) : null}
+      </div>
       <p className="text-fg-muted mt-1 text-sm">{t("hint")}</p>
       <form
         onSubmit={(e) => {
@@ -66,7 +127,25 @@ export function EmailForm({ email, onChange }: EmailFormProps) {
           {t("save")}
         </Button>
       </form>
+      {unverified ? (
+        <div className="mt-3 flex flex-col items-start gap-2 text-sm">
+          <p>{t("unverified", { email })}</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={busy || cooling}
+            onClick={() => {
+              void resend();
+            }}
+          >
+            {t("resend")}
+          </Button>
+        </div>
+      ) : null}
       {outcome === "saved" ? <p className="text-success mt-3 text-sm">{t("saved")}</p> : null}
+      {outcome === "sent" ? <p className="text-success mt-3 text-sm">{t("sent")}</p> : null}
+      {outcome === "wait" ? <p className="text-fg-muted mt-3 text-sm">{t("resendSoon")}</p> : null}
       {outcome === "invalid" ? <p className="text-danger mt-3 text-sm">{t("invalid")}</p> : null}
       {outcome === "failed" ? (
         <p className="text-danger mt-3 text-sm">{generic("generic")}</p>

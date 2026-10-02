@@ -53,10 +53,25 @@
     },
     "email": {
       "title": "Email",
-      "hint": "For receipts and order updates. Optional.",
+      "hint": "For emails about your orders.",
       "save": "Save",
       "saved": "Saved.",
-      "invalid": "Please check the address."
+      "invalid": "Please check the address.",
+      "unverified": "Your email is not confirmed. We sent a letter to {email}.",
+      "resend": "Send again",
+      "resendSoon": "You can send it again in a minute.",
+      "verified": "Confirmed",
+      "sent": "We sent you a letter with a link — open it.",
+      "confirm": {
+        "title": "Confirm your email",
+        "checking": "Checking the link…",
+        "done": "Your email is confirmed. Order emails will now come to it.",
+        "expired": "This link has expired. Send the letter again from your profile.",
+        "invalid": "This link does not fit. Send the letter again from your profile.",
+        "failed": "Could not check the link. Please try again.",
+        "retry": "Try again",
+        "toProfile": "To your profile"
+      }
     }
   },
   "balance": {

@@ -23,6 +23,8 @@ export interface Me {
   avatar_url: string | null;
   email: string | null;
   email_verified: boolean;
+  /** When the latest confirmation letter for the current, unconfirmed email was queued. */
+  email_verification_sent_at?: string | null;
   locale: "ru" | "uz" | "en";
   trade_link: string | null;
   trade_link_verdict: "ok" | "warn" | "bad" | null;

@@ -2,39 +2,59 @@
 import { SessionApiError } from "@csmarket/api-client";
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EmailForm } from "./EmailForm";
 
-const api = vi.hoisted(() => ({ apiPatch: vi.fn() }));
+const api = vi.hoisted(() => ({ apiPatch: vi.fn(), apiPost: vi.fn() }));
 vi.mock("@/lib/api", () => ({ session: api }));
 
-function setup(email: string | null = null) {
+interface Props {
+  email?: string | null;
+  verified?: boolean;
+  sentAt?: string | null;
+}
+
+function setup({ email = null, verified = false, sentAt = null }: Props = {}) {
   const onChange = vi.fn();
   render(
     <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-      <EmailForm email={email} onChange={onChange} />
+      <EmailForm email={email} verified={verified} sentAt={sentAt} onChange={onChange} />
     </NextIntlClientProvider>,
   );
   return { onChange };
 }
 
+const resend = () => screen.getByRole("button", { name: "Отправить ещё раз" });
+
 describe("EmailForm", () => {
   beforeEach(() => {
     api.apiPatch.mockReset();
+    api.apiPost.mockReset();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it("saves the address with an idempotency key and says so", async () => {
+  it("without an email: the form and what it is for", () => {
+    setup();
+    expect(screen.getByText("Для писем о заказах.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отправить ещё раз" })).not.toBeInTheDocument();
+  });
+
+  it("saves a new address with a key and says a letter is on its way", async () => {
     api.apiPatch.mockResolvedValue({});
-    const { onChange } = setup("old@example.com");
+    const { onChange } = setup({ email: "old@example.com", verified: true });
     const input = screen.getByRole("textbox");
     expect(input).toHaveValue("old@example.com");
     fireEvent.change(input, { target: { value: "new@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
-      expect(screen.getByText("Сохранено.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Мы отправили письмо со ссылкой — откройте его."),
+      ).toBeInTheDocument();
     });
     const [path, body, opts] = api.apiPatch.mock.calls[0] as [
       string,
@@ -47,20 +67,20 @@ describe("EmailForm", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
-  it("sends null when the field is cleared", async () => {
+  it("clearing the field sends null and says saved", async () => {
     api.apiPatch.mockResolvedValue({});
-    setup("old@example.com");
+    setup({ email: "old@example.com" });
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
-      expect(api.apiPatch).toHaveBeenCalled();
+      expect(screen.getByText("Сохранено.")).toBeInTheDocument();
     });
     expect((api.apiPatch.mock.calls[0] as [string, { email: string | null }])[1]).toEqual({
       email: null,
     });
   });
 
-  it("asks to check the address on a 422", async () => {
+  it("asks to check the address on a 422, and editing clears it", async () => {
     api.apiPatch.mockRejectedValue(new SessionApiError(422, "Unprocessable", null));
     const { onChange } = setup();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "a@b" } });
@@ -68,31 +88,55 @@ describe("EmailForm", () => {
     await waitFor(() => {
       expect(screen.getByText("Проверьте адрес.")).toBeInTheDocument();
     });
-    expect(screen.queryByText("Сохранено.")).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
-  });
-
-  it("editing the address clears the last outcome", async () => {
-    api.apiPatch.mockResolvedValue({});
-    setup("old@example.com");
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "new@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-    await waitFor(() => {
-      expect(screen.getByText("Сохранено.")).toBeInTheDocument();
-    });
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "newer@example.com" } });
-    expect(screen.queryByText("Сохранено.")).not.toBeInTheDocument();
-  });
-
-  it("editing after a refusal clears the error", async () => {
-    api.apiPatch.mockRejectedValue(new SessionApiError(422, "Unprocessable", null));
-    setup();
-    fireEvent.change(screen.getByRole("textbox"), { target: { value: "a@b" } });
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-    await waitFor(() => {
-      expect(screen.getByText("Проверьте адрес.")).toBeInTheDocument();
-    });
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "a@b.uz" } });
     expect(screen.queryByText("Проверьте адрес.")).not.toBeInTheDocument();
+  });
+
+  it("verified: a badge, no resend", () => {
+    setup({ email: "a@example.com", verified: true });
+    expect(screen.getByText("Подтверждена")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отправить ещё раз" })).not.toBeInTheDocument();
+  });
+
+  it("unverified: says where the letter went and resends it once a minute", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    api.apiPost.mockResolvedValue({ sent: true });
+    setup({ email: "a@example.com", sentAt: "2000-01-01T00:00:00Z" });
+    expect(
+      screen.getByText("Почта не подтверждена. Мы отправили письмо на a@example.com."),
+    ).toBeInTheDocument();
+    fireEvent.click(resend());
+    await waitFor(() => {
+      expect(api.apiPost).toHaveBeenCalledTimes(1);
+    });
+    const [path, , opts] = api.apiPost.mock.calls[0] as [
+      string,
+      unknown,
+      { idempotencyKey: string },
+    ];
+    expect(path).toBe("/api/v1/me/email/verification");
+    expect(opts.idempotencyKey.length).toBeGreaterThanOrEqual(16);
+    await waitFor(() => {
+      expect(resend()).toBeDisabled();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(61_000);
+    });
+    expect(resend()).toBeEnabled();
+  });
+
+  it("a letter queued in the last minute keeps resend off", () => {
+    setup({ email: "a@example.com", sentAt: new Date().toISOString() });
+    expect(resend()).toBeDisabled();
+  });
+
+  it("a 429 says to wait a minute", async () => {
+    api.apiPost.mockRejectedValue(
+      new SessionApiError(429, "Too Many Requests", { code: "email_verify_cooldown" }),
+    );
+    setup({ email: "a@example.com", sentAt: "2000-01-01T00:00:00Z" });
+    fireEvent.click(resend());
+    expect(await screen.findByText("Отправить ещё раз можно через минуту.")).toBeInTheDocument();
   });
 });

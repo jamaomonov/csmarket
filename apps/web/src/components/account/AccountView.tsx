@@ -78,6 +78,8 @@ export function AccountView({ locale }: AccountViewProps) {
       />
       <EmailForm
         email={user.email}
+        verified={user.email_verified}
+        sentAt={user.email_verification_sent_at ?? null}
         onChange={() => {
           void refreshMe();
         }}
