@@ -211,3 +211,24 @@ async def test_no_log_line_carries_the_token_or_the_user(
     out = capsys.readouterr()
     assert token not in out.out + out.err
     assert user_id not in out.out + out.err
+
+
+async def test_a_client_gone_before_auth_ends_the_handler_quietly(
+    integration_app: FastAPI, integration_client: AsyncClient
+) -> None:
+    async with WsSession(integration_app, PATH) as ws:
+        await ws.leave()
+        await ws.finished()  # the 4401 close to a gone client must not raise
+
+
+async def test_a_silently_dead_socket_ends_on_the_next_ping(
+    integration_app: FastAPI, integration_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _settings(monkeypatch, realtime_ping_seconds=0.1)
+    user_id, token = await _signed_in(integration_client, "76561190000000108")
+    async with WsSession(integration_app, PATH) as ws:
+        await _auth(ws, token)
+        await _wait_registered(user_id)
+        ws.vanish()
+        await ws.finished()  # the failed ping and the close after it must not raise
+    assert registry.count(user_id) == 0

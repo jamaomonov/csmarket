@@ -29,6 +29,11 @@ from csmarket.modules.realtime.registry import registry
 router = APIRouter(prefix="/realtime", tags=["realtime"])
 log = get_logger("csmarket.realtime.routes")
 
+#: A close to a client already gone: Starlette's ``RuntimeError`` after a close, and its
+#: ``WebSocketDisconnect`` for a send the server could not deliver (it wraps uvicorn's
+#: ``ClientDisconnected``, an ``OSError``, which is listed too in case it ever leaks).
+_GONE: tuple[type[Exception], ...] = (RuntimeError, WebSocketDisconnect, OSError)
+
 #: Close codes the storefront reacts to.
 CLOSE_UNAUTHORIZED = 4401
 CLOSE_RATE_LIMITED = 4429
@@ -92,11 +97,12 @@ async def orders_socket(ws: WebSocket) -> None:
     try:
         await guard_ip(ws, bucket="ws-connect")
     except RateLimitedError:
-        await ws.close(code=CLOSE_RATE_LIMITED)
+        with contextlib.suppress(*_GONE):
+            await ws.close(code=CLOSE_RATE_LIMITED)
         return
     who = await _who(ws, settings.realtime_auth_timeout_seconds)
     if who is None:
-        with contextlib.suppress(RuntimeError):
+        with contextlib.suppress(*_GONE):
             await ws.close(code=CLOSE_UNAUTHORIZED)
         return
     registry.add(who.user_id, ws)
@@ -107,7 +113,7 @@ async def orders_socket(ws: WebSocket) -> None:
         registry.remove(who.user_id, ws)
         ws_connected(-1)
     if code is not None:
-        with contextlib.suppress(RuntimeError):
+        with contextlib.suppress(*_GONE):
             await ws.close(code=code)
 
 

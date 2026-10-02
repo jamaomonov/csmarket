@@ -38,6 +38,8 @@ class WsSession:
         self._from_app: asyncio.Queue[Message] = asyncio.Queue()
         self._task: asyncio.Task[None] | None = None
         self.close_code: int | None = None
+        #: The client is gone: like uvicorn, a send then raises ``OSError``.
+        self._gone = False
 
     async def __aenter__(self) -> WsSession:
         await self._to_app.put({"type": "websocket.connect"})
@@ -61,7 +63,24 @@ class WsSession:
                 self._task.cancel()
 
     async def _send(self, message: MutableMapping[str, Any]) -> None:
+        if self._gone:
+            # uvicorn raises ``ClientDisconnected`` (an ``OSError``) on a send to a gone client.
+            raise OSError("client disconnected")
         await self._from_app.put(dict(message))
+
+    async def leave(self) -> None:
+        """The client closes: the app reads a disconnect, and any later send fails."""
+        self._gone = True
+        await self._to_app.put({"type": "websocket.disconnect", "code": 1001})
+
+    def vanish(self) -> None:
+        """The connection dies silently: no disconnect frame, every send fails."""
+        self._gone = True
+
+    async def finished(self, timeout: float = 5) -> None:
+        """Wait for the app to return; re-raises whatever it raised."""
+        assert self._task is not None
+        await asyncio.wait_for(self._task, timeout)
 
     async def send_json(self, data: object) -> None:
         await self._to_app.put({"type": "websocket.receive", "text": json.dumps(data)})
