@@ -131,7 +131,7 @@ tests:
               severity: page
             exp_annotations:
               summary: "2 paid order(s) older than 5 min not picked up"
-              description: "Orders in `paid` for more than 5 minutes. Is the worker up, is Postgres LISTEN/NOTIFY working, is `CSMARKET_SKINS_BUY_ENABLED` on?\n"
+              description: "Orders in `paid` for more than 5 minutes. Is the worker up, and is it reaching Postgres?\n"
               runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#paid-stuck"
 
   # --- a failed balance read keeps the last value: the timestamp says how old it is ----------

@@ -14,24 +14,30 @@
 - **Milestones** (spec §15), each with its own plan written with `superpowers:writing-plans`
   and saved to `docs/superpowers/plans/`, and its own deploy:
 
-  | #   | Scope                                                            | Plan                                                      |
-  | --- | ---------------------------------------------------------------- | --------------------------------------------------------- |
-  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`        |
-  | M1  | `auth` (Steam), `users`, roles, account page, trade link         | `docs/superpowers/plans/2026-10-01-m1-auth-users.md`      |
-  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO | `docs/superpowers/plans/2026-10-01-m2-skins-catalogue.md` |
-  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups       | `docs/superpowers/plans/2026-10-01-m3-wallet-payments.md` |
-  | M4  | `orders`, worker buy, trade tracking, refunds, order page, email | not written yet                                           |
-  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys       | not written yet                                           |
+  | #   | Scope                                                              | Plan                                                      |
+  | --- | ------------------------------------------------------------------ | --------------------------------------------------------- |
+  | M0  | Repo skeleton: tooling, CI, compose, Caddy, `core`, health, docs   | `docs/superpowers/plans/2026-10-01-m0-skeleton.md`        |
+  | M1  | `auth` (Steam), `users`, roles, account page, trade link           | `docs/superpowers/plans/2026-10-01-m1-auth-users.md`      |
+  | M2  | `skins` catalogue: import, price sync, read API, storefront, SEO   | `docs/superpowers/plans/2026-10-01-m2-skins-catalogue.md` |
+  | M3  | `fx`, `wallet`, `payments` + Click / Payme / Uzum, top-ups         | `docs/superpowers/plans/2026-10-01-m3-wallet-payments.md` |
+  | M4a | Orders & buying: checkout, pay, worker buy, trades, refunds, admin | `docs/superpowers/plans/2026-10-01-m4a-orders-buying.md`  |
+  | M4b | WebSocket, email (Resend), pricing editor, dashboard               | not written yet                                           |
+  | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys         | not written yet                                           |
 
-- **Where things stand:** M0–M3 merged on local `main`; the real-kassa check is pending the
-  first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`). There is no git remote yet;
-  nothing is pushed or deployed. M0 is done for good when `https://csmarket.uz/` answers from
-  CI-built images. Next: the M4 plan, when the owner asks for it.
+- **Where things stand:** M0–M3 merged on local `main`; M4a (ADR-0007) is on branch
+  `m4a-orders-buying` until the owner says to merge. The real-kassa check is pending the
+  first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`), and the first real sale waits
+  for the deploy too (the Waxpeer key whitelisted for the VPS IP, `docs/runbooks/waxpeer.md`).
+  There is no git remote yet; nothing is pushed or deployed. M0 is done for good when
+  `https://csmarket.uz/` answers from CI-built images. Next: the M4b plan, when the owner asks
+  for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
-  cabinets and credentials (`docs/runbooks/kassa-setup.md`). Everything later is listed in
-  spec §16.
+  cabinets and credentials (`docs/runbooks/kassa-setup.md`). M4a's first real sale needs the
+  Waxpeer API key whitelisted for the VPS IP and a topped-up Waxpeer balance; the `my-history`
+  probe (M4b) needs the owner's key for their local IP, which the owner puts in their own
+  `.env` — never in chat or the repo. Everything later is listed in spec §16.
 
 ---
 
@@ -117,7 +123,7 @@ csmarket/
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A backend domain module | `apps/api/src/csmarket/modules/<name>/` with `api.py` (the interface other modules import), `routes.py`, `service.py`, `models.py`, `schemas.py`, `README.md`. Mount the router in `apps/api/src/csmarket/api/v1/router.py` (never in the package `__init__.py`: `api/v1/deps.py` importers run it first, closing an import cycle). Import its models in `apps/api/migrations/env.py`, and in `apps/scheduler/src/csmarket_scheduler/main.py` once a job touches it, so relationship mappers resolve. Tests in `apps/api/tests/{unit,integration}/` |
 | A payment provider      | `modules/payments/gateways/<provider>.py` + its webhook twin module (`modules/click`, `payme`, `uzum`) — M3. The webhook route goes on the `bootstrap._exempt_self_authenticating_routes` list                                                                                                                                                                                                                                                                                                                                                      |
-| Background work         | A table with a claimable status, written together with `NOTIFY <channel>` in the same transaction; a `Queue` entry in `apps/worker/src/csmarket_worker/consumer.py::_queues`, with the channel constant imported from the module that notifies. Handlers are idempotent — a claim can always be re-run                                                                                                                                                                                                                                              |
+| Background work         | A table with a claimable status, written together with `NOTIFY <channel>` in the same transaction; a `Queue` entry in `apps/worker/src/csmarket_worker/consumer.py::_queues`, with the channel constant imported from the module that notifies. Handlers are idempotent — a claim can always be re-run. A handler with an external side effect (a Waxpeer buy) keys it by our own id, looks it up before acting, takes a short lease (`orders.buy_lease`) and resolves a lost answer by lookup, never by repeating it (ADR-0007)                    |
 | A periodic job          | `apps/scheduler/src/csmarket_scheduler/jobs/<name>.py` exposing `register(scheduler)`, called from `main.build_scheduler`. Long periods use `startup.first_run_after(n)`, staggered ≥ 15 s apart. Jobs only time work; the logic lives in a module's service                                                                                                                                                                                                                                                                                        |
 | A storefront page       | `apps/web/src/app/[locale]/<segment>/page.tsx` (+ `loading.tsx`, `error.tsx`). Unmatched paths render the root `app/not-found.tsx`. A page that calls `notFound()` must stay non-streaming, and a test must see a real 404 status (Next 15 otherwise answers an empty shell)                                                                                                                                                                                                                                                                        |
 | An admin page           | `apps/admin/src/features/<area>/<Page>.tsx`, route in `apps/admin/src/app/router.tsx`. The `features/` folder arrives with the first ported area (M1); M0's shell pages sit in `src/routes/`                                                                                                                                                                                                                                                                                                                                                        |
@@ -304,7 +310,7 @@ csmarket/
   `ip_guard` bucket. A
   second carve-out: `POST /me/trade-link/check` (M1; Waxpeer `check-tradelink` + Steam
   `GetTradeHoldDurations`), advisory, 4 s timeouts, 10-min Redis cache keyed by a hash of
-  the link. A third: `POST /orders` (M4a, ruling R11) re-prices the chosen offer through the
+  the link. A third: `POST /orders` (M4a, ADR-0007 R11) re-prices the chosen offer through the
   same cached, budgeted, breaker-guarded read as `GET /skins/{slug}/listings` (a degraded
   answer is accepted; the worker's price cap is the money guard), with no DB connection
   held across it. A new one needs an ADR and a line here — and its route in the `handler`

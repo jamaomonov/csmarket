@@ -29,7 +29,7 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
   across the upstream calls (AGENTS §11); the verdict is written in a fresh one.
 
 - **Email (ruling P4):** optional, stored lower-domain via `EmailStr`; any change resets
-  `email_verified_at`. Verification arrives with notifications in M4.
+  `email_verified_at`. Verification arrives with notifications in M4b.
 - **Trade link** (`tradelink.py`, spec §7.2):
   - Only `https://steamcommunity.com/tradeoffer/new/?partner=<digits>&token=<6-16 chars>`
     parses (`422 trade_link_invalid` otherwise). ASCII only (`re.ASCII`): look-alike

@@ -5,7 +5,7 @@ one probe, `GET /api/v1/admin/me`; M2 adds `admin_audit_log` with the first admi
 (hiding a catalogue item, editing search aliases — `skins/README.md`, **Admin catalogue**);
 M3 adds the users list and card, ban/unban and the audited balance adjustment; M4a the
 orders and trades API (search, the order page, the attention queue, resolve / refund /
-retry).
+retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007).
 
 ## Role model
 

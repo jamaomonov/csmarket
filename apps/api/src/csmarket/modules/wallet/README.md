@@ -2,7 +2,8 @@
 
 The double-entry ledger behind every soʻm balance (spec §5, rulings R1, R2; ADR-0006).
 Ported by allow-list (ADR-0002): UZS only, no currency column, whole soʻm. Operations
-(reading a history, adjusting, refused reversals): `docs/runbooks/wallet.md`.
+(reading a history, adjusting, refused reversals): `docs/runbooks/wallet.md`; order purchases and
+refunds (M4a): ADR-0007, `docs/runbooks/orders.md`.
 
 **Owns:** tables `wallet_accounts`, `wallet_transactions` and `wallet_postings`
 (migration `0006_wallet_ledger`).
@@ -26,7 +27,7 @@ Ported by allow-list (ADR-0002): UZS only, no currency column, whole soʻm. Oper
 the signed-in customer. The top-up routes under `/wallet/topups` are mounted from
 `payments.routes`.
 
-**Direction:** `wallet` never imports `payments` — `payments` (and M4 `orders`, and
+**Direction:** `wallet` never imports `payments` — `payments` (and M4a `orders`, and
 `admin`) build on it, never the reverse. `wallet.api`, `service`, `adjust` and `entries` are
 domain-pure (no other domain module); only `wallet.routes` imports `auth.api` and
 `users.models` for the signed-in customer (`test_wallet_never_imports_payments`).
@@ -56,7 +57,7 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
 | ------------------------- | ------------------------------------- | ----------- | ------------------------------------------- |
 | `user_wallet`             | `user` / user id                      | D           | The customer's spendable soʻm               |
 | `provider_clearing`       | `provider` / `click`, `payme`, `uzum` | C           | What a kassa collected for us               |
-| `house_payments_received` | `house` / `house`                     | D           | Orders paid from the balance (M4)           |
+| `house_payments_received` | `house` / `house`                     | D           | Orders paid from the balance (M4a)          |
 | `house_adjustments`       | `house` / `house`                     | D           | Contra-account of admin balance adjustments |
 
 ## Transaction kinds and keys

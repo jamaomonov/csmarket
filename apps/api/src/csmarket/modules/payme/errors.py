@@ -122,7 +122,7 @@ def account_not_payable() -> PaymeError:
 
 
 def account_busy() -> PaymeError:
-    """−31099: another active Payme transaction already holds this top-up.
+    """−31099: another active Payme transaction already holds this top-up or order.
 
     Payme's sandbox asserts an account-range code (−31050..−31099), not −31008, for a
     second, different ``CreateTransaction`` on a busy account.

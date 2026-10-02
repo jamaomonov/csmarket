@@ -1,0 +1,72 @@
+sequenceDiagram
+    autonumber
+    actor U as Signed-in buyer
+    participant Web as Item page (buy panel) / order page
+    participant API as API
+    participant R as Redis (listings cache, ip_guard)
+    participant X as Waxpeer (search, cached + budgeted)
+    participant DB as Postgres
+    participant K as Kassa (Click / Payme / Uzum / dev mock)
+
+    U->>Web: Picks an offer («Выбрать»), a method (balance pre-selected when it covers)
+    opt the saved link was never checked (verdict null)
+        Web->>API: POST /me/trade-link/check (advisory, once per link)
+    end
+    U->>Web: «Купить за …»
+    Web->>API: POST /orders {slug, listing_id, price_uzs} + Idempotency-Key (one per offer + link)
+    API->>R: ip_guard order-create (60/min per IP, 10/min per IP + account)
+    alt replayed key
+        API-->>Web: 200 the stored order, whatever the body
+    else new key
+        API->>DB: buying on? trade link saved and not bad (hold = bad)? item, rules, fresh rate
+        Note over API,DB: scalars copied out, read transaction ended — no DB session across Waxpeer
+        API->>R: listings_for(slug): 90 s fresh / 1 h stale
+        opt cache miss, budget left, breaker closed
+            API->>X: search-items-by-name (4 s timeout)
+        end
+        Note over API: degraded (snapshot) answer accepted — the worker's price cap is the money guard
+        alt chosen offer listed, price within ±2 %
+            API->>DB: insert order pending (expires +15 min), billed at the server price,<br/>cost_units, fx snapshot, trade-link snapshot
+            API-->>Web: 201 OrderOut
+        else price moved beyond ±2 %
+            API-->>Web: 409 price_changed {price_uzs} → panel reprices, same key next press
+        else offer gone, another ≤ shown × 1.03
+            API->>DB: insert with the substitute, billed min(its price, shown)
+            API-->>Web: 201 OrderOut
+        else offer gone, none within 3 %
+            API-->>Web: 409 offer_gone {next_offer | null}
+        end
+    end
+
+    Web->>API: POST /orders/{number}/pay {provider, locale} + a fresh Idempotency-Key
+    API->>R: ip_guard order-pay
+    API->>DB: lock the order (resolve, FOR UPDATE); replay lookup under the lock
+    alt not payable (paid, expired, cancelled)
+        API-->>Web: 409 order_not_payable {reason}
+    else provider = wallet
+        API->>DB: lock the wallet; balance short → 409 balance_too_low (nothing written)
+        API->>DB: ledger purchase (C user_wallet / D house_payments_received, key purchase:order:{id})<br/>payments row wallet succeeded, order paid, NOTIFY orders
+        API-->>Web: 200 {order: paid, intent_url: null}
+        Web->>Web: Go to /orders/{number}
+    else a kassa
+        API->>DB: ensure_attempt (reuse the live one in that kassa)
+        API-->>Web: 200 {order: pending, intent_url}
+        Web->>Web: Go to /orders/{number}?go=1&via=<kassa>
+        Web->>K: Open intent_url once (within 8 s), else «Оплатить …»
+        U->>K: Pays
+        K->>API: Callback (auth before the body; lock order → kassa row → payment)
+        alt order still pending
+            API->>DB: settle: attempt succeeded, order paid (paid_with = kassa), NOTIFY orders
+            API-->>K: OK
+        else paid another way meanwhile
+            API->>DB: kassa row closed, committed
+            API-->>K: Refused (Click −4, Payme −31008, Uzum 10008): no second charge
+        end
+        K-->>Web: Buyer returns to /orders/{number}
+    end
+
+    loop every 8 s (backoff to 60 s on errors) until a terminal status
+        Web->>API: GET /orders/{number}
+        API-->>Web: OrderOut + trade view (never a pay answer's snapshot)
+    end
+    Note over DB: NOTIFY orders wakes the worker: buy.mmd

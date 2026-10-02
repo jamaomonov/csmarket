@@ -46,14 +46,14 @@ flowchart LR
     scheduler --> pg
 
     api -- "sign-in, profile, trade hold (M1)" --> steam
-    api -- "listings, trade-link check (M1–M2)" --> waxpeer
-    worker -- "buy-one-p2p (M4)" --> waxpeer
-    scheduler -- "price snapshot (M2), trade status (M4)" --> waxpeer
+    api -- "listings, trade-link check (M1–M2), checkout re-price (M4a)" --> waxpeer
+    worker -- "lookup + buy-one-p2p (M4a)" --> waxpeer
+    scheduler -- "price snapshot (M2), trade status, balance (M4a)" --> waxpeer
     scheduler -- "catalogue import (M2)" --> bymykel
     scheduler -- "USD/UZS rate (M3)" --> cbu
     api -- "payment redirect (M3)" --> acq
     acq -- "webhooks (M3)" --> api
-    worker -- "order emails (M4)" --> email
+    worker -- "order emails (M4b)" --> email
 ```
 
 ## Runtime pieces
@@ -72,7 +72,8 @@ flowchart LR
 The queue is the database: the transaction that writes a claimable row also sends `NOTIFY`,
 the worker claims with `FOR UPDATE SKIP LOCKED`, and a poll tick catches lost notifications.
 Handlers are idempotent. M0 registers no queues and no jobs; both processes start, idle and
-stop cleanly.
+stop cleanly. M4a adds the `orders` queue (a paid order → one Waxpeer buy) and the trade
+sweeps; the worker and the scheduler expose `/metrics` on internal ports 9101 / 9102.
 
 ## Modules by milestone
 
@@ -84,8 +85,11 @@ stop cleanly.
 - **M2** — `skins` (catalogue, pricing, Waxpeer client, listings, price sync), storefront
   catalogue and SEO, admin catalogue page.
 - **M3** — `fx`, `wallet`, `payments` + `click` / `payme` / `uzum`, balance top-ups.
-- **M4** — `orders`, worker buy, trade reconcile / audit, refunds, `realtime`,
-  `notifications`, admin trades / pricing / dashboard.
+- **M4a** — `orders` (checkout, pay from the balance or a kassa, worker buy at Waxpeer, trade
+  reconcile / protection / audit, refunds to the balance), the buy panel and order page
+  (polling), admin orders and trades, order alerts. ADR-0007.
+- **M4b** — `realtime` (WebSocket order pushes), `notifications` (email), admin pricing
+  editor and dashboard.
 - **M5** — launch: VPS, secrets, backups, alerts, runbooks, test buys.
 
 The module list, tables and sources are in [`module-map.md`](./module-map.md).

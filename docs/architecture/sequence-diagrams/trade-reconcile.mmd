@@ -25,7 +25,7 @@ sequenceDiagram
         end
     end
     loop each due order still buy_pending
-        S->>S: attempt_buy — takes the order's lease or does nothing (order-buy.mmd)
+        S->>S: attempt_buy — takes the order's lease or does nothing (buy.mmd)
     end
 
     Note over S,X: trades.protection (hourly): delivered trades at 4 + release_date — 5 → released, 6 → attention rolled_back

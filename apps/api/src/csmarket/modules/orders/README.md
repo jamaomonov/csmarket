@@ -1,7 +1,7 @@
 # orders
 
 One skin bought by one customer, from checkout to the Steam trade (spec §5, §7; M4a plan
-rulings R1–R15). Builds on `payments`, `wallet`, `skins`, `users` and `fx`; `payments`
+rulings R1–R15; ADR-0007). Builds on `payments`, `wallet`, `skins`, `users` and `fx`; `payments`
 reaches this module only through `orders.api`, and `wallet` imports neither.
 
 **Owns:** tables `orders` and `skin_trades` (migration `0013_orders_skin_trades`, which also
@@ -214,7 +214,7 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
 The worker's `orders` queue (`apps/worker`, two drainers) buys each paid order at Waxpeer,
 at most once: `skin_trades.project_id` = the order id, every buy is preceded by a
 `check-many-project-id` lookup, and a lost answer is resolved by lookup, never by buying
-again. Flow: `docs/architecture/sequence-diagrams/order-buy.mmd`.
+again. Flow: `docs/architecture/sequence-diagrams/buy.mmd`.
 
 - `drain_paid(db, *, client=None, settings=None, limit=10) -> int` — the queue's drain:
   claims up to `limit` `paid` orders by `paid_at` (`FOR UPDATE SKIP LOCKED`), moves them to
@@ -385,9 +385,17 @@ Order row → kassa transaction row → payment → user wallet (the M3 top-up o
 order in the top-up's place). No lock is held across a Waxpeer call: read unlocked → call
 Waxpeer → `FOR UPDATE` re-read → re-check → write.
 
+## Operations
+
+Runbooks: `docs/runbooks/orders.md` (lifecycle, every alert, attention reasons and the safe
+admin action) and `docs/runbooks/waxpeer.md` (key and IP whitelist, balance, the fake versus
+the real key). Flow: `docs/product/flows/buy.md`; diagrams
+`docs/architecture/sequence-diagrams/{checkout,buy,trade-reconcile}.mmd`.
+
 ## Milestones
 
-- **M4a** — this module: tables and FSM (now), then checkout, payment (kassa or balance),
-  the worker's buy at Waxpeer, trade reconcile, refunds, the order page (polling) and the
-  admin trades view.
-- **M4b** — WebSocket order pushes, email (Resend), the pricing editor and the dashboard.
+- **M4a** (built) — tables and FSM, checkout, payment (kassa or balance), the worker's buy at
+  Waxpeer, trade sweeps, refunds to the balance, health gauges and alerts, the dev fake, the
+  order page (polling), «Мои заказы» and the admin orders and trades pages.
+- **M4b** — WebSocket order pushes, email (Resend), the pricing editor and the dashboard,
+  the `my-history` orphan-buy probe.

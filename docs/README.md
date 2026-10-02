@@ -5,17 +5,17 @@ you touch** — `AGENTS.md` § 5 lists which change needs which doc.
 
 ## Sections
 
-| Folder                             | What lives here                                                                                  |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------ |
-| [`architecture/`](./architecture/) | System overview (C4 context), module map, sequence diagrams, Redis cache keys                    |
-| [`decisions/`](./decisions/)       | Architecture Decision Records (ADRs), numbered, MADR template                                    |
-| [`runbooks/`](./runbooks/)         | Operational procedures: first deploy, deploys, admin bootstrap, traffic surge, incident template |
-| [`api/`](./api/)                   | Generated OpenAPI schema (`openapi.json`) + auth / idempotency / limits notes                    |
-| [`onboarding/`](./onboarding/)     | Local setup                                                                                      |
-| [`security/`](./security/)         | PII inventory and handling rules                                                                 |
-| [`superpowers/`](./superpowers/)   | Specs and plans; the design spec is the source of truth                                          |
+| Folder                             | What lives here                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------- |
+| [`architecture/`](./architecture/) | System overview (C4 context), module map, sequence diagrams, Redis cache keys                |
+| [`decisions/`](./decisions/)       | Architecture Decision Records (ADRs), numbered, MADR template                                |
+| [`runbooks/`](./runbooks/)         | Operational procedures: deploys, admin bootstrap, kassas, wallet, orders, Waxpeer, incidents |
+| [`api/`](./api/)                   | Generated OpenAPI schema (`openapi.json`) + auth / idempotency / limits notes                |
+| [`onboarding/`](./onboarding/)     | Local setup                                                                                  |
+| [`security/`](./security/)         | PII inventory and handling rules                                                             |
+| [`superpowers/`](./superpowers/)   | Specs and plans; the design spec is the source of truth                                      |
 
-[`product/flows/`](./product/flows/) holds user-facing flows with Mermaid diagrams (sign-in, trade link).
+[`product/flows/`](./product/flows/) holds user-facing flows with Mermaid diagrams (sign-in, trade link, browse, top-up, buy).
 
 ## Conventions
 

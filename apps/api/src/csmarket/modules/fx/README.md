@@ -21,7 +21,7 @@ the CBU fetch (`cbu.fetch_usd_uzs`), and the Redis copy `fx:usd_uzs`
   `record_snapshot` only flushes.
 - The CBU answer must be one plausible USD row (1 000 to 100 000 soʻm); anything else is a
   `CbuError` and the previous snapshot keeps serving.
-- No admin override yet (M3 may add one). M4 orders reference `fx_snapshots.id`.
+- No admin override yet (M3 may add one). M4a orders reference `fx_snapshots.id`.
 
 **Job:** `fx.refresh` in `apps/scheduler` — every `CSMARKET_FX_REFRESH_INTERVAL_MINUTES`
 (60), first run 20 s after start. It only times the work; the logic is `refresh_usd_uzs`.

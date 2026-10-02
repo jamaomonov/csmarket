@@ -16,8 +16,8 @@ groups:
         annotations:
           summary: '{{ $value | printf "%.0f" }} paid order(s) older than 5 min not picked up'
           description: >
-            Orders in `paid` for more than 5 minutes. Is the worker up, is Postgres
-            LISTEN/NOTIFY working, is `CSMARKET_SKINS_BUY_ENABLED` on?
+            Orders in `paid` for more than 5 minutes. Is the worker up, and is it reaching
+            Postgres?
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#paid-stuck"
 
       # Claimed for over 30 minutes, no open attention: the buy neither finished nor asked

@@ -121,7 +121,7 @@ not a Click call, as with Payme's and Uzum's non-POST answers.
 
 ## Not here
 
-The bot / mini-app service, anti-fraud vetoes, refunds (Click-side only), email (M4).
+The bot / mini-app service, anti-fraud vetoes, refunds (Click-side only), email (M4b).
 Order tests: `tests/integration/test_payments_orders_click.py`,
 `tests/integration/test_kassa_sweeps_orders.py`. Cabinet setup: `docs/runbooks/kassa-setup.md`; troubleshooting:
 `docs/runbooks/click.md`.

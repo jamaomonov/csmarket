@@ -4,8 +4,9 @@ Balance top-ups, and the attempts to pay a top-up or an order (M4a) through a ka
 §5, rulings R3–R6, R10, R11; ADR-0006; M4a ruling R7). Builds on `wallet` (credits and
 reversals go through `wallet.api`) and reaches orders only through `orders.api` (a settled
 order attempt calls `orders.mark_paid`); neither `wallet` nor `orders.api` imports
-`payments` (`test_orders_api_never_imports_payments`). Operations: `docs/runbooks/kassa-setup.md`; flow:
-`docs/product/flows/balance-topup.md`.
+`payments` (`test_orders_api_never_imports_payments`). Operations:
+`docs/runbooks/kassa-setup.md`, `docs/runbooks/orders.md`; flows:
+`docs/product/flows/balance-topup.md`, `docs/product/flows/buy.md`; orders: ADR-0007.
 
 **Owns:** tables `wallet_topups` and `payments` (migration `0007_payments_topups`;
 `0012_payments_number_pattern_ops` rebuilds `ix_payments_number` with `text_pattern_ops` so

@@ -55,15 +55,15 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS       -32300 (never a 405)
 
 ## The seven methods
 
-| Method                    | Result                                                                                                                                                                | Errors                                                                                          |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `CheckPerformTransaction` | `{"allow": true}`                                                                                                                                                     | `-31050` unknown, `-31051` paid / expired / reversed, `-31001` amount                           |
-| `CreateTransaction`       | `{"create_time", "transaction", "state": 1}`                                                                                                                          | as Check; `-31099` another state-1 transaction holds the top-up; `-31008` id of another account |
-| `PerformTransaction`      | `{"transaction", "perform_time", "state": 2}`                                                                                                                         | `-31003` unknown; `-31008` cancelled, or a second charge (below)                                |
-| `CancelTransaction`       | `{"transaction", "cancel_time", "state": -1 \| -2}`                                                                                                                   | `-31003` unknown; `-31007` the top-up was spent, or a performed order (R7)                      |
-| `CheckTransaction`        | `{create_time, perform_time, cancel_time, transaction, state, reason}`                                                                                                | `-31003`                                                                                        |
-| `GetStatement`            | `{"transactions": [{id, time, amount, account, create_time, perform_time, cancel_time, transaction, state, reason, receivers: []}]}` by `create_time` in `[from, to]` | —                                                                                               |
-| `SetFiscalData`           | `{"success": true}`; keeps the receipt under its `type` (`PERFORM` / `CANCEL`)                                                                                        | `-32001` unknown transaction                                                                    |
+| Method                    | Result                                                                                                                                                                | Errors                                                                                                   |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `CheckPerformTransaction` | `{"allow": true}`                                                                                                                                                     | `-31050` unknown, `-31051` paid / expired / reversed, `-31001` amount                                    |
+| `CreateTransaction`       | `{"create_time", "transaction", "state": 1}`                                                                                                                          | as Check; `-31099` another state-1 transaction holds the top-up or order; `-31008` id of another account |
+| `PerformTransaction`      | `{"transaction", "perform_time", "state": 2}`                                                                                                                         | `-31003` unknown; `-31008` cancelled, or a second charge (below)                                         |
+| `CancelTransaction`       | `{"transaction", "cancel_time", "state": -1 \| -2}`                                                                                                                   | `-31003` unknown; `-31007` the top-up was spent, or a performed order (R7)                               |
+| `CheckTransaction`        | `{create_time, perform_time, cancel_time, transaction, state, reason}`                                                                                                | `-31003`                                                                                                 |
+| `GetStatement`            | `{"transactions": [{id, time, amount, account, create_time, perform_time, cancel_time, transaction, state, reason, receivers: []}]}` by `create_time` in `[from, to]` | —                                                                                                        |
+| `SetFiscalData`           | `{"success": true}`; keeps the receipt under its `type` (`PERFORM` / `CANCEL`)                                                                                        | `-32001` unknown transaction                                                                             |
 
 `transaction` is our row id. Replays echo: Create returns the stored row whatever its state
 (a late replay after the top-up was paid still answers; another amount is `-31001`),
@@ -74,10 +74,12 @@ Perform on state 2 and Cancel on `-1` / `-2` return the stored result.
 ```text
 Create → 1
   1 --Perform--> 2      settle: the attempt succeeds, the top-up is credited once
+                        (an order: moved to paid, NOTIFY orders)
   1 --Cancel---> -1     the attempt is cancelled (unless another state-1 row holds it)
   2 --Cancel---> -2     reverse: the top-up is clawed back if unspent, else -31007
+                        (an order: always -31007, R7)
   1 --12 h-----> -1     reason 4, the timeout sweep
-  1 --Perform after the top-up was credited elsewhere--> -1, reason 3, answer -31008
+  1 --Perform after the owner was paid elsewhere--> -1, reason 3, answer -31008
 ```
 
 `reason` is Payme's code, stored as sent; we set **4** (timeout) in the sweep and **3**
@@ -120,8 +122,8 @@ reads "owner".
 
 | Handler                          | Sequence                                                                                                                                                                                                                                                  |
 | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CheckPerform                     | `resolve(account.order, lock=True)` (top-up)                                                                                                                                                                                                              |
-| Create                           | `resolve(account.order, lock=True)` → row by `payme_id` `FOR UPDATE` (replay) → busy check → SAVEPOINT { `ensure_attempt` → `mark_pending` (top-up, payment) → insert }                                                                                   |
+| CheckPerform                     | `resolve(account.order, lock=True)` (owner)                                                                                                                                                                                                               |
+| Create                           | `resolve(account.order, lock=True)` → row by `payme_id` `FOR UPDATE` (replay) → busy check → SAVEPOINT { `ensure_attempt` → `mark_pending` (owner, payment) → insert }                                                                                    |
 | Perform / Cancel / SetFiscalData | read the row by `payme_id` **without** a lock → `resolve(row.account, lock=True)` → row `FOR UPDATE` (populate_existing), re-check state → `settle` / `reverse` / `cancel_pending`                                                                        |
 | CheckTransaction / GetStatement  | plain reads, no lock                                                                                                                                                                                                                                      |
 | `cancel_stale`                   | unlocked scan of stale state-1 rows (top-up and order attempts) → per row (SAVEPOINT) `lock_owner_or_skip` (owner `FOR UPDATE SKIP LOCKED`; held → next tick) → row `FOR UPDATE`, re-check state 1 → `cancel_pending`; an order's status is never touched |
@@ -133,30 +135,30 @@ first.
 
 The scheduler job `payme.timeout` (every 5 min, first run after 180 s) runs
 `cancel_stale`: state-1 rows whose `create_time` is older than 12 h go to `-1`, reason 4,
-and their attempt is cancelled; the top-up expiry sweep then closes the top-up. A row whose
-top-up a callback holds is skipped until the next tick; one failing row is logged
+and their attempt is cancelled; the owner's expiry sweep (top-up or order) then closes the
+owner. A row whose owner a callback holds is skipped until the next tick; one failing row is logged
 (`payme.timeout.row_failed`) and skipped. A PerformTransaction on a state-1 row older than
 12 h that the sweep has not reached yet still settles — the customer paid, so the credit is
 safe, and the sweep closes the window within 5 minutes.
 
 ## Error codes
 
-| Code     | When                                                                        |
-| -------- | --------------------------------------------------------------------------- |
-| `-31001` | Amount is not the top-up's / order's × 100 (tiyin)                          |
-| `-31003` | Unknown transaction id                                                      |
-| `-31007` | Cancel of a performed top-up whose money was spent, or of a performed order |
-| `-31008` | Perform on a cancelled transaction; a second charge; another account's id   |
-| `-31050` | `account.order` missing or unknown (`data: "order"`)                        |
-| `-31051` | Top-up / order paid, expired, reversed or cancelled (`data: "order"`)       |
-| `-31099` | Another state-1 Payme transaction holds the top-up (`data: "order"`)        |
-| `-32001` | `SetFiscalData` for an unknown transaction                                  |
-| `-32300` | Not POST                                                                    |
-| `-32400` | Internal error or a failed commit                                           |
-| `-32504` | Basic auth failed                                                           |
-| `-32600` | Bad envelope or a missing / mistyped parameter                              |
-| `-32601` | Unknown method                                                              |
-| `-32700` | Body is not JSON, or over 64 KiB                                            |
+| Code     | When                                                                          |
+| -------- | ----------------------------------------------------------------------------- |
+| `-31001` | Amount is not the top-up's / order's × 100 (tiyin)                            |
+| `-31003` | Unknown transaction id                                                        |
+| `-31007` | Cancel of a performed top-up whose money was spent, or of a performed order   |
+| `-31008` | Perform on a cancelled transaction; a second charge; another account's id     |
+| `-31050` | `account.order` missing or unknown (`data: "order"`)                          |
+| `-31051` | Top-up / order paid, expired, reversed or cancelled (`data: "order"`)         |
+| `-31099` | Another state-1 Payme transaction holds the top-up or order (`data: "order"`) |
+| `-32001` | `SetFiscalData` for an unknown transaction                                    |
+| `-32300` | Not POST                                                                      |
+| `-32400` | Internal error or a failed commit                                             |
+| `-32504` | Basic auth failed                                                             |
+| `-32600` | Bad envelope or a missing / mistyped parameter                                |
+| `-32601` | Unknown method                                                                |
+| `-32700` | Body is not JSON, or over 64 KiB                                              |
 
 Messages are trilingual (ru / uz / en); Uzbek uses ʻ (U+02BB).
 

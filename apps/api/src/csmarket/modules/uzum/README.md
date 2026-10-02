@@ -197,7 +197,7 @@ counts nothing.
 ## Not here
 
 Anti-fraud vetoes, card refunds from admin (Uzum's side
-only), email (M4). Postman collection for Uzum's engineer: `docs/api/uzum.postman_collection.json`.
+only), email (M4b). Postman collection for Uzum's engineer: `docs/api/uzum.postman_collection.json`.
 Order tests: `tests/integration/test_payments_orders_uzum.py`,
 `tests/integration/test_kassa_sweeps_orders.py`. Cabinet setup (including
 the `order` attribute name): `docs/runbooks/kassa-setup.md`; troubleshooting:

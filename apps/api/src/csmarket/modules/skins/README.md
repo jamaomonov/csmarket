@@ -2,14 +2,17 @@
 
 The CS2 catalogue and everything Waxpeer (spec §3.2). M1 shipped the Waxpeer client's first
 call; **M2 is the browsable catalogue** (import, price sync, stored sell prices, read API,
-listings, admin); M4a adds the Waxpeer purchase client (below). Decisions: [ADR-0005](../../../../../../docs/decisions/0005-skins-catalogue-fx-and-indexing.md).
+listings, admin); M4a adds the Waxpeer purchase client and the dev fake (below). Decisions:
+[ADR-0005](../../../../../../docs/decisions/0005-skins-catalogue-fx-and-indexing.md),
+[ADR-0007](../../../../../../docs/decisions/0007-orders-buying-trades.md) (buying). Operations:
+`docs/runbooks/skins-catalogue.md`, `docs/runbooks/waxpeer.md`.
 
 ## What the module owns
 
 | Table                 | Holds                                                                                                                                                                                         |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `skin_items`          | One row per `(market_hash_name, phase)`: ByMykel metadata, our `slug` (a URL, assigned once), the Waxpeer price columns, `active`, `hidden`, the stored `sell_price_usd` / `discount_percent` |
-| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4); absent = `DEFAULT_RULES`                                                                                  |
+| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4b); absent = `DEFAULT_RULES`                                                                                 |
 | `skin_search_aliases` | Admin-edited search aliases (alias -> text), none seeded                                                                                                                                      |
 
 Migration `0003_skins_catalog`. `hidden` is the admin's flag and is never written by the
@@ -70,6 +73,15 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   `endpoint`, `outcome`, `status` only — never a URL (key, `partner`, `token`) or a body.
 - **Tests:** `tests/contract/test_waxpeer_purchase.py` (recorded shapes 2026-09-28, redrawn
   link and Steam IDs), `tests/unit/test_waxpeer_trade_parse.py`.
+- **The API key rides the query string** (`?api=…`), so a request URL is never logged —
+  only method, path and status. `httpx`/`httpcore` loggers are capped at WARNING in
+  `core.logging`, and exception text from `httpx` is never logged either (it carries the
+  URL); log the exception type name.
+- **Nothing Waxpeer-branded reaches a browser.** Callers translate results into their own
+  wire shapes (e.g. `users` maps reasons to `invalid | private | trade_ban`).
+- **Tests:** `apps/api/tests/contract/test_waxpeer_check_tradelink.py` and `test_waxpeer_catalogue.py`
+  (recorded shapes in `tests/fixtures/skins/`; respx; never the
+  real API, never a real trade-link token).
 
 ## Dev Waxpeer fake (`waxpeer_fake.py`, ruling R13)
 
@@ -92,16 +104,12 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   trade, `decline` sets 6 + `reason="Buyer failed to accept"`, `rollback` sets 6 +
   `penalties={"rollback_fee": price}` after an accept; `dev_routes.py`'s
   `POST /dev/waxpeer/balance {units}` sets the balance.
+- **The price sync is not faked** (ruling T): with a key set, the scheduler's
+  `skins.price_sync` job keeps the real read-only client, so dev prices stay live while
+  buys go to the fake.
+- **With the fake off and a real key, a local buy is a real purchase** with the shop's
+  Waxpeer money (`docs/runbooks/waxpeer.md`).
 - **Tests:** `tests/integration/test_waxpeer_fake.py` (the sweeps driven end to end).
-- **The API key rides the query string** (`?api=…`), so a request URL is never logged —
-  only method, path and status. `httpx`/`httpcore` loggers are capped at WARNING in
-  `core.logging`, and exception text from `httpx` is never logged either (it carries the
-  URL); log the exception type name.
-- **Nothing Waxpeer-branded reaches a browser.** Callers translate results into their own
-  wire shapes (e.g. `users` maps reasons to `invalid | private | trade_ban`).
-- **Tests:** `apps/api/tests/contract/test_waxpeer_check_tradelink.py` and `test_waxpeer_catalogue.py`
-  (recorded shapes in `tests/fixtures/skins/`; respx; never the
-  real API, never a real trade-link token).
 
 ## Pricing (M2)
 

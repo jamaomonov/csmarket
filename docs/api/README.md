@@ -224,7 +224,7 @@ Called by Click, not by our clients; anonymous, exempt from the per-IP limiter.
   transaction, `-7` internal, `-8` malformed or not POST, `-9` cancelled or not payable.
 - No `Idempotency-Key`: prepare is idempotent on Click's `(click_trans_id, service_id)`,
   complete on our `merchant_prepare_id` (a replay is `-4`). `merchant_trans_id` is the
-  top-up number. Details: `apps/api/src/csmarket/modules/click/README.md`.
+  top-up or order number (M4a); a completed order payment is never reversed. Details: `apps/api/src/csmarket/modules/click/README.md`.
 
 ### Kassa callbacks: Payme (M3)
 
@@ -236,7 +236,7 @@ Called by Payme, not by our clients; anonymous, exempt from the per-IP limiter.
   `Paycom:<key>` (the production or the sandbox key), checked before the body is read.
   **Always HTTP 200** with `{result, id}` or `{error: {code, message: {ru, uz, en}, data}, id}`;
   any other HTTP method is `-32300`. Amounts are tiyin (soʻm × 100); the account field is
-  `account.order` = the top-up number.
+  `account.order` = the top-up or order number. Cancel of a performed order is `-31007`.
 - No `Idempotency-Key`: every method is idempotent on Payme's transaction `id`. Codes and
   states: `apps/api/src/csmarket/modules/payme/README.md`.
 
@@ -250,7 +250,8 @@ Called by Uzum, not by our clients; anonymous, exempt from the per-IP limiter.
   **HTTP 200 on success, HTTP 400 on every error** with
   `{"status": "FAILED", "errorCode", "serviceId", "transId"?}`; any other HTTP method is
   `10003`. Amounts are tiyin (soʻm × 100), except `/check`'s `data.amount.value`, which is
-  whole soʻm. The account is `params.order` (also `orderId`, `order_id`) = the top-up number.
+  whole soʻm. The account is `params.order` (also `orderId`, `order_id`) = the top-up or
+  order number. `/reverse` of a confirmed order is `10017`.
 - No `Idempotency-Key`: every call is keyed on Uzum's `transId`, and a replay answers a
   dedicated code (`10010` create, `10016` confirm, `10018` reverse). Codes and states:
   `apps/api/src/csmarket/modules/uzum/README.md`; Postman collection for Uzum's engineer:
