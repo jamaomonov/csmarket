@@ -114,7 +114,7 @@ def test_an_empty_or_malformed_seller_is_not_shown(seller: dict[str, object]) ->
         ("not_accepted", "not_accepted"),
         ("sold_out", "sold_out"),
         ("waxpeer_low_balance", "try_later"),
-        ("invalid_trade_link", "other"),
+        ("invalid_trade_link", "trade_link"),
         ("admin", "other"),
         (None, "other"),
     ],

@@ -140,6 +140,7 @@ OrderBuyOutcome = Literal[
     "invalid_link",
     "ambiguous",
     "stale_bought",
+    "unrecorded",
 ]
 
 _ORDER_BUY_OUTCOMES = frozenset(
@@ -154,6 +155,7 @@ _ORDER_BUY_OUTCOMES = frozenset(
         "invalid_link",
         "ambiguous",
         "stale_bought",
+        "unrecorded",
     )
 )
 

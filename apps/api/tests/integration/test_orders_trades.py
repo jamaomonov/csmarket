@@ -213,6 +213,26 @@ async def test_a_refused_attempt_under_the_same_key_is_not_a_rollback(
     assert (row.waxpeer_id, row.attention_reason, row.penalties) == (WAXPEER_ID, None, None)
 
 
+async def test_an_ambiguous_order_is_logged_once_not_every_tick(
+    db: AsyncSession, fake: FakeTradeClient, trade_sent_order: Order
+) -> None:
+    await set_trade(db, trade_sent_order, waxpeer_id=None)
+    fake.lookup_returns(
+        [
+            trade(project_id=trade_sent_order.id, status=4, id=11_111),
+            trade(project_id=trade_sent_order.id, status=4, id=22_222),
+        ]
+    )
+    with capture_logs() as logs:
+        for _ in range(3):
+            await set_order(db, trade_sent_order, next_check_at=None)
+            await reconcile_once(db, fake)
+    events = [e["event"] for e in logs if e["event"].startswith("orders.trade")]
+    assert events == ["orders.trade.ambiguous"]  # the first sight; the attention is the record
+    _, row = await load(db, trade_sent_order)
+    assert row.attention_reason == "ambiguous_trade"
+
+
 async def test_a_refund_an_open_attention_blocks_waits_for_the_admin(
     db: AsyncSession, fake: FakeTradeClient, trade_sent_order: Order
 ) -> None:
@@ -224,6 +244,7 @@ async def test_a_refund_an_open_attention_blocks_waits_for_the_admin(
         await reconcile_once(db, fake)
     held = [e for e in logs if e["event"] == "orders.trade.refund_held"]
     assert len(held) == 1  # warned once, not every tick
+    assert [e for e in logs if e["event"] == "orders.trade"] == []  # parked: quiet (minor 5)
     order, _ = await load(db, trade_sent_order)
     assert (order.status, order.refunded_at) == ("trade_sent", None)
     await set_trade(db, trade_sent_order, resolved_at=core_clock.now(), resolved_by="admin:x")

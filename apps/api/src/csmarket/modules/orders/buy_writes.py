@@ -77,9 +77,11 @@ def _stale(snap: BuySnapshot, outcome: str) -> str:
 async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int | None) -> str:
     """A buy that may have gone through landed on rows someone else moved: never silent.
 
-    The same purchase already on record (same Waxpeer id) is fine. Otherwise a second
-    purchase may exist outside our record: the trade gets the ``ambiguous_trade`` attention
-    (which also blocks any automatic refund, R3) and an error is logged — number only.
+    The same purchase already on record (same Waxpeer id) is fine: another writer (the
+    sweep's lookup) recorded it first, so it counts as ``adopted``, never as a second
+    ``bought``. Otherwise a second purchase may exist outside our record: the trade gets
+    the ``ambiguous_trade`` attention (which also blocks any automatic refund, R3) and an
+    error is logged — number only.
     """
     order, trade = await _lock_both(db, snap.order_id)
     if order is None or trade is None:  # pragma: no cover - a foreign key
@@ -87,7 +89,7 @@ async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int |
         return "stale_bought"
     if waxpeer_id is not None and trade.waxpeer_id == waxpeer_id:
         await db.commit()
-        return "bought"
+        return "adopted"
     flag(trade, "ambiguous_trade", reopen=True)
     await db.commit()
     log.error("orders.buy.stale_purchase", number=snap.number)

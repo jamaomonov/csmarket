@@ -32,6 +32,9 @@ log = get_logger("csmarket.orders.buying")
 BUY_LEASE = timedelta(minutes=5)
 #: How long :func:`secure` may wait for the rows (a lock the dead attempt still holds).
 _SECURE_SECONDS = 10.0
+#: How long :func:`discard` may wait for a rollback (then for a close) on a session that
+#: may be stuck mid-statement: an exit path must never hang the attempt that called it.
+_DISCARD_SECONDS = 5.0
 
 
 async def take_lease(db: AsyncSession, order_id: str) -> datetime | None:
@@ -81,12 +84,19 @@ def _fresh(db: AsyncSession) -> AsyncSession:
 
 
 async def discard(db: AsyncSession) -> None:
-    """Roll ``db`` back (or close it) so the rows it may still lock are free."""
+    """Roll ``db`` back (or close it) so the rows it may still lock are free.
+
+    Each step is bounded by :data:`_DISCARD_SECONDS`: a rollback that hangs (a connection
+    stuck mid-statement) gives way to a close, and a close that hangs is abandoned — the
+    server ends the dead connection's transaction, and the lease still guards the order.
+    """
     try:
-        await db.rollback()
-    except Exception:  # noqa: BLE001 -- a broken connection: give it back instead
+        async with asyncio.timeout(_DISCARD_SECONDS):
+            await db.rollback()
+    except Exception:  # noqa: BLE001 -- a broken or stuck connection: give it back instead
         with contextlib.suppress(Exception):
-            await db.close()
+            async with asyncio.timeout(_DISCARD_SECONDS):
+                await db.close()
 
 
 async def release_fresh(db: AsyncSession, order_id: str, lease: datetime) -> None:

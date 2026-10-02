@@ -169,11 +169,47 @@ async def test_a_failed_first_lookup_defers_the_buy(
     fake.lookup_raises(error)
     assert await _attempt(db_session, fake, buying_order, settings) == "lookup_later"
     assert fake.buy_calls == 0
-    _, trade = await load(db_session, buying_order)
+    order, trade = await load(db_session, buying_order)
     assert trade.buy_pending is True
     assert trade.buy_unconfirmed_at is None
+    # A failed lookup backs off (minor 3): the next tick does not ask again at once.
+    assert order.next_check_at is not None
+    left = order.next_check_at - clock.now()
+    assert timedelta(seconds=15) < left <= timedelta(seconds=20)
+    assert await _attempt(db_session, fake, buying_order, settings) == "nothing_to_do"
+    assert fake.lookup_calls == 1
+    await make_due(db_session, buying_order)
     fake.lookup_returns([])
     assert await _attempt(db_session, fake, buying_order, settings) == "bought"
+
+
+@pytest.mark.parametrize(
+    ("retry_after", "waits"),
+    [(1, 20), (45, 45), (3600, 300)],
+    ids=["shorter_hint", "longer_hint", "capped"],
+)
+@pytest.mark.parametrize("where", ["lookup", "buy"])
+async def test_a_429_waits_as_long_as_waxpeer_asks(
+    *,
+    db_session: AsyncSession,
+    buying_order: Order,
+    fake: FakeTradeClient,
+    settings: Settings,
+    retry_after: int,
+    waits: int,
+    where: str,
+) -> None:
+    limited = WaxpeerRateLimitedError("slow", retry_after_seconds=retry_after)
+    if where == "lookup":
+        fake.lookup_raises(limited)
+    else:
+        fake.buy_raises(limited)
+    outcome = await _attempt(db_session, fake, buying_order, settings)
+    assert outcome == ("lookup_later" if where == "lookup" else "rate_limited")
+    order, _ = await load(db_session, buying_order)
+    assert order.next_check_at is not None
+    left = order.next_check_at - clock.now()
+    assert timedelta(seconds=waits - 5) < left <= timedelta(seconds=waits)
 
 
 async def test_nothing_to_do_unless_buying_with_a_buy_pending(
@@ -449,6 +485,52 @@ async def test_a_broken_trade_link_is_refunded_without_calling_waxpeer(
     assert metric("invalid_link") == before + 1
 
 
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        WaxpeerBuyRefusedError("Invalid tradelink", new_price_units=None),
+        WaxpeerBuyRefusedError("Inventory is private", new_price_units=None),
+        WaxpeerError("User has a trade ban", status=400, body="{}"),
+    ],
+    ids=["invalid", "private", "trade_ban"],
+)
+async def test_a_refusal_naming_the_trade_link_is_refunded_as_such(
+    db_session: AsyncSession,
+    buying_order: Order,
+    fake: FakeTradeClient,
+    settings: Settings,
+    refusal: WaxpeerError,
+) -> None:
+    """Another listing would refuse the same link: no substitute, no «sold out» — the buyer
+    is told the link did not work (final review minor 1)."""
+    fake.buy_raises(refusal)
+    fake.listings(buying_order.market_hash_name, [(777, 12_000)])
+    before = metric("invalid_link")
+    assert await _attempt(db_session, fake, buying_order, settings) == "invalid_link"
+    assert (fake.buy_calls, fake.search_calls, fake.balance_calls) == (1, 0, 0)
+    order, trade = await load(db_session, buying_order)
+    assert (order.status, order.failure_reason, order.refunded_to) == (
+        "failed",
+        "invalid_trade_link",
+        "balance",
+    )
+    assert trade.buy_pending is False
+    assert await user_balance(db_session, order.user_id) == PRICE
+    assert metric("invalid_link") == before + 1
+
+
+async def test_a_body_that_echoes_the_link_is_not_a_link_refusal(
+    db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
+) -> None:
+    fake.refuse(
+        buying_order.listing_id,
+        WaxpeerBuyRefusedError(
+            "Item not found", new_price_units=None, body='{"tradelink": "redrawn"}'
+        ),
+    )
+    assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
+
+
 # --- a write after someone else moved the rows ---------------------------------------------
 
 
@@ -461,9 +543,12 @@ async def test_a_buy_the_sweep_already_recorded_is_the_same_purchase(
         await db_session.commit()
 
     fake.before_buy = adopted_meanwhile
-    assert await _attempt(db_session, fake, buying_order, settings) == "bought"
+    bought, adopted = metric("bought"), metric("adopted")
+    assert await _attempt(db_session, fake, buying_order, settings) == "adopted"
     _, trade = await load(db_session, buying_order)
     assert trade.attention_reason is None
+    # One purchase, counted once: the sweep's adoption is what recorded it (minor 7).
+    assert (metric("bought"), metric("adopted")) == (bought, adopted + 1)
 
 
 async def test_a_buy_landing_on_moved_rows_is_flagged_never_silent(

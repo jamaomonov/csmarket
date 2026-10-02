@@ -164,6 +164,19 @@ async def test_a_6_only_lookup_after_a_lost_answer_buys_nothing(
     assert (order.status, order.refunded_at) == ("buying", None)
 
 
+async def test_an_empty_lookup_after_a_lost_answer_buys_nothing(
+    db: AsyncSession, fake: FakeTradeClient
+) -> None:
+    """The belt (final review minor 2): a ``buy_pending`` trade that still carries a lost
+    answer is parked whatever the lookup shows — empty included — never bought again."""
+    order0 = await _pending(db, buy_unconfirmed_at=core_clock.now())
+    assert await _attempt(db, fake, order0) == "nothing_to_do"
+    order, row = await load(db, order0)
+    assert (fake.lookup_calls, fake.buy_calls) == (1, 0)
+    assert (row.buy_pending, row.buy_unconfirmed_at is not None) == (False, True)
+    assert (order.status, order.refunded_at) == ("buying", None)
+
+
 async def test_a_6_only_lookup_that_was_accepted_buys_nothing(
     db: AsyncSession, fake: FakeTradeClient
 ) -> None:

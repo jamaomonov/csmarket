@@ -12,7 +12,8 @@ Waxpeer's numbers become five states a customer understands:
 
 ``reason_code`` says why a trade failed: ``not_accepted`` (declined or expired),
 ``sold_out`` (nothing left to buy), ``try_later`` (the purchase could not go through for
-now — a retry in a few minutes may work), ``support`` (an unresolved attention — a buy we
+now — a retry in a few minutes may work), ``trade_link`` (the buyer's trade link did not
+work — they fix it in their profile), ``support`` (an unresolved attention — a buy we
 could not confirm, an ambiguous lookup, a rollback after acceptance, a Waxpeer refusal or an
 audit divergence; a person settles it), ``other``. ``support`` shows whatever the state while
 the attention is unresolved (ruling R3): the page says «мы проверяем покупку», never a bare
@@ -34,7 +35,7 @@ from pydantic import BaseModel
 from csmarket.modules.orders.models import ATTENTION_REASONS, Order, SkinTrade
 
 SkinTradeState = Literal["buying", "offer_sent", "accepted", "released", "failed"]
-SkinTradeReason = Literal["not_accepted", "sold_out", "try_later", "support", "other"]
+SkinTradeReason = Literal["not_accepted", "sold_out", "try_later", "trade_link", "support", "other"]
 RefundedTo = Literal["balance"]
 
 #: Attention reasons the buyer reads as «we are checking the purchase» — every one (R3):
@@ -45,6 +46,7 @@ _FAILURE_REASONS: dict[str, SkinTradeReason] = {
     "waxpeer_low_balance": "try_later",
     "sold_out": "sold_out",
     "not_accepted": "not_accepted",
+    "invalid_trade_link": "trade_link",
 }
 #: Order statuses with no trade to show.
 _NO_TRADE = frozenset({"pending", "cancelled"})

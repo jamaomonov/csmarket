@@ -1,5 +1,5 @@
-"""The buy's two judgement calls (``orders.buying``, rulings R4, R6): is a refusal low
-balance, and which listing may replace a refused one."""
+"""The buy's judgement calls (``orders.buying``, rulings R4, R6): does a refusal name the
+buyer's trade link, is it low balance, and which listing may replace a refused one."""
 
 from __future__ import annotations
 
@@ -20,6 +20,27 @@ from csmarket.modules.skins.api import (
 )
 
 _LOW_BALANCE_HINTS = ("not enough balance", "insufficient balance", "insufficient funds")
+#: Waxpeer's words for a refusal caused by the buyer's trade link (as its ``check-tradelink``
+#: answers: "Invalid tradelink", "Inventory is private", a trade ban). Matched on the
+#: message only — a body may echo the link back on any refusal.
+_LINK_HINTS = (
+    "tradelink",
+    "trade link",
+    "trade url",
+    "inventory is private",
+    "private inventory",
+    "trade ban",
+    "cannot trade",
+    "can't trade",
+    "can not trade",
+)
+
+
+def link_refused(err: WaxpeerError) -> bool:
+    """Waxpeer refused the buy because of the buyer's trade link: another listing would be
+    refused the same way, so the order is refunded (``invalid_trade_link``), not sold out."""
+    text = str(err).lower()
+    return any(hint in text for hint in _LINK_HINTS)
 
 
 async def low_balance(client: TradeClient, err: WaxpeerError, units: int) -> bool:
@@ -86,4 +107,4 @@ async def substitute(
     return (fits[0][1], fits[0][0]) if fits else None
 
 
-__all__ = ["low_balance", "substitute"]
+__all__ = ["link_refused", "low_balance", "substitute"]

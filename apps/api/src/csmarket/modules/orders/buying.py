@@ -17,7 +17,7 @@
      several live ones set ``ambiguous_trade``;
   4. buy the chosen listing at the units agreed at checkout; a refusal (sold, price moved,
      a 4xx) → the cheapest other ``auto`` listing within ``paid_units × (1 + ceiling)``,
-     once; low balance (by Waxpeer's words or ``GET /v1/user``) → refund at once; 403 →
+     once; a refusal that names the trade link → refund ``invalid_trade_link``; low balance (by Waxpeer's words or ``GET /v1/user``) → refund at once; 403 →
      attention, ``buy_pending`` kept; 429 → retried next tick; a lost answer or a 5xx →
      ``buy_unconfirmed_at``, resolved by lookup (R3), never by buying again.
 
@@ -54,7 +54,7 @@ from csmarket.modules.orders.buy_lease import (
     secure,
     take_lease,
 )
-from csmarket.modules.orders.buy_rules import low_balance, substitute
+from csmarket.modules.orders.buy_rules import link_refused, low_balance, substitute
 from csmarket.modules.orders.buy_writes import (
     BuySnapshot,
     adopt,
@@ -83,12 +83,16 @@ log = get_logger("csmarket.orders.buying")
 #: An attempt's time budget, counted from before its lease is taken: it ends at least
 #: 30 s before the lease does.
 ATTEMPT_BUDGET = BUY_LEASE - timedelta(seconds=30)
-#: How long an attempt that hit Waxpeer's 403 or 429 leaves the order before the next one
-#: (bounds the lookups a misconfigured key or a rate limit causes).
+#: How long an attempt that hit Waxpeer's 403, its 429, or a failed lookup leaves the order
+#: before the next one (bounds the lookups a misconfigured key, a rate limit or an outage
+#: causes: without it every reconcile tick would ask again for every pending buy).
 RELEASE_BACKOFF: dict[str, timedelta] = {
     "forbidden": timedelta(seconds=60),
     "rate_limited": timedelta(seconds=20),
+    "lookup_later": timedelta(seconds=20),
 }
+#: The longest a 429's own ``retry_after`` may hold an order (a longer hint is capped).
+MAX_RETRY_AFTER = BUY_LEASE
 #: Outcomes that are not a buy attempt's result (nothing was tried, or nothing written).
 _UNCOUNTED = frozenset({"nothing_to_do", "lookup_later"})
 
@@ -166,13 +170,23 @@ async def drain_paid(
 
 
 class _Run:
-    """One attempt's progress: its snapshot once read, and whether a buy request went out."""
+    """One attempt's progress: its snapshot once read, whether a buy request went out, and
+    the wait a 429 asked for."""
 
-    __slots__ = ("sent", "snap")
+    __slots__ = ("retry_after", "sent", "snap")
 
     def __init__(self) -> None:
         self.snap: BuySnapshot | None = None
         self.sent = False
+        self.retry_after: float | None = None
+
+    def backoff(self, outcome: str) -> timedelta:
+        """How long the order waits after ``outcome``: :data:`RELEASE_BACKOFF`, or Waxpeer's
+        own ``retry_after`` when it asked for longer (capped at :data:`MAX_RETRY_AFTER`)."""
+        wait = RELEASE_BACKOFF.get(outcome, timedelta(0))
+        if self.retry_after is not None and wait > timedelta(0):
+            wait = max(wait, min(timedelta(seconds=self.retry_after), MAX_RETRY_AFTER))
+        return wait
 
 
 async def attempt_buy(
@@ -195,8 +209,10 @@ async def attempt_buy(
 
     Returns:
         The outcome: ``bought``, ``adopted``, ``sold_out``, ``low_balance``,
-        ``invalid_link``, ``forbidden``, ``rate_limited``, ``unconfirmed``, ``ambiguous``,
-        ``stale_bought``, ``lookup_later`` or ``nothing_to_do``.
+        ``invalid_link``, ``forbidden``, ``rate_limited``, ``unconfirmed``, ``unrecorded``
+        (a sent buy timed out and even the unconfirmed mark could not be written: the lease
+        lapses as a dead attempt's), ``ambiguous``, ``stale_bought``, ``lookup_later`` or
+        ``nothing_to_do``.
     """
     deadline = asyncio.get_running_loop().time() + ATTEMPT_BUDGET.total_seconds()
     lease = await take_lease(db, order_id)
@@ -214,7 +230,7 @@ async def attempt_buy(
             await secure(db, run.snap)  # the lease is kept either way: it lapses
         raise
     else:
-        await release(db, order_id, lease, after=RELEASE_BACKOFF.get(outcome, timedelta(0)))
+        await release(db, order_id, lease, after=run.backoff(outcome))
     if run.snap is None:
         return outcome
     if outcome not in _UNCOUNTED:
@@ -243,7 +259,7 @@ async def _after_timeout(db: AsyncSession, *, order_id: str, lease: datetime, ru
         return "lookup_later"
     marked = await secure(db, run.snap)
     if marked is None:
-        return "unconfirmed"  # not written: the lease lapses as a dead attempt's
+        return "unrecorded"  # nothing written: the lease lapses as a dead attempt's
     await release_fresh(db, order_id, lease)
     return "unconfirmed" if marked else "nothing_to_do"
 
@@ -292,8 +308,11 @@ async def _attempt(
         found = pick_trade(trades, None)
     except WaxpeerForbiddenError:
         return await attention(db, snap, "waxpeer_forbidden", outcome="forbidden")
+    except WaxpeerRateLimitedError as exc:
+        run.retry_after = exc.retry_after_seconds
+        return "lookup_later"  # nothing was sent: look again after the backoff, then buy
     except (WaxpeerUnavailableError, WaxpeerError):
-        return "lookup_later"  # nothing was sent: look again next tick, then buy
+        return "lookup_later"  # nothing was sent: look again after the backoff, then buy
     except AmbiguousTradeError:
         return await attention(db, snap, "ambiguous_trade", outcome="ambiguous", settle=True)
     return await _after_lookup(
@@ -312,14 +331,21 @@ async def _after_lookup(
     settings: Settings,
     run: _Run,
 ) -> str:
-    """Adopt a live trade; never a failed (6) one — refused attempts only → buy as usual."""
+    """Adopt a live trade; never a failed (6) one — refused attempts only → buy as usual.
+
+    A trade that still carries a lost answer (``snap.unconfirmed``) is parked whatever the
+    lookup shows, an empty one included. That is a belt: ``unconfirmed``/``secure_sent``
+    end ``buy_pending`` and ``retry_buy`` clears ``buy_unconfirmed_at``, so today no
+    attempt reads both; if a future writer ever leaves them together, a lost answer is
+    still resolved by the reconcile rule (R3), never by buying again.
+    """
     if found is not None and found.status != FAILED_STATUS:
         return await adopt(db, snap, found)
     # None found, or only failed (6) ones — never adopted as the order's trade.
     if any(t.release_date or t.penalties or t.is_released for t in trades):
         # One was accepted: the skin may have reached the buyer. Nothing is bought.
         return await attention(db, snap, "ambiguous_trade", outcome="ambiguous", settle=True)
-    if trades and snap.unconfirmed:
+    if snap.unconfirmed:
         return await park(db, snap)  # a lost answer: the reconcile rule decides (R3)
     return await _buy(db, client, snap=snap, link=link, settings=settings, run=run)
 
@@ -351,13 +377,16 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
             )
         except WaxpeerForbiddenError:
             return await attention(db, snap, "waxpeer_forbidden", outcome="forbidden")
-        except WaxpeerRateLimitedError:
-            return "rate_limited"  # nothing bought; the next tick retries
+        except WaxpeerRateLimitedError as exc:
+            run.retry_after = exc.retry_after_seconds
+            return "rate_limited"  # nothing bought; retried after the backoff
         except WaxpeerUnavailableError:
             return await unconfirmed(db, snap)  # the buy may have happened: resolve by lookup
         except WaxpeerError as err:  # a refusal (incl. WaxpeerBuyRefusedError) or HTTP error
             if err.status >= 500:
                 return await unconfirmed(db, snap)  # a 5xx may have bought it
+            if link_refused(err):  # the buyer's link: every listing would refuse it
+                return await refund(db, snap, "invalid_trade_link")
             if await low_balance(client, err, units):
                 return await refund(db, snap, "waxpeer_low_balance")
             log.info("orders.buy.refused", number=snap.number, status=err.status)
@@ -375,6 +404,7 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
 __all__ = [
     "ATTEMPT_BUDGET",
     "BUY_LEASE",
+    "MAX_RETRY_AFTER",
     "RELEASE_BACKOFF",
     "attempt_buy",
     "drain_paid",

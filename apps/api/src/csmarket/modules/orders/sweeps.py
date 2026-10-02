@@ -53,6 +53,9 @@ log = get_logger("csmarket.orders.sweeps")
 RECONCILE_BATCH = LOOKUP_MAX_IDS
 #: Statuses the reconcile sweep follows.
 RECONCILED = ("buying", "trade_sent")
+#: Outcomes the tick does not log: nothing moved, or a parked state that recurs every tick
+#: until an admin acts (its attention and the first-seen warning are the record).
+_QUIET = frozenset({"unchanged", "unseen", "ambiguous", "held"})
 
 SessionFactory = Callable[[], AsyncSession]
 
@@ -132,7 +135,7 @@ async def _reconcile_one(
     if order.status in RECONCILED:
         order.next_check_at = now() + timedelta(seconds=settings.trades_reconcile_seconds)
     await db.commit()
-    if outcome not in ("unchanged", "unseen"):
+    if outcome not in _QUIET:
         log.info("orders.trade", number=order.number, outcome=outcome)
     return outcome
 

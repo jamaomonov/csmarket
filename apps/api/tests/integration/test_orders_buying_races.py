@@ -19,6 +19,7 @@ from csmarket.modules.skins.api import (
     WaxpeerForbiddenError,
     WaxpeerUnavailableError,
 )
+from prometheus_client import REGISTRY
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -321,7 +322,11 @@ async def test_a_timeout_whose_unconfirmed_write_fails_keeps_the_lease(
     monkeypatch.setattr(buy_writes, "secure_sent", _secure_fails)
     order = await _buying(db_session)
     order_id = order.id
-    assert await _go(db_session, fake, order_id, settings) == "unconfirmed"
+    before = REGISTRY.get_sample_value("csmarket_order_buys_total", {"outcome": "unrecorded"})
+    # Nothing was written: a distinct outcome, so the stuck gauge has a cause (minor 10).
+    assert await _go(db_session, fake, order_id, settings) == "unrecorded"
+    after = REGISTRY.get_sample_value("csmarket_order_buys_total", {"outcome": "unrecorded"})
+    assert (after or 0) == (before or 0) + 1
     _, trade = await load(db_session, order)
     assert trade.buy_pending is True  # nothing could be written ...
     assert await _lease_held(db_session, order)  # ... so the lease lapses as a dead attempt's

@@ -3850,6 +3850,7 @@
                   "not_accepted",
                   "sold_out",
                   "try_later",
+                  "trade_link",
                   "support",
                   "other"
                 ],
