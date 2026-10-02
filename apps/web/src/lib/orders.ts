@@ -238,6 +238,9 @@ export function getOrder(number: string): Promise<OrderOut> {
 /** Query key of «Мои заказы», for whoever needs to invalidate it. */
 export const ORDERS_KEY = ["orders", "list"] as const;
 
+/** The query key of one order (its page; a socket nudge invalidates it). */
+export const orderKey = (number: string) => ["orders", "order", number] as const;
+
 /** `GET /me/orders`: one page, newest first; pass `next_cursor` back for the next. */
 export function listOrders(cursor?: string): Promise<OrdersPage> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";

@@ -22,6 +22,7 @@ import { BALANCE_KEY } from "@/lib/balance";
 import { orderPollInterval } from "@/lib/order-poll";
 import {
   getOrder,
+  orderKey,
   ORDERS_KEY,
   type OrderOut,
   type PayProvider,
@@ -49,7 +50,8 @@ interface OrderViewProps {
 
 /**
  * An order's page: pay it while it is pending, then follow the Steam trade. It re-reads
- * the order until it can no longer change (`orderPollInterval`); with `?go=1` it opens
+ * the order until it can no longer change (`orderPollInterval`) — a socket nudge
+ * (`useOrderSocket`) only re-reads it sooner; with `?go=1` it opens
  * the chosen kassa once, so on a phone the tab left behind the bank app is this page.
  */
 export function OrderView({ locale, number }: OrderViewProps) {
@@ -63,7 +65,7 @@ export function OrderView({ locale, number }: OrderViewProps) {
   const qc = useQueryClient();
 
   const order = useQuery({
-    queryKey: ["orders", "order", number],
+    queryKey: orderKey(number),
     queryFn: () => getOrder(number),
     enabled: signedIn,
     retry: (failures, err) => !isNotFound(err) && failures < 2,

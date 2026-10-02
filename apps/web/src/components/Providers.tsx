@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
+import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { AuthProvider } from "@/lib/auth";
 
 interface ProvidersProps {
@@ -15,7 +16,16 @@ export function Providers({ children }: ProvidersProps) {
   );
   return (
     <QueryClientProvider client={client}>
-      <AuthProvider>{children}</AuthProvider>
+      <AuthProvider>
+        <OrderSocketMount />
+        {children}
+      </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+/** Opens the order socket for a signed-in buyer (it needs the auth context). */
+function OrderSocketMount(): null {
+  useOrderSocket();
+  return null;
 }

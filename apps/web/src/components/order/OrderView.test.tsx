@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { SessionApiError } from "@csmarket/api-client";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { OrderOut } from "@/lib/orders";
 import type { ReactNode } from "react";
 
+import { orderKey } from "@/lib/orders";
 import { orderState as state, renderOrderView, tick } from "@/test/order-view";
 import { orderOut, tradeOut } from "@/test/orders";
 
@@ -137,6 +138,25 @@ describe("OrderView — the trade", () => {
     expect(state()).toBe("delivered");
     expect(screen.getByText("Получено")).toBeInTheDocument();
     await tick(10 * 60_000);
+    expect(m.get).toHaveBeenCalledTimes(3);
+  });
+
+  it("a socket nudge re-reads the order at once, and polling keeps running", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    m.get
+      .mockResolvedValueOnce(orderOut(number, { status: "buying", payable: false }))
+      .mockResolvedValue(orderOut(number, { status: "trade_sent", payable: false, trade: sent }));
+    const { client } = view();
+    await tick();
+    expect(state()).toBe("buying");
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: orderKey(number) });
+    });
+    await tick();
+    expect(state()).toBe("trade_sent");
+    expect(m.get).toHaveBeenCalledTimes(2);
+    await tick(8_000);
     expect(m.get).toHaveBeenCalledTimes(3);
   });
 

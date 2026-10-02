@@ -1,7 +1,7 @@
 /**
  * How often the order page re-reads its order.
  *
- * Polling is the reconciler: the WebSocket that arrives in M4b only nudges a re-read
+ * Polling is the reconciler: the order socket (`lib/realtime.ts`, M4b) only nudges a re-read
  * sooner. A socket can stay "connected" while it is dead (a backgrounded tab, a WebView
  * suspended during the hop to the bank), and a push lost in it must not leave the buyer
  * staring at «Покупаем» — so the poll runs until the order can no longer change.
