@@ -27,6 +27,7 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
 | `skins:wax:budget:{YYYYMMDDHHMM}`                                 | 120 s                                                         | `skins.listings.listings_for` (`INCR` per live attempt)                                                   | `skins.listings.listings_for` (over `skins_listings_budget_per_minute`: no live call) | No: a counter per UTC minute                                                                       |
 | `skins:waxpeer:fake:trade:{project_id}`                           | 7 days (set on each buy)                                      | `skins.waxpeer_fake.FakeTradeClient.buy_one_p2p`, `.act` (dev routes) — **dev fake only**                 | `FakeTradeClient.check_project_ids` (worker, scheduler sweeps, dev routes)            | No: a hash of Waxpeer-shaped trades by fake trade id; no link or Steam ID                          |
 | `skins:waxpeer:fake:balance`                                      | none                                                          | `FakeTradeClient.set_balance` (`POST /dev/waxpeer/balance`) — **dev fake only**                           | `FakeTradeClient.balance_units` (health gauges job)                                   | No: an integer, Waxpeer units                                                                      |
+| `users:email_verify:cooldown:{user_id}`                           | 60 s (`email_verify_cooldown_seconds`)                        | `users.email_flow.send_verification` (every confirmation letter; `SET NX` on a re-send)                   | `send_verification` (a re-send within it → 429 `email_verify_cooldown`)               | The user id (an internal id, not an address)                                                       |
 | `notifications:dev:mail`                                          | 3600 s (refreshed on each letter; the list keeps the last 50) | `notifications.dev_transport.DevTransport.send` (worker `emails` drain) — **dev transport only**          | `DevTransport.letters` (`GET /api/v1/dev/emails`, dev only)                           | The rendered letter (it may hold a confirmation link), filed by user id; the address is not stored |
 
 ## Notes
@@ -60,7 +61,7 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
   page keys' digest.
 
 - **Buckets** in use: `steam-login`, `dev-login` (sign-in routes, no subject),
-  `trade-link-check`, `topup-create`, `order-create` and `order-pay` (IP plus user id; they guard `POST /wallet/topups`, `POST /orders` and `POST /orders/{number}/pay`) `ws-connect` (IP only; each order WebSocket, M4b) and `skins-listings` (IP only; a cache miss spends Waxpeer
+  `trade-link-check`, `topup-create`, `order-create` and `order-pay` (IP plus user id; they guard `POST /wallet/topups`, `POST /orders` and `POST /orders/{number}/pay`) `ws-connect` (IP only; each order WebSocket, M4b), `email-verify` (IP plus user id on a re-send, IP only on a confirm; M4b) and `skins-listings` (IP only; a cache miss spends Waxpeer
   quota, so the bucket bounds distinct items per address). Per-bucket ceilings: `auth_ip_guard_bucket_max`
   (60 per window each); the subject ceiling is `auth_ip_guard_subject_max` (10).
 - **Fail open.** A Redis error in a blocklist read or write, or in `guard_ip`, lets the

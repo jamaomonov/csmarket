@@ -7,6 +7,8 @@ kassa attempt settling, a re-run reconcile) enqueues nothing new.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,3 +65,14 @@ async def enqueue(
         return None
     await db.execute(select(func.pg_notify(EMAILS_CHANNEL, row_id)))
     return str(row_id)
+
+
+async def verify_sent_at(db: AsyncSession, *, user_id: str, address: str) -> datetime | None:
+    """When the latest ``verify`` letter to ``address`` for ``user_id`` was enqueued."""
+    return await db.scalar(
+        select(func.max(EmailOutbox.created_at)).where(
+            EmailOutbox.user_id == user_id,
+            EmailOutbox.kind == "verify",
+            EmailOutbox.address == address,
+        )
+    )

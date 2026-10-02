@@ -357,3 +357,19 @@ All under `/admin/skins`, admin only (401 without a token, 403 for a customer).
 latest when the token expires; reconnect with a fresh one), **4429** — the `ws-connect`
 ip_guard bucket (60 per minute per IP). A nudge carries no data: re-read
 `GET /orders/{number}`. Keep polling as the fallback.
+
+## Email confirmation (M4b)
+
+Order letters go only to a confirmed address. `PATCH /me` with a new `email` resets
+`email_verified` and queues a confirmation letter; `MeOut.email_verification_sent_at` says
+when the latest one for the current address was queued (`null` once confirmed).
+
+- `POST /me/email/verification` (signed in; `Idempotency-Key` optional, a repeat replays
+  202 and sends nothing): `202 {sent: true}`; 409 `email_missing` /
+  `email_already_verified`; 429 `email_verify_cooldown` within 60 s of the last letter
+  (`Retry-After`); 429 past the `email-verify` bucket (10 a minute per IP and account).
+- `POST /email/confirm {token}` (anonymous — the link may be opened on another device;
+  keyless: the token is single-purpose and the write idempotent): `200 {email_verified:
+true}`, also when already confirmed; 422 `email_token_invalid` / `email_token_expired`
+  (24 h); 409 `email_token_stale` when the account's email is no longer the token's. The
+  `email-verify` bucket (60 a minute per IP) applies.

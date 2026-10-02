@@ -2248,6 +2248,37 @@
         "title": "CatalogStatusOut",
         "type": "object"
       },
+      "EmailConfirmIn": {
+        "additionalProperties": false,
+        "description": "The token from a confirmation link.",
+        "properties": {
+          "token": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "EmailConfirmIn",
+        "type": "object"
+      },
+      "EmailConfirmOut": {
+        "description": "The address is confirmed.",
+        "properties": {
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "email_verified"
+        ],
+        "title": "EmailConfirmOut",
+        "type": "object"
+      },
       "EntriesOut": {
         "description": "A page of entries, newest first, and the cursor for the next (``null`` on the last).",
         "properties": {
@@ -2566,6 +2597,18 @@
               }
             ],
             "title": "Email"
+          },
+          "email_verification_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verification Sent At"
           },
           "email_verified": {
             "title": "Email Verified",
@@ -4229,6 +4272,20 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VerificationSentOut": {
+        "description": "A confirmation letter is on its way.",
+        "properties": {
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sent"
+        ],
+        "title": "VerificationSentOut",
         "type": "object"
       }
     }
@@ -6253,9 +6310,51 @@
         ]
       }
     },
+    "/api/v1/email/confirm": {
+      "post": {
+        "description": "Confirm the address a link's token names; anonymous, so a link opened on another\ndevice works.\n\nKeyless: the token is single-purpose and the write is idempotent \u2014 confirming twice\nanswers 200 twice and stamps once. 422 ``email_token_invalid`` / ``email_token_expired``;\n409 ``email_token_stale`` when the account's email is no longer the token's.",
+        "operationId": "confirm_api_v1_email_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailConfirmOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Confirm an email by its link",
+        "tags": [
+          "email"
+        ]
+      }
+    },
     "/api/v1/me": {
       "get": {
-        "description": "Profile, roles and trade-link state.",
+        "description": "Profile, roles, trade-link state and email confirmation state.",
         "operationId": "get_me_api_v1_me_get",
         "parameters": [
           {
@@ -6303,7 +6402,7 @@
         ]
       },
       "patch": {
-        "description": "Partial update; replays a stored response for a repeated ``Idempotency-Key``.",
+        "description": "Partial update; replays a stored response for a repeated ``Idempotency-Key``.\n\nA new email is unconfirmed until its link is opened: a confirmation letter is queued.",
         "operationId": "patch_me_api_v1_me_patch",
         "parameters": [
           {
@@ -6372,6 +6471,72 @@
           }
         },
         "summary": "Edit locale or email",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/email/verification": {
+      "post": {
+        "description": "Queue a new confirmation letter for the current, unconfirmed email.\n\n409 ``email_missing`` / ``email_already_verified``; 429 ``email_verify_cooldown`` within\n60 s of the last letter; 429 past the ``email-verify`` bucket. A repeated\n``Idempotency-Key`` replays the first answer and sends nothing.",
+        "operationId": "resend_verification_api_v1_me_email_verification_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationSentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send the email confirmation letter again",
         "tags": [
           "me"
         ]

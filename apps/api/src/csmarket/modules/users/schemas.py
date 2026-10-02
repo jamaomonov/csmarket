@@ -26,9 +26,11 @@ class MeOut(BaseModel):
     trade_link_checked_at: datetime | None
     roles: list[str]
     created_at: datetime
+    #: When the latest confirmation letter for the current, unverified email was queued.
+    email_verification_sent_at: datetime | None = None
 
     @classmethod
-    def of(cls, user: User) -> MeOut:
+    def of(cls, user: User, *, verification_sent_at: datetime | None = None) -> MeOut:
         """Build from the ORM row."""
         return cls(
             id=user.id,
@@ -44,6 +46,7 @@ class MeOut(BaseModel):
             trade_link_checked_at=user.trade_link_checked_at,
             roles=list(user.roles),
             created_at=user.created_at,
+            email_verification_sent_at=verification_sent_at,
         )
 
 
@@ -81,3 +84,23 @@ class TradeLinkOut(BaseModel):
             reason=user.trade_link_reason,  # type: ignore[arg-type]  # DB check constraint
             checked_at=user.trade_link_checked_at,
         )
+
+
+class VerificationSentOut(BaseModel):
+    """A confirmation letter is on its way."""
+
+    sent: bool
+
+
+class EmailConfirmIn(BaseModel):
+    """The token from a confirmation link."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    token: str = Field(min_length=1, max_length=1024)
+
+
+class EmailConfirmOut(BaseModel):
+    """The address is confirmed."""
+
+    email_verified: bool

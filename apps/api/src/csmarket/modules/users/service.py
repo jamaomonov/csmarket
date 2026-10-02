@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.ids import new_id
+from csmarket.modules.users.email_flow import send_verification
 from csmarket.modules.users.identity_guard import safe_avatar_url, safe_display_name
 from csmarket.modules.users.models import User
 
@@ -90,17 +91,22 @@ async def set_roles(db: AsyncSession, user: User, roles: list[str]) -> None:
 async def update_profile(db: AsyncSession, user: User, *, fields: dict[str, object]) -> None:
     """Apply ``MePatchIn.model_dump(exclude_unset=True)``.
 
-    Setting an email resets verification (ruling P4: verification arrives in M4).
+    A new email resets verification and enqueues a confirmation letter to it (M4b R7);
+    clearing it sends nothing.
     """
     if "locale" in fields and fields["locale"] is not None:
         user.locale = str(fields["locale"])
+    changed = False
     if "email" in fields:
         new = fields["email"]
         if new != user.email:
             user.email = None if new is None else str(new)
             user.email_verified_at = None
+            changed = user.email is not None
     user.updated_at = now()
     await db.flush()
+    if changed:
+        await send_verification(db, user)
 
 
 async def save_trade_link(db: AsyncSession, user: User, url: str) -> None:

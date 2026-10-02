@@ -32,6 +32,8 @@ from csmarket.modules.skins.dev_routes import router as skins_dev_router
 from csmarket.modules.skins.routes import router as skins_router
 from csmarket.modules.skins.seo_routes import router as skins_seo_router
 from csmarket.modules.users.routes import router as users_router
+from csmarket.modules.users.routes_email import me_router as users_email_me_router
+from csmarket.modules.users.routes_email import router as users_email_router
 from csmarket.modules.uzum.routes import router as uzum_router
 from csmarket.modules.wallet.routes import router as wallet_router
 
@@ -57,6 +59,8 @@ router.include_router(skins_dev_router)
 router.include_router(skins_seo_router)
 router.include_router(skins_router)
 router.include_router(users_router)
+router.include_router(users_email_me_router)
+router.include_router(users_email_router)
 router.include_router(uzum_router)
 router.include_router(wallet_router)
 # /wallet/topups* is ``payments``' (``wallet`` never imports ``payments``).

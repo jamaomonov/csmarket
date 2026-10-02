@@ -19,6 +19,7 @@ from csmarket.core.idempotency import (
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import current_user, guard_ip, trade_hold_days
 from csmarket.modules.skins.api import FakeTradeClient, WaxpeerClient, fake_active
+from csmarket.modules.users.email_flow import verification_sent_at
 from csmarket.modules.users.models import User
 from csmarket.modules.users.schemas import MeOut, MePatchIn, TradeLinkIn, TradeLinkOut
 from csmarket.modules.users.service import (
@@ -72,10 +73,17 @@ async def _replayed(
     return cached.body if cached is not None else None
 
 
+async def _me_out(db: AsyncSession, user: User) -> MeOut:
+    return MeOut.of(user, verification_sent_at=await verification_sent_at(db, user))
+
+
 @router.get("", response_model=MeOut, summary="The signed-in account")
-async def get_me(user: Annotated[User, Depends(current_user)]) -> MeOut:
-    """Profile, roles and trade-link state."""
-    return MeOut.of(user)
+async def get_me(
+    user: Annotated[User, Depends(current_user)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+) -> MeOut:
+    """Profile, roles, trade-link state and email confirmation state."""
+    return await _me_out(db, user)
 
 
 @router.patch("", response_model=MeOut, summary="Edit locale or email")
@@ -85,13 +93,16 @@ async def patch_me(
     db: Annotated[AsyncSession, Depends(db_session)],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> MeOut:
-    """Partial update; replays a stored response for a repeated ``Idempotency-Key``."""
+    """Partial update; replays a stored response for a repeated ``Idempotency-Key``.
+
+    A new email is unconfirmed until its link is opened: a confirmation letter is queued.
+    """
     key = normalize_idempotency_key(idempotency_key)
     scope = f"users.patch_me:{user.id}"
     if (hit := await _replayed(db, scope, key)) is not None:
         return MeOut.model_validate(hit)
     await update_profile(db, user, fields=body.model_dump(exclude_unset=True))
-    out = MeOut.of(user)
+    out = await _me_out(db, user)
     if key is not None:
         await save_replay(db, scope=scope, idempotency_key=key, body=out.model_dump(mode="json"))
     return out

@@ -31,6 +31,7 @@ async def test_me_shape(integration_client: AsyncClient) -> None:
         "avatar_url",
         "email",
         "email_verified",
+        "email_verification_sent_at",
         "locale",
         "trade_link",
         "trade_link_verdict",

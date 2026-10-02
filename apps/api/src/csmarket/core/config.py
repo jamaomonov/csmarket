@@ -155,6 +155,12 @@ class Settings(BaseSettings):
     email_from: str = Field(default="noreply@csmarket.uz")
     email_from_name: str = Field(default="CS Market")
     email_send_timeout_seconds: float = Field(default=10, gt=0)
+    email_verify_ttl_hours: int = Field(
+        default=24, gt=0, description="Hours an email confirmation link works."
+    )
+    email_verify_cooldown_seconds: int = Field(
+        default=60, gt=0, description="Seconds between two confirmation letters to one account."
+    )
     auth_ip_guard_bucket_max: dict[str, int] = Field(
         default_factory=lambda: {
             "steam-login": 60,
@@ -165,6 +171,7 @@ class Settings(BaseSettings):
             "order-create": 60,
             "order-pay": 60,
             "ws-connect": 60,
+            "email-verify": 60,
         },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "
