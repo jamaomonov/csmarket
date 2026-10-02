@@ -141,7 +141,10 @@ paid | cancelled`; `paid → buying`; `buying → trade_sent | delivered | faile
   `already_refunded`, `order_in_flight`, `order_not_refundable`, `order_busy`.
 - **A rollback after delivery is never refunded by the app (J, P).** A spent 6 on a
   `buying` / `trade_sent` order first moves it to `delivered`, then flags `rolled_back`;
-  goodwill goes through an audited admin adjustment.
+  goodwill goes through an audited admin adjustment (no app refund for a rollback after
+  delivery — confirmed by the owner on 2026-10-02: an automatic refund would let a buyer
+  accept, reverse the trade and be paid back, at the cost of the price plus Waxpeer's 30 %
+  penalty each time).
 - **Lock order order → trade (K)** for every writer of `skin_trades`; with M3's order:
   order → kassa row → payment → user wallet. Kassa timeout sweeps lock the owner
   `SKIP LOCKED` per row.

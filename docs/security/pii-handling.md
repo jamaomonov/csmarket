@@ -115,5 +115,9 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 
 Retention for `users` (deletion via `deleted_at`), orders, and backups is decided with the
 modules that own them: M1 for accounts, M5 for backups. M4a deletes nothing: an order, its
-trade (with the trade-link snapshot) and its ledger entries are money records. How long the
-trade-link snapshot is kept after delivery is an open owner decision.
+trade (with the trade-link snapshot) and its ledger entries are money records.
+
+The order's trade-link **token** is not kept forever (owner decision 2026-10-02): 30 days after
+the order reaches a terminal status it is erased, leaving the Steam account and the masked
+form (`••••XY`) for disputes; the purchase stays findable at Waxpeer by the order's
+`project_id`. The nightly purge job lands in M4b; until then M4a stores the snapshot in full.
