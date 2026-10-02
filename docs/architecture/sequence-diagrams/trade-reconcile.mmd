@@ -10,18 +10,18 @@ sequenceDiagram
     alt lookup fails (unavailable, 429, 403, refusal)
         Note over S: nothing written — every row stays due for the next tick
     else answered
-        loop each polled order (its own transaction; one failure never stops the tick)
-            S->>DB: lock order, then trade (FOR UPDATE); re-check: still followed, not buy_pending, still due
-            Note over S: ours = picked by the stored Waxpeer id; a 6 without a known id is NOT ours<br/>(maybe a refused attempt while our lost buy went through) → unseen
+        loop each polled order (its own transaction, one failure never stops the tick)
+            S->>DB: lock order, then trade (FOR UPDATE), re-check: still followed, not buy_pending, still due
+            Note over S: ours = picked by the stored Waxpeer id, a 6 without a known id is NOT ours<br/>(maybe a refused attempt while our lost buy went through) → unseen
             alt several live trades, no Waxpeer id
-                S->>DB: attention ambiguous_trade (once; no refund)
+                S->>DB: attention ambiguous_trade (once, no refund)
             else none of ours
-                Note over S,DB: lost answer: buy_unconfirmed_at older than 10 min → attention buy_unconfirmed (once; no refund, R3)<br/>known Waxpeer id unseen for 10 min → attention ambiguous_trade (once)
+                Note over S,DB: lost answer: buy_unconfirmed_at older than 10 min → attention buy_unconfirmed (once, no refund, R3)<br/>known Waxpeer id unseen for 10 min → attention ambiguous_trade (once)
             else our trade (live, or by its known id)
-                S->>DB: clear an open buy_unconfirmed; mirror it, then apply the status
+                S->>DB: clear an open buy_unconfirmed, mirror it, then apply the status
                 Note over DB: 4 → trade_sent · 4 + release_date / 5 / released → delivered<br/>6 after acceptance / penalties → delivered, then attention rolled_back (money spent)<br/>6 otherwise → returned + refund to the balance (not_accepted)
             end
-            S->>DB: next_check_at = now + 10 s; commit
+            S->>DB: next_check_at = now + 10 s, commit
         end
     end
     loop each due order still buy_pending

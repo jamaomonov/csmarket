@@ -37,7 +37,7 @@ sequenceDiagram
     alt not the user's own link
         API-->>App: 422 trade_link_not_yours (nothing written)
     else own link
-        API->>DB: Save link; a different link clears verdict, reason, checked_at
+        API->>DB: Save link (a different link clears verdict, reason, checked_at)
         API-->>App: 200 TradeLinkOut (verdict null)
     end
 

@@ -8,7 +8,7 @@ sequenceDiagram
     S->>S: skip unless sync enabled and key set
     S->>WP: GET /v1/prices/snapshot?format=csv (streamed)
     WP-->>S: ~1.2 M rows (item_id, name, price, auto)
-    S->>S: aggregate to one row per (name, phase); only auto listings set a price
+    S->>S: aggregate to one row per (name, phase), only auto listings set a price
     S->>WP: GET /v1/prices?minified=0 (type, rarity, image for new names)
     WP-->>S: names with taxonomy
     S->>DB: count active rows

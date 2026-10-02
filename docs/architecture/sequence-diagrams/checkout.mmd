@@ -40,11 +40,11 @@ sequenceDiagram
 
     Web->>API: POST /orders/{number}/pay {provider, locale} + a fresh Idempotency-Key
     API->>R: ip_guard order-pay
-    API->>DB: lock the order (resolve, FOR UPDATE); replay lookup under the lock
+    API->>DB: lock the order (resolve, FOR UPDATE), replay lookup under the lock
     alt not payable (paid, expired, cancelled)
         API-->>Web: 409 order_not_payable {reason}
     else provider = wallet
-        API->>DB: lock the wallet; balance short → 409 balance_too_low (nothing written)
+        API->>DB: lock the wallet, balance short → 409 balance_too_low (nothing written)
         API->>DB: ledger purchase (C user_wallet / D house_payments_received, key purchase:order:{id})<br/>payments row wallet succeeded, order paid, NOTIFY orders
         API-->>Web: 200 {order: paid, intent_url: null}
         Web->>Web: Go to /orders/{number}
@@ -54,7 +54,7 @@ sequenceDiagram
         Web->>Web: Go to /orders/{number}?go=1&via=<kassa>
         Web->>K: Open intent_url once (within 8 s), else «Оплатить …»
         U->>K: Pays
-        K->>API: Callback (auth before the body; lock order → kassa row → payment)
+        K->>API: Callback (auth before the body, lock order → kassa row → payment)
         alt order still pending
             API->>DB: settle: attempt succeeded, order paid (paid_with = kassa), NOTIFY orders
             API-->>K: OK

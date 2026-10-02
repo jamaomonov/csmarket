@@ -10,29 +10,29 @@ sequenceDiagram
     W->>DB: claim paid orders oldest first (FOR UPDATE SKIP LOCKED)<br/>→ buying, claimed_at/by, skin_trades (project_id = order id, buy_pending)
     W->>DB: commit
 
-    loop each claimed order (its own transactions; one failure never stops the batch)
+    loop each claimed order (its own transactions, one failure never stops the batch)
         W->>DB: take the lease first: UPDATE next_check_at = now + 5 min<br/>WHERE buying AND buy_pending AND due RETURNING (else nothing to do)
         W->>DB: read the snapshot (still buying + buy_pending? else release, nothing to do)
         Note over W: the attempt's budget (lease − 30 s) starts before the lease is taken
         Note over W,DB: once the buy is sent, an exit that did not record it → unconfirmed<br/>in a fresh session, or the lease is kept (lapses as a dead attempt's)
         alt trade link does not parse
-            W->>DB: lock order → trade, re-check; failed + refund to balance (invalid_trade_link)
+            W->>DB: lock order → trade, re-check, failed + refund to balance (invalid_trade_link)
         else
             W->>X: check-many-project-id [order id]  (no lock held)
             alt 403
-                W->>DB: lock, re-check; attention waxpeer_forbidden, buy_pending kept
+                W->>DB: lock, re-check, attention waxpeer_forbidden, buy_pending kept
             else unavailable / 429 / refused
                 Note over W: lookup_later — nothing sent, retried next tick
             else a live trade under our project_id
-                W->>DB: lock, re-check; mirror it, buy_pending = false (adopted, never rebought)
+                W->>DB: lock, re-check, mirror it, buy_pending = false (adopted, never rebought)
             else only failed (6) trades — never adopted
                 Note over W,DB: one accepted / penalties → attention ambiguous_trade, nothing bought<br/>after a lost answer → buy_pending = false, reconcile decides (R3)<br/>otherwise refused attempts only → buy as below
             else several live trades
-                W->>DB: lock, re-check; attention ambiguous_trade, buy_pending = false
+                W->>DB: lock, re-check, attention ambiguous_trade, buy_pending = false
             else none (or refused attempts only)
                 W->>X: buy-one-p2p (listing, paid_units, trade link, project_id)
                 alt accepted
-                    W->>DB: lock, re-check; waxpeer_id, bought_units, status 0, buy_pending = false
+                    W->>DB: lock, re-check, waxpeer_id, bought_units, status 0, buy_pending = false
                 else 403
                     W->>DB: attention waxpeer_forbidden, buy_pending kept (no refund)
                 else 429

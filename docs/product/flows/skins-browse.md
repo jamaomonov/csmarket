@@ -39,7 +39,7 @@ sequenceDiagram
         API->>R: SET page, 60 s (errors swallowed)
     end
     API-->>Web: items with price_usd and price_uzs (null without a rate)
-    Web-->>V: HTML (indexable; any filter param makes it noindex)
+    Web-->>V: HTML (indexable, any filter param makes it noindex)
 
     V->>Web: GET /item/{slug}
     Web->>API: GET /skins/{slug} (no-store)
@@ -67,7 +67,7 @@ sequenceDiagram
         else 429 or outage
             API->>R: open skins:wax:breaker 2 min
             API->>R: GET skins:listings:{slug}:stale
-            Note over API: else the snapshot's cheapest_auto; degraded true
+            Note over API: else the snapshot's cheapest_auto, degraded true
         end
     end
     API-->>V: {items, degraded}

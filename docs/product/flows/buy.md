@@ -106,7 +106,7 @@ sequenceDiagram
     X->>St: the seller sends the offer
     loop every 10 s
         S->>X: check-many-project-id (≤ 100 orders a call)
-        S->>DB: mirror; 4 → trade_sent; accepted → delivered
+        S->>DB: mirror, 4 → trade_sent, accepted → delivered
     end
     Web->>API: GET /orders/{number} every 8 s
     U->>St: Accepts the offer
