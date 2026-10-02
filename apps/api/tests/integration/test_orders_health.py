@@ -89,12 +89,15 @@ async def test_a_resolved_attention_is_neither_attention_nor_a_hiding_place(
 
 
 @pytest.mark.parametrize(
-    ("last_polled", "stuck"),
-    [(_ago(minutes=29), 0), (_ago(minutes=31), 1), (None, 1)],
+    ("polled_minutes_ago", "stuck"),
+    [(29, 0), (31, 1), (None, 1)],
 )
 async def test_trade_sent_unpolled_after_thirty_minutes_or_never(
-    db: AsyncSession, last_polled: datetime | None, stuck: int
+    db: AsyncSession, polled_minutes_ago: int | None, stuck: int
 ) -> None:
+    # The poll time is taken when the test runs, not when pytest collects it: a slow run
+    # (CI) used to age a "29 minutes ago" parameter past the 30-minute line.
+    last_polled = None if polled_minutes_ago is None else _ago(minutes=polled_minutes_ago)
     order = await _order(db, "trade_sent", paid_at=_ago(hours=2))
     await make_trade(db, order, last_polled_at=last_polled)
     assert (await _measure(db)).trade_sent_unpolled == stuck
