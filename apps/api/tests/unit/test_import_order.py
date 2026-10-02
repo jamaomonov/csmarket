@@ -123,6 +123,8 @@ import pytest
         "csmarket.modules.skins.api",
         "csmarket.modules.skins.dev_routes",
         "csmarket.modules.skins.listings",
+        "csmarket.modules.skins.pricing_admin",
+        "csmarket.modules.skins.pricing_routes",
         "csmarket.modules.skins.routes",
         "csmarket.modules.skins.seo_routes",
         "csmarket.modules.skins.service",

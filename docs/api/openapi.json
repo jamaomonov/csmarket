@@ -978,6 +978,17 @@
             "title": "Category",
             "type": "string"
           },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
           "count": {
             "title": "Count",
             "type": "integer"
@@ -993,6 +1004,17 @@
             ],
             "title": "Exterior"
           },
+          "fixed_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed Price Usd"
+          },
           "hidden": {
             "title": "Hidden",
             "type": "boolean"
@@ -1007,6 +1029,17 @@
               }
             ],
             "title": "Image Url"
+          },
+          "margin_override_pp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Override Pp"
           },
           "name": {
             "title": "Name",
@@ -2168,6 +2201,65 @@
         "title": "BalanceOut",
         "type": "object"
       },
+      "Bracket-Input": {
+        "description": "``percent`` applies to the slice of cost from ``from_usd`` up to the next bracket.",
+        "properties": {
+          "from_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "From Usd"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,8}0*$)\\d{0,5}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Percent"
+          }
+        },
+        "required": [
+          "from_usd",
+          "percent"
+        ],
+        "title": "Bracket",
+        "type": "object"
+      },
+      "Bracket-Output": {
+        "description": "``percent`` applies to the slice of cost from ``from_usd`` up to the next bracket.",
+        "properties": {
+          "from_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+            "title": "From Usd",
+            "type": "string"
+          },
+          "percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,8}0*$)\\d{0,5}\\.\\d{0,2}0*$)",
+            "title": "Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_usd",
+          "percent"
+        ],
+        "title": "Bracket",
+        "type": "object"
+      },
       "CatalogStatusOut": {
         "description": "The admin status card: catalogue size, job outcomes, rate and switches.",
         "properties": {
@@ -2414,6 +2506,52 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "ItemPricingIn": {
+        "additionalProperties": false,
+        "description": "One item's pricing overrides; ``null`` clears one.",
+        "properties": {
+          "fixed_price_usd": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed Price Usd"
+          },
+          "margin_override_pp": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Override Pp"
+          }
+        },
+        "required": [
+          "margin_override_pp",
+          "fixed_price_usd"
+        ],
+        "title": "ItemPricingIn",
+        "type": "object"
+      },
       "JobOut": {
         "description": "The last run of a catalogue job (ruling Q6).",
         "properties": {
@@ -2555,6 +2693,57 @@
           "extra"
         ],
         "title": "KassaTxnOut",
+        "type": "object"
+      },
+      "LiquidityBand-Input": {
+        "description": "``pp`` applies when the item has at least ``min_count`` auto listings.",
+        "properties": {
+          "min_count": {
+            "minimum": 0.0,
+            "title": "Min Count",
+            "type": "integer"
+          },
+          "pp": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Pp"
+          }
+        },
+        "required": [
+          "min_count",
+          "pp"
+        ],
+        "title": "LiquidityBand",
+        "type": "object"
+      },
+      "LiquidityBand-Output": {
+        "description": "``pp`` applies when the item has at least ``min_count`` auto listings.",
+        "properties": {
+          "min_count": {
+            "minimum": 0.0,
+            "title": "Min Count",
+            "type": "integer"
+          },
+          "pp": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)",
+            "title": "Pp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "min_count",
+          "pp"
+        ],
+        "title": "LiquidityBand",
         "type": "object"
       },
       "MeOut": {
@@ -3015,6 +3204,434 @@
           "next_cursor"
         ],
         "title": "OrdersPage",
+        "type": "object"
+      },
+      "PreviewIn": {
+        "additionalProperties": false,
+        "description": "What to price: an item by ``slug``, or a made-up one by ``cost_usd`` + ``category``.\n\nEach field given overrides the item's own; ``rules`` previews an unsaved document.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,3}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "count_auto": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count Auto"
+          },
+          "fixed_price_usd": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixed Price Usd"
+          },
+          "item_pp": {
+            "anyOf": [
+              {
+                "maximum": 500.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Pp"
+          },
+          "rules": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PricingRules-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "weapon": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weapon"
+          }
+        },
+        "title": "PreviewIn",
+        "type": "object"
+      },
+      "PreviewOut": {
+        "description": "A quote and every component behind it (USD and so\u02bbm as strings).",
+        "properties": {
+          "applied": {
+            "title": "Applied",
+            "type": "string"
+          },
+          "bracket_margin_usd": {
+            "title": "Bracket Margin Usd",
+            "type": "string"
+          },
+          "category_pp": {
+            "title": "Category Pp",
+            "type": "string"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "effective_percent": {
+            "title": "Effective Percent",
+            "type": "string"
+          },
+          "expenses_usd": {
+            "title": "Expenses Usd",
+            "type": "string"
+          },
+          "item_pp": {
+            "title": "Item Pp",
+            "type": "string"
+          },
+          "liquidity_pp": {
+            "title": "Liquidity Pp",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "price_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Uzs"
+          },
+          "weapon_pp": {
+            "title": "Weapon Pp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "price_usd",
+          "price_uzs",
+          "cost_usd",
+          "expenses_usd",
+          "bracket_margin_usd",
+          "category_pp",
+          "weapon_pp",
+          "liquidity_pp",
+          "item_pp",
+          "effective_percent",
+          "applied"
+        ],
+        "title": "PreviewOut",
+        "type": "object"
+      },
+      "PricingOut": {
+        "description": "The pricing document and what it prices.",
+        "properties": {
+          "items_active": {
+            "title": "Items Active",
+            "type": "integer"
+          },
+          "items_overridden": {
+            "title": "Items Overridden",
+            "type": "integer"
+          },
+          "rate_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Uzs"
+          },
+          "rules": {
+            "$ref": "#/components/schemas/PricingRules-Output"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UpdatedByOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "rules",
+          "updated_at",
+          "updated_by",
+          "items_active",
+          "items_overridden",
+          "rate_uzs"
+        ],
+        "title": "PricingOut",
+        "type": "object"
+      },
+      "PricingRules-Input": {
+        "description": "The whole pricing document, as stored in ``skin_pricing_rules.rules``.",
+        "properties": {
+          "cap_at_steam": {
+            "default": false,
+            "title": "Cap At Steam",
+            "type": "boolean"
+          },
+          "category_pp": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Category Pp",
+            "type": "object"
+          },
+          "expenses_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "default": "3",
+            "title": "Expenses Percent"
+          },
+          "liquidity": {
+            "items": {
+              "$ref": "#/components/schemas/LiquidityBand-Input"
+            },
+            "title": "Liquidity",
+            "type": "array"
+          },
+          "min_margin_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.10",
+            "title": "Min Margin Usd"
+          },
+          "price_floor_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.20",
+            "title": "Price Floor Usd"
+          },
+          "retail": {
+            "items": {
+              "$ref": "#/components/schemas/Bracket-Input"
+            },
+            "minItems": 1,
+            "title": "Retail",
+            "type": "array"
+          },
+          "uzs_round_to": {
+            "default": 100,
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Uzs Round To",
+            "type": "integer"
+          },
+          "weapon_pp": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                }
+              ]
+            },
+            "title": "Weapon Pp",
+            "type": "object"
+          }
+        },
+        "required": [
+          "retail"
+        ],
+        "title": "PricingRules",
+        "type": "object"
+      },
+      "PricingRules-Output": {
+        "description": "The whole pricing document, as stored in ``skin_pricing_rules.rules``.",
+        "properties": {
+          "cap_at_steam": {
+            "default": false,
+            "title": "Cap At Steam",
+            "type": "boolean"
+          },
+          "category_pp": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Category Pp",
+            "type": "object"
+          },
+          "expenses_percent": {
+            "default": "3",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Expenses Percent",
+            "type": "string"
+          },
+          "liquidity": {
+            "items": {
+              "$ref": "#/components/schemas/LiquidityBand-Output"
+            },
+            "title": "Liquidity",
+            "type": "array"
+          },
+          "min_margin_usd": {
+            "default": "0.10",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Min Margin Usd",
+            "type": "string"
+          },
+          "price_floor_usd": {
+            "default": "0.20",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Price Floor Usd",
+            "type": "string"
+          },
+          "retail": {
+            "items": {
+              "$ref": "#/components/schemas/Bracket-Output"
+            },
+            "minItems": 1,
+            "title": "Retail",
+            "type": "array"
+          },
+          "uzs_round_to": {
+            "default": 100,
+            "maximum": 10000.0,
+            "minimum": 1.0,
+            "title": "Uzs Round To",
+            "type": "integer"
+          },
+          "weapon_pp": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Weapon Pp",
+            "type": "object"
+          }
+        },
+        "required": [
+          "retail"
+        ],
+        "title": "PricingRules",
         "type": "object"
       },
       "ProviderOut": {
@@ -4234,6 +4851,32 @@
         "title": "TradeLinkOut",
         "type": "object"
       },
+      "UpdatedByOut": {
+        "description": "The admin who saved the rules last.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "UpdatedByOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -5403,7 +6046,7 @@
     },
     "/api/v1/admin/skins/items": {
       "get": {
-        "description": "Substring match on the folded name; ``hidden`` filters; most listings first.",
+        "description": "Substring match on the folded name; ``hidden`` and ``overridden`` (a margin override\nor a pinned price) filter; most listings first.",
         "operationId": "search_items_api_v1_admin_skins_items_get",
         "parameters": [
           {
@@ -5438,6 +6081,22 @@
                 }
               ],
               "title": "Hidden"
+            }
+          },
+          {
+            "in": "query",
+            "name": "overridden",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Overridden"
             }
           },
           {
@@ -5577,6 +6236,261 @@
           }
         },
         "summary": "Hide or show an item",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/items/{slug}/pricing": {
+      "put": {
+        "description": "Set or clear the item's margin override and pinned price, and reprice it.",
+        "operationId": "put_item_pricing_api_v1_admin_skins_items__slug__pricing_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemPricingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSkinItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Override one item's price",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/pricing": {
+      "get": {
+        "description": "The saved document, who saved it and when, item counts and the rate.",
+        "operationId": "get_pricing_api_v1_admin_skins_pricing_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The pricing rules",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Replace the document and reprice every item in one transaction; publish after commit.",
+        "operationId": "put_pricing_api_v1_admin_skins_pricing_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PricingRules-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save the pricing rules",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/skins/pricing/preview": {
+      "post": {
+        "description": "Price an item or a made-up one under the saved or a draft document.\n\nKeyless: it writes nothing \u2014 no row, no cache, no audit \u2014 so there is nothing to replay.",
+        "operationId": "post_preview_api_v1_admin_skins_pricing_preview_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview a price",
         "tags": [
           "admin"
         ]

@@ -65,6 +65,12 @@ async def load_rules(db: AsyncSession, *, fresh: bool = False) -> PricingRules:
     return rules
 
 
+async def read_rules(db: AsyncSession) -> PricingRules:
+    """The saved rules from Postgres alone — no cache read, no cache fill (the preview)."""
+    row = await db.get(SkinPricingRules, 1)
+    return (_parse(row.rules) if row is not None else None) or DEFAULT_RULES
+
+
 async def save_rules(db: AsyncSession, *, rules: PricingRules, admin_id: str) -> None:
     """Upsert row 1. Postgres only — publish after commit."""
     document = json.loads(rules.model_dump_json())
@@ -93,4 +99,4 @@ def enabled_categories(settings: Settings) -> list[str]:
     return out
 
 
-__all__ = ["enabled_categories", "load_rules", "publish_rules", "save_rules"]
+__all__ = ["enabled_categories", "load_rules", "publish_rules", "read_rules", "save_rules"]

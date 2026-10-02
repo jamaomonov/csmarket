@@ -125,8 +125,28 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   active row after each price tick and each rules write. `hidden` rows are priced too, so
   unhiding is instant. `lock_pricing` serialises writers (advisory xact lock).
 - **`settings`** — `load_rules` (Redis `skins:pricing`, TTL 3600 -> `skin_pricing_rules`
-  row 1 -> defaults), `save_rules` (Postgres only; the caller `publish_rules` after commit),
-  `enabled_categories`.
+  row 1 -> defaults), `read_rules` (Postgres only, no cache fill — the preview), `save_rules`
+  (Postgres only; the caller `publish_rules` after commit), `enabled_categories`.
+
+## Pricing editor (M4b, ruling R8)
+
+`pricing_routes` (admin only) over `pricing_admin`:
+
+- `GET /admin/skins/pricing` — the saved document, who saved it and when, active and
+  overridden item counts, the rate.
+- `PUT /admin/skins/pricing` (required `Idempotency-Key`) — `lock_pricing` → `save_rules` →
+  `reprice_rows` (every active item) → audit `skins.pricing.save {items_repriced}` → replay
+  row → **commit** → `publish_rules` → `bump_catalog_version`. A failure before the commit
+  leaves the old rules in Postgres and Redis and the old prices; invalid rules are 422 with
+  the validator's reason.
+- `POST /admin/skins/pricing/preview` — a `Quote` with every component and the soʻm price,
+  for an item by `slug` (its cost, taxonomy and overrides fill the blanks) or a made-up one
+  (`cost_usd` + `category`), under the saved or a draft document. Writes nothing (no row, no
+  cache, no audit), so it is keyless.
+- `PUT /admin/skins/items/{slug}/pricing` (required key) — `margin_override_pp` (−100..500)
+  and `fixed_price_usd` (0..100 000, honoured while it covers cost + min margin), `null`
+  clears; reprices that item only; audit `skins.item.override`. `GET /admin/skins/items`
+  gains `overridden` and the item's cost and overrides.
 
 ## Catalogue import (M2)
 

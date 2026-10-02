@@ -1,5 +1,7 @@
 """``/api/v1/admin/skins`` — catalogue status, item search, hide/unhide, search aliases.
 
+The pricing editor (rules, preview, per-item overrides) is ``pricing_routes``.
+
 Admin only (``require_admin`` on the whole router). Every write takes an optional
 ``Idempotency-Key`` (the ``users.routes`` pattern), records one ``admin_audit_log`` row,
 commits, and only then bumps the catalogue version so every cached public page expires
@@ -9,10 +11,11 @@ commits, and only then bumps the catalogue version so every cached public page e
 from __future__ import annotations
 
 import re
+from decimal import Decimal
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Query, Response
-from sqlalchemy import func, select
+from sqlalchemy import func, not_, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,7 +88,8 @@ def _job_out(job: JobStatus | None) -> JobOut | None:
     return JobOut(finished_at=job.finished_at, ok=job.ok, counters=job.counters, error=job.error)
 
 
-def _item_out(item: SkinItem) -> AdminSkinItemOut:
+def item_out(item: SkinItem) -> AdminSkinItemOut:
+    """One item as the admin search and the pricing override answer it."""
     return AdminSkinItemOut(
         slug=item.slug,
         name=item.market_hash_name,
@@ -100,7 +104,22 @@ def _item_out(item: SkinItem) -> AdminSkinItemOut:
         hidden=item.hidden,
         price_usd=None if item.sell_price_usd is None else str(item.sell_price_usd),
         count=item.count_auto,
+        cost_usd=None
+        if item.min_auto_units is None
+        else _plain(Decimal(item.min_auto_units) / Decimal(1000)),
+        margin_override_pp=_text(item.margin_override_pp),
+        fixed_price_usd=_text(item.fixed_price_usd),
     )
+
+
+def _text(value: Decimal | None) -> str | None:
+    return None if value is None else _plain(value)
+
+
+def _plain(value: Decimal) -> str:
+    """``10.00`` → ``10``, ``99.50`` → ``99.50`` kept to the cent when it has cents."""
+    whole = value.to_integral_value()
+    return str(whole) if value == whole else str(value)
 
 
 def _like_escape(needle: str) -> str:
@@ -143,9 +162,11 @@ async def search_items(
     db: Db,
     q: Annotated[str | None, Query(min_length=2, max_length=80)] = None,
     hidden: bool | None = None,
+    overridden: bool | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AdminSkinItemsOut:
-    """Substring match on the folded name; ``hidden`` filters; most listings first."""
+    """Substring match on the folded name; ``hidden`` and ``overridden`` (a margin override
+    or a pinned price) filter; most listings first."""
     stmt = select(SkinItem)
     if q is not None:
         needle = search_text(q, "")
@@ -154,8 +175,11 @@ async def search_items(
         stmt = stmt.where(SkinItem.search_text.ilike(f"%{_like_escape(needle)}%", escape="\\"))
     if hidden is not None:
         stmt = stmt.where(SkinItem.hidden.is_(hidden))
+    if overridden is not None:
+        has = or_(SkinItem.margin_override_pp.is_not(None), SkinItem.fixed_price_usd.is_not(None))
+        stmt = stmt.where(has if overridden else not_(has))
     stmt = stmt.order_by(SkinItem.count_auto.desc(), SkinItem.slug).limit(limit)
-    return AdminSkinItemsOut(items=[_item_out(i) for i in (await db.execute(stmt)).scalars()])
+    return AdminSkinItemsOut(items=[item_out(i) for i in (await db.execute(stmt)).scalars()])
 
 
 @router.patch("/items/{slug}", response_model=AdminSkinItemOut, summary="Hide or show an item")
@@ -181,7 +205,7 @@ async def patch_item(
         target_id=item.id,
         payload={"slug": item.slug},
     )
-    out = _item_out(item)
+    out = item_out(item)
     if key is not None:
         await save_replay(db, scope=scope, idempotency_key=key, body=out.model_dump(mode="json"))
     await _commit_and_bump(db)
@@ -254,4 +278,4 @@ async def delete_alias(
     return Response(status_code=204)
 
 
-__all__ = ["normalize_alias", "router"]
+__all__ = ["item_out", "normalize_alias", "router"]

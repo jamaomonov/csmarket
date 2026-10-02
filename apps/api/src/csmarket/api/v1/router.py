@@ -29,6 +29,7 @@ from csmarket.modules.payments.routes import wallet_router as topups_router
 from csmarket.modules.realtime.routes import router as realtime_router
 from csmarket.modules.skins.admin_routes import router as skins_admin_router
 from csmarket.modules.skins.dev_routes import router as skins_dev_router
+from csmarket.modules.skins.pricing_routes import router as skins_pricing_router
 from csmarket.modules.skins.routes import router as skins_router
 from csmarket.modules.skins.seo_routes import router as skins_seo_router
 from csmarket.modules.users.routes import router as users_router
@@ -54,6 +55,7 @@ router.include_router(payments_dev_router)
 router.include_router(payments_router)
 router.include_router(realtime_router)
 router.include_router(skins_admin_router)
+router.include_router(skins_pricing_router)
 router.include_router(skins_dev_router)
 # /skins/seo/* must precede /skins/{slug}, which would otherwise swallow it.
 router.include_router(skins_seo_router)
