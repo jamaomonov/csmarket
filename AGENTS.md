@@ -24,8 +24,7 @@
   | M4b | WebSocket, email (Resend), pricing editor, dashboard, erase        | `docs/superpowers/plans/2026-10-02-m4b-live-email-pricing.md` |
   | M5  | Launch: VPS, secrets, backups, alerts, runbooks, test buys         | not written yet                                               |
 
-- **Where things stand:** M0–M4a merged on local `main` (M4a: ADR-0007); M4b (ADR-0008) built
-  on branch `m4b-live-email-pricing`, merge on the owner's word. The real-kassa check is pending the
+- **Where things stand:** M0–M4b merged on local `main` (M4a: ADR-0007, M4b: ADR-0008). The real-kassa check is pending the
   first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`), and the first real sale waits
   for the deploy too (the Waxpeer key whitelisted for the VPS IP, `docs/runbooks/waxpeer.md`).
   `main` is pushed to the private repo `github.com/jamaomonov/csmarket` (2026-10-02); nothing is deployed. M0 is done for good when
