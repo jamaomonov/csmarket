@@ -393,6 +393,16 @@ never), the count of unresolved attentions, and Waxpeer's balance in USD (`balan
 gauges from it and reads the balance on every 5th tick (the first included). The alerts are in
 `infra/prometheus/alerts/orders.yml`; the gauges in `docs/architecture/metrics.md`.
 
+## Nudges and letters (`letters.py`, M4b rulings R4, R5)
+
+Every buyer-visible status change calls `realtime.api.nudge` in its own transaction (paid,
+claimed, trade sent / delivered / rolled back, refunded, expired) — delivered on commit. Three
+events also enqueue a letter through `notifications.api.enqueue` in the same transaction:
+`mark_paid` → `receipt`, `trades.apply` → `trade_sent` (with the offer's `send_until`; none
+when an order jumps straight to `delivered`), `refund_to_balance` → `refunded` (with the
+amount; none when held or replayed). The payload snapshots the number and the skin; one
+letter per order and kind.
+
 ## Lock order
 
 Order row → kassa transaction row → payment → user wallet (the M3 top-up order with the

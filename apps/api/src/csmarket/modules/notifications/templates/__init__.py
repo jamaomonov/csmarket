@@ -1,44 +1,20 @@
-"""Render a letter from its kind, the reader's locale and the outbox payload (M4b R5).
+"""Render a letter from its kind, the reader's locale and the outbox payload (M4b T4).
 
-Task 3 ships the ``verify`` letter only; the order letters arrive with their copy in
-ru / uz / en (Task 4), and until then rendering one raises ``NotImplementedError``.
+Copy lives in :mod:`csmarket.modules.notifications.copy` (ru / uz / en); the shell in
+:mod:`.layout`. Letters never carry a trade link, a Steam ID or the buyer's balance.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
-from html import escape
-from typing import Literal
 
-Locale = Literal["ru", "uz", "en"]
+from csmarket.modules.notifications.templates import receipt, refunded, trade_sent, verify
+from csmarket.modules.notifications.templates.base import EmailContent, Links, Locale
 
-
-@dataclass(frozen=True, slots=True)
-class Links:
-    """Absolute storefront links a letter may point to, in the reader's locale."""
-
-    order_url: str
-    balance_url: str
-    confirm_url: str
-
-
-@dataclass(frozen=True, slots=True)
-class EmailContent:
-    """A rendered letter."""
-
-    subject: str
-    html: str
-    text: str
-
-
-_VERIFY = {
-    "ru": ("Подтвердите почту", "Нажмите на ссылку, чтобы получать письма о заказах."),
-    "uz": (
-        "Pochtangizni tasdiqlang",
-        "Buyurtmalar haqida xat olish uchun havolani bosing.",
-    ),
-    "en": ("Confirm your email", "Follow the link to get emails about your orders."),
+_ORDER_LETTERS = {
+    "receipt": receipt.build,
+    "trade_sent": trade_sent.build,
+    "refunded": refunded.build,
 }
 
 
@@ -46,18 +22,30 @@ def render(
     kind: str,
     *,
     locale: Locale,
-    number: str | None,  # noqa: ARG001 -- the order letters use it (Task 4)
-    payload: Mapping[str, str],  # noqa: ARG001 -- as above
+    number: str | None,
+    payload: Mapping[str, str],
     links: Links,
 ) -> EmailContent:
     """Render one letter.
 
+    Args:
+        kind: ``receipt``, ``trade_sent``, ``refunded`` or ``verify``.
+        locale: The reader's locale.
+        number: The order number of an order letter; ``None`` for ``verify``.
+        payload: The outbox row's strings.
+        links: Absolute storefront links in ``locale``.
+
     Raises:
-        NotImplementedError: An order letter (until Task 4 adds them).
+        ValueError: An unknown kind, or an order letter without a number.
     """
-    if kind != "verify":
-        raise NotImplementedError(kind)
-    subject, body = _VERIFY[locale]
-    url = links.confirm_url
-    html = f'<p>{escape(body)}</p><p><a href="{escape(url)}">{escape(url)}</a></p>'
-    return EmailContent(subject=subject, html=html, text=f"{body}\n\n{url}\n")
+    if kind == "verify":
+        return verify.build(locale=locale, links=links)
+    build = _ORDER_LETTERS.get(kind)
+    if build is None:
+        raise ValueError(f"unknown letter kind {kind!r}")
+    if not number:
+        raise ValueError(f"a {kind} letter needs an order number")
+    return build(locale=locale, number=number, payload=payload, links=links)
+
+
+__all__ = ["EmailContent", "Links", "Locale", "render"]

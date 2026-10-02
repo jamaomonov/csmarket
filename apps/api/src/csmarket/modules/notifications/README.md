@@ -6,7 +6,12 @@ Transactional email for csmarket (M4b, ADR-0008). Email only: no SMS, no push, n
   (`sender.drain_emails`), the Resend client, the dev transport, and the dev-only
   `GET /api/v1/dev/emails`.
 - **Letters:** `receipt`, `trade_sent`, `refunded` (order letters, one per order and kind) and
-  `verify` (the email confirmation). Rendered in the user's locale (`templates`).
+  `verify` (the email confirmation). Rendered in the user's locale by `templates` (copy in
+  `copy.py`, ru / uz / en; table layout, one button, a plain link under it; no images, no
+  external fonts, no tracking). The payload snapshots what a letter shows — the order
+  number, the skin, the offer's deadline or the refunded amount — so the worker never reads
+  `orders`. Enqueued by `orders.letters` at `mark_paid`, `trades.apply` → `trade_sent` and
+  `refund_to_balance`.
 - **Enqueue:** `notifications.api.enqueue(db, kind=…, user_id=…, order_id=…, address=…,
 payload=…)` inside the event's own transaction — the row and its `NOTIFY emails` land on
   commit or not at all. Flushes, never commits. A replayed event returns `None`.

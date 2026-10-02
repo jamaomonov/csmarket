@@ -1,8 +1,9 @@
 """An order's money arrived: :func:`mark_paid` moves it to ``paid`` and wakes the worker.
 
 Called by ``payments.hooks.settle`` (a kassa) and by the balance pay (ruling R8), each with
-the order row locked. ``NOTIFY orders`` goes out in the caller's transaction, so the worker
-hears it only once the payment is committed. Imports nothing from ``payments``.
+the order row locked. ``NOTIFY orders``, the buyer's nudge and the ``receipt`` letter go out
+in the caller's transaction, so each lands only once the payment is committed. Imports
+nothing from ``payments``.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.orders.fsm import move
+from csmarket.modules.orders.letters import enqueue_receipt
 from csmarket.modules.orders.models import Order
 from csmarket.modules.realtime.api import nudge
 
@@ -36,6 +38,7 @@ async def mark_paid(db: AsyncSession, order: Order, *, provider: str) -> None:
     await db.flush()
     await db.execute(select(func.pg_notify(ORDERS_CHANNEL, order.number)))
     await nudge(db, user_id=order.user_id, number=order.number)
+    await enqueue_receipt(db, order)
 
 
 __all__ = ["ORDERS_CHANNEL", "mark_paid"]

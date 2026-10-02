@@ -24,6 +24,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import timedelta
 from typing import Protocol, cast
+from urllib.parse import quote
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -200,12 +201,13 @@ async def _prepare(db: AsyncSession, claim: _Claim, settings: Settings) -> _Lett
         await _finish(db, claim, row.kind, "skipped")
         return None
     locale = cast("Locale", user.locale)
+    number = row.payload.get("number")
     content = render(
         row.kind,
         locale=locale,
-        number=None,
+        number=number,
         payload=row.payload,
-        links=_links(settings, locale, number=None, token=row.payload.get("token")),
+        links=_links(settings, locale, number=number, token=row.payload.get("token")),
     )
     return _Letter(kind=row.kind, user_id=row.user_id, to=to, content=content)
 
@@ -222,11 +224,13 @@ def _recipient(row: EmailOutbox, user: User | None) -> str | None:
 
 def _links(settings: Settings, locale: str, *, number: str | None, token: str | None) -> Links:
     """Absolute storefront links in ``locale`` (ru has no prefix)."""
-    root = settings.web_base_url.rstrip("/") + _LOCALE_PREFIX.get(locale, "")
+    home = settings.web_base_url.rstrip("/")
+    root = home + _LOCALE_PREFIX.get(locale, "")
     return Links(
         order_url=f"{root}/orders/{number}" if number else "",
         balance_url=f"{root}/account/balance",
-        confirm_url=f"{root}/account/email/confirm?token={token}" if token else "",
+        confirm_url=f"{root}/account/email/confirm?token={quote(token)}" if token else "",
+        home_url=root or home,
     )
 
 

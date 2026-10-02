@@ -1,0 +1,56 @@
+"""Order letters, enqueued in the transaction of the event they report (M4b T4, R5).
+
+``receipt`` at ``mark_paid``, ``trade_sent`` when ``trades.apply`` moves the order to
+``trade_sent``, ``refunded`` when ``refund_to_balance`` books a refund. The payload
+snapshots what the letter shows — the number, the skin, a deadline or an amount — so the
+worker renders it without reading orders. One letter per order and kind (a replay
+enqueues nothing); whether it is sent is decided at send time (a verified address).
+"""
+
+from __future__ import annotations
+
+from datetime import UTC
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from csmarket.modules.notifications.api import enqueue
+from csmarket.modules.orders.models import Order, SkinTrade
+
+
+def _skin(order: Order) -> str:
+    """The item as the order page names it: the market name, then the phase if any."""
+    return f"{order.market_hash_name} · {order.phase}" if order.phase else order.market_hash_name
+
+
+async def enqueue_receipt(db: AsyncSession, order: Order) -> None:
+    """``Заказ оплачен`` for a just-paid order."""
+    await enqueue(
+        db,
+        kind="receipt",
+        user_id=order.user_id,
+        order_id=order.id,
+        payload={"number": order.number, "skin": _skin(order)},
+    )
+
+
+async def enqueue_trade_sent(db: AsyncSession, order: Order, trade: SkinTrade) -> None:
+    """``Обмен отправлен``, with the offer's deadline when Waxpeer gave one."""
+    payload = {"number": order.number, "skin": _skin(order)}
+    if trade.send_until is not None:
+        payload["send_until"] = trade.send_until.astimezone(UTC).isoformat()
+    await enqueue(db, kind="trade_sent", user_id=order.user_id, order_id=order.id, payload=payload)
+
+
+async def enqueue_refunded(db: AsyncSession, order: Order) -> None:
+    """``Деньги на балансе`` with the amount returned."""
+    await enqueue(
+        db,
+        kind="refunded",
+        user_id=order.user_id,
+        order_id=order.id,
+        payload={
+            "number": order.number,
+            "skin": _skin(order),
+            "amount_uzs": f"{order.price_uzs:f}",
+        },
+    )

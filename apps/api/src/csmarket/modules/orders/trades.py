@@ -35,6 +35,7 @@ from csmarket.core.errors import ConflictError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import TradeAttentionReason, record_trade_attention
 from csmarket.modules.orders.fsm import TRANSITIONS, move
+from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.refunds import refund_to_balance
 from csmarket.modules.realtime.api import nudge
@@ -231,6 +232,8 @@ async def apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: Waxpeer
     outcome = await _apply(db, order=order, trade=trade, wt=wt)
     if outcome in _NUDGED:
         await nudge(db, user_id=order.user_id, number=order.number)
+    if outcome == "trade_sent":
+        await enqueue_trade_sent(db, order, trade)
     return outcome
 
 
