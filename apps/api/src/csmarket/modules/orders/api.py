@@ -21,6 +21,7 @@ from csmarket.modules.orders.admin_actions import (
 from csmarket.modules.orders.buying import attempt_buy, drain_paid
 from csmarket.modules.orders.dashboard import Dashboard, Days
 from csmarket.modules.orders.dashboard import summary as dashboard_summary
+from csmarket.modules.orders.erase import erase_old_trade_links, erase_old_verify_addresses
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
 from csmarket.modules.orders.health import Health, cache_balance, measure
 from csmarket.modules.orders.models import (
@@ -88,6 +89,8 @@ __all__ = [
     "dashboard_summary",
     "drain_paid",
     "effective_status",
+    "erase_old_trade_links",
+    "erase_old_verify_addresses",
     "expire_pending",
     "in_flight",
     "is_expired",

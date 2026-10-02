@@ -211,7 +211,7 @@ def _order_full(order: Order, trade: SkinTrade | None, fx_rate: Decimal) -> Admi
         else order.cost_usd
     )
     columns = {c.key: getattr(order, c.key) for c in Order.__table__.columns}
-    del columns["trade_link"], columns["idempotency_key"]
+    del columns["trade_link"], columns["idempotency_key"], columns["trade_link_erased_at"]
     return AdminOrderFull.model_validate(
         {
             **columns,
@@ -221,7 +221,10 @@ def _order_full(order: Order, trade: SkinTrade | None, fx_rate: Decimal) -> Admi
             "price_uzs": wire_uzs(order.price_uzs),
             "fx_rate": f"{fx_rate:f}",
             "margin_usd": _usd(order.price_usd - spent),
-            "trade_link_masked": mask_trade_link(order.trade_link),
+            # An erased link is stored masked already (and would not parse again).
+            "trade_link_masked": order.trade_link
+            if order.trade_link_erased_at is not None
+            else mask_trade_link(order.trade_link),
         }
     )
 

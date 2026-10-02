@@ -127,4 +127,7 @@ trade (with the trade-link snapshot) and its ledger entries are money records.
 The order's trade-link **token** is not kept forever (owner decision 2026-10-02): 30 days after
 the order reaches a terminal status it is erased, leaving the Steam account and the masked
 form (`••••XY`) for disputes; the purchase stays findable at Waxpeer by the order's
-`project_id`. The nightly purge job lands in M4b; until then M4a stores the snapshot in full.
+`project_id`. Since M4b the scheduler job `orders.erase_trade_links` (22:00 UTC nightly,
+`orders.erase`) rewrites `orders.trade_link` to the masked form and stamps
+`trade_link_erased_at`; a value that does not parse becomes `erased`. The same job drops a
+`verify` outbox row's address a week after it was queued (its link dies after 24 h).

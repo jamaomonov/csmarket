@@ -55,6 +55,7 @@ import pytest
         "csmarket.modules.orders.dev_routes",
         "csmarket.modules.orders.expiry",
         "csmarket.modules.orders.dashboard",
+        "csmarket.modules.orders.erase",
         "csmarket.modules.orders.fsm",
         "csmarket.modules.orders.letters",
         "csmarket.modules.orders.models",

@@ -326,6 +326,7 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
     assert set(o) == {c.key for c in Order.__table__.columns} - {
         "trade_link",
         "idempotency_key",
+        "trade_link_erased_at",
     } | {
         "trade_link_masked",
         "fx_rate",

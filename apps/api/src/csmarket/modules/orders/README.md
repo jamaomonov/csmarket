@@ -413,6 +413,15 @@ row per Tashkent day (zeros included; days cut in Postgres with `AT TIME ZONE
 `orders.health` job cached (`health.cache_balance`, Redis `orders:waxpeer:balance`, 1 h).
 Four queries whatever the window; `ix_orders_paid_at` / `ix_orders_refunded_at` (0016).
 
+## Erase (`erase.py`, decision D3, M4b ruling R11)
+
+The scheduler's `orders.erase_trade_links` job (22:00 UTC) masks `trade_link` 30 days after an
+order ended (`delivered_at` / `cancelled_at` / `failed_at`; `partner` and the token's last two
+characters stay, an unparsable value becomes `erased`) and stamps `trade_link_erased_at`
+(migration 0017), in committed batches of 500; it also drops a `verify` outbox row's address
+a week after it was queued. The admin order page shows the stored masked form. Nothing reads
+`trade_link` for an ended order.
+
 ## Lock order
 
 Order row → kassa transaction row → payment → user wallet (the M3 top-up order with the

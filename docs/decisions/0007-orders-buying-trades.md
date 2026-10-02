@@ -277,6 +277,12 @@ YuPay sent alerts from the app. That needs a bot token, dedupe and rate-limiting
 code, and goes silent when the process dies. Prometheus already scrapes us and Alertmanager
 already routes to Telegram, with `up == 0` covering a dead process. Rejected (R14).
 
+## Later
+
+- **M4b (2026-10-02):** the trade-link token of an ended order is erased after 30 days by
+  the nightly `orders.erase_trade_links` job (owner decision; `docs/security/pii-handling.md`
+  «Retention», ADR-0008).
+
 ## References
 
 - Spec §5, §7.2–§7.8, §8, §10, §12–§15; plan

@@ -114,7 +114,8 @@ class Order(Base):
     fx_snapshot_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("fx_snapshots.id", ondelete="RESTRICT"), nullable=False
     )
-    #: The buyer's trade link at checkout (PII: never logged).
+    #: The buyer's trade link at checkout (PII: never logged); masked 30 days after the
+    #: order ends (``erase``).
     trade_link: Mapped[str] = mapped_column(Text, nullable=False)
     #: The customer's ``Idempotency-Key``; unique per user.
     idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
@@ -136,6 +137,8 @@ class Order(Base):
     claimed_at: Mapped[datetime | None] = _at()
     claimed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     next_check_at: Mapped[datetime | None] = _at()
+    #: When the nightly erase replaced ``trade_link`` by its masked form (decision D3).
+    trade_link_erased_at: Mapped[datetime | None] = _at()
 
     __table_args__ = (
         UniqueConstraint("number", name="uq_orders_number"),
