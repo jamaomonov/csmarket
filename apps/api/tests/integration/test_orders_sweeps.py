@@ -355,6 +355,21 @@ async def test_a_refunded_trade_that_was_delivered_is_flagged(
     assert row.audit_verdict == "delivered_refunded"
 
 
+@pytest.mark.parametrize("status", [0, 2, 4])
+async def test_a_refunded_order_whose_trade_is_still_alive_is_flagged(
+    db: AsyncSession, fake: FakeTradeClient, status: int
+) -> None:
+    """Not only 4/5: a refunded order whose Waxpeer trade is anything but a 6 may still
+    deliver the skin (an admin refund of a resolved attention, final review Important 1)."""
+    order0 = await _refunded(db, status=None)
+    fake.lookup_returns([trade(project_id=order0.id, status=status)])
+    before = attentions("audit_divergence")
+    assert await audit_once(db, fake) == 1
+    _, row = await load(db, order0)
+    assert (row.audit_verdict, row.attention_reason) == ("delivered_refunded", "audit_divergence")
+    assert attentions("audit_divergence") == before + 1
+
+
 async def test_a_trade_waxpeer_does_not_know_is_flagged(
     db: AsyncSession, fake: FakeTradeClient
 ) -> None:

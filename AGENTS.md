@@ -249,8 +249,9 @@ csmarket/
 
 - **TDD** when building a module or fixing a reproducible bug: the failing test first.
 - **Coverage gates:** Python ≥ 80 % (enforced: `fail_under = 80` in `pyproject.toml`, CI
-  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins` ≥ 95 % — the per-module
-  gate is wired in M3; until then CI enforces only the 80 % floor. TS ≥ 70 % is a target; no
+  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins` ≥ 95 % each (enforced:
+  `scripts/check-module-coverage.py` reads `coverage.json` after `make test-py` and CI
+  `test-py`, and fails naming the module under the line). TS ≥ 70 % is a target; no
   threshold is configured yet.
 - **Locations:**
   - Python unit: `apps/api/tests/unit/`; worker and scheduler: `apps/{worker,scheduler}/tests/`.
@@ -313,7 +314,10 @@ csmarket/
   the link. A third: `POST /orders` (M4a, ADR-0007 R11) re-prices the chosen offer through the
   same cached, budgeted, breaker-guarded read as `GET /skins/{slug}/listings` (a degraded
   answer is accepted; the worker's price cap is the money guard), with no DB connection
-  held across it. A new one needs an ADR and a line here — and its route in the `handler`
+  held across it. A fourth, the first on an admin route: `POST /admin/orders/{number}/refund`
+  (M4a, ADR-0007 Y) asks Waxpeer `check-many-project-id` for the order's `project_id` before
+  it books — one call, 4 s timeout, no lock and no open transaction across it, a failed
+  lookup refuses the refund (`waxpeer_unavailable`). A new one needs an ADR and a line here — and its route in the `handler`
   regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.

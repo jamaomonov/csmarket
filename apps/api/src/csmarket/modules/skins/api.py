@@ -37,6 +37,7 @@ from csmarket.modules.skins.waxpeer_trades import (
     WaxpeerTrade,
     WaxpeerTradeClient,
     parse_trade,
+    request_trade_client,
     trade_client,
 )
 
@@ -69,6 +70,7 @@ __all__ = [
     "load_rules",
     "parse_trade",
     "quote",
+    "request_trade_client",
     "search_client",
     "steam_image",
     "to_uzs",

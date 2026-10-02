@@ -378,8 +378,15 @@ class WaxpeerTradeClient(WaxpeerClient):
         return wallet
 
 
-def trade_client(settings: Settings | None = None) -> TradeClient:
-    """The process's Waxpeer purchase client, with the buy timeout.
+#: The timeout of a lookup on a request path (the admin refund asks Waxpeer first,
+#: ADR-0007): the same 4 s as the other synchronous Waxpeer carve-outs (AGENTS §11).
+REQUEST_LOOKUP_TIMEOUT_SECONDS = 4.0
+
+
+def trade_client(
+    settings: Settings | None = None, *, timeout_seconds: float | None = None
+) -> TradeClient:
+    """The process's Waxpeer purchase client, with the buy timeout unless ``timeout_seconds``.
 
     The dev fake (Redis-backed, ruling R13) when ``waxpeer_fake`` is on outside prod: the
     worker's buys and every scheduler sweep build their client here.
@@ -393,12 +400,22 @@ def trade_client(settings: Settings | None = None) -> TradeClient:
     return WaxpeerTradeClient(
         api_key=settings.waxpeer_api_key,
         base_url=settings.waxpeer_base_url,
-        timeout_seconds=settings.waxpeer_buy_timeout_seconds,
+        timeout_seconds=timeout_seconds or settings.waxpeer_buy_timeout_seconds,
     )
+
+
+def request_trade_client() -> TradeClient:
+    """The purchase client of a request path (a FastAPI dependency; tests override it).
+
+    Only the admin refund uses it, for one ``check-many-project-id`` lookup bounded by
+    :data:`REQUEST_LOOKUP_TIMEOUT_SECONDS`; the dev fake under ``waxpeer_fake``.
+    """
+    return trade_client(timeout_seconds=REQUEST_LOOKUP_TIMEOUT_SECONDS)
 
 
 __all__ = [
     "LOOKUP_MAX_IDS",
+    "REQUEST_LOOKUP_TIMEOUT_SECONDS",
     "TradeClient",
     "WaxpeerBuy",
     "WaxpeerBuyRefusedError",
@@ -407,5 +424,6 @@ __all__ = [
     "WaxpeerTrade",
     "WaxpeerTradeClient",
     "parse_trade",
+    "request_trade_client",
     "trade_client",
 ]

@@ -161,11 +161,20 @@ next_check_at = now + 5 min WHERE buying AND buy_pending AND due` — then reads
   resolved `buy_unconfirmed` / `ambiguous_trade` / `waxpeer_forbidden` on a `buying` order
   and no running attempt (`order_busy`, which also covers the 403/429 backoff). Refund turns
   `buy_pending` off under the lock before booking. Retry is refused once a purchase is on
-  record (`waxpeer_id`) — it would buy twice.
-- **Accepted risk (U).** An admin refund of a resolved `waxpeer_forbidden` order after a dead
-  attempt (sent, unrecorded, lease lapsed) skips lookup-first. Probability very low; the
-  runbook says to search the `project_id` first and the nightly audit flags
-  `delivered_refunded`.
+  record (`waxpeer_id`) — it would buy twice; refund is refused then too (`order_in_flight`)
+  unless our own trade is a conclusive 6 — the skin may still arrive.
+- **The admin refund asks Waxpeer first (Y; closes the accepted risk U).** Before it books,
+  `admin_refund` reads the order unlocked, ends the transaction, and looks its `project_id`
+  up (`check-many-project-id`, 4 s); any trade under it that is live (status ≠ 6) or was ever
+  accepted (`release_date`, penalties, released) refuses the refund (`order_in_flight`); a
+  lookup that fails or times out refuses it too (`waxpeer_unavailable`, nothing booked). Then
+  it locks the order and its trade and re-checks, as every buy write does. This is a fourth
+  synchronous-Waxpeer carve-out, the first on an admin route (AGENTS §11, the
+  `ApiHighLatency` / `ApiWaxpeerLatency` regexes): a refund is the one place the system
+  could hand out both the skin and the money, and a human reading a runbook row was its
+  only guard. U — a refund of a resolved `waxpeer_forbidden` order after a dead attempt
+  (sent, unrecorded, lease lapsed) — is now caught by the same lookup. The nightly audit's
+  `delivered_refunded` fires for any refunded order whose trade is not a 6 (not only 4/5).
 - **Scheduler (O).** First runs 220 s (expiry), 240 s (reconcile), 260 s (health), 280 s
   (protection); the history audit is a pure cron (23:30 UTC), so a deploy never re-runs it.
 - **Signals (S).** `WorkerDown` / `SchedulerDown` (`up == 0`), `WaxpeerBalanceUnknown` (never
@@ -203,6 +212,9 @@ next_check_at = now + 5 min WHERE buying AND buy_pending AND due` — then reads
 - **Kassas cannot reverse orders** (−31007 / 10017); a disputed card payment is settled by
   hand.
 - **The checkout carve-out:** a synchronous (cached, budgeted) Waxpeer read on `POST /orders`.
+- **The admin refund carve-out:** one synchronous lookup (4 s) per refund; while Waxpeer is
+  down or rate-limits us an operator cannot refund (409 `waxpeer_unavailable`) — the money
+  waits, the skin is never given twice.
 - The buyer polls (8 s) until M4b's WebSocket; e2e must start ≥ 4 min after the stack (the
   reconcile's first run).
 - Orphan buys (a Waxpeer purchase with no order) are not detected until the M4b probe.
@@ -219,6 +231,8 @@ next_check_at = now + 5 min WHERE buying AND buy_pending AND due` — then reads
   `test_unconfirmed_after_10_min_needs_attention_no_refund`,
   `test_rollback_after_accept_keeps_money_spent`, `test_refund_refused_while_in_flight`,
   `test_admin_refund_of_attention_order_needs_resolve`,
+  `test_admin_refund_refused_while_a_purchase_is_on_record`,
+  `test_admin_refund_asks_waxpeer_first`,
   `test_forbidden_buy_keeps_order_buying_and_alerts`, `test_rate_limited_buy_is_retried`,
   `test_price_moved_beyond_tolerance_is_409`, `test_gone_offer_substituted_within_ceiling`,
   `test_trade_hold_link_is_refused`, `test_payme_cancel_of_performed_order_is_31007`,

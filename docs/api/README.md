@@ -303,7 +303,11 @@ payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retr
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,
-  `order_in_flight`, `order_not_refundable`, `order_busy`.
+  `order_in_flight` (also when a purchase is on record, or Waxpeer shows a live or
+  once-accepted trade under the order), `order_not_refundable`, `order_busy`,
+  `waxpeer_unavailable`. Asks Waxpeer before it books (one lookup, 4 s; ADR-0007 Y), so it
+  can take up to ~4 s; a `waxpeer_unavailable` booked nothing and the same key may be sent
+  again.
 - `POST /admin/orders/{number}/retry` (no body) → detail. 409 `not_retryable` (also when a
   purchase is on record), `order_busy`.
 - Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise); a replay returns

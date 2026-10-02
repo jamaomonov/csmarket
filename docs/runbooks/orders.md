@@ -49,23 +49,28 @@ project id»). The `project_id` is what ties a Waxpeer purchase to our order.
 
 ## Actions
 
-| Button                     | When it shows                                                                                      | What it does                                                                              |
-| -------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| «Разобрано» + «Заметка»    | An open attention                                                                                  | Marks it resolved, with your note (what you found at Waxpeer — no personal data). Audited |
-| «Вернуть деньги на баланс» | `buying`, not refunded, a **resolved** `buy_unconfirmed` / `ambiguous_trade` / `waxpeer_forbidden` | Refunds the price to the buyer's balance (`failed`, reason `admin`). Audited              |
-| «Повторить покупку»        | The same, and no purchase on record (no Waxpeer id)                                                | Clears the attention and lets the next sweep look up, then buy once. Audited              |
+| Button                     | When it shows                                                                                                                                                 | What it does                                                                                                                                                                          |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| «Разобрано» + «Заметка»    | An open attention                                                                                                                                             | Marks it resolved, with your note (what you found at Waxpeer — no personal data). Audited                                                                                             |
+| «Вернуть деньги на баланс» | `buying`, not refunded, a **resolved** `buy_unconfirmed` / `ambiguous_trade` / `waxpeer_forbidden`, no purchase on record (or our own trade failed, status 6) | Asks Waxpeer first (4 s): refuses if any trade under the `project_id` is live or was ever accepted. Else refunds the price to the buyer's balance (`failed`, reason `admin`). Audited |
+| «Повторить покупку»        | The same, and no purchase on record (no Waxpeer id)                                                                                                           | Clears the attention and lets the next sweep look up, then buy once. Audited                                                                                                          |
 
 Refusals (Russian text under the actions): «Скин ещё в пути — вернуть деньги нельзя.»
 (`order_in_flight`), «Деньги уже на балансе.» (`already_refunded`), «Этот заказ нельзя
 вернуть.» (`order_not_refundable`: unpaid, cancelled, delivered), «Покупка ещё идёт —
 попробуйте через минуту.» (`order_busy`: a buy attempt holds the order, or a 403/429 backoff
-of up to 60 s runs), «Повтор сейчас невозможен.» (`not_retryable`).
+of up to 60 s runs), «Не удалось проверить покупку — попробуйте позже.»
+(`waxpeer_unavailable`: the refund could not ask Waxpeer — down, 429, 403 or over 4 s;
+nothing was refunded), «Повтор сейчас невозможен.» (`not_retryable`).
 
 **Rules:**
 
 - **«Разобрано» first.** Refund and retry need a resolved attention.
 - **Refund only when Waxpeer shows nothing bought** under the `project_id` (or only failed
   trades, none accepted). If a skin went out, refunding gives away the skin and the money.
+  The refund checks this itself (ADR-0007 Y): it asks Waxpeer before booking and refuses
+  («Скин ещё в пути…») on a live or once-accepted trade, and refuses to guess
+  («Не удалось проверить покупку…») when Waxpeer cannot be asked. Never work around it.
 - **Retry only after checking the `project_id`.** The sweep looks up before it buys, so a
   purchase Waxpeer made is adopted, not repeated — but check anyway: it is the last guard
   against a second buy.
@@ -89,12 +94,13 @@ re-opens it.
 
 ### Forbidden, then refunded
 
-A `waxpeer_forbidden` order can be refunded once resolved. Rare edge (ruling U): if a buy
-attempt **sent** the buy, then died before recording it, and its lease lapsed, the refund
-skips the lookup the sweep would have made. So before refunding a resolved
-`waxpeer_forbidden` order, **search its `project_id` at Waxpeer**: a purchase there means
-"do not refund" (fix the whitelist and let the sweep adopt it). The nightly audit would flag
-a refunded-and-delivered order as `delivered_refunded` the next night.
+A `waxpeer_forbidden` order can be refunded once resolved. Rare edge (ruling U): a buy
+attempt **sent** the buy, then died before recording it, and its lease lapsed. The refund
+asks Waxpeer for the `project_id` first, so a purchase made that way refuses it
+(«Скин ещё в пути…»): fix the whitelist and let the sweep adopt it. The refund's own lookup
+comes from the same server, so while the whitelist is broken it is refused too
+(«Не удалось проверить покупку…») — fix the whitelist first. The nightly audit flags any
+refunded order whose trade is not a failed one as `delivered_refunded`.
 
 While Waxpeer keeps answering 403, refund and retry of a `waxpeer_forbidden` order answer
 `order_busy` during each 60 s backoff: fix the whitelist first.
@@ -156,12 +162,12 @@ to them.
 trades, looked up by `project_id`) found a new mismatch; the trade gets `audit_verdict` and
 an `audit_divergence` attention. It changes nothing else.
 
-| `audit_verdict`      | Means                                                                | Do                                                                                                                                                                   |
-| -------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rolled_back`        | A delivered order that Waxpeer now shows as 6: a late rollback       | As `rolled_back` above                                                                                                                                               |
-| `delivered_refunded` | We refunded the buyer, but Waxpeer shows the offer sent or completed | Check the dashboard and whether the buyer has the skin. If they have both, the owner decides; take the money back with a clawback adjustment naming the order number |
-| `unknown`            | Waxpeer no longer knows a trade we saw                               | Search the dashboard by `project_id`; report to Waxpeer if it is gone                                                                                                |
-| `ambiguous`          | Several live trades under one order                                  | As `ambiguous_trade` above                                                                                                                                           |
+| `audit_verdict`      | Means                                                                                                             | Do                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rolled_back`        | A delivered order that Waxpeer now shows as 6: a late rollback                                                    | As `rolled_back` above                                                                                                                                               |
+| `delivered_refunded` | We refunded the buyer, but Waxpeer shows a trade that is not a failed one (0–5: buying, sent, accepted, released) | Check the dashboard and whether the buyer has the skin. If they have both, the owner decides; take the money back with a clawback adjustment naming the order number |
+| `unknown`            | Waxpeer no longer knows a trade we saw                                                                            | Search the dashboard by `project_id`; report to Waxpeer if it is gone                                                                                                |
+| `ambiguous`          | Several live trades under one order                                                                               | As `ambiguous_trade` above                                                                                                                                           |
 
 Then «Разобрано» with what you found. A changed verdict alerts again; agreement clears the
 verdict but leaves the attention for you.

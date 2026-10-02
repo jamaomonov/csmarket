@@ -30,6 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.conftest import CUSTOMER_STEAM_ID
+from tests.integration.fake_trade_client import FakeTradeClient
 from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.payments_factory import make_user
 
@@ -363,7 +364,9 @@ async def test_refund_refused_while_in_flight(db_session: AsyncSession) -> None:
     unresolved_id = unresolved.id
     numbers = [o.number for o in (unresolved, sent, rolled_back, no_trade, paid)]
     for number in numbers:
-        assert await _code(admin_refund(db_session, number=number, admin_id=admin)) == (
+        assert await _code(
+            admin_refund(db_session, number=number, admin_id=admin, client=FakeTradeClient())
+        ) == (
             409,
             "order_in_flight",
         ), number
@@ -378,7 +381,9 @@ async def test_a_resolved_buying_order_needs_a_nothing_bought_reason(
     db_session: AsyncSession, reason: str
 ) -> None:
     order = await _attention(db_session, reason=reason, resolved=True)
-    assert await _code(admin_refund(db_session, number=order.number, admin_id=new_id())) == (
+    assert await _code(
+        admin_refund(db_session, number=order.number, admin_id=new_id(), client=FakeTradeClient())
+    ) == (
         409,
         "order_in_flight",
     )
@@ -391,7 +396,9 @@ async def test_admin_refund_after_resolve_credits_the_balance(
     order = await _attention(db_session, reason=reason, resolved=True)
     admin = new_id()
     before = _refunds_metric("admin")
-    refunded = await admin_refund(db_session, number=order.number, admin_id=admin)
+    refunded = await admin_refund(
+        db_session, number=order.number, admin_id=admin, client=FakeTradeClient()
+    )
     await db_session.commit()
     assert refunded.id == order.id
     assert (refunded.status, refunded.failure_reason, refunded.refunded_to) == (
@@ -407,9 +414,11 @@ async def test_admin_refund_after_resolve_credits_the_balance(
 
 async def test_an_already_refunded_order_is_409(db_session: AsyncSession) -> None:
     order = await _attention(db_session, resolved=True)
-    await admin_refund(db_session, number=order.number, admin_id=new_id())
+    await admin_refund(db_session, number=order.number, admin_id=new_id(), client=FakeTradeClient())
     await db_session.commit()
-    assert await _code(admin_refund(db_session, number=order.number, admin_id=new_id())) == (
+    assert await _code(
+        admin_refund(db_session, number=order.number, admin_id=new_id(), client=FakeTradeClient())
+    ) == (
         409,
         "already_refunded",
     )
@@ -426,7 +435,9 @@ async def test_a_settled_order_is_not_refundable(db_session: AsyncSession) -> No
     )
     numbers = [o.number for o in (pending, cancelled, delivered, resolved_rollback)]
     for number in numbers:
-        assert await _code(admin_refund(db_session, number=number, admin_id=new_id())) == (
+        assert await _code(
+            admin_refund(db_session, number=number, admin_id=new_id(), client=FakeTradeClient())
+        ) == (
             409,
             "order_not_refundable",
         ), number
@@ -436,13 +447,15 @@ async def test_a_settled_order_is_not_refundable(db_session: AsyncSession) -> No
 @pytest.mark.parametrize("number", ["ZZZZZZZZ", "bad", "T1234567"])
 async def test_an_unknown_order_is_404(db_session: AsyncSession, number: str) -> None:
     with pytest.raises(NotFoundError):
-        await admin_refund(db_session, number=number, admin_id=new_id())
+        await admin_refund(db_session, number=number, admin_id=new_id(), client=FakeTradeClient())
 
 
 async def test_admin_refund_raises_conflict_types(db_session: AsyncSession) -> None:
     order = await _attention(db_session, resolved=False)
     with pytest.raises(ConflictError):
-        await admin_refund(db_session, number=order.number, admin_id=new_id())
+        await admin_refund(
+            db_session, number=order.number, admin_id=new_id(), client=FakeTradeClient()
+        )
 
 
 # --- the customer's entries ----------------------------------------------------------------

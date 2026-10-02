@@ -5,8 +5,8 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from collections.abc import Awaitable, Callable
-from datetime import timedelta
+from collections.abc import Awaitable, Callable, Iterator
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -16,11 +16,19 @@ from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.orders.api import admin_refund, attempt_buy, can_refund, can_retry
 from csmarket.modules.orders.buy_lease import release, take_lease
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.skins.api import (
+    WaxpeerError,
+    WaxpeerForbiddenError,
+    WaxpeerRateLimitedError,
+    WaxpeerUnavailableError,
+    request_trade_client,
+)
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import user_balance
 from csmarket.modules.wallet.models import WalletTransaction
+from fastapi import FastAPI
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.integration.conftest import ADMIN_STEAM_ID
@@ -31,6 +39,15 @@ from tests.integration.trade_sweeps_kit import load, reconcile_once, sweep_setti
 Headers = Callable[[], Awaitable[dict[str, str]]]
 PRICE = Decimal(171_800)
 BASE = "/api/v1/admin/orders"
+
+
+@pytest.fixture(autouse=True)
+def waxpeer(integration_app: FastAPI) -> Iterator[FakeTradeClient]:
+    """The refund's lookup client: Waxpeer knows no trade unless a test scripts one."""
+    fake = FakeTradeClient()
+    integration_app.dependency_overrides[request_trade_client] = lambda: fake
+    yield fake
+    integration_app.dependency_overrides.pop(request_trade_client, None)
 
 
 def _key() -> dict[str, str]:
@@ -247,6 +264,221 @@ async def test_refund_refusals_write_nothing(
     assert await _audit(db_session, "orders.refund") == []
 
 
+# --- a purchase on record or at Waxpeer (final review Important 1) ----------------------
+
+ACCEPTED_AT = datetime(2026, 10, 9, 12, 0, tzinfo=UTC)
+
+
+async def test_admin_refund_refused_while_a_purchase_is_on_record(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+) -> None:
+    """A bought trade Waxpeer stopped reporting (``ambiguous_trade``, resolved): the skin may
+    still arrive, so the refund is refused before Waxpeer is even asked."""
+    h = await admin_headers()
+    order = await _order(
+        db_session,
+        trade=_attention("ambiguous_trade", resolved=True, waxpeer_id=60_000_001, status=2),
+    )
+    page = (await integration_client.get(f"{BASE}/{order.number}", headers=h)).json()
+    assert page["can_refund"] is False
+    status, body = await _post(integration_client, h, order, "refund")
+    assert (status, body["code"]) == (409, "order_in_flight")
+    assert waxpeer.lookup_calls == 0
+    assert await _refunds(db_session, order) == 0
+    assert await user_balance(db_session, order.user_id) == 0
+    assert await _audit(db_session, "orders.refund") == []
+    row, trade = await load(db_session, order)
+    assert (row.status, row.refunded_at, trade.waxpeer_id) == ("buying", None, 60_000_001)
+
+
+async def test_a_purchase_on_record_that_failed_is_refundable(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    """Our own trade at Waxpeer status 6 (never accepted) is conclusive: nothing to deliver."""
+    h = await admin_headers()
+    order = await _order(
+        db_session,
+        trade=_attention("ambiguous_trade", resolved=True, waxpeer_id=60_000_001, status=6),
+    )
+    status, page = await _post(integration_client, h, order, "refund")
+    assert status == 200, page
+    assert await _refunds(db_session, order) == 1
+
+
+_LIVE = {"status": 0, "id": 60_000_002}
+
+
+@pytest.mark.parametrize(
+    "found",
+    [
+        [_LIVE],
+        [{"status": 4, "id": 60_000_002}],
+        [{"status": 6, "id": 60_000_001}, _LIVE],
+        [{"status": 6, "id": 60_000_001, "release_date": ACCEPTED_AT}],
+        [{"status": 6, "id": 60_000_001, "penalties": {"total": 1500}}],
+        [{"status": 6, "id": 60_000_001, "is_released": True}],
+    ],
+    ids=["live", "offer_sent", "refused_and_live", "accepted", "penalties", "released"],
+)
+async def test_admin_refund_asks_waxpeer_first(
+    *,
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+    found: list[dict[str, Any]],
+) -> None:
+    """The page says «можно вернуть» (nothing on record), but Waxpeer has a live or once
+    accepted trade under the project id: 409 ``order_in_flight``, nothing booked."""
+    h = await admin_headers()
+    order = await _order(db_session, trade=_attention("buy_unconfirmed", resolved=True))
+    waxpeer.lookup_returns([waxpeer_trade(order.id, **t) for t in found])
+    status, body = await _post(integration_client, h, order, "refund")
+    assert (status, body["code"]) == (409, "order_in_flight")
+    assert waxpeer.asked == [[order.id]]
+    assert await _refunds(db_session, order) == 0
+    assert await user_balance(db_session, order.user_id) == 0
+    assert await _audit(db_session, "orders.refund") == []
+    row, _ = await load(db_session, order)
+    assert (row.status, row.refunded_at) == ("buying", None)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        WaxpeerUnavailableError("down"),
+        WaxpeerRateLimitedError("slow down", retry_after_seconds=30),
+        WaxpeerForbiddenError(),
+        WaxpeerError("bad", status=500),
+        TimeoutError(),
+    ],
+    ids=["unavailable", "rate_limited", "forbidden", "http_error", "timeout"],
+)
+async def test_admin_refund_is_refused_when_waxpeer_cannot_be_asked(
+    *,
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+    error: BaseException,
+) -> None:
+    h = await admin_headers()
+    order = await _order(db_session, trade=_attention("waxpeer_forbidden", resolved=True))
+    waxpeer.lookup_raises(error)
+    key = _key()
+    status, body = await _post(integration_client, h, order, "refund", key=key)
+    assert (status, body["code"]) == (409, "waxpeer_unavailable")
+    assert await _refunds(db_session, order) == 0
+    assert await _audit(db_session, "orders.refund") == []
+    # The same key works once Waxpeer answers: nothing was stored for it.
+    waxpeer.lookup_returns([])
+    status, page = await _post(integration_client, h, order, "refund", key=key)
+    assert status == 200, page
+    assert await _refunds(db_session, order) == 1
+
+
+async def test_admin_refund_with_only_refused_attempts_at_waxpeer_refunds(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+) -> None:
+    """Every trade under the project id is a 6 that was never accepted: nothing can arrive."""
+    h = await admin_headers()
+    order = await _order(db_session, trade=_attention("buy_unconfirmed", resolved=True))
+    waxpeer.lookup_returns(
+        [
+            waxpeer_trade(order.id, status=6, id=60_000_001),
+            waxpeer_trade(order.id, status=6, id=60_000_002),
+            waxpeer_trade("another-order", status=0, id=60_000_003),
+        ]
+    )
+    status, page = await _post(integration_client, h, order, "refund")
+    assert status == 200, page
+    assert (page["order"]["status"], page["order"]["failure_reason"]) == ("failed", "admin")
+    assert await user_balance(db_session, order.user_id) == PRICE
+    assert await _refunds(db_session, order) == 1
+
+
+async def test_admin_refund_holds_no_lock_while_waxpeer_answers(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+) -> None:
+    """During the lookup another session can lock the order at once (``NOWAIT``)."""
+    h = await admin_headers()
+    order = await _order(db_session, trade=_attention("buy_unconfirmed", resolved=True))
+    factory = async_sessionmaker(bind=db_session.bind, expire_on_commit=False)
+    locked: list[str] = []
+
+    async def lock_meanwhile() -> None:
+        async with factory() as other:
+            got = await other.scalar(
+                text("SELECT id FROM orders WHERE id = :id FOR UPDATE NOWAIT"), {"id": order.id}
+            )
+            locked.append(str(got))
+            await other.rollback()
+
+    waxpeer.before_lookup = lock_meanwhile
+    status, page = await _post(integration_client, h, order, "refund")
+    assert status == 200, page
+    assert locked == [order.id]
+
+
+async def test_admin_refund_rechecks_under_the_lock_after_the_lookup(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+) -> None:
+    """A buy recorded while Waxpeer answered (a retry's attempt landed): the locked re-check
+    sees the purchase on record and refuses."""
+    h = await admin_headers()
+    order = await _order(db_session, trade=_attention("buy_unconfirmed", resolved=True))
+    factory = async_sessionmaker(bind=db_session.bind, expire_on_commit=False)
+
+    async def bought_meanwhile() -> None:
+        async with factory() as other:
+            row = await other.scalar(select(SkinTrade).where(SkinTrade.order_id == order.id))
+            assert row is not None
+            row.waxpeer_id, row.status = 60_000_007, 0
+            await other.commit()
+
+    waxpeer.before_lookup = bought_meanwhile
+    status, body = await _post(integration_client, h, order, "refund")
+    assert (status, body["code"]) == (409, "order_in_flight")
+    assert await _refunds(db_session, order) == 0
+
+
+async def test_a_same_key_twin_refunding_during_the_lookup_is_replayed(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    waxpeer: FakeTradeClient,
+) -> None:
+    """Two submissions with one key: the second one's lookup ends after the first refunded;
+    it answers the first one's stored page, and the money moves once."""
+    h = await admin_headers()
+    order = await _order(db_session, trade=_attention("buy_unconfirmed", resolved=True))
+    key = _key()
+    first: list[tuple[int, dict[str, Any]]] = []
+
+    async def twin_first() -> None:
+        waxpeer.before_lookup = None
+        first.append(await _post(integration_client, h, order, "refund", key=key))
+
+    waxpeer.before_lookup = twin_first
+    second = await _post(integration_client, h, order, "refund", key=key)
+    assert first[0][0] == 200, first
+    assert second == first[0]
+    assert await _refunds(db_session, order) == 1
+    assert len(await _audit(db_session, "orders.refund")) == 1
+
+
 # --- retry ------------------------------------------------------------------------------
 
 
@@ -388,7 +620,8 @@ async def test_a_lease_waits_for_the_refund_and_then_finds_nothing_to_buy(
     admin = str(uuid.uuid4())
     factory = async_sessionmaker(bind=db_session.bind, expire_on_commit=False)
     async with factory() as refunding, factory() as attempt:
-        await admin_refund(refunding, number=order.number, admin_id=admin)  # holds the locks
+        # Returns holding the locks (the lookup ran before them, with nothing locked).
+        await admin_refund(refunding, number=order.number, admin_id=admin, client=FakeTradeClient())
         racing = asyncio.create_task(take_lease(attempt, order.id))
         await asyncio.sleep(0.3)
         assert not racing.done()  # the lease waits on the order row

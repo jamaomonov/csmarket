@@ -58,9 +58,10 @@ groups:
       # `ApiWaxpeerLatency` below for the other half.
       #
       # The list names the Waxpeer-touching routes (spec §7.2–7.4): the live listings,
-      # the trade-link check and checkout (`POST /orders`, exactly `/api/v1/orders` —
-      # the order reads and `/me/orders` do not match). Adding another means adding it
-      # here too, or this alert starts crying wolf.
+      # the trade-link check, checkout (`POST /orders`, exactly `/api/v1/orders` —
+      # the order reads and `/me/orders` do not match) and the admin refund, which asks
+      # Waxpeer first (ADR-0007 Y; the other admin order routes do not match). Adding
+      # another means adding it here too, or this alert starts crying wolf.
       - alert: ApiHighLatency
         expr: |
           histogram_quantile(
@@ -69,7 +70,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler!~".*(/skins/.*/listings|/trade-?link/check|/v1/orders)"
+                  handler!~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/admin/orders/[^/]+/refund)"
                 }[5m]
               )
             ) by (le)
@@ -95,7 +96,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler=~".*(/skins/.*/listings|/trade-?link/check|/v1/orders)"
+                  handler=~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/admin/orders/[^/]+/refund)"
                 }[5m]
               )
             ) by (le)

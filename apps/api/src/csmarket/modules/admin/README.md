@@ -153,11 +153,17 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   409 `nothing_to_resolve` without a trade or an attention.
 - **Refund:** only a `buying`, unrefunded order whose trade carries a **resolved**
   `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` (an operator checked Waxpeer:
-  nothing was bought) and no running buy attempt. Under the locks `buy_pending` goes off
-  (no new attempt can start), then `orders.refund_to_balance` books it (`failed`, reason
-  `admin`, actor `admin:<id>`). 409: `already_refunded`; `order_in_flight` (the skin may be
-  on its way or delivered, or the attention is unresolved or not a "nothing bought" case);
-  `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`.
+  nothing was bought), no purchase on record (`waxpeer_id`) unless our own trade failed
+  (status 6), and no running buy attempt. The route checks the replay row unlocked, then
+  `orders.admin_refund` asks Waxpeer for the `project_id` first (ADR-0007 Y; one
+  `check-many-project-id`, 4 s, `skins.request_trade_client`, nothing locked) and only
+  then locks and re-checks; a same-key twin that refunded meanwhile is answered with its
+  stored page. Under the locks `buy_pending` goes off (no new attempt can start), then
+  `orders.refund_to_balance` books it (`failed`, reason `admin`, actor `admin:<id>`). 409:
+  `already_refunded`; `order_in_flight` (the skin may be on its way or delivered — a live or
+  once-accepted trade at Waxpeer, a purchase on record — or the attention is unresolved or
+  not a "nothing bought" case); `order_not_refundable` (unpaid, cancelled, delivered);
+  `order_busy`; `waxpeer_unavailable` (the lookup failed or timed out; nothing booked).
 - **Retry:** the same eligibility, minus the refund, and no purchase on record (`waxpeer_id`
   unset: a bought trade that stopped being reported is `ambiguous_trade` too, and a retry
   would buy it twice) — clears `attention_reason`,

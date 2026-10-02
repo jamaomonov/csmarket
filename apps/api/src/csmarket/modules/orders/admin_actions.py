@@ -12,10 +12,19 @@ action never disagree.
 the future, ``orders.buy_lease``) a Waxpeer buy may be on the wire: refund and retry answer
 409 ``order_busy``. A refund also turns ``buy_pending`` off under the order lock, so no new
 attempt can start after it (``take_lease`` needs the row lock and a ``buying`` order).
+
+**The refund asks Waxpeer first** (ADR-0007, the admin carve-out): a refund is the one place
+the system could hand out both the skin and the money, so :func:`admin_refund` reads the
+order unlocked, ends the transaction, looks its ``project_id`` up at Waxpeer
+(:data:`REFUND_LOOKUP_SECONDS`), and only then locks and re-checks — no lock and no open
+transaction across the call. A live trade, or one that was ever accepted, refuses the
+refund (``order_in_flight``); a lookup that fails refuses it too (``waxpeer_unavailable``).
 """
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import select
@@ -23,9 +32,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError, NotFoundError
+from csmarket.core.logging import get_logger
 from csmarket.core.numbers import is_number, is_topup_number
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.refunds import ADMIN_REFUNDABLE, in_flight, refund_to_balance
+from csmarket.modules.orders.sweep_base import LOOKUP_ERRORS, of_project
+from csmarket.modules.orders.trades import FAILED_STATUS
+from csmarket.modules.skins.api import TradeClient, WaxpeerTrade
+
+log = get_logger("csmarket.orders.admin")
+
+#: How long an admin refund waits for Waxpeer's lookup before refusing
+#: (``waxpeer_unavailable``) — the request path's 4 s (AGENTS §11).
+REFUND_LOOKUP_SECONDS = 4.0
 
 #: Attention reasons after which a resolved ``buying`` order may be bought again: the
 #: next attempt looks the ``project_id`` up first, so a buy Waxpeer did make is adopted.
@@ -39,6 +58,7 @@ CONFLICTS: dict[str, str] = {
     "order_busy": "a buy attempt is running for this order; try again in a few minutes",
     "not_retryable": "this order's buy cannot be retried now",
     "nothing_to_resolve": "this order's trade has no attention to resolve",
+    "waxpeer_unavailable": "the purchase could not be checked at Waxpeer; try again later",
 }
 
 
@@ -90,12 +110,16 @@ def refund_refusal(order: Order, trade: SkinTrade | None, at: datetime) -> str |
 
     Only a ``buying`` order whose trade carries a **resolved** attention in
     :data:`~csmarket.modules.orders.refunds.ADMIN_REFUNDABLE` (an operator checked Waxpeer:
-    nothing was bought), not refunded yet, with no buy attempt running.
+    nothing was bought), not refunded yet, with no purchase on record that is not
+    conclusively our failed trade (``waxpeer_id`` set and Waxpeer status ≠ 6 — the skin may
+    still arrive; the same guard as :func:`retry_refusal`), with no buy attempt running.
     """
     if order.refunded_at is not None:
         return "already_refunded"
     if not (order.status == "buying" and _resolved_in(trade, ADMIN_REFUNDABLE)):
         return "order_in_flight" if in_flight(order, trade) else "order_not_refundable"
+    if trade is not None and trade.waxpeer_id is not None and trade.status != FAILED_STATUS:
+        return "order_in_flight"
     if buy_running(order, trade, at):
         return "order_busy"
     return None
@@ -128,17 +152,80 @@ def can_retry(order: Order, trade: SkinTrade | None, at: datetime | None = None)
     return retry_refusal(order, trade, at or now()) is None
 
 
-async def admin_refund(db: AsyncSession, *, number: str, admin_id: str) -> Order:
+async def _read_refundable(db: AsyncSession, number: str) -> str:
+    """Order ``number``'s id if :func:`refund_refusal` passes on an unlocked read; the read
+    transaction is ended either way (nothing is held while Waxpeer answers).
+
+    Raises:
+        NotFoundError: malformed, a top-up's, or unknown.
+        ConflictError: the refusal's code.
+    """
+    if not is_number(number) or is_topup_number(number):
+        raise NotFoundError("order not found")
+    order = await db.scalar(
+        select(Order).where(Order.number == number).execution_options(populate_existing=True)
+    )
+    trade = (
+        None
+        if order is None
+        else await db.scalar(
+            select(SkinTrade)
+            .where(SkinTrade.order_id == order.id)
+            .execution_options(populate_existing=True)
+        )
+    )
+    code = None if order is None else refund_refusal(order, trade, now())
+    order_id = None if order is None else order.id
+    await db.commit()  # nothing written: the read transaction ends before Waxpeer is asked
+    if order_id is None:
+        raise NotFoundError("order not found")
+    if code is not None:
+        raise _conflict(code)
+    return order_id
+
+
+def _purchase_seen(trades: Sequence[WaxpeerTrade]) -> bool:
+    """A trade under the order's ``project_id`` is live (status ≠ 6) or was ever accepted."""
+    return any(
+        t.status != FAILED_STATUS or t.release_date or t.penalties or t.is_released for t in trades
+    )
+
+
+async def _ask_waxpeer(client: TradeClient, *, order_id: str, number: str) -> None:
+    """Refuse the refund unless Waxpeer shows no purchase that may reach the buyer.
+
+    Raises:
+        ConflictError: ``order_in_flight`` — a live or once-accepted trade under the
+            ``project_id``; ``waxpeer_unavailable`` — the lookup failed or timed out.
+    """
+    try:
+        async with asyncio.timeout(REFUND_LOOKUP_SECONDS):
+            trades = of_project(await client.check_project_ids([order_id]), order_id)
+    except (*LOOKUP_ERRORS, TimeoutError) as exc:
+        log.warning("orders.admin_refund.lookup_failed", number=number, error=type(exc).__name__)
+        raise _conflict("waxpeer_unavailable") from None
+    if _purchase_seen(trades):
+        log.warning("orders.admin_refund.purchase_seen", number=number, trades=len(trades))
+        raise _conflict("order_in_flight")
+
+
+async def admin_refund(
+    db: AsyncSession, *, number: str, admin_id: str, client: TradeClient
+) -> Order:
     """An admin refunds order ``number`` to the balance (``failed``, reason ``admin``).
 
-    Under the locks: refused unless :func:`refund_refusal` passes; then ``buy_pending`` is
-    turned off (no new attempt may start) and ``refund_to_balance`` books the refund.
-    Flushes, never commits.
+    Lookup first (ADR-0007): an unlocked read refuses early (:func:`refund_refusal`) and
+    ends the transaction; Waxpeer is asked for every trade under the order's
+    ``project_id`` with no lock and no transaction open; then the order and its trade are
+    locked, the refusal is checked again (the rows may have moved meanwhile), ``buy_pending``
+    is turned off (no new attempt may start) and ``refund_to_balance`` books the refund.
+    Flushes, never commits; returns with the locks held.
 
     Args:
         db: Session; the order and its trade are locked here.
         number: The order's public number.
         admin_id: The admin's user id (booked as actor ``admin:<id>``, never logged).
+        client: Waxpeer, for the one lookup (the request path's 4 s client).
 
     Returns:
         The refunded order.
@@ -146,10 +233,14 @@ async def admin_refund(db: AsyncSession, *, number: str, admin_id: str) -> Order
     Raises:
         NotFoundError: no such order.
         ConflictError: ``already_refunded``; ``order_in_flight`` — the skin may be on its
-            way or delivered, or the attention is unresolved or not a "nothing bought" case;
+            way or delivered (a purchase on record or at Waxpeer that is not a failed trade
+            never accepted), or the attention is unresolved or not a "nothing bought" case;
             ``order_not_refundable`` — settled with nothing to give back (unpaid, cancelled,
-            delivered); ``order_busy`` — a buy attempt holds the order.
+            delivered); ``order_busy`` — a buy attempt holds the order;
+            ``waxpeer_unavailable`` — Waxpeer could not be asked.
     """
+    order_id = await _read_refundable(db, number)
+    await _ask_waxpeer(client, order_id=order_id, number=number)
     order, trade = await lock_order(db, number)
     at = now()
     code = refund_refusal(order, trade, at)
@@ -237,6 +328,7 @@ async def resolve_attention(
 
 __all__ = [
     "CONFLICTS",
+    "REFUND_LOOKUP_SECONDS",
     "RETRYABLE",
     "admin_refund",
     "buy_running",

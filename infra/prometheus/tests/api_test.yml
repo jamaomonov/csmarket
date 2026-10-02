@@ -1,0 +1,54 @@
+# Unit tests for ../alerts/api.yml (the latency split). Run from the repo root:
+#
+#   docker run --rm -v "$PWD/infra/prometheus:/p" --entrypoint promtool \
+#     prom/prometheus test rules /p/tests/api_test.yml
+rule_files:
+  - ../alerts/api.yml
+
+evaluation_interval: 1m
+
+tests:
+  # The admin refund asks Waxpeer first (ADR-0007 Y): a slow refund is the Waxpeer alert's,
+  # never the API-wide one's.
+  - interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{job="api",handler="/api/v1/admin/orders/{number}/refund",le="5.0"}'
+        values: "0x30"
+      - series: 'http_request_duration_seconds_bucket{job="api",handler="/api/v1/admin/orders/{number}/refund",le="10.0"}'
+        values: "0+10x30"
+      - series: 'http_request_duration_seconds_bucket{job="api",handler="/api/v1/admin/orders/{number}/refund",le="+Inf"}'
+        values: "0+10x30"
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: ApiWaxpeerLatency
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "Waxpeer-bound routes p95 > 5s — upstream is degraded"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+      - eval_time: 25m
+        alertname: ApiHighLatency
+        exp_alerts: []
+
+  # The other admin order actions never call Waxpeer: a slow retry is the API-wide alert's.
+  - interval: 1m
+    input_series:
+      - series: 'http_request_duration_seconds_bucket{job="api",handler="/api/v1/admin/orders/{number}/retry",le="1.0"}'
+        values: "0x30"
+      - series: 'http_request_duration_seconds_bucket{job="api",handler="/api/v1/admin/orders/{number}/retry",le="2.5"}'
+        values: "0+10x30"
+      - series: 'http_request_duration_seconds_bucket{job="api",handler="/api/v1/admin/orders/{number}/retry",le="+Inf"}'
+        values: "0+10x30"
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: ApiHighLatency
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "API p95 latency > 1.5s (excluding Waxpeer-bound routes)"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/traffic-surge.md"
+      - eval_time: 25m
+        alertname: ApiWaxpeerLatency
+        exp_alerts: []

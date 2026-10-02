@@ -25,7 +25,6 @@ from csmarket.modules.orders.sweep_base import (
 from csmarket.modules.orders.trades import (
     FAILED_STATUS,
     RELEASED_STATUS,
-    SENT_STATUS,
     AmbiguousTradeError,
     flag,
     pick_trade,
@@ -55,7 +54,9 @@ def _verdict(order: Order, trade: SkinTrade, theirs: list[WaxpeerTrade]) -> str 
         and trade.status != FAILED_STATUS  # a rollback the sweeps saw is already flagged
     ):
         return "rolled_back"
-    if refunded and wt.status in (SENT_STATUS, RELEASED_STATUS):
+    if refunded and wt.status != FAILED_STATUS:
+        # Any trade of ours that is not a failed one: the skin may reach (or have reached)
+        # the buyer although the money is back on the balance.
         return "delivered_refunded"
     return None
 
@@ -87,7 +88,8 @@ async def audit_recent(db: AsyncSession, client: TradeClient, *, days: int = AUD
     Settled: Waxpeer status 5 or 6, released, or the order ``failed`` / ``returned``.
     Verdicts: ``unknown`` (Waxpeer has no record of a trade we saw), ``rolled_back``
     (Waxpeer 6, the order delivered and not refunded), ``delivered_refunded`` (the order
-    refunded, Waxpeer 4/5), ``ambiguous``. A new verdict is stored in ``audit_verdict``,
+    refunded while its Waxpeer trade is anything but a 6: 0–5, the skin may reach the
+    buyer), ``ambiguous``. A new verdict is stored in ``audit_verdict``,
     opens the attention ``audit_divergence`` and counts the metric; agreement clears the
     verdict. Changes no trade or order state otherwise.
 

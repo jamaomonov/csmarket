@@ -7,6 +7,10 @@ Admin only (``require_admin`` on the whole router). Every write requires an
 (ruling K) → replay lookup → the change (``orders.api``) → ``audit.record`` → replay row →
 commit. A replayed key returns the stored page and writes nothing; the same key on another
 request is 409 ``idempotency_mismatch``.
+
+The refund asks Waxpeer first (ADR-0007): its replay lookup runs unlocked, then
+``admin_refund`` reads, asks Waxpeer with nothing locked, and locks; a same-key twin that
+refunded meanwhile is answered with its stored page.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
+from csmarket.core.errors import ConflictError
 from csmarket.modules.admin import orders_service as svc
 from csmarket.modules.admin.audit import record
 from csmarket.modules.admin.deps import require_admin, required_key
@@ -37,6 +42,7 @@ from csmarket.modules.orders.api import (
     resolve_attention,
     retry_buy,
 )
+from csmarket.modules.skins.api import TradeClient, request_trade_client
 from csmarket.modules.users.api import User
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -44,6 +50,7 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 Db = Annotated[AsyncSession, Depends(db_session)]
 Admin = Annotated[User, Depends(require_admin)]
 Key = Annotated[str, Depends(required_key)]
+Waxpeer = Annotated[TradeClient, Depends(request_trade_client)]
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {404: {"description": "No such order"}}
 _IDEMPOTENCY = "`idempotency_mismatch` — the key answered another request."
@@ -156,19 +163,30 @@ async def resolve(
         "`order_not_refundable` — settled with nothing to give back (unpaid, cancelled, "
         "delivered).",
         "`order_busy` — a buy attempt is running; try again in a few minutes.",
+        "`waxpeer_unavailable` — Waxpeer could not be asked whether a purchase exists; "
+        "nothing was refunded, try again later.",
         _IDEMPOTENCY,
     ),
     summary="Refund the order to the buyer's balance",
 )
-async def refund(number: str, admin: Admin, db: Db, key: Key) -> AdminOrderDetail:
+async def refund(number: str, admin: Admin, db: Db, key: Key, waxpeer: Waxpeer) -> AdminOrderDetail:
     """Only a ``buying`` order whose resolved attention says nothing was bought
-    (``can_refund``); the order becomes ``failed`` (reason ``admin``)."""
-    await lock_order(db, number)  # serialises same-key replays; the action re-locks
+    (``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade
+    under (asked first, 4 s, nothing locked); the order becomes ``failed`` (reason
+    ``admin``)."""
     request = {"number": number}
     scope = "admin.orders.refund"
     if (hit := await replayed(db, scope=scope, key=key, request=request)) is not None:
         return AdminOrderDetail.model_validate(hit)
-    order = await admin_refund(db, number=number, admin_id=admin.id)
+    try:
+        order = await admin_refund(db, number=number, admin_id=admin.id, client=waxpeer)
+    except ConflictError as exc:
+        # A same-key twin refunded while Waxpeer answered: its stored page is the answer.
+        if exc.extra.get("code") != "already_refunded":
+            raise
+        if (hit := await replayed(db, scope=scope, key=key, request=request)) is None:
+            raise
+        return AdminOrderDetail.model_validate(hit)
     await record(
         db,
         actor_id=admin.id,

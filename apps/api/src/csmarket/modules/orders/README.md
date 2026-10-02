@@ -187,14 +187,23 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
   of ≤ 60 s is running) → 409 `order_busy`. While Waxpeer keeps answering 403, refund/retry
   of a `waxpeer_forbidden` order answer `order_busy` during each 60 s backoff: fix the IP
   whitelist first — the sweep then buys by itself.
-- `admin_refund(db, *, number, admin_id) -> Order` — only a `buying`, unrefunded order whose
-  trade carries a **resolved** attention in `ADMIN_REFUNDABLE` (`buy_unconfirmed`,
-  `ambiguous_trade`, `waxpeer_forbidden`: an operator checked Waxpeer, nothing was bought)
-  and no running attempt. Turns `buy_pending` off under the lock (a racing `take_lease`
-  waits on the order row and then finds the order `failed`), then `refund_to_balance`
-  (`failed`, reason `admin`, actor `admin:<id>`). 409, in this order: `already_refunded`;
-  `order_in_flight` (`in_flight`, including an unresolved or "something may be bought"
-  attention); `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`.
+- `admin_refund(db, *, number, admin_id, client) -> Order` — only a `buying`, unrefunded
+  order whose trade carries a **resolved** attention in `ADMIN_REFUNDABLE`
+  (`buy_unconfirmed`, `ambiguous_trade`, `waxpeer_forbidden`: an operator checked Waxpeer,
+  nothing was bought), no purchase on record that is not our own failed trade (`waxpeer_id`
+  set and status ≠ 6 → `order_in_flight`, the same guard as the retry) and no running
+  attempt. **Lookup first** (ADR-0007 Y): an unlocked read refuses early and ends the
+  transaction; `client.check_project_ids([order.id])` is asked with nothing locked
+  (`REFUND_LOOKUP_SECONDS` = 4 s; the route's client is `skins.request_trade_client`, the
+  fake under `waxpeer_fake`); a trade under the `project_id` that is live (status ≠ 6) or
+  was ever accepted (`release_date`, penalties, released) → `order_in_flight`; a lookup
+  error or timeout → `waxpeer_unavailable`. Then it locks order → trade, re-checks, turns
+  `buy_pending` off under the lock (a racing `take_lease` waits on the order row and then
+  finds the order `failed`), and `refund_to_balance` books it (`failed`, reason `admin`,
+  actor `admin:<id>`). 409, in this order: `already_refunded`; `order_in_flight`
+  (`in_flight`, an unresolved or "something may be bought" attention, a purchase on record
+  or at Waxpeer); `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`;
+  `waxpeer_unavailable`.
 - `retry_buy(db, *, number, admin_id) -> str` — a `buying`, unrefunded order whose trade
   carries a **resolved** attention in `RETRYABLE` (the same three), no purchase on record
   (`waxpeer_id` unset — `sweeps` also flags a bought trade that stopped being reported
