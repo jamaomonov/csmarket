@@ -36,14 +36,22 @@ def _cooldown_key(user_id: str) -> str:
 
 async def send_verification(
     db: AsyncSession, user: User, *, settings: Settings | None = None, resend: bool = False
-) -> None:
-    """Enqueue a confirmation letter for ``user.email``. Flushes, never commits.
+) -> bool:
+    """Enqueue a confirmation letter for ``user.email``, at most one a minute per account.
+
+    Flushes, never commits. Within the cooldown a re-send is refused (429); an address
+    change is saved but not mailed — ``MeOut.email_verification_sent_at`` stays ``null`` and
+    the user sends it from the profile a minute later. Without that, alternating two
+    addresses through ``PATCH /me`` would mail a stranger's inbox on every call.
 
     Args:
         db: The request's session.
         user: The account; its email is set and unverified.
         settings: The process settings when omitted.
         resend: A re-send asked for by the user: refused within the cooldown.
+
+    Returns:
+        Whether a letter was queued.
 
     Raises:
         ConflictError: ``email_missing``; ``email_already_verified`` (re-send only).
@@ -56,11 +64,14 @@ async def send_verification(
     if resend and user.email_verified_at is not None:
         raise ConflictError("this email is already confirmed", code="email_already_verified")
     cooldown = settings.email_verify_cooldown_seconds
-    started = await get_redis().set(_cooldown_key(user.id), "1", ex=cooldown, nx=resend)
-    if resend and not started:
-        raise RateLimitedError(
-            "the letter was just sent", code="email_verify_cooldown", retry_after=cooldown
-        )
+    started = await get_redis().set(_cooldown_key(user.id), "1", ex=cooldown, nx=True)
+    if not started:
+        if resend:
+            raise RateLimitedError(
+                "the letter was just sent", code="email_verify_cooldown", retry_after=cooldown
+            )
+        log.info("users.email.verification_deferred")
+        return False
     expires_at = now() + timedelta(hours=settings.email_verify_ttl_hours)
     await enqueue(
         db,
@@ -70,6 +81,7 @@ async def send_verification(
         payload={"token": make_token(user.id, email, expires_at=expires_at)},
     )
     log.info("users.email.verification_sent", resend=resend)
+    return True
 
 
 async def confirm_email(db: AsyncSession, token: str) -> None:

@@ -30,7 +30,9 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
 
 - **Email (ruling P4, M4b R7):** optional, stored lower-domain via `EmailStr`; any change
   resets `email_verified_at` and queues a confirmation letter (`email_flow.send_verification`,
-  60 s cooldown in Redis `users:email_verify:cooldown:{user_id}`). The link's token
+  one a minute per account: Redis `users:email_verify:cooldown:{user_id}`; a second address
+  within the minute is saved but not mailed). An email edit is charged to the `email-verify`
+  bucket, so `PATCH /me` cannot mail a stranger's inbox in a loop. The link's token
   (`email_verify`) is `user_id | email | expiry` sealed with SecretBox, 24 h.
   `POST /me/email/verification` re-sends; `POST /email/confirm` (anonymous, idempotent;
   `routes_email`) confirms while the account's email is still the token's. `MeOut` carries

@@ -67,6 +67,17 @@ describe("EmailForm", () => {
     expect(onChange).toHaveBeenCalled();
   });
 
+  it("a second address within a minute is saved but says to send the letter later", async () => {
+    api.apiPatch.mockResolvedValue({ email_verification_sent_at: null });
+    setup({ email: "old@example.com" });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "new@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByText("Отправить ещё раз можно через минуту.")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Мы отправили письмо со ссылкой — откройте его."),
+    ).not.toBeInTheDocument();
+  });
+
   it("clearing the field sends null and says saved", async () => {
     api.apiPatch.mockResolvedValue({});
     setup({ email: "old@example.com" });

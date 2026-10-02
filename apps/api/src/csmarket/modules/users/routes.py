@@ -88,6 +88,7 @@ async def get_me(
 
 @router.patch("", response_model=MeOut, summary="Edit locale or email")
 async def patch_me(
+    request: Request,
     body: MePatchIn,
     user: Annotated[User, Depends(current_user)],
     db: Annotated[AsyncSession, Depends(db_session)],
@@ -95,8 +96,11 @@ async def patch_me(
 ) -> MeOut:
     """Partial update; replays a stored response for a repeated ``Idempotency-Key``.
 
-    A new email is unconfirmed until its link is opened: a confirmation letter is queued.
+    A new email is unconfirmed until its link is opened: a confirmation letter is queued (one a
+    minute per account). An email edit counts against the ``email-verify`` bucket.
     """
+    if "email" in body.model_fields_set:
+        await guard_ip(request, bucket="email-verify", subject=user.id)
     key = normalize_idempotency_key(idempotency_key)
     scope = f"users.patch_me:{user.id}"
     if (hit := await _replayed(db, scope, key)) is not None:

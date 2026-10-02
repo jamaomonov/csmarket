@@ -7,6 +7,8 @@ Order letters (paid, trade sent, money back on the balance) go only to a confirm
 
 1. On `/account`, «Email — Для писем о заказах.» They enter an address and save: «Мы
    отправили письмо со ссылкой — откройте его.»
+   A second address saved within a minute of the last letter is kept, but the page says
+   «Отправить ещё раз можно через минуту.» — the letter goes out when they press the button.
 2. Until it is confirmed: «Почта не подтверждена. Мы отправили письмо на {email}.» and
    «Отправить ещё раз» (once a minute; sooner → «Отправить ещё раз можно через минуту.»).
 3. The letter «Подтвердите почту» has one button. It opens

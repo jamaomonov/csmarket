@@ -361,8 +361,12 @@ ip_guard bucket (60 per minute per IP). A nudge carries no data: re-read
 ## Email confirmation (M4b)
 
 Order letters go only to a confirmed address. `PATCH /me` with a new `email` resets
-`email_verified` and queues a confirmation letter; `MeOut.email_verification_sent_at` says
-when the latest one for the current address was queued (`null` once confirmed).
+`email_verified` and queues a confirmation letter — one a minute per account: a second
+address within that minute is saved but not mailed (`email_verification_sent_at: null`; the
+user sends it from the profile later), and every email edit counts against the
+`email-verify` bucket (10 a minute per IP and account, then 429).
+`MeOut.email_verification_sent_at` says when the latest letter for the current address was
+queued (`null` once confirmed or when none was sent).
 
 - `POST /me/email/verification` (signed in; `Idempotency-Key` optional, a repeat replays
   202 and sends nothing): `202 {sent: true}`; 409 `email_missing` /

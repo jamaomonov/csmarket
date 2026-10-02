@@ -108,6 +108,9 @@ row's address a week after it was queued.
 - The socket client resets its backoff and its one-refresh allowance when the server first
   speaks, not on open (the server accepts every socket before it reads the auth frame).
 - A close or ping to a client already gone ends the socket quietly (found in e2e).
+- The one-letter-a-minute cooldown also holds on `PATCH /me` (a changed address within the
+  minute is saved, not mailed), and an email edit is charged to the `email-verify` bucket —
+  otherwise alternating two addresses would mail a stranger in a loop (final review).
 
 ## Consequences
 

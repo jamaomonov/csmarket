@@ -53,13 +53,16 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
     setOutcome(null);
     const next = value.trim() || null;
     try {
-      await session.apiPatch(
+      // The fields of `MeOut` this form reads (the API answers the whole profile).
+      const me = await session.apiPatch<{ email_verification_sent_at?: string | null }>(
         "/api/v1/me",
         { email: next },
         { idempotencyKey: crypto.randomUUID() },
       );
       const changed = next !== null && next !== email;
-      setOutcome(changed ? "sent" : "saved");
+      // Within a minute of the last letter the API saves the address but sends nothing.
+      const deferred = changed && me.email_verification_sent_at === null;
+      setOutcome(deferred ? "wait" : changed ? "sent" : "saved");
       if (changed) setLastSent(Date.now());
       onChange();
     } catch (err) {

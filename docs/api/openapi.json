@@ -7546,7 +7546,7 @@
         ]
       },
       "patch": {
-        "description": "Partial update; replays a stored response for a repeated ``Idempotency-Key``.\n\nA new email is unconfirmed until its link is opened: a confirmation letter is queued.",
+        "description": "Partial update; replays a stored response for a repeated ``Idempotency-Key``.\n\nA new email is unconfirmed until its link is opened: a confirmation letter is queued (one a\nminute per account). An email edit counts against the ``email-verify`` bucket.",
         "operationId": "patch_me_api_v1_me_patch",
         "parameters": [
           {

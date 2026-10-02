@@ -193,14 +193,14 @@ async def test_the_bucket_refuses_the_eleventh_send_in_a_minute(
     integration_client: AsyncClient, customer_headers: Headers
 ) -> None:
     headers = await customer_headers()
-    await _patch_email(integration_client, headers, A)
+    await _patch_email(integration_client, headers, A)  # the email edit is send 1 of 10
     codes = []
-    for _ in range(11):
+    for _ in range(10):
         r = await integration_client.post("/api/v1/me/email/verification", headers=headers)
         codes.append((r.status_code, r.json().get("code")))
-    assert codes[:10] == [(429, "email_verify_cooldown")] * 10
-    assert codes[10][0] == 429
-    assert codes[10][1] != "email_verify_cooldown"
+    assert codes[:9] == [(429, "email_verify_cooldown")] * 9
+    assert codes[9][0] == 429
+    assert codes[9][1] != "email_verify_cooldown"
 
 
 async def test_the_token_and_the_address_never_reach_the_logs(
@@ -219,3 +219,37 @@ async def test_the_token_and_the_address_never_reach_the_logs(
     logged = caplog.text + out.out + out.err
     for leak in (token, token[:24], A):
         assert leak not in logged
+
+
+async def test_a_second_address_within_the_cooldown_is_saved_but_not_mailed(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    headers = await customer_headers()
+    await _patch_email(integration_client, headers, A)
+    body = await _patch_email(integration_client, headers, B)
+    assert (body["email"], body["email_verified"]) == (B, False)
+    assert body["email_verification_sent_at"] is None  # the UI says «через минуту»
+    assert [r.address for r in await _verify_rows(db_session)] == [A]
+    await _clear_cooldown((await _me(db_session)).id)
+    r = await integration_client.post("/api/v1/me/email/verification", headers=headers)
+    assert r.status_code == 202
+    assert [r.address for r in await _verify_rows(db_session)] == [A, B]
+
+
+async def test_email_changes_count_against_the_email_verify_bucket(
+    integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    headers = await customer_headers()
+    codes: list[int] = []
+    bodies: list[str] = []
+    for n in range(11):
+        r = await integration_client.patch(
+            "/api/v1/me", json={"email": f"x{n}@example.uz"}, headers=headers
+        )
+        codes.append(r.status_code)
+        bodies.append(r.text)
+    assert codes[:10] == [200] * 10, bodies
+    assert codes[10] == 429, bodies
+    # A locale-only edit is not an email change and is never throttled by this bucket.
+    r = await integration_client.patch("/api/v1/me", json={"locale": "uz"}, headers=headers)
+    assert r.status_code == 200
