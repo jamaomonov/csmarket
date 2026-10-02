@@ -57,6 +57,30 @@ describe("PaymentDetail", () => {
     expect(within(uzum).getByText("подтверждён")).toBeInTheDocument();
   });
 
+  it("links the order a payment pays for", async () => {
+    api.getPayment.mockResolvedValue({
+      ...DETAIL,
+      topup: null,
+      order: { number: "O7K2M9QX", status: "buying", price_uzs: "171800" },
+    });
+    renderDetail();
+    const order = await screen.findByRole("region", { name: "Заказ" });
+    expect(within(order).getByRole("link", { name: "O7K2M9QX" })).toHaveAttribute(
+      "href",
+      "/orders/O7K2M9QX",
+    );
+    expect(within(order).getByText(/171\s800 сум/)).toBeInTheDocument();
+    expect(within(order).getByTestId("order-status")).toHaveTextContent("покупаем");
+    expect(screen.queryByRole("region", { name: "Пополнение" })).toBeNull();
+  });
+
+  it("shows no order block for a top-up payment", async () => {
+    api.getPayment.mockResolvedValue(DETAIL);
+    renderDetail();
+    await screen.findByRole("region", { name: "Пополнение" });
+    expect(screen.queryByRole("region", { name: "Заказ" })).toBeNull();
+  });
+
   it("renders only the allow-listed extra keys and never the raw phone", async () => {
     api.getPayment.mockResolvedValue(DETAIL);
     const { container } = (renderDetail(), { container: document.body });

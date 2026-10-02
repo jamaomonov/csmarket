@@ -66,6 +66,38 @@ describe("UserCard", () => {
     expect(within(topups).getByText("зачислено")).toBeInTheDocument();
   });
 
+  it("lists the user's orders with a link to each", async () => {
+    api.getUserCard.mockResolvedValue({
+      ...CARD,
+      orders: [
+        ...CARD.orders,
+        { ...CARD.orders[0], number: "O2", status: "returned", attention_reason: "rolled_back" },
+      ],
+    });
+    renderCard();
+    const orders = await screen.findByRole("region", { name: "Заказы" });
+    expect(within(orders).getByRole("link", { name: "O7K2M9QX" })).toHaveAttribute(
+      "href",
+      "/orders/O7K2M9QX",
+    );
+    expect(within(orders).getByRole("link", { name: "O2" })).toHaveAttribute("href", "/orders/O2");
+    expect(
+      within(orders)
+        .getAllByTestId("order-status")
+        .map((c) => c.textContent),
+    ).toEqual(["покупаем", "обмен не состоялся"]);
+    expect(within(orders).getByTestId("order-attention")).toHaveTextContent(
+      "откат после получения",
+    );
+  });
+
+  it("says there are no orders yet", async () => {
+    api.getUserCard.mockResolvedValue({ ...CARD, orders: [] });
+    renderCard();
+    const orders = await screen.findByRole("region", { name: "Заказы" });
+    expect(orders).toHaveTextContent("Пока не было.");
+  });
+
   it("credits after a confirm step with a signed amount, reason and key", async () => {
     api.adjustBalance.mockResolvedValue({ ...CARD, balance_uzs: "80000" });
     renderCard();

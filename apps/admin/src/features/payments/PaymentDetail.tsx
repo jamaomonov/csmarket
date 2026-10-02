@@ -3,7 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { type AdminPaymentDetail, getPayment, type KassaTxn, type PaymentTopup } from "./api";
+import {
+  type AdminPaymentDetail,
+  getPayment,
+  type KassaTxn,
+  type PaymentOrder,
+  type PaymentTopup,
+} from "./api";
 import {
   EXTRA_LABELS,
   formatKassaAmount,
@@ -13,6 +19,7 @@ import {
 } from "./labels";
 import { StatusChip } from "./StatusChip";
 
+import { OrderStatusChip } from "@/features/orders/StatusChip";
 import { errorText, providerLabel, topupStatusLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSum } from "@/lib/format";
@@ -42,6 +49,25 @@ function TopupBlock({ topup }: { topup: PaymentTopup }) {
         <Field label="Статус">{topupStatusLabel(topup.status)}</Field>
         <Field label="Действует до">{when(topup.expires_at)}</Field>
         <Field label="Зачислено">{when(topup.succeeded_at)}</Field>
+      </dl>
+    </section>
+  );
+}
+
+function OrderBlock({ order }: { order: PaymentOrder }) {
+  return (
+    <section aria-label="Заказ" className="space-y-2">
+      <h2 className="text-lg font-semibold">Заказ</h2>
+      <dl className="space-y-1 text-sm">
+        <Field label="Номер">
+          <Link to={`/orders/${order.number}`} className="font-mono hover:underline">
+            {order.number}
+          </Link>
+        </Field>
+        <Field label="Цена">{formatSum(order.price_uzs)}</Field>
+        <Field label="Статус">
+          <OrderStatusChip status={order.status} />
+        </Field>
       </dl>
     </section>
   );
@@ -124,7 +150,7 @@ function KassaTable({ kassa }: { kassa: KassaTxn[] }) {
 }
 
 function Body({ detail }: { detail: AdminPaymentDetail }) {
-  const { payment, topup, kassa } = detail;
+  const { payment, topup, order, kassa } = detail;
   return (
     <div className="space-y-8" data-testid="payment-detail">
       <section aria-label="Платёж" className="space-y-2">
@@ -152,6 +178,7 @@ function Body({ detail }: { detail: AdminPaymentDetail }) {
         </dl>
       </section>
       {topup !== null && <TopupBlock topup={topup} />}
+      {order !== null && <OrderBlock order={order} />}
       <KassaTable kassa={kassa} />
     </div>
   );

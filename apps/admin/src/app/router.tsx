@@ -11,8 +11,11 @@ import { AuthGuard } from "@/features/auth/AuthGuard";
 import { LoginPage } from "@/features/auth/LoginPage";
 import { SteamCallback } from "@/features/auth/SteamCallback";
 import { CataloguePage } from "@/features/catalogue/CataloguePage";
+import { OrderDetail } from "@/features/orders/OrderDetail";
+import { OrdersPage } from "@/features/orders/OrdersPage";
 import { PaymentDetail } from "@/features/payments/PaymentDetail";
 import { PaymentsPage } from "@/features/payments/PaymentsPage";
+import { TradesPage } from "@/features/trades/TradesPage";
 import { UserCard } from "@/features/users/UserCard";
 import { UsersPage } from "@/features/users/UsersPage";
 import { DashboardPage } from "@/routes/Dashboard";
@@ -31,6 +34,9 @@ export const router = createBrowserRouter([
           { path: "/catalogue", element: <CataloguePage /> },
           { path: "/users", element: <UsersPage /> },
           { path: "/users/:id", element: <UserCard /> },
+          { path: "/orders", element: <OrdersPage /> },
+          { path: "/orders/:number", element: <OrderDetail /> },
+          { path: "/trades", element: <TradesPage /> },
           { path: "/payments", element: <PaymentsPage /> },
           { path: "/payments/:id", element: <PaymentDetail /> },
           { path: "/audit", element: <AuditPage /> },

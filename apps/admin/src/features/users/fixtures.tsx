@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import { type AdminUserCard } from "./api";
 import { UserCard } from "./UserCard";
+import { ORDER_ROW } from "../orders/fixtures";
 
 // Fake IDs and a fake, already-masked trade link; never a real account.
 export const STEAM_ID = "76561190000000001";
@@ -56,6 +57,7 @@ export const CARD: AdminUserCard = {
       succeeded_at: "2026-09-30T10:00:00Z",
     },
   ],
+  orders: [ORDER_ROW],
 };
 
 export function renderCard(qc: QueryClient, seed?: (qc: QueryClient) => void) {

@@ -1,4 +1,6 @@
 /** Admin users API: thin typed wrappers over `/api/v1/admin/users`. Mirrors the API's schemas. */
+import { type AdminOrderRow } from "../orders/api";
+
 import { session } from "@/lib/api";
 
 const BASE = "/api/v1/admin/users";
@@ -69,6 +71,8 @@ export interface AdminUserCard {
   balance_uzs: string;
   entries: AdminEntry[];
   topups: AdminTopup[];
+  /** The latest 20 orders, newest first. */
+  orders: AdminOrderRow[];
 }
 
 export interface ListUsersParams {

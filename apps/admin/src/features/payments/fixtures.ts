@@ -25,6 +25,7 @@ export const DETAIL: AdminPaymentDetail = {
     expires_at: "2026-09-30T10:30:00Z",
     succeeded_at: "2026-09-30T10:01:00Z",
   },
+  order: null,
   kassa: [
     {
       provider: "payme",

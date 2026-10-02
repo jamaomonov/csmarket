@@ -17,6 +17,8 @@ import {
   tradeVerdictText,
 } from "./labels";
 import { useIdempotencyKey } from "./useIdempotencyKey";
+import { type AdminOrderRow } from "../orders/api";
+import { AttentionBadge, OrderStatusChip } from "../orders/StatusChip";
 
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSignedSum, formatSum } from "@/lib/format";
@@ -156,6 +158,54 @@ function Topups({ topups }: { topups: AdminTopup[] }) {
   );
 }
 
+function Orders({ orders }: { orders: AdminOrderRow[] }) {
+  return (
+    <section aria-labelledby="user-orders" className="space-y-2">
+      <h2 id="user-orders" className="text-lg font-semibold">
+        Заказы
+      </h2>
+      {orders.length === 0 && <p className="text-fg-muted text-sm">Пока не было.</p>}
+      {orders.length > 0 && (
+        <table className="w-full text-left text-sm">
+          <thead className="text-fg-muted">
+            <tr>
+              <th className="py-1 font-normal">Номер</th>
+              <th className="py-1 font-normal">Скин</th>
+              <th className="py-1 text-right font-normal">Цена</th>
+              <th className="py-1 font-normal">Статус</th>
+              <th className="py-1 font-normal">Создан</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orders.map((o) => (
+              <tr key={o.number} className="border-border border-t">
+                <td className="py-2">
+                  <Link to={`/orders/${o.number}`} className="font-mono hover:underline">
+                    {o.number}
+                  </Link>
+                </td>
+                <td className="py-2 pr-3">{o.name}</td>
+                <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums">
+                  {formatSum(o.price_uzs)}
+                </td>
+                <td className="py-2 pr-3">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <OrderStatusChip status={o.status} />
+                    <AttentionBadge reason={o.attention_reason} />
+                  </div>
+                </td>
+                <td className="text-fg-muted whitespace-nowrap py-2">
+                  {formatDateTime(o.created_at)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </section>
+  );
+}
+
 type Panel = "none" | "ban" | "adjust";
 
 function CardBody({ card }: { card: AdminUserCard }) {
@@ -245,6 +295,7 @@ function CardBody({ card }: { card: AdminUserCard }) {
         />
       )}
       <History entries={card.entries} />
+      <Orders orders={card.orders} />
       <Topups topups={card.topups} />
     </section>
   );

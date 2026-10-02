@@ -27,6 +27,12 @@ export function Layout() {
           <NavLink to="/users" className={navClass}>
             Пользователи
           </NavLink>
+          <NavLink to="/orders" className={navClass}>
+            Заказы
+          </NavLink>
+          <NavLink to="/trades" className={navClass}>
+            Обмены
+          </NavLink>
           <NavLink to="/payments" className={navClass}>
             Платежи
           </NavLink>

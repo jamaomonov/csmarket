@@ -27,13 +27,16 @@ Vite dev server proxies `/api/*` to the backend on `:8100` (`VITE_DEV_API_TARGET
 
 ## Routes
 
-| Path            | What                                                            |
-| --------------- | --------------------------------------------------------------- |
-| `/`             | Dashboard (placeholder)                                         |
-| `/catalogue`    | Catalogue status, hide/show items, search aliases               |
-| `/users`        | Users: search by name or Steam ID                               |
-| `/users/:id`    | User card: profile, balance, history, top-ups; ban, adjust      |
-| `/payments`     | Payments: search by number, filters; `?q=` pre-fills the search |
-| `/payments/:id` | Payment: fields, top-up, kassa transactions (read-only)         |
-| `/audit`        | Audit log: filters by action, target type, target id            |
-| `*`             | 404                                                             |
+| Path              | What                                                               |
+| ----------------- | ------------------------------------------------------------------ |
+| `/`               | Dashboard (placeholder)                                            |
+| `/catalogue`      | Catalogue status, hide/show items, search aliases                  |
+| `/users`          | Users: search by name or Steam ID                                  |
+| `/users/:id`      | User card: profile, balance, history, orders, top-ups; ban, adjust |
+| `/payments`       | Payments: search by number, filters; `?q=` pre-fills the search    |
+| `/payments/:id`   | Payment: fields, top-up or order (linked), kassa transactions      |
+| `/orders`         | Orders: search by number or skin name, status filter; `?q=`        |
+| `/orders/:number` | Order: fields, payments, Waxpeer trade; resolve, refund, retry     |
+| `/trades`         | Trades: tabs all / in flight / need attention (`?view=`)           |
+| `/audit`          | Audit log: filters by action, target type, target id               |
+| `*`               | 404                                                                |

@@ -1,5 +1,6 @@
 /** Admin payments API: thin typed wrappers over `/api/v1/admin/payments`. Mirrors the API's schemas. */
 import { type PaymentProvider, type PaymentPurpose, type PaymentStatus } from "./kinds";
+import { type OrderStatus } from "../orders/kinds";
 
 import { session } from "@/lib/api";
 
@@ -56,9 +57,18 @@ export interface KassaTxn {
   extra: Record<string, string>;
 }
 
+/** The order a payment pays for. */
+export interface PaymentOrder {
+  number: string;
+  status: OrderStatus;
+  /** Whole soʻm as a digit string. */
+  price_uzs: string;
+}
+
 export interface AdminPaymentDetail {
   payment: PaymentFull;
   topup: PaymentTopup | null;
+  order: PaymentOrder | null;
   kassa: KassaTxn[];
 }
 
