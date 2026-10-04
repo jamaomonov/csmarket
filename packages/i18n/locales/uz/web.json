@@ -13,7 +13,20 @@
   },
   "nav": {
     "signIn": "Steam orqali kirish",
-    "account": "Hisob"
+    "account": "Hisob",
+    "catalog": "Katalog",
+    "orders": "Buyurtmalarim",
+    "language": "Til",
+    "languages": {
+      "ru": "Русский",
+      "uz": "Oʻzbekcha",
+      "en": "English"
+    },
+    "menu": "Menyu",
+    "profile": "Profil va trade-havola",
+    "balance": "Balans va tarix",
+    "topUp": "Balansni toʻldirish",
+    "signOut": "Chiqish"
   },
   "auth": {
     "callback": {

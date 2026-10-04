@@ -15,6 +15,12 @@ vi.mock("@/i18n/navigation", () => ({
       {children}
     </a>
   ),
+  usePathname: () => "/",
+}));
+vi.mock("./header/LanguageSwitcher", () => ({ LanguageSwitcher: () => <span>lang</span> }));
+vi.mock("./header/MobileMenu", () => ({ MobileMenu: () => <span>menu</span> }));
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: () => ({ data: { balance_uzs: "1250000" } }),
 }));
 
 function renderHeader() {
@@ -37,13 +43,29 @@ describe("Header", () => {
     expect(link.getAttribute("href")).toContain("app=web&locale=ru");
   });
 
-  it("links a signed-in user to their account", () => {
+  it("shows the balance chip and the account menu to a signed-in user", () => {
     auth.value = {
       status: "signed_in",
       user: { display_name: "Player", avatar_url: null },
       signInHref: () => "",
+      signOut: () => Promise.resolve(),
     };
     renderHeader();
-    expect(screen.getByRole("link", { name: /Player/ }).getAttribute("href")).toBe("/account");
+    expect(screen.getAllByText(/1\s250\s000/).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Пополнить баланс" })[0]).toHaveAttribute(
+      "href",
+      "/account/balance",
+    );
+    expect(screen.getByRole("button", { name: /Player/ })).toBeInTheDocument();
+  });
+
+  it("has the catalogue and orders in the nav", () => {
+    auth.value = { status: "anonymous", user: null, signInHref: () => "" };
+    renderHeader();
+    expect(screen.getByRole("link", { name: "Каталог" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Мои заказы" })).toHaveAttribute(
+      "href",
+      "/account/orders",
+    );
   });
 });

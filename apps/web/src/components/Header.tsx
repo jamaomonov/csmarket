@@ -1,41 +1,81 @@
 "use client";
 
+import { buttonVariants } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
-import { Link } from "@/i18n/navigation";
+import { AccountMenu } from "./header/AccountMenu";
+import { BalanceChip } from "./header/BalanceChip";
+import { LanguageSwitcher } from "./header/LanguageSwitcher";
+import { MobileMenu } from "./header/MobileMenu";
+
+import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
+import { HOME, ORDERS } from "@/lib/paths";
 
 interface HeaderProps {
   locale: string;
 }
 
+const navClass = (on: boolean) =>
+  `text-[15px] transition-colors ${on ? "text-fg" : "text-fg-dim hover:text-fg"}`;
+
+/** Logo, nav, language and the account; on phones a balance and a ☰ menu. */
 export function Header({ locale }: HeaderProps) {
   const t = useTranslations("web.nav");
-  const common = useTranslations("common");
-  const { status, user, signInHref } = useAuth();
+  const { status } = useAuth();
+  const pathname = usePathname();
+  const signedIn = status === "signed_in";
   return (
-    <header className="border-border flex h-14 items-center justify-between border-b px-5">
-      <Link href="/" className="font-mono text-sm font-bold uppercase tracking-widest">
-        {common("brand")}
+    <header className="mx-auto flex h-[68px] max-w-[1320px] items-center gap-8 px-4 sm:px-6">
+      <Link href={HOME} className="text-[22px] font-bold tracking-tight" aria-label="csmarket">
+        cs<span className="text-accent">market</span>
       </Link>
-      {status === "signed_in" && user ? (
-        <Link href="/account" className="flex items-center gap-2 text-sm font-semibold">
-          {user.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Steam CDN avatars; next/image would need remotePatterns per CDN host
-            <img src={user.avatar_url} alt="" width={28} height={28} className="rounded-full" />
-          ) : null}
-          <span>{user.display_name ?? t("account")}</span>
+      <nav className="hidden items-center gap-6 md:flex">
+        <Link href={HOME} className={navClass(pathname === HOME)}>
+          {t("catalog")}
         </Link>
-      ) : status === "loading" ? (
-        <span aria-hidden className="bg-surface h-8 w-32 animate-pulse rounded-md" />
-      ) : (
-        <a
-          href={signInHref(locale)}
-          className="bg-accent text-accent-fg rounded-md px-4 py-2 text-sm font-semibold"
-        >
-          {t("signIn")}
-        </a>
-      )}
+        <Link href={ORDERS} className={navClass(pathname.startsWith(ORDERS))}>
+          {t("orders")}
+        </Link>
+      </nav>
+      <div className="ml-auto flex items-center gap-2.5">
+        <div className="hidden md:block">
+          <LanguageSwitcher locale={locale} />
+        </div>
+        {status === "loading" ? (
+          <span aria-hidden className="bg-surface h-10 w-40 animate-pulse rounded-lg" />
+        ) : signedIn ? (
+          <>
+            <span className="hidden md:block">
+              <BalanceChip />
+            </span>
+            <span className="md:hidden">
+              <BalanceChip compact />
+            </span>
+            <span className="hidden md:block">
+              <AccountMenu />
+            </span>
+          </>
+        ) : (
+          <SignIn locale={locale} />
+        )}
+        <span className="md:hidden">
+          <MobileMenu locale={locale} />
+        </span>
+      </div>
     </header>
+  );
+}
+
+function SignIn({ locale }: { locale: string }) {
+  const t = useTranslations("web.nav");
+  const { signInHref } = useAuth();
+  return (
+    <a
+      href={signInHref(locale)}
+      className={buttonVariants({ size: "md" }) + " hidden md:inline-flex"}
+    >
+      {t("signIn")}
+    </a>
   );
 }

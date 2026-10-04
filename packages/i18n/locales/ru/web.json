@@ -13,7 +13,20 @@
   },
   "nav": {
     "signIn": "Войти через Steam",
-    "account": "Аккаунт"
+    "account": "Аккаунт",
+    "catalog": "Каталог",
+    "orders": "Мои заказы",
+    "language": "Язык",
+    "languages": {
+      "ru": "Русский",
+      "uz": "Oʻzbekcha",
+      "en": "English"
+    },
+    "menu": "Меню",
+    "profile": "Профиль и трейд-ссылка",
+    "balance": "Баланс и история",
+    "topUp": "Пополнить баланс",
+    "signOut": "Выйти"
   },
   "auth": {
     "callback": {

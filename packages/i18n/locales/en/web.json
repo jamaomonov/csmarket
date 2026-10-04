@@ -13,7 +13,20 @@
   },
   "nav": {
     "signIn": "Sign in with Steam",
-    "account": "Account"
+    "account": "Account",
+    "catalog": "Catalogue",
+    "orders": "My orders",
+    "language": "Language",
+    "languages": {
+      "ru": "Русский",
+      "uz": "Oʻzbekcha",
+      "en": "English"
+    },
+    "menu": "Menu",
+    "profile": "Profile and trade link",
+    "balance": "Balance and history",
+    "topUp": "Top up the balance",
+    "signOut": "Sign out"
   },
   "auth": {
     "callback": {
