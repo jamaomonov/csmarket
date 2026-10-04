@@ -123,12 +123,19 @@ export function Dropdown({
   const menuItems = (): HTMLElement[] =>
     Array.from(menu.current?.querySelectorAll<HTMLElement>("[role='menuitem']") ?? []);
 
+  // A keyboard open focuses the first item — also once lazily loaded items arrive.
+  const itemCount = items.length;
   useEffect(() => {
-    if (!open) return;
-    if (focusFirst.current) {
-      menuItems()[0]?.focus();
+    if (!open || !focusFirst.current) return;
+    const first = menuItems()[0];
+    if (first) {
+      first.focus();
       focusFirst.current = false;
     }
+  }, [open, loading, itemCount]);
+
+  useEffect(() => {
+    if (!open) return;
     const onPointer = (e: PointerEvent) => {
       // A DOM node from the event target: narrowing the EventTarget to a Node.
       if (!root.current?.contains(e.target as Node)) setOpenState(false);
@@ -157,11 +164,29 @@ export function Dropdown({
   };
 
   const onTriggerKey = (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+    if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      if (open) {
+        close(false);
+        return;
+      }
       focusFirst.current = true;
       setOpenState(true);
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      focusFirst.current = true;
+      if (open) menuItems()[0]?.focus();
+      else setOpenState(true);
     }
+  };
+
+  /** Escape and Tab work wherever focus is inside: the trigger or the menu. */
+  const onRootKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!open) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      close(true);
+    } else if (e.key === "Tab") close(false);
   };
 
   const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -175,14 +200,10 @@ export function Dropdown({
     else if (e.key === "ArrowUp") move(at - 1);
     else if (e.key === "Home") move(0);
     else if (e.key === "End") move(list.length - 1);
-    else if (e.key === "Escape") {
-      e.preventDefault();
-      close(true);
-    } else if (e.key === "Tab") close(false);
   };
 
   return (
-    <div ref={root} className="relative">
+    <div ref={root} className="relative" onKeyDown={onRootKey}>
       <button
         ref={trigger}
         type="button"

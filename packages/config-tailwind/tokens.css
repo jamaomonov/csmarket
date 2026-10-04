@@ -27,7 +27,7 @@
   /* ---------- Status (success is not the accent) ---------- */
   --color-success: #2fbf71;
   --color-success-fg: #0d111b;
-  --color-danger: #ff5c5c;
+  --color-danger: #ff7a7a;
   --color-danger-fg: #0d111b;
   --color-warning: #f5b83d;
   --color-warning-fg: #0d111b;
@@ -42,7 +42,7 @@
   --color-rarity-classified: #d32ce6;
   --color-rarity-covert: #eb4b4b;
   --color-rarity-contraband: #e4ae39;
-  --color-stattrak: #cf6a32;
+  --color-stattrak: #e07a3f;
 
   /* ---------- Spacing / radius ---------- */
   --spacing: 0.25rem;

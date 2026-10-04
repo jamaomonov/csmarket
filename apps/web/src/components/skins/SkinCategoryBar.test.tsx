@@ -69,3 +69,10 @@ it("unknown model stays clearable: the chip shows it and links back to the categ
   expect(chip).toHaveAttribute("aria-current", "page");
   expect(chip.getAttribute("href")).not.toContain("weapon=");
 });
+
+it("the active chip's link has an offset focus ring (visible on green)", () => {
+  bar({ sort: "-price", category: "rifles" });
+  const chip = screen.getByRole("link", { name: "Винтовки" });
+  expect(chip.className).toContain("focus-visible:ring-offset-2");
+  expect(chip.className).toContain("focus-visible:ring-offset-bg");
+});

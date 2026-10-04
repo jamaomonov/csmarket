@@ -165,4 +165,30 @@ describe("Dropdown", () => {
     fireEvent.click(trigger);
     expect(screen.getByRole("menu").style.left).toBe("182px"); // 390 − 200 (min width) − 8
   });
+
+  it("keyboard open while loading focuses the first item once it arrives", () => {
+    const { rerender } = render(<Dropdown label="m" loading items={[]} />);
+    const trigger = screen.getByRole("button", { name: "m" });
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    rerender(<Dropdown label="m" items={[{ key: "a", label: "AK-47", href: "#" }]} />);
+    expect(document.activeElement).toBe(screen.getByRole("menuitem", { name: "AK-47" }));
+  });
+
+  it("with focus on the trigger, Escape closes and Tab closes", () => {
+    const trigger = setup();
+    fireEvent.click(trigger); // a mouse open leaves focus on the trigger
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    fireEvent.click(trigger);
+    fireEvent.keyDown(trigger, { key: "Tab" });
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("Enter on an open trigger closes it", () => {
+    const trigger = setup();
+    fireEvent.click(trigger);
+    fireEvent.keyDown(trigger, { key: "Enter" });
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
 });

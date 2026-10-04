@@ -39,9 +39,9 @@ describe("design tokens", () => {
     ["color-accent-fg", "#0D111B"],
     ["color-accent-soft", "#A7F3B2"],
     ["color-success", "#2FBF71"],
-    ["color-danger", "#FF5C5C"],
+    ["color-danger", "#FF7A7A"],
     ["color-rarity-covert", "#EB4B4B"],
-    ["color-stattrak", "#CF6A32"],
+    ["color-stattrak", "#E07A3F"],
     ["radius-sm", "6px"],
     ["radius-md", "8px"],
     ["radius-lg", "10px"],
@@ -62,6 +62,10 @@ describe("design tokens", () => {
     ["color-fg-dim", "color-bg", 4.5],
     ["color-accent", "color-surface", 4.5],
     ["color-accent-fg", "color-accent", 4.5],
+    // «Выйти» in a menu (surface-2) and the ST™ mark on a card (surface, hover).
+    ["color-danger", "color-surface-2", 4.5],
+    ["color-stattrak", "color-surface", 4.5],
+    ["color-stattrak", "color-surface-hover", 4.5],
   ])("%s on %s meets AA", (fg, bg, min) => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(min);
   });

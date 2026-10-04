@@ -67,7 +67,7 @@ export function SkinCategoryBar({ query, facets }: { query: SkinQuery; facets: S
           <span key={c} className={cn(chipVariants({ active }), "gap-0 p-0")}>
             <Link
               href={href({ category: c, weapon: undefined })}
-              className={`flex items-center gap-2 py-2 pl-3.5 ${menu ? "pr-1" : "pr-3.5"} focus-visible:ring-accent rounded-md focus-visible:outline-none focus-visible:ring-2`}
+              className={`flex items-center gap-2 py-2 pl-3.5 ${menu ? "pr-1" : "pr-3.5"} focus-visible:ring-accent focus-visible:ring-offset-bg rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2`}
               aria-current={active ? "page" : undefined}
             >
               <SkinCategoryIcon category={c} size="sm" />

@@ -25,7 +25,7 @@ the spec is `docs/superpowers/specs/2026-10-04-storefront-design-system-design.m
 |         | `accent-fg`                                       | `#0D111B`                                     | text on accent                                                |
 |         | `accent-soft`                                     | `#A7F3B2`                                     | light tint                                                    |
 |         | `accent-subtle`                                   | `rgb(75 243 100 / 0.12)`                      | badge background                                              |
-| Status  | `success` / `danger` / `warning` / `info`         | `#2FBF71` / `#FF5C5C` / `#F5B83D` / `#5DB2FF` | states — success is not the accent                            |
+| Status  | `success` / `danger` / `warning` / `info`         | `#2FBF71` / `#FF7A7A` / `#F5B83D` / `#5DB2FF` | states — success is not the accent                            |
 | Rarity  | `rarity-consumer … rarity-contraband`, `stattrak` | Steam's colours                               | legends and filters; a card glows in the API's `rarity_color` |
 | Radius  | `rounded-sm/md/lg/xl`                             | 6 / 8 / 10 / 12 px                            | badge / input, chip / card, button / panel, menu              |
 | Shadow  | `shadow-menu`                                     | `0 12px 30px rgb(0 0 0 / .45)`                | dropdown menus only                                           |
@@ -65,7 +65,8 @@ Domain components stay in `apps/web`: `SkinCard`, `SkinCategoryBar`, `WeaponMenu
 5. **Radii:** chips and cards 8–10, panels 12, menus 10, badges 6.
 
 Measured contrast (WCAG): `fg` on `surface` 15.5; `fg-muted` on `surface-2` 5.8; `accent` on
-`surface` 10.6; `accent-fg` on `accent` 12.9. `apps/web/src/lib/design-tokens.test.ts` pins
+`surface` 10.6; `accent-fg` on `accent` 12.9; `danger` on `surface-2` 4.9; `stattrak` on
+`surface` 5.2. `apps/web/src/lib/design-tokens.test.ts` pins
 the values and these ratios.
 
 ## Adding a component

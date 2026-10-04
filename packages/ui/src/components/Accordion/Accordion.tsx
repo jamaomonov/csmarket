@@ -27,7 +27,7 @@ export function Accordion({ title, defaultOpen = false, className, children }: A
           onClick={() => {
             setOpen(!open);
           }}
-          className="text-fg focus-visible:ring-accent flex w-full items-center justify-between rounded-md text-left text-[15px] font-medium focus-visible:outline-none focus-visible:ring-2"
+          className="text-fg focus-visible:ring-accent focus-visible:ring-offset-bg flex w-full items-center justify-between rounded-md text-left text-[15px] font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
         >
           {title}
           {open ? (

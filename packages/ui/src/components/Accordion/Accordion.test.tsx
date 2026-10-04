@@ -24,4 +24,11 @@ describe("Accordion", () => {
     );
     expect(screen.getByText("FN")).toBeInTheDocument();
   });
+
+  it("uses the one focus style (ring with an offset)", () => {
+    render(<Accordion title="Цена">x</Accordion>);
+    expect(screen.getByRole("button", { name: "Цена" }).className).toContain(
+      "focus-visible:ring-offset-2",
+    );
+  });
 });

@@ -28,3 +28,21 @@ None of these touches money or order state.
 5. **The admin preview type omits `count_auto`.** `apps/admin/src/features/pricing/api.ts`
    `PreviewIn` lacks a field the API accepts (harmless; the mirror is incomplete). _Fix:_ add
    it.
+
+## From the storefront design-system review (2026-10-04)
+
+Visual polish and robustness; nothing affects orders or money.
+
+1. **Header skeleton on phones.** `Header.tsx` shows the 160 px auth skeleton at 390 px too, and
+   for a guest it resolves to nothing (sign-in lives in ☰). _Fix:_ `hidden md:block` on it.
+2. **Sign-in class conflict.** `buttonVariants(…) + " hidden md:inline-flex"` keeps both
+   `inline-flex` and `hidden` and relies on CSS order. _Fix:_ `cn(buttonVariants(…), "hidden md:inline-flex")`.
+3. **WeaponMenu's AbortController is never aborted.** It only guards against double loads.
+   _Fix:_ abort on unmount, or drop the controller.
+4. **Copy.** uz `nav.profile` says «trade-havola» while the account page says «almashuv
+   havolasi»; en `skins.allOf.heavy` «All heavy» → «All heavy weapons».
+5. **A fixed menu never flips or clamps vertically.** On a short landscape phone a long model
+   list can run below the fold. _Fix:_ clamp `top` to `innerHeight − EDGE − menuHeight`, or flip
+   above the trigger.
+6. **LanguageSwitcher's unit test mocks `getPathname`.** It proves the concatenation, not
+   next-intl's prefixing (the e2e covers that).
