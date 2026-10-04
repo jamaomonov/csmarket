@@ -1,3 +1,4 @@
+import { Badge } from "@csmarket/ui";
 import { isVanilla, rarityGlow, steamImageSize } from "@csmarket/utils/skins";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -9,9 +10,9 @@ import { itemPath } from "@/lib/paths";
 import { displayPrice } from "@/lib/skins";
 
 /**
- * One catalogue tile: art, skin and weapon, wear, discount vs
- * Steam, price in soʻm. The rarity colour runs along the bottom edge — the
- * way the game and every CS2 market mark rarity, so it reads at a glance.
+ * One catalogue tile (design system, variant B): wear, StatTrak and the lot count on
+ * top, the discount vs Steam as a badge, the art over a glow in its rarity colour,
+ * weapon and skin, the price in green and how much dearer Steam is.
  *
  * No `"use client"`: rendered inside the server grid on `/`.
  */
@@ -26,16 +27,17 @@ export function SkinCard({ item, locale }: { item: SkinItem; locale: string }) {
   return (
     <Link
       href={itemPath(item.slug)}
-      className="border-border bg-surface hover:border-border-strong group flex h-full flex-col overflow-hidden rounded-xl border transition hover:-translate-y-1"
+      className="bg-surface hover:bg-surface-hover hover:border-border focus-visible:ring-accent focus-visible:ring-offset-bg group relative flex h-full flex-col rounded-lg border border-transparent px-3 pb-3 pt-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
     >
-      <div className="bg-surface-2 relative aspect-[4/3] w-full overflow-hidden">
-        {glow && (
-          <span
-            aria-hidden
-            className="absolute inset-0 opacity-80 transition duration-500 group-hover:scale-110 group-hover:opacity-100"
-            style={{ background: glow }}
-          />
-        )}
+      <div className="text-fg-dim flex items-center gap-1.5 text-[11px]">
+        {item.exterior && <span>{item.exterior}</span>}
+        {item.stattrak && <span className="text-stattrak font-semibold">ST™</span>}
+        {item.souvenir && <span className="text-rarity-contraband font-semibold">SV</span>}
+        <span className="ml-auto">{t("pieces", { count: item.count })}</span>
+      </div>
+      {discount !== null && <Badge className="absolute right-3 top-8 z-10">−{discount}%</Badge>}
+      <div className="relative my-1 aspect-[4/3] w-full">
+        {glow && <span aria-hidden className="absolute inset-0" style={{ background: glow }} />}
         {item.image_url && (
           <Image
             src={steamImageSize(item.image_url, "256fx256f")}
@@ -43,34 +45,27 @@ export function SkinCard({ item, locale }: { item: SkinItem; locale: string }) {
             fill
             // A Steam CDN image already cut to size (256fx256f): the optimizer adds nothing.
             unoptimized
-            sizes="(min-width: 1280px) 20vw, (min-width: 768px) 33vw, 50vw"
-            className="object-contain p-3 transition duration-500 group-hover:scale-[1.05]"
+            sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw"
+            className="object-contain p-2 transition duration-300 group-hover:scale-[1.04]"
           />
         )}
-        {discount !== null && (
-          <span className="bg-accent text-accent-fg absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-bold">
-            −{discount}%
-          </span>
-        )}
       </div>
-      <div className="flex flex-1 flex-col gap-0.5 p-3">
-        <div className="text-fg-dim/80 flex items-center gap-1.5 text-[11px]">
-          {item.stattrak && <span className="font-semibold text-orange-400">StatTrak™</span>}
-          {item.souvenir && <span className="font-semibold text-yellow-400">Souvenir</span>}
-          {item.weapon && <span className="truncate">{item.weapon}</span>}
-          {item.exterior && (
-            <span className="border-border ml-auto rounded border px-1 font-mono">
-              {item.exterior}
-            </span>
-          )}
-        </div>
-        <div className="line-clamp-2 text-[13px] font-semibold leading-snug">
-          {isVanilla(item) ? t("vanilla") : (item.skin ?? item.name)}
-          {item.phase && <span className="text-fg-dim font-normal"> · {item.phase}</span>}
-        </div>
-        <div className="mt-auto pt-1.5 text-[14px] font-bold tabular-nums">
-          {price ?? <span className="text-fg-dim font-sans text-[12px]">{t("soldOut")}</span>}
-        </div>
+      {item.weapon && <div className="text-fg-dim truncate text-[12px]">{item.weapon}</div>}
+      <div className="truncate text-[13px] font-medium">
+        {isVanilla(item) ? t("vanilla") : (item.skin ?? item.name)}
+        {item.phase && <span className="text-fg-dim"> · {item.phase}</span>}
+      </div>
+      <div className="mt-auto pt-2">
+        {price ? (
+          <span className="text-accent num text-[14px] font-semibold">{price}</span>
+        ) : (
+          <span className="text-fg-dim text-[12px]">{t("soldOut")}</span>
+        )}
+        {discount !== null && (
+          <p className="text-fg-dim mt-0.5 text-[11px]">
+            {t("steamHigher", { percent: discount })}
+          </p>
+        )}
       </div>
     </Link>
   );

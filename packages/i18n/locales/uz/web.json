@@ -225,7 +225,8 @@
       "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda hozir {percent}% arzonroq.",
       "floatQ": "{name} floati qanday?",
       "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
-    }
+    },
+    "steamHigher": "Steamʼda {percent}% qimmatroq"
   },
   "buy": {
     "title": "Sotib olish",

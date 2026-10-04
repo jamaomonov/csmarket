@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import common from "@csmarket/i18n/locales/ru/common.json";
 import messages from "@csmarket/i18n/locales/ru/web.json";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
@@ -63,13 +63,29 @@ describe("SkinCard", () => {
 
   it("marks StatTrak and hides a missing discount", () => {
     renderCard({ stattrak: true, discount_percent: null });
-    expect(screen.getByText("StatTrak™")).toBeInTheDocument();
+    expect(screen.getByText("ST™")).toBeInTheDocument();
     expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
   });
 
   it("says sold out without a price", () => {
     renderCard({ price_uzs: null, price_usd: null, count: 0 });
     expect(screen.getByText("Нет в наличии")).toBeInTheDocument();
+  });
+  it("variant B: wear, ST™, pieces, discount badge, green price and the Steam line", () => {
+    renderCard({ discount_percent: 19, exterior: "MW", count: 3, stattrak: true });
+    const card = screen.getByRole("link");
+    expect(within(card).getByText("MW")).toBeInTheDocument();
+    expect(within(card).getByText("ST™")).toBeInTheDocument();
+    expect(within(card).getByText("3 шт.")).toBeInTheDocument();
+    expect(within(card).getByText("−19%")).toBeInTheDocument();
+    expect(within(card).getByText("Steam дороже на 19%")).toBeInTheDocument();
+    expect(card.querySelector(".text-accent.num")).not.toBeNull();
+  });
+
+  it("no Steam line and no badge under 5 %", () => {
+    renderCard({ discount_percent: 3 });
+    expect(screen.queryByText(/Steam дороже/)).toBeNull();
+    expect(screen.queryByText("−3%")).toBeNull();
   });
 });
 
@@ -98,4 +114,5 @@ describe("SkinCard without an FX rate", () => {
     expect(screen.getByText("$30.37")).toBeInTheDocument();
     expect(screen.queryByText("Нет в наличии")).not.toBeInTheDocument();
   });
+
 });

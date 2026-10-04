@@ -225,7 +225,8 @@
       "steamA": "Yes: on the Steam Community Market it costs ${steam}; here it is {percent}% cheaper right now.",
       "floatQ": "What float does {name} have?",
       "floatA": "{exterior}: float from {min} to {max}. Each offer's exact float is in the list above."
-    }
+    },
+    "steamHigher": "{percent}% more on Steam"
   },
   "buy": {
     "title": "Buy",
