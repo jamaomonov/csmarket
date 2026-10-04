@@ -1,4 +1,4 @@
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
@@ -9,13 +9,15 @@ import { routing } from "@/i18n/routing";
 
 import "./globals.css";
 
-const sans = Inter({
-  subsets: ["latin", "cyrillic"],
+const sans = IBM_Plex_Sans({
+  subsets: ["latin", "latin-ext", "cyrillic"],
+  weight: ["400", "500", "600", "700"],
   variable: "--app-font-sans",
   display: "swap",
 });
-const mono = JetBrains_Mono({
+const mono = IBM_Plex_Mono({
   subsets: ["latin", "cyrillic"],
+  weight: ["500"],
   variable: "--app-font-mono",
   display: "swap",
 });

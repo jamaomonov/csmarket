@@ -1,50 +1,67 @@
-/* csmarket design tokens — single source of truth. Tailwind v4 reads them via @theme.
-   Dark by default (a skins shop is a dark UI); the light theme is a later decision. */
+/* csmarket design tokens — single source of truth (docs/design-system.md, ADR-0009).
+   Tailwind v4 reads them via @theme. Dark only; navy surfaces, one green accent. */
 
 @theme {
-  /* ---------- Color: surfaces ---------- */
-  --color-bg: oklch(0.17 0.012 262);
-  --color-surface: oklch(0.21 0.014 262);
-  --color-surface-2: oklch(0.26 0.016 262);
-  --color-border: oklch(0.32 0.016 262);
-  --color-border-strong: oklch(0.42 0.018 262);
+  /* ---------- Surfaces ---------- */
+  --color-bg: #0d111b;
+  --color-surface: #1d2434;
+  --color-surface-2: #2c3449;
+  --color-surface-hover: #232b3e;
+  --color-border: #2c3449;
+  --color-border-strong: #3a4460;
 
-  /* ---------- Color: text ---------- */
-  --color-fg: oklch(0.97 0.004 262);
-  --color-fg-muted: oklch(0.74 0.02 262);
-  --color-fg-dim: oklch(0.58 0.02 262);
+  /* ---------- Text ---------- */
+  --color-fg: #ffffff;
+  --color-fg-muted: #aab2c5;
+  /* only on bg / surface — on surface-2 use fg-muted (4.0:1 there) */
+  --color-fg-dim: #8a93a8;
 
-  /* ---------- Color: accent (amber) ---------- */
-  --color-accent: oklch(0.8 0.16 78);
-  --color-accent-hover: oklch(0.85 0.15 78);
-  --color-accent-active: oklch(0.74 0.16 78);
-  --color-accent-fg: oklch(0.2 0.03 78);
+  /* ---------- Accent: action and price only ---------- */
+  --color-accent: #4bf364;
+  --color-accent-hover: #6cf682;
+  --color-accent-active: #3ed957;
+  --color-accent-fg: #0d111b;
+  --color-accent-soft: #a7f3b2;
+  --color-accent-subtle: rgb(75 243 100 / 0.12);
 
-  /* ---------- Color: status ---------- */
-  --color-success: oklch(0.72 0.17 150);
-  --color-success-fg: oklch(0.15 0.03 150);
-  --color-danger: oklch(0.62 0.21 27);
-  --color-danger-fg: oklch(0.98 0 0);
-  --color-warning: oklch(0.8 0.16 85);
-  --color-warning-fg: oklch(0.2 0.03 85);
-  --color-info: oklch(0.72 0.13 235);
-  --color-info-fg: oklch(0.15 0.03 235);
+  /* ---------- Status (success is not the accent) ---------- */
+  --color-success: #2fbf71;
+  --color-success-fg: #0d111b;
+  --color-danger: #ff5c5c;
+  --color-danger-fg: #0d111b;
+  --color-warning: #f5b83d;
+  --color-warning-fg: #0d111b;
+  --color-info: #5db2ff;
+  --color-info-fg: #0d111b;
+
+  /* ---------- Steam rarity ---------- */
+  --color-rarity-consumer: #b0c3d9;
+  --color-rarity-industrial: #5e98d9;
+  --color-rarity-milspec: #4b69ff;
+  --color-rarity-restricted: #8847ff;
+  --color-rarity-classified: #d32ce6;
+  --color-rarity-covert: #eb4b4b;
+  --color-rarity-contraband: #e4ae39;
+  --color-stattrak: #cf6a32;
 
   /* ---------- Spacing / radius ---------- */
   --spacing: 0.25rem;
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
-  /* ---------- Typography ---------- */
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* ---------- Typography ----------
+     The fallback inside var() matters: an app that loads no font (the admin) would
+     otherwise get an invalid declaration and the browser's serif default. */
+  --font-sans: var(--app-font-sans, "IBM Plex Sans"), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--app-font-mono, "IBM Plex Mono"), ui-monospace, Menlo, monospace;
 
   /* ---------- Shadows / motion ---------- */
-  --shadow-sm: 0 1px 2px 0 oklch(0 0 0 / 0.25);
-  --shadow-md: 0 6px 16px -4px oklch(0 0 0 / 0.35);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+  --shadow-md: 0 6px 16px -4px rgb(0 0 0 / 0.35);
+  --shadow-menu: 0 12px 30px rgb(0 0 0 / 0.45);
   --duration-fast: 120ms;
   --duration-base: 200ms;
   --easing-out: cubic-bezier(0.16, 1, 0.3, 1);

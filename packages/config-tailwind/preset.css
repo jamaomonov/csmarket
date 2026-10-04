@@ -29,4 +29,9 @@
   *::after {
     border-color: var(--color-border);
   }
+
+  /* Prices and other columns of numbers: equal-width digits, no jitter. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
 }
