@@ -71,6 +71,15 @@ export function fetchSkinsPage(query: SkinQuery, signal?: AbortSignal): Promise<
   });
 }
 
+/** Browser: the facets inside a category (the model menu). Throws on any failure. */
+export function fetchSkinFacets(category: string, signal?: AbortSignal): Promise<SkinFacets> {
+  const qs = new URLSearchParams({ category });
+  return session.apiGet<SkinFacets>(`/api/v1/skins/facets?${qs.toString()}`, {
+    anonymous: true,
+    ...(signal ? { signal } : {}),
+  });
+}
+
 /** Browser: search-box suggestions. */
 export function fetchSuggest(q: string, signal?: AbortSignal): Promise<SkinSuggest> {
   const qs = new URLSearchParams({ q });

@@ -226,7 +226,17 @@
       "floatQ": "What float does {name} have?",
       "floatA": "{exterior}: float from {min} to {max}. Each offer's exact float is in the list above."
     },
-    "steamHigher": "{percent}% more on Steam"
+    "steamHigher": "{percent}% more on Steam",
+    "allOf": {
+      "knives": "All knives",
+      "gloves": "All gloves",
+      "rifles": "All rifles",
+      "pistols": "All pistols",
+      "smgs": "All SMGs",
+      "heavy": "All heavy"
+    },
+    "models": "Models: {category}",
+    "modelsFailed": "Could not load the models"
   },
   "buy": {
     "title": "Buy",

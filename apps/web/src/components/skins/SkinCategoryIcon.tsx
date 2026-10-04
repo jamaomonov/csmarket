@@ -7,16 +7,27 @@ import type { SkinCategory } from "@csmarket/utils/skins";
  * A category's silhouette: a self-hosted Steam item image used as a CSS mask
  * over `currentColor`, so it takes the tile's grey or its active colour.
  */
-export function SkinCategoryIcon({ category }: { category: SkinCategory | "all" }) {
+interface SkinCategoryIconProps {
+  category: SkinCategory | "all";
+  /** `sm` sits beside a chip's label; `md` (default) tops a tile. */
+  size?: "sm" | "md";
+}
+
+export function SkinCategoryIcon({ category, size = "md" }: SkinCategoryIconProps) {
   const icon = category === "all" ? null : CATEGORY_ICONS[category];
-  if (category === "all") return <LayoutGrid className="h-5 w-5" aria-hidden />;
-  if (icon === null) return <Music className="h-5 w-5" aria-hidden />;
+  const glyph = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
+  if (category === "all") return <LayoutGrid className={glyph} aria-hidden />;
+  if (icon === null) return <Music className={glyph} aria-hidden />;
   const url = `url(/skins/categories/${icon.file})`;
   return (
     <span
       data-skin-icon
       aria-hidden
-      className={`block h-[26px] bg-current ${icon.wide ? "w-[48px]" : "w-[30px]"}`}
+      className={
+        size === "sm"
+          ? `block h-[14px] shrink-0 bg-current ${icon.wide ? "w-[26px]" : "w-[16px]"}`
+          : `block h-[26px] bg-current ${icon.wide ? "w-[48px]" : "w-[30px]"}`
+      }
       style={{
         maskImage: url,
         WebkitMaskImage: url,

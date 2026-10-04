@@ -1,91 +1,89 @@
+import { chipVariants } from "@csmarket/ui";
 import { SKIN_CATEGORIES, skinQueryString } from "@csmarket/utils/skins";
 import { useTranslations } from "next-intl";
 
 import { ScrollActiveIntoView } from "./ScrollActiveIntoView";
 import { SkinCategoryIcon } from "./SkinCategoryIcon";
+import { WeaponMenu } from "./WeaponMenu";
 
 import type { SkinCategory, SkinFacets, SkinQuery, SkinQueryPatch } from "@csmarket/utils/skins";
 
 import { Link } from "@/i18n/navigation";
 import { HOME } from "@/lib/paths";
 
-function tile(active: boolean): string {
-  return `flex h-[64px] min-w-[72px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border px-2 text-[12px] font-semibold transition lg:min-w-0 ${
-    active
-      ? "border-accent bg-accent/10 text-accent"
-      : "border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg"
-  }`;
-}
-
-function chip(active: boolean): string {
-  return `whitespace-nowrap rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition ${
-    active
-      ? "border-accent bg-accent/10 text-fg"
-      : "border-border text-fg-muted hover:border-border-strong"
-  }`;
-}
+const ORDER: SkinCategory[] = [
+  "knives",
+  "gloves",
+  "rifles",
+  "pistols",
+  "smgs",
+  "heavy",
+  "agents",
+  "cases",
+  "keys",
+  "charms",
+  "music-kits",
+];
+const WITH_MODELS: ReadonlySet<SkinCategory> = new Set([
+  "knives",
+  "gloves",
+  "rifles",
+  "pistols",
+  "smgs",
+  "heavy",
+]);
 
 /**
- * Categories as icon tiles (plain links — crawlable, no JS), and with a category
- * chosen, its weapons. The weapon list comes from the facets scoped to the
- * category, so it is the whole category, classics first; the chosen weapon is
- * always kept so it can be unset.
+ * Categories as chips with their silhouette (plain links — crawlable, no JS); weapon
+ * categories add a ▾ menu of models (`WeaponMenu`, loaded on first open). With a model
+ * chosen the active chip names it and links back to the whole category.
  */
 export function SkinCategoryBar({ query, facets }: { query: SkinQuery; facets: SkinFacets }) {
   const t = useTranslations("web.skins");
   const present = new Set(facets.categories.map((f) => f.value));
-  const categories = SKIN_CATEGORIES.filter((c) => present.has(c));
-  const listed = facets.weapons.map((f) => f.value);
-  const weapons = query.category
-    ? query.weapon && !listed.includes(query.weapon)
-      ? [query.weapon, ...listed]
-      : listed
-    : [];
+  const categories = ORDER.filter(
+    (c) => present.has(c) && (SKIN_CATEGORIES as readonly string[]).includes(c),
+  );
   const href = (patch: SkinQueryPatch) => HOME + skinQueryString(query, patch);
-  const tiles: (SkinCategory | "all")[] = ["all", ...categories];
 
   return (
-    <nav className="space-y-2">
-      <ScrollActiveIntoView
-        activeKey={query.category ?? ""}
-        className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-12 lg:overflow-visible"
+    <ScrollActiveIntoView
+      activeKey={query.category ?? ""}
+      className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible"
+    >
+      <Link
+        href={href({ category: undefined, weapon: undefined })}
+        className={chipVariants({ active: !query.category })}
+        aria-current={!query.category ? "page" : undefined}
       >
-        {tiles.map((c) => {
-          const active = c === "all" ? !query.category : query.category === c;
-          return (
+        <SkinCategoryIcon category="all" size="sm" />
+        {t("all")}
+      </Link>
+      {categories.map((c) => {
+        const active = query.category === c;
+        const label = t(`category.${c}`);
+        const menu = WITH_MODELS.has(c);
+        return (
+          <span key={c} className={`${chipVariants({ active })} gap-0 p-0 ${menu ? "" : ""}`}>
             <Link
-              key={c}
-              href={href(
-                c === "all"
-                  ? { category: undefined, weapon: undefined }
-                  : { category: c, weapon: undefined },
-              )}
-              className={tile(active)}
+              href={href({ category: c, weapon: undefined })}
+              className={`flex items-center gap-2 py-2 pl-3.5 ${menu ? "pr-1" : "pr-3.5"} focus-visible:ring-accent rounded-md focus-visible:outline-none focus-visible:ring-2`}
               aria-current={active ? "page" : undefined}
             >
-              <SkinCategoryIcon category={c} />
-              <span className="truncate">{c === "all" ? t("all") : t(`category.${c}`)}</span>
+              <SkinCategoryIcon category={c} size="sm" />
+              {active && query.weapon ? `${label} · ${query.weapon}` : label}
             </Link>
-          );
-        })}
-      </ScrollActiveIntoView>
-      {(weapons.length > 1 || query.weapon !== undefined) && (
-        <ScrollActiveIntoView
-          activeKey={query.weapon ?? ""}
-          className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:flex-wrap"
-        >
-          {weapons.map((w) => (
-            <Link
-              key={w}
-              href={href({ weapon: query.weapon === w ? undefined : w })}
-              className={chip(query.weapon === w)}
-              aria-current={query.weapon === w ? "page" : undefined}
-            >
-              {w}
-            </Link>
-          ))}
-        </ScrollActiveIntoView>
-      )}
-    </nav>
+            {menu && (
+              <WeaponMenu
+                category={c}
+                label={label}
+                query={query}
+                {...(active ? { initial: facets.weapons } : {})}
+              />
+            )}
+          </span>
+        );
+      })}
+    </ScrollActiveIntoView>
   );
 }

@@ -226,7 +226,17 @@
       "floatQ": "Какой флоат у {name}?",
       "floatA": "{exterior}: флоат от {min} до {max}. Точный флоат каждого предложения — в списке выше."
     },
-    "steamHigher": "Steam дороже на {percent}%"
+    "steamHigher": "Steam дороже на {percent}%",
+    "allOf": {
+      "knives": "Все ножи",
+      "gloves": "Все перчатки",
+      "rifles": "Все винтовки",
+      "pistols": "Все пистолеты",
+      "smgs": "Все пистолеты-пулемёты",
+      "heavy": "Всё тяжёлое оружие"
+    },
+    "models": "Модели: {category}",
+    "modelsFailed": "Не удалось загрузить модели"
   },
   "buy": {
     "title": "Купить",

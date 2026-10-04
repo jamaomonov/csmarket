@@ -114,5 +114,4 @@ describe("SkinCard without an FX rate", () => {
     expect(screen.getByText("$30.37")).toBeInTheDocument();
     expect(screen.queryByText("Нет в наличии")).not.toBeInTheDocument();
   });
-
 });

@@ -226,7 +226,17 @@
       "floatQ": "{name} floati qanday?",
       "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
     },
-    "steamHigher": "Steamʼda {percent}% qimmatroq"
+    "steamHigher": "Steamʼda {percent}% qimmatroq",
+    "allOf": {
+      "knives": "Barcha pichoqlar",
+      "gloves": "Barcha qoʻlqoplar",
+      "rifles": "Barcha miltiqlar",
+      "pistols": "Barcha toʻpponchalar",
+      "smgs": "Barcha pistolet-pulemyotlar",
+      "heavy": "Barcha ogʻir qurollar"
+    },
+    "models": "Modellar: {category}",
+    "modelsFailed": "Modellarni yuklab boʻlmadi"
   },
   "buy": {
     "title": "Sotib olish",

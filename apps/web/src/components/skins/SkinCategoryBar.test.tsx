@@ -17,10 +17,15 @@ vi.mock("@/i18n/navigation", () => ({
   ),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
+vi.mock("./WeaponMenu", () => ({
+  WeaponMenu: ({ label }: { label: string }) => <button type="button">{`menu:${label}`}</button>,
+}));
 
 const facets: SkinFacets = {
   categories: [
     { value: "rifles", count: 10 },
+    { value: "cases", count: 4 },
+    { value: "knives", count: 2 },
     { value: "music-kits", count: 3 },
   ],
   weapons: [
@@ -40,25 +45,27 @@ function bar(query: SkinQuery) {
   );
 }
 
-it("keeps a chosen weapon visible and clearable", () => {
+it("chips carry silhouettes, knives first, and weapon categories get a model menu", () => {
+  bar({ sort: "-price" });
+  const links = screen.getAllByRole("link").map((a) => a.textContent);
+  expect(links).toEqual(["Все", "Ножи", "Винтовки", "Кейсы", "Наборы музыки"]);
+  expect(screen.getByRole("button", { name: "menu:Ножи" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "menu:Винтовки" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "menu:Кейсы" })).toBeNull();
+  expect(document.querySelectorAll("[data-skin-icon]").length).toBeGreaterThanOrEqual(3);
+  expect(screen.getByRole("link", { name: "Все" })).toHaveAttribute("aria-current", "page");
+});
+
+it("keeps a chosen weapon visible and clearable on the category chip", () => {
   bar({ sort: "-price", category: "rifles", weapon: "AK-47" });
-  const chip = screen.getByRole("link", { name: "AK-47" });
+  const chip = screen.getByRole("link", { name: /Винтовки · AK-47/ });
   expect(chip).toHaveAttribute("aria-current", "page");
   expect(chip).toHaveAttribute("href", "/?category=rifles");
 });
 
-it("lists every weapon of the category from the facets, in their order", () => {
-  bar({ sort: "-price", category: "rifles" });
-  const names = ["AK-47", "AWP", "Galil AR"].map((n) => screen.getByRole("link", { name: n }));
-  expect(names).toHaveLength(3);
-});
-
-it("draws each category tile with its silhouette icon", () => {
-  bar({ sort: "-price", category: "rifles" });
-  const tile = screen.getByRole("link", { name: "Винтовки" });
-  expect(tile).toHaveAttribute("aria-current", "page");
-  const icon = tile.querySelector("[data-skin-icon]");
-  expect(icon?.getAttribute("style")).toContain("/skins/categories/rifles.png");
-  // Music kits have no item image — a glyph stands in.
-  expect(screen.getByRole("link", { name: "Наборы музыки" }).querySelector("svg")).not.toBeNull();
+it("unknown model stays clearable: the chip shows it and links back to the category", () => {
+  bar({ sort: "-price", category: "rifles", weapon: "Foo" });
+  const chip = screen.getByRole("link", { name: /Foo/ });
+  expect(chip).toHaveAttribute("aria-current", "page");
+  expect(chip.getAttribute("href")).not.toContain("weapon=");
 });
