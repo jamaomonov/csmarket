@@ -32,7 +32,8 @@ test("top up 50 000 soʻm through the test kassa and see it on the balance", asy
 
   await page.getByRole("link", { name: "К балансу" }).click();
   await expect(page).toHaveURL(/\/account\/balance$/, { timeout: 30_000 });
-  await expect(page.getByText(/^50\s000\sсум$/)).toBeVisible();
+  // The header shows the balance too: read the one on the page.
+  await expect(page.locator("#main-content").getByText(/^50\s000\sсум$/)).toBeVisible();
   const entry = page.getByRole("listitem").filter({ hasText: number });
   await expect(entry).toHaveCount(1);
   await expect(entry.getByText("Пополнение", { exact: true })).toBeVisible();

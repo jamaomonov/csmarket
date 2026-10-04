@@ -85,7 +85,9 @@ test("buy from the balance: the trade arrives and is accepted", async ({ page, r
   await expect(page.getByTestId("order-status-label")).toHaveText("Получен");
 
   await page.goto("/account/balance");
-  await expect(page.getByText(new RegExp(`^${sum(TOP_UP - price)}$`))).toBeVisible();
+  await expect(
+    page.locator("#main-content").getByText(new RegExp(`^${sum(TOP_UP - price)}$`)),
+  ).toBeVisible();
   const entry = page.getByRole("listitem").filter({ hasText: number });
   await expect(entry).toHaveCount(1);
   await expect(entry.getByText("Покупка", { exact: true })).toBeVisible();
@@ -151,7 +153,9 @@ test("a declined trade puts the money back on the balance", async ({ page, reque
   await trade.getByRole("link", { name: "Открыть баланс" }).click();
   await expect(page).toHaveURL(/\/account\/balance$/, { timeout: 30_000 });
   // Back to what it was before the purchase.
-  await expect(page.getByText(new RegExp(`^${sum(TOP_UP)}$`))).toBeVisible();
+  await expect(
+    page.locator("#main-content").getByText(new RegExp(`^${sum(TOP_UP)}$`)),
+  ).toBeVisible();
   const entries = page.getByRole("listitem").filter({ hasText: number });
   await expect(entries).toHaveCount(2);
   await expect(entries.getByText("Возврат на баланс", { exact: true })).toBeVisible();
