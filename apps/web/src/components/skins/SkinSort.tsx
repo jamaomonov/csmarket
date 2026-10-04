@@ -1,5 +1,6 @@
 "use client";
 
+import { selectClass } from "@csmarket/ui";
 import { skinQueryString } from "@csmarket/utils/skins";
 import { useTranslations } from "next-intl";
 
@@ -15,7 +16,7 @@ export function SkinSort({ query }: { query: SkinQuery }) {
   const t = useTranslations("web.skins");
   const router = useRouter();
   return (
-    <label className="shrink-0">
+    <label className="min-w-0 flex-1 sm:flex-none">
       <span className="sr-only">{t("sortLabel")}</span>
       <select
         value={query.sort}
@@ -23,7 +24,7 @@ export function SkinSort({ query }: { query: SkinQuery }) {
           const sort = e.target.value as Sort; // one of SORTS, rendered below
           router.push(HOME + skinQueryString(query, { sort }));
         }}
-        className="border-border bg-surface h-full rounded-xl border px-3 py-2.5 text-[13px] font-semibold"
+        className={`${selectClass} w-full sm:w-[190px]`}
       >
         {SORTS.map((s) => (
           <option key={s} value={s}>

@@ -236,7 +236,8 @@
       "heavy": "Всё тяжёлое оружие"
     },
     "models": "Модели: {category}",
-    "modelsFailed": "Не удалось загрузить модели"
+    "modelsFailed": "Не удалось загрузить модели",
+    "stattrakTitle": "StatTrak™"
   },
   "buy": {
     "title": "Купить",

@@ -1,5 +1,6 @@
 "use client";
 
+import { inputClass } from "@csmarket/ui";
 import { skinQueryString, steamImageSize, wearColor } from "@csmarket/utils/skins";
 import { Search } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -83,15 +84,15 @@ export function SkinSearch({
         }}
         placeholder={t("searchPlaceholder")}
         aria-label={t("searchPlaceholder")}
-        className="border-border bg-surface w-full rounded-xl border py-2.5 pl-9 pr-3 text-[14px]"
+        className={`${inputClass} pl-9`}
       />
       {open && items.length > 0 && (
-        <ul className="border-border bg-surface absolute inset-x-0 top-full z-20 mt-1 max-h-96 overflow-y-auto rounded-xl border shadow-xl">
+        <ul className="bg-surface-2 shadow-menu absolute inset-x-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-xl p-1.5">
           {items.map((i) => (
             <li key={i.slug}>
               <Link
                 href={itemPath(i.slug)}
-                className="hover:bg-surface-2 flex items-center gap-3 px-3 py-2"
+                className="hover:bg-border-strong flex items-center gap-3 rounded-md px-3 py-2"
               >
                 {i.image_url ? (
                   // A Steam CDN thumbnail: next/image adds nothing at this size.
@@ -105,12 +106,12 @@ export function SkinSearch({
                     className="h-9 w-12 shrink-0 object-contain"
                   />
                 ) : (
-                  <span className="bg-surface-2 h-9 w-12 shrink-0 rounded" aria-hidden />
+                  <span className="bg-surface h-9 w-12 shrink-0 rounded" aria-hidden />
                 )}
                 <span className="min-w-0 flex-1 leading-tight">
-                  <span className="text-fg-dim block truncate text-[12px]">
-                    {i.stattrak && <span className="text-orange-400">StatTrak™ </span>}
-                    {i.souvenir && <span className="text-yellow-400">Souvenir </span>}
+                  <span className="text-fg-muted block truncate text-[12px]">
+                    {i.stattrak && <span className="text-stattrak">StatTrak™ </span>}
+                    {i.souvenir && <span className="text-rarity-contraband">Souvenir </span>}
                     {i.weapon}
                     {i.exterior && (
                       <>

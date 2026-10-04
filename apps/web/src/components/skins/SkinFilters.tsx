@@ -1,5 +1,6 @@
+import { Accordion, buttonVariants, CheckMark } from "@csmarket/ui";
 import { activeFilterCount, filterSections, skinQueryString } from "@csmarket/utils/skins";
-import { Check as CheckIcon, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { SkinPriceFilter } from "./SkinPriceFilter";
@@ -12,24 +13,9 @@ import { HOME } from "@/lib/paths";
 const EXTERIORS: Exterior[] = ["FN", "MW", "FT", "WW", "BS"];
 
 function option(active: boolean): string {
-  return `flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] transition ${
-    active ? "text-fg font-semibold" : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+  return `flex items-center gap-2.5 rounded-md px-1 py-1.5 text-[14px] transition-colors ${
+    active ? "text-fg" : "text-fg-muted hover:text-fg"
   }`;
-}
-
-/** A ticked or empty box: which values are on reads at a glance (the usual market pattern). */
-function Check({ on }: { on: boolean }) {
-  return (
-    <span
-      data-check={on ? "on" : "off"}
-      aria-hidden
-      className={`flex size-[18px] shrink-0 items-center justify-center rounded-[5px] border-2 ${
-        on ? "border-accent bg-accent text-accent-fg" : "border-border-strong"
-      }`}
-    >
-      {on && <CheckIcon className="size-3" strokeWidth={3.5} />}
-    </span>
-  );
 }
 
 /**
@@ -49,13 +35,12 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
 
   return (
     <div>
-      <SkinPriceFilter query={query} />
+      <Accordion title={t("price")} defaultOpen>
+        <SkinPriceFilter query={query} />
+      </Accordion>
 
       {show.team && (
-        <>
-          <p className="text-fg-muted mb-1 mt-5 text-[12px] font-semibold uppercase">
-            {t("team.title")}
-          </p>
+        <Accordion title={t("team.title")} defaultOpen>
           <ul role="radiogroup" aria-label={t("team.title")}>
             {([undefined, "ct", "t"] as const).map((side) => {
               const on = query.team === side;
@@ -81,12 +66,11 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
               );
             })}
           </ul>
-        </>
+        </Accordion>
       )}
 
       {show.wear && (
-        <>
-          <p className="text-fg-muted mb-1 mt-5 text-[12px] font-semibold uppercase">{t("wear")}</p>
+        <Accordion title={t("wear")} defaultOpen>
           <ul>
             {EXTERIORS.map((e) => (
               <li key={e}>
@@ -95,20 +79,19 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
                   className={option(query.exterior === e)}
                   aria-current={query.exterior === e ? "true" : undefined}
                 >
-                  <Check on={query.exterior === e} />
+                  <CheckMark checked={query.exterior === e} />
                   <span className="flex-1">{t(`exterior.${e}`)}</span>
+                  <span className="text-fg-dim text-[12px]">{e}</span>
                 </Link>
               </li>
             ))}
           </ul>
-        </>
+        </Accordion>
       )}
 
       {show.rarities.length > 0 && (
-        <>
-          <p className="text-fg-muted mb-1 mt-5 text-[12px] font-semibold uppercase">
-            {t("rarity")}
-          </p>
+        // Agents have no wear: their rarity is the first thing to filter by.
+        <Accordion title={t("rarity")} defaultOpen={query.rarity !== undefined || !show.wear}>
           <ul>
             {show.rarities.map((r) => (
               <li key={r.value}>
@@ -117,7 +100,7 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
                   className={option(query.rarity === r.value)}
                   aria-current={query.rarity === r.value ? "true" : undefined}
                 >
-                  <Check on={query.rarity === r.value} />
+                  <CheckMark checked={query.rarity === r.value} />
                   <span className="flex flex-1 items-center gap-2">
                     <span
                       className="size-2 shrink-0 rounded-full"
@@ -130,18 +113,20 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
               </li>
             ))}
           </ul>
-        </>
+        </Accordion>
       )}
 
       {(show.stattrak || query.stattrak === true) && (
-        <Link
-          href={href({ stattrak: query.stattrak ? undefined : true })}
-          className={`${option(query.stattrak === true)} mt-4`}
-          aria-current={query.stattrak ? "true" : undefined}
-        >
-          <Check on={query.stattrak === true} />
-          {t("stattrak")}
-        </Link>
+        <Accordion title={t("stattrakTitle")} defaultOpen={query.stattrak === true}>
+          <Link
+            href={href({ stattrak: query.stattrak ? undefined : true })}
+            className={option(query.stattrak === true)}
+            aria-current={query.stattrak ? "true" : undefined}
+          >
+            <CheckMark checked={query.stattrak === true} />
+            {t("stattrak")}
+          </Link>
+        </Accordion>
       )}
 
       {active > 0 && (
@@ -154,7 +139,7 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
             minUzs: undefined,
             maxUzs: undefined,
           })}
-          className="border-border-strong text-fg-muted hover:border-accent hover:text-fg mt-5 flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-[13px] font-semibold transition-colors"
+          className={`${buttonVariants({ variant: "secondary", size: "sm" })} mt-4 w-full`}
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
           {t("reset")}

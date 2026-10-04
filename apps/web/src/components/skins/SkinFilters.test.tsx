@@ -63,10 +63,13 @@ it("shows agents only what agents have: their rarities, no wear, no StatTrak", (
 
 it("offers the weapon rarity scale when no category is picked", () => {
   renderFilters(undefined, ["Covert", "Master", "Extraordinary", "Mil-Spec Grade"], 5);
+  // Untouched sections start closed (accordions): open them to read their options.
+  fireEvent.click(screen.getByRole("button", { name: /Редкость/ }));
+  fireEvent.click(screen.getByRole("button", { name: /StatTrak/ }));
   expect(screen.getByRole("link", { name: /Covert/ })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /Mil-Spec Grade/ })).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Master/ })).not.toBeInTheDocument();
-  expect(screen.getByText("Качество")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Качество" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: /StatTrak/ })).toBeInTheDocument();
 });
 
@@ -166,4 +169,40 @@ it("keeps the box (focus, typed digits) when its own price comes back in the URL
   } finally {
     vi.useRealTimers();
   }
+});
+
+function panel(query: Parameters<typeof SkinFilters>[0]["query"]) {
+  render(
+    <NextIntlClientProvider locale="ru" messages={{ web: messages, common }}>
+      <SkinFilters
+        query={query}
+        facets={{
+          categories: [],
+          weapons: [],
+          exteriors: [{ value: "FN", count: 3 }],
+          rarities: [{ value: "Covert", count: 2, color: "#eb4b4b" }],
+        }}
+      />
+    </NextIntlClientProvider>,
+  );
+}
+
+it("sections are accordions: price and wear open, an active rarity opens its own", () => {
+  panel({ sort: "-price", rarity: "Covert" });
+  expect(screen.getByRole("button", { name: /Цена/ })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("button", { name: "Качество" })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("button", { name: /Редкость/ })).toHaveAttribute("aria-expanded", "true");
+});
+
+it("an untouched rarity section starts closed when wear is shown", () => {
+  panel({ sort: "-price" });
+  expect(screen.getByRole("button", { name: /Редкость/ })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+});
+
+it("agents (no wear) open their rarity section by default", () => {
+  renderFilters("agents", ["Master"], 0);
+  expect(screen.getByRole("button", { name: /Редкость/ })).toHaveAttribute("aria-expanded", "true");
 });

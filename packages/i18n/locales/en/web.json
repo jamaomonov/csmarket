@@ -236,7 +236,8 @@
       "heavy": "All heavy"
     },
     "models": "Models: {category}",
-    "modelsFailed": "Could not load the models"
+    "modelsFailed": "Could not load the models",
+    "stattrakTitle": "StatTrak™"
   },
   "buy": {
     "title": "Buy",

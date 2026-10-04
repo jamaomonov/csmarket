@@ -1,5 +1,6 @@
 "use client";
 
+import { inputClass } from "@csmarket/ui";
 import { DEFAULT_SORT, skinQueryString } from "@csmarket/utils/skins";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
@@ -76,14 +77,14 @@ export function SkinPriceFilter({ query }: { query: SkinQuery }) {
         typed.current = true;
         set(e.target.value);
       }}
-      className="border-border bg-bg w-full rounded-lg border px-2 py-1.5 text-[13px]"
+      aria-label={placeholder}
+      className={inputClass}
     />
   );
 
   // The form has no `action`: a GET form submits to the page it sits on, locale prefix included.
   return (
     <form method="get">
-      <p className="text-fg-muted mb-2 text-[12px] font-semibold uppercase">{t("price")}</p>
       {query.category && <input type="hidden" name="category" value={query.category} />}
       {query.weapon && <input type="hidden" name="weapon" value={query.weapon} />}
       {query.exterior && <input type="hidden" name="exterior" value={query.exterior} />}

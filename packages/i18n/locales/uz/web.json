@@ -236,7 +236,8 @@
       "heavy": "Barcha ogʻir qurollar"
     },
     "models": "Modellar: {category}",
-    "modelsFailed": "Modellarni yuklab boʻlmadi"
+    "modelsFailed": "Modellarni yuklab boʻlmadi",
+    "stattrakTitle": "StatTrak™"
   },
   "buy": {
     "title": "Sotib olish",
