@@ -19,5 +19,8 @@ export default defineConfig({
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
     setupFiles: ["./src/test/setup.ts"],
+    // next-intl's ESM imports `next/navigation` without an extension, which Node's resolver
+    // rejects; inlining lets Vite resolve it (tests can then use the real `getPathname`).
+    server: { deps: { inline: ["next-intl"] } },
   },
 });

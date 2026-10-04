@@ -68,4 +68,18 @@ describe("Header", () => {
       "/account/orders",
     );
   });
+
+  it("hides the auth skeleton and the sign-in button on phones (☰ has them)", () => {
+    auth.value = { status: "loading", user: null, signInHref: () => "" };
+    const { container, unmount } = renderHeader();
+    const skeleton = container.querySelector(".animate-pulse");
+    expect(skeleton?.className.split(" ")).toEqual(expect.arrayContaining(["hidden", "md:block"]));
+    unmount();
+    auth.value = { status: "anonymous", user: null, signInHref: () => "/s" };
+    renderHeader();
+    const classes = screen.getByRole("link", { name: "Войти через Steam" }).className.split(" ");
+    expect(classes).toContain("hidden");
+    expect(classes).toContain("md:inline-flex");
+    expect(classes).not.toContain("inline-flex");
+  });
 });

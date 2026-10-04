@@ -233,7 +233,7 @@
       "rifles": "All rifles",
       "pistols": "All pistols",
       "smgs": "All SMGs",
-      "heavy": "All heavy"
+      "heavy": "All heavy weapons"
     },
     "models": "Models: {category}",
     "modelsFailed": "Could not load the models",

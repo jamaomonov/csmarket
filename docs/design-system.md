@@ -47,7 +47,9 @@ Type scale: 11 meta · 12 label · 13 small body · 14 body · 15 nav · 17 pane
 - **Checkbox** — a real input; **CheckMark** — the box alone, for filter options that are links.
 - **Dropdown** — a menu button (WAI-ARIA menu): items are links (pass the app's router `Link`
   as `LinkComponent`) or actions, with an optional count (`meta`), separators, a loading and a
-  status row, and `onOpenChange` for loading on first open.
+  status row, and `onOpenChange` for loading on first open. `maxHeight` caps a long list
+  (it scrolls). `strategy="fixed"` takes a menu out of a scrolling row: it is placed from the
+  trigger, stays on screen and opens upwards when there is more room above.
 - **Accordion** — one collapsible section (filters).
 
 Domain components stay in `apps/web`: `SkinCard`, `SkinCategoryBar`, `WeaponMenu`,

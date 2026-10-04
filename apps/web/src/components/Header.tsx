@@ -1,6 +1,6 @@
 "use client";
 
-import { buttonVariants } from "@csmarket/ui";
+import { buttonVariants, cn } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
 import { AccountMenu } from "./header/AccountMenu";
@@ -43,7 +43,10 @@ export function Header({ locale }: HeaderProps) {
           <LanguageSwitcher locale={locale} />
         </div>
         {status === "loading" ? (
-          <span aria-hidden className="bg-surface h-10 w-40 animate-pulse rounded-lg" />
+          <span
+            aria-hidden
+            className="bg-surface hidden h-10 w-40 animate-pulse rounded-lg md:block"
+          />
         ) : signedIn ? (
           <>
             <span className="hidden md:block">
@@ -73,7 +76,7 @@ function SignIn({ locale }: { locale: string }) {
   return (
     <a
       href={signInHref(locale)}
-      className={buttonVariants({ size: "md" }) + " hidden md:inline-flex"}
+      className={cn(buttonVariants({ size: "md" }), "hidden md:inline-flex")}
     >
       {t("signIn")}
     </a>

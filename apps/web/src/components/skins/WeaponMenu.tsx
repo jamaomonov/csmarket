@@ -4,7 +4,7 @@ import { Dropdown, type DropdownEntry } from "@csmarket/ui";
 import { skinQueryString } from "@csmarket/utils/skins";
 import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { SkinCategory, SkinQuery } from "@csmarket/utils/skins";
 
@@ -31,6 +31,8 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
   const [models, setModels] = useState<Model[] | null>(initial ?? null);
   const [failed, setFailed] = useState(false);
   const inflight = useRef<AbortController | null>(null);
+  // A request still running when the menu goes away (a navigation) is dropped.
+  useEffect(() => () => inflight.current?.abort(), []);
 
   const load = (open: boolean) => {
     if (!open || models !== null || inflight.current) return;
@@ -42,7 +44,7 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
         setModels(f.weapons);
       })
       .catch(() => {
-        setFailed(true);
+        if (!ctrl.signal.aborted) setFailed(true);
       })
       .finally(() => {
         inflight.current = null;
@@ -72,7 +74,7 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
       status={failed ? t("modelsFailed") : undefined}
       onOpenChange={load}
       strategy="fixed"
-      menuClassName="max-h-[360px] overflow-y-auto"
+      maxHeight={360}
     />
   );
 }

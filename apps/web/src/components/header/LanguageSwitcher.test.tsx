@@ -7,10 +7,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
-vi.mock("@/i18n/navigation", () => ({
+import type * as Navigation from "@/i18n/navigation";
+
+// Only the current path is stubbed: the hrefs come from next-intl's real `getPathname`,
+// so the test sees the routing's prefixes (ru none, uz / en prefixed).
+vi.mock("@/i18n/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof Navigation>()),
   usePathname: () => "/category/rifles",
-  getPathname: ({ href, locale }: { href: string; locale: string }) =>
-    locale === "ru" ? href : `/${locale}${href}`,
 }));
 
 describe("LanguageSwitcher", () => {

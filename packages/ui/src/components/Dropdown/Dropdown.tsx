@@ -2,6 +2,7 @@
 
 import {
   type ComponentType,
+  type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
   useCallback,
@@ -55,12 +56,23 @@ export interface DropdownProps {
    * trigger on scroll and resize. Default `absolute`.
    */
   strategy?: "absolute" | "fixed";
+  /** The menu's height cap in px; longer lists scroll. A fixed menu also fits the viewport. */
+  maxHeight?: number;
 }
 
 /** Keep a fixed menu this far from the viewport's edges. */
 const EDGE = 8;
 /** The menu's minimum width (`min-w-[200px]` below). */
 const MENU_MIN = 200;
+/** A fixed menu with less room than this below its trigger opens upwards if there is more there. */
+const FLIP_BELOW = 240;
+
+interface Place {
+  top?: number;
+  bottom?: number;
+  left: number;
+  maxHeight: number;
+}
 
 const isSeparator = (e: DropdownEntry): e is DropdownSeparator => "separator" in e;
 
@@ -74,6 +86,29 @@ const itemClass = (tone: DropdownItem["tone"], current: boolean | undefined) =>
     "hover:bg-border-strong focus-visible:bg-border-strong",
     tone === "danger" ? "text-danger" : current || tone === "accent" ? "text-accent" : "text-fg",
   );
+
+const px = (n: number) => `${String(n)}px`;
+
+/** Inline placement: viewport coordinates for a fixed menu, and the height cap. */
+function menuStyle(
+  strategy: "absolute" | "fixed",
+  place: Place | null,
+  align: "start" | "end",
+  maxHeight: number | undefined,
+): CSSProperties | undefined {
+  if (strategy === "fixed" && place) {
+    return {
+      position: "fixed",
+      ...(place.top !== undefined ? { top: px(place.top) } : {}),
+      ...(place.bottom !== undefined ? { bottom: px(place.bottom) } : {}),
+      left: px(place.left),
+      maxHeight: px(place.maxHeight),
+      overflowY: "auto",
+      ...(align === "end" ? { transform: "translateX(-100%)" } : {}),
+    };
+  }
+  return maxHeight !== undefined ? { maxHeight: px(maxHeight), overflowY: "auto" } : undefined;
+}
 
 /**
  * A menu button (WAI-ARIA menu pattern): click / Enter / Space / ArrowDown open it, arrows,
@@ -92,9 +127,10 @@ export function Dropdown({
   onOpenChange,
   LinkComponent = PlainLink,
   strategy = "absolute",
+  maxHeight,
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
-  const [place, setPlace] = useState<{ top: number; left: number } | null>(null);
+  const [place, setPlace] = useState<Place | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
@@ -108,8 +144,20 @@ export function Dropdown({
     const left = align === "end" ? box.right : box.left;
     // Start-aligned menus are at least MENU_MIN wide: keep that much on screen.
     const right = align === "end" ? window.innerWidth - EDGE : window.innerWidth - MENU_MIN - EDGE;
-    setPlace({ top: box.bottom + 8, left: Math.max(EDGE, Math.min(left, right)) });
-  }, [align]);
+    const x = Math.max(EDGE, Math.min(left, right));
+    const cap = maxHeight ?? Infinity;
+    const below = window.innerHeight - box.bottom - 8 - EDGE;
+    const above = box.top - 8 - EDGE;
+    if (below < Math.min(cap, FLIP_BELOW) && above > below) {
+      setPlace({
+        bottom: window.innerHeight - box.top + 8,
+        left: x,
+        maxHeight: Math.min(cap, above),
+      });
+    } else {
+      setPlace({ top: box.bottom + 8, left: x, maxHeight: Math.min(cap, below) });
+    }
+  }, [align, maxHeight]);
 
   const setOpenState = useCallback(
     (next: boolean) => {
@@ -229,16 +277,7 @@ export function Dropdown({
           id={id}
           role="menu"
           onKeyDown={onMenuKey}
-          style={
-            strategy === "fixed" && place
-              ? {
-                  position: "fixed",
-                  top: `${String(place.top)}px`,
-                  left: `${String(place.left)}px`,
-                  ...(align === "end" ? { transform: "translateX(-100%)" } : {}),
-                }
-              : undefined
-          }
+          style={menuStyle(strategy, place, align, maxHeight)}
           className={cn(
             "bg-surface-2 shadow-menu z-50 min-w-[200px] rounded-lg p-1.5",
             strategy === "fixed"

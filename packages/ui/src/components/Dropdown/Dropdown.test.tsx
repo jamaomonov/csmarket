@@ -191,4 +191,47 @@ describe("Dropdown", () => {
     fireEvent.keyDown(trigger, { key: "Enter" });
     expect(screen.queryByRole("menu")).toBeNull();
   });
+
+  it("a fixed menu fits the viewport height: capped below, flipped above near the bottom", () => {
+    window.innerHeight = 800;
+    let top = 100;
+    render(
+      <Dropdown
+        label="m"
+        strategy="fixed"
+        maxHeight={360}
+        items={[{ key: "a", label: "A", href: "#" }]}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: "m" });
+    // A DOMRect stand-in: jsdom does no layout.
+    trigger.getBoundingClientRect = () =>
+      ({
+        top,
+        bottom: top + 36,
+        left: 40,
+        right: 120,
+        width: 80,
+        height: 36,
+        x: 40,
+        y: top,
+      }) as DOMRect;
+    fireEvent.click(trigger);
+    let menu = screen.getByRole("menu");
+    expect(menu.style.maxHeight).toBe("360px");
+    expect(menu.style.overflowY).toBe("auto");
+    top = 564; // 200 px left below: open upwards
+    fireEvent.scroll(window);
+    menu = screen.getByRole("menu");
+    expect(menu.style.top).toBe("");
+    expect(menu.style.bottom).toBe("244px"); // 800 − 564 + 8
+    expect(menu.style.maxHeight).toBe("360px");
+    window.innerHeight = 300; // a landscape phone: little room either way, stay below
+    top = 100;
+    fireEvent(window, new Event("resize"));
+    menu = screen.getByRole("menu");
+    expect(menu.style.bottom).toBe("");
+    expect(menu.style.top).toBe("144px");
+    expect(menu.style.maxHeight).toBe("148px"); // 300 − 144 − 8
+  });
 });

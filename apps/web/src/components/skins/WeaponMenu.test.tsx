@@ -66,4 +66,18 @@ describe("WeaponMenu", () => {
     expect(await screen.findByText("Не удалось загрузить модели")).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: "Все винтовки" })).toBeInTheDocument();
   });
+
+  it("aborts the models request when the menu goes away", () => {
+    impl.fn = () => new Promise(() => undefined);
+    const { unmount } = render(
+      <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
+        <WeaponMenu category="rifles" label="Винтовки" query={query} />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Модели: Винтовки" }));
+    const signal = fetchFacets.mock.calls[0]?.[1] as AbortSignal; // the mock's recorded argument
+    expect(signal.aborted).toBe(false);
+    unmount();
+    expect(signal.aborted).toBe(true);
+  });
 });
