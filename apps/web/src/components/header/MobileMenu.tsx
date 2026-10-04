@@ -3,7 +3,6 @@
 import { LOCALES } from "@csmarket/i18n";
 import { Dropdown, type DropdownEntry } from "@csmarket/ui";
 import { Menu } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { AppLink } from "./AccountMenu";
@@ -17,8 +16,6 @@ export function MobileMenu({ locale }: { locale: string }) {
   const t = useTranslations("web.nav");
   const { status, signInHref, signOut } = useAuth();
   const pathname = usePathname();
-  const search = useSearchParams().toString();
-  const tail = search ? `?${search}` : "";
   const items: DropdownEntry[] = [
     { key: "catalog", label: t("catalog"), href: HOME },
     { key: "orders", label: t("orders"), href: ORDERS },
@@ -28,7 +25,7 @@ export function MobileMenu({ locale }: { locale: string }) {
       key: `lang-${l}`,
       label: t(`languages.${l}`),
       onSelect: () => {
-        window.location.assign(getPathname({ href: pathname, locale: l }) + tail);
+        window.location.assign(getPathname({ href: pathname, locale: l }) + window.location.search);
       },
       current: l === locale,
     })),

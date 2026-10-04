@@ -2,7 +2,6 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
-import { Suspense } from "react";
 
 import type { Metadata } from "next";
 
@@ -68,10 +67,7 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
-            {/* The language switcher reads the query: a boundary keeps static pages static. */}
-            <Suspense fallback={<div className="h-[68px]" />}>
-              <Header locale={locale} />
-            </Suspense>
+            <Header locale={locale} />
             {children}
           </Providers>
         </NextIntlClientProvider>

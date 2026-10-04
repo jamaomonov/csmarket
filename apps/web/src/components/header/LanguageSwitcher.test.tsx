@@ -12,12 +12,10 @@ vi.mock("@/i18n/navigation", () => ({
   getPathname: ({ href, locale }: { href: string; locale: string }) =>
     locale === "ru" ? href : `/${locale}${href}`,
 }));
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams("sort=price&weapon=AK-47"),
-}));
 
 describe("LanguageSwitcher", () => {
   it("keeps path and query; ru has no prefix", () => {
+    window.history.pushState({}, "", "/uz/category/rifles?sort=price&weapon=AK-47");
     render(
       <NextIntlClientProvider locale="uz" messages={{ web: ru, common }}>
         <LanguageSwitcher locale="uz" />

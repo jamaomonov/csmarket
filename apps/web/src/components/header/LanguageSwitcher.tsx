@@ -3,8 +3,8 @@
 import { LOCALES } from "@csmarket/i18n";
 import { Dropdown } from "@csmarket/ui";
 import { Globe } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { getPathname, usePathname } from "@/i18n/navigation";
 
@@ -12,11 +12,16 @@ import { getPathname, usePathname } from "@/i18n/navigation";
 export function LanguageSwitcher({ locale }: { locale: string }) {
   const t = useTranslations("web.nav");
   const pathname = usePathname();
-  const search = useSearchParams().toString();
-  const tail = search ? `?${search}` : "";
+  // Read the query when the menu opens (client only): `useSearchParams` would need a
+  // Suspense boundary, and a boundary around the header hydrates after the auth state
+  // settles — a server/client mismatch.
+  const [tail, setTail] = useState("");
   return (
     <Dropdown
       align="end"
+      onOpenChange={(open) => {
+        if (open) setTail(window.location.search);
+      }}
       triggerLabel={`${t("language")}: ${locale.toUpperCase()}`}
       label={
         <>

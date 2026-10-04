@@ -22,12 +22,12 @@ export default defineConfig({
   projects: [
     {
       name: "web-chromium",
-      testMatch: /(^|\/)(home|auth|catalogue|balance|buy|live|email)\.spec\.ts$/,
+      testMatch: /(^|\/)(home|auth|catalogue|balance|buy|live|email|design)\.spec\.ts$/,
       use: { ...devices["Desktop Chrome"], baseURL: WEB },
     },
     {
       name: "web-iphone",
-      testMatch: /home\.spec\.ts/,
+      testMatch: /(^|\/)(home|design)\.spec\.ts$/,
       use: { ...devices["iPhone 14"], baseURL: WEB },
     },
     {
