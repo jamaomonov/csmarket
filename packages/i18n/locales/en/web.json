@@ -237,7 +237,12 @@
     },
     "models": "Models: {category}",
     "modelsFailed": "Could not load the models",
-    "stattrakTitle": "StatTrak™"
+    "stattrakTitle": "StatTrak™",
+    "other": "Other",
+    "chipLabel": {
+      "smgs": "SMGs",
+      "heavy": "Heavy"
+    }
   },
   "buy": {
     "title": "Buy",

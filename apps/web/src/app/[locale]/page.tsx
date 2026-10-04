@@ -69,17 +69,6 @@ export default async function HomePage({ params, searchParams }: Props) {
   return (
     <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-28 pt-2 sm:px-6">
       <h1 className="mb-5 text-center text-[26px] font-semibold">{t("title")}</h1>
-      <Panel className="mb-3 flex flex-col gap-2.5 p-3 sm:flex-row">
-        <SkinSearch initial={query.q ?? ""} locale={locale} query={query} />
-        <div className="flex gap-2">
-          {facets && (
-            <SkinFilterDrawer count={activeFilterCount(query)}>
-              <SkinFilters query={query} facets={facets} />
-            </SkinFilterDrawer>
-          )}
-          <SkinSort query={query} />
-        </div>
-      </Panel>
       <div className="lg:flex lg:gap-3">
         {facets && (
           <aside className="hidden lg:block lg:w-[250px] lg:shrink-0">
@@ -93,7 +82,22 @@ export default async function HomePage({ params, searchParams }: Props) {
           </aside>
         )}
         <section className="min-w-0 flex-1">
-          {facets && <SkinCategoryBar query={query} facets={facets} />}
+          <Panel className="mb-3 flex flex-col gap-2.5 p-3 sm:flex-row">
+            <SkinSearch initial={query.q ?? ""} locale={locale} query={query} />
+            <div className="flex gap-2">
+              {facets && (
+                <SkinFilterDrawer count={activeFilterCount(query)}>
+                  <SkinFilters query={query} facets={facets} />
+                </SkinFilterDrawer>
+              )}
+              <SkinSort query={query} />
+            </div>
+          </Panel>
+          {facets && (
+            <Panel className="p-2">
+              <SkinCategoryBar query={query} facets={facets} />
+            </Panel>
+          )}
           {page.items.length === 0 ? (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <SearchX className="text-fg-dim h-10 w-10" aria-hidden />

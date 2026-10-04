@@ -48,3 +48,17 @@ test("the catalogue hydrates without a mismatch", async ({ page }) => {
   await page.waitForLoadState("networkidle");
   expect(errors.filter((e) => /hydrat/i.test(e))).toEqual([]);
 });
+
+test("categories fit one row at 1440; «Другое» lists the rest", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop row");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.waitForLoadState("networkidle");
+  const row = page.getByRole("link", { name: "Все", exact: true }).locator("..");
+  const spare = await row.evaluate((el) => el.clientWidth - el.scrollWidth);
+  expect(spare).toBeGreaterThanOrEqual(0);
+  await page.getByRole("button", { name: /Другое/ }).click();
+  await page.getByRole("menuitem", { name: /Кейсы/ }).click();
+  await expect(page).toHaveURL(/category=cases/, { timeout: 30_000 });
+  await expect(page.getByRole("button", { name: /Кейсы/ })).toBeVisible();
+});

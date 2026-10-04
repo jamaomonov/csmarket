@@ -5,8 +5,9 @@ import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
 /**
- * A horizontal chip row that scrolls its `aria-current` child into view on
- * mount — on a phone the chosen category («Ножи») otherwise sits off-screen.
+ * A horizontal chip row that scrolls its chosen child (`aria-current="page"`, or
+ * `data-active` on a menu chip that cannot carry it) into view on mount — on a phone
+ * the chosen category («Ножи») otherwise sits off-screen.
  */
 export function ScrollActiveIntoView({
   className,
@@ -21,7 +22,7 @@ export function ScrollActiveIntoView({
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const row = ref.current;
-    const active = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    const active = row?.querySelector<HTMLElement>('[aria-current="page"], [data-active]');
     if (!row || !active || row.scrollWidth <= row.clientWidth) return;
     row.scrollLeft = active.offsetLeft - (row.clientWidth - active.offsetWidth) / 2;
   }, [activeKey]);

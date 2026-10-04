@@ -237,7 +237,12 @@
     },
     "models": "Modellar: {category}",
     "modelsFailed": "Modellarni yuklab boʻlmadi",
-    "stattrakTitle": "StatTrak™"
+    "stattrakTitle": "StatTrak™",
+    "other": "Boshqa",
+    "chipLabel": {
+      "smgs": "Avtomatlar",
+      "heavy": "Ogʻir"
+    }
   },
   "buy": {
     "title": "Sotib olish",

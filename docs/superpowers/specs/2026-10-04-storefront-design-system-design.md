@@ -141,15 +141,18 @@ Measured contrast (WCAG): white on `surface` 15.5; `fg-muted` on `surface-2` 5.8
 Behaviour is unchanged: filters live in the URL, the same API calls, the same «ещё» paging, the
 same SEO. Only presentation and composition change.
 
-- **Title** «Скины КС2 (CS2)» centred; below it a Panel with `SkinSearch` (flex) and `SkinSort`.
-- **Category row** (`SkinCategoryBar`) — Chips, each with its silhouette on the left:
-  Все, Ножи, Перчатки, Винтовки, Пистолеты, Пистолеты-пулемёты, Тяжёлое, Агенты, Кейсы, Ключи,
-  Брелоки (music kits keep their lucide glyph if present). Weapon categories (knives, gloves,
+- **Title** «Скины КС2 (CS2)» centred. Below it two columns on desktop: the filters Panel on
+  the left from the top; on the right a Panel with `SkinSearch` (flex) and `SkinSort`, then the
+  category Panel, then the grid (owner, 2026-10-04: the layout of the reference market).
+- **Category row** (`SkinCategoryBar`) — one row of Chips inside a Panel, flat until hovered,
+  each with its silhouette on the left: Все, Ножи, Перчатки, Винтовки, Пистолеты, П-пулемёты,
+  Тяжёлое (short chip labels, `skins.chipLabel.*`; titles keep the full names), and «Другое» —
+  one Dropdown chip for agents, cases, keys, charms and music kits (it turns green and names
+  the chosen one). The row fits at 1440 px and scrolls, without a scrollbar, below that. Weapon categories (knives, gloves,
   rifles, pistols, smgs, heavy) carry a caret and a Dropdown: «Все {категория}» + the models with
   their counts, fetched on first open from `GET /skins/facets?category=…` (the `weapons` facet,
   already served). Choosing a model sets `weapon=`; «Все …» clears it. The active category chip
-  is green; with a model chosen the chip label shows the model. On phones the row scrolls
-  horizontally (no wrap). No API change.
+  is green; with a model chosen the chip label shows the model. No API change.
 - **Filters** (`SkinFilters`) — a Panel of Accordions: «Цена, сум» (two Inputs), «Качество»
   (Checkboxes with the wear code at the right), «Редкость» (Checkboxes with the rarity dot),
   «StatTrak™ / Souvenir», «Фаза» (when the category has phases). «Качество» and any section

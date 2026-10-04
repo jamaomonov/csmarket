@@ -17,6 +17,11 @@ vi.mock("@/i18n/navigation", () => ({
   ),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
+vi.mock("./OtherCategoriesMenu", () => ({
+  OtherCategoriesMenu: ({ categories, active }: { categories: string[]; active?: string }) => (
+    <button type="button">{`other:${categories.join(",")}:${active ?? ""}`}</button>
+  ),
+}));
 vi.mock("./WeaponMenu", () => ({
   WeaponMenu: ({ label }: { label: string }) => <button type="button">{`menu:${label}`}</button>,
 }));
@@ -27,6 +32,9 @@ const facets: SkinFacets = {
     { value: "cases", count: 4 },
     { value: "knives", count: 2 },
     { value: "music-kits", count: 3 },
+    { value: "smgs", count: 6 },
+    { value: "agents", count: 1 },
+    { value: "heavy", count: 2 },
   ],
   weapons: [
     { value: "AK-47", count: 5 },
@@ -48,10 +56,9 @@ function bar(query: SkinQuery) {
 it("chips carry silhouettes, knives first, and weapon categories get a model menu", () => {
   bar({ sort: "-price" });
   const links = screen.getAllByRole("link").map((a) => a.textContent);
-  expect(links).toEqual(["Все", "Ножи", "Винтовки", "Кейсы", "Наборы музыки"]);
+  expect(links).toEqual(["Все", "Ножи", "Винтовки", "П-пулемёты", "Тяжёлое"]);
   expect(screen.getByRole("button", { name: "menu:Ножи" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "menu:Винтовки" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "menu:Кейсы" })).toBeNull();
   expect(document.querySelectorAll("[data-skin-icon]").length).toBeGreaterThanOrEqual(3);
   expect(screen.getByRole("link", { name: "Все" })).toHaveAttribute("aria-current", "page");
 });
@@ -75,4 +82,27 @@ it("the active chip's link has an offset focus ring (visible on green)", () => {
   const chip = screen.getByRole("link", { name: "Винтовки" });
   expect(chip.className).toContain("focus-visible:ring-offset-2");
   expect(chip.className).toContain("focus-visible:ring-offset-bg");
+});
+
+it("agents, cases, keys and the rest collapse into one «Другое» menu after the weapons", () => {
+  bar({ sort: "-price" });
+  // In ORDER, only the present ones: agents, cases, music-kits.
+  expect(
+    screen.getByRole("button", { name: "other:agents,cases,music-kits:" }),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("link", { name: "Кейсы" })).toBeNull();
+  bar({ sort: "-price", category: "cases" });
+  const chosen = screen.getByRole("button", { name: "other:agents,cases,music-kits:cases" });
+  // The row scrolls it into view on a phone.
+  expect(chosen.closest("[data-active]")).not.toBeNull();
+});
+
+it("one row: chips never wrap, inactive ones are flat inside the panel", () => {
+  bar({ sort: "-price", category: "rifles" });
+  const all = screen.getByRole("link", { name: "Все" });
+  const row = all.parentElement;
+  expect(row?.className.split(" ")).not.toContain("lg:flex-wrap");
+  expect(row?.className.split(" ")).toContain("overflow-x-auto");
+  expect(all.className.split(" ")).toContain("bg-transparent");
+  expect(all.className.split(" ")).not.toContain("bg-surface");
 });

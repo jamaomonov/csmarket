@@ -237,7 +237,12 @@
     },
     "models": "Модели: {category}",
     "modelsFailed": "Не удалось загрузить модели",
-    "stattrakTitle": "StatTrak™"
+    "stattrakTitle": "StatTrak™",
+    "other": "Другое",
+    "chipLabel": {
+      "smgs": "П-пулемёты",
+      "heavy": "Тяжёлое"
+    }
   },
   "buy": {
     "title": "Купить",

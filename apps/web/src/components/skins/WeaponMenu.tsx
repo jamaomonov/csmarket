@@ -66,7 +66,7 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
   return (
     <Dropdown
       triggerLabel={t("models", { category: label })}
-      triggerClassName="h-9 rounded-l-none bg-transparent py-0 pl-1 pr-3 text-inherit"
+      triggerClassName="h-9 rounded-l-none bg-transparent py-0 pl-1 pr-2.5 text-inherit"
       label={<ChevronDown className="size-3.5" aria-hidden />}
       LinkComponent={AppLink}
       items={items}
