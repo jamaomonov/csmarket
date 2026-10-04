@@ -24,7 +24,9 @@ export function Accordion({ title, defaultOpen = false, className, children }: A
           type="button"
           aria-expanded={open}
           aria-controls={`${id}-p`}
-          onClick={() => { setOpen(!open); }}
+          onClick={() => {
+            setOpen(!open);
+          }}
           className="text-fg focus-visible:ring-accent flex w-full items-center justify-between rounded-md text-left text-[15px] font-medium focus-visible:outline-none focus-visible:ring-2"
         >
           {title}

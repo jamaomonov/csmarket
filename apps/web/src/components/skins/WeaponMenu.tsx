@@ -64,13 +64,14 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
   return (
     <Dropdown
       triggerLabel={t("models", { category: label })}
-      triggerClassName="h-full rounded-l-none bg-transparent px-2 text-inherit"
+      triggerClassName="h-full rounded-l-none bg-transparent py-0 pl-1 pr-3 text-inherit"
       label={<ChevronDown className="size-3.5" aria-hidden />}
       LinkComponent={AppLink}
       items={items}
       loading={models === null && !failed}
       status={failed ? t("modelsFailed") : undefined}
       onOpenChange={load}
+      strategy="fixed"
       menuClassName="max-h-[360px] overflow-y-auto"
     />
   );

@@ -49,7 +49,18 @@ export interface DropdownProps {
   status?: ReactNode;
   onOpenChange?: (open: boolean) => void;
   LinkComponent?: ComponentType<DropdownLinkProps>;
+  /**
+   * `fixed` places the menu from the trigger's box in viewport coordinates, so a menu
+   * inside a scrolling row (the category chips on a phone) is not clipped; it follows the
+   * trigger on scroll and resize. Default `absolute`.
+   */
+  strategy?: "absolute" | "fixed";
 }
+
+/** Keep a fixed menu this far from the viewport's edges. */
+const EDGE = 8;
+/** The menu's minimum width (`min-w-[200px]` below). */
+const MENU_MIN = 200;
 
 const isSeparator = (e: DropdownEntry): e is DropdownSeparator => "separator" in e;
 
@@ -80,20 +91,33 @@ export function Dropdown({
   status,
   onOpenChange,
   LinkComponent = PlainLink,
+  strategy = "absolute",
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
+  const [place, setPlace] = useState<{ top: number; left: number } | null>(null);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const focusFirst = useRef(false);
   const id = useId();
 
+  /** Viewport coordinates under the trigger (the `fixed` strategy). */
+  const placeFromTrigger = useCallback(() => {
+    if (!trigger.current) return;
+    const box = trigger.current.getBoundingClientRect();
+    const left = align === "end" ? box.right : box.left;
+    // Start-aligned menus are at least MENU_MIN wide: keep that much on screen.
+    const right = align === "end" ? window.innerWidth - EDGE : window.innerWidth - MENU_MIN - EDGE;
+    setPlace({ top: box.bottom + 8, left: Math.max(EDGE, Math.min(left, right)) });
+  }, [align]);
+
   const setOpenState = useCallback(
     (next: boolean) => {
+      if (next && strategy === "fixed") placeFromTrigger();
       setOpen(next);
       onOpenChange?.(next);
     },
-    [onOpenChange],
+    [onOpenChange, strategy, placeFromTrigger],
   );
 
   const menuItems = (): HTMLElement[] =>
@@ -110,10 +134,22 @@ export function Dropdown({
       if (!root.current?.contains(e.target as Node)) setOpenState(false);
     };
     document.addEventListener("pointerdown", onPointer);
+    // The page or a row scrolled (or the window resized): keep the menu under its trigger.
+    const onMove = (e: Event) => {
+      // The menu's own scrolling (a long model list) is not the page moving.
+      if (e.target instanceof Node && menu.current?.contains(e.target)) return;
+      placeFromTrigger();
+    };
+    if (strategy === "fixed") {
+      window.addEventListener("scroll", onMove, true);
+      window.addEventListener("resize", onMove);
+    }
     return () => {
       document.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("scroll", onMove, true);
+      window.removeEventListener("resize", onMove);
     };
-  }, [open, setOpenState]);
+  }, [open, setOpenState, strategy, placeFromTrigger]);
 
   const close = (refocus: boolean) => {
     setOpenState(false);
@@ -172,9 +208,21 @@ export function Dropdown({
           id={id}
           role="menu"
           onKeyDown={onMenuKey}
+          style={
+            strategy === "fixed" && place
+              ? {
+                  position: "fixed",
+                  top: `${String(place.top)}px`,
+                  left: `${String(place.left)}px`,
+                  ...(align === "end" ? { transform: "translateX(-100%)" } : {}),
+                }
+              : undefined
+          }
           className={cn(
-            "bg-surface-2 shadow-menu absolute z-50 mt-2 min-w-[200px] rounded-lg p-1.5",
-            align === "end" ? "right-0" : "left-0",
+            "bg-surface-2 shadow-menu z-50 min-w-[200px] rounded-lg p-1.5",
+            strategy === "fixed"
+              ? "max-w-[calc(100vw-16px)]"
+              : cn("absolute mt-2", align === "end" ? "right-0" : "left-0"),
             menuClassName,
           )}
         >

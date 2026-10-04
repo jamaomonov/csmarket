@@ -119,4 +119,50 @@ describe("Dropdown", () => {
     expect(link).toHaveAttribute("data-custom");
     expect(link).toHaveAttribute("aria-current", "true");
   });
+
+  it("fixed strategy escapes a scrolling row and follows its trigger when the page moves", () => {
+    render(<Dropdown label="m" strategy="fixed" items={[{ key: "a", label: "A", href: "#" }]} />);
+    const trigger = screen.getByRole("button", { name: "m" });
+    let top = 100;
+    // A DOMRect stand-in: jsdom does no layout.
+    trigger.getBoundingClientRect = () =>
+      ({
+        top,
+        bottom: top + 36,
+        left: 40,
+        right: 120,
+        width: 80,
+        height: 36,
+        x: 40,
+        y: top,
+      }) as DOMRect;
+    fireEvent.click(trigger);
+    const menu = screen.getByRole("menu");
+    expect(menu.style.position).toBe("fixed");
+    expect(menu.style.top).toBe("144px");
+    expect(menu.style.left).toBe("40px");
+    top = 60; // the row or the page scrolled (e.g. to bring the focused trigger into view)
+    fireEvent.scroll(window);
+    expect(screen.getByRole("menu").style.top).toBe("104px");
+  });
+
+  it("a fixed menu near the right edge stays on screen", () => {
+    window.innerWidth = 390;
+    render(<Dropdown label="m" strategy="fixed" items={[{ key: "a", label: "A", href: "#" }]} />);
+    const trigger = screen.getByRole("button", { name: "m" });
+    // A DOMRect stand-in: jsdom does no layout.
+    trigger.getBoundingClientRect = () =>
+      ({
+        top: 0,
+        bottom: 36,
+        left: 300,
+        right: 360,
+        width: 60,
+        height: 36,
+        x: 300,
+        y: 0,
+      }) as DOMRect;
+    fireEvent.click(trigger);
+    expect(screen.getByRole("menu").style.left).toBe("182px"); // 390 − 200 (min width) − 8
+  });
 });
