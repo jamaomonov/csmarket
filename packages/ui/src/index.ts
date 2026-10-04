@@ -13,3 +13,4 @@ export {
   type DropdownLinkProps,
   type DropdownProps,
 } from "./components/Dropdown";
+export { Accordion } from "./components/Accordion";
