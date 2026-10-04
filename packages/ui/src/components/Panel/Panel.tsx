@@ -2,7 +2,6 @@ import { cn } from "../../lib/cn";
 
 import type { ReactNode } from "react";
 
-
 interface PanelProps {
   as?: "div" | "section" | "aside";
   className?: string;

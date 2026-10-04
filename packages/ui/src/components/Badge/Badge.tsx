@@ -4,7 +4,6 @@ import { cn } from "../../lib/cn";
 
 import type { ReactNode } from "react";
 
-
 const badgeVariants = cva(
   "inline-flex items-center rounded-sm px-1.5 py-0.5 text-[11px] font-semibold",
   {
