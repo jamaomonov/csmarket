@@ -7,17 +7,18 @@ import { AccountMenu } from "./header/AccountMenu";
 import { BalanceChip } from "./header/BalanceChip";
 import { LanguageSwitcher } from "./header/LanguageSwitcher";
 import { MobileMenu } from "./header/MobileMenu";
+import { isCurrent, MAIN_NAV } from "./header/nav";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { HOME, ORDERS } from "@/lib/paths";
+import { HOME } from "@/lib/paths";
 
 interface HeaderProps {
   locale: string;
 }
 
 const navClass = (on: boolean) =>
-  `text-[15px] transition-colors ${on ? "text-fg" : "text-fg-dim hover:text-fg"}`;
+  `flex items-center gap-2 whitespace-nowrap text-[15px] transition-colors ${on ? "text-fg" : "text-fg-dim hover:text-fg"}`;
 
 /** Logo, nav, language and the account; on phones a balance and a ☰ menu. */
 export function Header({ locale }: HeaderProps) {
@@ -30,13 +31,21 @@ export function Header({ locale }: HeaderProps) {
       <Link href={HOME} aria-label="csmarket">
         <Logo />
       </Link>
-      <nav className="hidden items-center gap-6 md:flex">
-        <Link href={HOME} className={navClass(pathname === HOME)}>
-          {t("catalog")}
-        </Link>
-        <Link href={ORDERS} className={navClass(pathname.startsWith(ORDERS))}>
-          {t("orders")}
-        </Link>
+      <nav className="hidden items-center gap-6 xl:flex">
+        {MAIN_NAV.map((entry) => {
+          const on = isCurrent(entry, pathname);
+          return (
+            <Link
+              key={entry.key}
+              href={entry.href}
+              className={navClass(on)}
+              aria-current={on ? "page" : undefined}
+            >
+              <entry.icon className={`size-4 ${on ? "text-accent" : ""}`} aria-hidden />
+              {t(entry.key)}
+            </Link>
+          );
+        })}
       </nav>
       <div className="ml-auto flex items-center gap-2.5">
         <div className="hidden md:block">
@@ -62,7 +71,7 @@ export function Header({ locale }: HeaderProps) {
         ) : (
           <SignIn locale={locale} />
         )}
-        <span className="md:hidden">
+        <span className="xl:hidden">
           <MobileMenu locale={locale} />
         </span>
       </div>

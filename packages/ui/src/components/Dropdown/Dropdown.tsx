@@ -20,6 +20,8 @@ export interface DropdownItem {
   href?: string;
   onSelect?: () => void;
   meta?: ReactNode;
+  /** A glyph before the label (an `aria-hidden` icon, sized by the caller). */
+  icon?: ReactNode;
   tone?: "default" | "danger" | "accent";
   current?: boolean;
 }
@@ -298,7 +300,10 @@ export function Dropdown({
               }
               const body = (
                 <>
-                  <span className="truncate">{entry.label}</span>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    {entry.icon}
+                    <span className="truncate">{entry.label}</span>
+                  </span>
                   {entry.meta !== undefined && (
                     <span className="text-fg-muted shrink-0 text-[13px]">{entry.meta}</span>
                   )}

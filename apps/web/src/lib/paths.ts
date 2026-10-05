@@ -28,3 +28,12 @@ export const ORDERS = "/account/orders";
 
 /** The balance page («Открыть баланс», «Пополнить»). */
 export const BALANCE = "/account/balance";
+
+/** «Транзакции»: purchases and the balance history on one page. */
+export const TRANSACTIONS = "/account/transactions";
+
+/** Sections that are on their way («Скоро» pages for now). */
+export const SELL = "/sell";
+export const STEAM_TOPUP = "/steam";
+export const REVIEWS = "/reviews";
+export const REFERRAL = "/account/referral";

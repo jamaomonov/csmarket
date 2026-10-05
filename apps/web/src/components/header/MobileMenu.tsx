@@ -2,28 +2,34 @@
 
 import { LOCALES } from "@csmarket/i18n";
 import { Dropdown, type DropdownEntry } from "@csmarket/ui";
-import { Menu } from "lucide-react";
+import { Languages, LogIn, LogOut, Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AppLink } from "./AccountMenu";
+import { ACCOUNT_NAV, MAIN_NAV, type NavEntry } from "./nav";
 
 import { getPathname, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { ACCOUNT, BALANCE, HOME, ORDERS } from "@/lib/paths";
 
 /** Phones: one ☰ menu with the nav, the languages and the account. */
 export function MobileMenu({ locale }: { locale: string }) {
   const t = useTranslations("web.nav");
   const { status, signInHref, signOut } = useAuth();
   const pathname = usePathname();
+  const link = (entry: NavEntry) => ({
+    key: entry.key,
+    label: t(entry.key),
+    href: entry.href,
+    icon: <entry.icon className="text-fg-dim size-4 shrink-0" aria-hidden />,
+  });
   const items: DropdownEntry[] = [
-    { key: "catalog", label: t("catalog"), href: HOME },
-    { key: "orders", label: t("orders"), href: ORDERS },
+    ...MAIN_NAV.map(link),
     { key: "s1", separator: true },
     // A full navigation: the path is already locale-prefixed, AppLink would prefix it again.
     ...LOCALES.map((l) => ({
       key: `lang-${l}`,
       label: t(`languages.${l}`),
+      icon: <Languages className="text-fg-dim size-4 shrink-0" aria-hidden />,
       onSelect: () => {
         window.location.assign(getPathname({ href: pathname, locale: l }) + window.location.search);
       },
@@ -32,16 +38,24 @@ export function MobileMenu({ locale }: { locale: string }) {
     { key: "s2", separator: true },
     ...(status === "signed_in"
       ? [
-          { key: "profile", label: t("profile"), href: ACCOUNT },
-          { key: "balance", label: t("balance"), href: BALANCE },
+          ...ACCOUNT_NAV.map(link),
           {
             key: "out",
             label: t("signOut"),
             tone: "danger" as const,
+            icon: <LogOut className="size-4 shrink-0" aria-hidden />,
             onSelect: () => void signOut(),
           },
         ]
-      : [{ key: "in", label: t("signIn"), href: signInHref(locale), tone: "accent" as const }]),
+      : [
+          {
+            key: "in",
+            label: t("signIn"),
+            href: signInHref(locale),
+            tone: "accent" as const,
+            icon: <LogIn className="size-4 shrink-0" aria-hidden />,
+          },
+        ]),
   ];
   return (
     <Dropdown

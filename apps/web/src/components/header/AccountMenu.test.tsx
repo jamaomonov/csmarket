@@ -24,25 +24,21 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 describe("AccountMenu", () => {
-  it("lists profile, orders, balance and signs out", () => {
+  it("lists profile, transactions, referral with icons and signs out", () => {
     render(
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
         <AccountMenu />
       </NextIntlClientProvider>,
     );
     fireEvent.click(screen.getByRole("button", { name: /Jam/ }));
-    expect(screen.getByRole("menuitem", { name: "Профиль и трейд-ссылка" })).toHaveAttribute(
-      "href",
-      "/account",
-    );
-    expect(screen.getByRole("menuitem", { name: "Мои заказы" })).toHaveAttribute(
-      "href",
-      "/account/orders",
-    );
-    expect(screen.getByRole("menuitem", { name: "Баланс и история" })).toHaveAttribute(
-      "href",
-      "/account/balance",
-    );
+    const items = screen.getAllByRole("menuitem");
+    expect(items.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+      ["Профиль", "/account"],
+      ["Транзакции", "/account/transactions"],
+      ["Реферал", "/account/referral"],
+      ["Выйти", null],
+    ]);
+    for (const a of items) expect(a.querySelector("svg")).not.toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "Выйти" }));
     expect(signOut).toHaveBeenCalledOnce();
   });

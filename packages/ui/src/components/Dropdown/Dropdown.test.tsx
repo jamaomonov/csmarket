@@ -234,4 +234,16 @@ describe("Dropdown", () => {
     expect(menu.style.top).toBe("144px");
     expect(menu.style.maxHeight).toBe("148px"); // 300 − 144 − 8
   });
+
+  it("an item can carry an icon before its label", () => {
+    render(
+      <Dropdown
+        label="m"
+        items={[{ key: "p", label: "Профиль", href: "#", icon: <svg data-testid="ico" /> }]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "m" }));
+    const item = screen.getByRole("menuitem", { name: "Профиль" });
+    expect(item.firstElementChild?.firstElementChild).toBe(screen.getByTestId("ico"));
+  });
 });

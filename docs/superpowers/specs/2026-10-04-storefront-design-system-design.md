@@ -124,13 +124,16 @@ Measured contrast (WCAG): white on `surface` 15.5; `fg-muted` on `surface-2` 5.8
 
 ## 3. Header
 
-- **Guest:** logo `cs` + `market` (accent), nav «Каталог», «Мои заказы», language switcher
-  (RU / UZ / EN), primary «Войти через Steam».
+- **Guest:** the logo (`Logo`), nav with icons (owner, 2026-10-05): «Продать скины» (`/sell`),
+  «Маркет» (`/`), «Пополнить Steam» (`/steam`), «Отзывы» (`/reviews`); language switcher
+  (RU / UZ / EN), primary «Войти через Steam». Sell, Steam top-up, reviews and the referral are
+  «Скоро» pages (`ComingSoon`) under their final URLs until they are built.
 - **Signed in:** language switcher, balance chip («1 250 000 сум» + a green «+» to
-  `/account/balance`), avatar + name with a Dropdown: «Профиль и трейд-ссылка» (`/account`),
-  «Мои заказы», «Баланс и история», «Выйти» (danger).
-- **Phone (< 768 px):** logo, balance chip (amount without «сум»), a ☰ button opening a sheet
-  with the nav, the language and the account items.
+  `/account/balance`), avatar + name with a Dropdown with icons: «Профиль» (`/account`),
+  «Транзакции» (`/account/transactions`: purchases and the balance history, one tab each),
+  «Реферал» (`/account/referral`), «Выйти» (danger).
+- **Below 1280 px:** the nav moves into the ☰ menu (with the account items); below 768 px only
+  the logo, the balance chip (amount without «сум») and ☰ remain.
 - **Language switcher:** links to the same path in the other locale (next-intl navigation),
   keeping the query string; it does not change the profile's `locale`. Labels: «Русский»,
   «Oʻzbekcha», «English»; the trigger shows `RU` / `UZ` / `EN`.

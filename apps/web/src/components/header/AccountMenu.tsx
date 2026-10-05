@@ -1,12 +1,14 @@
 "use client";
 
 import { Dropdown, type DropdownLinkProps } from "@csmarket/ui";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+import { ACCOUNT_NAV } from "./nav";
 
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { ACCOUNT, BALANCE, ORDERS } from "@/lib/paths";
+
 
 /** next-intl's locale-aware Link, shaped for `Dropdown`. */
 export function AppLink({ href, children, ...rest }: DropdownLinkProps) {
@@ -39,11 +41,20 @@ export function AccountMenu() {
         </>
       }
       items={[
-        { key: "profile", label: t("profile"), href: ACCOUNT },
-        { key: "orders", label: t("orders"), href: ORDERS },
-        { key: "balance", label: t("balance"), href: BALANCE },
+        ...ACCOUNT_NAV.map((entry) => ({
+          key: entry.key,
+          label: t(entry.key),
+          href: entry.href,
+          icon: <entry.icon className="text-fg-dim size-4 shrink-0" aria-hidden />,
+        })),
         { key: "sep", separator: true },
-        { key: "out", label: t("signOut"), tone: "danger", onSelect: () => void signOut() },
+        {
+          key: "out",
+          label: t("signOut"),
+          tone: "danger",
+          icon: <LogOut className="size-4 shrink-0" aria-hidden />,
+          onSelect: () => void signOut(),
+        },
       ]}
     />
   );

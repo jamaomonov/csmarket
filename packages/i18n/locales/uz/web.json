@@ -23,10 +23,16 @@
       "en": "English"
     },
     "menu": "Menyu",
-    "profile": "Profil va almashuv havolasi",
+    "profile": "Profil",
     "balance": "Balans va tarix",
     "topUp": "Balansni toʻldirish",
-    "signOut": "Chiqish"
+    "signOut": "Chiqish",
+    "sell": "Skin sotish",
+    "market": "Market",
+    "steamTopup": "Steamni toʻldirish",
+    "reviews": "Sharhlar",
+    "transactions": "Tranzaksiyalar",
+    "referral": "Referal"
   },
   "auth": {
     "callback": {
@@ -303,5 +309,15 @@
       "support": "Xaridni tekshiryapmiz. Holat shu sahifada yangilanadi.",
       "toBalance": "Balansni ochish"
     }
+  },
+  "soon": {
+    "badge": "Tez orada",
+    "text": "Boʻlim tayyorlanmoqda. Hozircha marketga kiring — u yerda minglab CS2 skinlari bor.",
+    "toMarket": "Marketni ochish"
+  },
+  "transactions": {
+    "title": "Tranzaksiyalar",
+    "purchases": "Xaridlar",
+    "balance": "Balans"
   }
 }

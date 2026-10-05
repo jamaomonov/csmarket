@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
@@ -59,13 +59,21 @@ describe("Header", () => {
     expect(screen.getByRole("button", { name: /Player/ })).toBeInTheDocument();
   });
 
-  it("has the catalogue and orders in the nav", () => {
+  it("the nav: sell, market, Steam top-up and reviews, each with an icon", () => {
     auth.value = { status: "anonymous", user: null, signInHref: () => "" };
     renderHeader();
-    expect(screen.getByRole("link", { name: "Каталог" })).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Мои заказы" })).toHaveAttribute(
-      "href",
-      "/account/orders",
+    const nav = screen.getByRole("navigation");
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+      ["Продать скины", "/sell"],
+      ["Маркет", "/"],
+      ["Пополнить Steam", "/steam"],
+      ["Отзывы", "/reviews"],
+    ]);
+    for (const a of links) expect(a.querySelector("svg")).not.toBeNull();
+    expect(within(nav).getByRole("link", { name: "Маркет" })).toHaveAttribute(
+      "aria-current",
+      "page",
     );
   });
 
