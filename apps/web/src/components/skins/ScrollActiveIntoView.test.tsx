@@ -16,9 +16,11 @@ it("centres the chosen chip, a menu chip ([data-active]) included", () => {
       <span>menu</span>
     </ScrollActiveIntoView>,
   );
-  const row = container.firstElementChild!; // the row rendered above
+  const row = container.firstElementChild;
+  if (!row) throw new Error("no row");
   size(row, { scrollWidth: 1000, clientWidth: 300 });
-  const menu = row.querySelector("span")!; // the second child rendered above
+  const menu = row.querySelector("span");
+  if (!menu) throw new Error("no menu chip");
   size(menu, { offsetLeft: 800, offsetWidth: 100 });
   menu.setAttribute("data-active", "");
   rerender(
