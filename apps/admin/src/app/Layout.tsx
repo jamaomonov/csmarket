@@ -6,7 +6,7 @@
  *   navigation. The split is at lg: the admin's tables are wide, and a 240 px column on a
  *   tablet is not worth the room it takes.
  */
-import { Button } from "@csmarket/ui";
+import { Button, Logo } from "@csmarket/ui";
 import {
   Activity,
   ArrowLeftRight,
@@ -17,7 +17,6 @@ import {
   Package,
   Percent,
   Receipt,
-  ShieldCheck,
   Users,
   X,
   type LucideIcon,
@@ -119,10 +118,8 @@ export function Layout() {
       >
         <div className="border-border h-(--topbar-height) flex items-center justify-between gap-2 border-b px-4">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="text-accent size-5" aria-hidden />
-            <span className="text-lg font-semibold">
-              cs<span className="text-accent">market</span> admin
-            </span>
+            <Logo className="text-lg" />
+            <span className="text-fg-dim text-xs font-medium uppercase tracking-wider">admin</span>
           </div>
           <button
             type="button"

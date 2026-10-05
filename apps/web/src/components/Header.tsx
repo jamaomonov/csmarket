@@ -1,6 +1,6 @@
 "use client";
 
-import { buttonVariants, cn } from "@csmarket/ui";
+import { buttonVariants, cn, Logo } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
 import { AccountMenu } from "./header/AccountMenu";
@@ -27,8 +27,8 @@ export function Header({ locale }: HeaderProps) {
   const signedIn = status === "signed_in";
   return (
     <header className="mx-auto flex h-[68px] max-w-[1320px] items-center gap-8 px-4 sm:px-6">
-      <Link href={HOME} className="text-[22px] font-bold tracking-tight" aria-label="csmarket">
-        cs<span className="text-accent">market</span>
+      <Link href={HOME} aria-label="csmarket">
+        <Logo />
       </Link>
       <nav className="hidden items-center gap-6 md:flex">
         <Link href={HOME} className={navClass(pathname === HOME)}>

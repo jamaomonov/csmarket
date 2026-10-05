@@ -51,6 +51,9 @@ Type scale: 11 meta · 12 label · 13 small body · 14 body · 15 nav · 17 pane
   (it scrolls). `strategy="fixed"` takes a menu out of a scrolling row: it is placed from the
   trigger, stays on screen and opens upwards when there is more room above.
 - **Accordion** — one collapsible section (filters).
+- **Logo** / **LogoMark** — the brand lockup (mark + «cs**market**», leaning 14°, sized by the
+  font size, 24 px by default) and the mark alone in `currentColor`. Files for everything
+  outside the apps and the rules: `docs/brand/README.md`.
 
 Domain components stay in `apps/web`: `SkinCard`, `SkinCategoryBar`, `WeaponMenu`,
 `SkinFilters`, the header pieces. They compose the components above.

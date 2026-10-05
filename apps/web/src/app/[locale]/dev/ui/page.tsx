@@ -7,6 +7,8 @@ import {
   Chip,
   Dropdown,
   Input,
+  Logo,
+  LogoMark,
   Panel,
   Select,
 } from "@csmarket/ui";
@@ -133,6 +135,14 @@ export function Showcase() {
             <p className="text-fg-muted text-[14px]">Covert</p>
           </Accordion>
         </Panel>
+      </Section>
+      <Section name="Logo">
+        <div className="flex items-center gap-6">
+          <Logo />
+          <Logo className="text-lg" />
+          <LogoMark className="text-accent size-8" />
+          <LogoMark className="text-fg size-8" />
+        </div>
       </Section>
       <Section name="Panel">
         <Panel className="w-64">Панель: фильтры, тулбар, блоки.</Panel>

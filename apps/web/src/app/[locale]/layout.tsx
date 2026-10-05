@@ -43,7 +43,7 @@ export async function generateMetadata({
     metadataBase: new URL(SITE),
     title: { default: t("title"), template: "%s — csmarket" },
     description: t("description"),
-    icons: { icon: "/favicon.svg" },
+    icons: { icon: "/favicon.svg", apple: "/apple-touch-icon.png" },
   };
 }
 

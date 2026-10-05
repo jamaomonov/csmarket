@@ -14,3 +14,4 @@ export {
   type DropdownProps,
 } from "./components/Dropdown";
 export { Accordion } from "./components/Accordion";
+export { Logo, LogoMark } from "./components/Logo";

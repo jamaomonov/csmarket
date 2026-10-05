@@ -34,6 +34,7 @@ describe("dev UI showcase", () => {
       expect(screen.getByText(`--color-${t}`)).toBeInTheDocument();
     }
     for (const c of [
+      "Logo",
       "Button",
       "Chip",
       "Badge",
