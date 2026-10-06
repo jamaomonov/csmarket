@@ -447,6 +447,8 @@ balance, buy via mocked acquirer, refund on `returned`. `check-no-yupay.sh` in C
 - Paynet: only if the owner opens a kassa; the twin exists in YuPay and can be ported later.
 - Sell side (skinslink): API shape unknown yet; the only MVP hooks are the `sell` module slot
   and the `sell_payout` ledger kind.
+- P2P selling (seller lists and sends the trade, 7-day hold, Chrome extension for trade
+  checks): parked until after launch; the discussion is in `docs/product/p2p-later.md`.
 
 ## 18. References (source material in `~/Projects/yupay`)
 
