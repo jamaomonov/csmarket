@@ -270,3 +270,27 @@ async def test_a_full_load_streamed_in_batches_keeps_the_last_copy_of_an_id(
     await sync_mirror(_factory(db_engine), ScriptedClient(page), now=NOW)
     rows = await _rows(db_session)
     assert {k: v.price_units for k, v in rows.items()} == {"1": 8500, "2": 7000}
+
+
+async def test_pooled_items_without_a_numeric_id_are_skipped(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """Skinslink also lists pooled offers under a shared hash id (bought by name, no asset):
+    they are not one skin we can sell by its id, so the mirror keeps only numeric ids."""
+    item, _ = await make_item_and_rate(db_session)
+    name = item.market_hash_name
+    pooled = "b02411dfd3c832a218902fba32064b26eb22de0719ed1937f128a57276f1a417f7d77e"
+    page = AvailablePage(
+        items=[_item("1", name, "9.00"), _item(pooled, name, "1.05")], last_update_at="c0"
+    )
+    events = EventsPage(
+        since="c0",
+        next="c1",
+        more=False,
+        reset=False,
+        events=[CatalogueEvent(type="upsert", at="x", id=pooled, item=_item(pooled, name, "1"))],
+    )
+    client = ScriptedClient(page, events)
+    for _ in range(2):
+        await sync_mirror(_factory(db_engine), client, now=NOW)
+    assert list(await _rows(db_session)) == ["1"]

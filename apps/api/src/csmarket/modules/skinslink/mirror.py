@@ -101,9 +101,21 @@ async def _keys_to_items(
     return found
 
 
+#: The longest item id kept (``skinslink_items.id``).
+_MAX_ID = 32
+
+
+def listable(item: CatalogueItem) -> bool:
+    """One skin we can sell by its id: a numeric Steam asset id. Skinslink also lists pooled
+    offers under a shared hash id (no asset, bought by name) — those are skipped."""
+    return item.id.isdigit() and len(item.id) <= _MAX_ID
+
+
 async def _upsert(db: AsyncSession, items: Sequence[CatalogueItem], *, now: datetime) -> int:
-    """Insert or replace ``items`` by id; returns how many."""
-    keyed = [(i, split_phase(i.name, i.phase)) for i in items]
+    """Insert or replace the listable ``items`` by id; returns how many."""
+    keyed = [(i, split_phase(i.name, i.phase)) for i in items if listable(i)]
+    if not keyed:
+        return 0
     ids = await _keys_to_items(db, (key for _, key in keyed))
     rows = [
         {
