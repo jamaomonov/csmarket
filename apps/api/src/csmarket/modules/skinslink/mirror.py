@@ -24,7 +24,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
 from csmarket.modules.skins.api import SkinItem, canonical_name
-from csmarket.modules.skinslink.client import AvailablePage, CatalogueItem, EventsPage
+from csmarket.modules.skinslink.client import (
+    AvailablePage,
+    CatalogueEvent,
+    CatalogueItem,
+    EventsPage,
+)
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 
 log = get_logger("csmarket.skinslink.mirror")
@@ -136,6 +141,18 @@ async def _upsert(db: AsyncSession, items: Sequence[CatalogueItem], *, now: date
     return len(rows)
 
 
+def _fold(events: Sequence[CatalogueEvent]) -> dict[str, CatalogueItem | None]:
+    """A page's events, in order, as each id's last state (``None`` = removed): one id may
+    change several times in a page, and one statement may touch a row only once."""
+    latest: dict[str, CatalogueItem | None] = {}
+    for e in events:
+        if e.type == "remove":
+            latest[e.id] = None
+        elif e.type == "upsert" and e.item is not None:
+            latest[e.item.id] = e.item
+    return latest
+
+
 async def _remove(db: AsyncSession, ids: Sequence[str]) -> int:
     for start in range(0, len(ids), _BATCH):
         await db.execute(
@@ -164,7 +181,8 @@ async def _full(
     page = await client.available()
     async with factory() as db:
         await db.execute(delete(SkinslinkItem))
-        upserts = await _upsert(db, page.items, now=now)
+        # The last copy of an id wins (one statement may touch a row only once).
+        upserts = await _upsert(db, list({i.id: i for i in page.items}.values()), now=now)
         await _touch(db, cursor=page.last_update_at, now=now, full=True)
         await db.commit()
     log.info("skinslink.mirror.loaded", mode=mode, items=upserts)
@@ -191,11 +209,10 @@ async def sync_mirror(
         pages += 1
         if page.reset:
             return await _full(factory, client, now=now, mode="reset")
+        latest = _fold(page.events)
         async with factory() as db:
-            upserts += await _upsert(
-                db, [e.item for e in page.events if e.type == "upsert" and e.item], now=now
-            )
-            removes += await _remove(db, [e.id for e in page.events if e.type == "remove"])
+            upserts += await _upsert(db, [i for i in latest.values() if i is not None], now=now)
+            removes += await _remove(db, [k for k, i in latest.items() if i is None])
             await _touch(db, cursor=page.next, now=now)
             await db.commit()
         since = page.next

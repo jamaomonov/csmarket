@@ -39,6 +39,7 @@ from csmarket_scheduler.jobs import (
     skins_price_sync,
     skinslink_balance,
     skinslink_mirror,
+    skinslink_prices,
     skinslink_reconcile,
     topup_expiry,
     trades_audit,
@@ -66,6 +67,7 @@ def build_scheduler() -> AsyncIOScheduler:
     skinslink_mirror.register(scheduler)
     skinslink_reconcile.register(scheduler)
     skinslink_balance.register(scheduler)
+    skinslink_prices.register(scheduler)
     topup_expiry.register(scheduler)
     click_timeout.register(scheduler)
     payme_timeout.register(scheduler)

@@ -27,6 +27,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "skinslink.mirror",
         "skinslink.reconcile",
         "skinslink.balance",
+        "skinslink.prices",
         "wallet.topup_expiry",
         "click.timeout",
         "payme.timeout",

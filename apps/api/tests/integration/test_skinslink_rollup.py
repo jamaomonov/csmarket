@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from csmarket.core.clock import now
 from csmarket.core.config import get_settings
+from csmarket.core.redis import get_redis
 from csmarket.modules.skins.models import SkinItem
+from csmarket.modules.skins.prices import sync_skinslink_prices
 from csmarket.modules.skins.repricing import reprice_rows
 from csmarket.modules.skins.settings import load_rules
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from csmarket.modules.skinslink.rollup import rollup
 from sqlalchemy import delete
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.orders_factory import make_item_and_rate
 
@@ -108,3 +111,30 @@ async def test_stock_that_left_the_mirror_is_cleared(db_session: AsyncSession) -
     await db_session.commit()
     await db_session.refresh(item)
     assert (item.skinslink_min_units, item.skinslink_count, item.active) == (None, 0, True)
+
+
+async def test_skinslink_prices_without_any_waxpeer_tick(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """Prod may run Skinslink with no Waxpeer key: its own tick prices and lists the item,
+    and a mirror gone stale takes it off sale again."""
+    settings = get_settings().model_copy(update=ACTIVE)
+    item = await _waxpeer_item(db_session, units=None)
+    await _mirror(db_session, item, [9_000], synced=now())
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    assert await sync_skinslink_prices(factory, get_redis(), settings=settings, at=now())
+    await db_session.refresh(item)
+    assert (item.active, item.skinslink_min_units) == (True, 9_000)
+    assert item.sell_price_usd is not None
+    later = now() + timedelta(minutes=settings.skinslink_mirror_stale_minutes + 1)
+    assert await sync_skinslink_prices(factory, get_redis(), settings=settings, at=later)
+    await db_session.refresh(item)
+    assert (item.active, item.skinslink_count) == (False, 0)
+    assert item.sell_price_usd is None  # type: ignore[unreachable]  # refreshed from the row
+
+
+async def test_the_skinslink_tick_is_a_no_op_when_it_is_off_and_nothing_is_rolled_up(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    assert not await sync_skinslink_prices(factory, get_redis(), settings=get_settings(), at=now())

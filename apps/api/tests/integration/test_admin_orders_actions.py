@@ -16,6 +16,7 @@ from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.orders.api import admin_refund, attempt_buy, can_refund, can_retry
 from csmarket.modules.orders.buy_lease import release, take_lease
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.skinslink_status import check_purchase
 from csmarket.modules.skins.api import (
     WaxpeerError,
     WaxpeerForbiddenError,
@@ -32,8 +33,10 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from tests.integration.conftest import ADMIN_STEAM_ID
+from tests.integration.fake_skinslink_client import FakeSkinslinkClient, purchase
 from tests.integration.fake_trade_client import FakeTradeClient, waxpeer_trade
 from tests.integration.orders_factory import make_order, make_trade
+from tests.integration.skinslink_factory import make_skinslink_order
 from tests.integration.trade_sweeps_kit import load, reconcile_once, sweep_settings
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
@@ -752,3 +755,19 @@ async def _fresh(db: AsyncSession, order: Order) -> tuple[Order, SkinTrade | Non
     )
     await db.commit()
     return row, trade
+
+
+async def test_resolve_works_on_a_skinslink_purchase_and_frees_its_refund(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    order, _ = await make_skinslink_order(db_session, attention_reason="ambiguous_trade")
+    status, body = await _post(integration_client, h, order, "resolve", body={"note": "checked"})
+    assert status == 200, body
+    assert body["skinslink"]["resolved_at"] is not None
+    (row,) = await _audit(db_session, "orders.trade.resolve")
+    assert row.payload == {"reason": "ambiguous_trade"}
+    # The attention no longer holds the refund a declined offer brings.
+    fake = FakeSkinslinkClient(statuses={order.id: purchase("canceled")})
+    assert await check_purchase(db_session, fake, order_id=order.id) == "returned"
+    assert await user_balance(db_session, order.user_id) == PRICE

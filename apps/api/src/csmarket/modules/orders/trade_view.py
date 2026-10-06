@@ -24,8 +24,9 @@ refund actually went, from the order, so the page never promises a refund that h
 happened. The seller is shown on purpose: the customer should recognise the offer.
 
 A Skinslink order (spec 2026-10-06 §6) reads its purchase instead: ``new``/``pending`` →
-``buying``, ``active``/``hold`` → ``offer_sent``, ``completed`` → ``accepted``,
-``failed``/``canceled``/``reverted`` → ``failed``; no seller, release date or deadline.
+``buying``, ``active`` → ``offer_sent``, ``hold`` / ``completed`` → ``accepted`` (``hold`` with
+its end as ``release_date``),
+``failed``/``canceled``/``reverted`` → ``failed``; no seller or deadline.
 """
 
 from __future__ import annotations
@@ -92,7 +93,8 @@ def trade_state(order: Order, trade: SkinTrade | None) -> SkinTradeState:
 
 _PURCHASE_STATES: dict[str, SkinTradeState] = {
     "active": "offer_sent",
-    "hold": "offer_sent",
+    # Accepted; Steam's trade protection holds the skin until ``hold_end_date``.
+    "hold": "accepted",
     "completed": "accepted",
     "failed": "failed",
     "canceled": "failed",
@@ -147,6 +149,7 @@ def _purchase_out(order: Order, purchase: SkinslinkPurchase) -> SkinTradeOut:
         state=state,
         reason_code=reason,
         offer_url=f"https://steamcommunity.com/tradeoffer/{offer}/" if offer else None,
+        release_date=purchase.hold_end_date if state == "accepted" else None,
         refunded_to="balance" if order.refunded_to == "balance" else None,
     )
 

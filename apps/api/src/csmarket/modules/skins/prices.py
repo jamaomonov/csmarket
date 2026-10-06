@@ -22,7 +22,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from csmarket.core.clock import now
-from csmarket.core.config import get_settings
+from csmarket.core.config import Settings, get_settings
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.modules.skins.cachekeys import bump_catalog_version
@@ -320,6 +320,36 @@ async def sync_prices(
     return result
 
 
+async def sync_skinslink_prices(
+    session_factory: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    *,
+    settings: Settings,
+    at: datetime,
+) -> bool:
+    """Roll Skinslink's stock up and reprice, without waiting for a Waxpeer tick.
+
+    The Waxpeer price sync rolls up too; this one keeps Skinslink prices (and their removal
+    when the mirror goes stale or Skinslink is switched off) current when Waxpeer is
+    missing or failing. Runs only while Skinslink is on, or while an earlier roll-up is
+    still on the catalogue to clear.
+
+    Returns:
+        Whether it repriced.
+    """
+    async with session_factory() as db:
+        if not settings.skinslink_active:
+            left = await db.scalar(select(SkinItem.id).where(SkinItem.skinslink_count > 0).limit(1))
+            if left is None:
+                return False
+        await lock_pricing(db)
+        await rollup(db, settings=settings, now=at)
+        await reprice_rows(db, await load_rules(db, fresh=True))
+        await db.commit()
+    await bump_catalog_version(redis)
+    return True
+
+
 __all__ = [
     "ApplyResult",
     "PriceAggregate",
@@ -328,4 +358,5 @@ __all__ = [
     "apply_prices",
     "price_hash",
     "sync_prices",
+    "sync_skinslink_prices",
 ]

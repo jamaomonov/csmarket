@@ -217,3 +217,33 @@ def test_units_and_phase() -> None:
         "AK-47 | Redline (Field-Tested)",
         "",
     )
+
+
+async def test_one_page_with_an_id_twice_applies_its_events_in_order(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    item, _ = await make_item_and_rate(db_session)
+    name = item.market_hash_name
+    page = EventsPage(
+        since="c0",
+        next="c1",
+        more=False,
+        reset=False,
+        events=[
+            CatalogueEvent(type="upsert", at="x", id="1", item=_item("1", name, "9.00")),
+            CatalogueEvent(type="upsert", at="x", id="1", item=_item("1", name, "8.50")),
+            CatalogueEvent(type="upsert", at="x", id="2", item=_item("2", name, "7.00")),
+            CatalogueEvent(type="remove", at="x", id="2", item=None),
+            CatalogueEvent(type="upsert", at="x", id="2", item=_item("2", name, "7.25")),
+            CatalogueEvent(type="upsert", at="x", id="3", item=_item("3", name, "6.00")),
+            CatalogueEvent(type="remove", at="x", id="3", item=None),
+        ],
+    )
+    client = ScriptedClient(AvailablePage(items=[], last_update_at="c0"), page)
+    for _ in range(2):
+        await sync_mirror(_factory(db_engine), client, now=NOW)
+    rows = await _rows(db_session)
+    assert {k: v.price_units for k, v in rows.items()} == {"1": 8500, "2": 7250}
+    state = await db_session.get(SkinslinkState, 1, populate_existing=True)
+    assert state is not None
+    assert state.cursor == "c1"

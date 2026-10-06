@@ -174,10 +174,10 @@ async def _lock(db: AsyncSession, order_id: str) -> tuple[Order, SkinslinkPurcha
     return None if order is None or purchase is None else (order, purchase)
 
 
-async def _settle_unseen(
-    db: AsyncSession, order: Order, purchase: SkinslinkPurchase, settings: Settings
-) -> str:
-    """Skinslink has no purchase under our id: a lost buy past the wait was never made."""
+def _settle_unseen(order: Order, purchase: SkinslinkPurchase, settings: Settings) -> str:
+    """Skinslink shows no purchase under our id for a lost buy: past the wait, send the same
+    ``merchant_tx_id`` again (spec §5) — Skinslink answers it with the stored purchase, a new
+    one, or a refusal, so the buy path settles it. A silence is never refunded."""
     unseen = purchase.buy_unconfirmed_at
     purchase.last_polled_at = now()
     if unseen is None or purchase.purchase_id is not None or order.status != "buying":
@@ -185,7 +185,10 @@ async def _settle_unseen(
     if now() - unseen < timedelta(minutes=settings.order_unconfirmed_minutes):
         return "unchanged"
     purchase.buy_unconfirmed_at = None
-    return await _refund(db, order, "failed", "sold_out")
+    purchase.buy_pending = True
+    order.next_check_at = None  # due for the reconcile's buy at once
+    log.warning("orders.skinslink.repeat_unseen", number=order.number)
+    return "repeat"
 
 
 async def check_purchase(
@@ -202,8 +205,8 @@ async def check_purchase(
     buy is still pending is left to the buy path. No lock is held across the call.
 
     Returns:
-        :func:`apply_report`'s outcome, or ``unknown`` (no such purchase) or
-        ``unavailable`` (Skinslink did not answer).
+        :func:`apply_report`'s outcome, ``repeat`` (a lost buy is sent again), ``unknown``
+        (no such purchase) or ``unavailable`` (Skinslink did not answer).
     """
     settings = settings or get_settings()
     where = (
@@ -215,6 +218,8 @@ async def check_purchase(
     found = None if row is None else (row.order_id, row.merchant_tx_id, row.buy_pending)
     await db.commit()
     if found is None:
+        # A webhook about a purchase we hold no id for: logged, never applied blind.
+        log.warning("orders.skinslink.unknown_purchase")
         return "unknown"
     oid, tx, pending = found
     if pending:
@@ -230,7 +235,7 @@ async def check_purchase(
         return "unchanged"
     order, purchase = pair
     if report is None:
-        outcome = await _settle_unseen(db, order, purchase, settings)
+        outcome = _settle_unseen(order, purchase, settings)
     else:
         purchase.buy_unconfirmed_at = None
         outcome = await apply_report(db, order=order, purchase=purchase, report=report)

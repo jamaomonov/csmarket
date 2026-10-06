@@ -10,6 +10,7 @@ import pytest
 from csmarket.core import clock
 from csmarket.core.config import Settings, get_settings
 from csmarket.modules.orders.models import Order
+from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
 from csmarket.modules.orders.skinslink_reconcile import reconcile_skinslink
 from csmarket.modules.orders.skinslink_status import check_purchase, drain_checks
 from csmarket.modules.orders.trade_view import skin_trade_out
@@ -148,7 +149,7 @@ async def test_a_pending_buy_is_left_to_the_buy_path(db_session: AsyncSession) -
     assert (await _fresh(db_session, order))[0].status == "buying"
 
 
-async def test_an_unconfirmed_buy_skinslink_never_saw_is_refunded_after_the_wait(
+async def test_an_unconfirmed_buy_skinslink_never_saw_is_repeated_after_the_wait(
     db_session: AsyncSession,
 ) -> None:
     minutes = get_settings().order_unconfirmed_minutes
@@ -160,9 +161,22 @@ async def test_an_unconfirmed_buy_skinslink_never_saw_is_refunded_after_the_wait
         offer_id=None,
         buy_unconfirmed_at=clock.now() - timedelta(minutes=minutes + 1),
     )
-    assert await _check(db_session, order, None) == "failed"
-    row, _ = await _fresh(db_session, order)
-    assert (row.status, row.failure_reason) == ("failed", "sold_out")
+    assert await _check(db_session, order, None) == "repeat"
+    row, p = await _fresh(db_session, order)
+    # Never refunded on a silence: the same merchant_tx_id is sent again, and Skinslink
+    # answers it with the stored purchase, a new one, or a refusal.
+    assert (row.status, row.refunded_at) == ("buying", None)
+    assert (p.buy_pending, p.buy_unconfirmed_at) == (True, None)
+    settings = get_settings().model_copy(
+        update={"skinslink_enabled": True, "skinslink_api_key": "k", "skinslink_secret": "s"}
+    )
+    fake = FakeSkinslinkClient(purchase("active", offer_id=OFFER))
+    assert (
+        await attempt_skinslink_buy(db_session, fake, order_id=order.id, settings=settings)
+        == "bought"
+    )
+    assert fake.calls[0]["merchant_tx_id"] == order.id
+    assert (await _fresh(db_session, order))[0].status == "trade_sent"
 
 
 async def test_an_unconfirmed_buy_is_adopted_when_skinslink_has_it(
@@ -245,3 +259,15 @@ async def test_reconcile_polls_open_purchases_and_buys_pending_ones(
     assert (await _fresh(db_session, pending))[1].purchase_id == 181
     assert fake.status_calls == [sent.id]
     assert (await _fresh(db_session, done))[0].status == "delivered"
+
+
+async def test_a_held_trade_reads_accepted_until_the_hold_ends(db_session: AsyncSession) -> None:
+    order, _ = await make_skinslink_order(db_session)
+    report = purchase("hold", offer_id=OFFER, hold_end_date="2026-10-13T00:00:00Z")
+    await _check(db_session, order, report)
+    row, p = await _fresh(db_session, order)
+    view = skin_trade_out(row, None, purchase=p)
+    assert view is not None
+    assert view.state == "accepted"
+    assert view.release_date == p.hold_end_date
+    assert view.release_date is not None

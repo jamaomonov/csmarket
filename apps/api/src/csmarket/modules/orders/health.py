@@ -22,6 +22,7 @@ from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.skins.api import TradeClient
+from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 log = get_logger("csmarket.orders.health")
 
@@ -49,15 +50,38 @@ class Health(BaseModel):
     waxpeer_balance_usd: Decimal | None
 
 
+#: An order's trade fields, whichever market it is bought at (an order has one of the two).
+_ATTENTION = func.coalesce(SkinTrade.attention_reason, SkinslinkPurchase.attention_reason)
+_RESOLVED_AT = func.coalesce(SkinTrade.resolved_at, SkinslinkPurchase.resolved_at)
+_POLLED_AT = func.coalesce(SkinTrade.last_polled_at, SkinslinkPurchase.last_polled_at)
+
+
 async def _count(db: AsyncSession, *conditions: object) -> int:
-    """Orders (left-joined to their trade) matching ``conditions``."""
+    """Orders (left-joined to their Waxpeer trade or Skinslink purchase) matching
+    ``conditions``."""
     stmt = (
         select(func.count())
         .select_from(Order)
         .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
+        .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
         .where(*conditions)  # type: ignore[arg-type]  # SQL expressions
     )
     return int(await db.scalar(stmt) or 0)
+
+
+async def _open_attentions(db: AsyncSession) -> int:
+    """Trades and Skinslink purchases waiting for an admin."""
+    total = 0
+    for table in (SkinTrade, SkinslinkPurchase):
+        total += int(
+            await db.scalar(
+                select(func.count())
+                .select_from(table)
+                .where(table.attention_reason.is_not(None), table.resolved_at.is_(None))
+            )
+            or 0
+        )
+    return total
 
 
 async def _waxpeer_balance(client: TradeClient | None) -> Decimal | None:
@@ -90,25 +114,14 @@ async def measure(db: AsyncSession, client: TradeClient | None, *, settings: Set
         Order.status == "buying",
         Order.claimed_at < at - BUYING_STUCK_AFTER,
         # An open attention is already on an admin's list (and its own alert).
-        or_(
-            SkinTrade.order_id.is_(None),
-            SkinTrade.attention_reason.is_(None),
-            SkinTrade.resolved_at.is_not(None),
-        ),
+        or_(_ATTENTION.is_(None), _RESOLVED_AT.is_not(None)),
     )
     unpolled = await _count(
         db,
         Order.status == "trade_sent",
-        or_(SkinTrade.last_polled_at.is_(None), SkinTrade.last_polled_at < at - UNPOLLED_AFTER),
+        or_(_POLLED_AT.is_(None), at - UNPOLLED_AFTER > _POLLED_AT),
     )
-    attention = int(
-        await db.scalar(
-            select(func.count())
-            .select_from(SkinTrade)
-            .where(SkinTrade.attention_reason.is_not(None), SkinTrade.resolved_at.is_(None))
-        )
-        or 0
-    )
+    attention = await _open_attentions(db)
     return Health(
         paid_stuck=paid,
         buying_stuck=buying,

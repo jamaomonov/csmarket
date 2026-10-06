@@ -11,10 +11,12 @@ from csmarket.core.config import get_settings
 from csmarket.modules.orders.health import Health, measure
 from csmarket.modules.orders.models import Order
 from csmarket.modules.skins.api import WaxpeerUnavailableError
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.fake_trade_client import FakeTradeClient
 from tests.integration.orders_factory import make_order, make_trade
+from tests.integration.skinslink_factory import make_skinslink_order
 from tests.integration.trade_sweeps_kit import db_fixture  # noqa: F401 -- fixture
 
 
@@ -142,3 +144,22 @@ async def test_no_cached_balance_reads_as_nothing() -> None:
     assert await cached_balance(get_redis()) == (None, None)
     await get_redis().set("orders:waxpeer:balance", "not json")
     assert await cached_balance(get_redis()) == (None, None)
+
+
+@pytest.mark.parametrize(("polled_minutes_ago", "stuck"), [(1, 0), (31, 1), (None, 1)])
+async def test_a_skinslink_order_is_unpolled_by_its_purchase(
+    db: AsyncSession, polled_minutes_ago: int | None, stuck: int
+) -> None:
+    last_polled = None if polled_minutes_ago is None else _ago(minutes=polled_minutes_ago)
+    await make_skinslink_order(db, last_polled_at=last_polled)
+    assert (await _measure(db)).trade_sent_unpolled == stuck
+
+
+async def test_a_skinslink_attention_counts_and_is_not_stuck(db: AsyncSession) -> None:
+    order, _ = await make_skinslink_order(
+        db, status="buying", purchase_status=None, attention_reason="ambiguous_trade"
+    )
+    await db.execute(update(Order).where(Order.id == order.id).values(claimed_at=_ago(minutes=45)))
+    await db.commit()
+    health = await _measure(db)
+    assert (health.buying_stuck, health.attention) == (0, 1)
