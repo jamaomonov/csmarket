@@ -138,6 +138,15 @@ Measured contrast (WCAG): white on `surface` 15.5; `fg-muted` on `surface-2` 5.8
   Пополнение / Вывод (withdrawals: «скоро»); two panels — the note and big kassa tiles; the
   amount with quick chips, «Получите на баланс» and the submit. The header's «+» and a short
   balance's «Пополнить» lead here.
+- **Sell** (`/sell`, owner, 2026-10-06, UI only — the API comes later): title with three steps
+  (pick → accept the Steam trade → get paid); the inventory with search, sort, category chips,
+  «Выбрать все»; cards toggle with a green frame, unsellable ones are dimmed with the reason
+  (trade lock until a date, too cheap, not accepted) and sorted last; a sticky cart with the
+  chosen skins (each removable), «Куда получить» — csmarket balance (+bonus) or a Uzcard /
+  Humo / Uzum Visa card (fee; a 16-digit number checked by its prefix 8600 / 9860 / 4, a card
+  minimum) — and the payout. Phones: a bottom bar with the count and sum opens the cart as a
+  sheet. Production keeps the «Скоро» page; dev shows the page on a demo inventory made of
+  catalogue items, its button reads «Продажа скоро откроется».
 - **Profile pages** (`/account/*`, owner, 2026-10-06): a sidebar of the sections (Профиль,
   Транзакции, Обмены, Реферал, Выйти; a row of tabs on phones). «Профиль» (`/account`): a card
   with the avatar (Steam's, or the name's initial), name, «На csmarket с …», Steam ID with copy

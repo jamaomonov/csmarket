@@ -350,5 +350,61 @@
     "withdrawSoon": "Withdrawals to a card are coming soon.",
     "total": "You get on the balance",
     "topUp": "Top up"
+  },
+  "sell": {
+    "title": "Sell your CS2 skins",
+    "steps": {
+      "pick": "Pick skins",
+      "trade": "Accept the Steam trade",
+      "money": "Get paid"
+    },
+    "search": "Search by name",
+    "sortLabel": "Sort",
+    "sort": {
+      "expensive": "Most expensive",
+      "cheap": "Cheapest",
+      "name": "By name"
+    },
+    "all": "All",
+    "selectAll": "Select all",
+    "clearAll": "Clear selection",
+    "refresh": "Refresh inventory",
+    "total": "{count, plural, one {# item} other {# items}} worth {sum}",
+    "available": "{count} available",
+    "unavailable": {
+      "tradeLock": "Tradable from {date}",
+      "tooCheap": "Too cheap",
+      "notAccepted": "Not accepted"
+    },
+    "empty": "Nothing found.",
+    "needTradeLink": "Add your trade link — we use it to show your inventory and send the offer.",
+    "signedOut": "Sign in with Steam to sell skins.",
+    "cart": {
+      "title": "{count, plural, =0 {Nothing selected} one {# skin selected} other {# skins selected}}",
+      "hint": "Tap skins to add them here.",
+      "remove": "Remove {name}"
+    },
+    "payout": {
+      "title": "Get paid to",
+      "balance": "csmarket balance",
+      "balanceNote": "Instant, +{percent}%",
+      "cardNote": "Fee {percent}%"
+    },
+    "card": {
+      "label": "{method} card number",
+      "wrong": "This is not a {method} card",
+      "min": "Minimum to a card — {sum}"
+    },
+    "summary": {
+      "items": "Items",
+      "fee": "Fee {percent}%",
+      "bonus": "Balance bonus +{percent}%",
+      "payout": "You get"
+    },
+    "submit": "Sell for {sum}",
+    "soon": "Selling opens soon",
+    "demo": "Demo: this is how selling will look. Prices are examples.",
+    "continue": "Continue",
+    "close": "Close"
   }
 }

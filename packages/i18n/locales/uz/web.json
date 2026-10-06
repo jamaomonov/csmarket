@@ -350,5 +350,61 @@
     "withdrawSoon": "Kartaga yechib olish tez orada paydo boʻladi.",
     "total": "Balansga tushadi",
     "topUp": "Toʻldirish"
+  },
+  "sell": {
+    "title": "CS2 skinlaringizni soting",
+    "steps": {
+      "pick": "Skinlarni tanlang",
+      "trade": "Steamda almashuvni qabul qiling",
+      "money": "Pulni oling"
+    },
+    "search": "Nomi boʻyicha qidirish",
+    "sortLabel": "Saralash",
+    "sort": {
+      "expensive": "Avval qimmatlari",
+      "cheap": "Avval arzonlari",
+      "name": "Nomi boʻyicha"
+    },
+    "all": "Hammasi",
+    "selectAll": "Hammasini tanlash",
+    "clearAll": "Tanlovni bekor qilish",
+    "refresh": "Inventarni yangilash",
+    "total": "{count, plural, other {# ta buyum}} — {sum}",
+    "available": "mavjud: {count}",
+    "unavailable": {
+      "tradeLock": "Almashuv {date} dan",
+      "tooCheap": "Juda arzon",
+      "notAccepted": "Qabul qilmaymiz"
+    },
+    "empty": "Hech narsa topilmadi.",
+    "needTradeLink": "Almashuv havolasini qoʻshing — u orqali inventaringizni koʻrsatamiz va taklif yuboramiz.",
+    "signedOut": "Skin sotish uchun Steam orqali kiring.",
+    "cart": {
+      "title": "{count, plural, =0 {Hech narsa tanlanmagan} other {# ta skin tanlandi}}",
+      "hint": "Skinlarni bu yerga qoʻshish uchun ustiga bosing.",
+      "remove": "{name} ni olib tashlash"
+    },
+    "payout": {
+      "title": "Qayerga olish",
+      "balance": "csmarket balansi",
+      "balanceNote": "Darhol, +{percent}%",
+      "cardNote": "Komissiya {percent}%"
+    },
+    "card": {
+      "label": "{method} karta raqami",
+      "wrong": "Bu {method} karta emas",
+      "min": "Kartaga eng kami — {sum}"
+    },
+    "summary": {
+      "items": "Buyumlar qiymati",
+      "fee": "Komissiya {percent}%",
+      "bonus": "Balans uchun bonus +{percent}%",
+      "payout": "Siz olasiz"
+    },
+    "submit": "{sum} ga sotish",
+    "soon": "Sotish tez orada ochiladi",
+    "demo": "Demo: sotish shunday koʻrinadi. Narxlar — misol uchun.",
+    "continue": "Davom etish",
+    "close": "Yopish"
   }
 }

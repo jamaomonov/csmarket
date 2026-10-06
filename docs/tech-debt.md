@@ -28,3 +28,11 @@ None of these touches money or order state.
 5. **The admin preview type omits `count_auto`.** `apps/admin/src/features/pricing/api.ts`
    `PreviewIn` lacks a field the API accepts (harmless; the mirror is incomplete). _Fix:_ add
    it.
+
+## Sell page (2026-10-06)
+
+1. **The sell page is UI only.** `/sell` shows a demo inventory in dev and «Скоро» in
+   production. The fee (5 %), the balance bonus (2 %) and the card minimum (50 000 soʻm) are
+   placeholders in `apps/web/src/lib/sell.ts`; with the sell API they come from it, the demo
+   inventory (`sell-demo.ts`) goes, and the button starts selling. The payout card brands'
+   logos are in `apps/web/public/payout/` (supplied by the owner).
