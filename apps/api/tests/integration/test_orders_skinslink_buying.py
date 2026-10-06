@@ -13,8 +13,11 @@ from decimal import Decimal
 import pytest
 from csmarket.core import clock
 from csmarket.core.config import Settings, get_settings
+from csmarket.core.redis import get_redis
+from csmarket.modules.orders.api import attempt_buy
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
+from csmarket.modules.skins.api import WaxpeerBuyRefusedError
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skinslink.api import (
     SkinslinkError,
@@ -230,6 +233,7 @@ async def test_a_waxpeer_substitute_hands_the_order_to_the_waxpeer_path(
         (purchase("failed", fail_reason="insufficient_balance"), "source_low_balance"),
         (SkinslinkError("banned", status=400, code="trade_banned"), "invalid_trade_link"),
         (SkinslinkError("bad", status=400, code="validation"), "sold_out"),
+        (SkinslinkError("broke", status=400, code="insufficient_balance"), "source_low_balance"),
     ],
 )
 async def test_refund_reasons(
@@ -282,6 +286,7 @@ async def test_a_rate_limit_waits_with_the_buy_pending(
     "answer",
     [
         SkinslinkError("dup", status=409),
+        SkinslinkError("dup", status=400, code="duplicate_purchase"),
         purchase("failed", fail_reason="duplicate_purchase"),
     ],
 )
@@ -296,3 +301,43 @@ async def test_a_duplicate_adopts_the_stored_purchase(
     assert outcome == "adopted"
     assert (await _purchase(db_session, order)).purchase_id == 180
     assert (await _order(db_session, order)).status == "trade_sent"
+
+
+async def test_a_rerun_after_the_substitute_never_substitutes_again(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    """The one substitute was taken (``<id>:2``, dearer): a rerun that is refused refunds —
+    no third offer, and never one priced off the substitute instead of the order."""
+    order = await _buying(db_session, mirror=(("100", COST), ("101", 12_700), ("102", 13_000)))
+    row = await _purchase(db_session, order)
+    row.merchant_tx_id, row.asset_id, row.paid_units = f"{order.id}:2", "101", 12_700
+    await db_session.commit()
+    waxpeer = FakeTradeClient()
+    waxpeer.listings(order.market_hash_name, [(777, 12_900)])
+    fake = FakeSkinslinkClient(purchase("failed", fail_reason="item_sold"))
+    outcome = await attempt_skinslink_buy(
+        db_session, fake, order_id=order.id, settings=settings, waxpeer=waxpeer
+    )
+    assert outcome == "sold_out"
+    assert [c["merchant_tx_id"] for c in fake.calls] == [f"{order.id}:2"]
+
+
+async def test_a_switch_to_waxpeer_keeps_the_orders_ceiling(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    """After a Waxpeer substitute, the Waxpeer path's own substitute stays under the order's
+    ceiling (12_715), not one counted from the substitute's price."""
+    order = await _buying(db_session)
+    waxpeer = FakeTradeClient()
+    waxpeer.listings(order.market_hash_name, [(777, 12_700)])
+    fake = FakeSkinslinkClient(purchase("failed", fail_reason="item_sold"))
+    await attempt_skinslink_buy(
+        db_session, fake, order_id=order.id, settings=settings, waxpeer=waxpeer
+    )
+    waxpeer.lookup_returns([])
+    waxpeer.refuse(777, WaxpeerBuyRefusedError("Item not found", new_price_units=None))
+    waxpeer.listings(order.market_hash_name, [(778, 13_000)])  # within 12_700 × 1.03
+    await get_redis().delete(f"skins:listings:{order.slug}", f"skins:listings:{order.slug}:stale")
+    assert await attempt_buy(db_session, waxpeer, order_id=order.id, settings=settings) == (
+        "sold_out"
+    )

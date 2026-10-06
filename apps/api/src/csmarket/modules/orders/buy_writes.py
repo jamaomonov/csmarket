@@ -38,6 +38,9 @@ class BuySnapshot(BaseModel):
     skin_item_id: str
     listing_id: int
     paid_units: int
+    #: The order's agreed cost: the substitute ceiling is counted from it, never from a
+    #: substitute's price (a Skinslink order handed over to Waxpeer pays the substitute's).
+    cost_units: int | None = None
     #: A buy's answer was lost before (``buy_unconfirmed_at``): a lookup decides, not a buy.
     unconfirmed: bool = False
 

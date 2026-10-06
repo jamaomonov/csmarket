@@ -314,6 +314,7 @@ async def _read(db: AsyncSession, order_id: str) -> tuple[BuySnapshot, str] | No
             skin_item_id=order.skin_item_id,
             listing_id=trade.listing_id,
             paid_units=trade.paid_units,
+            cost_units=order.cost_units,
             unconfirmed=trade.buy_unconfirmed_at is not None,
         )
         result = (snap, order.trade_link)
@@ -392,7 +393,8 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
     run: _Run,
 ) -> str:
     """The chosen listing at the agreed units, then at most one substitute (R4, R6)."""
-    ceiling = int(snap.paid_units * (1 + settings.order_substitute_ceiling))
+    base = snap.cost_units if snap.cost_units is not None else snap.paid_units
+    ceiling = int(base * (1 + settings.order_substitute_ceiling))
     queue: list[tuple[int, int]] = [(snap.listing_id, snap.paid_units)]
     tried: set[int] = set()
     while queue:

@@ -1,7 +1,8 @@
 """Every 30 s: poll open Skinslink purchases and buy pending ones (``orders.skinslink_reconcile``).
 
 The fallback when a webhook is lost (spec 2026-10-06 §6); the logic lives in ``orders``.
-Skipped unless ``skinslink_active``. ``max_instances=1`` and ``coalesce=True``. A failure is
+Skipped without an API key; runs with the switch off too, so open orders still settle.
+``max_instances=1`` and ``coalesce=True``. A failure is
 logged by type only.
 """
 
@@ -26,7 +27,9 @@ INTERVAL_SECONDS = 30
 async def run() -> None:
     """One tick. Never raises."""
     settings = get_settings()
-    if not settings.skinslink_active:
+    # The key, not the switch: orders paid before the switch went off are followed to the end
+    # (the tick only looks at open Skinslink orders).
+    if not settings.skinslink_api_key:
         return
     try:
         looked = await reconcile_skinslink(

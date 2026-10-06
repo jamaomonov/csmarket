@@ -11,7 +11,7 @@ from collections.abc import AsyncIterator, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_DOWN, Decimal, InvalidOperation
 from typing import Any, Literal, Protocol
 
 import httpx
@@ -399,7 +399,8 @@ class SkinslinkClient:
                 "partner": partner,
                 "token": token,
                 "merchant_tx_id": merchant_tx_id,
-                "max_price": float(max_price_usd.quantize(_TWO_PLACES)),
+                # Cents, rounded down: the cap is never above what we agreed to pay.
+                "max_price": float(max_price_usd.quantize(_TWO_PLACES, rounding=ROUND_DOWN)),
             },
         )
         return _purchase(data)

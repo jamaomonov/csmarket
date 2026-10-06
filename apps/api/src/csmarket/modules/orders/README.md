@@ -343,7 +343,8 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   | a buy that went through but the rows moved during the call                   | `stale_bought` | attention `ambiguous_trade`                                                       |
 
   The substitute is the cheapest other offer of the item, **either source**, at most
-  `paid_units × (1 + order_substitute_ceiling)`: Skinslink's from the mirror, Waxpeer's
+  `orders.cost_units × (1 + order_substitute_ceiling)` (the order's ceiling, also on a rerun
+  and on the Waxpeer path after a switch; a rerun after `<id>:2` takes no second one): Skinslink's from the mirror, Waxpeer's
   through `skins.listings_for` (only when the caller passes a Waxpeer client — `drain_paid`
   and the reconcile do). A Skinslink substitute is **retargeted first** (`merchant_tx_id` =
   `<order id>:2`, its asset, `paid_units` = its price) and committed before the request, so
@@ -383,7 +384,7 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
 
 - **Reconcile** (`skinslink_reconcile.py`, scheduler `skinslink.reconcile`, every 30 s):
   every `buying` / `trade_sent` Skinslink order whose purchase is pending, unconfirmed,
-  never polled or unpolled for 30 s — up to 50 a tick, each in its own session. A pending one
+  never polled or unpolled for 30 s (10 min while Steam's trade hold runs) — up to 50 a tick, each in its own session. A pending one
   goes through `attempt_skinslink_buy` (its lease decides who acts), the rest through
   `check_purchase`. The fallback for a lost webhook.
 - **Reads:** the owner's order reads join `skinslink_purchases` in the same query (no N+1);

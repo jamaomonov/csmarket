@@ -81,7 +81,9 @@ hardened, and every Skinslink offer competes on price from day one.
   request, so a lost answer is looked up under the right id. Its `max_price` is that offer's
   own price.
 - A Waxpeer substitute writes `skin_trades.paid_units` = its price; the Waxpeer path may then
-  try one substitute of its own (two at worst, each within its own ceiling).
+  try one substitute of its own, within the **order's** ceiling (`cost_units × 1.03`, never
+  counted from a substitute's price). A rerun after a Skinslink substitute (`<id>:2`) never
+  looks for another.
 - Any other `failed` reason (incl. `provider_unavailable`) and any 4xx that is neither a
   trade-link code nor 409 is a refused offer: substitute once, then refund `sold_out`. A 409
   or `duplicate_purchase` adopts the stored purchase; a stored failed one counts as refused.

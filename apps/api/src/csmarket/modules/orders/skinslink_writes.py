@@ -41,6 +41,8 @@ class PurchaseSnapshot(BaseModel):
     merchant_tx_id: str
     asset_id: str
     paid_units: int
+    #: The order's agreed cost: the substitute ceiling is counted from it.
+    cost_units: int
 
 
 async def _lock_both(

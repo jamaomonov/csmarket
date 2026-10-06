@@ -260,7 +260,8 @@ async def drain_checks(
     settings = settings or get_settings()
     ids = await claim_checks(db, limit=limit)
     await db.commit()
-    if not ids or (client is None and not settings.skinslink_active):
+    # The key, not the switch: open orders still settle after Skinslink is switched off.
+    if not ids or (client is None and not settings.skinslink_api_key):
         return len(ids)
     client = client or client_for(settings)
     for pid in ids:

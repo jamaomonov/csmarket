@@ -271,3 +271,37 @@ async def test_a_held_trade_reads_accepted_until_the_hold_ends(db_session: Async
     assert view.state == "accepted"
     assert view.release_date == p.hold_end_date
     assert view.release_date is not None
+
+
+async def test_a_held_trade_is_polled_every_ten_minutes_not_every_tick(
+    db_engine: AsyncEngine, db_session: AsyncSession
+) -> None:
+    settings: Settings = get_settings().model_copy(
+        update={"skinslink_enabled": True, "skinslink_api_key": "k", "skinslink_secret": "s"}
+    )
+    ends = clock.now() + timedelta(days=6)
+    fresh, _ = await make_skinslink_order(
+        db_session,
+        purchase_status="hold",
+        hold_end_date=ends,
+        last_polled_at=clock.now() - timedelta(minutes=1),
+    )
+    due, _ = await make_skinslink_order(
+        db_session,
+        purchase_status="hold",
+        hold_end_date=ends,
+        purchase_id=179,
+        last_polled_at=clock.now() - timedelta(minutes=11),
+    )
+    over, _ = await make_skinslink_order(
+        db_session,
+        purchase_status="hold",
+        purchase_id=180,
+        hold_end_date=clock.now() - timedelta(minutes=1),
+        last_polled_at=clock.now() - timedelta(minutes=1),
+    )
+    fake = FakeSkinslinkClient()
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    await reconcile_skinslink(factory, fake, settings=settings)
+    assert sorted(fake.status_calls) == sorted([due.id, over.id])
+    assert fresh.id not in fake.status_calls

@@ -309,3 +309,17 @@ async def test_status_reads_the_offer_and_hold() -> None:
 async def test_no_key_is_unavailable_without_a_call() -> None:
     with pytest.raises(SkinslinkUnavailableError):
         await SkinslinkClient(api_key="", base_url=BASE, timeout_seconds=1).balance()
+
+
+@respx.mock
+@pytest.mark.parametrize(("cap", "sent_cap"), [("12.345", 12.34), ("12.349", 12.34), ("9.1", 9.1)])
+async def test_max_price_never_rounds_above_the_cap(cap: str, sent_cap: float) -> None:
+    route = respx.post(f"{BASE}/merchant/purchase").mock(
+        return_value=httpx.Response(
+            200, json=_ok({"id": 1, "merchant_tx_id": "o", "status": "pending"})
+        )
+    )
+    await _client().purchase(
+        asset_id="1", partner=PARTNER, token=TOKEN, merchant_tx_id="o", max_price_usd=Decimal(cap)
+    )
+    assert json.loads(route.calls.last.request.read())["max_price"] == sent_cap

@@ -17,12 +17,24 @@ def _settings(monkeypatch: pytest.MonkeyPatch, *, active: bool) -> None:
     monkeypatch.setattr(job, "get_settings", lambda: s)
 
 
-async def test_skipped_while_inactive(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_skipped_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
     tick = AsyncMock()
     monkeypatch.setattr(job, "reconcile_skinslink", tick)
     _settings(monkeypatch, active=False)
     await job.run()
     tick.assert_not_awaited()
+
+
+async def test_switched_off_with_a_key_still_settles_open_orders(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Orders paid before the switch went off are still followed to the end."""
+    tick = AsyncMock(return_value=0)
+    monkeypatch.setattr(job, "reconcile_skinslink", tick)
+    s = get_settings().model_copy(update={"skinslink_enabled": False, "skinslink_api_key": "k"})
+    monkeypatch.setattr(job, "get_settings", lambda: s)
+    await job.run()
+    tick.assert_awaited_once()
 
 
 async def test_a_tick_runs_while_active(monkeypatch: pytest.MonkeyPatch) -> None:

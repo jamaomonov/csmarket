@@ -154,18 +154,20 @@ retry still refuse a Skinslink order.
 Set `CSMARKET_SKINSLINK_ENABLED=false` and
 `docker compose -f docker-compose.prod.yml up -d api worker scheduler`. At once: no Skinslink
 offers (the next `skinslink.prices` tick, ≤ 2 min, clears the roll-up and its prices and
-deactivates items only Skinslink had; it keeps running until nothing is left to clear), the webhook answers 404, and the mirror, reconcile and balance jobs stop.
+deactivates items only Skinslink had; it keeps running until nothing is left to clear), the
+webhook answers 404, and the mirror and balance jobs stop. The reconcile and the check drain
+keep running while the API key is set, so orders already in flight settle.
 
 What happens to Skinslink orders already in flight:
 
 - **Paid, not yet claimed:** the worker still sends the purchase while the API key is in
   `secrets/api.env`; without the key it is recorded as unconfirmed and waits.
-- **`buying` / `trade_sent`:** nothing polls them while Skinslink is off (the reconcile is
-  stopped, queued checks are dropped). They wait; `OrdersBuyingStuck` / `TradesUnpolled`
-  fire after 30 minutes. Switching back on settles them: the reconcile asks under each
-  order's `merchant_tx_id`.
+- **`buying` / `trade_sent`:** with the key still set, the reconcile polls them every 30 s
+  (10 min while Steam's trade hold runs) and settles them as usual. Removing the key stops
+  that: they wait, `OrdersBuyingStuck` / `TradesUnpolled` fire after 30 minutes, and putting
+  the key back settles them under each order's `merchant_tx_id`.
 
-So disable cleanly: first list the open ones and wait until none is left.
+So turn the switch off first, and remove the key only once none is left open.
 
 ```bash
 docker compose -f docker-compose.prod.yml exec postgres psql -U <user> -d <db> -c \

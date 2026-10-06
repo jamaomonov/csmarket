@@ -202,6 +202,7 @@ async def _leased(
         merchant_tx_id=purchase.merchant_tx_id,
         asset_id=purchase.asset_id,
         paid_units=purchase.paid_units,
+        cost_units=order.cost_units,
     )
     try:
         link = parse_tradelink(order.trade_link)
@@ -219,12 +220,14 @@ async def _buy(
     waxpeer: TradeClient | None,
     run: _Run,
 ) -> str:
-    """The chosen offer at the agreed units, then at most one substitute."""
+    """The chosen offer at the agreed units, then at most one substitute per order: a rerun
+    after the substitute was taken (``<id>:2``) never looks for another."""
     assert run.snap is not None
     snap = run.snap
-    ceiling = int(snap.paid_units * (1 + settings.order_substitute_ceiling))
+    ceiling = int(snap.cost_units * (1 + settings.order_substitute_ceiling))
     tried = {offer_id_of("skinslink", snap.asset_id)}
-    for attempt in (1, 2):
+    first = 1 if snap.merchant_tx_id == snap.order_id else 2
+    for attempt in range(first, 3):
         settled = await _purchase_once(db, client, snap, link, run)
         if settled is not None:
             return settled
@@ -272,8 +275,10 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
     except SkinslinkError as err:
         if err.code in LINK_ERROR_CODES:
             return await refund(db, snap, "invalid_trade_link")
-        if err.status == 409:
+        if err.status == 409 or err.code == "duplicate_purchase":
             return await _adopt(db, client, snap)
+        if err.code == "insufficient_balance":
+            return await refund(db, snap, "source_low_balance")
         return None
     if report.status in _TAKEN:
         return await record_purchase(db, snap, report)

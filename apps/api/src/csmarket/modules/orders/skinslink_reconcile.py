@@ -1,7 +1,8 @@
 """The Skinslink reconcile (spec 2026-10-06 §6): the fallback when a webhook is lost.
 
 Every open Skinslink order (``buying`` / ``trade_sent``) whose purchase was not polled for
-:data:`POLL_EVERY`, or whose buy's answer was lost, is asked about again
+:data:`POLL_EVERY` (:data:`HOLD_POLL_EVERY` while Steam's trade hold runs), or whose buy's
+answer was lost, is asked about again
 (``skinslink_status.check_purchase``); one whose buy is still pending is bought
 (``skinslink_buying.attempt_skinslink_buy`` — its lease decides whether anyone else is on it).
 Each order gets its own session: one failure never stops the tick.
@@ -12,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from datetime import timedelta
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
@@ -28,6 +29,8 @@ log = get_logger("csmarket.orders.skinslink_reconcile")
 
 #: How long an open purchase goes unpolled before the reconcile asks about it.
 POLL_EVERY = timedelta(seconds=30)
+#: How often a trade in Steam's hold (accepted, ~7 days to go) is asked about.
+HOLD_POLL_EVERY = timedelta(minutes=10)
 #: Orders per tick.
 BATCH = 50
 
@@ -36,7 +39,18 @@ SessionFactory = Callable[[], AsyncSession]
 
 async def _due(db: AsyncSession) -> list[tuple[str, bool]]:
     """``(order id, buy_pending)`` of the open purchases due a poll; ends the transaction."""
-    stale = now() - POLL_EVERY
+    at = now()
+    stale = at - POLL_EVERY
+    in_hold = and_(
+        SkinslinkPurchase.status == "hold",
+        SkinslinkPurchase.hold_end_date.is_not(None),
+        SkinslinkPurchase.hold_end_date > at,
+    )
+    poll_due = or_(
+        SkinslinkPurchase.last_polled_at.is_(None),
+        and_(not_(in_hold), SkinslinkPurchase.last_polled_at <= stale),
+        SkinslinkPurchase.last_polled_at <= at - HOLD_POLL_EVERY,
+    )
     rows = await db.execute(
         select(SkinslinkPurchase.order_id, SkinslinkPurchase.buy_pending)
         .join(Order, Order.id == SkinslinkPurchase.order_id)
@@ -45,8 +59,7 @@ async def _due(db: AsyncSession) -> list[tuple[str, bool]]:
             or_(
                 SkinslinkPurchase.buy_pending.is_(True),
                 SkinslinkPurchase.buy_unconfirmed_at.is_not(None),
-                SkinslinkPurchase.last_polled_at.is_(None),
-                SkinslinkPurchase.last_polled_at <= stale,
+                poll_due,
             ),
         )
         .order_by(SkinslinkPurchase.last_polled_at.asc().nulls_first(), Order.created_at)
@@ -91,4 +104,4 @@ async def reconcile_skinslink(
     return len(due)
 
 
-__all__ = ["POLL_EVERY", "reconcile_skinslink"]
+__all__ = ["HOLD_POLL_EVERY", "POLL_EVERY", "reconcile_skinslink"]

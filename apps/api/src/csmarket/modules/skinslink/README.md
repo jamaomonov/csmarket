@@ -18,10 +18,11 @@ price anything (`skins`) and does not own orders (`orders`); both reach it throu
 | `CSMARKET_SKINSLINK_BUY_TIMEOUT_SECONDS`     | `35`                               | `POST /merchant/purchase` (≤ 30 s on their side) |
 | `CSMARKET_SKINSLINK_BALANCE_ALERT_USD`       | `100`                              | `SkinslinkBalanceLow` fires below it             |
 
-`skinslink_active` = the switch **and** both keys. Off: the mirror, reconcile and balance jobs
-skip, the `skinslink.prices` job only clears what an earlier roll-up left, the item page and
-the price syncs see no Skinslink stock, the webhook answers 404 and the
-check drain drops its rows. Both keys are on the log redaction list.
+`skinslink_active` = the switch **and** both keys. Off: the mirror and balance jobs skip, the
+`skinslink.prices` job only clears what an earlier roll-up left, the item page and the price
+syncs see no Skinslink stock and the webhook answers 404. The reconcile and the check drain
+follow the API key, not the switch: orders already in flight settle after switching off.
+`max_price` goes out in cents rounded down — never above the agreed cost. Both keys are on the log redaction list.
 
 ## Tables (migration `0018_skinslink`)
 
