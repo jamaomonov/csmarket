@@ -43,6 +43,31 @@ balance after **7 days** unless either side disputes or Steam rolls the trade ba
 5. **Screens** — seller: inventory, my lots, sales, hold, dispute; admin: lot moderation,
    disputes.
 
+## Mixing P2P lots with the provider's (owner's question, 2026-10-06)
+
+Split by **delivery time**, never by source, and at the **offer** level, not the item's. One
+catalogue item, all offers under it, each with a badge — the way TM (market.csgo) and
+CS.MONEY do it.
+
+- **Card:** price = the cheapest offer of either source, count = all offers. One badge by the
+  cheapest offer: ⚡ «Мгновенно» (provider) or 🕐 «До 12 часов» (our seller). A new filter
+  section «Доставка»: Мгновенно / До 12 часов (default: all); a `delivery` facet in
+  `/skins/facets`.
+- **Item page:** a segmented control over the offers — Все / ⚡ Мгновенно / 🕐 До 12 часов;
+  sorted by price, instant first on a tie; every row badged; a P2P row also shows the seller's
+  level (deals, success rate, time on the site). Float, pattern and stickers per offer, as now.
+- **Buying:** the button says what happens — «Купить — получите сразу» / «Купить — продавец
+  отправит до 12 часов». For P2P the 12 hours are a rule, not a label: a timer on the order
+  page, auto-cancel + refund when the seller has not sent in time. Buyer notified (WS + email)
+  when the offer is sent.
+- **Inside:** one offer shape for both sources — `source: waxpeer | p2p`,
+  `delivery: instant | up_to_12h`, price, float. P2P lots come from our DB (always fresh),
+  Waxpeer from the 90-s cache; merged in `GET /skins/{slug}/listings`; cards take the minimum
+  of both in the 5-min snapshot.
+- **Two rules:** the customer never sees the source («Waxpeer», «провайдер», «P2P») — only the
+  delivery time (AGENTS §12 and it hides where we buy); prices sort honestly, no boost for our
+  own lots — waiting 12 hours must simply be cheaper than getting it now.
+
 ## To decide before starting
 
 - **Payout.** Crediting the balance is easy; today the balance only buys skins. Card payouts
