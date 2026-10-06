@@ -84,6 +84,23 @@ WAXPEER_CALLS = Counter(
     ("endpoint", "outcome"),
 )
 
+#: A Skinslink merchant API call (spec 2026-10-06).
+SkinslinkEndpoint = Literal["available", "events", "purchase", "status", "balance"]
+#: ``refused`` = a 4xx or ``success: false``; ``not_found`` = 404 (a status lookup of an
+#: unknown purchase); ``unavailable`` = transport, 408/5xx or an unreadable body.
+SkinslinkOutcome = Literal["ok", "refused", "forbidden", "rate_limited", "unavailable", "not_found"]
+
+_SKINSLINK_ENDPOINTS = frozenset(("available", "events", "purchase", "status", "balance"))
+_SKINSLINK_OUTCOMES = frozenset(
+    ("ok", "refused", "forbidden", "rate_limited", "unavailable", "not_found")
+)
+
+SKINSLINK_CALLS = Counter(
+    "csmarket_skinslink_calls_total",
+    "Skinslink API calls by endpoint and outcome (alert: SkinslinkBuyFailures).",
+    ("endpoint", "outcome"),
+)
+
 
 #: Why an order's money went back to the balance (``orders.failure_reason``).
 OrderRefundReason = Literal[
@@ -183,6 +200,7 @@ _precreate(ORDER_REFUNDS, reason=_ORDER_REFUND_REASONS)
 _precreate(TRADE_ATTENTIONS, reason=_TRADE_ATTENTION_REASONS)
 _precreate(ORDER_BUYS, outcome=_ORDER_BUY_OUTCOMES)
 _precreate(WAXPEER_CALLS, endpoint=_WAXPEER_ENDPOINTS, outcome=_WAXPEER_OUTCOMES)
+_precreate(SKINSLINK_CALLS, endpoint=_SKINSLINK_ENDPOINTS, outcome=_SKINSLINK_OUTCOMES)
 _precreate(KASSA_REJECTIONS, provider=_KASSA_PROVIDERS, reason=_KASSA_REASONS)
 
 
@@ -399,6 +417,21 @@ def record_waxpeer_call(endpoint: WaxpeerEndpoint, outcome: WaxpeerOutcome) -> N
     )
 
 
+def record_skinslink_call(endpoint: SkinslinkEndpoint, outcome: SkinslinkOutcome) -> None:
+    """Count one Skinslink call by how it ended.
+
+    A value outside the closed sets becomes ``"other"``. Never raises.
+    """
+    _inc(
+        SKINSLINK_CALLS,
+        "csmarket_skinslink_calls_total",
+        {
+            "endpoint": endpoint if endpoint in _SKINSLINK_ENDPOINTS else "other",
+            "outcome": outcome if outcome in _SKINSLINK_OUTCOMES else "other",
+        },
+    )
+
+
 def record_order_refund(reason: OrderRefundReason) -> None:
     """Count one order refunded to the balance.
 
@@ -457,6 +490,7 @@ __all__ = [
     "ORDERS_STUCK",
     "ORDER_BUYS",
     "ORDER_REFUNDS",
+    "SKINSLINK_CALLS",
     "STEAM_WEB_API_CALLS",
     "TRADES_ATTENTION",
     "TRADE_ATTENTIONS",
@@ -473,6 +507,8 @@ __all__ = [
     "OrderBuyOutcome",
     "OrderRefundReason",
     "OrderStuckState",
+    "SkinslinkEndpoint",
+    "SkinslinkOutcome",
     "SteamApiConsumer",
     "SteamApiEndpoint",
     "SteamApiOutcome",
@@ -484,6 +520,7 @@ __all__ = [
     "record_kassa_rejection",
     "record_order_buy",
     "record_order_refund",
+    "record_skinslink_call",
     "record_steam_web_api_call",
     "record_trade_attention",
     "record_waxpeer_call",

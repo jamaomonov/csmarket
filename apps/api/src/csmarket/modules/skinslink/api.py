@@ -2,4 +2,38 @@
 
 from __future__ import annotations
 
-__all__: list[str] = []
+from csmarket.modules.skinslink.client import (
+    LINK_ERROR_CODES,
+    PURCHASE_FAIL_REASONS,
+    AvailablePage,
+    Balance,
+    CatalogueEvent,
+    CatalogueItem,
+    EventsPage,
+    Purchase,
+    SkinslinkClient,
+    SkinslinkError,
+    SkinslinkForbiddenError,
+    SkinslinkPurchaseClient,
+    SkinslinkRateLimitedError,
+    SkinslinkUnavailableError,
+    client_for,
+)
+
+__all__ = [
+    "LINK_ERROR_CODES",
+    "PURCHASE_FAIL_REASONS",
+    "AvailablePage",
+    "Balance",
+    "CatalogueEvent",
+    "CatalogueItem",
+    "EventsPage",
+    "Purchase",
+    "SkinslinkClient",
+    "SkinslinkError",
+    "SkinslinkForbiddenError",
+    "SkinslinkPurchaseClient",
+    "SkinslinkRateLimitedError",
+    "SkinslinkUnavailableError",
+    "client_for",
+]
