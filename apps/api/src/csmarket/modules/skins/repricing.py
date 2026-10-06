@@ -31,6 +31,12 @@ async def lock_pricing(db: AsyncSession) -> None:
     await db.execute(select(func.pg_advisory_xact_lock(PRICING_LOCK_KEY)))
 
 
+def cost_units(waxpeer: int | None, skinslink: int | None) -> int | None:
+    """The cheaper source's units, or the one that has stock; ``None`` with neither."""
+    present = [u for u in (waxpeer, skinslink) if u is not None]
+    return min(present) if present else None
+
+
 def discount_of(price: Decimal, steam_price_units: int | None) -> int | None:
     """Whole percent below Steam, truncated toward zero (negative when dearer)."""
     if not steam_price_units:
@@ -54,6 +60,8 @@ async def reprice_rows(
     stmt = select(
         SkinItem.id,
         SkinItem.min_auto_units,
+        SkinItem.skinslink_min_units,
+        SkinItem.skinslink_count,
         SkinItem.category,
         SkinItem.weapon,
         SkinItem.count_auto,
@@ -71,15 +79,17 @@ async def reprice_rows(
     updates: list[dict[str, object]] = []
     # ``hidden`` is deliberately not consulted: hidden rows stay priced so unhiding is instant.
     for row in (await db.execute(stmt)).all():
-        if row.min_auto_units is None:
+        units = cost_units(row.min_auto_units, row.skinslink_min_units)
+        if units is None:
             price, discount = None, None
         else:
             price = quote(
-                row.min_auto_units,
+                units,
                 rules=rules,
                 category=row.category,
                 weapon=row.weapon,
-                count_auto=row.count_auto,
+                # Liquidity counts both sources' stock.
+                count_auto=row.count_auto + row.skinslink_count,
                 item_pp=row.margin_override_pp,
                 fixed_price_usd=row.fixed_price_usd,
                 steam_price_units=row.steam_price_units,
@@ -92,4 +102,4 @@ async def reprice_rows(
     return written + len(updates)
 
 
-__all__ = ["PRICING_LOCK_KEY", "discount_of", "lock_pricing", "reprice_rows"]
+__all__ = ["PRICING_LOCK_KEY", "cost_units", "discount_of", "lock_pricing", "reprice_rows"]

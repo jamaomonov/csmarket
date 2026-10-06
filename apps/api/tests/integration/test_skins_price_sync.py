@@ -89,3 +89,17 @@ async def test_name_gone_from_snapshot_goes_inactive(db_session: AsyncSession) -
     assert result.deactivated == 1
     ak = await _by_slug(db_session, "ak-47-redline-field-tested")
     assert (ak.active, ak.min_auto_units, ak.count_auto, ak.cheapest_auto) == (False, None, 0, [])
+
+
+async def test_skinslink_stock_keeps_an_item_on_sale(db_session: AsyncSession) -> None:
+    await _seed(db_session)
+    await apply_prices(db_session, aggregate(_snapshot()), meta=_meta(), at=now())
+    await db_session.commit()
+    ak = await _by_slug(db_session, "ak-47-redline-field-tested")
+    ak.skinslink_count, ak.skinslink_min_units = 2, 25_000
+    await db_session.commit()
+    result = await apply_prices(db_session, aggregate(_snapshot()[2:]), meta=_meta(), at=now())
+    await db_session.commit()
+    assert result.deactivated == 0
+    ak = await _by_slug(db_session, "ak-47-redline-field-tested")
+    assert (ak.active, ak.min_auto_units, ak.count_auto) == (True, None, 0)

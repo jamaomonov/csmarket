@@ -98,7 +98,8 @@ class _ItemSnapshot:
             phase=item.phase,
             category=item.category,
             weapon=item.weapon,
-            count_auto=item.count_auto,
+            # Both sources' stock, as the catalogue prices it (``skins.repricing``).
+            count_auto=item.count_auto + item.skinslink_count,
             margin_override_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,

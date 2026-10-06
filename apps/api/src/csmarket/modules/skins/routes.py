@@ -120,7 +120,7 @@ def _item_out(item: SkinItem, rules: PricingRules, rate: Decimal | None) -> Skin
         price_uzs=_to_uzs(price, rate, rules),
         steam_price_usd=_units_to_usd(item.steam_price_units),
         discount_percent=discount,
-        count=item.count_auto,
+        count=item.count_auto + item.skinslink_count,
         min_float=None if item.min_float is None else str(item.min_float),
         max_float=None if item.max_float is None else str(item.max_float),
     )
@@ -267,7 +267,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
             rules=rules,
             category=item.category,
             weapon=item.weapon,
-            count_auto=item.count_auto,
+            count_auto=item.count_auto + item.skinslink_count,
             item_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,
@@ -287,7 +287,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
             souvenir=m.souvenir,
             price_usd=None if m.sell_price_usd is None else str(m.sell_price_usd),
             price_uzs=_to_uzs(m.sell_price_usd, rate, rules),
-            count=m.count_auto,
+            count=m.count_auto + m.skinslink_count,
         )
         for m in await family(db, item, categories=categories)
     ]
@@ -334,7 +334,7 @@ async def get_listings(
             rules=rules,
             category=item.category,
             weapon=item.weapon,
-            count_auto=item.count_auto,
+            count_auto=item.count_auto + item.skinslink_count,
             item_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,

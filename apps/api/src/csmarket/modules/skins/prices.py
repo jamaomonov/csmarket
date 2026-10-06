@@ -22,6 +22,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from csmarket.core.clock import now
+from csmarket.core.config import get_settings
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.modules.skins.cachekeys import bump_catalog_version
@@ -32,6 +33,7 @@ from csmarket.modules.skins.settings import load_rules
 from csmarket.modules.skins.slugs import resolve
 from csmarket.modules.skins.taxonomy import category_for_waxpeer_type
 from csmarket.modules.skins.waxpeer import SnapshotRow, WaxpeerClient
+from csmarket.modules.skinslink.api import rollup
 
 log = get_logger("csmarket.skins.prices")
 
@@ -256,7 +258,9 @@ async def apply_prices(
             update(SkinItem)
             .where(SkinItem.id.in_(missing), SkinItem.active.is_(True))
             .values(
-                active=False,
+                # Waxpeer's side always goes; Skinslink stock keeps the item on sale
+                # (``skinslink.rollup`` owns that side).
+                active=SkinItem.skinslink_count > 0,
                 min_auto_units=None,
                 count_auto=0,
                 cheapest_auto=[],
@@ -264,9 +268,9 @@ async def apply_prices(
                 prices_updated_at=at,
                 updated_at=at,
             )
+            .returning(SkinItem.active)
         )
-        # ``rowcount`` lives on CursorResult; async ``execute`` is typed as Result.
-        deactivated = int(getattr(result, "rowcount", 0) or 0)
+        deactivated = sum(1 for (still_active,) in result.all() if not still_active)
     return ApplyResult(changed=len(updates), deactivated=deactivated, stubs=len(stubs))
 
 
@@ -300,7 +304,9 @@ async def sync_prices(
             )
             return ApplyResult(changed=0, deactivated=0, stubs=0, refused=True)
         await lock_pricing(db)
-        result = await apply_prices(db, aggregates, meta=meta, at=now())
+        at = now()
+        result = await apply_prices(db, aggregates, meta=meta, at=at)
+        await rollup(db, settings=get_settings(), now=at)
         await reprice_rows(db, await load_rules(db, fresh=True))
         await db.commit()
     await bump_catalog_version(redis)

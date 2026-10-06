@@ -28,6 +28,7 @@ from csmarket.modules.skinslink.models import (
     SkinslinkState,
 )
 from csmarket.modules.skinslink.offers import offers_for
+from csmarket.modules.skinslink.rollup import rollup
 
 __all__ = [
     "LINK_ERROR_CODES",
@@ -53,6 +54,7 @@ __all__ = [
     "client_for",
     "mirror_fresh",
     "offers_for",
+    "rollup",
     "sync_mirror",
     "to_units",
 ]

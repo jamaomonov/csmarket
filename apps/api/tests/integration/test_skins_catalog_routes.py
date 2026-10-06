@@ -394,3 +394,50 @@ async def test_uzs_bounds_match_the_rounded_card_price(
     assert await slugs(min_uzs="127000") == [mehndi]
     assert await slugs(min_uzs="127050") == []
     assert await slugs(max_uzs="126999") == [boreal, sand]
+
+
+async def test_card_counts_both_sources_and_matches_the_item_page(
+    integration_client: AsyncClient, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The card's count adds Skinslink's stock; the liquidity margin uses the same total, so
+    the card's price is the price of the cheapest offer on the item page."""
+    from datetime import UTC, datetime
+
+    from csmarket.core import config as cfg
+    from csmarket.core.redis import get_redis
+    from csmarket.modules.skins.repricing import reprice_rows
+    from csmarket.modules.skins.settings import load_rules
+    from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
+
+    monkeypatch.setenv("CSMARKET_SKINSLINK_ENABLED", "true")
+    monkeypatch.setenv("CSMARKET_SKINSLINK_API_KEY", "k")
+    monkeypatch.setenv("CSMARKET_SKINSLINK_SECRET", "s")
+    monkeypatch.setenv("CSMARKET_WAXPEER_API_KEY", "")
+    cfg.get_settings.cache_clear()
+    item = _item("AK-47 | Redline (Field-Tested)", category="rifles", units=None, count=0)
+    item.active, item.skinslink_min_units, item.skinslink_count = True, 20_000, 3
+    db_session.add(item)
+    db_session.add_all(
+        [
+            SkinslinkItem(
+                id=f"7{i}",
+                market_hash_name=item.market_hash_name,
+                phase="",
+                price_units=20_000 + i,
+                skin_item_id=item.id,
+            )
+            for i in range(3)
+        ]
+    )
+    db_session.add(SkinslinkState(id=1, mirror_synced_at=datetime.now(UTC), cursor="c"))
+    await db_session.commit()
+    await reprice_rows(db_session, await load_rules(db_session))
+    await db_session.commit()
+    await get_redis().delete(f"skins:listings:{item.slug}", f"skins:listings:{item.slug}:stale")
+    r = await integration_client.get("/api/v1/skins/catalog", params={"sort": "price"})
+    card = next(i for i in r.json()["items"] if i["slug"] == item.slug)
+    assert card["count"] == 3
+    listings = (await integration_client.get(f"/api/v1/skins/{item.slug}/listings")).json()
+    assert listings["items"][0]["listing_id"] == "sl:70"
+    assert listings["items"][0]["price_usd"] == card["price_usd"]
+    cfg.get_settings.cache_clear()
