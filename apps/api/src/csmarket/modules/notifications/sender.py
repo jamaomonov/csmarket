@@ -228,7 +228,7 @@ def _links(settings: Settings, locale: str, *, number: str | None, token: str | 
     root = home + _LOCALE_PREFIX.get(locale, "")
     return Links(
         order_url=f"{root}/orders/{number}" if number else "",
-        balance_url=f"{root}/account/balance",
+        balance_url=f"{root}/account/transactions",
         confirm_url=f"{root}/account/email/confirm?token={quote(token)}" if token else "",
         home_url=root or home,
     )

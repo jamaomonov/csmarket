@@ -8867,7 +8867,7 @@
     },
     "/api/v1/wallet/entries": {
       "get": {
-        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.",
+        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.\n\n``type=topup`` keeps top-ups and their reversals; ``type=withdrawal`` is empty until\npayouts exist.",
         "operationId": "get_entries_api_v1_wallet_entries_get",
         "parameters": [
           {
@@ -8896,6 +8896,26 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "topup",
+                    "withdrawal"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
             }
           },
           {

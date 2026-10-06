@@ -7,7 +7,7 @@ from csmarket.modules.notifications.templates import Links, render
 
 LINKS = Links(
     order_url="https://csmarket.test/en/orders/AB12CD34",
-    balance_url="https://csmarket.test/en/account/balance",
+    balance_url="https://csmarket.test/en/account/transactions",
     confirm_url="https://csmarket.test/en/account/email/confirm?token=tok.en",
 )
 NUMBER = "AB12CD34"

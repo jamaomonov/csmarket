@@ -14,7 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.modules.auth.api import current_user
 from csmarket.modules.users.models import User
-from csmarket.modules.wallet.entries import DEFAULT_LIMIT, MAX_LIMIT, entries_for_user
+from csmarket.modules.wallet.entries import (
+    DEFAULT_LIMIT,
+    MAX_LIMIT,
+    EntryType,
+    entries_for_user,
+)
 from csmarket.modules.wallet.schemas import BalanceOut, EntriesOut
 from csmarket.modules.wallet.service import user_balance
 
@@ -36,6 +41,12 @@ async def get_entries(
     db: Annotated[AsyncSession, Depends(db_session)],
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
+    entry_type: Annotated[EntryType | None, Query(alias="type")] = None,
 ) -> EntriesOut:
-    """Newest first; pass ``next_cursor`` back as ``cursor`` for the next page."""
-    return EntriesOut.of(await entries_for_user(db, user.id, cursor=cursor, limit=limit))
+    """Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.
+
+    ``type=topup`` keeps top-ups and their reversals; ``type=withdrawal`` is empty until
+    payouts exist.
+    """
+    page = await entries_for_user(db, user.id, cursor=cursor, limit=limit, entry_type=entry_type)
+    return EntriesOut.of(page)

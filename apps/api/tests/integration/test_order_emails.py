@@ -163,7 +163,7 @@ async def test_each_order_letter_reaches_a_verified_buyer_in_their_locale(
     for letter in letters:
         assert letter["to_user"] == user_id
         assert number in letter["subject"]
-        link = "/account/balance" if letter["kind"] == "refunded" else f"/orders/{number}"
+        link = "/account/transactions" if letter["kind"] == "refunded" else f"/orders/{number}"
         assert f"{prefix}{link}" in letter["text"]
     receipt = next(m for m in letters if m["kind"] == "receipt")
     expected = {"ru": "Оплата получена", "uz": "Toʻlov qabul qilindi", "en": "Payment received"}

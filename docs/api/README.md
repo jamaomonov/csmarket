@@ -113,6 +113,8 @@ amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount
   **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal`,
   `admin_adjust`, `purchase` or `refund`; `reference_number` is the top-up's number for the
   first two, the order's number for `purchase` and `refund`, else `null`. The cursor is opaque; a malformed one is 422.
+  `type=topup` keeps `topup` and `topup_reversal` lines; `type=withdrawal` is an empty list
+  until payouts exist; any other `type` is 422 («Транзакции» filters).
 - `POST /dev/topups/{number}/pay` is not in this schema: it pays the owner's top-up through
   the `mock` kassa, exists only when dev login is on and the environment is not prod, and
   answers 404 otherwise. Keyless (a repeat is a no-op); 409 `code: topup_not_payable` for an

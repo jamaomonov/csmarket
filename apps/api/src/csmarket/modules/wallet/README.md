@@ -112,7 +112,7 @@ in the ledger in M4a. `orders.refunds.refund_to_balance` is its only caller.
 
 ## Customer entries (`entries.py`)
 
-`entries_for_user(db, user_id, *, cursor=None, limit=20)` — only the customer's
+`entries_for_user(db, user_id, *, cursor=None, limit=20, entry_type=None)` — only the customer's
 `user_wallet` leg of each transaction, newest first, keyset-paged on
 `(posting.created_at DESC, posting.id DESC)` with an opaque base64 cursor (a malformed one
 is a 422); `limit` 1..100. Each line: the transaction id, `kind`, the **signed** amount (+
@@ -122,7 +122,9 @@ for `purchase` / `refund`. **Never the actor or the metadata** — an admin's id
 reason stay in admin views. The numbers are read through bare `table("wallet_topups")` /
 `table("orders")` clauses (one query per kind present on the page), so `wallet` still
 imports nothing from `payments` or `orders`. No
-wallet yet → an empty page (none is created).
+wallet yet → an empty page (none is created). `entry_type` (`ENTRY_TYPES`) narrows the
+kinds: `topup` → `topup` + `topup_reversal`; `withdrawal` → none until payouts exist (an
+empty page without a query).
 
 `entries_for_admin(db, user_id, *, limit=20)` shares the query and returns `AdminEntry`
 (an `Entry` plus `actor` and `reason` = `metadata.reason`) — admin views only; the customer

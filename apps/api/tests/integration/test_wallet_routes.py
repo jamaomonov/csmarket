@@ -244,3 +244,35 @@ async def test_order_numbers_cost_one_query_for_any_page_size(db_session: AsyncS
         return len(statements)
 
     assert await _queries(1) == await _queries(6) == 4
+
+
+async def test_entries_filter_by_type(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    """``type=topup`` keeps top-ups (and their reversals); ``type=withdrawal`` is empty until
+    payouts exist; an unknown type is a 422."""
+    h = await customer_headers()
+    await _dev_paid_topup(integration_client, h)
+    user = await _customer(db_session)
+    wallet = await user_account(db_session, user.id)
+    house = await ensure_account(
+        db_session, owner_type="house", owner_id="house", kind="house_adjustments"
+    )
+    await post(
+        db_session,
+        kind="admin_adjust",
+        legs=[Leg(house.id, "D", Decimal(1000)), Leg(wallet.id, "C", Decimal(1000))],
+        idempotency_key="admin_adjust:test-filter",
+        reference=Reference(type="admin", id="a"),
+        actor="admin:a",
+    )
+    await db_session.commit()
+    url = "/api/v1/wallet/entries"
+    everything = (await integration_client.get(url, headers=h)).json()["items"]
+    assert {e["kind"] for e in everything} == {"topup", "admin_adjust"}
+    topups = (await integration_client.get(url, params={"type": "topup"}, headers=h)).json()
+    assert [e["kind"] for e in topups["items"]] == ["topup"]
+    out = (await integration_client.get(url, params={"type": "withdrawal"}, headers=h)).json()
+    assert out == {"items": [], "next_cursor": None}
+    bad = await integration_client.get(url, params={"type": "purchase"}, headers=h)
+    assert bad.status_code == 422

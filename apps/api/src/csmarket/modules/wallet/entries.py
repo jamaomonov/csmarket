@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
 
 from sqlalchemy import (
     ColumnElement,
@@ -46,6 +47,13 @@ _ORDERS = table("orders", column("id", UUID(as_uuid=False)), column("number", St
 _NUMBERED = {"topup": _TOPUPS, "order": _ORDERS}
 #: A line's ``(reference_type, reference_id)`` → that row's public number.
 Numbers = dict[tuple[str, str], str]
+#: The customer's filters over their history (``GET /wallet/entries?type=``) and the ledger
+#: kinds each keeps. ``withdrawal`` keeps none until payouts exist: an honest empty list.
+EntryType = Literal["topup", "withdrawal"]
+ENTRY_TYPES: dict[str, tuple[str, ...]] = {
+    "topup": ("topup", "topup_reversal"),
+    "withdrawal": (),
+}
 #: Default and largest page.
 DEFAULT_LIMIT = 20
 MAX_LIMIT = 100
@@ -110,9 +118,15 @@ async def _user_wallet_id(db: AsyncSession, user_id: str) -> str | None:
 
 
 async def _lines(
-    db: AsyncSession, account_id: str, *, after: tuple[datetime, str] | None, limit: int
+    db: AsyncSession,
+    account_id: str,
+    *,
+    after: tuple[datetime, str] | None,
+    limit: int,
+    kinds: tuple[str, ...] | None = None,
 ) -> tuple[list[tuple[WalletPosting, WalletTransaction]], Numbers]:
-    """Up to ``limit`` postings on ``account_id`` (newest first) and their public numbers."""
+    """Up to ``limit`` postings on ``account_id`` (newest first), of ``kinds`` when given, and
+    their public numbers."""
     stmt = (
         select(WalletPosting, WalletTransaction)
         .join(WalletTransaction, WalletTransaction.id == WalletPosting.transaction_id)
@@ -120,6 +134,8 @@ async def _lines(
         .order_by(WalletPosting.created_at.desc(), WalletPosting.id.desc())
         .limit(limit)
     )
+    if kinds is not None:
+        stmt = stmt.where(WalletTransaction.kind.in_(kinds))
     if after is not None:
         stamp, posting_id = after
         stmt = stmt.where(
@@ -144,9 +160,15 @@ def _entry(p: WalletPosting, t: WalletTransaction, numbers: Numbers) -> Entry:
 
 
 async def entries_for_user(
-    db: AsyncSession, user_id: str, *, cursor: str | None = None, limit: int = DEFAULT_LIMIT
+    db: AsyncSession,
+    user_id: str,
+    *,
+    cursor: str | None = None,
+    limit: int = DEFAULT_LIMIT,
+    entry_type: EntryType | None = None,
 ) -> EntriesPage:
-    """The user's ledger lines, newest first; empty when they have no wallet yet.
+    """The user's ledger lines, newest first, of one :data:`ENTRY_TYPES` filter when given;
+    empty when they have no wallet yet.
 
     Raises:
         ValidationError: ``limit`` outside ``1..100`` or a cursor this did not issue.
@@ -154,10 +176,11 @@ async def entries_for_user(
     if not 1 <= limit <= MAX_LIMIT:
         raise ValidationError("limit out of range", code="limit")
     after = decode_cursor(cursor) if cursor is not None else None
+    kinds = ENTRY_TYPES[entry_type] if entry_type is not None else None
     account_id = await _user_wallet_id(db, user_id)
-    if account_id is None:
+    if account_id is None or kinds == ():
         return EntriesPage(items=[], next_cursor=None)
-    rows, numbers = await _lines(db, account_id, after=after, limit=limit + 1)
+    rows, numbers = await _lines(db, account_id, after=after, limit=limit + 1, kinds=kinds)
     page, more = rows[:limit], len(rows) > limit
     last = page[-1][0] if more else None
     return EntriesPage(
@@ -223,10 +246,12 @@ def user_balance_column(
 
 __all__ = [
     "DEFAULT_LIMIT",
+    "ENTRY_TYPES",
     "MAX_LIMIT",
     "AdminEntry",
     "EntriesPage",
     "Entry",
+    "EntryType",
     "entries_for_admin",
     "entries_for_user",
     "user_balance_column",
