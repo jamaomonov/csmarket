@@ -70,6 +70,7 @@ async def _due(db: AsyncSession) -> list[SweepRow]:
         .join(SkinTrade, SkinTrade.order_id == Order.id)
         .where(
             Order.status.in_(RECONCILED),
+            Order.source == "waxpeer",  # Skinslink orders: ``orders.skinslink_status``
             or_(Order.next_check_at.is_(None), Order.next_check_at <= now()),
         )
         .order_by(Order.next_check_at.asc().nulls_first(), Order.created_at)

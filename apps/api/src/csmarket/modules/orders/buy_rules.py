@@ -65,7 +65,7 @@ async def low_balance(client: TradeClient, err: WaxpeerError, units: int) -> boo
         return False
 
 
-class _Search:
+class TradeSearch:
     """A :class:`TradeClient` as the listings read's ``SearchClient``."""
 
     def __init__(self, client: TradeClient) -> None:
@@ -103,7 +103,7 @@ async def substitute(
         return None
     rows, _ = await listings_for(
         item,
-        client=_Search(client),
+        client=TradeSearch(client),
         redis=get_redis(),
         budget_per_minute=listings_budget(settings),
     )
@@ -115,4 +115,4 @@ async def substitute(
     return (fits[0][1], fits[0][0]) if fits else None
 
 
-__all__ = ["link_refused", "low_balance", "substitute"]
+__all__ = ["TradeSearch", "link_refused", "low_balance", "substitute"]

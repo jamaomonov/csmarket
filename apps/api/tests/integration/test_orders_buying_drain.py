@@ -13,9 +13,11 @@ from csmarket.core import clock
 from csmarket.core.config import Settings, get_settings
 from csmarket.modules.orders.api import Order, SkinTrade, drain_paid
 from csmarket.modules.skins.api import WaxpeerBuy, WaxpeerUnavailableError
+from csmarket.modules.skinslink.models import SkinslinkPurchase
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from tests.integration.fake_skinslink_client import FakeSkinslinkClient, purchase
 from tests.integration.fake_trade_client import FakeTradeClient
 from tests.integration.orders_factory import make_order
 
@@ -92,6 +94,28 @@ async def test_the_claim_takes_the_oldest_paid_orders_and_opens_their_trades(
         assert trade.buy_pending is True
     assert (await _order(db_session, newest)).status == "paid"
     assert await _trade(db_session, newest) is None
+
+
+async def test_a_skinslink_order_is_claimed_into_a_purchase_and_bought_there(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    order = await _paid(db_session, source="skinslink", offer_id="sl:4242", listing_id=None)
+    waxpeer, skinslink = FakeTradeClient(), FakeSkinslinkClient(purchase("pending"))
+    assert (
+        await drain_paid(db_session, client=waxpeer, skinslink_client=skinslink, settings=settings)
+        == 1
+    )
+    assert await _trade(db_session, order) is None
+    row = await db_session.scalar(
+        select(SkinslinkPurchase)
+        .where(SkinslinkPurchase.order_id == order.id)
+        .execution_options(populate_existing=True)
+    )
+    assert row is not None
+    assert (row.merchant_tx_id, row.asset_id, row.paid_units) == (order.id, "4242", 12_345)
+    assert (row.purchase_id, row.buy_pending) == (178, False)
+    assert [c["merchant_tx_id"] for c in skinslink.calls] == [order.id]
+    assert waxpeer.buy_calls == 0
 
 
 async def test_two_workers_draining_concurrently_claim_disjoint_orders(

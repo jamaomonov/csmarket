@@ -66,6 +66,7 @@ from csmarket.modules.orders.buy_writes import (
 )
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
 from csmarket.modules.orders.trades import FAILED_STATUS, AmbiguousTradeError, pick_trade
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skins.api import (
@@ -75,8 +76,10 @@ from csmarket.modules.skins.api import (
     WaxpeerRateLimitedError,
     WaxpeerTrade,
     WaxpeerUnavailableError,
+    parse_offer_id,
     trade_client,
 )
+from csmarket.modules.skinslink.api import SkinslinkPurchase, SkinslinkPurchaseClient, client_for
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
 log = get_logger("csmarket.orders.buying")
@@ -103,8 +106,33 @@ def worker_id() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"[:64]
 
 
-async def _claim(db: AsyncSession, *, limit: int) -> list[str]:
-    """Move up to ``limit`` ``paid`` orders, oldest first, to ``buying``; commit."""
+def _pending_buy(order: Order) -> SkinTrade | SkinslinkPurchase:
+    """The row that holds a just-claimed order's pending buy, by its source."""
+    if order.source == "skinslink":
+        _, asset_id = parse_offer_id(order.offer_id or "")
+        return SkinslinkPurchase(
+            order_id=order.id,
+            merchant_tx_id=order.id,
+            asset_id=asset_id,
+            paid_units=order.cost_units,
+            buy_pending=True,
+        )
+    return SkinTrade(
+        order_id=order.id,
+        project_id=order.id,
+        listing_id=order.listing_id,
+        paid_units=order.cost_units,
+        buy_pending=True,
+        seller={},
+    )
+
+
+async def _claim(db: AsyncSession, *, limit: int) -> list[tuple[str, str]]:
+    """Move up to ``limit`` ``paid`` orders, oldest first, to ``buying``; commit.
+
+    Returns:
+        ``(order id, source)`` of each claimed order.
+    """
     orders = (
         await db.scalars(
             select(Order)
@@ -119,19 +147,10 @@ async def _claim(db: AsyncSession, *, limit: int) -> list[str]:
     for order in orders:
         move(order, "buying")
         order.claimed_at, order.claimed_by, order.next_check_at = at, me, at
-        db.add(
-            SkinTrade(
-                order_id=order.id,
-                project_id=order.id,
-                listing_id=order.listing_id,
-                paid_units=order.cost_units,
-                buy_pending=True,
-                seller={},
-            )
-        )
+        db.add(_pending_buy(order))
     for order in orders:
         await nudge(db, user_id=order.user_id, number=order.number)
-    claimed = [order.id for order in orders]
+    claimed = [(order.id, order.source) for order in orders]
     await db.commit()
     return claimed
 
@@ -140,6 +159,7 @@ async def drain_paid(
     db: AsyncSession,
     *,
     client: TradeClient | None = None,
+    skinslink_client: SkinslinkPurchaseClient | None = None,
     settings: Settings | None = None,
     limit: int = 10,
 ) -> int:
@@ -151,6 +171,7 @@ async def drain_paid(
     Args:
         db: The drainer's own session; committed here.
         client: Waxpeer; the process's :func:`trade_client` when omitted.
+        skinslink_client: Skinslink; built (buy timeout) when a Skinslink order is claimed.
         settings: The process settings when omitted.
         limit: Orders claimed per call.
 
@@ -162,9 +183,17 @@ async def drain_paid(
     if not claimed:
         return 0
     client = client or trade_client(settings)
-    for order_id in claimed:
+    for order_id, source in claimed:
         try:
-            await attempt_buy(db, client, order_id=order_id, settings=settings)
+            if source == "skinslink":
+                skinslink_client = skinslink_client or client_for(
+                    settings, timeout_seconds=settings.skinslink_buy_timeout_seconds
+                )
+                await attempt_skinslink_buy(
+                    db, skinslink_client, order_id=order_id, settings=settings, waxpeer=client
+                )
+            else:
+                await attempt_buy(db, client, order_id=order_id, settings=settings)
         except Exception as exc:  # noqa: BLE001 -- one poisoned order must not stop the batch
             await db.rollback()
             # The type only, no traceback: an error's text can carry bound SQL parameters.

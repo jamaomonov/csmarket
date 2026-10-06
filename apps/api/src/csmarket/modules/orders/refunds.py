@@ -30,6 +30,7 @@ from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.letters import enqueue_refunded
 from csmarket.modules.orders.models import FAILURE_REASONS, IN_FLIGHT, Order, SkinTrade
 from csmarket.modules.realtime.api import nudge
+from csmarket.modules.skinslink.api import SkinslinkPurchase
 from csmarket.modules.wallet.api import credit_order_refund
 
 log = get_logger("csmarket.orders.refunds")
@@ -81,7 +82,13 @@ async def _trade_of(db: AsyncSession, order: Order) -> SkinTrade | None:
 
 async def _refuse_while_unresolved(db: AsyncSession, order: Order) -> None:
     """409 ``order_needs_attention`` while the trade's outcome is unknown or spent (R3)."""
-    trade = await _trade_of(db, order)
+    trade: SkinTrade | SkinslinkPurchase | None = await _trade_of(db, order)
+    if trade is None:  # a Skinslink order keeps its attention on the purchase
+        trade = await db.scalar(
+            select(SkinslinkPurchase)
+            .where(SkinslinkPurchase.order_id == order.id)
+            .execution_options(populate_existing=True)
+        )
     if trade is not None and trade.attention_reason in BLOCKS_REFUND and trade.resolved_at is None:
         raise ConflictError("this order waits for an admin's check", code="order_needs_attention")
 

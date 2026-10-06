@@ -40,6 +40,7 @@ from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.refunds import refund_to_balance
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skins.api import WaxpeerTrade
+from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 log = get_logger("csmarket.orders.trades")
 
@@ -142,7 +143,9 @@ def mirror(trade: SkinTrade, wt: WaxpeerTrade) -> None:
     trade.updated_at = at
 
 
-def flag(trade: SkinTrade, reason: TradeAttentionReason, *, reopen: bool = False) -> bool:
+def flag(
+    trade: SkinTrade | SkinslinkPurchase, reason: TradeAttentionReason, *, reopen: bool = False
+) -> bool:
     """Open attention ``reason`` on ``trade`` unless an open one is already there.
 
     An open ``source_forbidden`` (the mildest) gives way to any other reason. A new
@@ -152,7 +155,7 @@ def flag(trade: SkinTrade, reason: TradeAttentionReason, *, reopen: bool = False
     an admin's decision must stand; the buy re-opens a ``source_forbidden`` on a new 403.
 
     Args:
-        trade: The trade, locked after its order.
+        trade: The trade (or a Skinslink purchase), locked after its order.
         reason: One of ``orders.models.ATTENTION_REASONS``.
         reopen: Re-open a resolved attention with the same reason.
 

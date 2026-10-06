@@ -9,7 +9,7 @@ enqueues nothing); whether it is sent is decided at send time (a verified addres
 
 from __future__ import annotations
 
-from datetime import UTC
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,11 +33,19 @@ async def enqueue_receipt(db: AsyncSession, order: Order) -> None:
     )
 
 
-async def enqueue_trade_sent(db: AsyncSession, order: Order, trade: SkinTrade) -> None:
-    """``Обмен отправлен``, with the offer's deadline when Waxpeer gave one."""
+async def enqueue_trade_sent(
+    db: AsyncSession,
+    order: Order,
+    trade: SkinTrade | None = None,
+    *,
+    send_until: datetime | None = None,
+) -> None:
+    """``Обмен отправлен``, with the offer's deadline when the market gave one (a Waxpeer
+    ``trade``'s own, else ``send_until``)."""
     payload = {"number": order.number, "skin": _skin(order)}
-    if trade.send_until is not None:
-        payload["send_until"] = trade.send_until.astimezone(UTC).isoformat()
+    until = trade.send_until if trade is not None else send_until
+    if until is not None:
+        payload["send_until"] = until.astimezone(UTC).isoformat()
     await enqueue(db, kind="trade_sent", user_id=order.user_id, order_id=order.id, payload=payload)
 
 
