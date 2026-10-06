@@ -38,7 +38,7 @@ test("someone else's trade link is refused with a reason", async ({ page }) => {
   await expect(page.getByText(/ссылка другого аккаунта Steam/)).toBeVisible();
 });
 
-test("account page asks a visitor to sign in", async ({ page }) => {
+test("profile page asks a visitor to sign in", async ({ page }) => {
   await page.goto("/en/account");
-  await expect(page.getByText("Sign in with Steam to open your account.")).toBeVisible();
+  await expect(page.getByText("Sign in with Steam to open your profile.")).toBeVisible();
 });
