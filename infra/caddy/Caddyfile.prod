@@ -97,6 +97,27 @@ csmarket.uz, www.csmarket.uz {
 	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.csmarket.uz wss://api.csmarket.uz; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	@www host www.csmarket.uz
 	redir @www https://csmarket.uz{uri} permanent
+
+	# INDEXING GATE (owner, 2026-10-06): the storefront stays out of search until the owner
+	# opens it — ``CSMARKET_INDEXING=on`` in secrets/caddy.env, then
+	# ``up -d --force-recreate caddy`` (docs/runbooks/indexing.md). Anything else, or the
+	# variable missing, keeps it closed: every response says ``X-Robots-Tag: noindex``
+	# and robots.txt disallows everything. It lives here, not in Next, because Next
+	# prerenders some pages at build time; the edge answers every request.
+	@indexingClosed expression `{env.CSMARKET_INDEXING} != "on"`
+	header @indexingClosed X-Robots-Tag "noindex, nofollow"
+	@robotsClosed {
+		path /robots.txt
+		expression `{env.CSMARKET_INDEXING} != "on"`
+	}
+	handle @robotsClosed {
+		header Content-Type "text/plain; charset=utf-8"
+		respond <<TXT
+			User-agent: *
+			Disallow: /
+			TXT 200
+	}
+
 	import access_log
 	import upstream web:3000
 }
@@ -105,6 +126,8 @@ csmarket.uz, www.csmarket.uz {
 admin.csmarket.uz {
 	encode zstd gzip
 	import security_headers
+	# Never in search, whatever the storefront's gate says.
+	header X-Robots-Tag "noindex, nofollow"
 	import access_log
 	import upstream admin:80
 }
@@ -113,6 +136,7 @@ admin.csmarket.uz {
 api.csmarket.uz {
 	encode zstd gzip
 	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+	header X-Robots-Tag "noindex, nofollow"
 	# CORS is FastAPI's job (CSMARKET_CORS_ALLOW_ORIGINS); doing it here too
 	# produces two Access-Control-Allow-Origin values and the browser rejects both.
 
@@ -163,6 +187,7 @@ api.csmarket.uz {
 # ---------- grafana (operators only) ----------
 grafana.csmarket.uz {
 	encode zstd gzip
+	header X-Robots-Tag "noindex, nofollow"
 	basic_auth {
 		ops {$GRAFANA_BASIC_AUTH_HASH}
 	}

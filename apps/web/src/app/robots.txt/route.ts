@@ -9,7 +9,9 @@
  * isn't needed to be cited in answers, bakes stale prices into weights, and is
  * irreversible. Flip ai-train to yes here if that stance ever changes.
  *
- * The catalogue is open to search engines from the M2 deploy (owner decision D2).
+ * The catalogue is open to search engines once the owner opens indexing: until then
+ * Caddy answers /robots.txt itself with «Disallow: /» and never reaches this route
+ * (CSMARKET_INDEXING, docs/runbooks/indexing.md).
  */
 import { SITE } from "@/lib/site";
 
