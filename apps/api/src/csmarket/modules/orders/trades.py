@@ -145,11 +145,11 @@ def mirror(trade: SkinTrade, wt: WaxpeerTrade) -> None:
 def flag(trade: SkinTrade, reason: TradeAttentionReason, *, reopen: bool = False) -> bool:
     """Open attention ``reason`` on ``trade`` unless an open one is already there.
 
-    An open ``waxpeer_forbidden`` (the mildest) gives way to any other reason. A new
+    An open ``source_forbidden`` (the mildest) gives way to any other reason. A new
     attention never keeps an earlier resolution (it must not look settled), and is counted
     once (``csmarket_trade_attention_total``). A resolved attention with the same reason
     stays resolved unless ``reopen`` — the sweeps see the same Waxpeer state every tick and
-    an admin's decision must stand; the buy re-opens a ``waxpeer_forbidden`` on a new 403.
+    an admin's decision must stand; the buy re-opens a ``source_forbidden`` on a new 403.
 
     Args:
         trade: The trade, locked after its order.
@@ -161,7 +161,7 @@ def flag(trade: SkinTrade, reason: TradeAttentionReason, *, reopen: bool = False
     """
     open_reason = trade.attention_reason if trade.resolved_at is None else None
     if open_reason is not None and not (
-        open_reason == "waxpeer_forbidden" and reason != open_reason
+        open_reason == "source_forbidden" and reason != open_reason
     ):
         return False
     if open_reason is None and trade.attention_reason == reason and not reopen:

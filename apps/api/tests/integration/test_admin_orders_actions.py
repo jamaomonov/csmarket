@@ -307,7 +307,7 @@ async def test_a_lost_answer_newer_than_the_resolve_blocks_the_refund(
     order = await _order(
         db_session,
         trade=_attention(
-            "waxpeer_forbidden",
+            "source_forbidden",
             resolved=True,
             resolved_at=resolved,
             buy_pending=False,
@@ -415,7 +415,7 @@ async def test_admin_refund_is_refused_when_waxpeer_cannot_be_asked(
     error: BaseException,
 ) -> None:
     h = await admin_headers()
-    order = await _order(db_session, trade=_attention("waxpeer_forbidden", resolved=True))
+    order = await _order(db_session, trade=_attention("source_forbidden", resolved=True))
     waxpeer.lookup_raises(error)
     key = _key()
     status, body = await _post(integration_client, h, order, "refund", key=key)
@@ -575,7 +575,7 @@ async def test_retry_with_nothing_at_waxpeer_buys_once(
     integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
 ) -> None:
     h = await admin_headers()
-    order = await _order(db_session, trade=_attention("waxpeer_forbidden", resolved=True))
+    order = await _order(db_session, trade=_attention("source_forbidden", resolved=True))
     status, _ = await _post(integration_client, h, order, "retry")
     assert status == 200
     fake = FakeTradeClient()
@@ -640,7 +640,7 @@ async def test_a_running_attempt_blocks_refund_and_retry_until_released(
 ) -> None:
     h = await admin_headers()
     order = await _order(
-        db_session, trade=_attention("waxpeer_forbidden", resolved=True, buy_pending=True)
+        db_session, trade=_attention("source_forbidden", resolved=True, buy_pending=True)
     )
     lease = await take_lease(db_session, order.id)
     assert lease is not None
@@ -664,7 +664,7 @@ async def test_a_lease_waits_for_the_refund_and_then_finds_nothing_to_buy(
     db_session: AsyncSession,
 ) -> None:
     order = await _order(
-        db_session, trade=_attention("waxpeer_forbidden", resolved=True, buy_pending=True)
+        db_session, trade=_attention("source_forbidden", resolved=True, buy_pending=True)
     )
     admin = str(uuid.uuid4())
     factory = async_sessionmaker(bind=db_session.bind, expire_on_commit=False)
@@ -686,11 +686,11 @@ _STATES: list[tuple[str, str, dict[str, Any] | None, dict[str, Any]]] = [
     ("unresolved", "buying", _attention("buy_unconfirmed", resolved=False), {}),
     ("unconfirmed", "buying", _attention("buy_unconfirmed", resolved=True), {}),
     ("ambiguous", "buying", _attention("ambiguous_trade", resolved=True), {}),
-    ("forbidden", "buying", _attention("waxpeer_forbidden", resolved=True, buy_pending=True), {}),
+    ("forbidden", "buying", _attention("source_forbidden", resolved=True, buy_pending=True), {}),
     (
         "leased",
         "buying",
-        _attention("waxpeer_forbidden", resolved=True, buy_pending=True),
+        _attention("source_forbidden", resolved=True, buy_pending=True),
         {"leased": True},
     ),
     (

@@ -94,6 +94,12 @@ async def make_order(db: AsyncSession, *, user: User | None = None, **overrides:
     return order
 
 
+def wx_listing(order: Order) -> int:
+    """A Waxpeer order's listing id (``orders.listing_id`` is nullable since Skinslink)."""
+    assert order.listing_id is not None, "not a Waxpeer order"
+    return order.listing_id
+
+
 async def make_trade(db: AsyncSession, order: Order, **overrides: object) -> SkinTrade:
     """A committed ``skin_trades`` row for ``order`` (``overrides`` replace any column)."""
     values: dict[str, object] = {

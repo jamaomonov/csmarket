@@ -36,13 +36,13 @@ export const ATTENTION_LABELS: Record<AttentionReason, string> = {
   buy_unconfirmed: "ответ Waxpeer потерян",
   ambiguous_trade: "несколько обменов",
   rolled_back: "откат после получения",
-  waxpeer_forbidden: "Waxpeer: IP не в белом списке",
+  source_forbidden: "Площадка: IP не в белом списке",
   audit_divergence: "расхождение со сверкой",
 };
 
 export const FAILURE_LABELS: Record<FailureReason, string> = {
   sold_out: "скин продан",
-  waxpeer_low_balance: "не хватило денег на Waxpeer",
+  source_low_balance: "не хватило денег на площадке",
   invalid_trade_link: "неверная трейд-ссылка",
   not_accepted: "обмен не принят",
   admin: "вернул администратор",

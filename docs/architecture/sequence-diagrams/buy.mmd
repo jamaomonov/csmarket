@@ -20,7 +20,7 @@ sequenceDiagram
         else
             W->>X: check-many-project-id [order id]  (no lock held)
             alt 403
-                W->>DB: lock, re-check, attention waxpeer_forbidden, buy_pending kept
+                W->>DB: lock, re-check, attention source_forbidden, buy_pending kept
             else unavailable / 429 / refused
                 Note over W: lookup_later — nothing sent, retried next tick
             else a live trade under our project_id
@@ -34,7 +34,7 @@ sequenceDiagram
                 alt accepted
                     W->>DB: lock, re-check, waxpeer_id, bought_units, status 0, buy_pending = false
                 else 403
-                    W->>DB: attention waxpeer_forbidden, buy_pending kept (no refund)
+                    W->>DB: attention source_forbidden, buy_pending kept (no refund)
                 else 429
                     Note over W: rate_limited — buy_pending kept, next tick retries
                 else lost answer / unreadable / 5xx / any unexpected error or timeout
@@ -42,7 +42,7 @@ sequenceDiagram
                 else refused (sold, price moved, 4xx)
                     W->>X: GET /v1/user when the refusal does not name low balance
                     alt low balance
-                        W->>DB: failed + refund to balance (waxpeer_low_balance)
+                        W->>DB: failed + refund to balance (source_low_balance)
                     else first refusal
                         W->>X: listings (cached, budgeted read): cheapest other auto ≤ paid × 1.03
                         W->>X: buy-one-p2p (the substitute), once

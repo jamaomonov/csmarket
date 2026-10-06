@@ -229,7 +229,7 @@
               {
                 "enum": [
                   "sold_out",
-                  "waxpeer_low_balance",
+                  "source_low_balance",
                   "invalid_trade_link",
                   "not_accepted",
                   "admin"
@@ -255,8 +255,15 @@
             "type": "string"
           },
           "listing_id": {
-            "title": "Listing Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listing Id"
           },
           "margin_usd": {
             "title": "Margin Usd",
@@ -281,6 +288,17 @@
           "number": {
             "title": "Number",
             "type": "string"
+          },
+          "offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
           },
           "paid_at": {
             "anyOf": [
@@ -356,6 +374,14 @@
             "title": "Slug",
             "type": "string"
           },
+          "source": {
+            "enum": [
+              "waxpeer",
+              "skinslink"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
           "status": {
             "enum": [
               "pending",
@@ -400,6 +426,8 @@
           "market_hash_name",
           "phase",
           "slug",
+          "source",
+          "offer_id",
           "listing_id",
           "cost_units",
           "cost_usd",
@@ -514,7 +542,7 @@
                   "buy_unconfirmed",
                   "ambiguous_trade",
                   "rolled_back",
-                  "waxpeer_forbidden",
+                  "source_forbidden",
                   "audit_divergence"
                 ],
                 "type": "string"
@@ -1291,7 +1319,7 @@
                   "buy_unconfirmed",
                   "ambiguous_trade",
                   "rolled_back",
-                  "waxpeer_forbidden",
+                  "source_forbidden",
                   "audit_divergence"
                 ],
                 "type": "string"
@@ -1540,7 +1568,7 @@
                   "buy_unconfirmed",
                   "ambiguous_trade",
                   "rolled_back",
-                  "waxpeer_forbidden",
+                  "source_forbidden",
                   "audit_divergence"
                 ],
                 "type": "string"
@@ -1636,7 +1664,7 @@
                   "buy_unconfirmed",
                   "ambiguous_trade",
                   "rolled_back",
-                  "waxpeer_forbidden",
+                  "source_forbidden",
                   "audit_divergence"
                 ],
                 "type": "string"
@@ -5783,7 +5811,7 @@
             "description": "No such order"
           },
           "409": {
-            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention and no purchase on record.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
+            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` attention and no purchase on record.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
           },
           "422": {
             "content": {

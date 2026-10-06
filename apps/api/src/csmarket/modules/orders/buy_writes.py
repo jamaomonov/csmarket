@@ -24,7 +24,7 @@ _ACTOR = "orders"
 _REFUND_OUTCOMES: dict[str, str] = {
     "invalid_trade_link": "invalid_link",
     "sold_out": "sold_out",
-    "waxpeer_low_balance": "low_balance",
+    "source_low_balance": "low_balance",
 }
 
 
@@ -97,9 +97,9 @@ async def _stale_purchase(db: AsyncSession, snap: BuySnapshot, waxpeer_id: int |
 
 
 def _settle(trade: SkinTrade) -> None:
-    """The buy is no longer pending; a ``waxpeer_forbidden`` attention is moot now."""
+    """The buy is no longer pending; a ``source_forbidden`` attention is moot now."""
     trade.buy_pending = False
-    if trade.attention_reason == "waxpeer_forbidden":
+    if trade.attention_reason == "source_forbidden":
         trade.attention_reason = None
         trade.resolved_at = trade.resolved_by = trade.resolved_note = None
     trade.updated_at = now()

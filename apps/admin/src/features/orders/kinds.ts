@@ -15,14 +15,14 @@ export const ATTENTION_REASONS = [
   "buy_unconfirmed",
   "ambiguous_trade",
   "rolled_back",
-  "waxpeer_forbidden",
+  "source_forbidden",
   "audit_divergence",
 ] as const;
 export type AttentionReason = (typeof ATTENTION_REASONS)[number];
 
 export const FAILURE_REASONS = [
   "sold_out",
-  "waxpeer_low_balance",
+  "source_low_balance",
   "invalid_trade_link",
   "not_accepted",
   "admin",

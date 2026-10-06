@@ -113,7 +113,7 @@ def test_an_empty_or_malformed_seller_is_not_shown(seller: dict[str, object]) ->
     [
         ("not_accepted", "not_accepted"),
         ("sold_out", "sold_out"),
-        ("waxpeer_low_balance", "try_later"),
+        ("source_low_balance", "try_later"),
         ("invalid_trade_link", "trade_link"),
         ("admin", "other"),
         (None, "other"),
@@ -127,7 +127,7 @@ def test_a_failure_is_named_by_the_order_reason(
     assert (out.state, out.reason_code) == ("failed", reason_code)
 
 
-@pytest.mark.parametrize("attention", ["buy_unconfirmed", "ambiguous_trade", "waxpeer_forbidden"])
+@pytest.mark.parametrize("attention", ["buy_unconfirmed", "ambiguous_trade", "source_forbidden"])
 def test_an_unconfirmed_outcome_sends_the_customer_to_support_not_to_a_refund(
     attention: str,
 ) -> None:

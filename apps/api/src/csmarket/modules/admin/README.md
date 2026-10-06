@@ -152,7 +152,7 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   `resolved_note` once; an already resolved attention stays as it was (200, no audit row).
   409 `nothing_to_resolve` without a trade or an attention.
 - **Refund:** only a `buying`, unrefunded order whose trade carries a **resolved**
-  `buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` (an operator checked Waxpeer:
+  `buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` (an operator checked Waxpeer:
   nothing was bought), no purchase on record (`waxpeer_id`) unless our own trade failed
   (status 6), and no running buy attempt. The route checks the replay row unlocked, then
   `orders.admin_refund` asks Waxpeer for the `project_id` first (ADR-0007 Y; one
@@ -172,7 +172,7 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   make is adopted, never repeated. 409: `not_retryable`, `order_busy`.
 - **The buy lease:** `order_busy` = a buy attempt may hold the order (`buy_pending` and
   `next_check_at` in the future: the lease, or a 403/429 backoff of ≤ 60 s). Try again once
-  it lapses. While Waxpeer keeps answering 403, refund/retry of a `waxpeer_forbidden` order answer
+  it lapses. While Waxpeer keeps answering 403, refund/retry of a `source_forbidden` order answer
   `order_busy` during each 60 s backoff: fix the IP whitelist first — the sweep then buys by
   itself.
 - **Idempotency:** every write requires `Idempotency-Key` (16..160 chars). Order: lock the

@@ -104,11 +104,11 @@ SKINSLINK_CALLS = Counter(
 
 #: Why an order's money went back to the balance (``orders.failure_reason``).
 OrderRefundReason = Literal[
-    "sold_out", "waxpeer_low_balance", "invalid_trade_link", "not_accepted", "admin"
+    "sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin"
 ]
 
 _ORDER_REFUND_REASONS = frozenset(
-    ("sold_out", "waxpeer_low_balance", "invalid_trade_link", "not_accepted", "admin")
+    ("sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin")
 )
 
 ORDER_REFUNDS = Counter(
@@ -120,11 +120,11 @@ ORDER_REFUNDS = Counter(
 
 #: Why a trade waits for an admin (``skin_trades.attention_reason``, ruling R3).
 TradeAttentionReason = Literal[
-    "buy_unconfirmed", "ambiguous_trade", "rolled_back", "waxpeer_forbidden", "audit_divergence"
+    "buy_unconfirmed", "ambiguous_trade", "rolled_back", "source_forbidden", "audit_divergence"
 ]
 
 _TRADE_ATTENTION_REASONS = frozenset(
-    ("buy_unconfirmed", "ambiguous_trade", "rolled_back", "waxpeer_forbidden", "audit_divergence")
+    ("buy_unconfirmed", "ambiguous_trade", "rolled_back", "source_forbidden", "audit_divergence")
 )
 
 TRADE_ATTENTIONS = Counter(

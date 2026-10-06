@@ -48,7 +48,7 @@ REFUND_LOOKUP_SECONDS = 4.0
 
 #: Attention reasons after which a resolved ``buying`` order may be bought again: the
 #: next attempt looks the ``project_id`` up first, so a buy Waxpeer did make is adopted.
-RETRYABLE: frozenset[str] = frozenset({"buy_unconfirmed", "ambiguous_trade", "waxpeer_forbidden"})
+RETRYABLE: frozenset[str] = frozenset({"buy_unconfirmed", "ambiguous_trade", "source_forbidden"})
 
 #: 409 codes of the admin actions → the problem's ``detail``.
 CONFLICTS: dict[str, str] = {

@@ -58,7 +58,7 @@ groups:
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#attention"
 
       # Our Waxpeer balance is under CSMARKET_WAXPEER_BALANCE_ALERT_USD: the next buys will
-      # be refunded as `waxpeer_low_balance`. Top it up. Spec §12.
+      # be refunded as `source_low_balance`. Top it up. Spec §12.
       - alert: WaxpeerBalanceLow
         expr: min(csmarket_waxpeer_balance_usd{job="scheduler"}) < min(csmarket_waxpeer_balance_threshold_usd{job="scheduler"})
         for: 10m
@@ -82,7 +82,7 @@ groups:
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/waxpeer.md#forbidden"
 
       - alert: WaxpeerLowBalanceRefund
-        expr: increase(csmarket_order_refunds_total{reason="waxpeer_low_balance"}[15m]) > 0
+        expr: increase(csmarket_order_refunds_total{reason="source_low_balance"}[15m]) > 0
         labels: { severity: page }
         annotations:
           summary: "An order was refunded because the Waxpeer balance ran out"

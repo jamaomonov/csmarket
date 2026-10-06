@@ -164,7 +164,7 @@ module's models and FSM — never `payments`.
   an order with no `paid_with` is 409 `order_not_paid`; an order whose trade has an
   unresolved `buy_unconfirmed`, `ambiguous_trade`, `rolled_back` or `audit_divergence`
   (`BLOCKS_REFUND`, R3: unknown or spent outcome) is 409 `order_needs_attention`, nothing
-  written — `waxpeer_forbidden` does not block (nothing was bought), and a resolved
+  written — `source_forbidden` does not block (nothing was bought), and a resolved
   attention no longer blocks; the trade is read under the caller's order lock; an FSM edge that does not exist
   raises `InvalidOrderTransitionError` before anything is booked. The payment row stays
   `succeeded` (the money stays with us, now as balance).
@@ -186,11 +186,11 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
 - `buy_running(order, trade, at)` — `buy_pending` and `next_check_at > at`: a buy attempt may
   hold the lease (`buy_lease.take_lease`), so a buy may be on the wire (or a 403/429 backoff
   of ≤ 60 s is running) → 409 `order_busy`. While Waxpeer keeps answering 403, refund/retry
-  of a `waxpeer_forbidden` order answer `order_busy` during each 60 s backoff: fix the IP
+  of a `source_forbidden` order answer `order_busy` during each 60 s backoff: fix the IP
   whitelist first — the sweep then buys by itself.
 - `admin_refund(db, *, number, admin_id, client) -> Order` — only a `buying`, unrefunded
   order whose trade carries a **resolved** attention in `ADMIN_REFUNDABLE`
-  (`buy_unconfirmed`, `ambiguous_trade`, `waxpeer_forbidden`: an operator checked Waxpeer,
+  (`buy_unconfirmed`, `ambiguous_trade`, `source_forbidden`: an operator checked Waxpeer,
   nothing was bought), no purchase on record that is not our own failed trade (`waxpeer_id`
   set and status ≠ 6 → `order_in_flight`, the same guard as the retry) and no running
   attempt. **Lookup first** (ADR-0007 Y): an unlocked read refuses early and ends the
@@ -255,7 +255,7 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   | ----------------------------------------------------------- | --------------- | ----------------------------------------------------------------------- |
   | trade link does not parse                                   | `invalid_link`  | `failed` + refund `invalid_trade_link`                                  |
   | lookup: 429, unavailable, a refusal                         | `lookup_later`  | nothing (`buy_pending` kept; no buy without a lookup); due in 20 s      |
-  | lookup or buy: HTTP 403                                     | `forbidden`     | attention `waxpeer_forbidden` (once), `buy_pending` kept                |
+  | lookup or buy: HTTP 403                                     | `forbidden`     | attention `source_forbidden` (once), `buy_pending` kept                 |
   | lookup finds our trade (`orders.trades.pick_trade`)         | `adopted`       | `mirror`, `bought_units`, `buy_pending = false` — never rebought        |
   | lookup finds only failed (6) trades, none accepted          | (buys)          | never adopted: refused attempts, nothing live was bought — buy as usual |
   | a lost answer on record (`buy_unconfirmed_at`), any lookup  | `nothing_to_do` | `buy_pending = false`; reconcile's unconfirmed rule decides (R3); belt  |
@@ -265,7 +265,7 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   | buy: 429                                                    | `rate_limited`  | nothing (`buy_pending` kept, next tick)                                 |
   | buy: unavailable / unreadable / 5xx                         | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
   | buy refused, the message names the trade link               | `invalid_link`  | `failed` + refund `invalid_trade_link` (no substitute)                  |
-  | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `waxpeer_low_balance`                                 |
+  | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `source_low_balance`                                  |
   | buy refused (sold, price moved, a 4xx), no substitute       | `sold_out`      | `failed` + refund `sold_out`                                            |
   | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (the purchase on record: `adopted`)         |
 
@@ -273,7 +273,7 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   listing of the item at most `paid_units × (1 + order_substitute_ceiling)` units, read
   through `skins.listings_for` (cached, budgeted; Waxpeer's spelling, phase included);
   Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy
-  or adoption ends a `waxpeer_forbidden` attention (cleared with its resolution: the access
+  or adoption ends a `source_forbidden` attention (cleared with its resolution: the access
   question is moot, and an admin refund must not see a "nothing bought" order that bought).
   Once a buy request has been **sent** in an attempt, no exit that failed to record its
   outcome frees the order: a timeout, a shutdown's `CancelledError` or any unexpected error —
@@ -283,7 +283,7 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   flags `ambiguous_trade`); when even that write fails the lease is **kept**, so it lapses
   after 5 min as a dead attempt's and no one buys again within it. The attempt's budget is
   counted from before the lease is taken. `bought_units` falls back to the units offered when Waxpeer
-  answers `price: 0`. A 403 on an order whose `waxpeer_forbidden` attention was resolved
+  answers `price: 0`. A 403 on an order whose `source_forbidden` attention was resolved
   re-opens it (resolution cleared): an admin refund must not see a still-forbidden order as
   settled.
   `csmarket_order_buys_total{outcome}` counts every outcome but `lookup_later` and
@@ -358,10 +358,10 @@ The three trade jobs do nothing without `waxpeer_api_key` (or `waxpeer_fake`); e
   first, and the next tick refunds.
 
 - `trades.flag(trade, reason, *, reopen=False) -> bool` — opens an attention unless one is
-  open (an open `waxpeer_forbidden` gives way); a new attention clears any earlier
+  open (an open `source_forbidden` gives way); a new attention clears any earlier
   resolution and counts `csmarket_trade_attention_total{reason}` once. A resolved attention
   with the same reason stays resolved (the sweeps see the same state every tick) unless
-  `reopen` — the buy re-opens `waxpeer_forbidden` on a new 403.
+  `reopen` — the buy re-opens `source_forbidden` on a new 403.
 - `expire_pending` — `pending` orders past `expires_at` with no `pending` (or `succeeded`)
   payment attempt, locked `FOR UPDATE SKIP LOCKED`, attempts re-read under the lock: their
   `created` attempts → `payments.cancel_pending` (imported inside the function: `payments`

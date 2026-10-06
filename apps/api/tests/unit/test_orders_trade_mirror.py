@@ -112,7 +112,7 @@ def test_flag_opens_an_attention_once() -> None:
 
 
 def test_flag_lets_a_forbidden_attention_give_way() -> None:
-    row = _flagged("waxpeer_forbidden")
+    row = _flagged("source_forbidden")
     assert flag(row, "ambiguous_trade") is True
     assert row.attention_reason == "ambiguous_trade"
 

@@ -19,6 +19,7 @@ from csmarket.modules.skins.api import WaxpeerBuyRefusedError, WaxpeerUnavailabl
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.fake_trade_client import FakeTradeClient
+from tests.integration.orders_factory import wx_listing
 from tests.integration.trade_sweeps_kit import (  # noqa: F401 -- fixtures by name
     WAXPEER_ID,
     Clock,
@@ -59,7 +60,7 @@ async def test_a_lost_substitute_is_never_refunded_on_the_refused_attempt(
     db: AsyncSession, fake: FakeTradeClient, clock: Clock
 ) -> None:
     order0 = await _pending(db)
-    fake.refuse(order0.listing_id, SOLD)  # listing 1 refused: Waxpeer keeps a 6
+    fake.refuse(wx_listing(order0), SOLD)  # listing 1 refused: Waxpeer keeps a 6
     fake.listings(order0.market_hash_name, [(SUBSTITUTE, 12_000)])
     fake.buy_raises(WaxpeerUnavailableError("the substitute's answer was lost"))
     assert await _attempt(db, fake, order0) == "unconfirmed"

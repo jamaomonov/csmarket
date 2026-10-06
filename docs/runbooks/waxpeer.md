@@ -47,7 +47,7 @@ After changing the key: `docker compose -f docker-compose.prod.yml up -d api wor
 
 `WaxpeerForbidden` (page): an order's lookup or buy got **HTTP 403** in the last 10 minutes.
 It is a configuration error, never "sold out", so **nothing is refunded**: the order stays
-`buying` with its buy pending, the trade gets the attention `waxpeer_forbidden` («Waxpeer:
+`buying` with its buy pending, the trade gets the attention `source_forbidden` («Waxpeer:
 IP не в белом списке»), and the reconcile sweep retries it every 60 s.
 
 1. Compare the server's egress IP (above) with the whitelist in the Waxpeer cabinet. Fix it.
@@ -71,7 +71,7 @@ Two alerts point here:
 - `WaxpeerBalanceLow` (page): `csmarket_waxpeer_balance_usd` has been below
   `CSMARKET_WAXPEER_BALANCE_ALERT_USD` (default 50) for 10 minutes. The next buys will fail.
 - `WaxpeerLowBalanceRefund` (page): an order **was** refunded because our balance did not
-  cover it (`csmarket_order_refunds_total{reason="waxpeer_low_balance"}`).
+  cover it (`csmarket_order_refunds_total{reason="source_low_balance"}`).
 
 What happens on a short balance: when Waxpeer refuses a buy and the refusal names the
 balance, or `GET /v1/user` shows less than the price, the order goes `failed` and the money

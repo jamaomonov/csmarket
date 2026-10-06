@@ -17,11 +17,11 @@ from csmarket.modules.orders.api import OrderStatusOut, SkinTradeState
 
 #: ``skin_trades.attention_reason`` (``orders.models.ATTENTION_REASONS``; a unit test pins it).
 AttentionReason = Literal[
-    "buy_unconfirmed", "ambiguous_trade", "rolled_back", "waxpeer_forbidden", "audit_divergence"
+    "buy_unconfirmed", "ambiguous_trade", "rolled_back", "source_forbidden", "audit_divergence"
 ]
 #: ``orders.failure_reason`` (``orders.models.FAILURE_REASONS``; a unit test pins it).
 FailureReason = Literal[
-    "sold_out", "waxpeer_low_balance", "invalid_trade_link", "not_accepted", "admin"
+    "sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin"
 ]
 #: The trades page's tabs.
 TradesView = Literal["all", "active", "attention"]
@@ -109,9 +109,13 @@ class AdminOrderFull(BaseModel):
     market_hash_name: str
     phase: str | None
     slug: str
-    #: The Waxpeer offer chosen at checkout.
-    listing_id: int
-    #: Waxpeer units agreed at checkout (the worker's price cap).
+    #: Where the skin is bought (spec 2026-10-06).
+    source: Literal["waxpeer", "skinslink"]
+    #: The prefixed offer chosen at checkout (``wx:<id>`` / ``sl:<id>``).
+    offer_id: str | None
+    #: The Waxpeer listing behind it; ``None`` for a Skinslink order.
+    listing_id: int | None
+    #: Units agreed at checkout (the worker's price cap).
     cost_units: int
     cost_usd: str
     price_usd: str

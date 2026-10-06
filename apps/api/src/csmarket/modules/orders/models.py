@@ -47,6 +47,8 @@ ORDER_STATUSES = (
     "failed",
     "returned",
 )
+#: Where an order's skin is bought (spec 2026-10-06).
+ORDER_SOURCES = ("waxpeer", "skinslink")
 #: Statuses an order never leaves.
 TERMINAL: frozenset[str] = frozenset({"delivered", "cancelled", "failed", "returned"})
 #: Paid, not yet settled: the money is ours and the skin is on its way (no refund now).
@@ -56,11 +58,11 @@ ATTENTION_REASONS = (
     "buy_unconfirmed",
     "ambiguous_trade",
     "rolled_back",
-    "waxpeer_forbidden",
+    "source_forbidden",
     "audit_divergence",
 )
 #: ``orders.failure_reason`` codes.
-FAILURE_REASONS = ("sold_out", "waxpeer_low_balance", "invalid_trade_link", "not_accepted", "admin")
+FAILURE_REASONS = ("sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin")
 #: Where a refund goes (spec §7.8: the balance only).
 REFUND_TARGETS = ("balance",)
 
@@ -103,9 +105,16 @@ class Order(Base):
     phase: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("''"))
     #: As ``skin_items.slug`` (the order page links the item).
     slug: Mapped[str] = mapped_column(String(255), nullable=False)
-    #: The Waxpeer offer the buyer chose, after any checkout substitution (R4).
-    listing_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    #: Waxpeer units we agreed to pay at checkout (1000 = $1); the worker's price cap.
+    #: Which market the chosen offer is on: one of :data:`ORDER_SOURCES`.
+    source: Mapped[str] = mapped_column(
+        String(12), nullable=False, server_default=text("'waxpeer'"), default="waxpeer"
+    )
+    #: The prefixed offer id the buyer chose (``wx:<item_id>`` / ``sl:<asset_id>``), after
+    #: any checkout substitution (R4).
+    offer_id: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    #: The Waxpeer listing behind ``offer_id``; ``NULL`` for a Skinslink order.
+    listing_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    #: Units we agreed to pay at checkout (1000 = $1); the worker's price cap.
     cost_units: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
     price_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
@@ -145,6 +154,7 @@ class Order(Base):
         UniqueConstraint("user_id", "idempotency_key", name="uq_orders_user_id_idempotency_key"),
         # Bare suffixes: the metadata naming convention adds ``ck_orders_``.
         CheckConstraint(f"status IN {_in(ORDER_STATUSES)}", name="status"),
+        CheckConstraint(f"source IN {_in(ORDER_SOURCES)}", name="source"),
         CheckConstraint(f"refunded_to IN {_in(REFUND_TARGETS)}", name="refunded_to"),
         Index("ix_orders_status_next_check", "status", "next_check_at"),
         Index("ix_orders_user_created", "user_id", text("created_at DESC")),
@@ -224,6 +234,7 @@ __all__ = [
     "ATTENTION_REASONS",
     "FAILURE_REASONS",
     "IN_FLIGHT",
+    "ORDER_SOURCES",
     "ORDER_STATUSES",
     "REFUND_TARGETS",
     "TERMINAL",

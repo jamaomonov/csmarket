@@ -203,7 +203,7 @@ async def refund(number: str, admin: Admin, db: Db, key: Key, waxpeer: Waxpeer) 
     response_model=AdminOrderDetail,
     responses=_conflicts(
         "`not_retryable` — not a `buying`, unrefunded order with a resolved "
-        "`buy_unconfirmed`, `ambiguous_trade` or `waxpeer_forbidden` attention and no "
+        "`buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` attention and no "
         "purchase on record.",
         "`order_busy` — a buy attempt is running; try again in a few minutes.",
         _IDEMPOTENCY,

@@ -40,10 +40,10 @@ _REFUND_STATUSES: frozenset[str] = frozenset({"failed", "returned"})
 #: Attention reasons under which a ``buying`` order may hold no skin at all — once an
 #: operator checked Waxpeer and resolved the trade, an admin may refund it.
 ADMIN_REFUNDABLE: frozenset[str] = frozenset(
-    {"buy_unconfirmed", "ambiguous_trade", "waxpeer_forbidden"}
+    {"buy_unconfirmed", "ambiguous_trade", "source_forbidden"}
 )
 #: Attention reasons whose outcome is unknown or spent (R3): while one is unresolved no
-#: refund is booked, by any path. ``waxpeer_forbidden`` is not here — nothing was bought, so
+#: refund is booked, by any path. ``source_forbidden`` is not here — nothing was bought, so
 #: a later sold-out or low-balance refund must still go through.
 BLOCKS_REFUND: frozenset[str] = frozenset(
     {"buy_unconfirmed", "ambiguous_trade", "rolled_back", "audit_divergence"}

@@ -66,13 +66,13 @@ describe("OrdersPage", () => {
 
   it("badges an order that needs attention, with the reason", async () => {
     api.listOrders.mockResolvedValue({
-      items: [{ ...ORDER_ROW, attention_reason: "waxpeer_forbidden" }],
+      items: [{ ...ORDER_ROW, attention_reason: "source_forbidden" }],
       next_cursor: null,
     });
     renderPage();
     const badge = await screen.findByTestId("order-attention");
     expect(badge).toHaveTextContent("внимание");
-    expect(badge).toHaveTextContent("Waxpeer: IP не в белом списке");
+    expect(badge).toHaveTextContent("Площадка: IP не в белом списке");
   });
 
   it("starts from ?q= and passes it to the API", async () => {

@@ -38,6 +38,7 @@ from tests.integration.orders_factory import (
     make_item_and_rate,
     make_order,
     make_trade,
+    wx_listing,
 )
 from tests.integration.payments_factory import make_user
 
@@ -278,7 +279,7 @@ async def test_forbidden_buy_keeps_order_buying_and_alerts(
     order, trade = await load(db_session, buying_order)
     assert order.status == "buying"
     assert order.refunded_at is None
-    assert trade.attention_reason == "waxpeer_forbidden"
+    assert trade.attention_reason == "source_forbidden"
     assert trade.buy_pending
     assert fake.search_calls == 0  # no substitute
     assert metric("forbidden") == before + 1
@@ -295,7 +296,7 @@ async def test_a_forbidden_lookup_buys_nothing_and_alerts(
     assert await _attempt(db_session, fake, buying_order, settings) == "forbidden"
     assert fake.buy_calls == 0
     _, trade = await load(db_session, buying_order)
-    assert trade.attention_reason == "waxpeer_forbidden"
+    assert trade.attention_reason == "source_forbidden"
     assert trade.buy_pending
 
 
@@ -343,7 +344,7 @@ async def test_rate_limited_buy_is_retried(
 async def test_a_sold_listing_is_replaced_by_one_within_the_ceiling(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
-    fake.refuse(buying_order.listing_id, SOLD)
+    fake.refuse(wx_listing(buying_order), SOLD)
     fake.listings(
         buying_order.market_hash_name,
         [(222, 12_716), (333, 12_715)],  # just over the ceiling: skipped; at it: bought
@@ -359,7 +360,7 @@ async def test_a_sold_listing_is_replaced_by_one_within_the_ceiling(
 async def test_a_substitute_above_the_ceiling_is_never_bought(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
-    fake.refuse(buying_order.listing_id, SOLD)
+    fake.refuse(wx_listing(buying_order), SOLD)
     fake.listings(buying_order.market_hash_name, [(222, 12_716)])
     before = metric("sold_out")
     assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
@@ -378,7 +379,7 @@ async def test_a_substitute_above_the_ceiling_is_never_bought(
 async def test_only_one_substitute_is_tried(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
-    fake.refuse(buying_order.listing_id, SOLD)
+    fake.refuse(wx_listing(buying_order), SOLD)
     fake.refuse(333, SOLD)
     fake.listings(buying_order.market_hash_name, [(333, 12_000), (334, 12_100)])
     assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
@@ -391,7 +392,7 @@ async def test_only_one_substitute_is_tried(
 async def test_a_moved_price_is_never_accepted_blindly(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
-    fake.refuse(buying_order.listing_id, WaxpeerBuyRefusedError("price", new_price_units=12_400))
+    fake.refuse(wx_listing(buying_order), WaxpeerBuyRefusedError("price", new_price_units=12_400))
     assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
     assert fake.buy_calls == 1
 
@@ -426,7 +427,7 @@ async def test_a_doppler_is_substituted_under_waxpeers_spelling(
     )
     await db_session.commit()
     await make_trade(db_session, order, buy_pending=True)
-    fake.refuse(order.listing_id, SOLD)
+    fake.refuse(wx_listing(order), SOLD)
     fake.listings("★ Karambit | Doppler Phase 2 (Factory New)", [(555, 12_000)])
     assert await _attempt(db_session, fake, order, settings) == "bought"
     assert fake.bought == [(555, 12_000, order.id)]
@@ -441,7 +442,7 @@ async def test_low_balance_by_message_is_refunded_at_once(
     assert await _attempt(db_session, fake, buying_order, settings) == "low_balance"
     assert (fake.search_calls, fake.balance_calls) == (0, 0)
     order, trade = await load(db_session, buying_order)
-    assert (order.status, order.failure_reason) == ("failed", "waxpeer_low_balance")
+    assert (order.status, order.failure_reason) == ("failed", "source_low_balance")
     assert trade.buy_pending is False
     assert await user_balance(db_session, order.user_id) == PRICE
     assert metric("low_balance") == before + 1
@@ -454,13 +455,13 @@ async def test_low_balance_by_our_waxpeer_wallet_is_refunded(
     fake.balance_returns(COST - 1)
     assert await _attempt(db_session, fake, buying_order, settings) == "low_balance"
     order, _ = await load(db_session, buying_order)
-    assert order.failure_reason == "waxpeer_low_balance"
+    assert order.failure_reason == "source_low_balance"
 
 
 async def test_a_failing_balance_call_does_not_read_as_low(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
-    fake.refuse(buying_order.listing_id, SOLD)
+    fake.refuse(wx_listing(buying_order), SOLD)
     fake.balance_raises(WaxpeerUnavailableError("down"))
     assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
     order, _ = await load(db_session, buying_order)
@@ -523,7 +524,7 @@ async def test_a_body_that_echoes_the_link_is_not_a_link_refusal(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
     fake.refuse(
-        buying_order.listing_id,
+        wx_listing(buying_order),
         WaxpeerBuyRefusedError(
             "Item not found", new_price_units=None, body='{"tradelink": "redrawn"}'
         ),

@@ -77,6 +77,11 @@ class SkinItem(Base):
     )
     min_all_units: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     count_all: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    # ---- the Skinslink side (same units), rolled up from ``skinslink_items`` every tick ----
+    skinslink_min_units: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    skinslink_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0"), default=0
+    )
     price_hash: Mapped[str | None] = mapped_column(String(40), nullable=True)
     prices_updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

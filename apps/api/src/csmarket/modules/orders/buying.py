@@ -13,7 +13,7 @@
      attempt's time budget starts before the lease, so it ends before the lease does;
   2. a trade link that does not parse → refund ``invalid_trade_link``;
   3. **lookup first** (``check_project_ids``): a failure buys nothing and retries later; a
-     403 sets the attention ``waxpeer_forbidden``; a found trade is adopted — never rebought;
+     403 sets the attention ``source_forbidden``; a found trade is adopted — never rebought;
      several live ones set ``ambiguous_trade``;
   4. buy the chosen listing at the units agreed at checkout; a refusal (sold, price moved,
      a 4xx) → the cheapest other ``auto`` listing within ``paid_units × (1 + ceiling)``,
@@ -310,7 +310,7 @@ async def _attempt(
         trades = await client.check_project_ids([snap.order_id])
         found = pick_trade(trades, None)
     except WaxpeerForbiddenError:
-        return await attention(db, snap, "waxpeer_forbidden", outcome="forbidden")
+        return await attention(db, snap, "source_forbidden", outcome="forbidden")
     except WaxpeerRateLimitedError as exc:
         run.retry_after = exc.retry_after_seconds
         return "lookup_later"  # nothing was sent: look again after the backoff, then buy
@@ -379,7 +379,7 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
                 project_id=snap.order_id,
             )
         except WaxpeerForbiddenError:
-            return await attention(db, snap, "waxpeer_forbidden", outcome="forbidden")
+            return await attention(db, snap, "source_forbidden", outcome="forbidden")
         except WaxpeerRateLimitedError as exc:
             run.retry_after = exc.retry_after_seconds
             return "rate_limited"  # nothing bought; retried after the backoff
@@ -391,7 +391,7 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
             if link_refused(err):  # the buyer's link: every listing would refuse it
                 return await refund(db, snap, "invalid_trade_link")
             if await low_balance(client, err, units):
-                return await refund(db, snap, "waxpeer_low_balance")
+                return await refund(db, snap, "source_low_balance")
             log.info("orders.buy.refused", number=snap.number, status=err.status)
             if len(tried) == 1:
                 nxt = await substitute(

@@ -43,7 +43,7 @@ RefundedTo = Literal["balance"]
 _SUPPORT_REASONS = frozenset(ATTENTION_REASONS)
 #: ``orders.failure_reason`` → what the buyer is told.
 _FAILURE_REASONS: dict[str, SkinTradeReason] = {
-    "waxpeer_low_balance": "try_later",
+    "source_low_balance": "try_later",
     "sold_out": "sold_out",
     "not_accepted": "not_accepted",
     "invalid_trade_link": "trade_link",

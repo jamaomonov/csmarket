@@ -74,7 +74,7 @@ async def test_buying_with_an_open_attention_is_not_stuck_but_is_attention(
     db: AsyncSession,
 ) -> None:
     order = await _order(db, "buying", paid_at=_ago(hours=2), claimed_at=_ago(minutes=45))
-    await make_trade(db, order, attention_reason="waxpeer_forbidden")
+    await make_trade(db, order, attention_reason="source_forbidden")
     health = await _measure(db)
     assert (health.buying_stuck, health.attention) == (0, 1)
 

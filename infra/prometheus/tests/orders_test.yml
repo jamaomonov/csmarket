@@ -15,7 +15,7 @@ tests:
   # and the first refund is a 0 -> 1 step.
   - interval: 1m
     input_series:
-      - series: 'csmarket_order_refunds_total{job="worker",reason="waxpeer_low_balance"}'
+      - series: 'csmarket_order_refunds_total{job="worker",reason="source_low_balance"}'
         values: "0 0 0 1 1 1"
     alert_rule_test:
       - eval_time: 4m
@@ -24,7 +24,7 @@ tests:
           - exp_labels:
               severity: page
               job: worker
-              reason: waxpeer_low_balance
+              reason: source_low_balance
             exp_annotations:
               summary: "An order was refunded because the Waxpeer balance ran out"
               description: "A customer paid and the buy failed for lack of balance. Top up Waxpeer now.\n"
@@ -34,7 +34,7 @@ tests:
   # see, increase() is 0, and nothing fires. (Documents why the pre-creation matters.)
   - interval: 1m
     input_series:
-      - series: 'csmarket_order_refunds_total{job="worker",reason="waxpeer_low_balance"}'
+      - series: 'csmarket_order_refunds_total{job="worker",reason="source_low_balance"}'
         values: "1 1 1 1 1 1"
     alert_rule_test:
       - eval_time: 4m

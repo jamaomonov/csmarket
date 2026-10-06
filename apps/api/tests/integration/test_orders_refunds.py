@@ -186,7 +186,7 @@ async def test_a_kassa_paid_refund_turns_the_kassa_money_into_balance(
     order = await _kassa_paid(db_session, provider=provider)
     locked = await _locked(db_session, order.id)
     assert await refund_to_balance(
-        db_session, order=locked, to_status="failed", reason="waxpeer_low_balance", actor="orders"
+        db_session, order=locked, to_status="failed", reason="source_low_balance", actor="orders"
     )
     await db_session.commit()
     [txn] = await _refunds(db_session, order.id)
@@ -281,9 +281,9 @@ async def test_an_unresolved_unknown_outcome_is_never_refunded(
 
 
 async def test_a_forbidden_buy_does_not_block_a_later_refund(db_session: AsyncSession) -> None:
-    """``waxpeer_forbidden`` bought nothing: a sold-out refund still goes through."""
+    """``source_forbidden`` bought nothing: a sold-out refund still goes through."""
     order = await _wallet_paid(db_session)
-    await make_trade(db_session, order, attention_reason="waxpeer_forbidden")
+    await make_trade(db_session, order, attention_reason="source_forbidden")
     locked = await _locked(db_session, order.id)
     assert await refund_to_balance(
         db_session, order=locked, to_status="failed", reason="sold_out", actor="orders"
@@ -389,7 +389,7 @@ async def test_a_resolved_buying_order_needs_a_nothing_bought_reason(
     )
 
 
-@pytest.mark.parametrize("reason", ["buy_unconfirmed", "ambiguous_trade", "waxpeer_forbidden"])
+@pytest.mark.parametrize("reason", ["buy_unconfirmed", "ambiguous_trade", "source_forbidden"])
 async def test_admin_refund_after_resolve_credits_the_balance(
     db_session: AsyncSession, reason: str
 ) -> None:
