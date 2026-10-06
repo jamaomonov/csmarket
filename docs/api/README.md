@@ -307,7 +307,8 @@ next_cursor}` — orders with a trade; `active` = `buying`/`trade_sent`, `attent
 trade_link and idempotency_key, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
 skinslink: AdminSkinslinkPurchaseOut | null, payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
   The order's `source` is `waxpeer` or `skinslink` (ADR-0010); a Skinslink order has
-  `skinslink` (its purchase) and no `trade`, and the actions below refuse it (409) for now.
+  `skinslink` (its purchase) and no `trade`. `resolve` works on its purchase's attention;
+  refund and retry refuse it (409) for now, and the trades list does not show it.
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,

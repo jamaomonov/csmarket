@@ -194,6 +194,11 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   truncated body, or an `auto` column whose format changed, must not read as "everything sold
   out". Nothing is written and the previous prices stand. Only rows active now are candidates
   for deactivation, so the `IN (…)` list never grows with the inactive catalogue.
+- **`sync_skinslink_prices`** (ADR-0010) — the Skinslink side on its own tick (scheduler
+  `skinslink.prices`, every 120 s, first run 105 s): `lock_pricing`, `skinslink.api.rollup`,
+  `reprice_rows`, commit, bump the catalogue version. It runs while Skinslink is active, or
+  while an earlier roll-up remains to clear, so Skinslink prices appear and leave without a
+  Waxpeer key or a Waxpeer tick.
 - **`cachekeys`** — `catalog_version` / `bump_catalog_version` for Redis `skins:catalog:ver`
   (`docs/architecture/cache-keys.md`). Kept apart from `prices` so the read path never imports the
   Waxpeer client.

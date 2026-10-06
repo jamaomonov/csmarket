@@ -72,8 +72,9 @@ A lost webhook costs at most 30 s: `skinslink.reconcile` polls every open purcha
 3. `docker compose -f docker-compose.prod.yml up -d api worker scheduler`.
 4. Watch: the scheduler logs `skinslink.mirror.loaded mode=full` within a minute;
    `csmarket_skinslink_enabled` reads 1 after the first balance tick (90 s);
-   `csmarket_skinslink_calls_total{outcome="ok"}` grows; the next price sync (≤ 5 min)
-   fills `skin_items.skinslink_count`. An item page now lists offers of both sources.
+   `csmarket_skinslink_calls_total{outcome="ok"}` grows; the `skinslink.prices` tick
+   (every 2 min, first run 105 s after start) fills `skin_items.skinslink_count` and
+   reprices. An item page now lists offers of both sources.
 5. The first test buy: an admin's own account, credited through «Изменить баланс», buys a
    cheap Skinslink offer (the admin order page shows «Источник: Skinslink · sl:…») and
    accepts it in Steam; then one declined, which is refunded to the balance once. Take the
@@ -101,7 +102,7 @@ Keep the balance above the most expensive skin likely to sell plus a day of sale
 
 `SkinslinkMirrorStale` (warn): no mirror tick has succeeded for 10 minutes. Skinslink offers
 and prices are off the storefront until one does (a stale mirror sells nothing); the next
-price sync deactivates items only Skinslink had. Waxpeer is unaffected. Open Skinslink
+`skinslink.prices` tick (≤ 2 min) deactivates items only Skinslink had. Waxpeer is unaffected. Open Skinslink
 orders keep moving: the status checks and the reconcile do not use the mirror.
 
 1. The scheduler log: `skinslink.mirror.failed error=<type>` on every tick names the error.
@@ -111,7 +112,8 @@ orders keep moving: the status checks and the reconcile do not use the mirror.
    - `refused` → a bad key, or a cursor Skinslink no longer accepts.
 3. A cursor problem heals itself: Skinslink answers `reset`, and the next tick downloads the
    whole list again (`skinslink.mirror.loaded mode=reset`).
-4. The alert clears once a tick succeeds; the next price sync puts Skinslink prices back.
+4. The alert clears once a tick succeeds; the next `skinslink.prices` tick (≤ 2 min) puts
+   Skinslink prices back.
 
 ## Buy failures
 
@@ -127,25 +129,32 @@ the key, the IP whitelist or Skinslink itself.
    - `unavailable` (timeout, 5xx, network): the buy may have gone through. The order keeps
      `buy_unconfirmed_at`; the reconcile asks Skinslink under the same id and adopts what is
      there. If Skinslink still has no purchase under it after `order_unconfirmed_minutes`
-     (10), the order is refunded `sold_out`.
+     (10), the buy is sent again under the **same** `merchant_tx_id` (log
+     `orders.skinslink.repeat_unseen`): Skinslink is idempotent on it, so this can never buy
+     twice. A silence is never refunded.
    - `refused`: sold or price moved. Each order tries one substitute (either source, ≤ 3 %
      above), then is refunded `sold_out`. Many at once can mean a stale mirror (see
      [Mirror stale](#mirror-stale)).
 3. A refusal naming the trade link (`trade_link_*`, `trade_banned`, `profile_private`,
    `hold`, `permissions`, …) refunds `invalid_trade_link`: the buyer fixes the link.
 
+A webhook naming a purchase id we do not know logs `orders.skinslink.unknown_purchase` and is
+dropped (the reconcile polls our own purchases anyway).
+
 **Known gap:** a Skinslink attention (`source_forbidden`, `ambiguous_trade`, `rolled_back`)
-shows only on the order's admin page («Покупка Skinslink») and in
-`csmarket_trade_attention_total`; it is not in the trades attention queue, and «Разобрано»,
-refund and retry refuse a Skinslink order (`docs/tech-debt.md`). Look the order up by number
-and check the purchase in the Skinslink cabinet by its `merchant_tx_id`.
+counts in `csmarket_trades_attention`, so `TradesNeedAttention` fires for it, but the trades
+attention queue and the dashboard tile do not list it (`docs/tech-debt.md`). Find the order by
+number in the admin order search: its «Покупка Skinslink» block shows the attention. Check the
+purchase in the Skinslink cabinet by its `merchant_tx_id`, then press «Разобрано» — it works
+on a Skinslink purchase, and resolving it frees a refund the attention held. Admin refund and
+retry still refuse a Skinslink order.
 
 ## Disabling
 
 Set `CSMARKET_SKINSLINK_ENABLED=false` and
 `docker compose -f docker-compose.prod.yml up -d api worker scheduler`. At once: no Skinslink
-offers or prices (the next price sync clears the roll-up and deactivates items only Skinslink
-had), the webhook answers 404, and the mirror, reconcile and balance jobs stop.
+offers (the next `skinslink.prices` tick, ≤ 2 min, clears the roll-up and its prices and
+deactivates items only Skinslink had; it keeps running until nothing is left to clear), the webhook answers 404, and the mirror, reconcile and balance jobs stop.
 
 What happens to Skinslink orders already in flight:
 

@@ -52,8 +52,10 @@ hardened, and every Skinslink offer competes on price from day one.
   download once (and after `reset`), then follows Catalogue Events from a cursor kept
   verbatim. Items map to our catalogue by `(market_hash_name, phase)`. A mirror older than
   10 minutes offers and prices nothing.
-- **Prices and offers.** The 5-minute price sync rolls the mirror up onto `skin_items`
-  (inside `sync_prices`, so one tick prices both sources). The cost is the cheaper source's;
+- **Prices and offers.** The scheduler's `skinslink.prices` (every 2 min,
+  `skins.prices.sync_skinslink_prices`) rolls the mirror up onto `skin_items` and reprices,
+  so Skinslink prices do not wait for, or depend on, the Waxpeer price sync; the 5-minute
+  Waxpeer sync rolls up too, so its tick prices both sources consistently. The cost is the cheaper source's;
   the count is the sum, used everywhere (card, item page, checkout, popular sort). The item
   page merges both sources' offers by price, Waxpeer first on a tie.
 - **Offer ids.** `listing_id` is a string `wx:<id>` / `sl:<id>`; a bare integer is read as
@@ -83,18 +85,29 @@ hardened, and every Skinslink offer competes on price from day one.
 - Any other `failed` reason (incl. `provider_unavailable`) and any 4xx that is neither a
   trade-link code nor 409 is a refused offer: substitute once, then refund `sold_out`. A 409
   or `duplicate_purchase` adopts the stored purchase; a stored failed one counts as refused.
-- `hold` with an offer on a `buying` order moves it to `trade_sent` (a missed `active`).
+- `hold` with an offer on a `buying` order moves it to `trade_sent` (a missed `active`). The
+  buyer reads `hold` as `accepted`, with `release_date = hold_end_date` (Steam protects the
+  skin until then); the order stays `trade_sent` until `completed`.
   `reverted` before delivery = `returned` + refund `not_accepted`; after delivery = attention
   `rolled_back`. A purchase failed before any offer is refunded by its reason.
 - Skinslink answering "no such purchase" for our `merchant_tx_id` past
-  `order_unconfirmed_minutes` refunds `sold_out` at once (the id is idempotent, so the answer
-  is conclusive) — unlike Waxpeer's attention.
+  `order_unconfirmed_minutes` **re-arms the buy** (`buy_pending`, due now; outcome `repeat`):
+  the buy path sends `POST /merchant/purchase` again under the same id, which Skinslink
+  answers with the stored purchase if one exists (spec §5). A silence is never refunded. A
+  webhook for an unknown purchase id is logged (`orders.skinslink.unknown_purchase`) and
+  dropped.
 - The check drain deletes the rows it claims before asking (one-shot); the reconcile is the
   retry. With Skinslink off the rows are dropped unasked.
 - The admin margin uses what Skinslink charged (`amount_units`) when known.
-- The admin attention queue and the resolve / refund / retry actions stay **Waxpeer-only** for
-  now (`docs/tech-debt.md`). A Skinslink attention shows on the order page's «Покупка
-  Skinslink» block and in `csmarket_trade_attention_total`.
+- «Разобрано» (`resolve_attention`) works on a Skinslink purchase's attention; resolving it
+  frees a refund the attention held. The admin attention **queue** (trades list view and
+  counts, the dashboard tile) and the refund / retry actions stay **Waxpeer-only** for now
+  (`docs/tech-debt.md`). A Skinslink attention shows on the order page's «Покупка Skinslink»
+  block, in `csmarket_trade_attention_total` and in the `csmarket_trades_attention` gauge.
+- `orders.health` is source-aware: the stuck and unpolled counts read a Skinslink order's
+  purchase (`last_polled_at`, attention), and the attention gauge counts both tables.
+- The mirror folds one events page per id in order (the last event wins) before writing;
+  a full load keeps the last copy of a duplicated id.
 
 ### Positive consequences
 

@@ -19,7 +19,8 @@ price anything (`skins`) and does not own orders (`orders`); both reach it throu
 | `CSMARKET_SKINSLINK_BALANCE_ALERT_USD`       | `100`                              | `SkinslinkBalanceLow` fires below it             |
 
 `skinslink_active` = the switch **and** both keys. Off: the mirror, reconcile and balance jobs
-skip, the item page and the price sync see no Skinslink stock, the webhook answers 404 and the
+skip, the `skinslink.prices` job only clears what an earlier roll-up left, the item page and
+the price syncs see no Skinslink stock, the webhook answers 404 and the
 check drain drops its rows. Both keys are on the log redaction list.
 
 ## Tables (migration `0018_skinslink`)
@@ -56,11 +57,14 @@ worker and the scheduler import only this.
   `csmarket_skinslink_calls_total{endpoint, outcome}`.
 - **`mirror.py`** — `sync_mirror`: no cursor or `reset` → the full list, replacing the table in
   one transaction; otherwise the events from the cursor (`upsert` by id, `remove`), following
-  `more` for up to 20 pages a tick. Names map to our catalogue by `(market_hash_name, phase)`
+  `more` for up to 20 pages a tick. One events page is folded per id in order (the last event
+  wins) before its upserts and removes are written; a full load dedupes ids the same way. Names map to our catalogue by `(market_hash_name, phase)`
   through `skins.canonical_name` (a phase in the name moves out, as for Waxpeer).
   `mirror_fresh`: synced within `skinslink_mirror_stale_minutes`.
-- **`rollup.py`** — `rollup`, run inside `skins.prices.sync_prices` (one tick prices both
-  sources): per item the cheapest Skinslink price and the count; an item with Skinslink stock
+- **`rollup.py`** — `rollup`, run by the scheduler's `skinslink.prices` job
+  (`skins.prices.sync_skinslink_prices`, every 120 s: `lock_pricing`, roll-up,
+  `reprice_rows`, a catalogue-version bump; it runs while Skinslink is active, or while an
+  earlier roll-up remains to clear) and also inside the Waxpeer `skins.prices.sync_prices`: per item the cheapest Skinslink price and the count; an item with Skinslink stock
   is active even with no Waxpeer listing. Off or stale → cleared, and items only Skinslink
   kept on sale go inactive.
 - **`offers.py`** — `offers_for(db, skin_item_id, …)`: the item's Skinslink offers from the
@@ -87,6 +91,7 @@ Skinslink»): they move orders and refund, which only `orders` may do.
 | Where     | Name                  | Every   | Does                                                       |
 | --------- | --------------------- | ------- | ---------------------------------------------------------- |
 | scheduler | `skinslink.mirror`    | 15 s    | `sync_mirror`; stamps `csmarket_skinslink_mirror_synced_…` |
+| scheduler | `skinslink.prices`    | 120 s   | `skins.prices.sync_skinslink_prices` (roll-up + reprice)   |
 | scheduler | `skinslink.reconcile` | 30 s    | `orders.reconcile_skinslink` (polls, retries pending buys) |
 | scheduler | `skinslink.balance`   | 5 min   | `refresh_balance`; sets `csmarket_skinslink_enabled`       |
 | worker    | queue `skinslink`     | on wake | `orders.drain_checks` (one drainer)                        |

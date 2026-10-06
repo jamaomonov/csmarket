@@ -372,8 +372,12 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `check_purchase(db, client, *, purchase_id=None, order_id=None)` asks
   `GET /merchant/purchase/status` by the stored `merchant_tx_id` (no lock held) and applies
   the answer; a purchase still `buy_pending` is left to the buy path. Skinslink answering "no
-  such purchase" for a lost buy past `order_unconfirmed_minutes` refunds `sold_out` (the id is
-  idempotent, so the answer is conclusive). `drain_checks` is the worker's `skinslink` queue:
+  such purchase" for a lost buy past `order_unconfirmed_minutes` **re-arms the buy**
+  (`_settle_unseen`: `buy_pending = true`, `buy_unconfirmed_at = null`, the order due now;
+  outcome `repeat`, log `orders.skinslink.repeat_unseen`), so the buy path repeats
+  `POST /merchant/purchase` under the **same** `merchant_tx_id` (spec §5) — Skinslink returns
+  the stored purchase if there is one. A silence is never refunded. A check for a purchase id
+  we do not know logs `orders.skinslink.unknown_purchase` and is dropped. `drain_checks` is the worker's `skinslink` queue:
   it claims and deletes `skinslink_checks` rows (one-shot), asks about each, and drops them
   unasked while Skinslink is off.
 
@@ -383,13 +387,16 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   goes through `attempt_skinslink_buy` (its lease decides who acts), the rest through
   `check_purchase`. The fallback for a lost webhook.
 - **Reads:** the owner's order reads join `skinslink_purchases` in the same query (no N+1);
-  `trade_view.purchase_state` maps `new`/`pending` → `buying`, `active`/`hold` →
-  `offer_sent`, `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed`; no
-  seller, release date or deadline. An open attention on the purchase reads `support` and
+  `trade_view.purchase_state` maps `new`/`pending` → `buying`, `active` → `offer_sent`,
+  `hold` / `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed`. A `hold`
+  reads `accepted` with `release_date = hold_end_date` (Steam protects the skin until then;
+  the order stays `trade_sent` until `completed`). No seller or deadline. An open attention on the purchase reads `support` and
   blocks `refund_to_balance` as on a trade.
 - **Admin:** the order page carries the purchase (`skinslink` block); the margin uses what
-  Skinslink charged (`amount_units`) when known. The attention queue and the resolve /
-  refund / retry actions read `skin_trades` only, so they refuse a Skinslink order
+  Skinslink charged (`amount_units`) when known. `resolve_attention` («Разобрано») resolves
+  a Skinslink purchase's attention too (lock the order, then the purchase); resolving it
+  frees a refund the attention held. The attention queue and the refund / retry actions read
+  `skin_trades` only, so they do not list a Skinslink attention and refuse a Skinslink order
   (`docs/tech-debt.md`).
 
 ## Trade sweeps (`sweeps.py`, `expiry.py`, `trade_audit.py`, `sweep_base.py`, `trades.py`, rulings R3, R5, K, M)
@@ -480,6 +487,9 @@ never), the count of unresolved attentions, and Waxpeer's balance in USD (`balan
 `csmarket_orders_stuck{state}`, `csmarket_trades_attention` and `csmarket_waxpeer_balance_*`
 gauges from it and reads the balance on every 5th tick (the first included). The alerts are in
 `infra/prometheus/alerts/orders.yml`; the gauges in `docs/architecture/metrics.md`.
+Source-aware since ADR-0010: the counts coalesce the trade's and the Skinslink purchase's
+`last_polled_at` and attention fields, and the attention count covers both `skin_trades` and
+`skinslink_purchases`.
 
 ## Nudges and letters (`letters.py`, M4b rulings R4, R5)
 

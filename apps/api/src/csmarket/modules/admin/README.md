@@ -149,15 +149,16 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   (`AdminSkinslinkPurchaseOut`: `merchant_tx_id`, `asset_id`, `purchase_id`, `status`,
   `offer_id` / `offer_url`, `fail_reason`, `amount_usd`, `hold_end_date`, the buy flags,
   `attention_reason`, `resolved_at`) instead of a trade; its margin uses what Skinslink
-  charged when known. The trades page, the attention queue and the three actions read
-  `skin_trades` only: they refuse a Skinslink order (409) and do not list its attention
+  charged when known. Resolve («Разобрано») works on a Skinslink purchase's attention. The
+  trades page, the attention queue, refund and retry read `skin_trades` only: they do not
+  list a Skinslink attention and refund / retry refuse a Skinslink order (409)
   (`docs/tech-debt.md`).
 - **`can_refund` / `can_retry`** are `orders.api.can_refund` / `can_retry` — the same
   functions (`refund_refusal`, `retry_refusal`) the actions run under the locks, so the
   button and the action agree (`test_the_flags_say_what_the_action_does`).
 - **Resolve («Разобрано»):** stamps `resolved_at`, `resolved_by` (admin id),
   `resolved_note` once; an already resolved attention stays as it was (200, no audit row).
-  409 `nothing_to_resolve` without a trade or an attention.
+  409 `nothing_to_resolve` without a trade (or Skinslink purchase) or an attention.
 - **Refund:** only a `buying`, unrefunded order whose trade carries a **resolved**
   `buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` (an operator checked Waxpeer:
   nothing was bought), no purchase on record (`waxpeer_id`) unless our own trade failed
