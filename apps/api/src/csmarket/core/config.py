@@ -129,6 +129,25 @@ class Settings(BaseSettings):
         description="Waxpeer API key (IP-whitelisted). Empty → trade-link check unavailable.",
     )
     waxpeer_base_url: str = Field(default="https://api.waxpeer.com/v1")
+    # --- skinslink (second buy source; spec 2026-10-06) ---
+    skinslink_enabled: bool = Field(
+        default=False, description="Mirror Skinslink's stock, show its offers, buy from it."
+    )
+    skinslink_api_key: str = Field(default="", description="Skinslink merchant API key.")
+    skinslink_secret: str = Field(
+        default="", description="Skinslink merchant secret: signs its webhooks."
+    )
+    skinslink_base_url: str = Field(default="https://api.skinslink.com/api/v1")
+    skinslink_mirror_stale_minutes: int = Field(
+        default=10, ge=1, description="A mirror older than this offers and prices nothing."
+    )
+    skinslink_request_timeout_seconds: float = Field(default=10.0, gt=0)
+    skinslink_buy_timeout_seconds: float = Field(
+        default=35.0,
+        gt=0,
+        description="POST /merchant/purchase blocks up to 30 s on their side.",
+    )
+    skinslink_balance_alert_usd: Decimal = Field(default=Decimal(100))
     dev_login_enabled: bool = Field(
         default=False,
         description="POST /auth/dev-login for local work and e2e. Ignored when environment=prod.",
@@ -387,6 +406,11 @@ class Settings(BaseSettings):
         if self.scheduler_first_run_divisor != 1 and self.is_prod:
             raise ValueError("CSMARKET_SCHEDULER_FIRST_RUN_DIVISOR must be 1 in prod")
         return self
+
+    @property
+    def skinslink_active(self) -> bool:
+        """Skinslink is used: switched on with both credentials present."""
+        return self.skinslink_enabled and bool(self.skinslink_api_key and self.skinslink_secret)
 
     @property
     def is_prod(self) -> bool:

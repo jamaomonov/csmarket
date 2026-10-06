@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 #: The gated modules (the money path, then M4b's letters and live updates) and their line.
-MODULES = ("orders", "payments", "wallet", "skins", "notifications", "realtime")
+MODULES = ("orders", "payments", "wallet", "skins", "notifications", "realtime", "skinslink")
 THRESHOLD = 95.0
 
 

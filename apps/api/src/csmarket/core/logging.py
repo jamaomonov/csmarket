@@ -66,6 +66,10 @@ REDACTED_KEYS = frozenset(
         # Uzum's /confirm extras: they hold the payer's phone (never logged, masked in admin).
         "payment_source",
         "waxpeer_api_key",
+        # Skinslink (spec 2026-10-06): the key rides an ``X-Api-Key`` header.
+        "skinslink_api_key",
+        "skinslink_secret",
+        "x-api-key",
         # Waxpeer's trade entries name both Steam accounts; ``parse_trade`` drops them,
         # and these keys stay masked should a raw entry ever reach a log line.
         "for_steamid64",
