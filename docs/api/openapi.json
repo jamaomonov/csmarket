@@ -260,6 +260,10 @@
             "title": "Fx Snapshot Id",
             "type": "string"
           },
+          "fx_uplift_pct": {
+            "title": "Fx Uplift Pct",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -445,6 +449,7 @@
           "price_uzs",
           "fx_snapshot_id",
           "fx_rate",
+          "fx_uplift_pct",
           "margin_usd",
           "trade_link_masked",
           "paid_with",

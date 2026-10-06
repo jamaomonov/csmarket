@@ -251,6 +251,12 @@ class Settings(BaseSettings):
     fx_max_age_days: int = Field(
         default=7, ge=1, description="A rate snapshot older than this counts as no rate."
     )
+    fx_uplift_pct: Decimal = Field(
+        default=Decimal(0),
+        ge=0,
+        le=10,
+        description="Percent added to the CBU rate for soʻm prices (ADR-0011); snapshots stay CBU.",
+    )
 
     # --- money (M3) ---
     # Kassa credentials are prod-only; tests and dev use the mock provider. An empty

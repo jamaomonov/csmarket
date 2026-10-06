@@ -121,8 +121,10 @@ class AdminOrderFull(BaseModel):
     price_usd: str
     price_uzs: str
     fx_snapshot_id: str
-    #: The USD → UZS rate of that snapshot.
+    #: The USD → UZS rate of that snapshot (the CBU's).
     fx_rate: str
+    #: Percent added to it for the soʻm price (ADR-0011).
+    fx_uplift_pct: str
     #: ``price_usd`` − what Waxpeer charged (``bought_units`` / 1000), else − ``cost_usd``.
     margin_usd: str
     #: ``…?partner=<id>&token=••••<last 2>``.

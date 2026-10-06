@@ -7,6 +7,7 @@ from decimal import Decimal
 
 import pytest
 from csmarket.core import clock
+from csmarket.core import config as cfg
 from csmarket.core.redis import get_redis
 from csmarket.modules.fx.models import FxSnapshot
 from csmarket.modules.fx.service import (
@@ -117,3 +118,52 @@ async def test_a_corrupt_redis_copy_falls_back_to_postgres(
     got = await current_usd_uzs(db_session, get_redis(), max_age_days=7)
     assert got is not None
     assert got.rate == Decimal("12700")
+
+
+async def _fetch_cbu() -> Decimal:
+    return Decimal("11790.79")
+
+
+@pytest.mark.parametrize("cached", [True, False])
+async def test_the_buyer_rate_carries_the_uplift_and_the_snapshot_stays_cbu(
+    db_session: AsyncSession, cached: bool
+) -> None:
+    got = await refresh_usd_uzs(db_session, get_redis(), fetch=_fetch_cbu)
+    await db_session.commit()
+    if not cached:
+        await get_redis().delete(REDIS_KEY)
+    rate = await current_usd_uzs(db_session, get_redis(), max_age_days=7, uplift_pct=Decimal(1))
+    assert rate is not None
+    assert (rate.rate, rate.cbu_rate, rate.uplift_pct) == (
+        Decimal("11908.70"),
+        Decimal("11790.79"),
+        Decimal(1),
+    )
+    assert rate.snapshot_id == got.snapshot_id
+    row = await db_session.get(FxSnapshot, got.snapshot_id)
+    assert row is not None
+    assert row.usd_uzs == Decimal("11790.79")
+
+
+async def test_the_uplift_comes_from_the_settings_by_default(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CSMARKET_FX_UPLIFT_PCT", "1")
+    cfg.get_settings.cache_clear()
+    try:
+        await refresh_usd_uzs(db_session, get_redis(), fetch=_fetch_cbu)
+        await db_session.commit()
+        rate = await current_usd_uzs(db_session, get_redis(), max_age_days=7)
+        assert rate is not None
+        assert (rate.rate, rate.uplift_pct) == (Decimal("11908.70"), Decimal(1))
+    finally:
+        monkeypatch.delenv("CSMARKET_FX_UPLIFT_PCT")
+        cfg.get_settings.cache_clear()
+
+
+async def test_no_uplift_is_the_cbu_rate(db_session: AsyncSession) -> None:
+    await refresh_usd_uzs(db_session, get_redis(), fetch=_fetch_cbu)
+    await db_session.commit()
+    rate = await current_usd_uzs(db_session, get_redis(), max_age_days=7, uplift_pct=Decimal(0))
+    assert rate is not None
+    assert (rate.rate, rate.cbu_rate) == (Decimal("11790.79"), Decimal("11790.79"))

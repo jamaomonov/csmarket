@@ -610,3 +610,27 @@ async def test_a_number_collision_is_not_mistaken_for_a_replay(
         )
     await db_session.rollback()
     assert await _orders(db_session) == 1
+
+
+async def test_the_order_keeps_the_uplift_it_was_priced_with(
+    *,
+    integration_client: AsyncClient,
+    user_headers: dict[str, str],
+    stub_listings: StubListings,
+    rate: FxSnapshot,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Soʻm prices use CBU + 1 %; the order points at the CBU snapshot and records the 1 %."""
+    rate_id = rate.id
+    monkeypatch.setenv("CSMARKET_FX_UPLIFT_PCT", "1")
+    cfg.get_settings.cache_clear()
+    await stub_listings.set(SLUG, [(111, 10_000)])
+    shown = await _shown_price(integration_client, SLUG, 111)
+    r = await _post(integration_client, user_headers, price_uzs=shown)
+    assert r.status_code == 201, r.text
+    order = await _order(db_session, r.json()["number"])
+    assert (order.fx_snapshot_id, order.fx_uplift_pct) == (rate_id, Decimal(1))
+    assert order.price_uzs == Decimal(shown)
+    # The soʻm price is the dollar price at 12 700 × 1.01 = 12 827, rounded as the page does.
+    assert order.price_uzs > order.price_usd * RATE

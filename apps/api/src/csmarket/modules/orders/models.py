@@ -123,6 +123,11 @@ class Order(Base):
     fx_snapshot_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("fx_snapshots.id", ondelete="RESTRICT"), nullable=False
     )
+    #: Percent added to that snapshot's CBU rate for the soʻm price (ADR-0011): the order's
+    #: rate is ``usd_uzs × (1 + fx_uplift_pct / 100)``.
+    fx_uplift_pct: Mapped[Decimal] = mapped_column(
+        Numeric(5, 2), nullable=False, server_default=text("0"), default=Decimal(0)
+    )
     #: The buyer's trade link at checkout (PII: never logged); masked 30 days after the
     #: order ends (``erase``).
     trade_link: Mapped[str] = mapped_column(Text, nullable=False)

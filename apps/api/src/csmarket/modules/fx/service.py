@@ -4,6 +4,10 @@ Postgres (``fx_snapshots``) is the record; Redis ``fx:usd_uzs`` is a copy the re
 path reads first. A Redis error is never fatal — the newest snapshot is one indexed
 query away. A rate older than ``max_age_days`` is treated as no rate: the page then
 shows dollars rather than soʻm at a week-old rate.
+
+The snapshot is always the CBU's own rate. The buyer's rate — every soʻm price, the
+catalogue's and checkout's alike — is that rate plus ``fx_uplift_pct`` (ADR-0011), applied
+in :func:`current_usd_uzs` only; an order keeps the snapshot id and the uplift it used.
 """
 
 from __future__ import annotations
@@ -11,9 +15,9 @@ from __future__ import annotations
 import contextlib
 import json
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
@@ -21,6 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
+from csmarket.core.config import get_settings
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.modules.fx.models import FxSnapshot
@@ -29,23 +34,40 @@ log = get_logger("csmarket.fx.service")
 
 REDIS_KEY = "fx:usd_uzs"
 _REDIS_TTL_SECONDS = 86_400
+#: The buyer's rate is kept to the CBU's own precision (kopecks of a soʻm).
+_RATE_PLACES = Decimal("0.01")
 #: A refresh with an unchanged rate adds a row only when the newest is this old.
 _REFRESH_ROW_AFTER = timedelta(hours=20)
 
 
 @dataclass(frozen=True)
 class UsdUzs:
-    """A rate and the snapshot it came from."""
+    """A rate and the snapshot it came from.
+
+    ``rate`` is what soʻm prices use: ``cbu_rate`` × (1 + ``uplift_pct`` / 100). Straight from
+    a snapshot (``refresh_usd_uzs``) the two are equal and the uplift is 0.
+    """
 
     rate: Decimal
     snapshot_id: str
     fetched_at: datetime
     source: str
+    cbu_rate: Decimal = Decimal(0)
+    uplift_pct: Decimal = Decimal(0)
+
+    def uplifted(self, pct: Decimal) -> UsdUzs:
+        """This snapshot's rate with ``pct`` percent added."""
+        rate = (self.cbu_rate * (1 + pct / 100)).quantize(_RATE_PLACES, rounding=ROUND_HALF_UP)
+        return replace(self, rate=rate, uplift_pct=pct)
 
 
 def _of(row: FxSnapshot) -> UsdUzs:
     return UsdUzs(
-        rate=row.usd_uzs, snapshot_id=row.id, fetched_at=row.fetched_at, source=row.source
+        rate=row.usd_uzs,
+        snapshot_id=row.id,
+        fetched_at=row.fetched_at,
+        source=row.source,
+        cbu_rate=row.usd_uzs,
     )
 
 
@@ -80,8 +102,28 @@ async def record_snapshot(db: AsyncSession, *, rate: Decimal, source: str) -> Fx
     return row
 
 
-async def current_usd_uzs(db: AsyncSession, redis: Redis, *, max_age_days: int) -> UsdUzs | None:
-    """The newest rate younger than ``max_age_days``, or ``None``."""
+async def current_usd_uzs(
+    db: AsyncSession,
+    redis: Redis,
+    *,
+    max_age_days: int,
+    uplift_pct: Decimal | None = None,
+) -> UsdUzs | None:
+    """The buyer's rate from the newest snapshot younger than ``max_age_days``, or ``None``.
+
+    Args:
+        db: Session (read only).
+        redis: The ``fx:usd_uzs`` copy, read first.
+        max_age_days: Older snapshots count as no rate.
+        uplift_pct: Percent added to the CBU rate; ``settings.fx_uplift_pct`` when omitted.
+    """
+    pct = get_settings().fx_uplift_pct if uplift_pct is None else uplift_pct
+    raw = await _current(db, redis, max_age_days=max_age_days)
+    return None if raw is None else raw.uplifted(pct)
+
+
+async def _current(db: AsyncSession, redis: Redis, *, max_age_days: int) -> UsdUzs | None:
+    """The newest snapshot younger than ``max_age_days`` (the CBU rate), or ``None``."""
     oldest = now() - timedelta(days=max_age_days)
     with contextlib.suppress(RedisError, ValueError, KeyError, TypeError, InvalidOperation):
         raw = await redis.get(REDIS_KEY)
@@ -92,6 +134,7 @@ async def current_usd_uzs(db: AsyncSession, redis: Redis, *, max_age_days: int) 
                 snapshot_id=str(data["snapshot_id"]),
                 fetched_at=datetime.fromisoformat(data["fetched_at"]),
                 source=str(data["source"]),
+                cbu_rate=Decimal(data["rate"]),
             )
             if cached.fetched_at >= oldest:
                 return cached

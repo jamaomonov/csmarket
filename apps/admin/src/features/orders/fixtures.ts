@@ -55,6 +55,7 @@ export const DETAIL: AdminOrderDetail = {
     price_usd: "13.580000",
     price_uzs: "171800",
     fx_rate: "12650.5000",
+    fx_uplift_pct: "0.00",
     margin_usd: "0.380000",
     // Fake, already-masked link: the token never reaches the page.
     trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY",

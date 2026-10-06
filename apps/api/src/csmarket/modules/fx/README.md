@@ -22,6 +22,11 @@ the CBU fetch (`cbu.fetch_usd_uzs`), and the Redis copy `fx:usd_uzs`
 - The CBU answer must be one plausible USD row (1 000 to 100 000 soʻm); anything else is a
   `CbuError` and the previous snapshot keeps serving.
 - No admin override yet (M3 may add one). M4a orders reference `fx_snapshots.id`.
+- Uplift (ADR-0011): `current_usd_uzs` returns the buyer's rate, `cbu_rate × (1 +
+CSMARKET_FX_UPLIFT_PCT / 100)` to 2 places (`UsdUzs.rate`; `cbu_rate` and `uplift_pct`
+  beside it). Snapshots and the Redis copy keep the CBU rate. Dollar prices and costs never
+  see it; an order stores the uplift it used (`orders.fx_uplift_pct`). Prod: 1
+  (`docker-compose.prod.yml`); default 0.
 
 **Job:** `fx.refresh` in `apps/scheduler` — every `CSMARKET_FX_REFRESH_INTERVAL_MINUTES`
 (60), first run 20 s after start. It only times the work; the logic is `refresh_usd_uzs`.

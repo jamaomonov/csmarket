@@ -19,6 +19,9 @@ x-app-env: &app-env
   CSMARKET_DEBUG: "false"
   CSMARKET_LOG_LEVEL: INFO
   CSMARKET_LOG_JSON: "true"
+  # Soʻm prices use the CBU rate + 1 % (ADR-0011); the snapshots stay the CBU's own rate.
+  # Set here, in git, not in secrets: it is pricing policy, and this value wins over env_file.
+  CSMARKET_FX_UPLIFT_PCT: "1"
 
 # Bound every container's json-file logs. Without this the driver keeps an
 # unbounded log per container, which fills the disk and gets replayed on every

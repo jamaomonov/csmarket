@@ -51,6 +51,8 @@ export interface AdminOrderFull {
   price_uzs: string;
   /** USD → UZS rate of the order's snapshot. */
   fx_rate: string;
+  /** Percent added to the CBU rate for the soʻm price (ADR-0011). */
+  fx_uplift_pct: string;
   margin_usd: string;
   /** Already masked by the API: the token is never in the page. */
   trade_link_masked: string | null;

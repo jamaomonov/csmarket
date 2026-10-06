@@ -265,6 +265,7 @@ def _build(
         price_usd=usd,
         price_uzs=uzs,
         fx_snapshot_id=q.rate.snapshot_id,
+        fx_uplift_pct=q.rate.uplift_pct,
         trade_link=q.trade_link,
         idempotency_key=key,
         expires_at=now() + timedelta(minutes=settings.order_expiry_minutes),
