@@ -11,6 +11,7 @@ from csmarket.modules.skins.listings import (
     search_client,
 )
 from csmarket.modules.skins.models import SkinItem
+from csmarket.modules.skins.naming import canonical_name
 from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
 from csmarket.modules.skins.service import get_item
 from csmarket.modules.skins.settings import enabled_categories, load_rules
@@ -61,6 +62,7 @@ __all__ = [
     "WaxpeerTrade",
     "WaxpeerTradeClient",
     "WaxpeerUnavailableError",
+    "canonical_name",
     "enabled_categories",
     "fake_active",
     "fake_client",

@@ -227,6 +227,10 @@ WAXPEER_BALANCE_THRESHOLD_USD = Gauge(
     "csmarket_waxpeer_balance_threshold_usd",
     "The balance below which WaxpeerBalanceLow fires (setting waxpeer_balance_alert_usd).",
 )
+SKINSLINK_MIRROR_SYNCED_TIMESTAMP = Gauge(
+    "csmarket_skinslink_mirror_synced_timestamp_seconds",
+    "Unix time of the last good Skinslink mirror tick (alert: SkinslinkMirrorStale).",
+)
 WAXPEER_BALANCE_READ_TIMESTAMP = Gauge(
     "csmarket_waxpeer_balance_read_timestamp_seconds",
     "Unix time of the last successful Waxpeer balance read (alert: WaxpeerBalanceUnknown).",
@@ -241,6 +245,7 @@ WAXPEER_BALANCE_THRESHOLD_USD.set(float("nan"))
 # own window, instead of at once. The API and the worker keep these values; the alerts are
 # pinned to job="scheduler".
 WAXPEER_BALANCE_READ_TIMESTAMP.set(time.time())
+SKINSLINK_MIRROR_SYNCED_TIMESTAMP.set(time.time())
 ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(time.time())
 
 
@@ -331,6 +336,18 @@ def set_waxpeer_balance(balance_usd: float, threshold_usd: float) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_waxpeer_balance", error=type(exc).__name__
+        )
+
+
+def set_skinslink_mirror_synced() -> None:
+    """Stamp a good Skinslink mirror tick. Never raises."""
+    try:
+        SKINSLINK_MIRROR_SYNCED_TIMESTAMP.set(time.time())
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed",
+            metric="csmarket_skinslink_mirror_synced_timestamp_seconds",
+            error=type(exc).__name__,
         )
 
 
@@ -491,6 +508,7 @@ __all__ = [
     "ORDER_BUYS",
     "ORDER_REFUNDS",
     "SKINSLINK_CALLS",
+    "SKINSLINK_MIRROR_SYNCED_TIMESTAMP",
     "STEAM_WEB_API_CALLS",
     "TRADES_ATTENTION",
     "TRADE_ATTENTIONS",
@@ -527,6 +545,7 @@ __all__ = [
     "record_ws_nudges",
     "serve_metrics",
     "set_orders_stuck",
+    "set_skinslink_mirror_synced",
     "set_trades_attention",
     "set_waxpeer_balance",
     "set_waxpeer_balance_threshold",
