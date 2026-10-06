@@ -133,6 +133,7 @@ def _exempt_self_authenticating_routes(limiter: Limiter) -> None:
     """
     from csmarket.modules.click.routes import click_complete, click_prepare
     from csmarket.modules.payme.routes import payme_merchant
+    from csmarket.modules.skinslink.routes import skinslink_webhook
     from csmarket.modules.uzum.routes import (
         uzum_check,
         uzum_confirm,
@@ -153,6 +154,8 @@ def _exempt_self_authenticating_routes(limiter: Limiter) -> None:
         uzum_confirm,
         uzum_reverse,
         uzum_status,
+        # Skinslink: ``sign = sha256(id + secret)``; the body is not trusted, a check is queued.
+        skinslink_webhook,
     ):
         # slowapi ships no types for this decorator; the side effect on the exempt set is
         # the point, the returned wrapper is discarded.

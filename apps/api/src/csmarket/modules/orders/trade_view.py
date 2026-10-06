@@ -22,6 +22,10 @@ failure and never a refund; once resolved, the order's own ``failure_reason`` sp
 Whether the money came back is never read off the reason: ``refunded_to`` says where a
 refund actually went, from the order, so the page never promises a refund that has not
 happened. The seller is shown on purpose: the customer should recognise the offer.
+
+A Skinslink order (spec 2026-10-06 §6) reads its purchase instead: ``new``/``pending`` →
+``buying``, ``active``/``hold`` → ``offer_sent``, ``completed`` → ``accepted``,
+``failed``/``canceled``/``reverted`` → ``failed``; no seller, release date or deadline.
 """
 
 from __future__ import annotations
@@ -33,6 +37,7 @@ import pydantic
 from pydantic import BaseModel
 
 from csmarket.modules.orders.models import ATTENTION_REASONS, Order, SkinTrade
+from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 SkinTradeState = Literal["buying", "offer_sent", "accepted", "released", "failed"]
 SkinTradeReason = Literal["not_accepted", "sold_out", "try_later", "trade_link", "support", "other"]
@@ -85,7 +90,25 @@ def trade_state(order: Order, trade: SkinTrade | None) -> SkinTradeState:
     return "buying"
 
 
-def _needs_support(trade: SkinTrade | None) -> bool:
+_PURCHASE_STATES: dict[str, SkinTradeState] = {
+    "active": "offer_sent",
+    "hold": "offer_sent",
+    "completed": "accepted",
+    "failed": "failed",
+    "canceled": "failed",
+    "reverted": "failed",
+}
+
+
+def purchase_state(order: Order, purchase: SkinslinkPurchase | None) -> SkinTradeState:
+    """A Skinslink order's trade state as the buyer reads it."""
+    if order.status in ("failed", "returned"):
+        return "failed"
+    status = None if purchase is None else purchase.status
+    return _PURCHASE_STATES.get(status or "", "buying")
+
+
+def _needs_support(trade: SkinTrade | SkinslinkPurchase | None) -> bool:
     """An unresolved attention the buyer reads as «we are checking the purchase»."""
     return (
         trade is not None
@@ -94,7 +117,7 @@ def _needs_support(trade: SkinTrade | None) -> bool:
     )
 
 
-def _reason(order: Order, trade: SkinTrade | None) -> SkinTradeReason:
+def _reason(order: Order, trade: SkinTrade | SkinslinkPurchase | None) -> SkinTradeReason:
     if _needs_support(trade):
         return "support"
     return _FAILURE_REASONS.get(order.failure_reason or "", "other")
@@ -111,12 +134,32 @@ def _seller(raw: dict[str, Any] | None) -> SkinSellerOut | None:
         return None
 
 
-def skin_trade_out(order: Order, trade: SkinTrade | None) -> SkinTradeOut | None:
-    """Map an order and its trade mirror to the buyer's view.
+def _purchase_out(order: Order, purchase: SkinslinkPurchase) -> SkinTradeOut:
+    """A Skinslink order's trade card."""
+    state = purchase_state(order, purchase)
+    reason: SkinTradeReason | None = None
+    if state == "failed":
+        reason = _reason(order, purchase)
+    elif _needs_support(purchase):
+        reason = "support"
+    offer = purchase.offer_id
+    return SkinTradeOut(
+        state=state,
+        reason_code=reason,
+        offer_url=f"https://steamcommunity.com/tradeoffer/{offer}/" if offer else None,
+        refunded_to="balance" if order.refunded_to == "balance" else None,
+    )
+
+
+def skin_trade_out(
+    order: Order, trade: SkinTrade | None, *, purchase: SkinslinkPurchase | None = None
+) -> SkinTradeOut | None:
+    """Map an order and its trade mirror (or Skinslink purchase) to the buyer's view.
 
     Args:
         order: The order (its status decides ``failed`` and whether there is a trade at all).
         trade: The order's ``skin_trades`` row, ``None`` before the worker took it.
+        purchase: A Skinslink order's purchase row; it is read instead of ``trade``.
 
     Returns:
         ``None`` for a ``pending`` or ``cancelled`` order; else the trade as the buyer sees
@@ -124,6 +167,8 @@ def skin_trade_out(order: Order, trade: SkinTrade | None) -> SkinTradeOut | None
     """
     if order.status in _NO_TRADE:
         return None
+    if purchase is not None:
+        return _purchase_out(order, purchase)
     state = trade_state(order, trade)
     reason: SkinTradeReason | None = None
     if state == "failed":
@@ -148,6 +193,7 @@ __all__ = [
     "SkinTradeOut",
     "SkinTradeReason",
     "SkinTradeState",
+    "purchase_state",
     "skin_trade_out",
     "trade_state",
 ]

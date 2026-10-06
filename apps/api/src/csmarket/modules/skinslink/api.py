@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from csmarket.modules.skinslink.checks import claim_checks, enqueue_check
 from csmarket.modules.skinslink.client import (
     LINK_ERROR_CODES,
     PURCHASE_FAIL_REASONS,
@@ -51,7 +52,9 @@ __all__ = [
     "SkinslinkRateLimitedError",
     "SkinslinkState",
     "SkinslinkUnavailableError",
+    "claim_checks",
     "client_for",
+    "enqueue_check",
     "mirror_fresh",
     "offers_for",
     "rollup",

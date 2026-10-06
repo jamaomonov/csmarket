@@ -38,7 +38,7 @@ async def _owned_out(db: AsyncSession, user_id: str, number: str) -> OrderOut:
     row = await get_owned(db, user_id, number)
     if row is None:
         raise NotFoundError("order not found")
-    return order_out(row.order, row.trade, row.image_url)
+    return order_out(row.order, row.trade, row.image_url, row.purchase)
 
 
 @router.post(
@@ -132,7 +132,8 @@ async def get_my_orders(
     """My orders, newest first, 20 a page; cancelled and expired unpaid ones are left out."""
     rows, next_cursor = await list_for_user(db, user.id, cursor)
     return OrdersPage(
-        items=[order_out(r.order, r.trade, r.image_url) for r in rows], next_cursor=next_cursor
+        items=[order_out(r.order, r.trade, r.image_url, r.purchase) for r in rows],
+        next_cursor=next_cursor,
     )
 
 

@@ -50,11 +50,12 @@ from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.notifications.api import EMAILS_CHANNEL, drain_emails
-from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_paid
+from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_checks, drain_paid
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.skinslink import models as _skinslink_models  # noqa: F401
+from csmarket.modules.skinslink.api import SKINSLINK_CHANNEL
 from csmarket.modules.users import models as _users_models  # noqa: F401
 from csmarket.modules.uzum import models as _uzum_models  # noqa: F401
 from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
@@ -105,18 +106,30 @@ async def _drain_emails(db: AsyncSession) -> int:
     return await drain_emails(db)
 
 
+async def _drain_skinslink_checks(db: AsyncSession) -> int:
+    """Ask Skinslink about the purchases its webhook named (``orders.drain_checks``)."""
+    return await drain_checks(db)
+
+
 def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may read settings
     """The queues this process drains, in the order a wake drains them.
 
     ``orders``: two drainers, so one Waxpeer call that hangs to its timeout stalls one
     drainer, not every paid order. ``emails``: one drainer — letters are not urgent to the
-    second, and one sender keeps the provider's rate limit far away. Each channel constant
+    second, and one sender keeps the provider's rate limit far away. ``skinslink``: one
+    drainer — a status check is a single cheap read. Each channel constant
     comes from the producing module's ``api`` — a channel spelled twice is a queue nobody
     drains and no test fails.
     """
     return (
         Queue(name="orders", channel=ORDERS_CHANNEL, drain=_drain_orders, concurrency=2),
         Queue(name="emails", channel=EMAILS_CHANNEL, drain=_drain_emails, concurrency=1),
+        Queue(
+            name="skinslink",
+            channel=SKINSLINK_CHANNEL,
+            drain=_drain_skinslink_checks,
+            concurrency=1,
+        ),
     )
 
 

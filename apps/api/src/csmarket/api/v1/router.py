@@ -33,6 +33,7 @@ from csmarket.modules.skins.dev_routes import router as skins_dev_router
 from csmarket.modules.skins.pricing_routes import router as skins_pricing_router
 from csmarket.modules.skins.routes import router as skins_router
 from csmarket.modules.skins.seo_routes import router as skins_seo_router
+from csmarket.modules.skinslink.routes import router as skinslink_router
 from csmarket.modules.users.routes import router as users_router
 from csmarket.modules.users.routes_email import me_router as users_email_me_router
 from csmarket.modules.users.routes_email import router as users_email_router
@@ -62,6 +63,7 @@ router.include_router(skins_dev_router)
 # /skins/seo/* must precede /skins/{slug}, which would otherwise swallow it.
 router.include_router(skins_seo_router)
 router.include_router(skins_router)
+router.include_router(skinslink_router)
 router.include_router(users_router)
 router.include_router(users_email_me_router)
 router.include_router(users_email_router)

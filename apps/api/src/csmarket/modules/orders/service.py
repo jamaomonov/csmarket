@@ -22,6 +22,7 @@ from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.schemas import OrderOut, OrderStatusOut
 from csmarket.modules.orders.trade_view import skin_trade_out
 from csmarket.modules.skins.api import SkinItem, steam_image
+from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 #: Orders per page of ``GET /me/orders``.
 PAGE_SIZE = 20
@@ -35,6 +36,8 @@ class OrderRow:
     trade: SkinTrade | None
     #: The item's image, already on our image host.
     image_url: str | None
+    #: A Skinslink order's purchase.
+    purchase: SkinslinkPurchase | None = None
 
 
 def is_expired(order: Order, at: datetime | None = None) -> bool:
@@ -48,13 +51,19 @@ def effective_status(order: Order, at: datetime | None = None) -> OrderStatusOut
     return "cancelled" if is_expired(order, at) else status
 
 
-def order_out(order: Order, trade: SkinTrade | None, image_url: str | None) -> OrderOut:
+def order_out(
+    order: Order,
+    trade: SkinTrade | None,
+    image_url: str | None,
+    purchase: SkinslinkPurchase | None = None,
+) -> OrderOut:
     """The owner's view of ``order``.
 
     Args:
         order: The order row.
         trade: Its ``skin_trades`` row, if the worker has created one.
         image_url: The item's image on our image host.
+        purchase: A Skinslink order's purchase row.
     """
     at = now()
     status = effective_status(order, at)
@@ -74,24 +83,28 @@ def order_out(order: Order, trade: SkinTrade | None, image_url: str | None) -> O
         paid_with=order.paid_with,
         refunded_to="balance" if order.refunded_to == "balance" else None,
         payable=status == "pending",
-        trade=skin_trade_out(order, trade),
+        trade=skin_trade_out(order, trade, purchase=purchase),
     )
 
 
-def _rows() -> Select[Order, SkinTrade, str | None]:
-    # An outer join: ``SkinTrade`` is ``None`` on a row without a trade.
+def _rows() -> Select[Order, SkinTrade, str | None, SkinslinkPurchase]:
+    # Outer joins: ``SkinTrade`` / ``SkinslinkPurchase`` is ``None`` on a row without one.
     return (
-        select(Order, SkinTrade, SkinItem.image_url)
+        select(Order, SkinTrade, SkinItem.image_url, SkinslinkPurchase)
         .join(SkinItem, SkinItem.id == Order.skin_item_id)
         .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
+        .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
     )
 
 
-def _row(order: Order, trade: SkinTrade | None, image: str | None) -> OrderRow:
+def _row(
+    order: Order, trade: SkinTrade | None, image: str | None, purchase: SkinslinkPurchase | None
+) -> OrderRow:
     return OrderRow(
         order=order,
         trade=trade,
         image_url=steam_image(image, host=get_settings().skins_image_host),
+        purchase=purchase,
     )
 
 
@@ -104,8 +117,8 @@ async def get_owned(db: AsyncSession, user_id: str, number: str) -> OrderRow | N
     ).one_or_none()
     if found is None:
         return None
-    order, trade, image = found
-    return _row(order, trade, image)
+    order, trade, image, purchase = found
+    return _row(order, trade, image, purchase)
 
 
 async def list_for_user(
@@ -136,7 +149,7 @@ async def list_for_user(
                 and_(Order.created_at == stamp, Order.id < order_id),
             )
         )
-    found = [_row(order, trade, image) for order, trade, image in (await db.execute(stmt)).all()]
+    found = [_row(*row) for row in (await db.execute(stmt)).all()]
     page = found[:limit]
     more = len(found) > limit
     next_cursor = encode_cursor(page[-1].order.created_at, page[-1].order.id) if more else None

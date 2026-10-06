@@ -103,7 +103,7 @@ async def _owner_view(db: AsyncSession, *, user_id: str, number: str) -> OrderOu
     row = await get_owned(db, user_id, number)
     if row is None:  # pragma: no cover -- the order is locked and theirs; never seen
         raise NotFoundError("order not found")
-    return order_out(row.order, row.trade, row.image_url)
+    return order_out(row.order, row.trade, row.image_url, row.purchase)
 
 
 async def _pay_from_balance(db: AsyncSession, order: Order) -> None:

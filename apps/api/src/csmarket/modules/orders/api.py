@@ -43,6 +43,9 @@ from csmarket.modules.orders.refunds import (
 )
 from csmarket.modules.orders.schemas import OrderOut, OrderStatusOut
 from csmarket.modules.orders.service import effective_status, is_expired, order_out
+from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
+from csmarket.modules.orders.skinslink_reconcile import reconcile_skinslink
+from csmarket.modules.orders.skinslink_status import check_purchase, drain_checks
 from csmarket.modules.orders.sweeps import (
     audit_recent,
     expire_pending,
@@ -81,12 +84,15 @@ __all__ = [
     "SkinTradeState",
     "admin_refund",
     "attempt_buy",
+    "attempt_skinslink_buy",
     "audit_recent",
     "buy_running",
     "cache_balance",
     "can_refund",
     "can_retry",
+    "check_purchase",
     "dashboard_summary",
+    "drain_checks",
     "drain_paid",
     "effective_status",
     "erase_old_trade_links",
@@ -100,6 +106,7 @@ __all__ = [
     "move",
     "order_out",
     "reconcile",
+    "reconcile_skinslink",
     "refund_to_balance",
     "resolve_attention",
     "retry_buy",
