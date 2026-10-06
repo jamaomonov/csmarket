@@ -9,20 +9,22 @@ listings, admin); M4a adds the Waxpeer purchase client and the dev fake (below).
 
 ## What the module owns
 
-| Table                 | Holds                                                                                                                                                                                         |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skin_items`          | One row per `(market_hash_name, phase)`: ByMykel metadata, our `slug` (a URL, assigned once), the Waxpeer price columns, `active`, `hidden`, the stored `sell_price_usd` / `discount_percent` |
-| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4b); absent = `DEFAULT_RULES`                                                                                 |
-| `skin_search_aliases` | Admin-edited search aliases (alias -> text), none seeded                                                                                                                                      |
+| Table                 | Holds                                                                                                                                                                                                                |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skin_items`          | One row per `(market_hash_name, phase)`: ByMykel metadata, our `slug` (a URL, assigned once), the Waxpeer price columns, the Skinslink roll-up, `active`, `hidden`, the stored `sell_price_usd` / `discount_percent` |
+| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4b); absent = `DEFAULT_RULES`                                                                                                        |
+| `skin_search_aliases` | Admin-edited search aliases (alias -> text), none seeded                                                                                                                                                             |
 
-Migration `0003_skins_catalog`. `hidden` is the admin's flag and is never written by the
+Migration `0003_skins_catalog`; `0018_skinslink` adds `skinslink_min_units` and
+`skinslink_count`, written only by `skinslink.rollup` (ADR-0010). `hidden` is the admin's flag and is never written by the
 import or the price sync. `phase` is `''` when an item has none, never NULL.
 
 - **Public interface:** `skins.api` — `WaxpeerClient`, `WaxpeerError`,
   `WaxpeerUnavailableError`, `WaxpeerRateLimitedError`, `SnapshotRow`, and the purchase
   side (`TradeClient`, `WaxpeerTradeClient`, `trade_client`, `WaxpeerBuy`, `WaxpeerTrade`,
   `WaxpeerSeller`, `parse_trade`, `WaxpeerBuyRefusedError`, `WaxpeerForbiddenError`,
-  `LOOKUP_MAX_IDS`). Other modules import
+  `LOOKUP_MAX_IDS`), and the source-neutral offers (`Offer`, `Source`, `offer_id_of`,
+  `parse_offer_id`, `from_listing`, `merge_offers`, below) with `canonical_name`. Other modules import
   nothing else from here; the catalogue is reached through HTTP routes, not through `api.py`.
 - **`waxpeer.WaxpeerClient`** — transport only, async `httpx`, inject `client=` in tests.
   `check_tradelink(url) -> str | None` (`POST /v1/check-tradelink`):
@@ -122,7 +124,10 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   the owner's launch seed. Retail only: there is no merchant channel. A stored document
   with a stray `b2b` key still loads (extra keys are ignored).
 - **`repricing`** — `reprice_rows` writes `sell_price_usd` / `discount_percent` for every
-  active row after each price tick and each rules write. `hidden` rows are priced too, so
+  active row after each price tick and each rules write. The cost is the cheaper source
+  (`cost_units(min_auto_units, skinslink_min_units)`); the liquidity count is
+  `count_auto + skinslink_count`, the same sum the card, the item page, checkout and the
+  `popular` sort use. `hidden` rows are priced too, so
   unhiding is instant. `lock_pricing` serialises writers (advisory xact lock).
 - **`settings`** — `load_rules` (Redis `skins:pricing`, TTL 3600 -> `skin_pricing_rules`
   row 1 -> defaults), `read_rules` (Postgres only, no cache fill — the preview), `save_rules`
@@ -181,7 +186,9 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   stored as NULL (unknown). `apply_prices` never writes `hidden`, metadata, `slug` or the stored
   sell price; writers set `updated_at` explicitly.
 - **`sync_prices`** — one tick: stream the snapshot, read `/v1/prices`, then take
-  `lock_pricing`, apply, `reprice_rows` with rules read fresh from Postgres, commit, and bump the
+  `lock_pricing`, apply, roll Skinslink's mirror up (`skinslink.api.rollup`: per item the
+  cheapest Skinslink price and count; an item with Skinslink stock stays active without a
+  Waxpeer listing, and loses only its Waxpeer columns when Waxpeer drops it), `reprice_rows` with rules read fresh from Postgres, commit, and bump the
   catalogue version. A snapshot with an `auto` listing for fewer names than `MIN_SNAPSHOT_SHARE`
   (half) of the active catalogue is **refused** (`ApplyResult.refused`) before the lock: a
   truncated body, or an `auto` column whose format changed, must not read as "everything sold
@@ -284,6 +291,16 @@ Steam CDN host (`*.steamstatic.com`, `*.akamaihd.net`, rewritten to `CSMARKET_SK
 `ip_guard` bucket `skins-listings` (60 per window); an unknown or hidden slug is a 404 before any
 Waxpeer call. Redis keys: `docs/architecture/cache-keys.md`. Tests:
 `tests/unit/test_skins_listings.py`, `tests/integration/test_skins_listings_route.py`.
+
+**Two sources (ADR-0010).** The route adds Skinslink's offers of the item from our own mirror
+(`skinslink.api.offers_for`; none while Skinslink is off or the mirror is stale; no external
+call, no stickers) and merges both by price (`offers.merge_offers`, Waxpeer first on a tie: its
+delivery is instant). `degraded` still means "Waxpeer answered from a
+fallback". Every offer carries a string `listing_id` naming its market: `wx:<Waxpeer item_id>`
+or `sl:<Skinslink asset id>` (`offers.offer_id_of`); `offers.parse_offer_id` reads it back and
+still reads a bare positive integer as `wx:` for one release (`docs/tech-debt.md`). The
+customer never sees the source. Tests: `tests/unit/test_skins_offers.py`,
+`tests/integration/test_skinslink_offers.py`.
 
 ## Cache keys
 

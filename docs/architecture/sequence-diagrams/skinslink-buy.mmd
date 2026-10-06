@@ -1,0 +1,69 @@
+sequenceDiagram
+    autonumber
+    actor B as Buyer
+    participant Web as Storefront
+    participant API as API
+    participant DB as Postgres
+    participant W as Worker (orders, skinslink queues)
+    participant S as Scheduler (skinslink.mirror, skinslink.reconcile)
+    participant SL as Skinslink
+
+    loop every 15 s
+        S->>SL: GET /merchant/purchase/events?since=cursor (full download first / after reset)
+        S->>DB: upsert / remove skinslink_items, keep the cursor, mirror_synced_at
+    end
+
+    B->>Web: picks an offer (sl:<asset id>) on the item page
+    Web->>API: POST /orders {slug, listing_id: "sl:…", price_uzs} + Idempotency-Key
+    API->>DB: re-quote the offer from the mirror (no external call; stale > 10 min = none)
+    Note over API: gone or moved > 2 % → substitute ≤ 3 % / offer_gone with next offer of either source
+    API->>DB: insert order (source = skinslink, offer_id, cost_units) pending
+    API-->>Web: 201 OrderOut
+    B->>API: POST /orders/{number}/pay (balance or a kassa)
+    API->>DB: paid + NOTIFY orders
+
+    DB-->>W: NOTIFY orders
+    W->>DB: drain_paid: claim → buying; skinslink_purchases (merchant_tx_id = order id, buy_pending)
+    W->>DB: take the lease (take_lease source = skinslink), read the snapshot
+    W->>SL: POST /merchant/purchase {asset_id, partner, token, merchant_tx_id, max_price} (no lock held)
+    alt taken (new / pending / active)
+        W->>DB: lock order → purchase, record purchase_id + status, buy_pending = false
+    else 409 / duplicate_purchase
+        W->>SL: GET /merchant/purchase/status?merchant_tx_id → adopt the stored purchase
+    else sold / price moved / other 4xx
+        W->>DB: one substitute of either source ≤ paid × 1.03 (Skinslink: retarget to <id>:2 first)
+        Note over W,DB: none → failed + refund to balance (sold_out)
+    else trade-link code
+        W->>DB: failed + refund to balance (invalid_trade_link)
+    else insufficient_balance
+        W->>DB: failed + refund to balance (source_low_balance)
+    else 403
+        W->>DB: attention source_forbidden, buy_pending kept
+    else timeout / 5xx / network
+        W->>DB: buy_unconfirmed_at (the reconcile asks again under the same merchant_tx_id)
+    end
+    W->>DB: release the lease
+
+    SL->>API: POST /api/v1/skinslink/webhook {purchase_id, sign}
+    API->>API: verify sign = base64(sha256(id + secret)) (403 otherwise); body not trusted
+    API->>DB: insert skinslink_checks + NOTIFY skinslink
+    API-->>SL: 200
+    DB-->>W: NOTIFY skinslink
+    W->>DB: drain_checks: claim and delete the rows
+    W->>SL: GET /merchant/purchase/status?merchant_tx_id
+    W->>DB: lock order → purchase, apply the status
+    alt active / hold with an offer
+        W->>DB: buying → trade_sent (offer URL, letter, nudge)
+    else completed
+        W->>DB: trade_sent → delivered
+    else failed / canceled
+        W->>DB: returned (after an offer) or failed + refund to balance
+    else reverted
+        W->>DB: delivered: attention rolled_back; before: returned + refund
+    end
+
+    loop every 30 s (the lost-webhook fallback)
+        S->>DB: open purchases unpolled ≥ 30 s, unconfirmed or still pending
+        S->>SL: GET /merchant/purchase/status (or the buy again, same merchant_tx_id)
+        S->>DB: apply as above
+    end

@@ -46,6 +46,8 @@ Decisions inherited from YuPay's skins work (ADR-0093, spec
 - Deliver straight to the customer's trade link; no Steam bot of our own.
 - Our catalogue is ours (ByMykel/CSGO-API); Waxpeer supplies only listings; nothing
   Waxpeer-branded reaches a browser; seller name + inspect link may be shown.
+  **Changed 2026-10-06:** Skinslink is a second buy source beside Waxpeer — spec
+  `2026-10-06-skinslink-buy-source-design.md`, ADR-0010.
 - Buy only `auto` listings.
 - Skin names stay English; taxonomy (category, weapon, wear, StatTrak/Souvenir) is localised.
 - The Waxpeer purchase happens **at payment** (no "I am ready" gate); the offer waits for the
@@ -446,7 +448,9 @@ balance, buy via mocked acquirer, refund on `returned`. `check-no-yupay.sh` in C
 - ~~Email provider?~~ Decided 2026-10-01: Resend.
 - Paynet: only if the owner opens a kassa; the twin exists in YuPay and can be ported later.
 - Sell side (skinslink): API shape unknown yet; the only MVP hooks are the `sell` module slot
-  and the `sell_payout` ledger kind.
+  and the `sell_payout` ledger kind. **2026-10-06:** Skinslink became a **buy** source first
+  (spec `2026-10-06-skinslink-buy-source-design.md`, ADR-0010); its client, webhook and
+  models are what the sell side reuses later. Selling stays a separate spec.
 - P2P selling (seller lists and sends the trade, 7-day hold, Chrome extension for trade
   checks): parked until after launch; the discussion is in `docs/product/p2p-later.md`.
 

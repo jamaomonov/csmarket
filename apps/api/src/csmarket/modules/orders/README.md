@@ -9,7 +9,9 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 
 - `orders` — the purchase and the worker's queue: `number` (8 Crockford chars, unique),
   `user_id`, `status`, the item (`skin_item_id`, `market_hash_name`, `phase`, `slug`), the
-  offer (`listing_id`, after any checkout substitution) and its cost (`cost_units` — Waxpeer
+  offer after any checkout substitution (`source` = `waxpeer` | `skinslink`, `offer_id` =
+  `wx:<id>` / `sl:<id>`, and `listing_id` for a Waxpeer order, `NULL` for a Skinslink one —
+  migration `0018_skinslink`) and its cost (`cost_units` — Waxpeer
   units, 1000 = $1, the worker's price cap — `cost_usd`), the price billed (`price_usd`,
   `price_uzs` in whole soʻm, `fx_snapshot_id`), the `trade_link` snapshot (PII, never
   logged), `idempotency_key` (unique per user), `paid_with` (`wallet` | `click` | `payme` |
@@ -34,7 +36,9 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `ADMIN_REFUNDABLE`, `BLOCKS_REFUND`, `RefundStatus`), the admin actions (`admin_refund`,
 `resolve_attention`, `retry_buy`, `can_refund`, `can_retry`, `buy_running`, `lock_order`,
 `RETRYABLE`, `CONFLICTS`), the buy (`drain_paid`, `attempt_buy`), and the trade sweeps (`reconcile`, `expire_pending`,
-`watch_protected`, `audit_recent`; the scheduler's jobs import `orders.sweeps` directly). `api.py` never imports `payments`
+`watch_protected`, `audit_recent`; the scheduler's jobs import `orders.sweeps` directly), and
+Skinslink's buy and status flow (`attempt_skinslink_buy`, `check_purchase`, `drain_checks`,
+`reconcile_skinslink`). `api.py` never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
 
@@ -60,7 +64,11 @@ the body; `skins_buy_enabled` off → 409 `buying_disabled`; the trade-link gate
 unknown or hidden), the pricing rules and a fresh soʻm rate (503 `rate_unavailable`).
 Those scalars are copied out and the read transaction ends **before** the listings read
 (`skins.listings.listings_for` with the shared `search_client` — cached 90 s, budgeted,
-breaker-guarded; a degraded answer is accepted). Every live offer is priced with the item
+breaker-guarded; a degraded answer is accepted) and Skinslink's offers from the mirror
+(`skinslink.api.offers_for`, no external call; none while Skinslink is off or the mirror is
+stale). Both are merged by price (`skins.merge_offers`, Waxpeer first on a tie, also when
+choosing). The chosen `listing_id` is parsed by `skins.parse_offer_id` (`wx:` / `sl:`; a bare
+integer is Waxpeer's for one release). Every live offer is priced with the item
 page's `quote` + `to_uzs`; then:
 
 - the chosen offer is listed → billed at the server price if within
@@ -72,7 +80,7 @@ page's `quote` + `to_uzs`; then:
   offer or `null`.
 
 The order is inserted `pending`, expiring after `order_expiry_minutes` (15), with the offer
-(`listing_id`, `cost_units`, `cost_usd`), the price, `fx_snapshot_id` and the trade-link
+(`source`, `offer_id`, `listing_id` for Waxpeer, `cost_units`, `cost_usd`), the price, `fx_snapshot_id` and the trade-link
 snapshot. Two first requests racing on one key: the unique `(user_id, idempotency_key)`
 refuses the second, which returns the first's order. The route charges the `order-create`
 ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
@@ -229,8 +237,9 @@ again. Flow: `docs/architecture/sequence-diagrams/buy.mmd`.
 - `drain_paid(db, *, client=None, settings=None, limit=10) -> int` — the queue's drain:
   claims up to `limit` `paid` orders by `paid_at` (`FOR UPDATE SKIP LOCKED`), moves them to
   `buying`, stamps `claimed_at`, `claimed_by` (`hostname:pid`) and `next_check_at = now`,
-  opens their trade (`listing_id`, `paid_units = cost_units`, `buy_pending`), commits, then
-  runs `attempt_buy` per order. An exception in one order is rolled back and logged
+  opens the row that holds the pending buy by `order.source` — a Waxpeer trade (`listing_id`,
+  `paid_units = cost_units`, `buy_pending`) or a Skinslink purchase (below) — commits, then
+  runs `attempt_buy` or `attempt_skinslink_buy` per order. An exception in one order is rolled back and logged
   (`orders.buy.crashed`, the type only); the order stays `buying` with `buy_pending` and the
   reconcile sweep retries it once its lease lapses. Builds the purchase client
   (`skins.api.trade_client`) only when it claimed something. Returns the number claimed.
@@ -303,6 +312,85 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   goes back); `trades.pick_trade(trades, waxpeer_id)` picks ours by Waxpeer's id, else the
   only one, else the only live one, else (all failed) the last — several live ones raise
   `AmbiguousTradeError`. `trades.flag` and `trades.apply` are below.
+
+## Buying at Skinslink (`skinslink_buying.py`, `skinslink_writes.py`, `skinslink_status.py`, `skinslink_reconcile.py`; ADR-0010)
+
+A `source = skinslink` order is bought at Skinslink under the same rules: at most once, no lock
+across a call, a lost answer resolved by asking, never by buying again. Flow:
+`docs/architecture/sequence-diagrams/skinslink-buy.mmd`. The purchase row
+(`skinslink_purchases`) belongs to the `skinslink` module; these files write it.
+
+- `drain_paid` opens `skinslink_purchases` (`merchant_tx_id` = the order id, `asset_id`,
+  `paid_units = cost_units`, `buy_pending`). `buy_lease.take_lease(db, order_id, source="skinslink")`
+  takes the same 5-minute lease, keyed on the purchase's `buy_pending`.
+- `attempt_skinslink_buy(db, client, *, order_id, settings, waxpeer=None) -> str` — the lease,
+  the snapshot, then `POST /merchant/purchase` with `partner` + `token` from the trade-link
+  snapshot and `max_price` = `paid_units / 1000`. Skinslink is idempotent on
+  `merchant_tx_id`, so the reconcile repeats the same call after a lost answer. Outcomes
+  (`csmarket_order_buys_total`, log `orders.skinslink_buy`):
+
+  | Skinslink answers                                                            | Outcome        | Writes                                                                            |
+  | ---------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+  | trade link does not parse                                                    | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
+  | taken (`new`, `pending`, `active`, `hold`, `completed`)                      | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
+  | 409 or `duplicate_purchase`                                                  | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
+  | a trade-link code (`LINK_ERROR_CODES`)                                       | `invalid_link` | `failed` + refund `invalid_trade_link` (no substitute)                            |
+  | `insufficient_balance`                                                       | `low_balance`  | `failed` + refund `source_low_balance`                                            |
+  | HTTP 403                                                                     | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
+  | HTTP 429                                                                     | `rate_limited` | nothing; next try after 20 s                                                      |
+  | timeout, 408, 5xx, network                                                   | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
+  | any other `failed` reason or 4xx (sold, price moved, `provider_unavailable`) | (substitute)   | one substitute, then `sold_out` + refund                                          |
+  | a buy that went through but the rows moved during the call                   | `stale_bought` | attention `ambiguous_trade`                                                       |
+
+  The substitute is the cheapest other offer of the item, **either source**, at most
+  `paid_units × (1 + order_substitute_ceiling)`: Skinslink's from the mirror, Waxpeer's
+  through `skins.listings_for` (only when the caller passes a Waxpeer client — `drain_paid`
+  and the reconcile do). A Skinslink substitute is **retargeted first** (`merchant_tx_id` =
+  `<order id>:2`, its asset, `paid_units` = its price) and committed before the request, so
+  a lost answer is looked up under the id actually sent. A Waxpeer substitute turns the order
+  into a Waxpeer order (`source`, `offer_id`, `listing_id`, a `skin_trades` row with
+  `buy_pending` and `paid_units` = its price; the purchase row goes) and the Waxpeer path buys
+  it — which may try one substitute of its own. A buy or adoption clears a
+  `source_forbidden` attention. Once a request was sent, an exit that failed to record it is
+  secured as unconfirmed in a fresh session, as for Waxpeer.
+
+- **Writes** (`skinslink_writes.py`): lock the order, then the purchase (ruling K), re-check
+  `buying` and `buy_pending`, write, commit; nothing when a sweep moved the rows (except
+  `stale_bought`).
+- **Status** (`skinslink_status.py`): `apply_report(db, *, order, purchase, report)` mirrors
+  Skinslink's report onto the purchase (`status`, `offer_id`, `fail_reason`,
+  `amount_units`, `hold_end_date`) and moves the order:
+
+  | Skinslink                       | Order                                                                                   |
+  | ------------------------------- | --------------------------------------------------------------------------------------- |
+  | `new`, `pending`                | nothing                                                                                 |
+  | `active` / `hold` with an offer | `buying → trade_sent` (+ the `trade_sent` letter, a nudge)                              |
+  | `completed`                     | `→ delivered`                                                                           |
+  | `failed`, `canceled`            | after an offer: `returned` + refund `not_accepted`; before: `failed` + refund by reason |
+  | `reverted`                      | delivered: attention `rolled_back`; before: `returned` + refund `not_accepted`          |
+
+  `check_purchase(db, client, *, purchase_id=None, order_id=None)` asks
+  `GET /merchant/purchase/status` by the stored `merchant_tx_id` (no lock held) and applies
+  the answer; a purchase still `buy_pending` is left to the buy path. Skinslink answering "no
+  such purchase" for a lost buy past `order_unconfirmed_minutes` refunds `sold_out` (the id is
+  idempotent, so the answer is conclusive). `drain_checks` is the worker's `skinslink` queue:
+  it claims and deletes `skinslink_checks` rows (one-shot), asks about each, and drops them
+  unasked while Skinslink is off.
+
+- **Reconcile** (`skinslink_reconcile.py`, scheduler `skinslink.reconcile`, every 30 s):
+  every `buying` / `trade_sent` Skinslink order whose purchase is pending, unconfirmed,
+  never polled or unpolled for 30 s — up to 50 a tick, each in its own session. A pending one
+  goes through `attempt_skinslink_buy` (its lease decides who acts), the rest through
+  `check_purchase`. The fallback for a lost webhook.
+- **Reads:** the owner's order reads join `skinslink_purchases` in the same query (no N+1);
+  `trade_view.purchase_state` maps `new`/`pending` → `buying`, `active`/`hold` →
+  `offer_sent`, `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed`; no
+  seller, release date or deadline. An open attention on the purchase reads `support` and
+  blocks `refund_to_balance` as on a trade.
+- **Admin:** the order page carries the purchase (`skinslink` block); the margin uses what
+  Skinslink charged (`amount_units`) when known. The attention queue and the resolve /
+  refund / retry actions read `skin_trades` only, so they refuse a Skinslink order
+  (`docs/tech-debt.md`).
 
 ## Trade sweeps (`sweeps.py`, `expiry.py`, `trade_audit.py`, `sweep_base.py`, `trades.py`, rulings R3, R5, K, M)
 
@@ -411,6 +499,8 @@ percent of revenue), refunds by `refunded_at`, orders in flight and open attenti
 row per Tashkent day (zeros included; days cut in Postgres with `AT TIME ZONE
 'Asia/Tashkent'`, the window start in Python at the fixed UTC+5), and the Waxpeer balance the
 `orders.health` job cached (`health.cache_balance`, Redis `orders:waxpeer:balance`, 1 h).
+Since ADR-0010 also the Skinslink balance (available and on hold) the `skinslink.balance`
+job cached (`skinslink.api.skinslink_cached_balance`, Redis `skinslink:balance`, 1 h).
 Four queries whatever the window; `ix_orders_paid_at` / `ix_orders_refunded_at` (0016).
 
 ## Erase (`erase.py`, decision D3, M4b ruling R11)
@@ -431,9 +521,10 @@ Waxpeer → `FOR UPDATE` re-read → re-check → write.
 ## Operations
 
 Runbooks: `docs/runbooks/orders.md` (lifecycle, every alert, attention reasons and the safe
-admin action) and `docs/runbooks/waxpeer.md` (key and IP whitelist, balance, the fake versus
-the real key). Flow: `docs/product/flows/buy.md`; diagrams
-`docs/architecture/sequence-diagrams/{checkout,buy,trade-reconcile}.mmd`.
+admin action), `docs/runbooks/waxpeer.md` (key and IP whitelist, balance, the fake versus
+the real key) and `docs/runbooks/skinslink.md` (keys, whitelist, webhook, switching on and
+off). Flow: `docs/product/flows/buy.md`; diagrams
+`docs/architecture/sequence-diagrams/{checkout,buy,trade-reconcile,skinslink-buy}.mmd`.
 
 ## Milestones
 
@@ -442,3 +533,5 @@ the real key). Flow: `docs/product/flows/buy.md`; diagrams
   order page (polling), «Мои заказы» and the admin orders and trades pages.
 - **M4b** — WebSocket order pushes, email (Resend), the pricing editor and the dashboard,
   the `my-history` orphan-buy probe.
+- **Skinslink** (ADR-0010, branch `skinslink-buy`) — a second buy source: `source` on the
+  order, checkout across sources, the Skinslink buy, status flow and reconcile.

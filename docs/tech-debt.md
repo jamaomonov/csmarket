@@ -36,3 +36,27 @@ None of these touches money or order state.
    placeholders in `apps/web/src/lib/sell.ts`; with the sell API they come from it, the demo
    inventory (`sell-demo.ts`) goes, and the button starts selling. The payout card brands'
    logos are in `apps/web/public/payout/` (supplied by the owner).
+
+## Skinslink buy source (ADR-0010, 2026-10-06)
+
+1. **A bare integer `listing_id` is still accepted.** `POST /orders` reads `123` as `wx:123`
+   for one release, so a tab opened before the deploy can still buy
+   (`orders.schemas` validator, `skins.offers.parse_offer_id`'s digit branch). _Fix:_ after
+   the next deploy, accept only `wx:` / `sl:` strings, drop the branch and its tests, and
+   regenerate the API client.
+2. **The admin attention queue and actions are Waxpeer-only.** The trades list, its
+   `attention` view and counts, the dashboard's attention tile and the resolve / refund /
+   retry actions read `skin_trades`, so a Skinslink attention (`source_forbidden`,
+   `ambiguous_trade`, `rolled_back` on `skinslink_purchases`) shows only on the order page's
+   «Покупка Skinslink» block and in `csmarket_trade_attention_total`, and the actions refuse a
+   Skinslink order (409). An operator cannot mark it «Разобрано» or refund it from the admin.
+   _Fix:_ read attentions from both tables in `admin.orders_service` and teach
+   `orders.admin_actions` the purchase row (refund: ask Skinslink by `merchant_tx_id` first,
+   as ADR-0007 Y asks Waxpeer).
+3. **The stuck-order gauges read Skinslink orders as Waxpeer ones.** `orders.health.measure`
+   left-joins `skin_trades` only: a Skinslink order in `trade_sent` has no trade row, so it
+   counts as `trade_sent_unpolled` at once (`TradesUnpolled` fires after 5 minutes for every
+   Skinslink offer awaiting the buyer), and a `buying` one with an open purchase attention
+   still counts as stuck; `csmarket_trades_attention` misses Skinslink attentions. _Fix:_
+   count Skinslink orders from `skinslink_purchases.last_polled_at` / `attention_reason`, or
+   exclude `source = 'skinslink'` from the Waxpeer counts and add their own.

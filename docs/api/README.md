@@ -305,7 +305,9 @@ next_cursor}` — orders with a trade; `active` = `buying`/`trade_sent`, `attent
   unresolved attention; the counts ignore `q`.
 - `GET /admin/orders/{number}` → `AdminOrderDetail {order: {every orders column but
 trade_link and idempotency_key, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
-payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
+skinslink: AdminSkinslinkPurchaseOut | null, payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
+  The order's `source` is `waxpeer` or `skinslink` (ADR-0010); a Skinslink order has
+  `skinslink` (its purchase) and no `trade`, and the actions below refuse it (409) for now.
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,
@@ -384,6 +386,22 @@ true}`, also when already confirmed; 422 `email_token_invalid` / `email_token_ex
   (24 h); 409 `email_token_stale` when the account's email is no longer the token's. The
   `email-verify` bucket (60 a minute per IP) applies.
 
+### Source callbacks: Skinslink (ADR-0010)
+
+Called by Skinslink, not by our clients; anonymous, exempt from the per-IP limiter, not in the
+OpenAPI schema.
+
+- `POST /skinslink/webhook` — Skinslink's purchase / deposit status webhook. JSON body ≤ 4 KiB
+  with `purchase_id` (or `trade_id`) and `sign`; authenticated by
+  `sign == base64(sha256(str(id) + secret))` (constant time) before anything else is read.
+  **200** `{ok: true}`; 403 `bad_signature` for a bad or missing `sign`; 400 `bad_body` for a
+  body that is not a JSON object; **404 while Skinslink is off**.
+- The signature covers only the id, so the body is **not trusted**: a purchase webhook queues a
+  check and the worker reads the status from Skinslink's API; a deposit webhook (the future
+  sell side) is answered and ignored.
+- No `Idempotency-Key`: a repeat queues one more check, and checks are idempotent. Details:
+  `apps/api/src/csmarket/modules/skinslink/README.md`, `docs/runbooks/skinslink.md`.
+
 ## Admin pricing and dashboard (M4b)
 
 Admin only (401 without a token, 403 for a customer). Writes need `Idempotency-Key` (16–160);
@@ -406,4 +424,4 @@ fixed_price_usd: 0..100000 | null}` (2 decimals) → `AdminSkinItemOut` (now wit
 - `GET /admin/dashboard?days=1|7|30` → `DashboardOut {days, since, sales {count, revenue_uzs,
 revenue_usd, cost_usd, margin_usd, margin_percent}, refunds {count, amount_uzs}, in_flight,
 attention, by_day [{day, sales_count, revenue_uzs, margin_usd}], waxpeer {balance_usd,
-read_at}}`; days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.
+read_at}, skinslink {available_usd, hold_usd, read_at}}`; days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.

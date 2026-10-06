@@ -144,7 +144,14 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   `price_usd` − what Waxpeer charged (`bought_units` / 1000), else − `cost_usd`; the buyer
   `{id, display_name}`; the trade (every column an operator needs, `offer_url` built from
   `trade_id`; `attention_reason` whether resolved or not); the payment attempts, oldest
-  first; `can_refund`, `can_retry`.
+  first; `can_refund`, `can_retry`. Since ADR-0010 the order carries `source`
+  (`waxpeer` | `skinslink`) and `offer_id`, and a Skinslink order a `skinslink` block
+  (`AdminSkinslinkPurchaseOut`: `merchant_tx_id`, `asset_id`, `purchase_id`, `status`,
+  `offer_id` / `offer_url`, `fail_reason`, `amount_usd`, `hold_end_date`, the buy flags,
+  `attention_reason`, `resolved_at`) instead of a trade; its margin uses what Skinslink
+  charged when known. The trades page, the attention queue and the three actions read
+  `skin_trades` only: they refuse a Skinslink order (409) and do not list its attention
+  (`docs/tech-debt.md`).
 - **`can_refund` / `can_retry`** are `orders.api.can_refund` / `can_retry` — the same
   functions (`refund_refusal`, `retry_refusal`) the actions run under the locks, so the
   button and the action agree (`test_the_flags_say_what_the_action_does`).
@@ -232,3 +239,5 @@ like `users`; the skins admin routes live in `skins.admin_routes`.
 
 `GET /admin/dashboard?days=1|7|30` (`dashboard_routes`, `dashboard_schemas`) — the numbers
 come from `orders.api.dashboard_summary`; any other `days` is 422 `dashboard_days`. Reads only.
+`skinslink {available_usd, hold_usd, read_at}` sits beside `waxpeer` (ADR-0010; `null`s when
+unknown).
