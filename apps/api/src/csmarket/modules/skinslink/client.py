@@ -7,7 +7,8 @@ as ``Decimal`` built from the JSON number's text, never through a float.
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator, Mapping
+import json
+from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -19,6 +20,7 @@ import httpx
 from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import SkinslinkEndpoint, record_skinslink_call
+from csmarket.modules.skinslink.stream import ItemsScanner
 
 log = get_logger("csmarket.skinslink.client")
 
@@ -48,7 +50,7 @@ LINK_ERROR_CODES = frozenset(
     }
 )
 _RETRYABLE = frozenset({408, 500, 502, 503, 504})
-_TWO_PLACES = Decimal("0.01")
+_THREE_PLACES = Decimal("0.001")
 
 
 class SkinslinkError(Exception):
@@ -240,6 +242,13 @@ def _code(body: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _loads(text: str) -> object:
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+
 def _json_or_none(resp: httpx.Response) -> object:
     try:
         return resp.json()
@@ -295,8 +304,11 @@ class SkinslinkClient:
         except httpx.HTTPError as exc:
             record_skinslink_call(endpoint, "unavailable")
             raise SkinslinkUnavailableError(type(exc).__name__) from exc
-        status = resp.status_code
-        body = _json_or_none(resp)
+        return self._verdict(resp.status_code, _json_or_none(resp), endpoint)
+
+    # Any: Skinslink's ``data``, narrowed by each caller.
+    def _verdict(self, status: int, body: object, endpoint: SkinslinkEndpoint) -> Any:
+        """``data`` of a success; every other answer as a typed error."""
         if status == 429:
             record_skinslink_call(endpoint, "rate_limited")
             raise SkinslinkRateLimitedError("rate limited")
@@ -320,22 +332,81 @@ class SkinslinkClient:
         record_skinslink_call(endpoint, "ok")
         return body.get("data")
 
-    async def available(self, game: str = "csgo") -> AvailablePage:
-        """``GET /merchant/purchase/available`` (full, extended): the whole sale list."""
-        data = await self._request(
-            "GET",
-            "/merchant/purchase/available",
-            endpoint="available",
-            params={"game": game, "full": "true", "extended": "true"},
-        )
-        if not isinstance(data, Mapping) or not isinstance(data.get("items"), list):
+    async def available_batches(
+        self,
+        on_batch: Callable[[list[CatalogueItem]], Awaitable[None]],
+        *,
+        game: str = "csgo",
+        batch_size: int = 1000,
+    ) -> str:
+        """``GET /merchant/purchase/available`` (full, extended), streamed: ``on_batch`` gets
+        the readable items ``batch_size`` at a time; the whole list is never in memory.
+
+        Returns:
+            The ``last_update_at`` cursor (now, when Skinslink gave none).
+
+        Raises:
+            SkinslinkError: A refusal. SkinslinkForbiddenError: HTTP 403.
+            SkinslinkUnavailableError: Transport, 5xx, 429, or a truncated or unreadable body.
+        """
+        if not self._api_key:
+            raise SkinslinkUnavailableError("no api key")
+        scanner = ItemsScanner()
+        try:
+            async with (
+                self._session() as client,
+                client.stream(
+                    "GET",
+                    f"{self._base_url}/merchant/purchase/available",
+                    params={"game": game, "full": "true", "extended": "true"},
+                    headers={"X-Api-Key": self._api_key},
+                ) as resp,
+            ):
+                if resp.status_code != 200:
+                    await resp.aread()
+                    self._verdict(resp.status_code, _json_or_none(resp), "available")
+                    raise SkinslinkUnavailableError(f"http {resp.status_code}")
+                await self._scan(resp, scanner, on_batch, batch_size)
+        except httpx.HTTPError as exc:
+            record_skinslink_call("available", "unavailable")
+            raise SkinslinkUnavailableError(type(exc).__name__) from exc
+        return self._cursor_of(scanner)
+
+    async def _scan(
+        self,
+        resp: httpx.Response,
+        scanner: ItemsScanner,
+        on_batch: Callable[[list[CatalogueItem]], Awaitable[None]],
+        batch_size: int,
+    ) -> None:
+        batch: list[CatalogueItem] = []
+        async for text in resp.aiter_text():
+            try:
+                raws = scanner.feed(text)
+            except ValueError as exc:
+                record_skinslink_call("available", "unavailable")
+                raise SkinslinkUnavailableError("unexpected body") from exc
+            batch += [i for raw in raws if isinstance(raw, Mapping) and (i := _item(raw))]
+            while len(batch) >= batch_size:
+                await on_batch(batch[:batch_size])
+                batch = batch[batch_size:]
+        if scanner.headless is not None:  # an error answer, never an items array
+            self._verdict(200, _loads(scanner.headless), "available")
             raise SkinslinkUnavailableError("unexpected body")
-        items = [i for raw in data["items"] if isinstance(raw, Mapping) and (i := _item(raw))]
-        cursor = _str(data.get("last_update_at"))
+        if batch:
+            await on_batch(batch)
+
+    def _cursor_of(self, scanner: ItemsScanner) -> str:
+        try:
+            cursor = scanner.finish()
+        except ValueError as exc:
+            record_skinslink_call("available", "unavailable")
+            raise SkinslinkUnavailableError("unexpected body") from exc
+        record_skinslink_call("available", "ok")
         if cursor is None:
             log.warning("skinslink.available.no_cursor")
             cursor = datetime.now(UTC).isoformat()
-        return AvailablePage(items=items, last_update_at=cursor)
+        return cursor
 
     async def events(self, since: str, *, game: str = "csgo", limit: int = 10000) -> EventsPage:
         """``GET /merchant/purchase/events``: what changed after ``since``."""
@@ -399,8 +470,8 @@ class SkinslinkClient:
                 "partner": partner,
                 "token": token,
                 "merchant_tx_id": merchant_tx_id,
-                # Cents, rounded down: the cap is never above what we agreed to pay.
-                "max_price": float(max_price_usd.quantize(_TWO_PLACES, rounding=ROUND_DOWN)),
+                # Skinslink prices to 1/1000 $; rounded down, the cap is never above our cost.
+                "max_price": float(max_price_usd.quantize(_THREE_PLACES, rounding=ROUND_DOWN)),
             },
         )
         return _purchase(data)

@@ -11,7 +11,7 @@ Re-applying an event is safe: upserts replace by id, a remove of a missing id re
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Awaitable, Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -25,7 +25,6 @@ from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
 from csmarket.modules.skins.api import SkinItem, canonical_name
 from csmarket.modules.skinslink.client import (
-    AvailablePage,
     CatalogueEvent,
     CatalogueItem,
     EventsPage,
@@ -45,8 +44,14 @@ _FLOAT_PLACES = Decimal("0.000001")
 class CatalogueClient(Protocol):
     """What the mirror needs from Skinslink."""
 
-    async def available(self, game: str = "csgo") -> AvailablePage:
-        """The whole sale list."""
+    async def available_batches(
+        self,
+        on_batch: Callable[[list[CatalogueItem]], Awaitable[None]],
+        *,
+        game: str = "csgo",
+        batch_size: int = 1000,
+    ) -> str:
+        """The whole sale list, streamed to ``on_batch``; returns the cursor."""
         ...
 
     async def events(self, since: str, *, game: str = "csgo", limit: int = 10000) -> EventsPage:
@@ -178,12 +183,20 @@ async def _full(
     now: datetime,
     mode: Literal["full", "reset"],
 ) -> MirrorResult:
-    page = await client.available()
+    upserts = 0
     async with factory() as db:
         await db.execute(delete(SkinslinkItem))
-        # The last copy of an id wins (one statement may touch a row only once).
-        upserts = await _upsert(db, list({i.id: i for i in page.items}.values()), now=now)
-        await _touch(db, cursor=page.last_update_at, now=now, full=True)
+
+        async def write(batch: list[CatalogueItem]) -> None:
+            nonlocal upserts
+            # One statement may touch a row only once: the last copy of an id wins (a later
+            # batch's copy overwrites through ON CONFLICT).
+            upserts += await _upsert(db, list({i.id: i for i in batch}.values()), now=now)
+
+        # Streamed (~500k items): never the whole list in memory; one transaction, so a
+        # failed load leaves the previous mirror as it was.
+        cursor = await client.available_batches(write)
+        await _touch(db, cursor=cursor, now=now, full=True)
         await db.commit()
     log.info("skinslink.mirror.loaded", mode=mode, items=upserts)
     return MirrorResult(mode=mode, upserts=upserts, removes=0, pages=1)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -43,11 +43,20 @@ class ScriptedClient:
         self.answers = list(answers)
         self.asked: list[tuple[str, str | None]] = []
 
-    async def available(self, game: str = "csgo") -> AvailablePage:
+    async def available_batches(
+        self,
+        on_batch: Callable[[list[CatalogueItem]], Awaitable[None]],
+        *,
+        game: str = "csgo",
+        batch_size: int = 1000,
+    ) -> str:
+        """Streams the scripted page one item per batch (as a long list arrives)."""
         self.asked.append(("available", None))
         answer = self.answers.pop(0)
         assert isinstance(answer, AvailablePage)
-        return answer
+        for item in answer.items:
+            await on_batch([item])
+        return answer.last_update_at
 
     async def events(self, since: str, *, game: str = "csgo", limit: int = 10000) -> EventsPage:
         self.asked.append(("events", since))
@@ -247,3 +256,17 @@ async def test_one_page_with_an_id_twice_applies_its_events_in_order(
     state = await db_session.get(SkinslinkState, 1, populate_existing=True)
     assert state is not None
     assert state.cursor == "c1"
+
+
+async def test_a_full_load_streamed_in_batches_keeps_the_last_copy_of_an_id(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    item, _ = await make_item_and_rate(db_session)
+    name = item.market_hash_name
+    page = AvailablePage(
+        items=[_item("1", name, "9.00"), _item("2", name, "7.00"), _item("1", name, "8.50")],
+        last_update_at="c0",
+    )
+    await sync_mirror(_factory(db_engine), ScriptedClient(page), now=NOW)
+    rows = await _rows(db_session)
+    assert {k: v.price_units for k, v in rows.items()} == {"1": 8500, "2": 7000}

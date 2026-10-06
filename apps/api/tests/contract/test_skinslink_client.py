@@ -13,6 +13,7 @@ import httpx
 import pytest
 import respx
 from csmarket.modules.skinslink.api import (
+    CatalogueItem,
     Purchase,
     SkinslinkClient,
     SkinslinkError,
@@ -20,6 +21,7 @@ from csmarket.modules.skinslink.api import (
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
 )
+from csmarket.modules.skinslink.stream import ItemsScanner
 
 BASE = "https://api.skinslink.com/api/v1"
 PARTNER = 39734273
@@ -57,36 +59,68 @@ async def _buy(client: SkinslinkClient | None = None) -> Purchase:
     )
 
 
+async def _batches(
+    client: SkinslinkClient, *, size: int = 1000
+) -> tuple[list[list[CatalogueItem]], str]:
+    got: list[list[CatalogueItem]] = []
+
+    async def keep(batch: list[CatalogueItem]) -> None:
+        got.append(batch)
+
+    cursor = await client.available_batches(keep, batch_size=size)
+    return got, cursor
+
+
 @respx.mock
-async def test_available_sends_the_key_header_and_parses_items() -> None:
+async def test_available_streams_items_in_batches_and_reads_the_cursor_after_them() -> None:
+    items = [{**ITEM, "id": str(n)} for n in range(5)]
     route = respx.get(f"{BASE}/merchant/purchase/available").mock(
         return_value=httpx.Response(
             200,
             json=_ok(
                 {
                     "game": "csgo",
-                    "total": 1,
-                    "items": [ITEM],
+                    "total": 5,
+                    "items": items,
                     "last_update_at": "2026-10-06T10:00:00Z",
                 }
             ),
         )
     )
-    page = await _client().available()
+    got, cursor = await _batches(_client(), size=2)
     request = route.calls.last.request
     assert request.headers["X-Api-Key"] == "k"
     assert request.url.params["full"] == "true"
     assert request.url.params["extended"] == "true"
     assert request.url.params["game"] == "csgo"
-    assert page.last_update_at == "2026-10-06T10:00:00Z"
-    item = page.items[0]
-    assert (item.id, item.price_usd, item.float_value, item.paint_seed, item.inspect_url) == (
-        "38029384123",
+    assert cursor == "2026-10-06T10:00:00Z"
+    assert [[i.id for i in b] for b in got] == [["0", "1"], ["2", "3"], ["4"]]
+    item = got[0][0]
+    assert (item.price_usd, item.float_value, item.paint_seed, item.inspect_url) == (
         Decimal("12.45"),
         0.2512,
         661,
         "steam://rungame/730/x",
     )
+
+
+@pytest.mark.parametrize("chunk", [1, 7, 64, 100_000])
+def test_the_items_scanner_reads_any_chunking(chunk: int) -> None:
+    body = json.dumps(
+        _ok(
+            {
+                "game": "csgo",
+                "items": [ITEM, {"id": "2", "name": "a, ] {x}", "price": 1.5}],
+                "last_update_at": "c9",
+            }
+        )
+    )
+    scanner = ItemsScanner()
+    found: list[object] = []
+    for start in range(0, len(body), chunk):
+        found += scanner.feed(body[start : start + chunk])
+    assert [o["id"] for o in found if isinstance(o, dict)] == ["38029384123", "2"]
+    assert scanner.finish() == "c9"
 
 
 @respx.mock
@@ -95,8 +129,27 @@ async def test_available_drops_unreadable_items() -> None:
     respx.get(f"{BASE}/merchant/purchase/available").mock(
         return_value=httpx.Response(200, json=_ok({"items": [ITEM, *bad], "last_update_at": "c"}))
     )
-    page = await _client().available()
-    assert [i.id for i in page.items] == ["38029384123"]
+    got, _ = await _batches(_client())
+    assert [i.id for b in got for i in b] == ["38029384123"]
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    ("response", "error"),
+    [
+        (
+            httpx.Response(200, content=b'{"success":true,"data":{"items":[{"id":"1"'),
+            SkinslinkUnavailableError,
+        ),
+        (httpx.Response(200, json={"success": False, "message": "no"}), SkinslinkError),
+        (httpx.Response(403, json={"success": False}), SkinslinkForbiddenError),
+        (httpx.Response(503, text="down"), SkinslinkUnavailableError),
+    ],
+)
+async def test_a_bad_full_load_raises(response: httpx.Response, error: type[Exception]) -> None:
+    respx.get(f"{BASE}/merchant/purchase/available").mock(return_value=response)
+    with pytest.raises(error):
+        await _batches(_client())
 
 
 @respx.mock
@@ -312,7 +365,9 @@ async def test_no_key_is_unavailable_without_a_call() -> None:
 
 
 @respx.mock
-@pytest.mark.parametrize(("cap", "sent_cap"), [("12.345", 12.34), ("12.349", 12.34), ("9.1", 9.1)])
+@pytest.mark.parametrize(
+    ("cap", "sent_cap"), [("12.3549", 12.354), ("12.354", 12.354), ("9.1", 9.1)]
+)
 async def test_max_price_never_rounds_above_the_cap(cap: str, sent_cap: float) -> None:
     route = respx.post(f"{BASE}/merchant/purchase").mock(
         return_value=httpx.Response(
@@ -323,3 +378,41 @@ async def test_max_price_never_rounds_above_the_cap(cap: str, sent_cap: float) -
         asset_id="1", partner=PARTNER, token=TOKEN, merchant_tx_id="o", max_price_usd=Decimal(cap)
     )
     assert json.loads(route.calls.last.request.read())["max_price"] == sent_cap
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "response",
+    [
+        httpx.Response(200, json={"success": True, "data": {"note": "no items here"}}),
+        httpx.Response(200, content=b"x" * 70_000),
+        httpx.Response(200, content=b'{"success":false,"data":{"items":[]}}'),
+    ],
+)
+async def test_a_body_without_a_readable_list_is_unavailable(response: httpx.Response) -> None:
+    respx.get(f"{BASE}/merchant/purchase/available").mock(return_value=response)
+    with pytest.raises(SkinslinkUnavailableError):
+        await _batches(_client())
+
+
+@respx.mock
+async def test_a_transport_error_is_unavailable() -> None:
+    respx.get(f"{BASE}/merchant/purchase/available").mock(side_effect=httpx.ReadTimeout("slow"))
+    with pytest.raises(SkinslinkUnavailableError):
+        await _batches(_client())
+
+
+async def test_no_key_never_calls() -> None:
+    client = SkinslinkClient(api_key="", base_url=BASE, timeout_seconds=1)
+    with pytest.raises(SkinslinkUnavailableError):
+        await _batches(client)
+
+
+@respx.mock
+async def test_a_list_without_a_cursor_starts_from_now() -> None:
+    respx.get(f"{BASE}/merchant/purchase/available").mock(
+        return_value=httpx.Response(200, json=_ok({"items": [ITEM]}))
+    )
+    got, cursor = await _batches(_client())
+    assert [i.id for b in got for i in b] == ["38029384123"]
+    assert cursor.startswith("20")

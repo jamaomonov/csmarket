@@ -56,6 +56,10 @@ worker and the scheduler import only this.
   unreadable body / no key → `SkinslinkUnavailableError`; any other refusal → `SkinslinkError`
   with `status` and `code`. Error bodies are never logged. Each call counts in
   `csmarket_skinslink_calls_total{endpoint, outcome}`.
+- **`stream.py`** — `ItemsScanner`: the full list is ~500k items (~200 MB of JSON), so
+  `client.available_batches` streams it and hands the mirror 1000 items at a time; it is never
+  in memory whole (the scheduler has 384 MB). The prod incident of 2026-10-06 (the scheduler
+  OOM-looped on the first full load) is why.
 - **`mirror.py`** — `sync_mirror`: no cursor or `reset` → the full list, replacing the table in
   one transaction; otherwise the events from the cursor (`upsert` by id, `remove`), following
   `more` for up to 20 pages a tick. One events page is folded per id in order (the last event
