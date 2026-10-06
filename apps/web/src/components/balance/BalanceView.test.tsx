@@ -65,13 +65,15 @@ describe("BalanceView", () => {
     expect(screen.getByText("Аккаунт заблокирован.")).toBeInTheDocument();
   });
 
-  it("shows the balance, the top-up form and the history when signed in", async () => {
+  it("shows the balance, a top-up link and the history when signed in", async () => {
     auth.value = { status: "signed_in", user: { id: "u1" }, signInHref: () => "" };
     renderView();
     const amount = await screen.findByText(/^150\s000 сум$/);
     expect(amount).toBeInTheDocument();
     expect(screen.getByText("На балансе")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Click" })).toBeInTheDocument();
+    // The top-up has its own page now.
+    expect(screen.queryByRole("button", { name: "Click" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Пополнить" })).toHaveAttribute("href", "/deposit");
     expect(await screen.findByText("Пока пусто.")).toBeInTheDocument();
   });
 

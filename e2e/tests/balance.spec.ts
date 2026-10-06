@@ -11,6 +11,10 @@ test("top up 50 000 soʻm through the test kassa and see it on the balance", asy
   await page.goto("/account/transactions");
   await expect(page.getByRole("heading", { level: 1, name: "Транзакции" })).toBeVisible();
   await expect(page.getByText("Пока пусто.")).toBeVisible();
+  // The top-up has its own page, «Кошелёк».
+  await page.locator("#main-content").getByRole("link", { name: "Пополнить" }).click();
+  await expect(page).toHaveURL(/\/deposit$/, { timeout: 30_000 });
+  await expect(page.getByRole("heading", { level: 1, name: "Кошелёк" })).toBeVisible();
 
   await page.getByLabel("Сумма", { exact: true }).fill("50000");
   const mock = page.getByRole("button", { name: "Тестовая оплата" });
@@ -42,7 +46,7 @@ test("top up 50 000 soʻm through the test kassa and see it on the balance", asy
 
 test("an amount below the minimum is refused in the form", async ({ page }) => {
   await devLogin(page, { steamId: uniqueSteamId(PREFIX) });
-  await page.goto("/account/transactions");
+  await page.goto("/deposit");
   await page.getByLabel("Сумма", { exact: true }).fill("999");
   await page.getByRole("button", { name: "Тестовая оплата" }).click();
   await page.getByRole("button", { name: /^Пополнить на 999/ }).click();
@@ -51,8 +55,7 @@ test("an amount below the minimum is refused in the form", async ({ page }) => {
     /^Сумма от 1\s000\sсум до 10\s000\s000\sсум/,
   );
   // Refused before any request: no top-up was opened.
-  await expect(page).toHaveURL(/\/account\/transactions$/);
-  await expect(page.getByText("Пока пусто.")).toBeVisible();
+  await expect(page).toHaveURL(/\/deposit$/);
 });
 
 test("someone else's top-up number shows not found", async ({ page, request }) => {

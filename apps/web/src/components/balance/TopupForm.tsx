@@ -3,6 +3,7 @@
 import { SessionApiError } from "@csmarket/api-client";
 import { Button, cn } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
+import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
   useId,
@@ -50,11 +51,13 @@ interface TopupFormProps {
 }
 
 /**
- * Amount (grouped as typed, quick chips), kassa tiles, submit. On success the visitor
+ * The deposit form, two panels: the note and the kassa tiles; the amount (grouped as
+ * typed, quick chips), what reaches the balance, submit. On success the visitor
  * goes to the top-up's page with `?go=1`, which opens the kassa once.
  */
 export function TopupForm({ locale, providers }: TopupFormProps) {
   const t = useTranslations("web.balance");
+  const d = useTranslations("web.deposit");
   const router = useRouter();
   const fieldId = useId();
   const rangeId = useId();
@@ -123,16 +126,33 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
     }
   }
 
+  const panel = "bg-surface flex flex-col gap-5 rounded-xl p-5 sm:p-6";
   return (
-    <section className="border-border rounded-lg border p-5">
-      <h2 className="text-lg font-bold">{t("topUpTitle")}</h2>
-      <form
-        noValidate
-        onSubmit={(e) => {
-          void submit(e);
-        }}
-        className="mt-4 flex flex-col gap-5"
-      >
+    <form
+      noValidate
+      onSubmit={(e) => {
+        void submit(e);
+      }}
+      className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_400px]"
+    >
+      <div className={panel}>
+        <p className="border-warning/30 bg-warning/10 text-warning flex gap-3 rounded-lg border px-4 py-3 text-sm">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+          {d("note")}
+        </p>
+        <PaymentPicker
+          size="lg"
+          providers={providers}
+          method={method}
+          onPick={(slug) => {
+            setChosen(slug);
+            setError(null);
+          }}
+          labels={{ legend: t("methodLabel"), test: t("methodTest"), none: t("methodNone") }}
+        />
+      </div>
+
+      <div className={panel}>
         <div>
           <label htmlFor={fieldId} className="text-fg-muted mb-2 block text-sm font-semibold">
             {t("amountLabel")}
@@ -160,9 +180,9 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
             maxLength={FIELD_MAX}
             aria-invalid={outOfRange}
             aria-describedby={rangeId}
-            className="border-border bg-surface focus:border-accent h-14 w-full rounded-md border px-4 text-2xl font-bold tabular-nums outline-none"
+            className="border-border bg-bg focus:border-accent h-14 w-full rounded-lg border px-4 text-2xl font-bold tabular-nums outline-none"
           />
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             {QUICK_AMOUNTS.map((v) => (
               <button
                 key={v}
@@ -175,7 +195,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
                   "h-11 rounded-md border px-3 text-sm font-bold tabular-nums",
                   typed === v
                     ? "border-accent bg-accent/10"
-                    : "border-border bg-surface hover:border-border-strong",
+                    : "border-border bg-surface-2 hover:border-border-strong",
                 )}
               >
                 {groupDigits(String(v), locale)}
@@ -190,15 +210,11 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
           </p>
         </div>
 
-        <PaymentPicker
-          providers={providers}
-          method={method}
-          onPick={(slug) => {
-            setChosen(slug);
-            setError(null);
-          }}
-          labels={{ legend: t("methodLabel"), test: t("methodTest"), none: t("methodNone") }}
-        />
+        <p className="mt-auto flex items-baseline gap-3 text-sm">
+          <span className="text-fg-muted">{d("total")}</span>
+          <span aria-hidden className="border-border flex-1 border-b border-dashed" />
+          <span className="text-accent num font-bold">{formatUzs(locale, typed)}</span>
+        </p>
 
         {error ? (
           <p role="alert" className="text-danger text-sm">
@@ -213,7 +229,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
         >
           {typed === 0 ? t("enterAmount") : t("submit", { amount: formatUzs(locale, typed) })}
         </Button>
-      </form>
-    </section>
+      </div>
+    </form>
   );
 }

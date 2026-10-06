@@ -55,6 +55,18 @@ describe("TopupForm", () => {
     fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
     expect(field()).toHaveValue(groupDigits("50000", "ru"));
     expect(submit().textContent.replace(/\s/g, " ")).toBe("Пополнить на 50 000 сум");
+    // The summary: no fee, the balance gets the whole amount.
+    const total = screen.getByText("Получите на баланс").parentElement;
+    expect(total?.textContent.replace(/\s/g, " ")).toContain("50 000 сум");
+  });
+
+  it("the kassas are big tiles beside the note", () => {
+    setup();
+    expect(
+      screen.getByText("Деньги на балансе можно потратить на скины в маркете."),
+    ).toBeInTheDocument();
+    const click = screen.getByRole("button", { name: "Click" });
+    expect(click.className.split(" ")).toContain("h-20");
   });
 
   it("asks for an amount before there is one", () => {

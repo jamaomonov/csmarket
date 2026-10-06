@@ -1,17 +1,18 @@
 "use client";
 
-import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
+import { buttonVariants } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { EntriesList } from "./EntriesList";
-import { TopupForm } from "./TopupForm";
 
 import { HistoryFilter } from "@/components/account/HistoryFilter";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { BALANCE_KEY, getBalance, getProviders } from "@/lib/balance";
-import { TRANSACTIONS } from "@/lib/paths";
+import { BALANCE_KEY, getBalance } from "@/lib/balance";
+import { DEPOSIT, TRANSACTIONS } from "@/lib/paths";
 
 export type TransactionsType = "all" | "topup" | "withdrawal";
 
@@ -21,13 +22,14 @@ interface BalanceViewProps {
   type: TransactionsType;
 }
 
-/** «Транзакции»: the balance, the top-up form and the filtered history; auth states as on
+/** «Транзакции»: the balance (with the way to top it up) and the filtered history; auth states as on
  * the account page. */
 export function BalanceView({ locale, type }: BalanceViewProps) {
   const t = useTranslations("web.balance");
   const auth = useTranslations("web.auth");
   const nav = useTranslations("web.nav");
   const tx = useTranslations("web.transactions");
+  const dep = useTranslations("web.deposit");
   const { status, user, signInHref } = useAuth();
   const signedIn = status === "signed_in" && user !== null;
   const balance = useQuery({
@@ -35,13 +37,6 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
     queryFn: getBalance,
     enabled: signedIn,
   });
-  const providers = useQuery({
-    queryKey: ["payments", "providers"],
-    queryFn: getProviders,
-    enabled: signedIn,
-    staleTime: 60_000,
-  });
-
   if (status === "loading") {
     return <div aria-busy className="bg-surface h-40 animate-pulse rounded-lg" />;
   }
@@ -63,23 +58,24 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
   }
   return (
     <div className="flex flex-col gap-6">
-      <div className="bg-surface rounded-lg p-5">
-        <p className="text-fg-muted text-sm">{t("amount")}</p>
-        {balance.data ? (
-          <p className="mt-1 text-3xl font-bold tabular-nums">
-            {formatUzs(locale, balance.data.balance_uzs)}
-          </p>
-        ) : balance.isError ? (
-          <p className="text-fg-dim mt-1 text-3xl font-bold">—</p>
-        ) : (
-          <div aria-busy className="bg-surface-2 mt-2 h-9 w-40 animate-pulse rounded-md" />
-        )}
+      <div className="bg-surface flex flex-wrap items-center justify-between gap-4 rounded-xl p-5">
+        <div>
+          <p className="text-fg-muted text-sm">{t("amount")}</p>
+          {balance.data ? (
+            <p className="mt-1 text-3xl font-bold tabular-nums">
+              {formatUzs(locale, balance.data.balance_uzs)}
+            </p>
+          ) : balance.isError ? (
+            <p className="text-fg-dim mt-1 text-3xl font-bold">—</p>
+          ) : (
+            <div aria-busy className="bg-surface-2 mt-2 h-9 w-40 animate-pulse rounded-md" />
+          )}
+        </div>
+        <Link href={DEPOSIT} className={buttonVariants({ size: "lg" })}>
+          <Plus className="size-4" strokeWidth={3} aria-hidden />
+          {dep("topUp")}
+        </Link>
       </div>
-      <TopupForm
-        locale={isLocale(locale) ? locale : DEFAULT_LOCALE}
-        // A failed list reads as "nothing open": the form says so instead of spinning.
-        providers={providers.isError ? [] : providers.data}
-      />
       <div className="flex flex-col gap-3">
         <HistoryFilter
           current={type}

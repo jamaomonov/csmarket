@@ -130,10 +130,14 @@ Measured contrast (WCAG): white on `surface` 15.5; `fg-muted` on `surface-2` 5.8
   «Скоро» pages (`ComingSoon`) under their final URLs until they are built.
 - **Signed in:** language switcher, balance chip («1 250 000 сум» + a green «+» to
   `/account/balance`), avatar + name with a Dropdown with icons: «Профиль» (`/account`),
-  «Транзакции» (`/account/transactions`: the balance, the top-up form and the history,
+  «Транзакции» (`/account/transactions`: the balance with «Пополнить» and the history,
   filtered Все / Пополнение / Вывод), «Обмены» (`/account/trades`: orders, filtered Все /
   Покупки / Продажи), «Реферал» (`/account/referral`), «Выйти» (danger). The old
   `/account/balance` and `/account/orders` redirect there for good (owner, 2026-10-06).
+- **Deposit** (`/deposit`, owner, 2026-10-06, after aim.market's): «Кошелёк» with tabs
+  Пополнение / Вывод (withdrawals: «скоро»); two panels — the note and big kassa tiles; the
+  amount with quick chips, «Получите на баланс» and the submit. The header's «+» and a short
+  balance's «Пополнить» lead here.
 - **Profile pages** (`/account/*`, owner, 2026-10-06): a sidebar of the sections (Профиль,
   Транзакции, Обмены, Реферал, Выйти; a row of tabs on phones). «Профиль» (`/account`): a card
   with the avatar (Steam's, or the name's initial), name, «На csmarket с …», Steam ID with copy

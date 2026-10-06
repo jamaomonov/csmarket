@@ -34,3 +34,6 @@ export const SELL = "/sell";
 export const STEAM_TOPUP = "/steam";
 export const REVIEWS = "/reviews";
 export const REFERRAL = "/account/referral";
+
+/** «Пополнение баланса»: the wallet with the kassas (top-up; withdrawals later). */
+export const DEPOSIT = "/deposit";

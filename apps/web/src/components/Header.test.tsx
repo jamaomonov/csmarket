@@ -54,7 +54,7 @@ describe("Header", () => {
     expect(screen.getAllByText(/1\s250\s000/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Пополнить баланс" })[0]).toHaveAttribute(
       "href",
-      "/account/transactions",
+      "/deposit",
     );
     expect(screen.getByRole("button", { name: /Player/ })).toBeInTheDocument();
     // Phones: the avatar alone, linking to the profile.

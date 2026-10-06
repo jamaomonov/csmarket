@@ -265,10 +265,7 @@ describe("SkinBuyPanel — payment method", () => {
     const tile = await screen.findByRole("button", { name: /Не хватает 1\s000 сум/ });
     expect(tile).toBeDisabled();
     expect(screen.getByRole("button", { name: "Click" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("link", { name: "Пополнить" })).toHaveAttribute(
-      "href",
-      "/account/transactions",
-    );
+    expect(screen.getByRole("link", { name: "Пополнить" })).toHaveAttribute("href", "/deposit");
   });
 });
 

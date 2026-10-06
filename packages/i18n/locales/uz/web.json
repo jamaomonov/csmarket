@@ -340,5 +340,15 @@
     "purchases": "Xaridlar",
     "sales": "Sotuvlar",
     "salesEmpty": "Hozircha sotuvlar yoʻq."
+  },
+  "deposit": {
+    "title": "Balansni toʻldirish",
+    "wallet": "Hamyon",
+    "topup": "Toʻldirish",
+    "withdraw": "Yechib olish",
+    "note": "Balansdagi pulni marketdagi skinlarga sarflash mumkin.",
+    "withdrawSoon": "Kartaga yechib olish tez orada paydo boʻladi.",
+    "total": "Balansga tushadi",
+    "topUp": "Toʻldirish"
   }
 }

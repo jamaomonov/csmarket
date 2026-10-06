@@ -44,6 +44,8 @@ export interface PaymentPickerProps {
   onPick: (method: string) => void;
   labels: { legend: string; test: string; none: string };
   wallet?: WalletOption;
+  /** `lg`: big tiles, three to a row (the deposit page). Default `md`. */
+  size?: "md" | "lg";
 }
 
 const TILE = "rounded-md border px-3 text-sm font-semibold";
@@ -51,7 +53,14 @@ const tileState = (on: boolean): string =>
   on ? "border-accent bg-accent/10" : "border-border bg-surface hover:border-border-strong";
 
 /** Payment method tiles: the balance (when given), then the kassas open now. */
-export function PaymentPicker({ providers, method, onPick, labels, wallet }: PaymentPickerProps) {
+export function PaymentPicker({
+  providers,
+  method,
+  onPick,
+  labels,
+  wallet,
+  size = "md",
+}: PaymentPickerProps) {
   const offered = offeredKassas(providers);
   const noKassa = providers !== undefined && offered.length === 0;
   return (
@@ -99,7 +108,12 @@ export function PaymentPicker({ providers, method, onPick, labels, wallet }: Pay
           <p className="text-fg-muted text-sm">{labels.none}</p>
         )
       ) : (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-2",
+            size === "lg" ? "sm:grid-cols-3 sm:gap-3" : "sm:grid-cols-4",
+          )}
+        >
           {offered.map((p) => (
             <button
               key={p.slug}
@@ -108,7 +122,11 @@ export function PaymentPicker({ providers, method, onPick, labels, wallet }: Pay
               onClick={() => {
                 onPick(p.slug);
               }}
-              className={cn(TILE, "h-12", tileState(p.slug === method))}
+              className={cn(
+                TILE,
+                size === "lg" ? "h-20 rounded-lg text-lg font-bold" : "h-12",
+                tileState(p.slug === method),
+              )}
             >
               {kassaLabel(p.slug, labels.test)}
             </button>
