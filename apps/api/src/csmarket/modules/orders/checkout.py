@@ -37,18 +37,21 @@ from csmarket.modules.fx.api import UsdUzs, current_usd_uzs
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.schemas import OrderCreateIn
 from csmarket.modules.skins.api import (
-    Listing,
+    Offer,
     PricingRules,
     SearchClient,
     SkinItem,
     enabled_categories,
+    from_listing,
     get_item,
     listings_budget,
     listings_for,
     load_rules,
+    merge_offers,
     quote,
     to_uzs,
 )
+from csmarket.modules.skinslink.api import offers_for
 from csmarket.modules.users.api import User, parse_tradelink
 
 log = get_logger("csmarket.orders.checkout")
@@ -59,8 +62,8 @@ _UNITS_PER_USD = Decimal(1000)
 #: hold, which is refused now (owner decision D2); a stored or cached one still refuses.
 _BAD_VERDICTS = frozenset({"bad", "warn"})
 
-#: ``(listing, (price_usd, price_uzs))`` — one live offer priced for the buyer.
-_Priced = tuple[Listing, tuple[Decimal, Decimal]]
+#: ``(offer, (price_usd, price_uzs))`` — one live offer priced for the buyer.
+_Priced = tuple[Offer, tuple[Decimal, Decimal]]
 
 
 class RateUnavailableError(UpstreamUnavailableError):
@@ -141,22 +144,27 @@ def _price(
 
 def _choose(
     priced: list[_Priced], body: OrderCreateIn, settings: Settings, rate: Decimal
-) -> tuple[Listing, Decimal, Decimal]:
-    """``(listing, price_usd, price_uzs)`` to bill, or a 409 — the ±2 % rule and R4.
+) -> tuple[Offer, Decimal, Decimal]:
+    """``(offer, price_usd, price_uzs)`` to bill, or a 409 — the ±2 % rule and R4.
 
     Raises:
         ConflictError: ``price_changed`` (with the new ``price_uzs``) or ``offer_gone``
             (with ``next_offer``, ``None`` when nothing is listed).
     """
     shown = Decimal(body.price_uzs)
-    chosen = next((p for p in priced if p[0].listing_id == body.listing_id), None)
+    chosen = next((p for p in priced if p[0].offer_id == body.listing_id), None)
     if chosen is not None:
         row, (usd, uzs) = chosen
         if abs(uzs - shown) > shown * settings.order_price_tolerance:
             raise ConflictError("the price has changed", code="price_changed", price_uzs=str(uzs))
         return row, usd, uzs
     ceiling = shown * (1 + settings.order_substitute_ceiling)
-    cheapest = min(priced, key=lambda p: (p[1][1], p[0].listing_id), default=None)
+    # Waxpeer first on a tie: its delivery is instant (``merge_offers``).
+    cheapest = min(
+        priced,
+        key=lambda p: (p[1][1], p[0].source != "waxpeer", p[0].offer_id),
+        default=None,
+    )
     if cheapest is not None:
         row, (usd, uzs) = cheapest
         if uzs <= shown:
@@ -168,7 +176,7 @@ def _choose(
         code="offer_gone",
         next_offer=None
         if cheapest is None
-        else {"listing_id": cheapest[0].listing_id, "price_uzs": str(cheapest[1][1])},
+        else {"listing_id": cheapest[0].offer_id, "price_uzs": str(cheapest[1][1])},
     )
 
 
@@ -212,6 +220,8 @@ class _Quoted:
     snap: _ItemSnapshot
     rules: PricingRules
     rate: UsdUzs
+    #: Skinslink's offers, read from the mirror inside the read transaction.
+    extra: list[Offer]
 
 
 async def _read(
@@ -226,13 +236,19 @@ async def _read(
     rate = await current_usd_uzs(db, redis, max_age_days=settings.fx_max_age_days)
     if rate is None:
         raise RateUnavailableError("no soʻm rate", code="rate_unavailable")
+    extra = await offers_for(db, item.id, settings=settings, now=now())
     return _Quoted(
-        user_id=user.id, trade_link=link, snap=_ItemSnapshot.of(item), rules=rules, rate=rate
+        user_id=user.id,
+        trade_link=link,
+        snap=_ItemSnapshot.of(item),
+        rules=rules,
+        rate=rate,
+        extra=extra,
     )
 
 
 def _build(
-    q: _Quoted, row: Listing, usd: Decimal, uzs: Decimal, *, key: str, settings: Settings
+    q: _Quoted, row: Offer, usd: Decimal, uzs: Decimal, *, key: str, settings: Settings
 ) -> Order:
     return Order(
         user_id=q.user_id,
@@ -241,6 +257,8 @@ def _build(
         market_hash_name=q.snap.market_hash_name,
         phase=q.snap.phase,
         slug=q.snap.slug,
+        source=row.source,
+        offer_id=row.offer_id,
         listing_id=row.listing_id,
         cost_units=row.price_units,
         cost_usd=(Decimal(row.price_units) / _UNITS_PER_USD).quantize(_USD_PLACES),
@@ -292,7 +310,8 @@ async def create_order(
     rows, degraded = await listings_for(
         q.snap.item_view(), client=client, redis=redis, budget_per_minute=listings_budget(settings)
     )
-    priced = [(row, _price(row.price_units, q.snap, q.rules, q.rate.rate)) for row in rows]
+    offers = merge_offers([from_listing(r) for r in rows], q.extra)
+    priced = [(o, _price(o.price_units, q.snap, q.rules, q.rate.rate)) for o in offers]
     row, usd, uzs = _choose(priced, body, settings, q.rate.rate)
     order = _build(q, row, usd, uzs, key=idempotency_key, settings=settings)
     order.number = await allocate(db, Order.number, order_number)
@@ -310,7 +329,8 @@ async def create_order(
         "orders.created",
         number=order.number,
         price_uzs=str(uzs),
-        substituted=row.listing_id != body.listing_id,
+        source=row.source,
+        substituted=row.offer_id != body.listing_id,
         degraded=degraded,
     )
     return order, True

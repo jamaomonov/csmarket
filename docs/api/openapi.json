@@ -3051,9 +3051,16 @@
         "description": "Buy one skin: the offer the buyer chose and the price the panel showed them.",
         "properties": {
           "listing_id": {
-            "exclusiveMinimum": 0.0,
-            "title": "Listing Id",
-            "type": "integer"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "maxLength": 40,
+                "type": "string"
+              }
+            ],
+            "title": "Listing Id"
           },
           "price_uzs": {
             "exclusiveMinimum": 0.0,

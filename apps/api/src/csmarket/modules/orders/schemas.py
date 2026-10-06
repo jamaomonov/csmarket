@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 from csmarket.modules.orders.trade_view import RefundedTo, SkinTradeOut
+from csmarket.modules.skins.api import offer_id_of, parse_offer_id
 
 OrderStatusOut = Literal[
     "pending", "paid", "buying", "trade_sent", "delivered", "cancelled", "failed", "returned"
@@ -20,10 +21,21 @@ class OrderCreateIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     slug: Annotated[str, Field(min_length=1, max_length=160)]
-    #: The offer picked on the item page.
-    listing_id: Annotated[int, Field(strict=True, gt=0)]
+    #: The offer picked on the item page: ``wx:<id>`` / ``sl:<id>``; a bare integer reads as
+    #: Waxpeer's (one release). Normalised to the prefixed string.
+    listing_id: StrictInt | Annotated[str, Field(strict=True, max_length=40)]
     #: Whole soʻm the panel showed; a JSON integer only.
     price_uzs: Annotated[int, Field(strict=True, gt=0)]
+
+    @field_validator("listing_id")
+    @classmethod
+    def _offer_id(cls, v: int | str) -> str:
+        """``wx:…`` / ``sl:…`` whatever form the panel sent."""
+        try:
+            source, raw = parse_offer_id(v)
+        except ValueError as exc:
+            raise ValueError("not an offer id") from exc
+        return offer_id_of(source, raw)
 
 
 class OrderOut(BaseModel):

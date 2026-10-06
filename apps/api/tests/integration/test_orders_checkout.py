@@ -274,7 +274,7 @@ async def test_gone_offer_without_substitute_is_409_with_next(
     r = await _post(integration_client, user_headers, price_uzs=shown)
     assert r.status_code == 409, r.text
     assert r.json()["code"] == "offer_gone"
-    assert r.json()["next_offer"]["listing_id"] == 113
+    assert r.json()["next_offer"]["listing_id"] == "wx:113"
     assert int(r.json()["next_offer"]["price_uzs"]) > shown
     assert await _orders(db_session) == 0
 

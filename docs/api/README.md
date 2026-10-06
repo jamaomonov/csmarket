@@ -76,7 +76,8 @@ Public, no sign-in. Under `/skins`:
 - `GET /skins/{slug}/listings` — live offers `{items, degraded}`. `degraded: true` means the
   answer is the last cached or last snapshot offers because Waxpeer could not answer; it is
   not an error. Rate-limited per IP in its own bucket (`skins-listings`); 429 carries
-  `Retry-After`. Offers carry a numeric `listing_id` (opaque; M4 checkout will need it).
+  `Retry-After`. Offers carry a string `listing_id` — `wx:<id>` or `sl:<id>` (opaque to the
+  client; checkout echoes it back). Offers of both markets are merged by price.
 - `GET /skins/seo/slugs?offset&limit` (≤ 5 000) — slugs for the sitemap.
 
 Conventions: **money is a string** (`price_usd` with 2 decimals, `price_uzs` whole soʻm
@@ -138,13 +139,16 @@ rulings behind them: ADR-0006. Cabinet settings: `docs/runbooks/kassa-setup.md`.
 Signed in (401 without a token). One skin per order.
 
 - `POST /orders` `{slug, listing_id, price_uzs}` + **required** `Idempotency-Key` (16..160
-  chars) → **201** `OrderOut`. `listing_id` is an offer from `GET /skins/{slug}/listings`;
+  chars) → **201** `OrderOut`. `listing_id` is an offer id from `GET /skins/{slug}/listings`
+  (`wx:<id>` / `sl:<id>`; a bare integer is still read as `wx:<id>` for one release, anything
+  else is 422);
   `price_uzs` is the whole soʻm the panel showed for it (a JSON **integer** > 0). The server
   re-prices the offer from the same live listings: within ±2 % of `price_uzs` it bills **its
   own** price; further off → 409 `price_changed` with the new `price_uzs`. An offer sold in
   the meantime is replaced by the cheapest other offer of the item priced at most 3 % above
   `price_uzs`, billed at the lower of its price and `price_uzs` (never more than shown);
-  none → 409 `offer_gone` with `next_offer: {listing_id, price_uzs}` or `null`. The same key
+  none → 409 `offer_gone` with `next_offer: {listing_id, price_uzs}` (a string id, either
+  market) or `null`. The same key
   again → **200** with the stored order, whatever the body. Rate-limited by the
   `order-create` bucket: 60 a minute per IP and 10 a minute per IP and account, then 429
   with `Retry-After`. The new order is `pending` and payable for 15 minutes.
