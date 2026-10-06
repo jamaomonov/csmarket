@@ -183,7 +183,7 @@ same SEO. Only presentation and composition change.
 - **Card** (`SkinCard`, variant B) — whole card is the link; top row: wear code, ST™, «{n} шт»;
   a discount Badge «−{n}%» (accent tone) when `discount_percent > 0`; image over a radial glow
   in `rarity_color`; weapon (dim, 12) and skin (500, 13) with the phase after «·»; price in
-  accent 600 14 (`num`); a line «Steam дороже на {n}%» (dim, 11) when there is a discount;
+  accent 600 14 (`num`) (no «Steam дороже» line: dropped by the owner, 2026-10-06);
   hover → `surface-hover` + border; focus ring.
 - **Grid:** 5 columns at ≥ 1280, 4 at ≥ 1024, 3 at ≥ 640, 2 below.
 - **New strings** (all three locales): the language names, the account menu items, «Steam
@@ -195,7 +195,7 @@ same SEO. Only presentation and composition change.
   aria), Accordion (toggle, aria), Chip (`aria-pressed`, caret), Checkbox, Badge, Button variants.
 - **Storefront:** existing tests updated for the new markup; new — a model in the category menu
   sets / clears `weapon=`; the language switcher keeps path and query; the signed-in header shows
-  the balance and the menu items; the card shows «−N%», «Steam дороже на N%» and the wear.
+  the balance and the menu items; the card shows «−N%» and the wear.
 - **e2e:** the existing specs pass (selectors adjusted where roles or labels moved, assertions
   unchanged).
 - **Visual check:** Playwright screenshots at 1440 and 390 — catalogue as a guest, catalogue with

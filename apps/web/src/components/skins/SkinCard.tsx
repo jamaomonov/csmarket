@@ -61,11 +61,6 @@ export function SkinCard({ item, locale }: { item: SkinItem; locale: string }) {
         ) : (
           <span className="text-fg-dim text-[12px]">{t("soldOut")}</span>
         )}
-        {discount !== null && (
-          <p className="text-fg-dim mt-0.5 text-[11px]">
-            {t("steamHigher", { percent: discount })}
-          </p>
-        )}
       </div>
     </Link>
   );

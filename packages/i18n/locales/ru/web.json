@@ -244,7 +244,6 @@
       "floatQ": "Какой флоат у {name}?",
       "floatA": "{exterior}: флоат от {min} до {max}. Точный флоат каждого предложения — в списке выше."
     },
-    "steamHigher": "Steam дороже на {percent}%",
     "allOf": {
       "knives": "Все ножи",
       "gloves": "Все перчатки",

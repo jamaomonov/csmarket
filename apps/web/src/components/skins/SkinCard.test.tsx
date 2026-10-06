@@ -71,20 +71,20 @@ describe("SkinCard", () => {
     renderCard({ price_uzs: null, price_usd: null, count: 0 });
     expect(screen.getByText("Нет в наличии")).toBeInTheDocument();
   });
-  it("variant B: wear, ST™, pieces, discount badge, green price and the Steam line", () => {
+  it("variant B: wear, ST™, pieces, discount badge and a green price — no Steam line", () => {
     renderCard({ discount_percent: 19, exterior: "MW", count: 3, stattrak: true });
     const card = screen.getByRole("link");
     expect(within(card).getByText("MW")).toBeInTheDocument();
     expect(within(card).getByText("ST™")).toBeInTheDocument();
     expect(within(card).getByText("3 шт.")).toBeInTheDocument();
     expect(within(card).getByText("−19%")).toBeInTheDocument();
-    expect(within(card).getByText("Steam дороже на 19%")).toBeInTheDocument();
+    // The owner dropped «Steam дороже на N%» from the cards (2026-10-06); the badge says it.
+    expect(within(card).queryByText(/Steam/)).toBeNull();
     expect(card.querySelector(".text-accent.num")).not.toBeNull();
   });
 
-  it("no Steam line and no badge under 5 %", () => {
+  it("no badge under 5 %", () => {
     renderCard({ discount_percent: 3 });
-    expect(screen.queryByText(/Steam дороже/)).toBeNull();
     expect(screen.queryByText("−3%")).toBeNull();
   });
 });
