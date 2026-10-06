@@ -44,8 +44,8 @@
     "suspended": "Аккаунт заблокирован."
   },
   "account": {
-    "title": "Аккаунт",
-    "signedOut": "Войдите через Steam, чтобы открыть аккаунт.",
+    "title": "Профиль",
+    "signedOut": "Войдите через Steam, чтобы открыть профиль.",
     "signOut": "Выйти",
     "tradeLink": {
       "title": "Ссылка на обмен",
@@ -92,6 +92,17 @@
         "retry": "Попробовать ещё раз",
         "toProfile": "В профиль"
       }
+    },
+    "profile": {
+      "joined": "На csmarket с {date}",
+      "steamId": "Steam ID",
+      "copy": "Скопировать Steam ID",
+      "copied": "Скопировано",
+      "steamProfile": "Профиль в Steam",
+      "yourAccount": "Ваш аккаунт",
+      "referralTitle": "Реферальный код",
+      "referralHint": "Реферальная программа скоро появится.",
+      "nav": "Разделы профиля"
     }
   },
   "balance": {

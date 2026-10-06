@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { ACCOUNT_NAV } from "./nav";
 
+import { UserAvatar } from "@/components/account/UserAvatar";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 
@@ -29,12 +30,7 @@ export function AccountMenu() {
       triggerClassName="py-1.5 pl-1.5"
       label={
         <>
-          {user.avatar_url ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Steam CDN avatars; next/image would need remotePatterns per CDN host
-            <img src={user.avatar_url} alt="" width={28} height={28} className="rounded-md" />
-          ) : (
-            <span aria-hidden className="bg-accent/30 size-7 rounded-md" />
-          )}
+          <UserAvatar user={user} size={28} />
           <span className="max-w-[120px] truncate">{user.display_name ?? t("account")}</span>
           <ChevronDown className="text-fg-dim size-4" aria-hidden />
         </>

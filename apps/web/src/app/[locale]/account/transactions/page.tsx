@@ -28,8 +28,8 @@ export default async function TransactionsPage({ params, searchParams }: Props) 
   const raw = (await searchParams).type;
   const type = TYPES.find((x) => x === raw) ?? "all";
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
-      <h1 className="mb-6 text-2xl font-bold">{t("title")}</h1>
+    <main id="main-content" className="min-w-0 flex-1">
+      <h1 className="mb-6 text-3xl font-bold">{t("title")}</h1>
       <BalanceView locale={locale} type={type} />
     </main>
   );

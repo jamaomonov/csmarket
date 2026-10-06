@@ -134,6 +134,12 @@ Measured contrast (WCAG): white on `surface` 15.5; `fg-muted` on `surface-2` 5.8
   filtered Все / Пополнение / Вывод), «Обмены» (`/account/trades`: orders, filtered Все /
   Покупки / Продажи), «Реферал» (`/account/referral`), «Выйти» (danger). The old
   `/account/balance` and `/account/orders` redirect there for good (owner, 2026-10-06).
+- **Profile pages** (`/account/*`, owner, 2026-10-06): a sidebar of the sections (Профиль,
+  Транзакции, Обмены, Реферал, Выйти; a row of tabs on phones). «Профиль» (`/account`): a card
+  with the avatar (Steam's, or the name's initial), name, «На csmarket с …», Steam ID with copy
+  and a link to the Steam profile; then «Ваш аккаунт» — trade link, email, referral code
+  («Скоро»). The header shows the avatar and name (on phones the avatar alone, linking to the
+  profile).
 - **Below 1280 px:** the nav moves into the ☰ menu (with the account items); below 768 px only
   the logo, the balance chip (amount without «сум») and ☰ remain.
 - **Language switcher:** links to the same path in the other locale (next-intl navigation),

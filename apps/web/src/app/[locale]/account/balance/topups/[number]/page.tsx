@@ -28,7 +28,7 @@ export default async function TopupPage({ params }: Props) {
     setRequestLocale(locale);
   }
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
+    <main id="main-content" className="min-w-0 flex-1">
       <TopupStatus locale={locale} number={number} />
     </main>
   );

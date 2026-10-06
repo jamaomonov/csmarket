@@ -57,6 +57,8 @@ describe("Header", () => {
       "/account/transactions",
     );
     expect(screen.getByRole("button", { name: /Player/ })).toBeInTheDocument();
+    // Phones: the avatar alone, linking to the profile.
+    expect(screen.getByRole("link", { name: "Профиль" })).toHaveAttribute("href", "/account");
   });
 
   it("the nav: sell, market, Steam top-up and reviews, each with an icon", () => {

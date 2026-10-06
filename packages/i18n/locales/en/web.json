@@ -44,8 +44,8 @@
     "suspended": "This account is suspended."
   },
   "account": {
-    "title": "Account",
-    "signedOut": "Sign in with Steam to open your account.",
+    "title": "Profile",
+    "signedOut": "Sign in with Steam to open your profile.",
     "signOut": "Sign out",
     "tradeLink": {
       "title": "Trade link",
@@ -92,6 +92,17 @@
         "retry": "Try again",
         "toProfile": "To your profile"
       }
+    },
+    "profile": {
+      "joined": "On csmarket since {date}",
+      "steamId": "Steam ID",
+      "copy": "Copy Steam ID",
+      "copied": "Copied",
+      "steamProfile": "Steam profile",
+      "yourAccount": "Your account",
+      "referralTitle": "Referral code",
+      "referralHint": "The referral programme is coming soon.",
+      "nav": "Profile sections"
     }
   },
   "balance": {

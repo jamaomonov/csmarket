@@ -45,6 +45,10 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   WARNING (`core/logging.py`).
 - **Refresh token.** Only its SHA-256 is stored (`refresh_tokens.token_hash`); the raw value
   lives in an `HttpOnly` cookie. The access JWT carries no PII beyond the user id.
+- **Profile page (storefront, 2026-10-06):** «Профиль» shows the signed-in owner their own
+  Steam ID (with a copy button and a link to their Steam profile), name, avatar and join date,
+  all from `GET /me`, which already returned them to the owner. Nothing about another person,
+  nothing new leaves the API.
 - **Roles** are in `users.roles`. `grant_admin` prints one word and never the Steam ID.
 - **Admin audit log** (`admin_audit_log`, M2): the actor is `actor_user_id` (our uuid); the
   `payload` names things only (slugs, aliases) — never a Steam ID, email or IP. M3 adds

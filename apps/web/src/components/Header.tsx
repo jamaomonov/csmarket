@@ -3,6 +3,7 @@
 import { buttonVariants, cn, Logo } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
+import { UserAvatar } from "./account/UserAvatar";
 import { AccountMenu } from "./header/AccountMenu";
 import { BalanceChip } from "./header/BalanceChip";
 import { LanguageSwitcher } from "./header/LanguageSwitcher";
@@ -11,7 +12,7 @@ import { isCurrent, MAIN_NAV } from "./header/nav";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { HOME } from "@/lib/paths";
+import { ACCOUNT, HOME } from "@/lib/paths";
 
 interface HeaderProps {
   locale: string;
@@ -23,7 +24,7 @@ const navClass = (on: boolean) =>
 /** Logo, nav, language and the account; on phones a balance and a ☰ menu. */
 export function Header({ locale }: HeaderProps) {
   const t = useTranslations("web.nav");
-  const { status } = useAuth();
+  const { status, user } = useAuth();
   const pathname = usePathname();
   const signedIn = status === "signed_in";
   return (
@@ -64,6 +65,11 @@ export function Header({ locale }: HeaderProps) {
             <span className="md:hidden">
               <BalanceChip compact />
             </span>
+            {user && (
+              <Link href={ACCOUNT} aria-label={t("profile")} className="md:hidden">
+                <UserAvatar user={user} size={36} />
+              </Link>
+            )}
             <span className="hidden md:block">
               <AccountMenu />
             </span>

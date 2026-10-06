@@ -2,8 +2,11 @@
 
 import { SessionApiError } from "@csmarket/api-client";
 import { Button } from "@csmarket/ui";
+import { ArrowLeftRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState, type SyntheticEvent } from "react";
+
+import { SettingsCard } from "./SettingsCard";
 
 import { session } from "@/lib/api";
 import {
@@ -82,9 +85,7 @@ export function TradeLinkForm({ initial, onChange }: TradeLinkFormProps) {
 
   const message = verdictMessage(state);
   return (
-    <section className="border-border rounded-lg border p-5">
-      <h2 className="text-lg font-bold">{t("title")}</h2>
-      <p className="text-fg-muted mt-1 text-sm">{t("hint")}</p>
+    <SettingsCard icon={ArrowLeftRight} title={t("title")} hint={t("hint")}>
       <details className="mt-3 text-sm">
         <summary className="text-accent cursor-pointer font-semibold">{t("whereToFind")}</summary>
         <p className="text-fg-muted mt-2">{t("steps")}</p>
@@ -136,6 +137,6 @@ export function TradeLinkForm({ initial, onChange }: TradeLinkFormProps) {
           {t("check")}
         </button>
       ) : null}
-    </section>
+    </SettingsCard>
   );
 }

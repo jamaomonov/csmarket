@@ -2,8 +2,11 @@
 
 import { SessionApiError } from "@csmarket/api-client";
 import { Button } from "@csmarket/ui";
+import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type SyntheticEvent } from "react";
+
+import { SettingsCard } from "./SettingsCard";
 
 import { session } from "@/lib/api";
 
@@ -98,16 +101,18 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
 
   const unverified = email !== null && !verified;
   return (
-    <section className="border-border rounded-lg border p-5">
-      <div className="flex items-center gap-3">
-        <h2 className="text-lg font-bold">{t("title")}</h2>
-        {email !== null && verified ? (
+    <SettingsCard
+      icon={Mail}
+      title={t("title")}
+      hint={t("hint")}
+      aside={
+        email !== null && verified ? (
           <span className="bg-success text-success-fg rounded px-2 py-0.5 text-xs">
             {t("verified")}
           </span>
-        ) : null}
-      </div>
-      <p className="text-fg-muted mt-1 text-sm">{t("hint")}</p>
+        ) : null
+      }
+    >
       <form
         onSubmit={(e) => {
           void save(e);
@@ -153,6 +158,6 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
       {outcome === "failed" ? (
         <p className="text-danger mt-3 text-sm">{generic("generic")}</p>
       ) : null}
-    </section>
+    </SettingsCard>
   );
 }

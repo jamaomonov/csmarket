@@ -44,8 +44,8 @@
     "suspended": "Hisob bloklangan."
   },
   "account": {
-    "title": "Hisob",
-    "signedOut": "Hisobni ochish uchun Steam orqali kiring.",
+    "title": "Profil",
+    "signedOut": "Profilni ochish uchun Steam orqali kiring.",
     "signOut": "Chiqish",
     "tradeLink": {
       "title": "Almashuv havolasi",
@@ -92,6 +92,17 @@
         "retry": "Yana urinib koʻrish",
         "toProfile": "Profilga"
       }
+    },
+    "profile": {
+      "joined": "csmarketda {date} dan beri",
+      "steamId": "Steam ID",
+      "copy": "Steam ID ni nusxalash",
+      "copied": "Nusxalandi",
+      "steamProfile": "Steam profili",
+      "yourAccount": "Hisobingiz",
+      "referralTitle": "Referal kod",
+      "referralHint": "Referal dasturi tez orada paydo boʻladi.",
+      "nav": "Profil boʻlimlari"
     }
   },
   "balance": {
