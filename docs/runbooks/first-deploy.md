@@ -244,6 +244,14 @@ done
 
 ---
 
+## 5a. Search indexing stays closed
+
+`secrets/caddy.env` must say `CSMARKET_INDEXING=off` (the example does): the storefront stays
+out of search until the owner opens it. Check: `curl -sI https://csmarket.uz/ | grep -i
+x-robots-tag` prints `noindex, nofollow`. Opening it: `docs/runbooks/indexing.md`.
+
+---
+
 ## 6. Grafana
 
 Open `https://grafana.csmarket.uz/`. Caddy asks for basic-auth first (user `ops`, the
