@@ -179,7 +179,8 @@ services:
     # /metrics on :9102 (CSMARKET_SCHEDULER_METRICS_PORT): the order-health gauges. Not published.
     image: ghcr.io/${GHCR_OWNER:-jamaomonov}/csmarket-scheduler:${IMAGE_TAG:?set IMAGE_TAG in .env (see docs/runbooks/deploy.md)}
     logging: *default-logging
-    mem_limit: 384m
+    # 512m: the Skinslink mirror (~435k rows, streamed full load) keeps it near 270 MB.
+    mem_limit: 512m
     restart: unless-stopped
     environment:
       <<: *app-env

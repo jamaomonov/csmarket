@@ -58,7 +58,7 @@ worker and the scheduler import only this.
   `csmarket_skinslink_calls_total{endpoint, outcome}`.
 - **`stream.py`** — `ItemsScanner`: the full list is ~500k items (~200 MB of JSON), so
   `client.available_batches` streams it and hands the mirror 1000 items at a time; it is never
-  in memory whole (the scheduler has 384 MB). The prod incident of 2026-10-06 (the scheduler
+  in memory whole (the scheduler has 512 MB and sits near 270 MB). The prod incident of 2026-10-06 (the scheduler
   OOM-looped on the first full load) is why.
 - **`mirror.py`** — `sync_mirror`: no cursor or `reset` → the full list, replacing the table in
   one transaction; otherwise the events from the cursor (`upsert` by id, `remove`), following
