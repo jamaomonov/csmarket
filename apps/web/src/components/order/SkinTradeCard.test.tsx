@@ -113,7 +113,7 @@ describe("SkinTradeCard", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Открыть баланс" })).toHaveAttribute(
       "href",
-      "/account/balance",
+      "/account/transactions",
     );
   });
 

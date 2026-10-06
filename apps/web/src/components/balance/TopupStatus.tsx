@@ -19,6 +19,7 @@ import {
   searchWithoutGo,
   shouldAutoOpen,
 } from "@/lib/kassa-redirect";
+import { TRANSACTIONS } from "@/lib/paths";
 
 /** Poll cadence while the customer pays: every 3 s… */
 const POLL_MS = 3_000;
@@ -238,7 +239,7 @@ function Outcome({ view, title }: OutcomeProps) {
   return (
     <Panel view={view}>
       <h1 className="text-2xl font-bold">{title}</h1>
-      <Link href="/account/balance" className={buttonVariants({ variant: "secondary" })}>
+      <Link href={TRANSACTIONS} className={buttonVariants({ variant: "secondary" })}>
         {t("toBalance")}
       </Link>
     </Panel>
@@ -287,7 +288,7 @@ function Waiting({ view, amount, kassa, stopped, onRefresh, devPay: test }: Wait
             {t("refresh")}
           </button>
         ) : null}
-        <Link href="/account/balance" className="text-fg-muted hover:text-fg">
+        <Link href={TRANSACTIONS} className="text-fg-muted hover:text-fg">
           {t("toBalance")}
         </Link>
       </div>

@@ -12,7 +12,7 @@ import type * as BalanceModule from "@/lib/balance";
 import type { EntriesPage, Entry } from "@/lib/balance";
 
 const mocks = vi.hoisted(() => ({
-  getEntries: vi.fn<(cursor?: string) => Promise<EntriesPage>>(),
+  getEntries: vi.fn<(cursor?: string, type?: string) => Promise<EntriesPage>>(),
 }));
 vi.mock("@/lib/balance", async (importOriginal) => ({
   ...(await importOriginal<typeof BalanceModule>()),
@@ -30,12 +30,12 @@ function entry(over: Partial<Entry>): Entry {
   };
 }
 
-function setup() {
+function setup(type?: "topup" | "withdrawal") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-        <EntriesList locale="ru" />
+        <EntriesList locale="ru" {...(type ? { type } : {})} />
       </NextIntlClientProvider>
     </QueryClientProvider>,
   );
@@ -65,7 +65,7 @@ describe("EntriesList", () => {
     const amounts = screen.getAllByTestId("entry-amount").map((el) => plain(el.textContent));
     expect(amounts).toEqual(["+50 000 сум", "−10 000 сум", "+2 000 сум"]);
     expect(screen.queryByRole("button", { name: "Показать ещё" })).not.toBeInTheDocument();
-    expect(mocks.getEntries).toHaveBeenCalledWith(undefined);
+    expect(mocks.getEntries).toHaveBeenCalledWith(undefined, undefined);
   });
 
   it("labels order purchases and refunds", async () => {
@@ -91,7 +91,7 @@ describe("EntriesList", () => {
     setup();
     fireEvent.click(await screen.findByRole("button", { name: "Показать ещё" }));
     expect(await screen.findByText("Корректировка")).toBeInTheDocument();
-    expect(mocks.getEntries).toHaveBeenLastCalledWith("CUR1");
+    expect(mocks.getEntries).toHaveBeenLastCalledWith("CUR1", undefined);
     expect(screen.getByText("Пополнение")).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "Показать ещё" })).not.toBeInTheDocument();
@@ -111,5 +111,12 @@ describe("EntriesList", () => {
     setup();
     fireEvent.click(await screen.findByRole("button", { name: "Обновить" }));
     expect(await screen.findByText("Пока пусто.")).toBeInTheDocument();
+  });
+
+  it("says there are no withdrawals yet under that filter", async () => {
+    mocks.getEntries.mockResolvedValue({ items: [], next_cursor: null });
+    setup("withdrawal");
+    expect(await screen.findByText("Выводов пока нет.")).toBeInTheDocument();
+    expect(mocks.getEntries).toHaveBeenCalledWith(undefined, "withdrawal");
   });
 });

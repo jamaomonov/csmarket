@@ -32,7 +32,8 @@
     "steamTopup": "Top up Steam",
     "reviews": "Reviews",
     "transactions": "Transactions",
-    "referral": "Referral"
+    "referral": "Referral",
+    "trades": "Trades"
   },
   "auth": {
     "callback": {
@@ -273,7 +274,7 @@
     "howItWorks": "After you pay, the seller sends you a Steam trade offer. Accept it — the skin is yours."
   },
   "orders": {
-    "title": "My orders",
+    "title": "Trades",
     "empty": "No orders yet.",
     "toCatalog": "Browse skins",
     "more": "Show more",
@@ -317,7 +318,16 @@
   },
   "transactions": {
     "title": "Transactions",
+    "all": "All",
+    "topups": "Top-ups",
+    "withdrawals": "Withdrawals",
+    "withdrawalsEmpty": "No withdrawals yet."
+  },
+  "trades": {
+    "title": "Trades",
+    "all": "All",
     "purchases": "Purchases",
-    "balance": "Balance"
+    "sales": "Sales",
+    "salesEmpty": "No sales yet."
   }
 }

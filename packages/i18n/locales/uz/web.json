@@ -32,7 +32,8 @@
     "steamTopup": "Steamni toʻldirish",
     "reviews": "Sharhlar",
     "transactions": "Tranzaksiyalar",
-    "referral": "Referal"
+    "referral": "Referal",
+    "trades": "Almashuvlar"
   },
   "auth": {
     "callback": {
@@ -273,7 +274,7 @@
     "howItWorks": "Toʻlovdan keyin sotuvchi Steamʼda almashuv yuboradi. Uni qabul qiling — skin sizniki."
   },
   "orders": {
-    "title": "Mening buyurtmalarim",
+    "title": "Almashuvlar",
     "empty": "Hozircha buyurtmalar yoʻq.",
     "toCatalog": "Katalogga",
     "more": "Yana koʻrsatish",
@@ -317,7 +318,16 @@
   },
   "transactions": {
     "title": "Tranzaksiyalar",
+    "all": "Hammasi",
+    "topups": "Toʻldirish",
+    "withdrawals": "Yechib olish",
+    "withdrawalsEmpty": "Hozircha yechib olishlar yoʻq."
+  },
+  "trades": {
+    "title": "Almashuvlar",
+    "all": "Hammasi",
     "purchases": "Xaridlar",
-    "balance": "Balans"
+    "sales": "Sotuvlar",
+    "salesEmpty": "Hozircha sotuvlar yoʻq."
   }
 }

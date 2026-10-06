@@ -64,11 +64,8 @@ describe("AccountView", () => {
     expect(screen.getByRole("button", { name: "Выйти" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Баланс/ })).toHaveAttribute(
       "href",
-      "/account/balance",
+      "/account/transactions",
     );
-    expect(screen.getByRole("link", { name: "Мои заказы" })).toHaveAttribute(
-      "href",
-      "/account/orders",
-    );
+    expect(screen.getByRole("link", { name: "Обмены" })).toHaveAttribute("href", "/account/trades");
   });
 });

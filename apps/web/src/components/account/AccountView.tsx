@@ -9,7 +9,7 @@ import { TradeLinkForm } from "./TradeLinkForm";
 
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { BALANCE, ORDERS } from "@/lib/paths";
+import { TRADES, TRANSACTIONS } from "@/lib/paths";
 
 const TILE =
   "border-border hover:border-border-strong flex items-center gap-3 rounded-lg border p-5 font-bold";
@@ -55,12 +55,12 @@ export function AccountView({ locale }: AccountViewProps) {
         <p className="text-xl font-bold">{user.display_name ?? "Steam"}</p>
       </div>
       <div className="flex flex-col gap-3">
-        <Link href={BALANCE} className={TILE}>
+        <Link href={TRANSACTIONS} className={TILE}>
           <Wallet aria-hidden className="text-accent h-5 w-5" />
           <span className="flex-1">{balance("title")}</span>
           <ChevronRight aria-hidden className="text-fg-dim h-5 w-5" />
         </Link>
-        <Link href={ORDERS} className={TILE}>
+        <Link href={TRADES} className={TILE}>
           <Package aria-hidden className="text-accent h-5 w-5" />
           <span className="flex-1">{orders("title")}</span>
           <ChevronRight aria-hidden className="text-fg-dim h-5 w-5" />

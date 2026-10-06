@@ -113,7 +113,7 @@ export function Showcase() {
           label="Jam ▾"
           items={[
             { key: "p", label: "Профиль и трейд-ссылка", href: "#" },
-            { key: "o", label: "Мои заказы", href: "#", meta: "3" },
+            { key: "o", label: "Обмены", href: "#", meta: "3" },
             { key: "s", separator: true },
             {
               key: "x",

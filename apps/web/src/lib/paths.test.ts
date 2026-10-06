@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BALANCE, ORDERS, orderPath } from "./paths";
+import { orderPath, TRADES, TRANSACTIONS } from "./paths";
 
 describe("order paths", () => {
   it("escapes the order number as one path segment", () => {
@@ -9,7 +9,7 @@ describe("order paths", () => {
   });
 
   it("names the account pages", () => {
-    expect(ORDERS).toBe("/account/orders");
-    expect(BALANCE).toBe("/account/balance");
+    expect(TRADES).toBe("/account/trades");
+    expect(TRANSACTIONS).toBe("/account/transactions");
   });
 });

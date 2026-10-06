@@ -35,6 +35,7 @@ describe("AccountMenu", () => {
     expect(items.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
+      ["Обмены", "/account/trades"],
       ["Реферал", "/account/referral"],
       ["Выйти", null],
     ]);

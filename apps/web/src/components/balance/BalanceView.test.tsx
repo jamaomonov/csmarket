@@ -21,14 +21,21 @@ vi.mock("@/lib/balance", async (importOriginal) => ({
   ...(await importOriginal<typeof BalanceModule>()),
   ...api,
 }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/i18n/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 
-function renderView() {
+function renderView(type: "all" | "topup" | "withdrawal" = "all") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-        <BalanceView locale="ru" />
+        <BalanceView locale="ru" type={type} />
       </NextIntlClientProvider>
     </QueryClientProvider>,
   );
@@ -66,5 +73,19 @@ describe("BalanceView", () => {
     expect(screen.getByText("На балансе")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Click" })).toBeInTheDocument();
     expect(await screen.findByText("Пока пусто.")).toBeInTheDocument();
+  });
+
+  it("filters the history: all, top-ups, withdrawals", async () => {
+    auth.value = { status: "signed_in", user: { id: "u1" }, signInHref: () => "" };
+    renderView("topup");
+    const links = ["Все", "Пополнение", "Вывод"].map((name) => screen.getByRole("link", { name }));
+    expect(links.map((a) => a.getAttribute("href"))).toEqual([
+      "/account/transactions",
+      "/account/transactions?type=topup",
+      "/account/transactions?type=withdrawal",
+    ]);
+    expect(links[1]).toHaveAttribute("aria-current", "page");
+    await screen.findByText("Пока пусто.");
+    expect(api.getEntries).toHaveBeenCalledWith(undefined, "topup");
   });
 });

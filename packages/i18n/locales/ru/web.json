@@ -32,7 +32,8 @@
     "steamTopup": "Пополнить Steam",
     "reviews": "Отзывы",
     "transactions": "Транзакции",
-    "referral": "Реферал"
+    "referral": "Реферал",
+    "trades": "Обмены"
   },
   "auth": {
     "callback": {
@@ -273,7 +274,7 @@
     "howItWorks": "После оплаты продавец отправит обмен в Steam. Примите его — скин ваш."
   },
   "orders": {
-    "title": "Мои заказы",
+    "title": "Обмены",
     "empty": "Заказов пока нет.",
     "toCatalog": "В каталог",
     "more": "Показать ещё",
@@ -317,7 +318,16 @@
   },
   "transactions": {
     "title": "Транзакции",
+    "all": "Все",
+    "topups": "Пополнение",
+    "withdrawals": "Вывод",
+    "withdrawalsEmpty": "Выводов пока нет."
+  },
+  "trades": {
+    "title": "Обмены",
+    "all": "Все",
     "purchases": "Покупки",
-    "balance": "Баланс"
+    "sales": "Продажи",
+    "salesEmpty": "Продаж пока нет."
   }
 }

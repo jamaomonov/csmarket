@@ -1,7 +1,7 @@
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { BalanceView, type TransactionsType } from "@/components/balance/BalanceView";
+import { TradesView, type TradesType } from "@/components/trades/TradesView";
 import { routing } from "@/i18n/routing";
 
 interface Props {
@@ -9,28 +9,28 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const TYPES: readonly TransactionsType[] = ["topup", "withdrawal"];
+const TYPES: readonly TradesType[] = ["purchases", "sales"];
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "web.transactions" });
+  const t = await getTranslations({ locale, namespace: "web.trades" });
   return { title: t("title"), robots: { index: false, follow: false } };
 }
 
-/** «Транзакции»: per-account, so it renders client-side; `?type=topup|withdrawal` filters. */
-export default async function TransactionsPage({ params, searchParams }: Props) {
+/** «Обмены»: per-account, so it renders client-side; `?type=purchases|sales` filters. */
+export default async function TradesPage({ params, searchParams }: Props) {
   const { locale } = await params;
   if (hasLocale(routing.locales, locale)) {
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
     setRequestLocale(locale);
   }
-  const t = await getTranslations("web.transactions");
+  const t = await getTranslations("web.trades");
   const raw = (await searchParams).type;
   const type = TYPES.find((x) => x === raw) ?? "all";
   return (
     <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
       <h1 className="mb-6 text-2xl font-bold">{t("title")}</h1>
-      <BalanceView locale={locale} type={type} />
+      <TradesView locale={locale} type={type} />
     </main>
   );
 }

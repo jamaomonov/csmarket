@@ -130,8 +130,10 @@ Measured contrast (WCAG): white on `surface` 15.5; `fg-muted` on `surface-2` 5.8
   «Скоро» pages (`ComingSoon`) under their final URLs until they are built.
 - **Signed in:** language switcher, balance chip («1 250 000 сум» + a green «+» to
   `/account/balance`), avatar + name with a Dropdown with icons: «Профиль» (`/account`),
-  «Транзакции» (`/account/transactions`: purchases and the balance history, one tab each),
-  «Реферал» (`/account/referral`), «Выйти» (danger).
+  «Транзакции» (`/account/transactions`: the balance, the top-up form and the history,
+  filtered Все / Пополнение / Вывод), «Обмены» (`/account/trades`: orders, filtered Все /
+  Покупки / Продажи), «Реферал» (`/account/referral`), «Выйти» (danger). The old
+  `/account/balance` and `/account/orders` redirect there for good (owner, 2026-10-06).
 - **Below 1280 px:** the nav moves into the ☰ menu (with the account items); below 768 px only
   the logo, the balance chip (amount without «сум») and ☰ remain.
 - **Language switcher:** links to the same path in the other locale (next-intl navigation),

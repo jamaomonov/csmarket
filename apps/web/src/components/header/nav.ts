@@ -1,12 +1,38 @@
-import { Gamepad2, Gift, HandCoins, ReceiptText, Star, Store, User } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Gamepad2,
+  Gift,
+  HandCoins,
+  ReceiptText,
+  Star,
+  Store,
+  User,
+} from "lucide-react";
 
 import type { LucideIcon } from "lucide-react";
 
-import { ACCOUNT, HOME, REFERRAL, REVIEWS, SELL, STEAM_TOPUP, TRANSACTIONS } from "@/lib/paths";
+import {
+  ACCOUNT,
+  HOME,
+  REFERRAL,
+  REVIEWS,
+  SELL,
+  STEAM_TOPUP,
+  TRADES,
+  TRANSACTIONS,
+} from "@/lib/paths";
 
 export interface NavEntry {
   /** The key under `web.nav`. */
-  key: "sell" | "market" | "steamTopup" | "reviews" | "profile" | "transactions" | "referral";
+  key:
+    | "sell"
+    | "market"
+    | "steamTopup"
+    | "reviews"
+    | "profile"
+    | "transactions"
+    | "trades"
+    | "referral";
   href: string;
   icon: LucideIcon;
 }
@@ -23,6 +49,7 @@ export const MAIN_NAV: NavEntry[] = [
 export const ACCOUNT_NAV: NavEntry[] = [
   { key: "profile", href: ACCOUNT, icon: User },
   { key: "transactions", href: TRANSACTIONS, icon: ReceiptText },
+  { key: "trades", href: TRADES, icon: ArrowLeftRight },
   { key: "referral", href: REFERRAL, icon: Gift },
 ];
 

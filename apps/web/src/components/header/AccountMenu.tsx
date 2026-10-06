@@ -9,7 +9,6 @@ import { ACCOUNT_NAV } from "./nav";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 
-
 /** next-intl's locale-aware Link, shaped for `Dropdown`. */
 export function AppLink({ href, children, ...rest }: DropdownLinkProps) {
   return (

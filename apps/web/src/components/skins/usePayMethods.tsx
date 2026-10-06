@@ -12,7 +12,7 @@ import type { Provider } from "@/lib/balance";
 import { Link } from "@/i18n/navigation";
 import { BALANCE_KEY, getBalance, getProviders } from "@/lib/balance";
 import { isPayProvider, type PayProvider } from "@/lib/orders";
-import { BALANCE } from "@/lib/paths";
+import { TRANSACTIONS } from "@/lib/paths";
 import { usePreferBalance, WALLET } from "@/lib/prefer-balance";
 
 /** Query key of the kassas open now (anonymous, shared by every picker). */
@@ -83,7 +83,7 @@ export function usePayMethods(
         ...(funds !== null && price !== null && !covers
           ? {
               action: (
-                <Link href={BALANCE} className="text-accent shrink-0 text-sm font-semibold">
+                <Link href={TRANSACTIONS} className="text-accent shrink-0 text-sm font-semibold">
                   {t("topUp")}
                 </Link>
               ),

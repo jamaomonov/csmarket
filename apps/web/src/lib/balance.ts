@@ -88,9 +88,16 @@ export function getBalance(): Promise<Balance> {
   return session.apiGet<Balance>("/api/v1/wallet");
 }
 
-/** `GET /wallet/entries`: one page of history; pass `next_cursor` back for the next. */
-export function getEntries(cursor?: string): Promise<EntriesPage> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+/** The history filters `GET /wallet/entries?type=` knows. */
+export type EntryType = "topup" | "withdrawal";
+
+/** `GET /wallet/entries`: one page of history (of one `type` when given); pass `next_cursor`
+ * back for the next. */
+export function getEntries(cursor?: string, type?: EntryType): Promise<EntriesPage> {
+  const params = new URLSearchParams();
+  if (cursor) params.set("cursor", cursor);
+  if (type) params.set("type", type);
+  const query = params.size > 0 ? `?${params.toString()}` : "";
   return session.apiGet<EntriesPage>(`/api/v1/wallet/entries${query}`);
 }
 

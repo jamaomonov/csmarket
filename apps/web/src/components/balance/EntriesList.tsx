@@ -4,28 +4,32 @@ import { Button, cn } from "@csmarket/ui";
 import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { getEntries, signedUzs, type EntriesPage } from "@/lib/balance";
+import { getEntries, signedUzs, type EntriesPage, type EntryType } from "@/lib/balance";
 
 interface EntriesListProps {
   locale: string;
+  /** Only top-ups or only withdrawals; everything when absent. */
+  type?: EntryType;
 }
 
 /** Query key of the balance history, for whoever needs to invalidate it. */
 export const ENTRIES_KEY = ["wallet", "entries"] as const;
 
 /** The balance history, newest first, one page at a time behind «Показать ещё». */
-export function EntriesList({ locale }: EntriesListProps) {
+export function EntriesList({ locale, type }: EntriesListProps) {
   const t = useTranslations("web.balance");
   const common = useTranslations("common");
+  const tx = useTranslations("web.transactions");
   const entries = useInfiniteQuery<
     EntriesPage,
     Error,
     InfiniteData<EntriesPage, string | null>,
-    typeof ENTRIES_KEY,
+    readonly [...typeof ENTRIES_KEY, string],
     string | null
   >({
-    queryKey: ENTRIES_KEY,
-    queryFn: ({ pageParam }) => getEntries(pageParam ?? undefined),
+    // Under ENTRIES_KEY, so invalidating that refreshes every filter.
+    queryKey: [...ENTRIES_KEY, type ?? "all"],
+    queryFn: ({ pageParam }) => getEntries(pageParam ?? undefined, type),
     initialPageParam: null,
     getNextPageParam: (last) => last.next_cursor,
   });
@@ -53,7 +57,9 @@ export function EntriesList({ locale }: EntriesListProps) {
     const items = entries.data.pages.flatMap((page) => page.items);
     body =
       items.length === 0 ? (
-        <p className="text-fg-muted text-sm">{t("historyEmpty")}</p>
+        <p className="text-fg-muted text-sm">
+          {type === "withdrawal" ? tx("withdrawalsEmpty") : t("historyEmpty")}
+        </p>
       ) : (
         <ul className="divide-border divide-y">
           {items.map((e) => (

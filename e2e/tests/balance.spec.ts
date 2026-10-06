@@ -8,8 +8,8 @@ const PREFIX = "7656119803";
 
 test("top up 50 000 soʻm through the test kassa and see it on the balance", async ({ page }) => {
   await devLogin(page, { steamId: uniqueSteamId(PREFIX), name: "Buyer" });
-  await page.goto("/account/balance");
-  await expect(page.getByRole("heading", { level: 1, name: "Баланс" })).toBeVisible();
+  await page.goto("/account/transactions");
+  await expect(page.getByRole("heading", { level: 1, name: "Транзакции" })).toBeVisible();
   await expect(page.getByText("Пока пусто.")).toBeVisible();
 
   await page.getByLabel("Сумма", { exact: true }).fill("50000");
@@ -31,7 +31,7 @@ test("top up 50 000 soʻm through the test kassa and see it on the balance", asy
   await expect(page.getByRole("heading", { name: /^Баланс пополнен на 50\s000/ })).toBeVisible();
 
   await page.getByRole("link", { name: "К балансу" }).click();
-  await expect(page).toHaveURL(/\/account\/balance$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/account\/transactions$/, { timeout: 30_000 });
   // The header shows the balance too: read the one on the page.
   await expect(page.locator("#main-content").getByText(/^50\s000\sсум$/)).toBeVisible();
   const entry = page.getByRole("listitem").filter({ hasText: number });
@@ -42,7 +42,7 @@ test("top up 50 000 soʻm through the test kassa and see it on the balance", asy
 
 test("an amount below the minimum is refused in the form", async ({ page }) => {
   await devLogin(page, { steamId: uniqueSteamId(PREFIX) });
-  await page.goto("/account/balance");
+  await page.goto("/account/transactions");
   await page.getByLabel("Сумма", { exact: true }).fill("999");
   await page.getByRole("button", { name: "Тестовая оплата" }).click();
   await page.getByRole("button", { name: /^Пополнить на 999/ }).click();
@@ -51,7 +51,7 @@ test("an amount below the minimum is refused in the form", async ({ page }) => {
     /^Сумма от 1\s000\sсум до 10\s000\s000\sсум/,
   );
   // Refused before any request: no top-up was opened.
-  await expect(page).toHaveURL(/\/account\/balance$/);
+  await expect(page).toHaveURL(/\/account\/transactions$/);
   await expect(page.getByText("Пока пусто.")).toBeVisible();
 });
 

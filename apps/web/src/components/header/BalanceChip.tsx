@@ -7,7 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
 import { BALANCE_KEY, getBalance } from "@/lib/balance";
-import { BALANCE } from "@/lib/paths";
+import { TRANSACTIONS } from "@/lib/paths";
 
 /** The signed-in balance with a «+» to top up; `compact` drops the «сум» on phones. */
 export function BalanceChip({ compact = false }: { compact?: boolean }) {
@@ -25,7 +25,7 @@ export function BalanceChip({ compact = false }: { compact?: boolean }) {
             : formatUzs(locale, amount)}
       </span>
       <Link
-        href={BALANCE}
+        href={TRANSACTIONS}
         aria-label={t("topUp")}
         className="bg-accent text-accent-fg hover:bg-accent-hover focus-visible:ring-accent focus-visible:ring-offset-bg flex size-7 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >

@@ -1,24 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 
-const calls = vi.hoisted((): { namespaces: unknown[] } => ({ namespaces: [] }));
-vi.mock("next-intl/server", () => ({
-  getTranslations: (opts: unknown) => {
-    calls.namespaces.push(opts);
-    return Promise.resolve((key: string) => `web.balance.${key}`);
-  },
-  setRequestLocale: () => undefined,
-}));
-vi.mock("@/components/balance/BalanceView", () => ({ BalanceView: () => null }));
+const moved = vi.hoisted(() => vi.fn());
+vi.mock("@/i18n/navigation", () => ({ permanentRedirect: moved }));
 
-import { generateMetadata } from "./page";
+import Page from "./page";
 
-describe("balance page metadata", () => {
-  it("is titled in the route's locale and never indexed", async () => {
-    const meta = await generateMetadata({ params: Promise.resolve({ locale: "uz" }) });
-    expect(meta).toEqual({
-      title: "web.balance.title",
-      robots: { index: false, follow: false },
-    });
-    expect(calls.namespaces).toContainEqual({ locale: "uz", namespace: "web.balance" });
-  });
+it("moved for good to /account/transactions, in the same locale", async () => {
+  await Page({ params: Promise.resolve({ locale: "uz" }) });
+  expect(moved).toHaveBeenCalledWith({ href: "/account/transactions", locale: "uz" });
 });

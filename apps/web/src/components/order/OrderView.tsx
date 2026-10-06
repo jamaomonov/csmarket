@@ -28,7 +28,7 @@ import {
   type PayProvider,
   type SkinTradeOut,
 } from "@/lib/orders";
-import { ORDERS } from "@/lib/paths";
+import { TRADES } from "@/lib/paths";
 
 const isNotFound = (err: unknown): boolean => err instanceof SessionApiError && err.status === 404;
 
@@ -190,7 +190,7 @@ function Panel({ state, children }: PanelProps) {
       className="flex flex-col items-start gap-5"
     >
       {children}
-      <Link href={ORDERS} className="text-fg-muted hover:text-fg text-sm">
+      <Link href={TRADES} className="text-fg-muted hover:text-fg text-sm">
         {t("title")}
       </Link>
     </section>

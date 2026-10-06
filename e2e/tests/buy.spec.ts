@@ -84,7 +84,7 @@ test("buy from the balance: the trade arrives and is accepted", async ({ page, r
   await expect(trade.getByText("Получено", { exact: true })).toBeVisible();
   await expect(page.getByTestId("order-status-label")).toHaveText("Получен");
 
-  await page.goto("/account/balance");
+  await page.goto("/account/transactions");
   await expect(
     page.locator("#main-content").getByText(new RegExp(`^${sum(TOP_UP - price)}$`)),
   ).toBeVisible();
@@ -151,7 +151,7 @@ test("a declined trade puts the money back on the balance", async ({ page, reque
   ).toBeVisible();
 
   await trade.getByRole("link", { name: "Открыть баланс" }).click();
-  await expect(page).toHaveURL(/\/account\/balance$/, { timeout: 30_000 });
+  await expect(page).toHaveURL(/\/account\/transactions$/, { timeout: 30_000 });
   // Back to what it was before the purchase.
   await expect(
     page.locator("#main-content").getByText(new RegExp(`^${sum(TOP_UP)}$`)),

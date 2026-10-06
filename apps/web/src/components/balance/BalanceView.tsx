@@ -8,18 +8,26 @@ import { useTranslations } from "next-intl";
 import { EntriesList } from "./EntriesList";
 import { TopupForm } from "./TopupForm";
 
+import { HistoryFilter } from "@/components/account/HistoryFilter";
 import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY, getBalance, getProviders } from "@/lib/balance";
+import { TRANSACTIONS } from "@/lib/paths";
+
+export type TransactionsType = "all" | "topup" | "withdrawal";
 
 interface BalanceViewProps {
   locale: string;
+  /** The history filter (`?type=` on «Транзакции»). */
+  type: TransactionsType;
 }
 
-/** The balance page body; auth states as on the account page. */
-export function BalanceView({ locale }: BalanceViewProps) {
+/** «Транзакции»: the balance, the top-up form and the filtered history; auth states as on
+ * the account page. */
+export function BalanceView({ locale, type }: BalanceViewProps) {
   const t = useTranslations("web.balance");
   const auth = useTranslations("web.auth");
   const nav = useTranslations("web.nav");
+  const tx = useTranslations("web.transactions");
   const { status, user, signInHref } = useAuth();
   const signedIn = status === "signed_in" && user !== null;
   const balance = useQuery({
@@ -72,7 +80,21 @@ export function BalanceView({ locale }: BalanceViewProps) {
         // A failed list reads as "nothing open": the form says so instead of spinning.
         providers={providers.isError ? [] : providers.data}
       />
-      <EntriesList locale={locale} />
+      <div className="flex flex-col gap-3">
+        <HistoryFilter
+          current={type}
+          options={[
+            { key: "all", label: tx("all"), href: TRANSACTIONS },
+            { key: "topup", label: tx("topups"), href: `${TRANSACTIONS}?type=topup` },
+            {
+              key: "withdrawal",
+              label: tx("withdrawals"),
+              href: `${TRANSACTIONS}?type=withdrawal`,
+            },
+          ]}
+        />
+        <EntriesList locale={locale} {...(type !== "all" ? { type } : {})} />
+      </div>
     </div>
   );
 }

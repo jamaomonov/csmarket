@@ -23,13 +23,10 @@ export function orderPath(number: string): string {
 /** The account page («В профиль»). */
 export const ACCOUNT = "/account";
 
-/** «Мои заказы». */
-export const ORDERS = "/account/orders";
+/** «Обмены»: purchases (and later sales); `?type=purchases|sales` filters. */
+export const TRADES = "/account/trades";
 
-/** The balance page («Открыть баланс», «Пополнить»). */
-export const BALANCE = "/account/balance";
-
-/** «Транзакции»: purchases and the balance history on one page. */
+/** «Транзакции»: the balance, top-up and its history; `?type=topup|withdrawal` filters. */
 export const TRANSACTIONS = "/account/transactions";
 
 /** Sections that are on their way («Скоро» pages for now). */

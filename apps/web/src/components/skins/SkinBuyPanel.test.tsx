@@ -267,7 +267,7 @@ describe("SkinBuyPanel — payment method", () => {
     expect(screen.getByRole("button", { name: "Click" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("link", { name: "Пополнить" })).toHaveAttribute(
       "href",
-      "/account/balance",
+      "/account/transactions",
     );
   });
 });

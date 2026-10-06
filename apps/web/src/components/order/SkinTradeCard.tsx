@@ -16,7 +16,7 @@ import { useEffect, useId, useState } from "react";
 import type { SkinTradeOut, TradeReason } from "@/lib/orders";
 
 import { Link } from "@/i18n/navigation";
-import { BALANCE } from "@/lib/paths";
+import { TRANSACTIONS } from "@/lib/paths";
 
 /** Re-render once a minute while `active`, so time-bound lines stay true. */
 function useMinuteTick(active: boolean): void {
@@ -169,7 +169,7 @@ function Refunded({ reason }: RefundedProps) {
     <div className="flex flex-col items-start gap-2">
       <p>{t(line)}</p>
       <Link
-        href={BALANCE}
+        href={TRANSACTIONS}
         className="text-accent inline-flex items-center gap-1.5 text-sm font-semibold"
       >
         <Wallet aria-hidden className="h-4 w-4" />

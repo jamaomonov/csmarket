@@ -181,7 +181,7 @@ describe("TopupStatus", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "К балансу" })).toHaveAttribute(
       "href",
-      "/account/balance",
+      "/account/transactions",
     );
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["wallet", "balance"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["wallet", "entries"] });
@@ -201,7 +201,7 @@ describe("TopupStatus", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "К балансу" })).toHaveAttribute(
       "href",
-      "/account/balance",
+      "/account/transactions",
     );
     expect(screen.queryByRole("link", { name: "Перейти к оплате" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Оплатить (тест)" })).toBeNull();
