@@ -28,8 +28,13 @@
   shortcomings shipped on purpose live in `docs/tech-debt.md`. The real-kassa check is pending the
   first deploy (ADR-0006 R14, `docs/runbooks/kassa-setup.md`), and the first real sale waits
   for the deploy too (the Waxpeer key whitelisted for the VPS IP, `docs/runbooks/waxpeer.md`).
-  `main` is pushed to the private repo `github.com/jamaomonov/csmarket` (2026-10-02); nothing is deployed. M0 is done for good when
-  `https://csmarket.uz/` answers from CI-built images. Next: M5 (launch), when the owner asks for it.
+  `main` is pushed to the private repo `github.com/jamaomonov/csmarket`. **First deploy done
+  2026-10-06** on the VPS `57.131.198.69` (Ubuntu 24.04, user `deploy`, checkout `~/opt/csmarket`,
+  password and root SSH off), image tag `sha-3aa03e4`: all five hosts answer through Cloudflare
+  with Let's Encrypt certificates, the client IP check passed — M0 is done for good. Search
+  indexing stays closed (`CSMARKET_INDEXING=off`, `docs/runbooks/indexing.md`) until the owner
+  opens it. Not yet on the server: the Waxpeer key (no prices, no buying), the kassas, Resend,
+  backups and alerts (the `ops` profile). Next: M5 (launch), when the owner asks for it.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
