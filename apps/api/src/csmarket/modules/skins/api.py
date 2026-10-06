@@ -12,6 +12,14 @@ from csmarket.modules.skins.listings import (
 )
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.naming import canonical_name
+from csmarket.modules.skins.offers import (
+    Offer,
+    Source,
+    from_listing,
+    merge_offers,
+    offer_id_of,
+    parse_offer_id,
+)
 from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
 from csmarket.modules.skins.service import get_item
 from csmarket.modules.skins.settings import enabled_categories, load_rules
@@ -47,10 +55,12 @@ __all__ = [
     "FakeAction",
     "FakeTradeClient",
     "Listing",
+    "Offer",
     "PricingRules",
     "SearchClient",
     "SkinItem",
     "SnapshotRow",
+    "Source",
     "TradeClient",
     "WaxpeerBuy",
     "WaxpeerBuyRefusedError",
@@ -66,10 +76,14 @@ __all__ = [
     "enabled_categories",
     "fake_active",
     "fake_client",
+    "from_listing",
     "get_item",
     "listings_budget",
     "listings_for",
     "load_rules",
+    "merge_offers",
+    "offer_id_of",
+    "parse_offer_id",
     "parse_trade",
     "quote",
     "request_trade_client",

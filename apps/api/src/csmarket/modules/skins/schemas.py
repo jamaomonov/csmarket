@@ -75,7 +75,7 @@ class SkinSuggestOut(BaseModel):
 class SkinListingSummaryOut(BaseModel):
     """One of the cheapest auto listings from the last price tick, at our price."""
 
-    listing_id: int
+    listing_id: str
     price_usd: str
     price_uzs: str | None
 
@@ -113,7 +113,8 @@ class SkinStickerOut(BaseModel):
 class SkinListingOut(BaseModel):
     """One live auto listing at our price."""
 
-    listing_id: int
+    #: ``wx:<id>`` / ``sl:<id>`` — echo it back to ``POST /orders``.
+    listing_id: str
     price_usd: str
     price_uzs: str | None
     float_value: float | None

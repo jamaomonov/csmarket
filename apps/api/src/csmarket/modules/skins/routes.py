@@ -20,6 +20,7 @@ from redis.exceptions import RedisError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
+from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.redis import get_redis
@@ -35,6 +36,7 @@ from csmarket.modules.skins.listings import (
     steam_inspect_url,
 )
 from csmarket.modules.skins.models import SkinItem
+from csmarket.modules.skins.offers import from_listing, merge_offers, offer_id_of
 from csmarket.modules.skins.pricing import (
     PricingRules,
     max_usd_for_uzs,
@@ -66,6 +68,7 @@ from csmarket.modules.skins.service import (
     suggest,
 )
 from csmarket.modules.skins.settings import enabled_categories, load_rules
+from csmarket.modules.skinslink.api import offers_for
 
 _PAGE_TTL = 60
 
@@ -271,7 +274,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
         ).price_usd
         cheapest.append(
             SkinListingSummaryOut(
-                listing_id=int(entry["listing_id"]),
+                listing_id=offer_id_of("waxpeer", int(entry["listing_id"])),
                 price_usd=str(usd),
                 price_uzs=_to_uzs(usd, rate, rules),
             )
@@ -318,11 +321,14 @@ async def get_listings(
     item = await get_item(db, slug, categories=enabled_categories(settings))
     rules = await load_rules(db)
     rate = await usd_uzs_rate(db)
+    # Skinslink's offers come from our mirror (a DB read, no external call); this route
+    # composes the two sources — ``skins`` itself never imports ``skinslink``.
+    extra = await offers_for(db, item.id, settings=settings, now=now())
     rows, degraded = await listings_for(
         item, client=client, redis=get_redis(), budget_per_minute=listings_budget(settings)
     )
     items: list[SkinListingOut] = []
-    for row in rows:
+    for row in merge_offers([from_listing(r) for r in rows], extra):
         usd = quote(
             row.price_units,
             rules=rules,
@@ -335,7 +341,7 @@ async def get_listings(
         ).price_usd
         items.append(
             SkinListingOut(
-                listing_id=row.listing_id,
+                listing_id=row.offer_id,
                 price_usd=str(usd),
                 price_uzs=_to_uzs(usd, rate, rules),
                 float_value=row.float_value,

@@ -27,6 +27,7 @@ from csmarket.modules.skinslink.models import (
     SkinslinkPurchase,
     SkinslinkState,
 )
+from csmarket.modules.skinslink.offers import offers_for
 
 __all__ = [
     "LINK_ERROR_CODES",
@@ -51,6 +52,7 @@ __all__ = [
     "SkinslinkUnavailableError",
     "client_for",
     "mirror_fresh",
+    "offers_for",
     "sync_mirror",
     "to_units",
 ]

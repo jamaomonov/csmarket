@@ -177,7 +177,7 @@ async def test_detail_has_phase_and_cheapest(integration_client: AsyncClient, se
     assert body["phase"] == "Phase 2"
     # 1450: 29.35 bracket margin + (3 % + 3 pp for a single listing) × 1450 = 87.00 -> 1579.85
     assert body["cheapest"] == [
-        {"listing_id": 1, "price_usd": "1579.85", "price_uzs": _uzs("1579.85")}
+        {"listing_id": "wx:1", "price_usd": "1579.85", "price_uzs": _uzs("1579.85")}
     ]
     assert (await integration_client.get("/api/v1/skins/nope")).status_code == 404
 

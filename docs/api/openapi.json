@@ -4410,7 +4410,7 @@
           },
           "listing_id": {
             "title": "Listing Id",
-            "type": "integer"
+            "type": "string"
           },
           "paint_seed": {
             "anyOf": [
@@ -4463,7 +4463,7 @@
         "properties": {
           "listing_id": {
             "title": "Listing Id",
-            "type": "integer"
+            "type": "string"
           },
           "price_usd": {
             "title": "Price Usd",

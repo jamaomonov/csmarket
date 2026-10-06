@@ -104,11 +104,13 @@ def _key(headers: dict[str, str], key: str | None = None) -> dict[str, str]:
     return {**headers, "Idempotency-Key": key or f"order-{uuid.uuid4()}"}
 
 
-async def _shown_price(api: AsyncClient, slug: str, listing_id: int) -> int:
-    """The soʻm price the item page's listings showed for ``listing_id``."""
+async def _shown_price(api: AsyncClient, slug: str, listing_id: int | str) -> int:
+    """The soʻm price the item page's listings showed for ``listing_id`` (a bare int is
+    Waxpeer's: the page lists ``wx:<id>``)."""
     r = await api.get(f"/api/v1/skins/{slug}/listings")
     assert r.status_code == 200, r.text
-    row = next(i for i in r.json()["items"] if i["listing_id"] == listing_id)
+    wanted = listing_id if isinstance(listing_id, str) else f"wx:{listing_id}"
+    row = next(i for i in r.json()["items"] if i["listing_id"] == wanted)
     return int(row["price_uzs"])
 
 

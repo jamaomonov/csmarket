@@ -71,7 +71,7 @@ async def test_live_listings_are_priced(integration_client: AsyncClient, item: S
     assert r.status_code == 200
     body = r.json()
     assert body["degraded"] is False
-    assert [i["listing_id"] for i in body["items"]] == [53857957789, 53863078495]
+    assert [i["listing_id"] for i in body["items"]] == ["wx:53857957789", "wx:53863078495"]
     assert body["items"][0]["price_usd"] == "30.37"
     assert body["items"][0]["price_uzs"] is not None
     assert body["items"][0]["inspect_url"].startswith("steam://")
@@ -125,7 +125,7 @@ async def test_rate_limited_upstream_is_degraded_200(
     assert r.status_code == 200
     body = r.json()
     assert body["degraded"] is True
-    assert [i["listing_id"] for i in body["items"]] == [53857957789]
+    assert [i["listing_id"] for i in body["items"]] == ["wx:53857957789"]
     assert await get_redis().exists("skins:wax:breaker")
 
 
@@ -154,3 +154,43 @@ async def test_unknown_and_hidden_slugs_are_404_before_waxpeer(
     await db_session.commit()
     assert (await integration_client.get(f"/api/v1/skins/{item.slug}/listings")).status_code == 404
     assert not route.called
+
+
+@respx.mock
+async def test_skinslink_offers_join_the_list(
+    integration_client: AsyncClient,
+    item: SkinItem,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from datetime import UTC, datetime
+
+    from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
+
+    monkeypatch.setenv("CSMARKET_SKINSLINK_ENABLED", "true")
+    monkeypatch.setenv("CSMARKET_SKINSLINK_API_KEY", "k")
+    monkeypatch.setenv("CSMARKET_SKINSLINK_SECRET", "s")
+    cfg.get_settings.cache_clear()
+    db_session.add_all(
+        [
+            SkinslinkItem(
+                id="380001",
+                market_hash_name=item.market_hash_name,
+                phase="",
+                price_units=20000,
+                skin_item_id=item.id,
+            ),
+            SkinslinkState(id=1, mirror_synced_at=datetime.now(UTC), cursor="c"),
+        ]
+    )
+    await db_session.commit()
+    respx.get(f"{HOST}/v2/search-items-by-name").mock(
+        return_value=httpx.Response(200, content=(FIXTURES / "search_v2.json").read_bytes())
+    )
+    r = await integration_client.get(f"/api/v1/skins/{item.slug}/listings")
+    assert r.status_code == 200
+    items = r.json()["items"]
+    assert [i["listing_id"] for i in items] == ["sl:380001", "wx:53857957789", "wx:53863078495"]
+    assert items[0]["stickers"] == []
+    prices = [int(i["price_uzs"]) for i in items]
+    assert prices == sorted(prices)
