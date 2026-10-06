@@ -18,10 +18,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "amount_uzs",
-          "reason"
-        ],
+        "required": ["amount_uzs", "reason"],
         "title": "AdminAdjustIn",
         "type": "object"
       },
@@ -53,13 +50,7 @@
             "type": "string"
           },
           "kind": {
-            "enum": [
-              "topup",
-              "topup_reversal",
-              "admin_adjust",
-              "purchase",
-              "refund"
-            ],
+            "enum": ["topup", "topup_reversal", "admin_adjust", "purchase", "refund"],
             "title": "Kind",
             "type": "string"
           },
@@ -133,14 +124,7 @@
             "$ref": "#/components/schemas/AdminOrderUser"
           }
         },
-        "required": [
-          "order",
-          "user",
-          "trade",
-          "payments",
-          "can_refund",
-          "can_retry"
-        ],
+        "required": ["order", "user", "trade", "payments", "can_refund", "can_retry"],
         "title": "AdminOrderDetail",
         "type": "object"
       },
@@ -453,11 +437,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "number",
-          "status",
-          "price_uzs"
-        ],
+        "required": ["number", "status", "price_uzs"],
         "title": "AdminOrderInfo",
         "type": "object"
       },
@@ -482,25 +462,12 @@
             "type": "string"
           },
           "status": {
-            "enum": [
-              "created",
-              "pending",
-              "succeeded",
-              "failed",
-              "cancelled",
-              "refunded"
-            ],
+            "enum": ["created", "pending", "succeeded", "failed", "cancelled", "refunded"],
             "title": "Status",
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "provider",
-          "status",
-          "amount_uzs",
-          "created_at"
-        ],
+        "required": ["id", "provider", "status", "amount_uzs", "created_at"],
         "title": "AdminOrderPaymentOut",
         "type": "object"
       },
@@ -615,10 +582,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "display_name"
-        ],
+        "required": ["id", "display_name"],
         "title": "AdminOrderUser",
         "type": "object"
       },
@@ -644,10 +608,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "AdminOrdersOut",
         "type": "object"
       },
@@ -685,12 +646,7 @@
             ]
           }
         },
-        "required": [
-          "payment",
-          "topup",
-          "order",
-          "kassa"
-        ],
+        "required": ["payment", "topup", "order", "kassa"],
         "title": "AdminPaymentDetail",
         "type": "object"
       },
@@ -750,22 +706,12 @@
             "title": "Provider Ref"
           },
           "purpose": {
-            "enum": [
-              "topup",
-              "order"
-            ],
+            "enum": ["topup", "order"],
             "title": "Purpose",
             "type": "string"
           },
           "status": {
-            "enum": [
-              "created",
-              "pending",
-              "succeeded",
-              "failed",
-              "cancelled",
-              "refunded"
-            ],
+            "enum": ["created", "pending", "succeeded", "failed", "cancelled", "refunded"],
             "title": "Status",
             "type": "string"
           },
@@ -826,22 +772,12 @@
             "type": "string"
           },
           "purpose": {
-            "enum": [
-              "topup",
-              "order"
-            ],
+            "enum": ["topup", "order"],
             "title": "Purpose",
             "type": "string"
           },
           "status": {
-            "enum": [
-              "created",
-              "pending",
-              "succeeded",
-              "failed",
-              "cancelled",
-              "refunded"
-            ],
+            "enum": ["created", "pending", "succeeded", "failed", "cancelled", "refunded"],
             "title": "Status",
             "type": "string"
           },
@@ -894,10 +830,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "display_name"
-        ],
+        "required": ["id", "display_name"],
         "title": "AdminPaymentUser",
         "type": "object"
       },
@@ -923,10 +856,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "AdminPaymentsOut",
         "type": "object"
       },
@@ -941,9 +871,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "reason"
-        ],
+        "required": ["reason"],
         "title": "AdminReasonIn",
         "type": "object"
       },
@@ -1117,9 +1045,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "hidden"
-        ],
+        "required": ["hidden"],
         "title": "AdminSkinItemPatchIn",
         "type": "object"
       },
@@ -1134,9 +1060,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "title": "AdminSkinItemsOut",
         "type": "object"
       },
@@ -1157,12 +1081,7 @@
             "type": "string"
           },
           "status": {
-            "enum": [
-              "pending",
-              "succeeded",
-              "expired",
-              "reversed"
-            ],
+            "enum": ["pending", "succeeded", "expired", "reversed"],
             "title": "Status",
             "type": "string"
           },
@@ -1179,13 +1098,7 @@
             "title": "Succeeded At"
           }
         },
-        "required": [
-          "number",
-          "amount_uzs",
-          "status",
-          "expires_at",
-          "succeeded_at"
-        ],
+        "required": ["number", "amount_uzs", "status", "expires_at", "succeeded_at"],
         "title": "AdminTopupInfo",
         "type": "object"
       },
@@ -1217,12 +1130,7 @@
             "title": "Provider"
           },
           "status": {
-            "enum": [
-              "pending",
-              "succeeded",
-              "expired",
-              "reversed"
-            ],
+            "enum": ["pending", "succeeded", "expired", "reversed"],
             "title": "Status",
             "type": "string"
           },
@@ -1239,14 +1147,7 @@
             "title": "Succeeded At"
           }
         },
-        "required": [
-          "number",
-          "amount_uzs",
-          "status",
-          "provider",
-          "created_at",
-          "succeeded_at"
-        ],
+        "required": ["number", "amount_uzs", "status", "provider", "created_at", "succeeded_at"],
         "title": "AdminTopupOut",
         "type": "object"
       },
@@ -1262,10 +1163,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "active",
-          "attention"
-        ],
+        "required": ["active", "attention"],
         "title": "AdminTradeCounts",
         "type": "object"
       },
@@ -1660,13 +1558,7 @@
             "title": "Send Until"
           },
           "state": {
-            "enum": [
-              "buying",
-              "offer_sent",
-              "accepted",
-              "released",
-              "failed"
-            ],
+            "enum": ["buying", "offer_sent", "accepted", "released", "failed"],
             "title": "State",
             "type": "string"
           },
@@ -1682,12 +1574,7 @@
             "title": "Status"
           }
         },
-        "required": [
-          "status",
-          "state",
-          "attention_reason",
-          "send_until"
-        ],
+        "required": ["status", "state", "attention_reason", "send_until"],
         "title": "AdminTradeSummary",
         "type": "object"
       },
@@ -1716,11 +1603,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "counts",
-          "next_cursor"
-        ],
+        "required": ["items", "counts", "next_cursor"],
         "title": "AdminTradesOut",
         "type": "object"
       },
@@ -1756,13 +1639,7 @@
             "$ref": "#/components/schemas/AdminUserDetail"
           }
         },
-        "required": [
-          "user",
-          "balance_uzs",
-          "entries",
-          "topups",
-          "orders"
-        ],
+        "required": ["user", "balance_uzs", "entries", "topups", "orders"],
         "title": "AdminUserCard",
         "type": "object"
       },
@@ -1835,11 +1712,7 @@
             "type": "string"
           },
           "locale": {
-            "enum": [
-              "ru",
-              "uz",
-              "en"
-            ],
+            "enum": ["ru", "uz", "en"],
             "title": "Locale",
             "type": "string"
           },
@@ -1880,13 +1753,7 @@
           "trade_link_reason": {
             "anyOf": [
               {
-                "enum": [
-                  "invalid",
-                  "private",
-                  "trade_ban",
-                  "hold",
-                  "unavailable"
-                ],
+                "enum": ["invalid", "private", "trade_ban", "hold", "unavailable"],
                 "type": "string"
               },
               {
@@ -1898,11 +1765,7 @@
           "trade_link_verdict": {
             "anyOf": [
               {
-                "enum": [
-                  "ok",
-                  "warn",
-                  "bad"
-                ],
+                "enum": ["ok", "warn", "bad"],
                 "type": "string"
               },
               {
@@ -2028,10 +1891,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "AdminUsersOut",
         "type": "object"
       },
@@ -2045,9 +1905,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "text"
-        ],
+        "required": ["text"],
         "title": "AliasIn",
         "type": "object"
       },
@@ -2063,10 +1921,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "alias",
-          "text"
-        ],
+        "required": ["alias", "text"],
         "title": "AliasOut",
         "type": "object"
       },
@@ -2081,9 +1936,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "title": "AliasesOut",
         "type": "object"
       },
@@ -2106,10 +1959,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "display_name"
-        ],
+        "required": ["id", "display_name"],
         "title": "AuditActor",
         "type": "object"
       },
@@ -2135,10 +1985,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "AuditOut",
         "type": "object"
       },
@@ -2175,15 +2022,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "created_at",
-          "action",
-          "target_type",
-          "target_id",
-          "actor",
-          "payload"
-        ],
+        "required": ["id", "created_at", "action", "target_type", "target_id", "actor", "payload"],
         "title": "AuditRow",
         "type": "object"
       },
@@ -2195,9 +2034,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "balance_uzs"
-        ],
+        "required": ["balance_uzs"],
         "title": "BalanceOut",
         "type": "object"
       },
@@ -2232,10 +2069,7 @@
             "title": "Percent"
           }
         },
-        "required": [
-          "from_usd",
-          "percent"
-        ],
+        "required": ["from_usd", "percent"],
         "title": "Bracket",
         "type": "object"
       },
@@ -2253,10 +2087,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "from_usd",
-          "percent"
-        ],
+        "required": ["from_usd", "percent"],
         "title": "Bracket",
         "type": "object"
       },
@@ -2410,12 +2241,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "day",
-          "sales_count",
-          "revenue_uzs",
-          "margin_usd"
-        ],
+        "required": ["day", "sales_count", "revenue_uzs", "margin_usd"],
         "title": "DayOut",
         "type": "object"
       },
@@ -2430,9 +2256,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "token"
-        ],
+        "required": ["token"],
         "title": "EmailConfirmIn",
         "type": "object"
       },
@@ -2444,9 +2268,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "email_verified"
-        ],
+        "required": ["email_verified"],
         "title": "EmailConfirmOut",
         "type": "object"
       },
@@ -2472,10 +2294,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "EntriesOut",
         "type": "object"
       },
@@ -2496,13 +2315,7 @@
             "type": "string"
           },
           "kind": {
-            "enum": [
-              "topup",
-              "topup_reversal",
-              "admin_adjust",
-              "purchase",
-              "refund"
-            ],
+            "enum": ["topup", "topup_reversal", "admin_adjust", "purchase", "refund"],
             "title": "Kind",
             "type": "string"
           },
@@ -2518,13 +2331,7 @@
             "title": "Reference Number"
           }
         },
-        "required": [
-          "id",
-          "kind",
-          "amount_uzs",
-          "created_at",
-          "reference_number"
-        ],
+        "required": ["id", "kind", "amount_uzs", "created_at", "reference_number"],
         "title": "EntryOut",
         "type": "object"
       },
@@ -2540,10 +2347,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "value",
-          "count"
-        ],
+        "required": ["value", "count"],
         "title": "FacetOut",
         "type": "object"
       },
@@ -2564,11 +2368,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "usd_uzs",
-          "fetched_at",
-          "source"
-        ],
+        "required": ["usd_uzs", "fetched_at", "source"],
         "title": "FxOut",
         "type": "object"
       },
@@ -2624,10 +2424,7 @@
             "title": "Margin Override Pp"
           }
         },
-        "required": [
-          "margin_override_pp",
-          "fixed_price_usd"
-        ],
+        "required": ["margin_override_pp", "fixed_price_usd"],
         "title": "ItemPricingIn",
         "type": "object"
       },
@@ -2662,12 +2459,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "finished_at",
-          "ok",
-          "counters",
-          "error"
-        ],
+        "required": ["finished_at", "ok", "counters", "error"],
         "title": "JobOut",
         "type": "object"
       },
@@ -2711,11 +2503,7 @@
             "title": "Performed"
           }
         },
-        "required": [
-          "created",
-          "performed",
-          "cancelled"
-        ],
+        "required": ["created", "performed", "cancelled"],
         "title": "KassaTimes",
         "type": "object"
       },
@@ -2727,10 +2515,7 @@
             "type": "string"
           },
           "amount_unit": {
-            "enum": [
-              "soum",
-              "tiyin"
-            ],
+            "enum": ["soum", "tiyin"],
             "title": "Amount Unit",
             "type": "string"
           },
@@ -2746,11 +2531,7 @@
             "type": "object"
           },
           "provider": {
-            "enum": [
-              "click",
-              "payme",
-              "uzum"
-            ],
+            "enum": ["click", "payme", "uzum"],
             "title": "Provider",
             "type": "string"
           },
@@ -2797,10 +2578,7 @@
             "title": "Pp"
           }
         },
-        "required": [
-          "min_count",
-          "pp"
-        ],
+        "required": ["min_count", "pp"],
         "title": "LiquidityBand",
         "type": "object"
       },
@@ -2818,10 +2596,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "min_count",
-          "pp"
-        ],
+        "required": ["min_count", "pp"],
         "title": "LiquidityBand",
         "type": "object"
       },
@@ -2887,11 +2662,7 @@
             "type": "string"
           },
           "locale": {
-            "enum": [
-              "ru",
-              "uz",
-              "en"
-            ],
+            "enum": ["ru", "uz", "en"],
             "title": "Locale",
             "type": "string"
           },
@@ -2932,13 +2703,7 @@
           "trade_link_reason": {
             "anyOf": [
               {
-                "enum": [
-                  "invalid",
-                  "private",
-                  "trade_ban",
-                  "hold",
-                  "unavailable"
-                ],
+                "enum": ["invalid", "private", "trade_ban", "hold", "unavailable"],
                 "type": "string"
               },
               {
@@ -2950,11 +2715,7 @@
           "trade_link_verdict": {
             "anyOf": [
               {
-                "enum": [
-                  "ok",
-                  "warn",
-                  "bad"
-                ],
+                "enum": ["ok", "warn", "bad"],
                 "type": "string"
               },
               {
@@ -3001,11 +2762,7 @@
           "locale": {
             "anyOf": [
               {
-                "enum": [
-                  "ru",
-                  "uz",
-                  "en"
-                ],
+                "enum": ["ru", "uz", "en"],
                 "type": "string"
               },
               {
@@ -3039,11 +2796,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "slug",
-          "listing_id",
-          "price_uzs"
-        ],
+        "required": ["slug", "listing_id", "price_uzs"],
         "title": "OrderCreateIn",
         "type": "object"
       },
@@ -3204,30 +2957,17 @@
         "description": "Pay an order from the balance or through a kassa.",
         "properties": {
           "locale": {
-            "enum": [
-              "ru",
-              "uz",
-              "en"
-            ],
+            "enum": ["ru", "uz", "en"],
             "title": "Locale",
             "type": "string"
           },
           "provider": {
-            "enum": [
-              "wallet",
-              "click",
-              "payme",
-              "uzum",
-              "mock"
-            ],
+            "enum": ["wallet", "click", "payme", "uzum", "mock"],
             "title": "Provider",
             "type": "string"
           }
         },
-        "required": [
-          "provider",
-          "locale"
-        ],
+        "required": ["provider", "locale"],
         "title": "OrderPayIn",
         "type": "object"
       },
@@ -3249,10 +2989,7 @@
             "$ref": "#/components/schemas/OrderOut"
           }
         },
-        "required": [
-          "order",
-          "intent_url"
-        ],
+        "required": ["order", "intent_url"],
         "title": "OrderPayOut",
         "type": "object"
       },
@@ -3278,10 +3015,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "OrdersPage",
         "type": "object"
       },
@@ -3636,9 +3370,7 @@
             "type": "object"
           }
         },
-        "required": [
-          "retail"
-        ],
+        "required": ["retail"],
         "title": "PricingRules",
         "type": "object"
       },
@@ -3707,9 +3439,7 @@
             "type": "object"
           }
         },
-        "required": [
-          "retail"
-        ],
+        "required": ["retail"],
         "title": "PricingRules",
         "type": "object"
       },
@@ -3721,9 +3451,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "slug"
-        ],
+        "required": ["slug"],
         "title": "ProviderOut",
         "type": "object"
       },
@@ -3738,9 +3466,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "providers"
-        ],
+        "required": ["providers"],
         "title": "ProvidersOut",
         "type": "object"
       },
@@ -3767,10 +3493,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "value",
-          "count"
-        ],
+        "required": ["value", "count"],
         "title": "RarityFacetOut",
         "type": "object"
       },
@@ -3785,10 +3508,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "count",
-          "amount_uzs"
-        ],
+        "required": ["count", "amount_uzs"],
         "title": "RefundsOut",
         "type": "object"
       },
@@ -4086,12 +3806,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "categories",
-          "weapons",
-          "exteriors",
-          "rarities"
-        ],
+        "required": ["categories", "weapons", "exteriors", "rarities"],
         "title": "SkinFacetsOut",
         "type": "object"
       },
@@ -4148,15 +3863,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "slug",
-          "exterior",
-          "stattrak",
-          "souvenir",
-          "price_usd",
-          "price_uzs",
-          "count"
-        ],
+        "required": ["slug", "exterior", "stattrak", "souvenir", "price_usd", "price_uzs", "count"],
         "title": "SkinFamilyMemberOut",
         "type": "object"
       },
@@ -4453,11 +4160,7 @@
             "title": "Price Uzs"
           }
         },
-        "required": [
-          "listing_id",
-          "price_usd",
-          "price_uzs"
-        ],
+        "required": ["listing_id", "price_usd", "price_uzs"],
         "title": "SkinListingSummaryOut",
         "type": "object"
       },
@@ -4476,10 +4179,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "items",
-          "degraded"
-        ],
+        "required": ["items", "degraded"],
         "title": "SkinListingsOut",
         "type": "object"
       },
@@ -4550,10 +4250,7 @@
             "type": "integer"
           }
         },
-        "required": [
-          "items",
-          "total"
-        ],
+        "required": ["items", "total"],
         "title": "SkinSlugsOut",
         "type": "object"
       },
@@ -4598,12 +4295,7 @@
             "title": "Wear"
           }
         },
-        "required": [
-          "name",
-          "image",
-          "slot",
-          "wear"
-        ],
+        "required": ["name", "image", "slot", "wear"],
         "title": "SkinStickerOut",
         "type": "object"
       },
@@ -4618,9 +4310,7 @@
             "type": "array"
           }
         },
-        "required": [
-          "items"
-        ],
+        "required": ["items"],
         "title": "SkinSuggestOut",
         "type": "object"
       },
@@ -4641,14 +4331,7 @@
           "reason_code": {
             "anyOf": [
               {
-                "enum": [
-                  "not_accepted",
-                  "sold_out",
-                  "try_later",
-                  "trade_link",
-                  "support",
-                  "other"
-                ],
+                "enum": ["not_accepted", "sold_out", "try_later", "trade_link", "support", "other"],
                 "type": "string"
               },
               {
@@ -4704,20 +4387,12 @@
             "title": "Send Until"
           },
           "state": {
-            "enum": [
-              "buying",
-              "offer_sent",
-              "accepted",
-              "released",
-              "failed"
-            ],
+            "enum": ["buying", "offer_sent", "accepted", "released", "failed"],
             "title": "State",
             "type": "string"
           }
         },
-        "required": [
-          "state"
-        ],
+        "required": ["state"],
         "title": "SkinTradeOut",
         "type": "object"
       },
@@ -4743,10 +4418,7 @@
             "title": "Next Cursor"
           }
         },
-        "required": [
-          "items",
-          "next_cursor"
-        ],
+        "required": ["items", "next_cursor"],
         "title": "SkinsPageOut",
         "type": "object"
       },
@@ -4755,10 +4427,7 @@
         "description": "The ``openid.*`` params exactly as Steam appended them, and which app asked.",
         "properties": {
           "app": {
-            "enum": [
-              "web",
-              "admin"
-            ],
+            "enum": ["web", "admin"],
             "title": "App",
             "type": "string"
           },
@@ -4772,10 +4441,7 @@
             "type": "object"
           }
         },
-        "required": [
-          "app",
-          "params"
-        ],
+        "required": ["app", "params"],
         "title": "SteamCallbackIn",
         "type": "object"
       },
@@ -4796,10 +4462,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "access_token",
-          "expires_in"
-        ],
+        "required": ["access_token", "expires_in"],
         "title": "TokensOut",
         "type": "object"
       },
@@ -4812,11 +4475,7 @@
             "type": "integer"
           },
           "locale": {
-            "enum": [
-              "ru",
-              "uz",
-              "en"
-            ],
+            "enum": ["ru", "uz", "en"],
             "title": "Locale",
             "type": "string"
           },
@@ -4827,11 +4486,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "amount_uzs",
-          "provider",
-          "locale"
-        ],
+        "required": ["amount_uzs", "provider", "locale"],
         "title": "TopupIn",
         "type": "object"
       },
@@ -4878,12 +4533,7 @@
             "title": "Provider"
           },
           "status": {
-            "enum": [
-              "pending",
-              "succeeded",
-              "expired",
-              "reversed"
-            ],
+            "enum": ["pending", "succeeded", "expired", "reversed"],
             "title": "Status",
             "type": "string"
           }
@@ -4910,9 +4560,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "url"
-        ],
+        "required": ["url"],
         "title": "TradeLinkIn",
         "type": "object"
       },
@@ -4934,13 +4582,7 @@
           "reason": {
             "anyOf": [
               {
-                "enum": [
-                  "invalid",
-                  "private",
-                  "trade_ban",
-                  "hold",
-                  "unavailable"
-                ],
+                "enum": ["invalid", "private", "trade_ban", "hold", "unavailable"],
                 "type": "string"
               },
               {
@@ -4963,11 +4605,7 @@
           "verdict": {
             "anyOf": [
               {
-                "enum": [
-                  "ok",
-                  "warn",
-                  "bad"
-                ],
+                "enum": ["ok", "warn", "bad"],
                 "type": "string"
               },
               {
@@ -4977,12 +4615,7 @@
             "title": "Verdict"
           }
         },
-        "required": [
-          "trade_link",
-          "verdict",
-          "reason",
-          "checked_at"
-        ],
+        "required": ["trade_link", "verdict", "reason", "checked_at"],
         "title": "TradeLinkOut",
         "type": "object"
       },
@@ -5005,10 +4638,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "id",
-          "display_name"
-        ],
+        "required": ["id", "display_name"],
         "title": "UpdatedByOut",
         "type": "object"
       },
@@ -5044,11 +4674,7 @@
             "type": "string"
           }
         },
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError",
         "type": "object"
       },
@@ -5060,9 +4686,7 @@
             "type": "boolean"
           }
         },
-        "required": [
-          "sent"
-        ],
+        "required": ["sent"],
         "title": "VerificationSentOut",
         "type": "object"
       },
@@ -5092,10 +4716,7 @@
             "title": "Read At"
           }
         },
-        "required": [
-          "balance_usd",
-          "read_at"
-        ],
+        "required": ["balance_usd", "read_at"],
         "title": "WaxpeerOut",
         "type": "object"
       }
@@ -5252,9 +4873,7 @@
           }
         },
         "summary": "The audit log",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/dashboard": {
@@ -5314,9 +4933,7 @@
           }
         },
         "summary": "The dashboard",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/me": {
@@ -5364,9 +4981,7 @@
           }
         },
         "summary": "The signed-in admin",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/orders": {
@@ -5503,9 +5118,7 @@
           }
         },
         "summary": "Find orders",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/orders/{number}": {
@@ -5565,9 +5178,7 @@
           }
         },
         "summary": "An order",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/orders/{number}/refund": {
@@ -5639,9 +5250,7 @@
           }
         },
         "summary": "Refund the order to the buyer's balance",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/orders/{number}/resolve": {
@@ -5723,9 +5332,7 @@
           }
         },
         "summary": "Mark the trade's attention as checked",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/orders/{number}/retry": {
@@ -5797,9 +5404,7 @@
           }
         },
         "summary": "Retry the order's buy",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/payments": {
@@ -5832,14 +5437,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "created",
-                    "pending",
-                    "succeeded",
-                    "failed",
-                    "cancelled",
-                    "refunded"
-                  ],
+                  "enum": ["created", "pending", "succeeded", "failed", "cancelled", "refunded"],
                   "type": "string"
                 },
                 {
@@ -5856,12 +5454,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "click",
-                    "payme",
-                    "uzum",
-                    "mock"
-                  ],
+                  "enum": ["click", "payme", "uzum", "mock"],
                   "type": "string"
                 },
                 {
@@ -5878,10 +5471,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "topup",
-                    "order"
-                  ],
+                  "enum": ["topup", "order"],
                   "type": "string"
                 },
                 {
@@ -5959,9 +5549,7 @@
           }
         },
         "summary": "Find payments",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/payments/{payment_id}": {
@@ -6018,9 +5606,7 @@
           }
         },
         "summary": "A payment",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/aliases": {
@@ -6068,9 +5654,7 @@
           }
         },
         "summary": "Search aliases",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/aliases/{alias}": {
@@ -6136,9 +5720,7 @@
           }
         },
         "summary": "Delete an alias",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       },
       "put": {
         "description": "Set what ``alias`` expands to in a search; both are stored lower-case.",
@@ -6219,9 +5801,7 @@
           }
         },
         "summary": "Create or replace an alias",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/catalog/status": {
@@ -6269,9 +5849,7 @@
           }
         },
         "summary": "Catalogue status",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/items": {
@@ -6381,9 +5959,7 @@
           }
         },
         "summary": "Find items (hidden included)",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/items/{slug}": {
@@ -6466,9 +6042,7 @@
           }
         },
         "summary": "Hide or show an item",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/items/{slug}/pricing": {
@@ -6544,9 +6118,7 @@
           }
         },
         "summary": "Override one item's price",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/pricing": {
@@ -6594,9 +6166,7 @@
           }
         },
         "summary": "The pricing rules",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       },
       "put": {
         "description": "Replace the document and reprice every item in one transaction; publish after commit.",
@@ -6661,9 +6231,7 @@
           }
         },
         "summary": "Save the pricing rules",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/skins/pricing/preview": {
@@ -6721,9 +6289,7 @@
           }
         },
         "summary": "Preview a price",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/trades": {
@@ -6737,11 +6303,7 @@
             "required": false,
             "schema": {
               "default": "all",
-              "enum": [
-                "all",
-                "active",
-                "attention"
-              ],
+              "enum": ["all", "active", "attention"],
               "title": "View",
               "type": "string"
             }
@@ -6832,9 +6394,7 @@
           }
         },
         "summary": "Trades and the attention queue",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/users": {
@@ -6928,9 +6488,7 @@
           }
         },
         "summary": "Find users",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/users/{user_id}": {
@@ -6987,9 +6545,7 @@
           }
         },
         "summary": "A user's card",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/users/{user_id}/ban": {
@@ -7065,9 +6621,7 @@
           }
         },
         "summary": "Ban a user",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/users/{user_id}/unban": {
@@ -7143,9 +6697,7 @@
           }
         },
         "summary": "Lift a ban",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/admin/users/{user_id}/wallet/adjust": {
@@ -7221,9 +6773,7 @@
           }
         },
         "summary": "Adjust a balance",
-        "tags": [
-          "admin"
-        ]
+        "tags": ["admin"]
       }
     },
     "/api/v1/auth/logout": {
@@ -7280,9 +6830,7 @@
           }
         },
         "summary": "Sign out",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/auth/refresh": {
@@ -7330,9 +6878,7 @@
           }
         },
         "summary": "Rotate the refresh cookie",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/auth/steam": {
@@ -7393,9 +6939,7 @@
           }
         },
         "summary": "Complete a Steam sign-in",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/auth/steam/start": {
@@ -7409,10 +6953,7 @@
             "required": false,
             "schema": {
               "default": "web",
-              "enum": [
-                "web",
-                "admin"
-              ],
+              "enum": ["web", "admin"],
               "title": "App",
               "type": "string"
             }
@@ -7423,11 +6964,7 @@
             "required": false,
             "schema": {
               "default": "ru",
-              "enum": [
-                "ru",
-                "uz",
-                "en"
-              ],
+              "enum": ["ru", "uz", "en"],
               "title": "Locale",
               "type": "string"
             }
@@ -7449,9 +6986,7 @@
           }
         },
         "summary": "Begin a Steam sign-in (302 to steamcommunity.com)",
-        "tags": [
-          "auth"
-        ]
+        "tags": ["auth"]
       }
     },
     "/api/v1/email/confirm": {
@@ -7491,9 +7026,7 @@
           }
         },
         "summary": "Confirm an email by its link",
-        "tags": [
-          "email"
-        ]
+        "tags": ["email"]
       }
     },
     "/api/v1/me": {
@@ -7541,9 +7074,7 @@
           }
         },
         "summary": "The signed-in account",
-        "tags": [
-          "me"
-        ]
+        "tags": ["me"]
       },
       "patch": {
         "description": "Partial update; replays a stored response for a repeated ``Idempotency-Key``.\n\nA new email is unconfirmed until its link is opened: a confirmation letter is queued (one a\nminute per account). An email edit counts against the ``email-verify`` bucket.",
@@ -7615,9 +7146,7 @@
           }
         },
         "summary": "Edit locale or email",
-        "tags": [
-          "me"
-        ]
+        "tags": ["me"]
       }
     },
     "/api/v1/me/email/verification": {
@@ -7681,9 +7210,7 @@
           }
         },
         "summary": "Send the email confirmation letter again",
-        "tags": [
-          "me"
-        ]
+        "tags": ["me"]
       }
     },
     "/api/v1/me/orders": {
@@ -7747,9 +7274,7 @@
           }
         },
         "summary": "My orders",
-        "tags": [
-          "orders"
-        ]
+        "tags": ["orders"]
       }
     },
     "/api/v1/me/trade-link": {
@@ -7823,9 +7348,7 @@
           }
         },
         "summary": "Save my trade link",
-        "tags": [
-          "me"
-        ]
+        "tags": ["me"]
       }
     },
     "/api/v1/me/trade-link/check": {
@@ -7873,9 +7396,7 @@
           }
         },
         "summary": "Check my trade link",
-        "tags": [
-          "me"
-        ]
+        "tags": ["me"]
       }
     },
     "/api/v1/orders": {
@@ -7959,9 +7480,7 @@
           }
         },
         "summary": "Buy one skin",
-        "tags": [
-          "orders"
-        ]
+        "tags": ["orders"]
       }
     },
     "/api/v1/orders/{number}": {
@@ -8018,9 +7537,7 @@
           }
         },
         "summary": "One of my orders",
-        "tags": [
-          "orders"
-        ]
+        "tags": ["orders"]
       }
     },
     "/api/v1/orders/{number}/pay": {
@@ -8103,9 +7620,7 @@
           }
         },
         "summary": "Pay one of my orders",
-        "tags": [
-          "orders"
-        ]
+        "tags": ["orders"]
       }
     },
     "/api/v1/payments/click/complete": {
@@ -8136,9 +7651,7 @@
           }
         },
         "summary": "Click Shop API: complete",
-        "tags": [
-          "click"
-        ]
+        "tags": ["click"]
       }
     },
     "/api/v1/payments/click/prepare": {
@@ -8169,9 +7682,7 @@
           }
         },
         "summary": "Click Shop API: prepare",
-        "tags": [
-          "click"
-        ]
+        "tags": ["click"]
       }
     },
     "/api/v1/payments/payme/merchant": {
@@ -8193,9 +7704,7 @@
           }
         },
         "summary": "Payme Merchant API (JSON-RPC 2.0)",
-        "tags": [
-          "payme"
-        ]
+        "tags": ["payme"]
       }
     },
     "/api/v1/payments/providers": {
@@ -8215,9 +7724,7 @@
           }
         },
         "summary": "Kassas available now",
-        "tags": [
-          "payments"
-        ]
+        "tags": ["payments"]
       }
     },
     "/api/v1/payments/uzum/check": {
@@ -8235,9 +7742,7 @@
           }
         },
         "summary": "Uzum Merchant API: /check",
-        "tags": [
-          "uzum"
-        ]
+        "tags": ["uzum"]
       }
     },
     "/api/v1/payments/uzum/confirm": {
@@ -8255,9 +7760,7 @@
           }
         },
         "summary": "Uzum Merchant API: /confirm",
-        "tags": [
-          "uzum"
-        ]
+        "tags": ["uzum"]
       }
     },
     "/api/v1/payments/uzum/create": {
@@ -8275,9 +7778,7 @@
           }
         },
         "summary": "Uzum Merchant API: /create",
-        "tags": [
-          "uzum"
-        ]
+        "tags": ["uzum"]
       }
     },
     "/api/v1/payments/uzum/reverse": {
@@ -8295,9 +7796,7 @@
           }
         },
         "summary": "Uzum Merchant API: /reverse",
-        "tags": [
-          "uzum"
-        ]
+        "tags": ["uzum"]
       }
     },
     "/api/v1/payments/uzum/status": {
@@ -8315,9 +7814,7 @@
           }
         },
         "summary": "Uzum Merchant API: /status",
-        "tags": [
-          "uzum"
-        ]
+        "tags": ["uzum"]
       }
     },
     "/api/v1/skins/catalog": {
@@ -8429,10 +7926,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "ct",
-                    "t"
-                  ],
+                  "enum": ["ct", "t"],
                   "type": "string"
                 },
                 {
@@ -8509,12 +8003,7 @@
             "required": false,
             "schema": {
               "default": "-price",
-              "enum": [
-                "price",
-                "-price",
-                "discount",
-                "popular"
-              ],
+              "enum": ["price", "-price", "discount", "popular"],
               "title": "Sort",
               "type": "string"
             }
@@ -8571,9 +8060,7 @@
           }
         },
         "summary": "Browse the skins catalogue",
-        "tags": [
-          "skins"
-        ]
+        "tags": ["skins"]
       }
     },
     "/api/v1/skins/facets": {
@@ -8622,9 +8109,7 @@
           }
         },
         "summary": "Counts per category, weapon, wear",
-        "tags": [
-          "skins"
-        ]
+        "tags": ["skins"]
       }
     },
     "/api/v1/skins/seo/slugs": {
@@ -8679,9 +8164,7 @@
           }
         },
         "summary": "Item pages for the sitemap",
-        "tags": [
-          "skins"
-        ]
+        "tags": ["skins"]
       }
     },
     "/api/v1/skins/suggest": {
@@ -8724,9 +8207,7 @@
           }
         },
         "summary": "Search-as-you-type",
-        "tags": [
-          "skins"
-        ]
+        "tags": ["skins"]
       }
     },
     "/api/v1/skins/{slug}": {
@@ -8767,9 +8248,7 @@
           }
         },
         "summary": "One item with its cheapest listings",
-        "tags": [
-          "skins"
-        ]
+        "tags": ["skins"]
       }
     },
     "/api/v1/skins/{slug}/listings": {
@@ -8810,9 +8289,7 @@
           }
         },
         "summary": "Live auto listings for one item (cached, rate-budgeted, degradable)",
-        "tags": [
-          "skins"
-        ]
+        "tags": ["skins"]
       }
     },
     "/api/v1/wallet": {
@@ -8860,9 +8337,7 @@
           }
         },
         "summary": "My balance",
-        "tags": [
-          "wallet"
-        ]
+        "tags": ["wallet"]
       }
     },
     "/api/v1/wallet/entries": {
@@ -8905,10 +8380,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "enum": [
-                    "topup",
-                    "withdrawal"
-                  ],
+                  "enum": ["topup", "withdrawal"],
                   "type": "string"
                 },
                 {
@@ -8958,9 +8430,7 @@
           }
         },
         "summary": "My balance history",
-        "tags": [
-          "wallet"
-        ]
+        "tags": ["wallet"]
       }
     },
     "/api/v1/wallet/topups": {
@@ -9034,9 +8504,7 @@
           }
         },
         "summary": "Open a balance top-up",
-        "tags": [
-          "wallet"
-        ]
+        "tags": ["wallet"]
       }
     },
     "/api/v1/wallet/topups/{number}": {
@@ -9059,11 +8527,7 @@
             "required": false,
             "schema": {
               "default": "ru",
-              "enum": [
-                "ru",
-                "uz",
-                "en"
-              ],
+              "enum": ["ru", "uz", "en"],
               "title": "Locale",
               "type": "string"
             }
@@ -9108,9 +8572,7 @@
           }
         },
         "summary": "One of my top-ups",
-        "tags": [
-          "wallet"
-        ]
+        "tags": ["wallet"]
       }
     },
     "/healthz": {
@@ -9134,9 +8596,7 @@
           }
         },
         "summary": "Liveness probe",
-        "tags": [
-          "meta"
-        ]
+        "tags": ["meta"]
       }
     },
     "/readyz": {
@@ -9157,9 +8617,7 @@
           }
         },
         "summary": "Readiness probe",
-        "tags": [
-          "meta"
-        ]
+        "tags": ["meta"]
       }
     }
   }

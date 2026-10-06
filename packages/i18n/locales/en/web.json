@@ -353,11 +353,6 @@
   },
   "sell": {
     "title": "Sell your CS2 skins",
-    "steps": {
-      "pick": "Pick skins",
-      "trade": "Accept the Steam trade",
-      "money": "Get paid"
-    },
     "search": "Search by name",
     "sortLabel": "Sort",
     "sort": {
@@ -403,7 +398,6 @@
     },
     "submit": "Sell for {sum}",
     "soon": "Selling opens soon",
-    "demo": "Demo: this is how selling will look. Prices are examples.",
     "continue": "Continue",
     "close": "Close"
   }

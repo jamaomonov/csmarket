@@ -2,7 +2,7 @@
 
 import { Button } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
-import { ArrowLeftRight, MousePointerClick, Wallet, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
@@ -18,12 +18,6 @@ interface SellViewProps {
   locale: string;
   inventory: SellItem[];
 }
-
-const STEPS = [
-  { key: "pick", icon: MousePointerClick },
-  { key: "trade", icon: ArrowLeftRight },
-  { key: "money", icon: Wallet },
-] as const;
 
 const ORDER: Record<SellSort, (a: SellItem, b: SellItem) => number> = {
   expensive: (a, b) => b.priceUzs - a.priceUzs,
@@ -201,20 +195,7 @@ export function SellView({ locale, inventory }: SellViewProps) {
 
   return (
     <div className="flex flex-col gap-6 pb-24 lg:pb-0">
-      <header className="flex flex-col gap-4">
-        <h1 className="text-center text-3xl font-bold">{t("title")}</h1>
-        <ol className="flex flex-wrap justify-center gap-2 sm:gap-6">
-          {STEPS.map(({ key, icon: Icon }, i) => (
-            <li key={key} className="text-fg-muted flex items-center gap-2 text-sm">
-              <span className="bg-accent-subtle text-accent grid size-7 place-items-center rounded-full text-xs font-bold">
-                {i + 1}
-              </span>
-              <Icon className="size-4" aria-hidden />
-              {t(`steps.${key}`)}
-            </li>
-          ))}
-        </ol>
-      </header>
+      <h1 className="text-center text-3xl font-bold">{t("title")}</h1>
       {body}
     </div>
   );

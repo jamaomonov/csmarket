@@ -353,11 +353,6 @@
   },
   "sell": {
     "title": "CS2 skinlaringizni soting",
-    "steps": {
-      "pick": "Skinlarni tanlang",
-      "trade": "Steamda almashuvni qabul qiling",
-      "money": "Pulni oling"
-    },
     "search": "Nomi boʻyicha qidirish",
     "sortLabel": "Saralash",
     "sort": {
@@ -403,7 +398,6 @@
     },
     "submit": "{sum} ga sotish",
     "soon": "Sotish tez orada ochiladi",
-    "demo": "Demo: sotish shunday koʻrinadi. Narxlar — misol uchun.",
     "continue": "Davom etish",
     "close": "Yopish"
   }

@@ -1,4 +1,4 @@
-import { HandCoins, Info } from "lucide-react";
+import { HandCoins } from "lucide-react";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
@@ -32,14 +32,9 @@ export default async function SellPage({ params }: Props) {
   if (process.env.NODE_ENV === "production") {
     return <ComingSoon section="sell" icon={HandCoins} />;
   }
-  const t = await getTranslations("web.sell");
   const page = await getSkinsPage({ sort: "-price" });
   return (
     <main id="main-content" className="mx-auto max-w-[1320px] px-4 py-8 sm:px-6">
-      <p className="border-info/30 bg-info/10 text-info mb-6 flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm">
-        <Info className="size-4 shrink-0" aria-hidden />
-        {t("demo")}
-      </p>
       <SellView locale={locale} inventory={demoInventory(page.items, new Date())} />
     </main>
   );
