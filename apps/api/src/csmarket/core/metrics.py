@@ -231,6 +231,26 @@ SKINSLINK_MIRROR_SYNCED_TIMESTAMP = Gauge(
     "csmarket_skinslink_mirror_synced_timestamp_seconds",
     "Unix time of the last good Skinslink mirror tick (alert: SkinslinkMirrorStale).",
 )
+SKINSLINK_BALANCE_AVAILABLE_USD = Gauge(
+    "csmarket_skinslink_balance_available_usd",
+    "The Skinslink merchant balance free to spend, USD (alert: SkinslinkBalanceLow).",
+)
+SKINSLINK_BALANCE_HOLD_USD = Gauge(
+    "csmarket_skinslink_balance_hold_usd",
+    "The Skinslink merchant balance held by open purchases, USD.",
+)
+SKINSLINK_BALANCE_THRESHOLD_USD = Gauge(
+    "csmarket_skinslink_balance_threshold_usd",
+    "The balance below which SkinslinkBalanceLow fires (setting skinslink_balance_alert_usd).",
+)
+SKINSLINK_BALANCE_READ_TIMESTAMP = Gauge(
+    "csmarket_skinslink_balance_read_timestamp_seconds",
+    "Unix time of the last successful Skinslink balance read.",
+)
+SKINSLINK_ENABLED = Gauge(
+    "csmarket_skinslink_enabled",
+    "1 while Skinslink is switched on and keyed, else 0 (gates the Skinslink alerts).",
+)
 WAXPEER_BALANCE_READ_TIMESTAMP = Gauge(
     "csmarket_waxpeer_balance_read_timestamp_seconds",
     "Unix time of the last successful Waxpeer balance read (alert: WaxpeerBalanceUnknown).",
@@ -241,6 +261,10 @@ ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP = Gauge(
 )
 WAXPEER_BALANCE_USD.set(float("nan"))
 WAXPEER_BALANCE_THRESHOLD_USD.set(float("nan"))
+SKINSLINK_BALANCE_AVAILABLE_USD.set(float("nan"))
+SKINSLINK_BALANCE_HOLD_USD.set(float("nan"))
+SKINSLINK_BALANCE_THRESHOLD_USD.set(float("nan"))
+SKINSLINK_BALANCE_READ_TIMESTAMP.set(time.time())
 # Start at process start, not 0: "never succeeded" then reads as stale only after the alert's
 # own window, instead of at once. The API and the worker keep these values; the alerts are
 # pinned to job="scheduler".
@@ -348,6 +372,29 @@ def set_skinslink_mirror_synced() -> None:
             "metrics.set_failed",
             metric="csmarket_skinslink_mirror_synced_timestamp_seconds",
             error=type(exc).__name__,
+        )
+
+
+def set_skinslink_balance(available_usd: float, hold_usd: float, threshold_usd: float) -> None:
+    """Export a successful Skinslink balance read and the alert threshold. Never raises."""
+    try:
+        SKINSLINK_BALANCE_AVAILABLE_USD.set(available_usd)
+        SKINSLINK_BALANCE_HOLD_USD.set(hold_usd)
+        SKINSLINK_BALANCE_THRESHOLD_USD.set(threshold_usd)
+        SKINSLINK_BALANCE_READ_TIMESTAMP.set(time.time())
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_skinslink_balance", error=type(exc).__name__
+        )
+
+
+def set_skinslink_enabled(*, enabled: bool) -> None:
+    """Whether Skinslink is on (``csmarket_skinslink_enabled``). Never raises."""
+    try:
+        SKINSLINK_ENABLED.set(1 if enabled else 0)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_skinslink_enabled", error=type(exc).__name__
         )
 
 
@@ -507,7 +554,12 @@ __all__ = [
     "ORDERS_STUCK",
     "ORDER_BUYS",
     "ORDER_REFUNDS",
+    "SKINSLINK_BALANCE_AVAILABLE_USD",
+    "SKINSLINK_BALANCE_HOLD_USD",
+    "SKINSLINK_BALANCE_READ_TIMESTAMP",
+    "SKINSLINK_BALANCE_THRESHOLD_USD",
     "SKINSLINK_CALLS",
+    "SKINSLINK_ENABLED",
     "SKINSLINK_MIRROR_SYNCED_TIMESTAMP",
     "STEAM_WEB_API_CALLS",
     "TRADES_ATTENTION",
@@ -545,6 +597,8 @@ __all__ = [
     "record_ws_nudges",
     "serve_metrics",
     "set_orders_stuck",
+    "set_skinslink_balance",
+    "set_skinslink_enabled",
     "set_skinslink_mirror_synced",
     "set_trades_attention",
     "set_waxpeer_balance",

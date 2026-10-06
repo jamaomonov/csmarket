@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.orders.health import cached_balance
 from csmarket.modules.orders.models import IN_FLIGHT, Order, SkinTrade
+from csmarket.modules.skinslink.api import skinslink_cached_balance
 
 Days = Literal[1, 7, 30]
 TASHKENT = timezone(timedelta(hours=5))
@@ -64,6 +65,12 @@ class WaxpeerBalance(_Frozen):
     read_at: datetime | None
 
 
+class SkinslinkBalance(_Frozen):
+    available_usd: Decimal | None
+    hold_usd: Decimal | None
+    read_at: datetime | None
+
+
 class Dashboard(_Frozen):
     """Everything the dashboard shows for one window."""
 
@@ -75,6 +82,7 @@ class Dashboard(_Frozen):
     attention: int
     by_day: list[DayRow]
     waxpeer: WaxpeerBalance
+    skinslink: SkinslinkBalance
 
 
 def window_start(at: datetime, days: int) -> datetime:
@@ -157,6 +165,7 @@ async def summary(db: AsyncSession, redis: Redis, *, days: Days, at: datetime) -
     rows = await _by_day(db, since, at)
     in_flight, attention = await _now_counts(db)
     balance, read_at = await cached_balance(redis)
+    sl_available, sl_hold, sl_read_at = await skinslink_cached_balance(redis)
     first = since.date()
     by_day = []
     for n in range(days):
@@ -172,7 +181,19 @@ async def summary(db: AsyncSession, redis: Redis, *, days: Days, at: datetime) -
         attention=attention,
         by_day=by_day,
         waxpeer=WaxpeerBalance(balance_usd=balance, read_at=read_at),
+        skinslink=SkinslinkBalance(
+            available_usd=sl_available, hold_usd=sl_hold, read_at=sl_read_at
+        ),
     )
 
 
-__all__ = ["Dashboard", "DayRow", "Days", "Refunds", "Sales", "WaxpeerBalance", "summary"]
+__all__ = [
+    "Dashboard",
+    "DayRow",
+    "Days",
+    "Refunds",
+    "Sales",
+    "SkinslinkBalance",
+    "WaxpeerBalance",
+    "summary",
+]

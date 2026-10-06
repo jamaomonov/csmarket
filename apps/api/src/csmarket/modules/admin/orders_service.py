@@ -25,6 +25,7 @@ from csmarket.modules.admin.orders_schemas import (
     AdminOrderPaymentOut,
     AdminOrderRow,
     AdminOrderUser,
+    AdminSkinslinkPurchaseOut,
     AdminTradeCounts,
     AdminTradeOut,
     AdminTradeRow,
@@ -40,6 +41,7 @@ from csmarket.modules.orders.api import (
     trade_state,
 )
 from csmarket.modules.payments.api import Payment
+from csmarket.modules.skinslink.api import SkinslinkPurchase
 from csmarket.modules.users.api import User, mask_trade_link
 
 #: Orders with their trade (``None`` on an outer join) and the buyer's name.
@@ -204,12 +206,19 @@ def _usd(value: Decimal) -> str:
     return f"{value.quantize(_USD):f}"
 
 
-def _order_full(order: Order, trade: SkinTrade | None, fx_rate: Decimal) -> AdminOrderFull:
-    spent = (
-        Decimal(trade.bought_units) / 1000
-        if trade is not None and trade.bought_units is not None
-        else order.cost_usd
-    )
+def _spent(order: Order, trade: SkinTrade | None, purchase: SkinslinkPurchase | None) -> Decimal:
+    """What the market charged, USD; the agreed cost until it says."""
+    if trade is not None and trade.bought_units is not None:
+        return Decimal(trade.bought_units) / 1000
+    if purchase is not None and purchase.amount_units is not None:
+        return Decimal(purchase.amount_units) / 1000
+    return order.cost_usd
+
+
+def _order_full(
+    order: Order, trade: SkinTrade | None, purchase: SkinslinkPurchase | None, fx_rate: Decimal
+) -> AdminOrderFull:
+    spent = _spent(order, trade, purchase)
     columns = {c.key: getattr(order, c.key) for c in Order.__table__.columns}
     del columns["trade_link"], columns["idempotency_key"], columns["trade_link_erased_at"]
     return AdminOrderFull.model_validate(
@@ -237,6 +246,19 @@ def _trade_out(trade: SkinTrade) -> AdminTradeOut:
     return AdminTradeOut.model_validate({**fields, "offer_url": offer})
 
 
+def _purchase_out(p: SkinslinkPurchase) -> AdminSkinslinkPurchaseOut:
+    offer = f"https://steamcommunity.com/tradeoffer/{p.offer_id}/" if p.offer_id else None
+    amount = None if p.amount_units is None else _usd(Decimal(p.amount_units) / 1000)
+    fields = {
+        name: getattr(p, name)
+        for name in AdminSkinslinkPurchaseOut.model_fields
+        if name not in ("offer_url", "amount_usd")
+    }
+    return AdminSkinslinkPurchaseOut.model_validate(
+        {**fields, "offer_url": offer, "amount_usd": amount}
+    )
+
+
 async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
     """Order ``number``'s page: the order, its buyer, its trade, payments, the actions allowed.
 
@@ -257,13 +279,19 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
         raise NotFoundError("order not found")
     order, display_name, fx_rate = found
     trade = await db.scalar(select(SkinTrade).where(SkinTrade.order_id == order.id))
+    purchase = (
+        await db.scalar(select(SkinslinkPurchase).where(SkinslinkPurchase.order_id == order.id))
+        if order.source == "skinslink"
+        else None
+    )
     payments = await db.scalars(
         select(Payment).where(Payment.order_id == order.id).order_by(Payment.created_at, Payment.id)
     )
     return AdminOrderDetail(
-        order=_order_full(order, trade, Decimal(fx_rate)),
+        order=_order_full(order, trade, purchase, Decimal(fx_rate)),
         user=AdminOrderUser(id=order.user_id, display_name=display_name),
         trade=_trade_out(trade) if trade is not None else None,
+        skinslink=_purchase_out(purchase) if purchase is not None else None,
         payments=[
             AdminOrderPaymentOut.model_validate(
                 {

@@ -163,3 +163,48 @@ groups:
             Trades are not being reconciled and the order-health gauges are not refreshed.
             Check the container and its logs.
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#scheduler-down"
+
+      # --- Skinslink, the second buy source (spec 2026-10-06). Gated by
+      # csmarket_skinslink_enabled (the scheduler's balance job sets it every 5 minutes).
+
+      # The mirror of Skinslink's stock has not synced for 10 minutes: its offers and prices
+      # are hidden (a stale mirror sells nothing) until the events feed answers again.
+      - alert: SkinslinkMirrorStale
+        expr: >
+          (time() - max(csmarket_skinslink_mirror_synced_timestamp_seconds{job="scheduler"}) > 600)
+          and on() (max(csmarket_skinslink_enabled{job="scheduler"}) == 1)
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "The Skinslink mirror has not synced for over 10 minutes"
+          description: >
+            Skinslink offers are off the storefront until the mirror syncs again. Check the
+            scheduler's skinslink.mirror log lines and Skinslink's status.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/skinslink.md#mirror-stale"
+
+      - alert: SkinslinkBalanceLow
+        expr: >
+          (min(csmarket_skinslink_balance_available_usd{job="scheduler"})
+            < min(csmarket_skinslink_balance_threshold_usd{job="scheduler"}))
+          and on() (max(csmarket_skinslink_enabled{job="scheduler"}) == 1)
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: 'Skinslink balance ${{ $value | printf "%.2f" }}, below the alert threshold'
+          description: >
+            Top up the Skinslink balance before its purchases start failing and refunding
+            customers.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/skinslink.md#balance-low"
+
+      # Purchases refused, forbidden or unanswered: several in 15 minutes means the key, the
+      # IP whitelist or Skinslink itself, not one sold item.
+      - alert: SkinslinkBuyFailures
+        expr: >
+          sum(increase(csmarket_skinslink_calls_total{endpoint="purchase",outcome=~"refused|forbidden|unavailable"}[15m])) > 5
+        labels: { severity: warn }
+        annotations:
+          summary: "Skinslink purchases keep failing"
+          description: >
+            More than five Skinslink purchases were refused, forbidden or unanswered in 15
+            minutes. Check the worker's orders.skinslink_buy lines and Skinslink's status.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/skinslink.md#buy-failures"

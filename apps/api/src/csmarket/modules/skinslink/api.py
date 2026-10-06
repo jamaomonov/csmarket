@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from csmarket.modules.skinslink.balance import cached_balance as skinslink_cached_balance
+from csmarket.modules.skinslink.balance import refresh_balance
 from csmarket.modules.skinslink.checks import claim_checks, enqueue_check
 from csmarket.modules.skinslink.client import (
     LINK_ERROR_CODES,
@@ -57,7 +59,9 @@ __all__ = [
     "enqueue_check",
     "mirror_fresh",
     "offers_for",
+    "refresh_balance",
     "rollup",
+    "skinslink_cached_balance",
     "sync_mirror",
     "to_units",
 ]

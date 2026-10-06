@@ -1,6 +1,6 @@
 /**
  * «Дашборд»: today / 7 / 30 Tashkent days — sales, revenue, margin, refunds — and what needs
- * a look now: orders in flight, open attentions, the Waxpeer balance. Re-read every minute.
+ * a look now: orders in flight, open attentions, the Waxpeer and Skinslink balances. Re-read every minute.
  */
 import { Button } from "@csmarket/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +32,7 @@ function Tile({ title, children }: TileProps) {
 }
 
 function Tiles({ data }: { data: DashboardOut }) {
-  const { sales, refunds, waxpeer } = data;
+  const { sales, refunds, waxpeer, skinslink } = data;
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       <Tile title="Продажи">{sales.count}</Tile>
@@ -64,6 +64,17 @@ function Tiles({ data }: { data: DashboardOut }) {
           <>
             <span>${waxpeer.balance_usd}</span>
             <span className="text-fg-muted text-sm">{freshness(waxpeer.read_at)}</span>
+          </>
+        )}
+      </Tile>
+      <Tile title="Баланс Skinslink">
+        {skinslink.available_usd === null || skinslink.read_at === null ? (
+          <span>неизвестно</span>
+        ) : (
+          <>
+            <span>${skinslink.available_usd}</span>
+            <span className="text-fg-muted text-sm">в холде ${skinslink.hold_usd ?? "0"}</span>
+            <span className="text-fg-muted text-sm">{freshness(skinslink.read_at)}</span>
           </>
         )}
       </Tile>

@@ -1,5 +1,10 @@
 /** Shared fixtures for the orders and trades tests. Fake numbers and ids only. */
-import { type AdminOrderDetail, type AdminOrderRow, type AdminTradeOut } from "./api";
+import {
+  type AdminOrderDetail,
+  type AdminOrderRow,
+  type AdminSkinslinkPurchaseOut,
+  type AdminTradeOut,
+} from "./api";
 
 export const ORDER_ROW: AdminOrderRow = {
   number: "O7K2M9QX",
@@ -67,6 +72,7 @@ export const DETAIL: AdminOrderDetail = {
   },
   user: { id: "u-1", display_name: "Ivan" },
   trade: TRADE,
+  skinslink: null,
   payments: [
     {
       id: "p-1",
@@ -101,4 +107,20 @@ export const RESOLVED: AdminOrderDetail = {
 export const ATTENTION: AdminOrderDetail = {
   ...DETAIL,
   trade: { ...TRADE, attention_reason: "ambiguous_trade" },
+};
+
+export const SKINSLINK: AdminSkinslinkPurchaseOut = {
+  merchant_tx_id: "6f1c2a52-0000-4000-8000-000000000001",
+  asset_id: "380",
+  purchase_id: 178,
+  status: "active",
+  offer_id: "6912345678",
+  offer_url: "https://steamcommunity.com/tradeoffer/6912345678/",
+  fail_reason: null,
+  amount_usd: "12.000000",
+  hold_end_date: null,
+  buy_pending: false,
+  buy_unconfirmed_at: null,
+  attention_reason: "rolled_back",
+  resolved_at: null,
 };

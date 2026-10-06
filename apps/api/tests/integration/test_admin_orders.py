@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from tests.integration.orders_factory import build_order, make_item_and_rate, make_trade
 from tests.integration.payments_factory import make_user
+from tests.integration.skinslink_factory import make_skinslink_order
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 #: A redrawn fake trade link — never a real partner/token.
@@ -371,6 +372,38 @@ async def test_detail_margin_against_cost_before_the_buy_and_no_trade(
     body = r.json()
     assert body["order"]["margin_usd"] == "1.235000"
     assert (body["trade"], body["payments"]) == (None, [])
+
+
+async def test_detail_of_a_skinslink_order_shows_its_purchase(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    order, _ = await make_skinslink_order(db_session, amount_units=12_000)
+    r = await integration_client.get(
+        f"/api/v1/admin/orders/{order.number}", headers=await admin_headers()
+    )
+    body = r.json()
+    assert (body["order"]["source"], body["order"]["listing_id"]) == ("skinslink", None)
+    assert body["trade"] is None
+    sl = body["skinslink"]
+    assert (sl["purchase_id"], sl["status"], sl["offer_id"], sl["amount_usd"]) == (
+        178,
+        "active",
+        "6912345678",
+        "12.000000",
+    )
+    assert sl["merchant_tx_id"] == order.id
+    # The margin is against what Skinslink charged.
+    assert Decimal(body["order"]["margin_usd"]) == order.price_usd - Decimal(12)
+
+
+async def test_detail_of_a_waxpeer_order_has_no_skinslink_block(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    order = await _order(db_session, status="paid")
+    r = await integration_client.get(
+        f"/api/v1/admin/orders/{order.number}", headers=await admin_headers()
+    )
+    assert (r.json()["order"]["source"], r.json()["skinslink"]) == ("waxpeer", None)
 
 
 # --- the trades page --------------------------------------------------------------------

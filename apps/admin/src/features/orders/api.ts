@@ -100,10 +100,31 @@ export interface AdminOrderPayment {
   created_at: string;
 }
 
+/** A Skinslink order's purchase (spec 2026-10-06). */
+export interface AdminSkinslinkPurchaseOut {
+  /** Our idempotency key at Skinslink — what their dashboard is searched by. */
+  merchant_tx_id: string;
+  asset_id: string;
+  purchase_id: number | null;
+  status: string | null;
+  offer_id: string | null;
+  offer_url: string | null;
+  fail_reason: string | null;
+  /** USD with six places. */
+  amount_usd: string | null;
+  hold_end_date: string | null;
+  buy_pending: boolean;
+  buy_unconfirmed_at: string | null;
+  attention_reason: AttentionReason | null;
+  resolved_at: string | null;
+}
+
 export interface AdminOrderDetail {
   order: AdminOrderFull;
   user: OrderUser;
   trade: AdminTradeOut | null;
+  /** `null` for a Waxpeer order. */
+  skinslink: AdminSkinslinkPurchaseOut | null;
   payments: AdminOrderPayment[];
   can_refund: boolean;
   can_retry: boolean;

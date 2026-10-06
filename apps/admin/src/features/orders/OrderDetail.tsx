@@ -7,6 +7,7 @@ import { type AdminOrderDetail, getOrder } from "./api";
 import { detailKey } from "./keys";
 import { FAILURE_LABELS } from "./labels";
 import { OrderActions } from "./OrderActions";
+import { SkinslinkBlock } from "./SkinslinkBlock";
 import { AttentionBadge, OrderStatusChip } from "./StatusChip";
 import { TradeBlock } from "./TradeBlock";
 
@@ -136,7 +137,11 @@ export function OrderDetail() {
         <div className="space-y-8" data-testid="order-detail">
           <OrderFields detail={detail} />
           <Payments payments={detail.payments} />
-          <TradeBlock trade={detail.trade} />
+          {detail.skinslink !== null ? (
+            <SkinslinkBlock purchase={detail.skinslink} />
+          ) : (
+            <TradeBlock trade={detail.trade} />
+          )}
           <OrderActions
             key={detail.order.number}
             detail={detail}

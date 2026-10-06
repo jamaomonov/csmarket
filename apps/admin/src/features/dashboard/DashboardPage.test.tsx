@@ -28,6 +28,11 @@ const DATA: DashboardOut = {
     { day: "2026-10-02", sales_count: 12, revenue_uzs: "1524000", margin_usd: "15" },
   ],
   waxpeer: { balance_usd: "812.5", read_at: new Date(Date.now() - 4 * 60_000).toISOString() },
+  skinslink: {
+    available_usd: "240.5",
+    hold_usd: "12",
+    read_at: new Date(Date.now() - 2 * 60_000).toISOString(),
+  },
 };
 
 function renderPage(path = "/") {
@@ -82,6 +87,9 @@ describe("DashboardPage", () => {
     expect(tile("В пути")).toHaveTextContent("3");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("$812.5");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("обновлено 4 мин назад");
+    expect(tile("Баланс Skinslink")).toHaveTextContent("$240.5");
+    expect(tile("Баланс Skinslink")).toHaveTextContent("в холде $12");
+    expect(tile("Баланс Skinslink")).toHaveTextContent("обновлено 2 мин назад");
     const link = within(tile("Требуют внимания")).getByRole("link");
     expect(link).toHaveAttribute("href", "/trades?view=attention");
   });
@@ -91,6 +99,16 @@ describe("DashboardPage", () => {
     renderPage();
     await screen.findByTestId("tile-Продажи");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("неизвестно");
+  });
+
+  it("an unknown Skinslink balance says so", async () => {
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      skinslink: { available_usd: null, hold_usd: null, read_at: null },
+    });
+    renderPage();
+    await screen.findByTestId("tile-Продажи");
+    expect(tile("Баланс Skinslink")).toHaveTextContent("неизвестно");
   });
 
   it("days without sales are listed too", async () => {

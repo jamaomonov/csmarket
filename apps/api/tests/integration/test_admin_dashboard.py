@@ -139,6 +139,7 @@ async def test_in_flight_attention_and_no_cached_balance(
     body = await _get(integration_client, headers, 1)
     assert (body["in_flight"], body["attention"]) == (2, 1)
     assert body["waxpeer"] == {"balance_usd": None, "read_at": None}
+    assert body["skinslink"] == {"available_usd": None, "hold_usd": None, "read_at": None}
 
 
 async def test_the_cached_balance_is_shown_with_its_age(

@@ -19,6 +19,7 @@ export interface DashboardOut {
   attention: number;
   by_day: { day: string; sales_count: number; revenue_uzs: string; margin_usd: string }[];
   waxpeer: { balance_usd: string | null; read_at: string | null };
+  skinslink: { available_usd: string | null; hold_usd: string | null; read_at: string | null };
 }
 
 export function getDashboard(days: Days): Promise<DashboardOut> {

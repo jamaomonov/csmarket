@@ -45,6 +45,13 @@ class WaxpeerOut(BaseModel):
     read_at: datetime | None
 
 
+class SkinslinkOut(BaseModel):
+    #: The last good read by the balance job; ``null`` when unknown (none in the last hour).
+    available_usd: str | None
+    hold_usd: str | None
+    read_at: datetime | None
+
+
 class DashboardOut(BaseModel):
     """Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look."""
 
@@ -56,6 +63,7 @@ class DashboardOut(BaseModel):
     attention: int
     by_day: list[DayOut]
     waxpeer: WaxpeerOut
+    skinslink: SkinslinkOut
 
     @classmethod
     def of(cls, d: Dashboard) -> DashboardOut:
@@ -89,5 +97,12 @@ class DashboardOut(BaseModel):
                 if d.waxpeer.balance_usd is None
                 else _money(d.waxpeer.balance_usd),
                 read_at=d.waxpeer.read_at,
+            ),
+            skinslink=SkinslinkOut(
+                available_usd=None
+                if d.skinslink.available_usd is None
+                else _money(d.skinslink.available_usd),
+                hold_usd=None if d.skinslink.hold_usd is None else _money(d.skinslink.hold_usd),
+                read_at=d.skinslink.read_at,
             ),
         )

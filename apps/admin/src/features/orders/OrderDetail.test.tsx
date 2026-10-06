@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AdminOrderDetail } from "./api";
-import { ATTENTION, DETAIL, RESOLVED } from "./fixtures";
+import { ATTENTION, DETAIL, RESOLVED, SKINSLINK } from "./fixtures";
 import { detailKey } from "./keys";
 import { OrderDetail } from "./OrderDetail";
 
@@ -71,15 +71,26 @@ describe("OrderDetail", () => {
     expect(within(order).getByText("Waxpeer · wx:4242")).toBeInTheDocument();
   });
 
-  it("names a Skinslink order's source", async () => {
+  it("names a Skinslink order's source and shows its purchase", async () => {
     api.getOrder.mockResolvedValue({
       ...DETAIL,
       order: { ...DETAIL.order, source: "skinslink", offer_id: "sl:380", listing_id: null },
       trade: null,
+      skinslink: SKINSLINK,
     });
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
     expect(within(order).getByText("Skinslink · sl:380")).toBeInTheDocument();
+    const purchase = screen.getByRole("region", { name: "Покупка Skinslink" });
+    expect(within(purchase).getByText("178")).toBeInTheDocument();
+    expect(within(purchase).getByText("active")).toBeInTheDocument();
+    expect(within(purchase).getByText("$12.000000")).toBeInTheDocument();
+    expect(within(purchase).getByRole("link", { name: "6912345678" })).toHaveAttribute(
+      "href",
+      "https://steamcommunity.com/tradeoffer/6912345678/",
+    );
+    expect(within(purchase).getByText("откат после получения")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Обмен" })).toBeNull();
   });
 
   it("renders the trade block and never a trade-link token", async () => {

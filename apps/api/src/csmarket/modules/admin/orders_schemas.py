@@ -191,12 +191,37 @@ class AdminOrderPaymentOut(BaseModel):
     created_at: datetime
 
 
+class AdminSkinslinkPurchaseOut(BaseModel):
+    """A Skinslink order's purchase as the operator needs it (spec 2026-10-06 §7)."""
+
+    #: Our idempotency key at Skinslink — what their dashboard is searched by.
+    merchant_tx_id: str
+    #: The Skinslink item (Steam asset) bought.
+    asset_id: str
+    purchase_id: int | None
+    #: Skinslink's status word (``new`` … ``reverted``).
+    status: str | None
+    #: Steam's trade offer id.
+    offer_id: str | None
+    offer_url: str | None
+    fail_reason: str | None
+    #: What Skinslink charged, USD with six places.
+    amount_usd: str | None
+    hold_end_date: datetime | None
+    buy_pending: bool
+    buy_unconfirmed_at: datetime | None
+    attention_reason: AttentionReason | None
+    resolved_at: datetime | None
+
+
 class AdminOrderDetail(BaseModel):
     """The order page: the order, its buyer, its trade, its payments and what may be done."""
 
     order: AdminOrderFull
     user: AdminOrderUser
     trade: AdminTradeOut | None
+    #: A Skinslink order's purchase; ``None`` for a Waxpeer order.
+    skinslink: AdminSkinslinkPurchaseOut | None = None
     #: Oldest first.
     payments: list[AdminOrderPaymentOut]
     #: «Вернуть деньги на баланс» would succeed now.
@@ -221,6 +246,7 @@ __all__ = [
     "AdminOrderUser",
     "AdminOrdersOut",
     "AdminResolveIn",
+    "AdminSkinslinkPurchaseOut",
     "AdminTradeCounts",
     "AdminTradeOut",
     "AdminTradeRow",

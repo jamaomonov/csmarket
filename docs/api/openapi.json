@@ -119,6 +119,16 @@
             "title": "Payments",
             "type": "array"
           },
+          "skinslink": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminSkinslinkPurchaseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "trade": {
             "anyOf": [
               {
@@ -1166,6 +1176,160 @@
           "items"
         ],
         "title": "AdminSkinItemsOut",
+        "type": "object"
+      },
+      "AdminSkinslinkPurchaseOut": {
+        "description": "A Skinslink order's purchase as the operator needs it (spec 2026-10-06 \u00a77).",
+        "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_unconfirmed",
+                  "ambiguous_trade",
+                  "rolled_back",
+                  "source_forbidden",
+                  "audit_divergence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "buy_pending": {
+            "title": "Buy Pending",
+            "type": "boolean"
+          },
+          "buy_unconfirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Unconfirmed At"
+          },
+          "fail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Reason"
+          },
+          "hold_end_date": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold End Date"
+          },
+          "merchant_tx_id": {
+            "title": "Merchant Tx Id",
+            "type": "string"
+          },
+          "offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
+          },
+          "offer_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Url"
+          },
+          "purchase_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Id"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "merchant_tx_id",
+          "asset_id",
+          "purchase_id",
+          "status",
+          "offer_id",
+          "offer_url",
+          "fail_reason",
+          "amount_usd",
+          "hold_end_date",
+          "buy_pending",
+          "buy_unconfirmed_at",
+          "attention_reason",
+          "resolved_at"
+        ],
+        "title": "AdminSkinslinkPurchaseOut",
         "type": "object"
       },
       "AdminTopupInfo": {
@@ -2401,6 +2565,9 @@
             "title": "Since",
             "type": "string"
           },
+          "skinslink": {
+            "$ref": "#/components/schemas/SkinslinkOut"
+          },
           "waxpeer": {
             "$ref": "#/components/schemas/WaxpeerOut"
           }
@@ -2413,7 +2580,8 @@
           "in_flight",
           "attention",
           "by_day",
-          "waxpeer"
+          "waxpeer",
+          "skinslink"
         ],
         "title": "DashboardOut",
         "type": "object"
@@ -4783,6 +4951,51 @@
           "next_cursor"
         ],
         "title": "SkinsPageOut",
+        "type": "object"
+      },
+      "SkinslinkOut": {
+        "properties": {
+          "available_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Usd"
+          },
+          "hold_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Usd"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          }
+        },
+        "required": [
+          "available_usd",
+          "hold_usd",
+          "read_at"
+        ],
+        "title": "SkinslinkOut",
         "type": "object"
       },
       "SteamCallbackIn": {
