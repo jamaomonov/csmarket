@@ -1,7 +1,7 @@
 /** The idempotency key of `POST /orders`, kept per (offer, trade link) across retries. */
 
 export interface OrderKey {
-  listingId: number;
+  listingId: string;
   tradeLink: string;
   key: string;
 }
@@ -14,7 +14,7 @@ export interface OrderKey {
  */
 export function orderKeyFor(
   current: OrderKey | null,
-  listingId: number,
+  listingId: string,
   tradeLink: string,
   mint: () => string,
 ): OrderKey {

@@ -38,7 +38,12 @@ export interface AdminOrderFull {
   market_hash_name: string;
   phase: string | null;
   slug: string;
-  listing_id: number;
+  /** Where the offer is bought. */
+  source: "waxpeer" | "skinslink";
+  /** The offer the buyer chose: `wx:<id>` / `sl:<id>`. */
+  offer_id: string | null;
+  /** The Waxpeer listing; `null` for a Skinslink order. */
+  listing_id: number | null;
   cost_units: number;
   /** USD with six places. */
   cost_usd: string;

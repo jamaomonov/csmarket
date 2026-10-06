@@ -82,7 +82,7 @@ const USER: Me = {
 };
 
 const offer = (id: number, usd: string, uzs: string) => ({
-  listing_id: id,
+  listing_id: `wx:${String(id)}`,
   price_usd: usd,
   price_uzs: uzs,
   float_value: 0.2,
@@ -130,7 +130,7 @@ function Choose({ id }: { id: number }) {
     <button
       type="button"
       onClick={() => {
-        select(id);
+        select(`wx:${String(id)}`);
       }}
     >
       {`pick ${String(id)}`}
@@ -322,7 +322,7 @@ describe("SkinBuyPanel — notices", () => {
 
   it("an offer-gone notice stays on the offer it moved to", async () => {
     m.create.mockRejectedValueOnce(
-      conflict({ code: "offer_gone", next_offer: { listing_id: 2, price_uzs: "393700" } }),
+      conflict({ code: "offer_gone", next_offer: { listing_id: "wx:2", price_uzs: "393700" } }),
     );
     panel();
     fireEvent.click(await ready("381 000"));
@@ -347,7 +347,7 @@ describe("SkinBuyPanel — buying", () => {
       expect(m.push).toHaveBeenCalledWith("/orders/A100");
     });
     expect(m.create).toHaveBeenCalledWith(
-      { slug: "ak", listing_id: 1, price_uzs: 381000 },
+      { slug: "ak", listing_id: "wx:1", price_uzs: 381000 },
       expect.any(String),
     );
     const [orderKey] = createKeys();
@@ -377,7 +377,11 @@ describe("SkinBuyPanel — buying", () => {
     await waitFor(() => {
       expect(m.push).toHaveBeenCalled();
     });
-    expect(m.create.mock.calls[0]?.[0]).toEqual({ slug: "ak", listing_id: 2, price_uzs: 393700 });
+    expect(m.create.mock.calls[0]?.[0]).toEqual({
+      slug: "ak",
+      listing_id: "wx:2",
+      price_uzs: 393700,
+    });
   });
 
   it("a double click sends one order", async () => {
@@ -414,7 +418,11 @@ describe("SkinBuyPanel — buying", () => {
     await waitFor(() => {
       expect(m.push).toHaveBeenCalledWith("/orders/A100?go=1&via=click");
     });
-    expect(m.create.mock.calls[1]?.[0]).toEqual({ slug: "ak", listing_id: 1, price_uzs: 400100 });
+    expect(m.create.mock.calls[1]?.[0]).toEqual({
+      slug: "ak",
+      listing_id: "wx:1",
+      price_uzs: 400100,
+    });
     const [first, second] = createKeys();
     expect(second).toBe(first);
   });
@@ -422,7 +430,7 @@ describe("SkinBuyPanel — buying", () => {
   it("a sold offer moves to the next one, which a new press buys", async () => {
     m.create
       .mockRejectedValueOnce(
-        conflict({ code: "offer_gone", next_offer: { listing_id: 2, price_uzs: "393700" } }),
+        conflict({ code: "offer_gone", next_offer: { listing_id: "wx:2", price_uzs: "393700" } }),
       )
       .mockResolvedValueOnce(order("A200"));
     panel();
@@ -434,7 +442,7 @@ describe("SkinBuyPanel — buying", () => {
     await waitFor(() => {
       expect(m.push).toHaveBeenCalledWith("/orders/A200?go=1&via=click");
     });
-    expect(m.create.mock.calls[1]?.[0]).toMatchObject({ listing_id: 2, price_uzs: 393700 });
+    expect(m.create.mock.calls[1]?.[0]).toMatchObject({ listing_id: "wx:2", price_uzs: 393700 });
     const [first, second] = createKeys();
     expect(second).not.toBe(first);
   });

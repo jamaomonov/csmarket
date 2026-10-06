@@ -42,6 +42,8 @@ export const DETAIL: AdminOrderDetail = {
     market_hash_name: "AK-47 | Redline (Field-Tested)",
     phase: null,
     slug: "ak-47-redline-field-tested",
+    source: "waxpeer",
+    offer_id: "wx:4242",
     listing_id: 4242,
     cost_units: 13500,
     cost_usd: "13.500000",

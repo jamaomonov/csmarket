@@ -31,7 +31,7 @@ const m = (
 });
 
 const offer = (id: number, usd: string, uzs: string | null): SkinListing => ({
-  listing_id: id,
+  listing_id: `wx:${String(id)}`,
   price_usd: usd,
   price_uzs: uzs,
   float_value: null,

@@ -28,7 +28,7 @@ const wrap = (ui: ReactNode) =>
   );
 
 const offer = (id: number, usd: string, uzs: string): SkinListing => ({
-  listing_id: id,
+  listing_id: `wx:${String(id)}`,
   price_usd: usd,
   price_uzs: uzs,
   float_value: null,

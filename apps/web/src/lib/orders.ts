@@ -73,7 +73,7 @@ export type PayProvider = "wallet" | "click" | "payme" | "uzum" | "mock";
 
 export interface CreateOrderBody {
   slug: string;
-  listing_id: number;
+  listing_id: string;
   /** Whole soʻm the buyer saw, a JSON integer. */
   price_uzs: number;
 }
@@ -91,7 +91,7 @@ export interface OrderPayOut {
 }
 
 export interface NextOffer {
-  listing_id: number;
+  listing_id: string;
   price_uzs: string;
 }
 
@@ -165,7 +165,7 @@ function nextOfferOf(raw: unknown): NextOffer | null {
   if (typeof raw !== "object" || raw === null) return null;
   // Trusted server JSON, narrowed field by field below.
   const o = raw as Record<string, unknown>;
-  return typeof o.listing_id === "number" && typeof o.price_uzs === "string"
+  return typeof o.listing_id === "string" && typeof o.price_uzs === "string"
     ? { listing_id: o.listing_id, price_uzs: o.price_uzs }
     : null;
 }

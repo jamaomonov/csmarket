@@ -18,7 +18,7 @@ vi.mock("@/lib/skins", async (importOriginal) => ({
 }));
 
 const lot = (id: number, usd: string, float: number, stickers: number) => ({
-  listing_id: id,
+  listing_id: `wx:${String(id)}`,
   price_usd: usd,
   price_uzs: null,
   float_value: float,

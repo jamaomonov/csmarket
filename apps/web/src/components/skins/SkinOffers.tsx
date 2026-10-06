@@ -14,11 +14,11 @@ interface OffersState {
   cheapest: SkinListing | null;
   /** The offer the buy panel buys: the cheapest until the buyer picks another. */
   selected: SkinListing | null;
-  select: (listingId: number) => void;
+  select: (listingId: string) => void;
   /** The server quoted another soʻm price for this offer: show and send that one. */
-  reprice: (listingId: number, priceUzs: string) => void;
+  reprice: (listingId: string, priceUzs: string) => void;
   /** This offer was sold: take it off the page. */
-  drop: (listingId: number) => void;
+  drop: (listingId: string) => void;
 }
 
 const noop = (): void => undefined;
@@ -46,7 +46,7 @@ function cheapestOf(offers: readonly SkinListing[] | null): SkinListing | null {
  */
 export function SkinOffersProvider({ slug, children }: { slug: string; children: ReactNode }) {
   const [offers, setOffers] = useState<SkinListing[] | null>(null);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => {
     const ctl = new AbortController();
     setOffers(null);
@@ -62,13 +62,13 @@ export function SkinOffersProvider({ slug, children }: { slug: string; children:
       ctl.abort();
     };
   }, [slug]);
-  const reprice = useCallback((listingId: number, priceUzs: string) => {
+  const reprice = useCallback((listingId: string, priceUzs: string) => {
     setOffers(
       (all) =>
         all?.map((o) => (o.listing_id === listingId ? { ...o, price_uzs: priceUzs } : o)) ?? null,
     );
   }, []);
-  const drop = useCallback((listingId: number) => {
+  const drop = useCallback((listingId: string) => {
     setOffers((all) => all?.filter((o) => o.listing_id !== listingId) ?? null);
   }, []);
   const value = useMemo<OffersState>(() => {

@@ -40,7 +40,7 @@ interface SkinBuyFormProps {
 interface Notice {
   text: string;
   /** The offer it is about; `null` when it is about none (nothing left). */
-  listingId: number | null;
+  listingId: string | null;
   method: string | null;
 }
 
@@ -80,7 +80,7 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
     notice.method === chosen
       ? notice.text
       : null;
-  const say = (text: string, listingId: number | null): void => {
+  const say = (text: string, listingId: string | null): void => {
     setNotice({ text, listingId, method: chosen });
   };
 

@@ -65,6 +65,23 @@ describe("OrderDetail", () => {
     expect(within(payments).getByText("оплачен")).toBeInTheDocument();
   });
 
+  it("names the order's source and offer", async () => {
+    renderDetail();
+    const order = await screen.findByRole("region", { name: "Заказ" });
+    expect(within(order).getByText("Waxpeer · wx:4242")).toBeInTheDocument();
+  });
+
+  it("names a Skinslink order's source", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, source: "skinslink", offer_id: "sl:380", listing_id: null },
+      trade: null,
+    });
+    renderDetail();
+    const order = await screen.findByRole("region", { name: "Заказ" });
+    expect(within(order).getByText("Skinslink · sl:380")).toBeInTheDocument();
+  });
+
   it("renders the trade block and never a trade-link token", async () => {
     renderDetail();
     const trade = await screen.findByRole("region", { name: "Обмен" });

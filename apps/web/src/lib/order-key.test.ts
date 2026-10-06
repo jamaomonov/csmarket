@@ -9,21 +9,21 @@ describe("orderKeyFor", () => {
   it("keeps one key per (offer, trade link), so a retry replays the same order", () => {
     let n = 0;
     const mint = () => `key-${String(++n)}`;
-    const first = orderKeyFor(null, 7, LINK, mint);
-    expect(first).toEqual({ listingId: 7, tradeLink: LINK, key: "key-1" });
-    expect(orderKeyFor(first, 7, LINK, mint)).toBe(first);
+    const first = orderKeyFor(null, "wx:7", LINK, mint);
+    expect(first).toEqual({ listingId: "wx:7", tradeLink: LINK, key: "key-1" });
+    expect(orderKeyFor(first, "wx:7", LINK, mint)).toBe(first);
     expect(n).toBe(1);
   });
 
   it("mints a new key for another offer", () => {
-    const first = orderKeyFor(null, 7, LINK, () => "a");
-    expect(orderKeyFor(first, 8, LINK, () => "b").key).toBe("b");
+    const first = orderKeyFor(null, "wx:7", LINK, () => "a");
+    expect(orderKeyFor(first, "sl:8", LINK, () => "b").key).toBe("b");
   });
 
   it("mints a new key for another trade link: a replay would deliver to the old one", () => {
-    const first = orderKeyFor(null, 7, LINK, () => "a");
-    expect(orderKeyFor(first, 7, OTHER_LINK, () => "b")).toEqual({
-      listingId: 7,
+    const first = orderKeyFor(null, "wx:7", LINK, () => "a");
+    expect(orderKeyFor(first, "wx:7", OTHER_LINK, () => "b")).toEqual({
+      listingId: "wx:7",
       tradeLink: OTHER_LINK,
       key: "b",
     });

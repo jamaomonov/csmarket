@@ -85,7 +85,7 @@ export interface SkinDetail extends SkinItem {
 }
 /** One of the cheapest stored offers shown on the item page before live offers load. */
 export interface SkinListingSummary {
-  listing_id: number;
+  listing_id: string;
   price_usd: string;
   price_uzs: string | null;
 }
@@ -96,7 +96,7 @@ export interface SkinSticker {
   wear: number | null;
 }
 export interface SkinListing {
-  listing_id: number;
+  listing_id: string;
   price_usd: string;
   price_uzs: string | null;
   float_value: number | null;

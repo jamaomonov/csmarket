@@ -15,6 +15,11 @@ import { errorText, providerLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSum } from "@/lib/format";
 
+const SOURCE_LABELS: Record<AdminOrderDetail["order"]["source"], string> = {
+  waxpeer: "Waxpeer",
+  skinslink: "Skinslink",
+};
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex gap-3">
@@ -46,6 +51,10 @@ function OrderFields({ detail }: { detail: AdminOrderDetail }) {
           <Link to={`/users/${user.id}`} className="hover:underline">
             {user.display_name ?? "Без имени"}
           </Link>
+        </Field>
+        <Field label="Источник">
+          {SOURCE_LABELS[order.source]}
+          {order.offer_id !== null && ` · ${order.offer_id}`}
         </Field>
         <Field label="Цена">{formatSum(order.price_uzs)}</Field>
         <Field label="Цена, USD">{usd(order.price_usd)}</Field>

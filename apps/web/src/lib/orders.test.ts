@@ -48,7 +48,7 @@ const conflict = (body: Record<string, unknown>, status = 409) =>
 
 async function createError(err: unknown): Promise<unknown> {
   api.apiPost.mockRejectedValueOnce(err);
-  return createOrder({ slug: "s", listing_id: 1, price_uzs: 1 }, KEY).catch((e: unknown) => e);
+  return createOrder({ slug: "s", listing_id: "wx:1", price_uzs: 1 }, KEY).catch((e: unknown) => e);
 }
 
 async function payError(err: unknown): Promise<unknown> {
@@ -64,7 +64,7 @@ beforeEach(() => {
 describe("createOrder", () => {
   it("posts the offer and the price with the caller's key", async () => {
     api.apiPost.mockResolvedValueOnce(ORDER);
-    const body = { slug: "ak-47-redline-ft", listing_id: 7, price_uzs: 381000 };
+    const body = { slug: "ak-47-redline-ft", listing_id: "wx:7", price_uzs: 381000 };
     await expect(createOrder(body, KEY)).resolves.toBe(ORDER);
     expect(api.apiPost).toHaveBeenCalledWith("/api/v1/orders", body, { idempotencyKey: KEY });
   });
@@ -77,14 +77,24 @@ describe("createOrder", () => {
 
   it("a gone offer carries the next one, or null", async () => {
     const next = await createError(
-      conflict({ code: "offer_gone", next_offer: { listing_id: 9, price_uzs: "393700" } }),
+      conflict({
+        code: "offer_gone",
+        next_offer: { listing_id: "sl:38029384123", price_uzs: "393700" },
+      }),
     );
     expect(next).toBeInstanceOf(OfferGoneError);
-    expect((next as OfferGoneError).nextOffer).toEqual({ listing_id: 9, price_uzs: "393700" });
+    expect((next as OfferGoneError).nextOffer).toEqual({
+      listing_id: "sl:38029384123",
+      price_uzs: "393700",
+    });
     const none = await createError(conflict({ code: "offer_gone", next_offer: null }));
     expect((none as OfferGoneError).nextOffer).toBeNull();
     const junk = await createError(conflict({ code: "offer_gone", next_offer: { id: "x" } }));
     expect((junk as OfferGoneError).nextOffer).toBeNull();
+    const numeric = await createError(
+      conflict({ code: "offer_gone", next_offer: { listing_id: 9, price_uzs: "1" } }),
+    );
+    expect((numeric as OfferGoneError).nextOffer).toBeNull();
   });
 
   it("a refused trade link says which refusal", async () => {
@@ -187,7 +197,7 @@ describe("reads and dev helpers", () => {
 });
 
 describe("createAndPay", () => {
-  const body = { slug: "s", listing_id: 1, price_uzs: 381000 };
+  const body = { slug: "s", listing_id: "wx:1", price_uzs: 381000 };
   const pay = { provider: "wallet", locale: "ru" } as const;
   let n = 0;
   const payKey = () => `web-pay-0000000000-${String(++n)}`;

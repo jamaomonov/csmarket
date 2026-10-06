@@ -49,7 +49,7 @@ describe("SkinListings", () => {
       degraded: false,
       items: [
         {
-          listing_id: 1,
+          listing_id: "wx:1",
           price_usd: "30.37",
           price_uzs: "385700",
           float_value: 0.3692,
@@ -87,7 +87,7 @@ describe("SkinListings", () => {
       degraded: true,
       items: [
         {
-          listing_id: 1,
+          listing_id: "wx:1",
           price_usd: "30.37",
           price_uzs: "385700",
           float_value: null,
@@ -111,7 +111,7 @@ describe("SkinListings", () => {
 
   it("offers «Выбрать» on each row when buying is on; the cheapest starts selected", async () => {
     const row = (id: number, usd: string, uzs: string) => ({
-      listing_id: id,
+      listing_id: `wx:${String(id)}`,
       price_usd: usd,
       price_uzs: uzs,
       float_value: null,
@@ -137,7 +137,7 @@ describe("SkinListings", () => {
       degraded: false,
       items: [
         {
-          listing_id: 1,
+          listing_id: "wx:1",
           price_usd: "30.37",
           price_uzs: "385700",
           float_value: null,
