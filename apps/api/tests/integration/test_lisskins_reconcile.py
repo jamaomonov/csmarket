@@ -9,8 +9,8 @@ from decimal import Decimal
 import pytest
 from csmarket.core import clock
 from csmarket.core.config import get_settings
-from csmarket.modules.lisskins.api import LisskinsUnavailableError
-from csmarket.modules.lisskins.models import LisskinsPurchase
+from csmarket.modules.lisskins.api import LisskinsError, LisskinsUnavailableError
+from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsPurchase, LisskinsState
 from csmarket.modules.orders import lisskins_reconcile
 from csmarket.modules.orders.lisskins_reconcile import reconcile_lisskins
 from csmarket.modules.orders.models import Order
@@ -116,7 +116,7 @@ async def test_an_unseen_buy_is_bought_again_under_the_same_custom_id_after_the_
     fake = FakeLisskinsClient(purchase("processing", custom_id=order.id))
     await _tick(db_engine, fake)  # LIS-SKINS shows nothing under our id: due again
     _, p = await _state(db_session, order)
-    assert (p.buy_pending, p.buy_unconfirmed_at) == (True, None)
+    assert (p.buy_pending, p.buy_unconfirmed_at) == (True, lost)  # the mark of a repeat stays
     await _tick(db_engine, fake)
     assert [c["custom_id"] for c in fake.calls] == [order.id]
     _, p = await _state(db_session, order)
@@ -205,3 +205,28 @@ async def test_a_pending_buy_is_bought_by_the_tick(
     await _tick(db_engine, fake)
     assert [c["custom_id"] for c in fake.calls] == [order.id]
     assert fake.info_calls == []  # it was not due a poll in the same tick
+
+
+async def test_a_repeat_refused_for_its_lot_is_never_refunded_nor_substituted(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """The lost first buy may have taken the lot: a repeat that LIS-SKINS refuses for the lot
+    (not for the ``custom_id``) proves nothing — an admin decides, nobody buys or refunds."""
+    lost = clock.now() - timedelta(minutes=get_settings().order_unconfirmed_minutes + 1)
+    order, _ = await make_lisskins_order(
+        db_session, status="buying", skin_status=None, purchase_id=None, buy_unconfirmed_at=lost
+    )
+    db_session.add(  # a cheaper lot that a substitute would take
+        LisskinsOffer(id=6, skin_item_id=order.skin_item_id, price_units=12_000, asset_id="6")
+    )
+    await db_session.merge(LisskinsState(id=1, snapshot_at=clock.now(), lots=1))
+    await db_session.commit()
+    before = await user_balance(db_session, order.user_id)
+    fake = FakeLisskinsClient(LisskinsError("gone", status=400, code="skins_unavailable"))
+    for _ in range(3):  # re-arm, the refused repeat, a later tick
+        await _tick(db_engine, fake)
+    assert [c["custom_id"] for c in fake.calls] == [order.id]
+    row, p = await _state(db_session, order)
+    assert (row.status, row.refunded_at) == ("buying", None)
+    assert (p.custom_id, p.buy_pending, p.attention_reason) == (order.id, False, "buy_unconfirmed")
+    assert await user_balance(db_session, order.user_id) == before

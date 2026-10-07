@@ -477,7 +477,10 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
   polled ≥ 10 min ago), longest-unpolled first. Each answer is applied in its own session.
   **The unconfirmed rule:** LIS-SKINS showing nothing under the `custom_id` of a lost buy past
   `order_unconfirmed_minutes` **re-arms the buy** (`buy_pending = true`, the order due now;
-  log `orders.lisskins.repeat_unseen`) under the same `custom_id`. A purchase we hold an id for
+  log `orders.lisskins.repeat_unseen`) under the same `custom_id`; `buy_unconfirmed_at` stays
+  as the mark of a repeat. A repeat's refusal of the lot may be our own first buy: no
+  substitute, no refund — `market/info` once more, else the `buy_unconfirmed` attention
+  (`lisskins_writes.held`), and no further repeat until it is resolved. A purchase we hold an id for
   is never settled by its absence, and a silence is never refunded. A failed `info` call skips
   the tick (`orders.lisskins.info_failed`).
 - **Reads:** the owner's order reads join `lisskins_purchases` in the same query (no N+1);

@@ -130,8 +130,12 @@ key, the IP, the balance or LIS-SKINS itself.
      `buy_unconfirmed_at`; the reconcile asks `market/info` under the same `custom_id` and
      adopts what is there. If nothing shows after `order_unconfirmed_minutes` (10), the buy
      is sent again under the **same** `custom_id` (log `orders.lisskins.repeat_unseen`):
-     LIS-SKINS refuses a known `custom_id`, so this can never buy twice. A silence is never
-     refunded. Many at once → LIS-SKINS' outage; wait.
+     LIS-SKINS refuses a known `custom_id`, so this can never buy twice. A repeat that
+     LIS-SKINS refuses for the lot (`skins_unavailable`, `skins_price_higher_than_max_price`,
+     an unknown code) may be refused because our first send bought it: no substitute, no
+     refund — `market/info` is asked once more, and if it still shows nothing the purchase
+     gets the `buy_unconfirmed` attention. A silence is never refunded. Many at once →
+     LIS-SKINS' outage; wait.
    - `refused`: the `code` says why. `skins_unavailable` or
      `skins_price_higher_than_max_price` → one substitute (any source, ≤ 3 % above the
      agreed cost), then a refund `sold_out`. Many at once can mean a stale snapshot (see
@@ -157,9 +161,11 @@ by that `custom_id` (the order id, or `<order id>:2` after a substitute).
 - `ambiguous_trade` — LIS-SKINS reports `wait_unlock` / `wait_withdraw` (we never buy locked
   lots), or a buy went through while the order had moved. Check what LIS-SKINS holds under the
   `custom_id`.
-- `buy_unconfirmed` — not raised on a LIS-SKINS purchase today. A lost answer is kept as
-  `buy_unconfirmed_at` and settled by the reconcile (see [Buy failures](#buy-failures)); the
-  block shows that time.
+- `buy_unconfirmed` — a lost buy was sent again and LIS-SKINS refused the lot, while
+  `market/info` showed nothing under the `custom_id` (see [Buy failures](#buy-failures)).
+  Look the `custom_id` up in the cabinet or ask LIS-SKINS support. While it is open the
+  reconcile still asks `market/info` and adopts a purchase that shows up, but sends nothing;
+  «Разобрано» lets it send once more under the same `custom_id` after the wait.
 - `source_forbidden` — see [Buy failures](#buy-failures); it clears itself once a buy goes
   through.
 

@@ -44,6 +44,8 @@ class LisskinsSnapshot(BaseModel):
     paid_units: int
     #: The order's agreed cost: the substitute ceiling is counted from it.
     cost_units: int
+    #: A repeat of a buy whose answer was lost: the first send may own the lot.
+    repeat: bool = False
 
 
 async def _lock_both(
@@ -155,6 +157,22 @@ async def unconfirmed(db: AsyncSession, snap: LisskinsSnapshot) -> str:
     _settle(purchase)
     purchase.buy_unconfirmed_at = now()
     await db.commit()
+    return "unconfirmed"
+
+
+async def held(db: AsyncSession, snap: LisskinsSnapshot) -> str:
+    """A repeat that LIS-SKINS refused and ``market/info`` cannot explain: the first send may
+    have bought the lot, so neither a refund nor another buy — the ``buy_unconfirmed``
+    attention, and the purchase stays unconfirmed until an admin retries or settles it."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return await _stale_purchase(db, snap)
+    _, purchase = pair
+    _settle(purchase)
+    purchase.buy_unconfirmed_at = now()
+    flag(purchase, "buy_unconfirmed", reopen=True)
+    await db.commit()
+    log.error("orders.lisskins_buy.repeat_refused", number=snap.number)
     return "unconfirmed"
 
 

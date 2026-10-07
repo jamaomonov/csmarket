@@ -10,7 +10,9 @@
    stored purchase adopted;
 4. sold or dearer than our cap → the cheapest other offer of any source within the
    ceiling, once (``orders.substitutes``: a LIS-SKINS one under ``<order id>:2``, another
-   source's hands the order to that path); ``insufficient_funds`` → refund
+   source's hands the order to that path) — except on a repeat of a lost buy, whose refusal
+   of the lot may be our own first purchase: ``market/info`` decides, else the
+   ``buy_unconfirmed`` attention (``lisskins_writes.held``); ``insufficient_funds`` → refund
    ``source_low_balance``; a refusal naming the trade link → refund ``invalid_trade_link``;
    401/403 → attention ``source_forbidden``, the buy kept pending; 429 → retried after its
    ``Retry-After``; no answer, a timeout or a 5xx → ``buy_unconfirmed_at``, settled by the
@@ -47,6 +49,7 @@ from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, relea
 from csmarket.modules.orders.lisskins_writes import (
     LisskinsSnapshot,
     attention,
+    held,
     record_purchase,
     refund,
     retarget,
@@ -73,6 +76,9 @@ MAX_RETRY_AFTER = BUY_LEASE
 _UNCOUNTED = frozenset({"nothing_to_do", "lookup_later"})
 _SECURE_SECONDS = 10.0
 _UNITS_PER_USD = Decimal(1000)
+#: Refusals about the buyer or our balance, never about the lot: a repeat settles them as a
+#: first buy would.
+_MOVED_ON = frozenset({*BUY_LINK_ERRORS, "insufficient_funds"})
 
 
 class _Run:
@@ -198,6 +204,7 @@ async def _leased(
         skin_id=purchase.skin_id,
         paid_units=purchase.paid_units,
         cost_units=order.cost_units,
+        repeat=purchase.buy_unconfirmed_at is not None,
     )
     try:
         link = parse_tradelink(order.trade_link)
@@ -274,8 +281,8 @@ async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table
     except LisskinsUnavailableError:
         return await unconfirmed(db, snap)  # it may have gone through: market/info settles it
     except LisskinsError as err:
-        if err.code == "custom_id_already_exists":
-            return await _adopt(db, client, snap)
+        if err.code == "custom_id_already_exists" or (snap.repeat and err.code not in _MOVED_ON):
+            return await _adopt(db, client, snap)  # a repeat's refusal may be our own first buy
         if err.code in BUY_LINK_ERRORS:
             return await refund(db, snap, "invalid_trade_link")
         if err.code == "insufficient_funds":
@@ -293,7 +300,7 @@ async def _adopt(db: AsyncSession, client: LisskinsBuyClient, snap: LisskinsSnap
         found = []
     report = next((p for p in found if p.custom_id == snap.custom_id), None)
     if report is None:
-        return await unconfirmed(db, snap)
+        return await (held(db, snap) if snap.repeat else unconfirmed(db, snap))
     return await record_purchase(db, snap, report, outcome="adopted")
 
 

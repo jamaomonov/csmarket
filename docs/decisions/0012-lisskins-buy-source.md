@@ -107,7 +107,9 @@ smallest new moving part: a periodic download and a periodic poll, both in the s
   and a margin), because an accepted trade can still be rolled back.
 - A lost buy answer is never refunded. If `market/info` shows nothing under the `custom_id`
   after `order_unconfirmed_minutes`, the buy is re-armed and sent again under the **same**
-  `custom_id` (log `orders.lisskins.repeat_unseen`).
+  `custom_id` (log `orders.lisskins.repeat_unseen`). Which check LIS-SKINS runs first — the
+  `custom_id` or the lot — is not documented, so a repeat refused for the lot is never
+  substituted or refunded: `market/info` decides, else the `buy_unconfirmed` attention.
 - The dashboard's attention count and the admin «Разобрано» now read every source.
 
 ### Positive consequences

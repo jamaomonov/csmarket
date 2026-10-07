@@ -90,14 +90,20 @@ async def _to_poll(db: AsyncSession) -> dict[str, str]:
 
 def _settle_unseen(order: Order, purchase: LisskinsPurchase, settings: Settings) -> str:
     """LIS-SKINS shows nothing under our ``custom_id``. A lost buy past the wait is due
-    again under the same id (spec §6); anything else is left as it is."""
+    again under the same id (spec §6), its ``buy_unconfirmed_at`` kept as the mark of a
+    repeat; one an admin was asked about (``buy_unconfirmed``) waits until it is resolved."""
     purchase.last_polled_at = now()
     unseen = purchase.buy_unconfirmed_at
-    if unseen is None or purchase.purchase_id is not None or order.status != "buying":
+    if (
+        unseen is None
+        or purchase.purchase_id is not None
+        or order.status != "buying"
+        or purchase.buy_pending
+        or (purchase.attention_reason == "buy_unconfirmed" and purchase.resolved_at is None)
+    ):
         return "unchanged"
     if now() - unseen < timedelta(minutes=settings.order_unconfirmed_minutes):
         return "unchanged"
-    purchase.buy_unconfirmed_at = None
     purchase.buy_pending = True
     order.next_check_at = None  # due for the next tick's buy at once
     log.warning("orders.lisskins.repeat_unseen", number=order.number)
