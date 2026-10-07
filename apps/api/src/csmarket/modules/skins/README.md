@@ -300,7 +300,8 @@ It never raises for a Waxpeer problem, and logs only the exception type name (th
 Waxpeer's query string). Each row is re-quoted with the live rules (`pricing.quote`) and shown in
 soʻm at the CBU rate. Nothing Waxpeer-hosted reaches a browser: a sticker image is kept only on a
 Steam CDN host (`*.steamstatic.com`, `*.akamaihd.net`, rewritten to `CSMARKET_SKINS_IMAGE_HOST`,
-`images.steam_image_only`), else `null`; `inspect_url` only when it is a `steam://` link
+`images.steam_image_only`; a `/apps/730/icons/…` icon path goes to the `cdn.` twin of that
+host, the only one serving it), else `null`; `inspect_url` only when it is a `steam://` link
 (`listings.steam_inspect_url`), checked at parse and again on the way out. The route sits behind its own
 `ip_guard` bucket `skins-listings` (60 per window); an unknown or hidden slug is a 404 before any
 Waxpeer call. Redis keys: `docs/architecture/cache-keys.md`. Tests:

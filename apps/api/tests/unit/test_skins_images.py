@@ -40,3 +40,16 @@ def test_steam_image_only_drops_other_hosts() -> None:
     assert steam_image_only("not a url", host=host) is None
     assert steam_image_only("", host=host) is None
     assert steam_image_only(None, host=host) is None
+
+
+def test_an_icon_path_goes_to_the_cdn_host_that_serves_it() -> None:
+    """``/apps/730/icons/…`` (sticker and charm icons) is served by ``cdn.*`` only:
+    ``community.*`` redirects it to the Steam home page."""
+    icon = "https://community.fastly.steamstatic.com/apps/730/icons/econ/stickers/x/y.png"
+    out = "https://cdn.fastly.steamstatic.com/apps/730/icons/econ/stickers/x/y.png"
+    assert steam_image(icon, host="community.fastly.steamstatic.com") == out
+    assert steam_image_only(icon, host="community.fastly.steamstatic.com") == out
+    economy = "https://community.akamai.steamstatic.com/economy/image/abc"
+    assert steam_image(economy, host="community.fastly.steamstatic.com") == (
+        "https://community.fastly.steamstatic.com/economy/image/abc"
+    )
