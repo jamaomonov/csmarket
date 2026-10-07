@@ -6,6 +6,7 @@ import { Link, useParams } from "react-router-dom";
 import { type AdminOrderDetail, getOrder } from "./api";
 import { detailKey } from "./keys";
 import { FAILURE_LABELS } from "./labels";
+import { LisskinsBlock } from "./LisskinsBlock";
 import { OrderActions } from "./OrderActions";
 import { SkinslinkBlock } from "./SkinslinkBlock";
 import { AttentionBadge, OrderStatusChip } from "./StatusChip";
@@ -19,7 +20,19 @@ import { formatDateTime, formatSum } from "@/lib/format";
 const SOURCE_LABELS: Record<AdminOrderDetail["order"]["source"], string> = {
   waxpeer: "Waxpeer",
   skinslink: "Skinslink",
+  lisskins: "LIS-SKINS",
 };
+
+interface BoughtProps {
+  detail: AdminOrderDetail;
+}
+
+/** The market's side of the order: a purchase block, or the Waxpeer trade. */
+function Bought({ detail }: BoughtProps) {
+  if (detail.skinslink !== null) return <SkinslinkBlock purchase={detail.skinslink} />;
+  if (detail.lisskins !== null) return <LisskinsBlock purchase={detail.lisskins} />;
+  return <TradeBlock trade={detail.trade} />;
+}
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -137,11 +150,7 @@ export function OrderDetail() {
         <div className="space-y-8" data-testid="order-detail">
           <OrderFields detail={detail} />
           <Payments payments={detail.payments} />
-          {detail.skinslink !== null ? (
-            <SkinslinkBlock purchase={detail.skinslink} />
-          ) : (
-            <TradeBlock trade={detail.trade} />
-          )}
+          <Bought detail={detail} />
           <OrderActions
             key={detail.order.number}
             detail={detail}

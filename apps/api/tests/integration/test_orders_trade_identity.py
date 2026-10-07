@@ -12,14 +12,12 @@ from __future__ import annotations
 from datetime import timedelta
 
 from csmarket.core import clock as core_clock
-from csmarket.core.config import Settings
 from csmarket.modules.orders.buying import attempt_buy
 from csmarket.modules.orders.models import Order
 from csmarket.modules.skins.api import WaxpeerBuyRefusedError, WaxpeerUnavailableError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.fake_trade_client import FakeTradeClient
-from tests.integration.orders_factory import wx_listing
 from tests.integration.trade_sweeps_kit import (  # noqa: F401 -- fixtures by name
     WAXPEER_ID,
     Clock,
@@ -38,7 +36,6 @@ from tests.integration.trade_sweeps_kit import (  # noqa: F401 -- fixtures by na
 
 SOLD = WaxpeerBuyRefusedError("Item not found", new_price_units=None)
 REFUSED_ID = 111
-SUBSTITUTE = 777
 
 
 async def _pending(db: AsyncSession, **trade_values: object) -> Order:
@@ -49,20 +46,17 @@ async def _pending(db: AsyncSession, **trade_values: object) -> Order:
 
 
 async def _attempt(db: AsyncSession, fake: FakeTradeClient, order: Order) -> str:
-    settings: Settings = sweep_settings()
-    return await attempt_buy(db, fake, order_id=order.id, settings=settings)
+    return await attempt_buy(db, fake, order_id=order.id)
 
 
 # --- the reviewer's scenario ---------------------------------------------------------------
 
 
-async def test_a_lost_substitute_is_never_refunded_on_the_refused_attempt(
+async def test_a_lost_answer_is_never_refunded_on_a_refused_trade_record(
     db: AsyncSession, fake: FakeTradeClient, clock: Clock
 ) -> None:
     order0 = await _pending(db)
-    fake.refuse(wx_listing(order0), SOLD)  # listing 1 refused: Waxpeer keeps a 6
-    fake.listings(order0.market_hash_name, [(SUBSTITUTE, 12_000)])
-    fake.buy_raises(WaxpeerUnavailableError("the substitute's answer was lost"))
+    fake.buy_raises(WaxpeerUnavailableError("the buy's answer was lost"))
     assert await _attempt(db, fake, order0) == "unconfirmed"
     order, row = await load(db, order0)
     assert (row.buy_pending, row.waxpeer_id) == (False, None)
@@ -91,10 +85,10 @@ async def test_a_lost_substitute_is_never_refunded_on_the_refused_attempt(
     clock.advance(seconds=11)
     await reconcile_once(db, fake)
     order, row = await load(db, order0)
-    assert (row.waxpeer_id, row.status) == (WAXPEER_ID, 2)  # the substitute, adopted
+    assert (row.waxpeer_id, row.status) == (WAXPEER_ID, 2)  # the lost buy, adopted
     assert row.attention_reason is None  # a live trade answers the lost buy (ruling Q)
     assert order.status == "buying"
-    assert fake.buy_calls == 2  # listing 1 and the substitute, never a third
+    assert fake.buy_calls == 1  # never bought again
 
 
 async def test_a_known_trade_that_fails_is_conclusive(

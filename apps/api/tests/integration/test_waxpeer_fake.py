@@ -116,7 +116,7 @@ async def act(api: AsyncClient, headers: dict[str, str], order: Order, action: s
 
 async def bought(db: AsyncSession, wax: FakeTradeClient, order: Order) -> None:
     """Buy ``order`` through the real worker step against the fake."""
-    assert await attempt_buy(db, wax, order_id=order.id, settings=sweep_settings()) == "bought"
+    assert await attempt_buy(db, wax, order_id=order.id) == "bought"
 
 
 # --- the fake on its own -------------------------------------------------------------------

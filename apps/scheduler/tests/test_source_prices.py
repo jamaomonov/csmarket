@@ -7,18 +7,18 @@ from unittest.mock import AsyncMock
 
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from csmarket_scheduler.jobs import skinslink_prices as job
+from csmarket_scheduler.jobs import source_prices as job
 
 
 async def test_a_tick_reprices(monkeypatch: pytest.MonkeyPatch) -> None:
     tick = AsyncMock(return_value=True)
-    monkeypatch.setattr(job, "sync_skinslink_prices", tick)
+    monkeypatch.setattr(job, "sync_source_prices", tick)
     await job.run()
     tick.assert_awaited_once()
 
 
 async def test_a_failure_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(job, "sync_skinslink_prices", AsyncMock(side_effect=RuntimeError("x")))
+    monkeypatch.setattr(job, "sync_source_prices", AsyncMock(side_effect=RuntimeError("x")))
     await job.run()
 
 

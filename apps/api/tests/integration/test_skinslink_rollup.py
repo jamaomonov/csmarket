@@ -8,9 +8,9 @@ from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.redis import get_redis
 from csmarket.modules.skins.models import SkinItem
-from csmarket.modules.skins.prices import sync_skinslink_prices
 from csmarket.modules.skins.repricing import reprice_rows
 from csmarket.modules.skins.settings import load_rules
+from csmarket.modules.skins.source_prices import sync_source_prices
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from csmarket.modules.skinslink.rollup import rollup
 from sqlalchemy import delete
@@ -122,12 +122,12 @@ async def test_skinslink_prices_without_any_waxpeer_tick(
     item = await _waxpeer_item(db_session, units=None)
     await _mirror(db_session, item, [9_000], synced=now())
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
-    assert await sync_skinslink_prices(factory, get_redis(), settings=settings, at=now())
+    assert await sync_source_prices(factory, get_redis(), settings=settings, at=now())
     await db_session.refresh(item)
     assert (item.active, item.skinslink_min_units) == (True, 9_000)
     assert item.sell_price_usd is not None
     later = now() + timedelta(minutes=settings.skinslink_mirror_stale_minutes + 1)
-    assert await sync_skinslink_prices(factory, get_redis(), settings=settings, at=later)
+    assert await sync_source_prices(factory, get_redis(), settings=settings, at=later)
     await db_session.refresh(item)
     assert (item.active, item.skinslink_count) == (False, 0)
     assert item.sell_price_usd is None  # type: ignore[unreachable]  # refreshed from the row
@@ -137,4 +137,4 @@ async def test_the_skinslink_tick_is_a_no_op_when_it_is_off_and_nothing_is_rolle
     db_session: AsyncSession, db_engine: AsyncEngine
 ) -> None:
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
-    assert not await sync_skinslink_prices(factory, get_redis(), settings=get_settings(), at=now())
+    assert not await sync_source_prices(factory, get_redis(), settings=get_settings(), at=now())

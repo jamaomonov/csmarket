@@ -31,9 +31,9 @@ async def lock_pricing(db: AsyncSession) -> None:
     await db.execute(select(func.pg_advisory_xact_lock(PRICING_LOCK_KEY)))
 
 
-def cost_units(waxpeer: int | None, skinslink: int | None) -> int | None:
-    """The cheaper source's units, or the one that has stock; ``None`` with neither."""
-    present = [u for u in (waxpeer, skinslink) if u is not None]
+def cost_units(*units: int | None) -> int | None:
+    """The cheapest source's units among those with stock; ``None`` with none."""
+    present = [u for u in units if u is not None]
     return min(present) if present else None
 
 
@@ -62,6 +62,8 @@ async def reprice_rows(
         SkinItem.min_auto_units,
         SkinItem.skinslink_min_units,
         SkinItem.skinslink_count,
+        SkinItem.lisskins_min_units,
+        SkinItem.lisskins_count,
         SkinItem.category,
         SkinItem.weapon,
         SkinItem.count_auto,
@@ -79,7 +81,7 @@ async def reprice_rows(
     updates: list[dict[str, object]] = []
     # ``hidden`` is deliberately not consulted: hidden rows stay priced so unhiding is instant.
     for row in (await db.execute(stmt)).all():
-        units = cost_units(row.min_auto_units, row.skinslink_min_units)
+        units = cost_units(row.min_auto_units, row.skinslink_min_units, row.lisskins_min_units)
         if units is None:
             price, discount = None, None
         else:
@@ -89,7 +91,8 @@ async def reprice_rows(
                 category=row.category,
                 weapon=row.weapon,
                 # Liquidity counts both sources' stock.
-                count_auto=row.count_auto + row.skinslink_count,
+                # Liquidity counts every source's stock.
+                count_auto=row.count_auto + row.skinslink_count + row.lisskins_count,
                 item_pp=row.margin_override_pp,
                 fixed_price_usd=row.fixed_price_usd,
                 steam_price_units=row.steam_price_units,

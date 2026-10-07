@@ -95,6 +95,21 @@ _SKINSLINK_OUTCOMES = frozenset(
     ("ok", "refused", "forbidden", "rate_limited", "unavailable", "not_found")
 )
 
+#: A LIS-SKINS API call (spec 2026-10-07); ``export`` is the public price export.
+LisskinsEndpoint = Literal["export", "buy", "info", "check", "balance"]
+#: ``refused`` = a 4xx with an ``error`` code; ``unavailable`` = transport, 408/5xx, an
+#: unreadable or cut body.
+LisskinsOutcome = Literal["ok", "refused", "forbidden", "rate_limited", "unavailable"]
+
+_LISSKINS_ENDPOINTS = frozenset(("export", "buy", "info", "check", "balance"))
+_LISSKINS_OUTCOMES = frozenset(("ok", "refused", "forbidden", "rate_limited", "unavailable"))
+
+LISSKINS_CALLS = Counter(
+    "csmarket_lisskins_calls_total",
+    "LIS-SKINS API calls by endpoint and outcome (alert: LisskinsBuyFailures).",
+    ("endpoint", "outcome"),
+)
+
 SKINSLINK_CALLS = Counter(
     "csmarket_skinslink_calls_total",
     "Skinslink API calls by endpoint and outcome (alert: SkinslinkBuyFailures).",
@@ -227,6 +242,10 @@ WAXPEER_BALANCE_THRESHOLD_USD = Gauge(
     "csmarket_waxpeer_balance_threshold_usd",
     "The balance below which WaxpeerBalanceLow fires (setting waxpeer_balance_alert_usd).",
 )
+LISSKINS_SNAPSHOT_TIMESTAMP = Gauge(
+    "csmarket_lisskins_snapshot_timestamp_seconds",
+    "Unix time LIS-SKINS made the last export we applied (alert: LisskinsSnapshotStale).",
+)
 SKINSLINK_MIRROR_SYNCED_TIMESTAMP = Gauge(
     "csmarket_skinslink_mirror_synced_timestamp_seconds",
     "Unix time of the last good Skinslink mirror tick (alert: SkinslinkMirrorStale).",
@@ -251,6 +270,26 @@ SKINSLINK_ENABLED = Gauge(
     "csmarket_skinslink_enabled",
     "1 while Skinslink is switched on and keyed, else 0 (gates the Skinslink alerts).",
 )
+LISSKINS_BALANCE_AVAILABLE_USD = Gauge(
+    "csmarket_lisskins_balance_available_usd",
+    "The LIS-SKINS balance free to spend, USD (alert: LisskinsBalanceLow).",
+)
+LISSKINS_BALANCE_LOCKED_USD = Gauge(
+    "csmarket_lisskins_balance_locked_usd", "The LIS-SKINS balance locked by open purchases, USD."
+)
+LISSKINS_BALANCE_THRESHOLD_USD = Gauge(
+    "csmarket_lisskins_balance_threshold_usd",
+    "The balance below which LisskinsBalanceLow fires (setting lisskins_balance_alert_usd).",
+)
+LISSKINS_BALANCE_READ_TIMESTAMP = Gauge(
+    "csmarket_lisskins_balance_read_timestamp_seconds",
+    "Unix time of the last successful LIS-SKINS balance read.",
+)
+LISSKINS_ENABLED = Gauge(
+    "csmarket_lisskins_enabled",
+    "1 while LIS-SKINS is switched on and keyed, else 0 (gates the LIS-SKINS alerts).",
+)
+
 WAXPEER_BALANCE_READ_TIMESTAMP = Gauge(
     "csmarket_waxpeer_balance_read_timestamp_seconds",
     "Unix time of the last successful Waxpeer balance read (alert: WaxpeerBalanceUnknown).",
@@ -264,12 +303,17 @@ WAXPEER_BALANCE_THRESHOLD_USD.set(float("nan"))
 SKINSLINK_BALANCE_AVAILABLE_USD.set(float("nan"))
 SKINSLINK_BALANCE_HOLD_USD.set(float("nan"))
 SKINSLINK_BALANCE_THRESHOLD_USD.set(float("nan"))
+LISSKINS_BALANCE_AVAILABLE_USD.set(float("nan"))
+LISSKINS_BALANCE_LOCKED_USD.set(float("nan"))
+LISSKINS_BALANCE_THRESHOLD_USD.set(float("nan"))
+LISSKINS_BALANCE_READ_TIMESTAMP.set(time.time())
 SKINSLINK_BALANCE_READ_TIMESTAMP.set(time.time())
 # Start at process start, not 0: "never succeeded" then reads as stale only after the alert's
 # own window, instead of at once. The API and the worker keep these values; the alerts are
 # pinned to job="scheduler".
 WAXPEER_BALANCE_READ_TIMESTAMP.set(time.time())
 SKINSLINK_MIRROR_SYNCED_TIMESTAMP.set(time.time())
+LISSKINS_SNAPSHOT_TIMESTAMP.set(time.time())
 ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(time.time())
 
 
@@ -363,6 +407,18 @@ def set_waxpeer_balance(balance_usd: float, threshold_usd: float) -> None:
         )
 
 
+def set_lisskins_snapshot(at_unix: float) -> None:
+    """Stamp the time LIS-SKINS made the export we applied. Never raises."""
+    try:
+        LISSKINS_SNAPSHOT_TIMESTAMP.set(at_unix)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed",
+            metric="csmarket_lisskins_snapshot_timestamp_seconds",
+            error=type(exc).__name__,
+        )
+
+
 def set_skinslink_mirror_synced() -> None:
     """Stamp a good Skinslink mirror tick. Never raises."""
     try:
@@ -395,6 +451,29 @@ def set_skinslink_enabled(*, enabled: bool) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_skinslink_enabled", error=type(exc).__name__
+        )
+
+
+def set_lisskins_balance(available_usd: float, locked_usd: float, threshold_usd: float) -> None:
+    """Export a successful LIS-SKINS balance read and the alert threshold. Never raises."""
+    try:
+        LISSKINS_BALANCE_AVAILABLE_USD.set(available_usd)
+        LISSKINS_BALANCE_LOCKED_USD.set(locked_usd)
+        LISSKINS_BALANCE_THRESHOLD_USD.set(threshold_usd)
+        LISSKINS_BALANCE_READ_TIMESTAMP.set(time.time())
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_lisskins_balance", error=type(exc).__name__
+        )
+
+
+def set_lisskins_enabled(*, enabled: bool) -> None:
+    """Whether LIS-SKINS is on (``csmarket_lisskins_enabled``). Never raises."""
+    try:
+        LISSKINS_ENABLED.set(1 if enabled else 0)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_lisskins_enabled", error=type(exc).__name__
         )
 
 
@@ -481,6 +560,21 @@ def record_waxpeer_call(endpoint: WaxpeerEndpoint, outcome: WaxpeerOutcome) -> N
     )
 
 
+def record_lisskins_call(endpoint: LisskinsEndpoint, outcome: LisskinsOutcome) -> None:
+    """Count one LIS-SKINS call by how it ended.
+
+    A value outside the closed sets becomes ``"other"``. Never raises.
+    """
+    _inc(
+        LISSKINS_CALLS,
+        "csmarket_lisskins_calls_total",
+        {
+            "endpoint": endpoint if endpoint in _LISSKINS_ENDPOINTS else "other",
+            "outcome": outcome if outcome in _LISSKINS_OUTCOMES else "other",
+        },
+    )
+
+
 def record_skinslink_call(endpoint: SkinslinkEndpoint, outcome: SkinslinkOutcome) -> None:
     """Count one Skinslink call by how it ended.
 
@@ -550,6 +644,7 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 __all__ = [
     "EMAILS",
     "KASSA_REJECTIONS",
+    "LISSKINS_SNAPSHOT_TIMESTAMP",
     "ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP",
     "ORDERS_STUCK",
     "ORDER_BUYS",
@@ -574,6 +669,8 @@ __all__ = [
     "EmailOutcome",
     "KassaProvider",
     "KassaRejectionReason",
+    "LisskinsEndpoint",
+    "LisskinsOutcome",
     "OrderBuyOutcome",
     "OrderRefundReason",
     "OrderStuckState",
@@ -588,6 +685,7 @@ __all__ = [
     "mark_orders_health_success",
     "record_email",
     "record_kassa_rejection",
+    "record_lisskins_call",
     "record_order_buy",
     "record_order_refund",
     "record_skinslink_call",
@@ -596,6 +694,9 @@ __all__ = [
     "record_waxpeer_call",
     "record_ws_nudges",
     "serve_metrics",
+    "set_lisskins_balance",
+    "set_lisskins_enabled",
+    "set_lisskins_snapshot",
     "set_orders_stuck",
     "set_skinslink_balance",
     "set_skinslink_enabled",

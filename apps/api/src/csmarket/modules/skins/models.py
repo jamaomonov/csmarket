@@ -84,6 +84,11 @@ class SkinItem(Base):
     skinslink_count: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default=text("0"), default=0
     )
+    # ---- the LIS-SKINS side (same units), written by the snapshot (``lisskins.snapshot``) ----
+    lisskins_min_units: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    lisskins_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0"), default=0
+    )
     price_hash: Mapped[str | None] = mapped_column(String(40), nullable=True)
     prices_updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -113,6 +118,11 @@ class SkinItem(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
+
+    @property
+    def stock_count(self) -> int:
+        """Every source's lots: the liquidity the pricing rules and the card count read."""
+        return self.count_auto + self.skinslink_count + self.lisskins_count
 
     __table_args__ = (
         UniqueConstraint("market_hash_name", "phase", name="uq_skin_items_name_phase"),

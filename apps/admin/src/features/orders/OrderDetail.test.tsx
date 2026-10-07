@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AdminOrderDetail } from "./api";
-import { ATTENTION, DETAIL, RESOLVED, SKINSLINK } from "./fixtures";
+import { ATTENTION, DETAIL, LISSKINS, RESOLVED, SKINSLINK } from "./fixtures";
 import { detailKey } from "./keys";
 import { OrderDetail } from "./OrderDetail";
 
@@ -91,6 +91,41 @@ describe("OrderDetail", () => {
     );
     expect(within(purchase).getByText("откат после получения")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Обмен" })).toBeNull();
+  });
+
+  it("names a LIS-SKINS order's source and shows its purchase", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, source: "lisskins", offer_id: "ls:125345", listing_id: null },
+      trade: null,
+      lisskins: LISSKINS,
+    });
+    renderDetail();
+    const order = await screen.findByRole("region", { name: "Заказ" });
+    expect(within(order).getByText("LIS-SKINS · ls:125345")).toBeInTheDocument();
+    const purchase = screen.getByRole("region", { name: "Покупка LIS-SKINS" });
+    expect(within(purchase).getByText("55")).toBeInTheDocument();
+    expect(within(purchase).getByText("wait_accept")).toBeInTheDocument();
+    expect(within(purchase).getByText("$12.340000")).toBeInTheDocument();
+    expect(within(purchase).getByRole("link", { name: "7252638866" })).toHaveAttribute(
+      "href",
+      "https://steamcommunity.com/tradeoffer/7252638866/",
+    );
+    expect(within(purchase).getByText("откат после получения")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Обмен" })).toBeNull();
+  });
+
+  it("offers «Разобрано» for a purchase's open attention", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, source: "lisskins", offer_id: "ls:125345", listing_id: null },
+      trade: null,
+      lisskins: LISSKINS,
+      can_refund: false,
+      can_retry: false,
+    });
+    renderDetail();
+    expect(await screen.findByRole("button", { name: "Разобрано" })).toBeInTheDocument();
   });
 
   it("renders the trade block and never a trade-link token", async () => {

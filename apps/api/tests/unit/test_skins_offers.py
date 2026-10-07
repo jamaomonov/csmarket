@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 from csmarket.modules.skins.listings import Listing
 from csmarket.modules.skins.offers import (
@@ -85,3 +87,30 @@ def test_a_skinslink_stock_offer_has_a_hex_id() -> None:
 def test_hex_is_skinslinks_only_and_bounded(bad: str) -> None:
     with pytest.raises(ValueError, match="offer id"):
         parse_offer_id(bad)
+
+
+def test_lisskins_ids_round_trip() -> None:
+    assert offer_id_of("lisskins", 125345) == "ls:125345"
+    assert parse_offer_id("ls:125345") == ("lisskins", "125345")
+
+
+@pytest.mark.parametrize("bad", ["ls:", "ls:abc", "ls:1a", "ls:-1", "ls:" + "1" * 21])
+def test_bad_lisskins_ids_are_refused(bad: str) -> None:
+    with pytest.raises(ValueError, match="offer id"):
+        parse_offer_id(bad)
+
+
+def test_ties_go_waxpeer_then_skinslink_then_lisskins() -> None:
+    merged = merge_offers(
+        [_o("lisskins", 1000, "5")], [_o("skinslink", 1000, "8")], [_o("waxpeer", 1000, "1")]
+    )
+    assert [o.offer_id for o in merged] == ["wx:1", "sl:8", "ls:5"]
+
+
+def test_one_asset_in_two_sources_is_shown_once_at_the_cheaper() -> None:
+    sl = replace(_o("skinslink", 1200, "777"), asset_id="777")
+    ls = replace(_o("lisskins", 1100, "5"), asset_id="777")
+    other = replace(_o("lisskins", 1300, "6"), asset_id="778")
+    assert [o.offer_id for o in merge_offers([sl], [ls, other])] == ["ls:5", "ls:6"]
+    tie = replace(ls, price_units=1200)
+    assert [o.offer_id for o in merge_offers([tie], [sl])] == ["sl:777"]

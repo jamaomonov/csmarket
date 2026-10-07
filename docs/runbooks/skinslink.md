@@ -15,7 +15,7 @@ design: [ADR-0010](../decisions/0010-skinslink-buy-source.md); flow:
 | ---------------------------------- | ---------------------------------------------- | ----------------------------------------- |
 | `GET /merchant/purchase/available` | scheduler `skinslink.mirror`                   | the first tick, and after `reset`         |
 | `GET /merchant/purchase/events`    | scheduler `skinslink.mirror`                   | every 15 s (more pages at once if `more`) |
-| `POST /merchant/purchase`          | worker (`orders` queue), `skinslink.reconcile` | once per order (one substitute at most)   |
+| `POST /merchant/purchase`          | worker (`orders` queue), `skinslink.reconcile` | once per order                            |
 | `GET /merchant/purchase/status`    | worker (`skinslink` queue), reconcile, buy     | per webhook; every 30 s per open purchase |
 | `GET /merchant/balance`            | scheduler `skinslink.balance`                  | every 5 min                               |
 
@@ -72,7 +72,7 @@ A lost webhook costs at most 30 s: `skinslink.reconcile` polls every open purcha
 3. `docker compose -f docker-compose.prod.yml up -d api worker scheduler`.
 4. Watch: the scheduler logs `skinslink.mirror.loaded mode=full` within a minute;
    `csmarket_skinslink_enabled` reads 1 after the first balance tick (90 s);
-   `csmarket_skinslink_calls_total{outcome="ok"}` grows; the `skinslink.prices` tick
+   `csmarket_skinslink_calls_total{outcome="ok"}` grows; the `sources.prices` tick
    (every 2 min, first run 105 s after start) fills `skin_items.skinslink_count` and
    reprices. An item page now lists offers of both sources.
 5. The first test buy: an admin's own account, credited through «Изменить баланс», buys a
@@ -84,7 +84,7 @@ A lost webhook costs at most 30 s: `skinslink.reconcile` polls every open purcha
 
 `SkinslinkBalanceLow` (page): `csmarket_skinslink_balance_available_usd` has been below
 `CSMARKET_SKINSLINK_BALANCE_ALERT_USD` (default 100) for 10 minutes. `WaxpeerLowBalanceRefund`
-fires for either source: it counts refunds with reason `source_low_balance`.
+fires for every source: it counts refunds with reason `source_low_balance`.
 
 What happens on a short balance: Skinslink refuses the purchase with `insufficient_balance`,
 the order goes `failed` and the money goes back to the buyer's balance **at once**. The buyer
@@ -102,7 +102,7 @@ Keep the balance above the most expensive skin likely to sell plus a day of sale
 
 `SkinslinkMirrorStale` (warn): no mirror tick has succeeded for 10 minutes. Skinslink offers
 and prices are off the storefront until one does (a stale mirror sells nothing); the next
-`skinslink.prices` tick (≤ 2 min) deactivates items only Skinslink had. Waxpeer is unaffected. Open Skinslink
+`sources.prices` tick (≤ 2 min) deactivates items only Skinslink had. Waxpeer is unaffected. Open Skinslink
 orders keep moving: the status checks and the reconcile do not use the mirror.
 
 1. The scheduler log: `skinslink.mirror.failed error=<type>` on every tick names the error.
@@ -112,7 +112,7 @@ orders keep moving: the status checks and the reconcile do not use the mirror.
    - `refused` → a bad key, or a cursor Skinslink no longer accepts.
 3. A cursor problem heals itself: Skinslink answers `reset`, and the next tick downloads the
    whole list again (`skinslink.mirror.loaded mode=reset`).
-4. The alert clears once a tick succeeds; the next `skinslink.prices` tick (≤ 2 min) puts
+4. The alert clears once a tick succeeds; the next `sources.prices` tick (≤ 2 min) puts
    Skinslink prices back.
 
 ## Buy failures
@@ -132,8 +132,8 @@ the key, the IP whitelist or Skinslink itself.
      (10), the buy is sent again under the **same** `merchant_tx_id` (log
      `orders.skinslink.repeat_unseen`): Skinslink is idempotent on it, so this can never buy
      twice. A silence is never refunded.
-   - `refused`: sold or price moved. Each order tries one substitute (either source, ≤ 3 %
-     above), then is refunded `sold_out`. Many at once can mean a stale mirror (see
+   - `refused`: sold or price moved. The order is refunded `sold_out`; no other
+     offer is bought in its place (ADR-0013). Many at once can mean a stale mirror (see
      [Mirror stale](#mirror-stale)).
 3. A refusal naming the trade link (`trade_link_*`, `trade_banned`, `profile_private`,
    `hold`, `permissions`, …) refunds `invalid_trade_link`: the buyer fixes the link.
@@ -153,7 +153,7 @@ retry still refuse a Skinslink order.
 
 Set `CSMARKET_SKINSLINK_ENABLED=false` and
 `docker compose -f docker-compose.prod.yml up -d api worker scheduler`. At once: no Skinslink
-offers (the next `skinslink.prices` tick, ≤ 2 min, clears the roll-up and its prices and
+offers (the next `sources.prices` tick, ≤ 2 min, clears the roll-up and its prices and
 deactivates items only Skinslink had; it keeps running until nothing is left to clear), the
 webhook answers 404, and the mirror and balance jobs stop. The reconcile and the check drain
 keep running while the API key is set, so orders already in flight settle.

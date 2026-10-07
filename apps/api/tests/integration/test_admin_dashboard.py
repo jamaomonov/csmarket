@@ -16,7 +16,9 @@ from httpx import AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tests.integration.lisskins_factory import make_lisskins_order
 from tests.integration.orders_factory import make_order, make_trade
+from tests.integration.skinslink_factory import make_skinslink_order
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 #: 2026-10-02 12:00 in Tashkent (UTC+5).
@@ -140,6 +142,7 @@ async def test_in_flight_attention_and_no_cached_balance(
     assert (body["in_flight"], body["attention"]) == (2, 1)
     assert body["waxpeer"] == {"balance_usd": None, "read_at": None}
     assert body["skinslink"] == {"available_usd": None, "hold_usd": None, "read_at": None}
+    assert body["lisskins"] == {"available_usd": None, "locked_usd": None, "read_at": None}
 
 
 async def test_the_cached_balance_is_shown_with_its_age(
@@ -186,3 +189,14 @@ async def test_customers_are_refused(
 ) -> None:
     r = await integration_client.get("/api/v1/admin/dashboard", headers=await customer_headers())
     assert r.status_code == 403
+
+
+async def test_attention_counts_every_source(
+    integration_client: AsyncClient, db_session: AsyncSession, headers: dict[str, str]
+) -> None:
+    order = await make_order(db_session, status="trade_sent", paid_with="payme", paid_at=NOW)
+    await make_trade(db_session, order, attention_reason="ambiguous_trade")
+    await make_skinslink_order(db_session, attention_reason="rolled_back")
+    await make_lisskins_order(db_session, attention_reason="buy_unconfirmed")
+    body = await _get(integration_client, headers, 1)
+    assert body["attention"] == 3

@@ -72,14 +72,14 @@ paid | cancelled`; `paid → buying`; `buying → trade_sent | delivered | faile
   the item priced ≤ shown × 1.03, billed at the lower of its price and the shown one; none →
   409 `offer_gone` with the next offer. In the worker a buy refused on price or because the
   listing sold is retried **once** with the cheapest other `auto` listing ≤ `paid_units` ×
-  1.03; Waxpeer's `new_price` is never accepted blindly.
+  1.03; Waxpeer's `new_price` is never accepted blindly. Superseded by ADR-0013: no substitutes.
 - **R5 — Reconcile every 10 s** (spec: 2–3 min): the buyer has ~30 min to accept and the
   order page rides this sweep; one lookup covers ≤ 100 orders, so ≤ 6 calls a minute.
   Protection watch hourly (spec: daily); history audit daily at 04:30 Tashkent over 14 days
   by `check-many-project-id` (spec: `my-history`, whose shape was never captured — the
   orphan-buy probe moves to M4b).
 - **R6 — Buy errors are classified.** A 200 refusal (sold, `new_price`) → substitute once,
-  then `failed` + refund `sold_out`; a refusal naming low balance, or any refusal while
+  then `failed` + refund `sold_out` (Superseded by ADR-0013: no substitutes.); a refusal naming low balance, or any refusal while
   `GET /v1/user` shows less than the price → `failed` + refund `waxpeer_low_balance` + alert;
   HTTP 403 → no substitute, no refund, the order stays `buying`, attention
   `waxpeer_forbidden` + alert; 429 → retried; network / 5xx / unreadable → unconfirmed,

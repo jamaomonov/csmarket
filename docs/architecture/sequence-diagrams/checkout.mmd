@@ -30,10 +30,7 @@ sequenceDiagram
             API-->>Web: 201 OrderOut
         else price moved beyond ±2 %
             API-->>Web: 409 price_changed {price_uzs} → panel reprices, same key next press
-        else offer gone, another ≤ shown × 1.03
-            API->>DB: insert with the substitute, billed min(its price, shown)
-            API-->>Web: 201 OrderOut
-        else offer gone, none within 3 %
+        else offer gone
             API-->>Web: 409 offer_gone {next_offer | null}
         end
     end

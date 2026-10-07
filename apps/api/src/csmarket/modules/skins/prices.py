@@ -22,9 +22,10 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from csmarket.core.clock import now
-from csmarket.core.config import Settings, get_settings
+from csmarket.core.config import get_settings
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
+from csmarket.modules.lisskins.api import rollup as lisskins_rollup
 from csmarket.modules.skins.cachekeys import bump_catalog_version
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.naming import canonical_name, parse_market_name, search_text, slug_for
@@ -33,7 +34,7 @@ from csmarket.modules.skins.settings import load_rules
 from csmarket.modules.skins.slugs import resolve
 from csmarket.modules.skins.taxonomy import category_for_waxpeer_type
 from csmarket.modules.skins.waxpeer import SnapshotRow, WaxpeerClient
-from csmarket.modules.skinslink.api import rollup
+from csmarket.modules.skinslink.api import rollup as skinslink_rollup
 
 log = get_logger("csmarket.skins.prices")
 
@@ -258,9 +259,9 @@ async def apply_prices(
             update(SkinItem)
             .where(SkinItem.id.in_(missing), SkinItem.active.is_(True))
             .values(
-                # Waxpeer's side always goes; Skinslink stock keeps the item on sale
-                # (``skinslink.rollup`` owns that side).
-                active=SkinItem.skinslink_count > 0,
+                # Waxpeer's side always goes; Skinslink or LIS-SKINS stock keeps the item on
+                # sale (their roll-ups own that side).
+                active=(SkinItem.skinslink_count > 0) | (SkinItem.lisskins_count > 0),
                 min_auto_units=None,
                 count_auto=0,
                 cheapest_auto=[],
@@ -308,7 +309,8 @@ async def sync_prices(
         if not get_settings().waxpeer_buy_enabled:
             aggregates = {key: _without_stock(agg) for key, agg in aggregates.items()}
         result = await apply_prices(db, aggregates, meta=meta, at=at)
-        await rollup(db, settings=get_settings(), now=at)
+        await skinslink_rollup(db, settings=get_settings(), now=at)
+        await lisskins_rollup(db, settings=get_settings(), now=at)
         await reprice_rows(db, await load_rules(db, fresh=True))
         await db.commit()
     await bump_catalog_version(redis)
@@ -328,48 +330,6 @@ def _without_stock(agg: PriceAggregate) -> PriceAggregate:
     return PriceAggregate(min_all=agg.min_all, count_all=agg.count_all)
 
 
-async def _clear_waxpeer_stock(db: AsyncSession) -> None:
-    """Waxpeer buying is off: forget the stock an earlier Waxpeer tick wrote."""
-    await db.execute(
-        update(SkinItem)
-        .where(SkinItem.count_auto > 0)
-        .values(min_auto_units=None, count_auto=0, cheapest_auto=[], price_hash=None)
-        .execution_options(synchronize_session=False)
-    )
-
-
-async def sync_skinslink_prices(
-    session_factory: async_sessionmaker[AsyncSession],
-    redis: Redis,
-    *,
-    settings: Settings,
-    at: datetime,
-) -> bool:
-    """Roll Skinslink's stock up and reprice, without waiting for a Waxpeer tick.
-
-    The Waxpeer price sync rolls up too; this one keeps Skinslink prices (and their removal
-    when the mirror goes stale or Skinslink is switched off) current when Waxpeer is
-    missing or failing. Runs only while Skinslink is on, or while an earlier roll-up is
-    still on the catalogue to clear.
-
-    Returns:
-        Whether it repriced.
-    """
-    async with session_factory() as db:
-        if not settings.skinslink_active:
-            left = await db.scalar(select(SkinItem.id).where(SkinItem.skinslink_count > 0).limit(1))
-            if left is None:
-                return False
-        await lock_pricing(db)
-        if not settings.waxpeer_buy_enabled:
-            await _clear_waxpeer_stock(db)
-        await rollup(db, settings=settings, now=at)
-        await reprice_rows(db, await load_rules(db, fresh=True))
-        await db.commit()
-    await bump_catalog_version(redis)
-    return True
-
-
 __all__ = [
     "ApplyResult",
     "PriceAggregate",
@@ -378,5 +338,4 @@ __all__ = [
     "apply_prices",
     "price_hash",
     "sync_prices",
-    "sync_skinslink_prices",
 ]

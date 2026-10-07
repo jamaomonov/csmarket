@@ -1,5 +1,5 @@
-"""Every 2 minutes: roll Skinslink's stock onto the catalogue and reprice
-(``skins.prices.sync_skinslink_prices``) — independent of the Waxpeer price sync, so
+"""Every 2 minutes: roll Skinslink's and LIS-SKINS' stock onto the catalogue and reprice
+(``skins.prices.sync_source_prices``) — independent of the Waxpeer price sync, so
 Skinslink prices appear, and leave when the mirror goes stale, without a Waxpeer key.
 
 The logic lives in ``skins.prices``; it does nothing while Skinslink is off and nothing of
@@ -14,24 +14,24 @@ from csmarket.core.config import get_settings
 from csmarket.core.db import get_session_factory
 from csmarket.core.logging import get_logger
 from csmarket.core.redis import get_redis
-from csmarket.modules.skins.prices import sync_skinslink_prices
+from csmarket.modules.skins.source_prices import sync_source_prices
 
 from csmarket_scheduler.startup import first_run_after
 
-log = get_logger("csmarket.scheduler.skinslink_prices")
+log = get_logger("csmarket.scheduler.source_prices")
 
-JOB_ID = "skinslink.prices"
+JOB_ID = "sources.prices"
 INTERVAL_SECONDS = 120
 
 
 async def run() -> None:
     """One tick. Never raises."""
     try:
-        await sync_skinslink_prices(
+        await sync_source_prices(
             get_session_factory(), get_redis(), settings=get_settings(), at=now()
         )
     except Exception as exc:  # noqa: BLE001 -- a tick never raises; the next one retries
-        log.warning("skinslink.prices.failed", error=type(exc).__name__)
+        log.warning("sources.prices.failed", error=type(exc).__name__)
 
 
 def register(scheduler: AsyncIOScheduler) -> None:

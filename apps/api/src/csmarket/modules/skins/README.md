@@ -9,22 +9,25 @@ listings, admin); M4a adds the Waxpeer purchase client and the dev fake (below).
 
 ## What the module owns
 
-| Table                 | Holds                                                                                                                                                                                                                |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `skin_items`          | One row per `(market_hash_name, phase)`: ByMykel metadata, our `slug` (a URL, assigned once), the Waxpeer price columns, the Skinslink roll-up, `active`, `hidden`, the stored `sell_price_usd` / `discount_percent` |
-| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4b); absent = `DEFAULT_RULES`                                                                                                        |
-| `skin_search_aliases` | Admin-edited search aliases (alias -> text), none seeded                                                                                                                                                             |
+| Table                 | Holds                                                                                                                                                                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `skin_items`          | One row per `(market_hash_name, phase)`: ByMykel metadata, our `slug` (a URL, assigned once), the Waxpeer price columns, the Skinslink and LIS-SKINS roll-ups, `active`, `hidden`, the stored `sell_price_usd` / `discount_percent` |
+| `skin_pricing_rules`  | The single row (`id = 1`) of the pricing document the admin editor will write (M4b); absent = `DEFAULT_RULES`                                                                                                                       |
+| `skin_search_aliases` | Admin-edited search aliases (alias -> text), none seeded                                                                                                                                                                            |
 
 Migration `0003_skins_catalog`; `0018_skinslink` adds `skinslink_min_units` and
-`skinslink_count`, written only by `skinslink.rollup` (ADR-0010). `hidden` is the admin's flag and is never written by the
-import or the price sync. `phase` is `''` when an item has none, never NULL.
+`skinslink_count`, written only by `skinslink.rollup` (ADR-0010); `0022_lisskins` adds
+`lisskins_min_units` and `lisskins_count`, written by the LIS-SKINS snapshot and kept honest by
+`lisskins.rollup` (ADR-0012). `SkinItem.stock_count` = `count_auto + skinslink_count +
+lisskins_count`. `hidden` is the admin's flag and is never written by the import or the price
+sync. `phase` is `''` when an item has none, never NULL.
 
 - **Public interface:** `skins.api` — `WaxpeerClient`, `WaxpeerError`,
   `WaxpeerUnavailableError`, `WaxpeerRateLimitedError`, `SnapshotRow`, and the purchase
   side (`TradeClient`, `WaxpeerTradeClient`, `trade_client`, `WaxpeerBuy`, `WaxpeerTrade`,
   `WaxpeerSeller`, `parse_trade`, `WaxpeerBuyRefusedError`, `WaxpeerForbiddenError`,
   `LOOKUP_MAX_IDS`), and the source-neutral offers (`Offer`, `Source`, `offer_id_of`,
-  `parse_offer_id`, `from_listing`, `merge_offers`, below) with `canonical_name`. Other modules import
+  `parse_offer_id`, `from_listing`, `merge_offers`, `TIE_ORDER`, below) with `canonical_name`. Other modules import
   nothing else from here; the catalogue is reached through HTTP routes, not through `api.py`.
 - **`waxpeer.WaxpeerClient`** — transport only, async `httpx`, inject `client=` in tests.
   `check_tradelink(url) -> str | None` (`POST /v1/check-tradelink`):
@@ -124,10 +127,10 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   the owner's launch seed. Retail only: there is no merchant channel. A stored document
   with a stray `b2b` key still loads (extra keys are ignored).
 - **`repricing`** — `reprice_rows` writes `sell_price_usd` / `discount_percent` for every
-  active row after each price tick and each rules write. The cost is the cheaper source
-  (`cost_units(min_auto_units, skinslink_min_units)`); the liquidity count is
-  `count_auto + skinslink_count`, the same sum the card, the item page, checkout and the
-  `popular` sort use. `hidden` rows are priced too, so
+  active row after each price tick and each rules write. The cost is the cheapest present
+  source (`cost_units(*units)`: `min_auto_units`, `skinslink_min_units`,
+  `lisskins_min_units`); the liquidity count is `stock_count` (every source's lots), the same
+  sum the card, the item page, checkout and the `popular` sort use. `hidden` rows are priced too, so
   unhiding is instant. `lock_pricing` serialises writers (advisory xact lock).
 - **`settings`** — `load_rules` (Redis `skins:pricing`, TTL 3600 -> `skin_pricing_rules`
   row 1 -> defaults), `read_rules` (Postgres only, no cache fill — the preview), `save_rules`
@@ -194,11 +197,17 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   truncated body, or an `auto` column whose format changed, must not read as "everything sold
   out". Nothing is written and the previous prices stand. Only rows active now are candidates
   for deactivation, so the `IN (…)` list never grows with the inactive catalogue.
-- **`sync_skinslink_prices`** (ADR-0010) — the Skinslink side on its own tick (scheduler
-  `skinslink.prices`, every 120 s, first run 105 s): `lock_pricing`, `skinslink.api.rollup`,
-  `reprice_rows`, commit, bump the catalogue version. It runs while Skinslink is active, or
-  while an earlier roll-up remains to clear, so Skinslink prices appear and leave without a
-  Waxpeer key or a Waxpeer tick.
+- **`source_prices`** (ADR-0010, ADR-0012) — the non-Waxpeer sources on their own ticks.
+  `sync_source_prices` (scheduler `sources.prices`, was `skinslink.prices`; every 120 s, first
+  run 105 s): `lock_pricing`, forget Waxpeer stock while Waxpeer buying is off,
+  `skinslink.api.rollup`, `lisskins.api.rollup`, `reprice_rows`, commit, bump the catalogue
+  version. It runs while Skinslink or LIS-SKINS is active, or while an earlier roll-up of
+  either remains to clear, so their prices appear and leave without a Waxpeer tick.
+  `sync_lisskins` (scheduler `lisskins.snapshot`, every 5 min): streams LIS-SKINS' export with
+  no transaction open (it takes minutes), then in one transaction under `lock_pricing` writes
+  the snapshot (`lisskins.api.apply_snapshot`; a refused one writes nothing), rolls it up,
+  reprices and bumps the catalogue version. The Waxpeer `sync_prices` tick runs both roll-ups
+  too.
 - **`cachekeys`** — `catalog_version` / `bump_catalog_version` for Redis `skins:catalog:ver`
   (`docs/architecture/cache-keys.md`). Kept apart from `prices` so the read path never imports the
   Waxpeer client.
@@ -306,6 +315,15 @@ or `sl:<Skinslink asset id>` (`offers.offer_id_of`); `offers.parse_offer_id` rea
 still reads a bare positive integer as `wx:` for one release (`docs/tech-debt.md`). The
 customer never sees the source. Tests: `tests/unit/test_skins_offers.py`,
 `tests/integration/test_skinslink_offers.py`.
+
+**Three sources (ADR-0012).** LIS-SKINS' lots come from `lisskins_offers`
+(`lisskins.api.offers_for`; none while off or stale; no external call) as `ls:<LIS-SKINS skin
+id>`, with float, seed, inspect link and stickers as LIS-SKINS names them; sticker images pass
+`images.steam_image_only` on the way out (anything off Steam's CDN is dropped, the name stays).
+`merge_offers` sorts every source's offers by price, ties by `TIE_ORDER` (Waxpeer, Skinslink,
+LIS-SKINS), and shows one Steam asset once — the cheapest (then tie-winning) offer of it.
+Checkout re-checks a chosen `ls:` lot live (`orders/README.md`, ADR-0012). Tests:
+`tests/integration/test_lisskins_offers.py`, `test_lisskins_listings_route.py`.
 
 ## Cache keys
 

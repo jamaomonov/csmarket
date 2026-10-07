@@ -35,6 +35,8 @@
   indexing stays closed (`CSMARKET_INDEXING=off`, `docs/runbooks/indexing.md`) until the owner
   opens it. Not yet on the server: the Waxpeer key (no prices, no buying), the kassas, Resend,
   backups and alerts (the `ops` profile). Next: M5 (launch), when the owner asks for it.
+  LIS-SKINS is a third buy source behind `CSMARKET_LISSKINS_ENABLED` (spec
+  `2026-10-07-lisskins-buy-source-design.md`, ADR-0012), off until the owner switches it on.
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in
@@ -329,7 +331,11 @@ csmarket/
   (M4a, ADR-0007 Y) asks Waxpeer `check-many-project-id` for the order's `project_id` before
   it books — one call, 4 s timeout, no lock and no open transaction across it, a failed
   lookup refuses the refund (`waxpeer_unavailable`). Skinslink (ADR-0010) adds none: its offers
-  come from our own mirror, and its webhook only verifies the signature and enqueues a check. A new one needs an ADR and a line here — and its route in the `handler`
+  come from our own mirror, and its webhook only verifies the signature and enqueues a check. A fifth: `POST /orders`
+  (ADR-0012) asks LIS-SKINS `GET /market/check-availability` once for a chosen `ls:` lot — 4 s
+  timeout, 100 calls/min for the API, a 120 s breaker, no DB connection held across it; a
+  failed call accepts the snapshot price (the worker's `max_price` guards). The route is
+  already in the latency alerts' `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
   regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.

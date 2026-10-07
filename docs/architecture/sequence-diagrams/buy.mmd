@@ -43,12 +43,8 @@ sequenceDiagram
                     W->>X: GET /v1/user when the refusal does not name low balance
                     alt low balance
                         W->>DB: failed + refund to balance (source_low_balance)
-                    else first refusal
-                        W->>X: listings (cached, budgeted read): cheapest other auto ≤ paid × 1.03
-                        W->>X: buy-one-p2p (the substitute), once
-                    end
-                    opt nothing bought
-                        W->>DB: failed + refund to balance (sold_out)
+                    else
+                        W->>DB: failed + refund to balance (sold_out), no other listing bought
                     end
                 end
             end

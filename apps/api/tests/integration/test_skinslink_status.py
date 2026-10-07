@@ -167,14 +167,8 @@ async def test_an_unconfirmed_buy_skinslink_never_saw_is_repeated_after_the_wait
     # answers it with the stored purchase, a new one, or a refusal.
     assert (row.status, row.refunded_at) == ("buying", None)
     assert (p.buy_pending, p.buy_unconfirmed_at) == (True, None)
-    settings = get_settings().model_copy(
-        update={"skinslink_enabled": True, "skinslink_api_key": "k", "skinslink_secret": "s"}
-    )
     fake = FakeSkinslinkClient(purchase("active", offer_id=OFFER))
-    assert (
-        await attempt_skinslink_buy(db_session, fake, order_id=order.id, settings=settings)
-        == "bought"
-    )
+    assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == "bought"
     assert fake.calls[0]["merchant_tx_id"] == order.id
     assert (await _fresh(db_session, order))[0].status == "trade_sent"
 

@@ -70,6 +70,8 @@ REDACTED_KEYS = frozenset(
         "skinslink_api_key",
         "skinslink_secret",
         "x-api-key",
+        # LIS-SKINS (spec 2026-10-07): the key rides an ``Authorization: Bearer`` header.
+        "lisskins_api_key",
         # Waxpeer's trade entries name both Steam accounts; ``parse_trade`` drops them,
         # and these keys stay masked should a raw entry ever reach a log line.
         "for_steamid64",

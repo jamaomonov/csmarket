@@ -124,6 +124,17 @@ describe("SkinTradeCard", () => {
     expect(screen.getByRole("link", { name: "Открыть баланс" })).toBeInTheDocument();
   });
 
+  it("says someone bought the skin first when it was sold out", () => {
+    card({ state: "failed", reason_code: "sold_out", refunded_to: "balance" });
+    expect(
+      screen.getByText(
+        "Этот скин уже купили до вас — деньги вернулись на баланс. Выберите другой в маркете.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Обмен не состоялся/)).toBeNull();
+    expect(screen.getByRole("link", { name: "Открыть баланс" })).toBeInTheDocument();
+  });
+
   it("names the trade link when it was the reason, with the money on the balance", () => {
     card({ state: "failed", reason_code: "trade_link", refunded_to: "balance" });
     expect(

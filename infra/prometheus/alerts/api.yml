@@ -62,6 +62,8 @@ groups:
       # the order reads and `/me/orders` do not match) and the admin refund, which asks
       # Waxpeer first (ADR-0007 Y; the other admin order routes do not match). Adding
       # another means adding it here too, or this alert starts crying wolf.
+      # Checkout also asks LIS-SKINS `check-availability` for a chosen `ls:` lot (ADR-0012) —
+      # /v1/orders is already in the handler list below.
       - alert: ApiHighLatency
         expr: |
           histogram_quantile(

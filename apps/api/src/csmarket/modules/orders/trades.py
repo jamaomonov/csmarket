@@ -34,6 +34,7 @@ from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import TradeAttentionReason, record_trade_attention
+from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.fsm import TRANSITIONS, move
 from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order, SkinTrade
@@ -144,7 +145,10 @@ def mirror(trade: SkinTrade, wt: WaxpeerTrade) -> None:
 
 
 def flag(
-    trade: SkinTrade | SkinslinkPurchase, reason: TradeAttentionReason, *, reopen: bool = False
+    trade: SkinTrade | SkinslinkPurchase | LisskinsPurchase,
+    reason: TradeAttentionReason,
+    *,
+    reopen: bool = False,
 ) -> bool:
     """Open attention ``reason`` on ``trade`` unless an open one is already there.
 
@@ -155,7 +159,7 @@ def flag(
     an admin's decision must stand; the buy re-opens a ``source_forbidden`` on a new 403.
 
     Args:
-        trade: The trade (or a Skinslink purchase), locked after its order.
+        trade: The trade (or a Skinslink / LIS-SKINS purchase), locked after its order.
         reason: One of ``orders.models.ATTENTION_REASONS``.
         reopen: Re-open a resolved attention with the same reason.
 

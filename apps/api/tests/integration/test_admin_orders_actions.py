@@ -13,6 +13,7 @@ from typing import Any
 import pytest
 from csmarket.core import clock
 from csmarket.modules.admin.models import AdminAuditLog
+from csmarket.modules.lisskins.models import LisskinsPurchase
 from csmarket.modules.orders.api import admin_refund, attempt_buy, can_refund, can_retry
 from csmarket.modules.orders.buy_lease import release, take_lease
 from csmarket.modules.orders.models import Order, SkinTrade
@@ -35,9 +36,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from tests.integration.conftest import ADMIN_STEAM_ID
 from tests.integration.fake_skinslink_client import FakeSkinslinkClient, purchase
 from tests.integration.fake_trade_client import FakeTradeClient, waxpeer_trade
+from tests.integration.lisskins_factory import make_lisskins_order
 from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.skinslink_factory import make_skinslink_order
-from tests.integration.trade_sweeps_kit import load, reconcile_once, sweep_settings
+from tests.integration.trade_sweeps_kit import load, reconcile_once
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 PRICE = Decimal(171_800)
@@ -659,7 +661,7 @@ async def test_a_running_attempt_blocks_refund_and_retry_until_released(
     assert page["trade"]["buy_pending"] is False
     # No attempt can start after the refund: nothing is bought.
     fake = FakeTradeClient()
-    outcome = await attempt_buy(db_session, fake, order_id=order.id, settings=sweep_settings())
+    outcome = await attempt_buy(db_session, fake, order_id=order.id)
     assert (outcome, fake.lookup_calls, fake.buy_calls) == ("nothing_to_do", 0, 0)
 
 
@@ -771,3 +773,20 @@ async def test_resolve_works_on_a_skinslink_purchase_and_frees_its_refund(
     fake = FakeSkinslinkClient(statuses={order.id: purchase("canceled")})
     assert await check_purchase(db_session, fake, order_id=order.id) == "returned"
     assert await user_balance(db_session, order.user_id) == PRICE
+
+
+async def test_resolve_works_on_a_lisskins_purchase(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    order, _ = await make_lisskins_order(db_session, attention_reason="rolled_back")
+    order_id = order.id
+    status, body = await _post(integration_client, h, order, "resolve", body={"note": "checked"})
+    assert status == 200, body
+    db_session.expire_all()
+    p = await db_session.get(LisskinsPurchase, order_id)
+    assert p is not None
+    assert p.resolved_at is not None
+    assert p.resolved_note == "checked"
+    (row,) = await _audit(db_session, "orders.trade.resolve")
+    assert row.payload == {"reason": "rolled_back"}

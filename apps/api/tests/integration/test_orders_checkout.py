@@ -224,42 +224,25 @@ async def test_the_order_snapshots_offer_price_rate_and_link(
     assert (body["name"], body["phase"]) == (item_name, None)
 
 
-# --- substitution (R4) --------------------------------------------------------------------
+# --- a gone offer: the buyer chooses again ------------------------------------------------
 
 
-async def test_gone_offer_substituted_within_ceiling(
+async def test_a_gone_offer_is_never_replaced_even_by_a_cheaper_one(
     integration_client: AsyncClient,
     user_headers: dict[str, str],
     stub_listings: StubListings,
     db_session: AsyncSession,
 ) -> None:
-    await stub_listings.set(SLUG, [(111, 10_000), (112, 10_200)])
-    shown = await _shown_price(integration_client, SLUG, 111)
-    await stub_listings.set(SLUG, [(112, 10_200), (113, 12_000)])  # 111 sold
-    r = await _post(integration_client, user_headers, price_uzs=shown)
-    assert r.status_code == 201, r.text
-    order = await _order(db_session, r.json()["number"])
-    assert (order.listing_id, order.cost_units) == (112, 10_200)
-    assert Decimal(r.json()["price_uzs"]) <= shown  # never more than shown
-    assert order.price_uzs == shown
-    assert order.price_usd == (Decimal(shown) / RATE).quantize(Decimal("0.000001"))
-
-
-async def test_a_cheaper_substitute_is_billed_at_its_own_price(
-    integration_client: AsyncClient,
-    user_headers: dict[str, str],
-    stub_listings: StubListings,
-    db_session: AsyncSession,
-) -> None:
+    """Another lot has its own float and stickers: the buyer sees it and decides."""
     await stub_listings.set(SLUG, [(111, 10_000), (112, 9_000)])
     shown = await _shown_price(integration_client, SLUG, 111)
     cheaper = await _shown_price(integration_client, SLUG, 112)
-    await stub_listings.set(SLUG, [(112, 9_000)])
+    await stub_listings.set(SLUG, [(112, 9_000)])  # 111 sold
     r = await _post(integration_client, user_headers, price_uzs=shown)
-    assert r.status_code == 201, r.text
-    order = await _order(db_session, r.json()["number"])
-    assert (order.listing_id, order.cost_units, order.price_uzs) == (112, 9_000, Decimal(cheaper))
-    assert cheaper < shown
+    assert r.status_code == 409, r.text
+    assert r.json()["code"] == "offer_gone"
+    assert r.json()["next_offer"] == {"listing_id": "wx:112", "price_uzs": str(cheaper)}
+    assert await _orders(db_session) == 0
 
 
 async def test_gone_offer_without_substitute_is_409_with_next(

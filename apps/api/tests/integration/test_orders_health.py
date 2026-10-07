@@ -15,6 +15,7 @@ from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.fake_trade_client import FakeTradeClient
+from tests.integration.lisskins_factory import make_lisskins_order
 from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.skinslink_factory import make_skinslink_order
 from tests.integration.trade_sweeps_kit import db_fixture  # noqa: F401 -- fixture
@@ -163,3 +164,18 @@ async def test_a_skinslink_attention_counts_and_is_not_stuck(db: AsyncSession) -
     await db.commit()
     health = await _measure(db)
     assert (health.buying_stuck, health.attention) == (0, 1)
+
+
+async def test_lisskins_orders_count_like_any_other(db: AsyncSession) -> None:
+    claimed = core_clock.now() - timedelta(minutes=31)
+    await make_lisskins_order(
+        db,
+        status="buying",
+        skin_status=None,
+        order={"claimed_at": claimed},
+        attention_reason="source_forbidden",
+    )
+    await make_lisskins_order(db, status="buying", skin_status=None, order={"claimed_at": claimed})
+    await make_lisskins_order(db, last_polled_at=core_clock.now() - timedelta(minutes=31))
+    health = await _measure(db)
+    assert (health.buying_stuck, health.trade_sent_unpolled, health.attention) == (1, 1, 1)

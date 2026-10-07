@@ -18,7 +18,6 @@ from csmarket.core.errors import ConflictError
 from csmarket.core.ids import new_id
 from csmarket.modules.orders.api import Order, SkinTrade, attempt_buy
 from csmarket.modules.skins.api import (
-    SkinItem,
     WaxpeerBuy,
     WaxpeerBuyRefusedError,
     WaxpeerError,
@@ -33,14 +32,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.fake_trade_client import FakeTradeClient, waxpeer_trade
 from tests.integration.orders_factory import (
-    build_order,
     make_due,
-    make_item_and_rate,
     make_order,
     make_trade,
     wx_listing,
 )
-from tests.integration.payments_factory import make_user
 
 PRICE = Decimal(171_800)
 COST = 12_345  # orders_factory's cost_units; the ceiling is 12_345 × 1.03 → 12_715
@@ -100,7 +96,7 @@ def metric(outcome: str) -> float:
 async def _attempt(
     db: AsyncSession, fake: FakeTradeClient, order: Order, settings: Settings
 ) -> str:
-    return await attempt_buy(db, fake, order_id=order.id, settings=settings)
+    return await attempt_buy(db, fake, order_id=order.id)
 
 
 # --- the happy path and adoption ----------------------------------------------------------
@@ -223,7 +219,7 @@ async def test_nothing_to_do_unless_buying_with_a_buy_pending(
     await db_session.commit()
     for order in (paid, settled):
         assert await _attempt(db_session, fake, order, settings) == "nothing_to_do"
-    unknown = await attempt_buy(db_session, fake, order_id=new_id(), settings=settings)
+    unknown = await attempt_buy(db_session, fake, order_id=new_id())
     assert unknown == "nothing_to_do"
     assert fake.lookup_calls == 0
 
@@ -338,33 +334,18 @@ async def test_rate_limited_buy_is_retried(
     assert (trade.waxpeer_id, trade.bought_units) == (6, 10_000)
 
 
-# --- substitutes, sold out, low balance, a broken link -------------------------------------
+# --- sold out, low balance, a broken link -------------------------------------------------
 
 
-async def test_a_sold_listing_is_replaced_by_one_within_the_ceiling(
+async def test_a_sold_listing_is_refunded_never_replaced(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
+    """Another listing has its own float and stickers: the buyer chose this one (ADR-0013)."""
     fake.refuse(wx_listing(buying_order), SOLD)
-    fake.listings(
-        buying_order.market_hash_name,
-        [(222, 12_716), (333, 12_715)],  # just over the ceiling: skipped; at it: bought
-        manual=[(444, 11_000)],  # a manual seller: never
-    )
-    assert await _attempt(db_session, fake, buying_order, settings) == "bought"
-    assert fake.bought == [(333, 12_715, buying_order.id)]
-    order, trade = await load(db_session, buying_order)
-    assert (trade.listing_id, trade.paid_units, trade.bought_units) == (333, 12_715, 12_715)
-    assert order.listing_id == buying_order.listing_id  # the buyer's choice stays on record
-
-
-async def test_a_substitute_above_the_ceiling_is_never_bought(
-    db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
-) -> None:
-    fake.refuse(wx_listing(buying_order), SOLD)
-    fake.listings(buying_order.market_hash_name, [(222, 12_716)])
+    fake.listings(buying_order.market_hash_name, [(333, 11_000)])  # cheaper: still never
     before = metric("sold_out")
     assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
-    assert fake.bought == []
+    assert (fake.buy_calls, fake.bought, fake.search_calls) == (1, [], 0)
     order, trade = await load(db_session, buying_order)
     assert (order.status, order.failure_reason, order.refunded_to) == (
         "failed",
@@ -374,19 +355,6 @@ async def test_a_substitute_above_the_ceiling_is_never_bought(
     assert trade.buy_pending is False
     assert await user_balance(db_session, order.user_id) == PRICE
     assert metric("sold_out") == before + 1
-
-
-async def test_only_one_substitute_is_tried(
-    db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
-) -> None:
-    fake.refuse(wx_listing(buying_order), SOLD)
-    fake.refuse(333, SOLD)
-    fake.listings(buying_order.market_hash_name, [(333, 12_000), (334, 12_100)])
-    assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
-    assert fake.buy_calls == 2
-    order, _ = await load(db_session, buying_order)
-    assert order.status == "failed"
-    assert order.failure_reason == "sold_out"
 
 
 async def test_a_moved_price_is_never_accepted_blindly(
@@ -405,32 +373,6 @@ async def test_a_4xx_on_the_buy_means_nothing_was_bought(
     order, _ = await load(db_session, buying_order)
     assert order.status == "failed"
     assert order.refunded_at is not None
-
-
-async def test_a_doppler_is_substituted_under_waxpeers_spelling(
-    db_session: AsyncSession, fake: FakeTradeClient, settings: Settings
-) -> None:
-    _, fx = await make_item_and_rate(db_session)
-    item = SkinItem(
-        id=new_id(),
-        market_hash_name="★ Karambit | Doppler (Factory New)",
-        phase="Phase 2",
-        slug=f"karambit-doppler-p2-{new_id()[-6:]}",
-        category="knives",
-        search_text="karambit doppler",
-    )
-    db_session.add(item)
-    await db_session.commit()
-    user = await make_user(db_session)
-    order = await build_order(
-        db_session, user=user, item=item, fx=fx, status="buying", paid_with="payme"
-    )
-    await db_session.commit()
-    await make_trade(db_session, order, buy_pending=True)
-    fake.refuse(wx_listing(order), SOLD)
-    fake.listings("★ Karambit | Doppler Phase 2 (Factory New)", [(555, 12_000)])
-    assert await _attempt(db_session, fake, order, settings) == "bought"
-    assert fake.bought == [(555, 12_000, order.id)]
 
 
 async def test_low_balance_by_message_is_refunded_at_once(
@@ -641,7 +583,7 @@ async def test_a_refund_that_cannot_be_booked_writes_nothing(
     order = await _buying(db_session, trade_link="nope", paid_with=None)
     order_id = order.id  # the rollback expires ``order`` in this shared session
     with pytest.raises(ConflictError):
-        await attempt_buy(db_session, fake, order_id=order_id, settings=settings)
+        await attempt_buy(db_session, fake, order_id=order_id)
     row = await db_session.get(Order, order_id)
     trade = await db_session.get(SkinTrade, order_id)
     assert row is not None

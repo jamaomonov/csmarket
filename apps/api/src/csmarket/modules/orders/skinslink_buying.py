@@ -8,10 +8,8 @@
    ``max_price`` = the agreed cost: Skinslink answers a repeat with the stored purchase, so a
    lost answer is resolved by asking again under the same id (Task 9's reconcile), never by
    a new purchase;
-4. a refusal (sold, price moved, a 4xx) → the cheapest other offer of the item, of either
-   market, within ``paid_units × (1 + ceiling)``, once: a Skinslink one is bought under
-   ``<order id>:2``; a Waxpeer one turns the order into a Waxpeer order for the Waxpeer path;
-   low balance → refund; a refusal naming the trade link → refund ``invalid_trade_link``;
+4. a refusal (sold, price moved, a 4xx) → refund ``sold_out``, never another offer
+   (ADR-0013); low balance → refund; a refusal naming the trade link → refund ``invalid_trade_link``;
    403 → attention, the buy kept pending; 429 → retried after a backoff; no answer →
    ``buy_unconfirmed_at``.
 
@@ -29,35 +27,18 @@ from typing import cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from csmarket.core.clock import now
-from csmarket.core.config import Settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
-from csmarket.core.redis import get_redis
 from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, release_fresh, take_lease
-from csmarket.modules.orders.buy_rules import TradeSearch
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.skinslink_writes import (
     PurchaseSnapshot,
     attention,
     record_purchase,
     refund,
-    retarget,
     secure_sent,
-    switch_to_waxpeer,
     unconfirmed,
-)
-from csmarket.modules.skins.api import (
-    Listing,
-    Offer,
-    SkinItem,
-    TradeClient,
-    from_listing,
-    listings_budget,
-    listings_for,
-    merge_offers,
-    offer_id_of,
 )
 from csmarket.modules.skinslink.api import (
     LINK_ERROR_CODES,
@@ -68,7 +49,6 @@ from csmarket.modules.skinslink.api import (
     SkinslinkPurchaseClient,
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
-    offers_for,
 )
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
@@ -103,8 +83,6 @@ async def attempt_skinslink_buy(
     client: SkinslinkPurchaseClient,
     *,
     order_id: str,
-    settings: Settings,
-    waxpeer: TradeClient | None = None,
 ) -> str:
     """Buy order ``order_id`` at Skinslink, unless it was bought or is being bought.
 
@@ -112,14 +90,11 @@ async def attempt_skinslink_buy(
         db: Session; each step commits its own short transaction.
         client: Skinslink.
         order_id: The order.
-        settings: For the substitute ceiling and the listings budget.
-        waxpeer: Waxpeer, for a substitute among its listings; ``None`` looks at Skinslink's
-            offers only.
 
     Returns:
         ``bought``, ``adopted``, ``sold_out``, ``low_balance``, ``invalid_link``,
         ``forbidden``, ``rate_limited``, ``unconfirmed``, ``stale_bought``, ``unrecorded``,
-        ``lookup_later`` (handed to the Waxpeer path) or ``nothing_to_do``.
+        ``lookup_later`` (nothing sent before the budget ran out) or ``nothing_to_do``.
     """
     deadline = asyncio.get_running_loop().time() + ATTEMPT_BUDGET.total_seconds()
     lease = await take_lease(db, order_id, source="skinslink")
@@ -128,9 +103,7 @@ async def attempt_skinslink_buy(
     run = _Run()
     try:
         async with asyncio.timeout_at(deadline):
-            outcome = await _leased(
-                db, client, order_id=order_id, settings=settings, waxpeer=waxpeer, run=run
-            )
+            outcome = await _leased(db, client, order_id=order_id, run=run)
     except TimeoutError:
         outcome = await _after_timeout(db, order_id=order_id, lease=lease, run=run)
     except BaseException:
@@ -179,8 +152,6 @@ async def _leased(
     client: SkinslinkPurchaseClient,
     *,
     order_id: str,
-    settings: Settings,
-    waxpeer: TradeClient | None,
     run: _Run,
 ) -> str:
     """Read the snapshot under the lease, then buy."""
@@ -208,45 +179,11 @@ async def _leased(
         link = parse_tradelink(order.trade_link)
     except ValidationError:
         return await refund(db, run.snap, "invalid_trade_link")
-    return await _buy(db, client, link=link, settings=settings, waxpeer=waxpeer, run=run)
-
-
-async def _buy(
-    db: AsyncSession,
-    client: SkinslinkPurchaseClient,
-    *,
-    link: TradeLink,
-    settings: Settings,
-    waxpeer: TradeClient | None,
-    run: _Run,
-) -> str:
-    """The chosen offer at the agreed units, then at most one substitute per order: a rerun
-    after the substitute was taken (``<id>:2``) never looks for another."""
-    assert run.snap is not None
-    snap = run.snap
-    ceiling = int(snap.cost_units * (1 + settings.order_substitute_ceiling))
-    tried = {offer_id_of("skinslink", snap.asset_id)}
-    first = 1 if snap.merchant_tx_id == snap.order_id else 2
-    for attempt in range(first, 3):
-        settled = await _purchase_once(db, client, snap, link, run)
-        if settled is not None:
-            return settled
-        if attempt == 2:
-            break
-        log.info("orders.skinslink_buy.refused", number=snap.number)
-        nxt = await _substitute(
-            db, snap, ceiling=ceiling, tried=tried, settings=settings, waxpeer=waxpeer
-        )
-        if nxt is None:
-            break
-        if nxt.source == "waxpeer":
-            return await switch_to_waxpeer(db, snap, nxt)
-        tried.add(nxt.offer_id)
-        try:
-            snap = run.snap = await retarget(db, snap, nxt)
-        except LookupError:
-            return "nothing_to_do"
-    return await refund(db, snap, "sold_out")
+    settled = await _purchase_once(db, client, run.snap, link, run)
+    if settled is not None:
+        return settled
+    log.info("orders.skinslink_buy.refused", number=run.snap.number)
+    return await refund(db, run.snap, "sold_out")  # never another offer (ADR-0013)
 
 
 async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as the table
@@ -302,35 +239,6 @@ async def _adopt(
     if report.status not in _TAKEN:
         return None
     return await record_purchase(db, snap, report, outcome="adopted")
-
-
-async def _substitute(
-    db: AsyncSession,
-    snap: PurchaseSnapshot,
-    *,
-    ceiling: int,
-    tried: set[str],
-    settings: Settings,
-    waxpeer: TradeClient | None,
-) -> Offer | None:
-    """The cheapest other offer of the item, either market, at most ``ceiling`` units."""
-    item = await db.get(SkinItem, snap.skin_item_id)
-    if item is not None:
-        db.expunge(item)  # read below with no transaction open
-    extra = await offers_for(db, snap.skin_item_id, settings=settings, now=now())
-    await db.commit()
-    rows: list[Listing] = []
-    if item is not None and waxpeer is not None and settings.waxpeer_buy_enabled:
-        rows, _ = await listings_for(
-            item,
-            client=TradeSearch(waxpeer),
-            redis=get_redis(),
-            budget_per_minute=listings_budget(settings),
-        )
-    offers = merge_offers([from_listing(r) for r in rows], extra)
-    return next(
-        (o for o in offers if o.offer_id not in tried and 0 < o.price_units <= ceiling), None
-    )
 
 
 __all__ = ["ATTEMPT_BUDGET", "RELEASE_BACKOFF", "attempt_skinslink_buy"]

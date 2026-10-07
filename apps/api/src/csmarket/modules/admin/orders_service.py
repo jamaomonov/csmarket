@@ -20,6 +20,7 @@ from csmarket.core.errors import NotFoundError
 from csmarket.core.money import wire_uzs
 from csmarket.core.numbers import is_number, is_topup_number
 from csmarket.modules.admin.orders_schemas import (
+    AdminLisskinsPurchaseOut,
     AdminOrderDetail,
     AdminOrderFull,
     AdminOrderPaymentOut,
@@ -33,11 +34,14 @@ from csmarket.modules.admin.orders_schemas import (
     TradesView,
 )
 from csmarket.modules.fx.api import FxSnapshot
+from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.api import (
     Order,
+    PurchaseRow,
     SkinTrade,
     can_refund,
     can_retry,
+    purchase_of,
     trade_state,
 )
 from csmarket.modules.payments.api import Payment
@@ -206,7 +210,7 @@ def _usd(value: Decimal) -> str:
     return f"{value.quantize(_USD):f}"
 
 
-def _spent(order: Order, trade: SkinTrade | None, purchase: SkinslinkPurchase | None) -> Decimal:
+def _spent(order: Order, trade: SkinTrade | None, purchase: PurchaseRow | None) -> Decimal:
     """What the market charged, USD; the agreed cost until it says."""
     if trade is not None and trade.bought_units is not None:
         return Decimal(trade.bought_units) / 1000
@@ -216,7 +220,7 @@ def _spent(order: Order, trade: SkinTrade | None, purchase: SkinslinkPurchase | 
 
 
 def _order_full(
-    order: Order, trade: SkinTrade | None, purchase: SkinslinkPurchase | None, fx_rate: Decimal
+    order: Order, trade: SkinTrade | None, purchase: PurchaseRow | None, fx_rate: Decimal
 ) -> AdminOrderFull:
     spent = _spent(order, trade, purchase)
     columns = {c.key: getattr(order, c.key) for c in Order.__table__.columns}
@@ -260,6 +264,28 @@ def _purchase_out(p: SkinslinkPurchase) -> AdminSkinslinkPurchaseOut:
     )
 
 
+def _lisskins_out(p: LisskinsPurchase) -> AdminLisskinsPurchaseOut:
+    offer = p.steam_trade_offer_id
+    return AdminLisskinsPurchaseOut.model_validate(
+        {
+            "custom_id": p.custom_id,
+            "skin_id": p.skin_id,
+            "purchase_id": p.purchase_id,
+            "status": p.status,
+            "return_reason": p.return_reason,
+            "error": p.error,
+            "offer_id": offer,
+            "offer_url": f"https://steamcommunity.com/tradeoffer/{offer}/" if offer else None,
+            "offer_expiry_at": p.offer_expiry_at,
+            "amount_usd": None if p.amount_units is None else _usd(Decimal(p.amount_units) / 1000),
+            "buy_pending": p.buy_pending,
+            "buy_unconfirmed_at": p.buy_unconfirmed_at,
+            "attention_reason": p.attention_reason,
+            "resolved_at": p.resolved_at,
+        }
+    )
+
+
 async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
     """Order ``number``'s page: the order, its buyer, its trade, payments, the actions allowed.
 
@@ -280,11 +306,7 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
         raise NotFoundError("order not found")
     order, display_name, fx_rate = found
     trade = await db.scalar(select(SkinTrade).where(SkinTrade.order_id == order.id))
-    purchase = (
-        await db.scalar(select(SkinslinkPurchase).where(SkinslinkPurchase.order_id == order.id))
-        if order.source == "skinslink"
-        else None
-    )
+    purchase = await purchase_of(db, order, lock=False)
     payments = await db.scalars(
         select(Payment).where(Payment.order_id == order.id).order_by(Payment.created_at, Payment.id)
     )
@@ -292,7 +314,8 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
         order=_order_full(order, trade, purchase, Decimal(fx_rate)),
         user=AdminOrderUser(id=order.user_id, display_name=display_name),
         trade=_trade_out(trade) if trade is not None else None,
-        skinslink=_purchase_out(purchase) if purchase is not None else None,
+        skinslink=_purchase_out(purchase) if isinstance(purchase, SkinslinkPurchase) else None,
+        lisskins=_lisskins_out(purchase) if isinstance(purchase, LisskinsPurchase) else None,
         payments=[
             AdminOrderPaymentOut.model_validate(
                 {

@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.clock import now
 from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
+from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.skins.api import TradeClient
 from csmarket.modules.skinslink.api import SkinslinkPurchase
@@ -51,9 +52,17 @@ class Health(BaseModel):
 
 
 #: An order's trade fields, whichever market it is bought at (an order has one of the two).
-_ATTENTION = func.coalesce(SkinTrade.attention_reason, SkinslinkPurchase.attention_reason)
-_RESOLVED_AT = func.coalesce(SkinTrade.resolved_at, SkinslinkPurchase.resolved_at)
-_POLLED_AT = func.coalesce(SkinTrade.last_polled_at, SkinslinkPurchase.last_polled_at)
+_ATTENTION = func.coalesce(
+    SkinTrade.attention_reason,
+    SkinslinkPurchase.attention_reason,
+    LisskinsPurchase.attention_reason,
+)
+_RESOLVED_AT = func.coalesce(
+    SkinTrade.resolved_at, SkinslinkPurchase.resolved_at, LisskinsPurchase.resolved_at
+)
+_POLLED_AT = func.coalesce(
+    SkinTrade.last_polled_at, SkinslinkPurchase.last_polled_at, LisskinsPurchase.last_polled_at
+)
 
 
 async def _count(db: AsyncSession, *conditions: object) -> int:
@@ -64,15 +73,16 @@ async def _count(db: AsyncSession, *conditions: object) -> int:
         .select_from(Order)
         .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
         .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
+        .outerjoin(LisskinsPurchase, LisskinsPurchase.order_id == Order.id)
         .where(*conditions)  # type: ignore[arg-type]  # SQL expressions
     )
     return int(await db.scalar(stmt) or 0)
 
 
-async def _open_attentions(db: AsyncSession) -> int:
-    """Trades and Skinslink purchases waiting for an admin."""
+async def open_attentions(db: AsyncSession) -> int:
+    """Trades and purchases of every source waiting for an admin."""
     total = 0
-    for table in (SkinTrade, SkinslinkPurchase):
+    for table in (SkinTrade, SkinslinkPurchase, LisskinsPurchase):
         total += int(
             await db.scalar(
                 select(func.count())
@@ -121,7 +131,7 @@ async def measure(db: AsyncSession, client: TradeClient | None, *, settings: Set
         Order.status == "trade_sent",
         or_(_POLLED_AT.is_(None), at - UNPOLLED_AFTER > _POLLED_AT),
     )
-    attention = await _open_attentions(db)
+    attention = await open_attentions(db)
     return Health(
         paid_stuck=paid,
         buying_stuck=buying,
@@ -158,4 +168,11 @@ async def cached_balance(redis: Redis) -> tuple[Decimal | None, datetime | None]
     return None, None
 
 
-__all__ = ["BALANCE_KEY", "Health", "cache_balance", "cached_balance", "measure"]
+__all__ = [
+    "BALANCE_KEY",
+    "Health",
+    "cache_balance",
+    "cached_balance",
+    "measure",
+    "open_attentions",
+]

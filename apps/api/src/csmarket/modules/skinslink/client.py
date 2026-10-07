@@ -19,9 +19,9 @@ from typing import Any, Literal, Protocol
 import httpx
 
 from csmarket.core.config import Settings
+from csmarket.core.json_stream import ItemsScanner
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import SkinslinkEndpoint, record_skinslink_call
-from csmarket.modules.skinslink.stream import ItemsScanner
 
 log = get_logger("csmarket.skinslink.client")
 

@@ -115,7 +115,7 @@ class SkinslinkPurchase(Base):
     order_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("orders.id", ondelete="CASCADE"), primary_key=True
     )
-    #: Our idempotency key at Skinslink: the order id, ``<order id>:2`` for a substitute.
+    #: Our idempotency key at Skinslink: the order id (a row from before ADR-0013 may carry ``<order id>:2``).
     merchant_tx_id: Mapped[str] = mapped_column(String(64), nullable=False)
     #: The Skinslink item (Steam asset) being bought.
     asset_id: Mapped[str] = mapped_column(String(300), nullable=False)

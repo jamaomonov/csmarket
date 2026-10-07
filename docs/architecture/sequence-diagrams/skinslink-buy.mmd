@@ -16,7 +16,7 @@ sequenceDiagram
     B->>Web: picks an offer (sl:<asset id>) on the item page
     Web->>API: POST /orders {slug, listing_id: "sl:…", price_uzs} + Idempotency-Key
     API->>DB: re-quote the offer from the mirror (no external call; stale > 10 min = none)
-    Note over API: gone or moved > 2 % → substitute ≤ 3 % / offer_gone with next offer of either source
+    Note over API: gone → 409 offer_gone with next_offer; moved > 2 % → price_changed
     API->>DB: insert order (source = skinslink, offer_id, cost_units) pending
     API-->>Web: 201 OrderOut
     B->>API: POST /orders/{number}/pay (balance or a kassa)
@@ -31,8 +31,7 @@ sequenceDiagram
     else 409 / duplicate_purchase
         W->>SL: GET /merchant/purchase/status?merchant_tx_id → adopt the stored purchase
     else sold / price moved / other 4xx
-        W->>DB: one substitute of either source ≤ paid × 1.03 (Skinslink: retarget to <id>:2 first)
-        Note over W,DB: none → failed + refund to balance (sold_out)
+        W->>DB: failed + refund to balance (sold_out), no other offer bought
     else trade-link code
         W->>DB: failed + refund to balance (invalid_trade_link)
     else insufficient_balance

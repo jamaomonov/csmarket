@@ -30,12 +30,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.config import Settings, get_settings
-from csmarket.core.errors import ConflictError
 from csmarket.core.logging import get_logger
 from csmarket.modules.orders.fsm import TRANSITIONS, move
 from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order
-from csmarket.modules.orders.refunds import RefundStatus, refund_to_balance
+from csmarket.modules.orders.refunds import refund_or_hold
 from csmarket.modules.orders.trades import flag
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skinslink.api import (
@@ -83,17 +82,6 @@ def mirror_report(purchase: SkinslinkPurchase, report: Purchase) -> None:
     purchase.last_polled_at = purchase.updated_at = now()
 
 
-async def _refund(db: AsyncSession, order: Order, to: RefundStatus, reason: str) -> str:
-    """Refund ``order``; ``held`` while an open attention blocks it (R3)."""
-    try:
-        await refund_to_balance(db, order=order, to_status=to, reason=reason, actor="orders")
-    except ConflictError as exc:
-        if exc.extra.get("code") != "order_needs_attention":
-            raise
-        return "held"
-    return to
-
-
 def _failure_reason(fail_reason: str | None) -> str:
     """Why a purchase that never reached an offer failed, as the order's refund reason."""
     if fail_reason == "insufficient_balance":
@@ -123,8 +111,8 @@ async def _apply(  # noqa: PLR0911 -- one return per row of the status table
         return "rolled_back"
     if status in ("failed", "canceled", "reverted") and order.status in ("buying", "trade_sent"):
         if order.status == "trade_sent" or purchase.offer_id or status == "reverted":
-            return await _refund(db, order, "returned", "not_accepted")
-        return await _refund(db, order, "failed", _failure_reason(report.fail_reason))
+            return await refund_or_hold(db, order, "returned", "not_accepted")
+        return await refund_or_hold(db, order, "failed", _failure_reason(report.fail_reason))
     return "unchanged"
 
 

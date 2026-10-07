@@ -21,7 +21,8 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.fx.api import record_snapshot
 from csmarket.modules.skins.api import search_client
 from csmarket.modules.skins.models import SkinItem
-from csmarket.modules.skins.prices import sync_prices, sync_skinslink_prices
+from csmarket.modules.skins.prices import sync_prices
+from csmarket.modules.skins.source_prices import sync_source_prices
 from csmarket.modules.skins.waxpeer import SnapshotRow
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from fastapi import FastAPI
@@ -101,7 +102,7 @@ async def test_skinslink_alone_prices_and_counts_an_item_waxpeer_had_priced(
     await _mirror(db_session, item, 12_000, clock.now())
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     settings = cfg.get_settings()
-    assert await sync_skinslink_prices(factory, get_redis(), settings=settings, at=clock.now())
+    assert await sync_source_prices(factory, get_redis(), settings=settings, at=clock.now())
     await db_session.refresh(item)
     waxpeer: tuple[object, ...] = (item.min_auto_units, item.count_auto, item.cheapest_auto)
     assert waxpeer == (None, 0, [])

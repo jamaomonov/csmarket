@@ -132,7 +132,7 @@ def _sort_column(sort: Sort) -> Any:
     if sort == "discount":
         return func.coalesce(SkinItem.discount_percent, _NO_DISCOUNT)
     if sort == "popular":
-        return SkinItem.count_auto + SkinItem.skinslink_count
+        return SkinItem.count_auto + SkinItem.skinslink_count + SkinItem.lisskins_count
     return SkinItem.sell_price_usd
 
 
@@ -141,7 +141,7 @@ def _sort_value(item: SkinItem, sort: Sort) -> CursorValue:
     if sort == "discount":
         return item.discount_percent if item.discount_percent is not None else _NO_DISCOUNT
     if sort == "popular":
-        return item.count_auto + item.skinslink_count
+        return item.stock_count
     return item.sell_price_usd
 
 

@@ -11,7 +11,16 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 SCRIPT = REPO_ROOT / "scripts" / "check-module-coverage.py"
-MODULES = ("orders", "payments", "wallet", "skins", "notifications", "realtime", "skinslink")
+MODULES = (
+    "orders",
+    "payments",
+    "wallet",
+    "skins",
+    "notifications",
+    "realtime",
+    "skinslink",
+    "lisskins",
+)
 
 
 def _report(tmp_path: Path, percents: dict[str, tuple[int, int]]) -> Path:

@@ -109,7 +109,7 @@ Wait for the next reconcile, look the `project_id` up again, resolve again, then
 A Waxpeer refusal is refunded as `invalid_trade_link` only when it names the buyer's link
 («tradelink», «trade link», «trade url») or names the buyer with an account problem («your
 inventory is private», «buyer has a trade ban»); a seller-side «cannot trade» is a refused
-listing (substitute, then `sold_out`).
+listing (`sold_out`).
 
 While Waxpeer keeps answering 403, refund and retry of a `source_forbidden` order answer
 `order_busy` during each 60 s backoff: fix the whitelist first.

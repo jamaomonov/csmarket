@@ -76,8 +76,9 @@ Public, no sign-in. Under `/skins`:
 - `GET /skins/{slug}/listings` — live offers `{items, degraded}`. `degraded: true` means the
   answer is the last cached or last snapshot offers because Waxpeer could not answer; it is
   not an error. Rate-limited per IP in its own bucket (`skins-listings`); 429 carries
-  `Retry-After`. Offers carry a string `listing_id` — `wx:<id>` or `sl:<id>` (opaque to the
-  client; checkout echoes it back). Offers of both markets are merged by price.
+  `Retry-After`. Offers carry a string `listing_id` — `wx:<id>`, `sl:<id>` or `ls:<digits>`
+  (LIS-SKINS, ADR-0012; opaque to the client; checkout echoes it back). Offers of every market
+  are merged by price; one Steam asset listed twice is shown once, at the cheaper price.
 - `GET /skins/seo/slugs?offset&limit` (≤ 5 000) — slugs for the sitemap.
 
 Conventions: **money is a string** (`price_usd` with 2 decimals, `price_uzs` whole soʻm
@@ -140,15 +141,18 @@ Signed in (401 without a token). One skin per order.
 
 - `POST /orders` `{slug, listing_id, price_uzs}` + **required** `Idempotency-Key` (16..160
   chars) → **201** `OrderOut`. `listing_id` is an offer id from `GET /skins/{slug}/listings`
-  (`wx:<id>` / `sl:<id>`; a bare integer is still read as `wx:<id>` for one release, anything
-  else is 422);
+  (`wx:<id>` / `sl:<id>` / `ls:<digits>`; a bare integer is still read as `wx:<id>` for one
+  release, anything else is 422);
   `price_uzs` is the whole soʻm the panel showed for it (a JSON **integer** > 0). The server
   re-prices the offer from the same live listings: within ±2 % of `price_uzs` it bills **its
   own** price; further off → 409 `price_changed` with the new `price_uzs`. An offer sold in
-  the meantime is replaced by the cheapest other offer of the item priced at most 3 % above
-  `price_uzs`, billed at the lower of its price and `price_uzs` (never more than shown);
-  none → 409 `offer_gone` with `next_offer: {listing_id, price_uzs}` (a string id, either
-  market) or `null`. The same key
+  the meantime is never replaced (ADR-0013): 409 `offer_gone` with
+  `next_offer: {listing_id, price_uzs}` (the cheapest offer left, a string id, either
+  market) or `null`. A chosen `ls:` offer is re-checked live at LIS-SKINS (ADR-0012: one
+  `check-availability` call, 4 s timeout, 100 a minute for the API, a 120 s breaker): sold →
+  as an offer sold in the meantime (`offer_gone`); a live price beyond ±2 % of
+  the shown one → `price_changed`; no answer → the snapshot price stands. So `POST /orders` for an `ls:`
+  offer can take up to ~4 s. The same key
   again → **200** with the stored order, whatever the body. Rate-limited by the
   `order-create` bucket: 60 a minute per IP and 10 a minute per IP and account, then 429
   with `Retry-After`. The new order is `pending` and payable for 15 minutes.
@@ -186,7 +190,7 @@ checked by hand (never promise a refund then).
 | 409    | `conflict`         | `trade_link_missing` | No trade link saved                                                                  |
 | 409    | `conflict`         | `trade_link_bad`     | The saved link was checked bad (`reason`: `invalid`, `private`, `trade_ban`, `hold`) |
 | 409    | `conflict`         | `price_changed`      | The offer's price moved beyond ±2 % (`price_uzs`)                                    |
-| 409    | `conflict`         | `offer_gone`         | Sold, no substitute within 3 % (`next_offer` or `null`)                              |
+| 409    | `conflict`         | `offer_gone`         | Sold; never replaced (`next_offer` or `null`)                                        |
 | 404    | `not-found`        | —                    | Unknown or hidden item                                                               |
 | 503    | `rate-unavailable` | `rate_unavailable`   | No fresh soʻm rate                                                                   |
 | 422    | `validation`       | —                    | Malformed body or missing/short/over-long key                                        |
@@ -305,10 +309,13 @@ next_cursor}` — orders with a trade; `active` = `buying`/`trade_sent`, `attent
   unresolved attention; the counts ignore `q`.
 - `GET /admin/orders/{number}` → `AdminOrderDetail {order: {every orders column but
 trade_link and idempotency_key, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
-skinslink: AdminSkinslinkPurchaseOut | null, payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
-  The order's `source` is `waxpeer` or `skinslink` (ADR-0010); a Skinslink order has
-  `skinslink` (its purchase) and no `trade`. `resolve` works on its purchase's attention;
-  refund and retry refuse it (409) for now, and the trades list does not show it.
+skinslink: AdminSkinslinkPurchaseOut | null, lisskins: AdminLisskinsPurchaseOut | null, payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
+  The order's `source` is `waxpeer`, `skinslink` (ADR-0010) or `lisskins` (ADR-0012); a
+  Skinslink order has `skinslink` (its purchase) and no `trade`, a LIS-SKINS order has
+  `lisskins` `{custom_id, skin_id, purchase_id, status, return_reason, error, offer_id,
+offer_url, offer_expiry_at, amount_usd, buy_pending, buy_unconfirmed_at, attention_reason,
+resolved_at}` and no `trade`. `resolve` works on either purchase's attention; refund and
+  retry refuse them (409) for now, and the trades list does not show them.
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,
@@ -425,4 +432,5 @@ fixed_price_usd: 0..100000 | null}` (2 decimals) → `AdminSkinItemOut` (now wit
 - `GET /admin/dashboard?days=1|7|30` → `DashboardOut {days, since, sales {count, revenue_uzs,
 revenue_usd, cost_usd, margin_usd, margin_percent}, refunds {count, amount_uzs}, in_flight,
 attention, by_day [{day, sales_count, revenue_uzs, margin_usd}], waxpeer {balance_usd,
-read_at}, skinslink {available_usd, hold_usd, read_at}}`; days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.
+read_at}, skinslink {available_usd, hold_usd, read_at}, lisskins {available_usd, locked_usd,
+read_at}}` (a balance is `null` when unknown; `attention` counts every source); days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.

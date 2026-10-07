@@ -28,6 +28,11 @@ const DATA: DashboardOut = {
     { day: "2026-10-02", sales_count: 12, revenue_uzs: "1524000", margin_usd: "15" },
   ],
   waxpeer: { balance_usd: "812.5", read_at: new Date(Date.now() - 4 * 60_000).toISOString() },
+  lisskins: {
+    available_usd: "99.96",
+    locked_usd: "1.5",
+    read_at: new Date(Date.now() - 3 * 60_000).toISOString(),
+  },
   skinslink: {
     available_usd: "240.5",
     hold_usd: "12",
@@ -90,6 +95,9 @@ describe("DashboardPage", () => {
     expect(tile("Баланс Skinslink")).toHaveTextContent("$240.5");
     expect(tile("Баланс Skinslink")).toHaveTextContent("в холде $12");
     expect(tile("Баланс Skinslink")).toHaveTextContent("обновлено 2 мин назад");
+    expect(tile("Баланс LIS-SKINS")).toHaveTextContent("$99.96");
+    expect(tile("Баланс LIS-SKINS")).toHaveTextContent("заблокировано $1.5");
+    expect(tile("Баланс LIS-SKINS")).toHaveTextContent("обновлено 3 мин назад");
     const link = within(tile("Требуют внимания")).getByRole("link");
     expect(link).toHaveAttribute("href", "/trades?view=attention");
   });
@@ -99,6 +107,16 @@ describe("DashboardPage", () => {
     renderPage();
     await screen.findByTestId("tile-Продажи");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("неизвестно");
+  });
+
+  it("an unknown LIS-SKINS balance says so", async () => {
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      lisskins: { available_usd: null, locked_usd: null, read_at: null },
+    });
+    renderPage();
+    await screen.findByTestId("tile-Продажи");
+    expect(tile("Баланс LIS-SKINS")).toHaveTextContent("неизвестно");
   });
 
   it("an unknown Skinslink balance says so", async () => {

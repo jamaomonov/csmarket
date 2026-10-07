@@ -1,4 +1,4 @@
-"""The worker buys paid orders at Waxpeer — each order at most once (rulings R3, R4, R6).
+"""The worker buys paid orders at Waxpeer — each order at most once (rulings R3, R6; ADR-0013).
 
 - :func:`drain_paid` — the ``orders`` queue's drain: claims ``paid`` orders oldest first
   (``FOR UPDATE SKIP LOCKED``), moves them to ``buying``, opens their ``skin_trades`` row
@@ -16,8 +16,7 @@
      403 sets the attention ``source_forbidden``; a found trade is adopted — never rebought;
      several live ones set ``ambiguous_trade``;
   4. buy the chosen listing at the units agreed at checkout; a refusal (sold, price moved,
-     a 4xx) → the cheapest other ``auto`` listing within ``paid_units × (1 + ceiling)``,
-     once; a refusal that names the trade link → refund ``invalid_trade_link``; low balance (by Waxpeer's words or ``GET /v1/user``) → refund at once; 403 →
+     a 4xx) → refund ``sold_out``, no other listing is bought; a refusal that names the trade link → refund ``invalid_trade_link``; low balance (by Waxpeer's words or ``GET /v1/user``) → refund at once; 403 →
      attention, ``buy_pending`` kept; 429 → retried next tick; a lost answer or a 5xx →
      ``buy_unconfirmed_at``, resolved by lookup (R3), never by buying again.
 
@@ -46,6 +45,8 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
+from csmarket.modules.lisskins.api import LisskinsBuyClient
+from csmarket.modules.lisskins.api import client_for as lisskins_client_for
 from csmarket.modules.orders.buy_lease import (
     BUY_LEASE,
     discard,
@@ -54,7 +55,7 @@ from csmarket.modules.orders.buy_lease import (
     secure,
     take_lease,
 )
-from csmarket.modules.orders.buy_rules import link_refused, low_balance, substitute
+from csmarket.modules.orders.buy_rules import link_refused, low_balance
 from csmarket.modules.orders.buy_writes import (
     BuySnapshot,
     adopt,
@@ -65,7 +66,9 @@ from csmarket.modules.orders.buy_writes import (
     unconfirmed,
 )
 from csmarket.modules.orders.fsm import move
+from csmarket.modules.orders.lisskins_buying import attempt_lisskins_buy
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.purchase_rows import pending_buy
 from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
 from csmarket.modules.orders.trades import FAILED_STATUS, AmbiguousTradeError, pick_trade
 from csmarket.modules.realtime.api import nudge
@@ -76,10 +79,9 @@ from csmarket.modules.skins.api import (
     WaxpeerRateLimitedError,
     WaxpeerTrade,
     WaxpeerUnavailableError,
-    parse_offer_id,
     trade_client,
 )
-from csmarket.modules.skinslink.api import SkinslinkPurchase, SkinslinkPurchaseClient, client_for
+from csmarket.modules.skinslink.api import SkinslinkPurchaseClient, client_for
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
 log = get_logger("csmarket.orders.buying")
@@ -106,27 +108,6 @@ def worker_id() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"[:64]
 
 
-def _pending_buy(order: Order) -> SkinTrade | SkinslinkPurchase:
-    """The row that holds a just-claimed order's pending buy, by its source."""
-    if order.source == "skinslink":
-        _, asset_id = parse_offer_id(order.offer_id or "")
-        return SkinslinkPurchase(
-            order_id=order.id,
-            merchant_tx_id=order.id,
-            asset_id=asset_id,
-            paid_units=order.cost_units,
-            buy_pending=True,
-        )
-    return SkinTrade(
-        order_id=order.id,
-        project_id=order.id,
-        listing_id=order.listing_id,
-        paid_units=order.cost_units,
-        buy_pending=True,
-        seller={},
-    )
-
-
 async def _claim(db: AsyncSession, *, limit: int) -> list[tuple[str, str]]:
     """Move up to ``limit`` ``paid`` orders, oldest first, to ``buying``; commit.
 
@@ -147,7 +128,7 @@ async def _claim(db: AsyncSession, *, limit: int) -> list[tuple[str, str]]:
     for order in orders:
         move(order, "buying")
         order.claimed_at, order.claimed_by, order.next_check_at = at, me, at
-        db.add(_pending_buy(order))
+        db.add(pending_buy(order, units=order.cost_units, key=order.id))
     for order in orders:
         await nudge(db, user_id=order.user_id, number=order.number)
     claimed = [(order.id, order.source) for order in orders]
@@ -160,6 +141,7 @@ async def drain_paid(
     *,
     client: TradeClient | None = None,
     skinslink_client: SkinslinkPurchaseClient | None = None,
+    lisskins_client: LisskinsBuyClient | None = None,
     settings: Settings | None = None,
     limit: int = 10,
 ) -> int:
@@ -172,6 +154,7 @@ async def drain_paid(
         db: The drainer's own session; committed here.
         client: Waxpeer; the process's :func:`trade_client` when omitted.
         skinslink_client: Skinslink; built (buy timeout) when a Skinslink order is claimed.
+        lisskins_client: LIS-SKINS; built (buy timeout) when a LIS-SKINS order is claimed.
         settings: The process settings when omitted.
         limit: Orders claimed per call.
 
@@ -189,11 +172,14 @@ async def drain_paid(
                 skinslink_client = skinslink_client or client_for(
                     settings, timeout_seconds=settings.skinslink_buy_timeout_seconds
                 )
-                await attempt_skinslink_buy(
-                    db, skinslink_client, order_id=order_id, settings=settings, waxpeer=client
+                await attempt_skinslink_buy(db, skinslink_client, order_id=order_id)
+            elif source == "lisskins":
+                lisskins_client = lisskins_client or lisskins_client_for(
+                    settings, timeout_seconds=settings.lisskins_buy_timeout_seconds
                 )
+                await attempt_lisskins_buy(db, lisskins_client, order_id=order_id)
             else:
-                await attempt_buy(db, client, order_id=order_id, settings=settings)
+                await attempt_buy(db, client, order_id=order_id)
         except Exception as exc:  # noqa: BLE001 -- one poisoned order must not stop the batch
             await db.rollback()
             # The type only, no traceback: an error's text can carry bound SQL parameters.
@@ -221,9 +207,7 @@ class _Run:
         return wait
 
 
-async def attempt_buy(
-    db: AsyncSession, client: TradeClient, *, order_id: str, settings: Settings
-) -> str:
+async def attempt_buy(db: AsyncSession, client: TradeClient, *, order_id: str) -> str:
     """Buy order ``order_id`` at Waxpeer, unless it was bought or is being bought.
 
     The lease comes first (one atomic UPDATE that also requires ``buy_pending``), the
@@ -237,7 +221,6 @@ async def attempt_buy(
         db: Session; each step commits its own short transaction.
         client: Waxpeer.
         order_id: The order.
-        settings: For the substitute ceiling and the listings budget.
 
     Returns:
         The outcome: ``bought``, ``adopted``, ``sold_out``, ``low_balance``,
@@ -253,7 +236,7 @@ async def attempt_buy(
     run = _Run()
     try:
         async with asyncio.timeout_at(deadline):
-            outcome = await _leased(db, client, order_id=order_id, settings=settings, run=run)
+            outcome = await _leased(db, client, order_id=order_id, run=run)
     except TimeoutError:
         outcome = await _after_timeout(db, order_id=order_id, lease=lease, run=run)
     except BaseException:
@@ -271,15 +254,13 @@ async def attempt_buy(
     return outcome
 
 
-async def _leased(
-    db: AsyncSession, client: TradeClient, *, order_id: str, settings: Settings, run: _Run
-) -> str:
+async def _leased(db: AsyncSession, client: TradeClient, *, order_id: str, run: _Run) -> str:
     """Read the snapshot under the lease, then run the attempt."""
     read = await _read(db, order_id)
     if read is None:
         return "nothing_to_do"
     run.snap, raw_link = read
-    return await _attempt(db, client, snap=run.snap, raw_link=raw_link, settings=settings, run=run)
+    return await _attempt(db, client, snap=run.snap, raw_link=raw_link, run=run)
 
 
 async def _after_timeout(db: AsyncSession, *, order_id: str, lease: datetime, run: _Run) -> str:
@@ -328,7 +309,6 @@ async def _attempt(
     *,
     snap: BuySnapshot,
     raw_link: str,
-    settings: Settings,
     run: _Run,
 ) -> str:
     """Steps 2–4 of :func:`attempt_buy` (the order is leased)."""
@@ -349,7 +329,7 @@ async def _attempt(
     except AmbiguousTradeError:
         return await attention(db, snap, "ambiguous_trade", outcome="ambiguous", settle=True)
     return await _after_lookup(
-        db, client, snap=snap, trades=trades, found=found, link=link, settings=settings, run=run
+        db, client, snap=snap, trades=trades, found=found, link=link, run=run
     )
 
 
@@ -361,7 +341,6 @@ async def _after_lookup(
     trades: Sequence[WaxpeerTrade],
     found: WaxpeerTrade | None,
     link: TradeLink,
-    settings: Settings,
     run: _Run,
 ) -> str:
     """Adopt a live trade; never a failed (6) one — refused attempts only → buy as usual.
@@ -380,7 +359,7 @@ async def _after_lookup(
         return await attention(db, snap, "ambiguous_trade", outcome="ambiguous", settle=True)
     if snap.unconfirmed:
         return await park(db, snap)  # a lost answer: the reconcile rule decides (R3)
-    return await _buy(db, client, snap=snap, link=link, settings=settings, run=run)
+    return await _buy(db, client, snap=snap, link=link, run=run)
 
 
 async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the ruling
@@ -389,50 +368,35 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
     *,
     snap: BuySnapshot,
     link: TradeLink,
-    settings: Settings,
     run: _Run,
 ) -> str:
-    """The chosen listing at the agreed units, then at most one substitute (R4, R6)."""
-    base = snap.cost_units if snap.cost_units is not None else snap.paid_units
-    ceiling = int(base * (1 + settings.order_substitute_ceiling))
-    queue: list[tuple[int, int]] = [(snap.listing_id, snap.paid_units)]
-    tried: set[int] = set()
-    while queue:
-        listing_id, units = queue.pop(0)
-        tried.add(listing_id)
-        try:
-            run.sent = True  # from here on an unrecorded exit must not free the order
-            bought = await client.buy_one_p2p(
-                item_id=listing_id,
-                price_units=units,
-                partner=link.partner,
-                token=link.token,
-                project_id=snap.order_id,
-            )
-        except WaxpeerForbiddenError:
-            return await attention(db, snap, "source_forbidden", outcome="forbidden")
-        except WaxpeerRateLimitedError as exc:
-            run.retry_after = exc.retry_after_seconds
-            return "rate_limited"  # nothing bought; retried after the backoff
-        except WaxpeerUnavailableError:
-            return await unconfirmed(db, snap)  # the buy may have happened: resolve by lookup
-        except WaxpeerError as err:  # a refusal (incl. WaxpeerBuyRefusedError) or HTTP error
-            if err.status >= 500:
-                return await unconfirmed(db, snap)  # a 5xx may have bought it
-            if link_refused(err):  # the buyer's link: every listing would refuse it
-                return await refund(db, snap, "invalid_trade_link")
-            if await low_balance(client, err, units):
-                return await refund(db, snap, "source_low_balance")
-            log.info("orders.buy.refused", number=snap.number, status=err.status)
-            if len(tried) == 1:
-                nxt = await substitute(
-                    db, client, snap=snap, ceiling=ceiling, tried=tried, settings=settings
-                )
-                if nxt is not None:
-                    queue.append(nxt)
-            continue
-        return await record_bought(db, snap, bought, listing_id=listing_id, units=units)
-    return await refund(db, snap, "sold_out")
+    """The chosen listing at the agreed units — never another one (ADR-0013)."""
+    try:
+        run.sent = True  # from here on an unrecorded exit must not free the order
+        bought = await client.buy_one_p2p(
+            item_id=snap.listing_id,
+            price_units=snap.paid_units,
+            partner=link.partner,
+            token=link.token,
+            project_id=snap.order_id,
+        )
+    except WaxpeerForbiddenError:
+        return await attention(db, snap, "source_forbidden", outcome="forbidden")
+    except WaxpeerRateLimitedError as exc:
+        run.retry_after = exc.retry_after_seconds
+        return "rate_limited"  # nothing bought; retried after the backoff
+    except WaxpeerUnavailableError:
+        return await unconfirmed(db, snap)  # the buy may have happened: resolve by lookup
+    except WaxpeerError as err:  # a refusal (incl. WaxpeerBuyRefusedError) or HTTP error
+        if err.status >= 500:
+            return await unconfirmed(db, snap)  # a 5xx may have bought it
+        if link_refused(err):  # the buyer's link: every listing would refuse it
+            return await refund(db, snap, "invalid_trade_link")
+        if await low_balance(client, err, snap.paid_units):
+            return await refund(db, snap, "source_low_balance")
+        log.info("orders.buy.refused", number=snap.number, status=err.status)
+        return await refund(db, snap, "sold_out")
+    return await record_bought(db, snap, bought, listing_id=snap.listing_id, units=snap.paid_units)
 
 
 __all__ = [

@@ -35,11 +35,11 @@ from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.core.numbers import is_number, is_topup_number
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
 from csmarket.modules.orders.refunds import ADMIN_REFUNDABLE, in_flight, refund_to_balance
 from csmarket.modules.orders.sweep_base import LOOKUP_ERRORS, of_project
 from csmarket.modules.orders.trades import FAILED_STATUS
 from csmarket.modules.skins.api import TradeClient, WaxpeerTrade
-from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 log = get_logger("csmarket.orders.admin")
 
@@ -310,7 +310,7 @@ async def retry_buy(db: AsyncSession, *, number: str, admin_id: str) -> str:
 async def resolve_attention(
     db: AsyncSession, *, number: str, admin_id: str, note: str | None
 ) -> str | None:
-    """An admin marks order ``number``'s trade (or Skinslink purchase) attention as checked
+    """An admin marks order ``number``'s trade (or Skinslink / LIS-SKINS purchase) attention as checked
     («Разобрано»).
 
     Sets ``resolved_at``, ``resolved_by`` (the admin's id) and ``resolved_note`` once: an
@@ -330,14 +330,8 @@ async def resolve_attention(
         ConflictError: ``nothing_to_resolve`` — no trade, or no attention on it.
     """
     order, waxpeer_trade = await lock_order(db, number)
-    trade: SkinTrade | SkinslinkPurchase | None = waxpeer_trade
-    if trade is None:  # a Skinslink order keeps its attention on the purchase
-        trade = await db.scalar(
-            select(SkinslinkPurchase)
-            .where(SkinslinkPurchase.order_id == order.id)
-            .with_for_update()
-            .execution_options(populate_existing=True)
-        )
+    # A Skinslink or LIS-SKINS order keeps its attention on its purchase row.
+    trade: SkinTrade | PurchaseRow | None = waxpeer_trade or await purchase_of(db, order, lock=True)
     if trade is None or trade.attention_reason is None:
         raise _conflict("nothing_to_resolve")
     if trade.resolved_at is not None:

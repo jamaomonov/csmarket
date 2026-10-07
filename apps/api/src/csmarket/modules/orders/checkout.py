@@ -1,10 +1,9 @@
 """Checkout: ``POST /orders`` re-prices the chosen offer from the live listings (spec §7.4).
 
 The price the buyer was shown is a courtesy check within ±``order_price_tolerance``; the
-server's number is what is billed. A chosen offer that is gone is replaced by the cheapest
-other offer of the same item priced within the shown price × (1 + ``order_substitute_ceiling``),
-billed at the lower of its own price and the shown one — never more than the buyer saw
-(ruling R4). Nothing fits → 409 ``offer_gone`` with the next offer.
+server's number is what is billed. A chosen offer that is gone is never replaced — another lot
+has its own float, pattern and stickers: 409 ``offer_gone`` with the cheapest offer left, and
+the buyer decides (ADR-0013).
 
 The order snapshots everything buying needs: the offer and its cost in Waxpeer units (the
 worker's price cap), the price in soʻm and dollars, the rate it was priced at, and the
@@ -13,14 +12,16 @@ buyer's trade link (PII: never logged).
 No database connection is held across the listings read: the scalars it needs are copied
 into a frozen value object and the read transaction ends first (AGENTS §11). The listings
 read is the cached, budgeted, degradable one the item page uses (ruling R11); a degraded
-answer is accepted — the worker's price cap is the money guard.
+answer is accepted — the worker's price cap is the money guard. A chosen LIS-SKINS lot is
+re-checked live (``lisskins.recheck_chosen``, one call, 4 s, budgeted, breaker-guarded): sold →
+``offer_gone``; no answer → the snapshot price.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from redis.asyncio import Redis
@@ -34,9 +35,12 @@ from csmarket.core.errors import ConflictError, UpstreamUnavailableError, Valida
 from csmarket.core.logging import get_logger
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import UsdUzs, current_usd_uzs
+from csmarket.modules.lisskins.api import AvailabilityClient, recheck_chosen
+from csmarket.modules.lisskins.api import offers_for as lisskins_offers
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.schemas import OrderCreateIn
 from csmarket.modules.skins.api import (
+    TIE_ORDER,
     Listing,
     Offer,
     PricingRules,
@@ -52,7 +56,7 @@ from csmarket.modules.skins.api import (
     quote,
     to_uzs,
 )
-from csmarket.modules.skinslink.api import offers_for
+from csmarket.modules.skinslink.api import offers_for as skinslink_offers
 from csmarket.modules.users.api import User, parse_tradelink
 
 log = get_logger("csmarket.orders.checkout")
@@ -103,7 +107,7 @@ class _ItemSnapshot:
             category=item.category,
             weapon=item.weapon,
             # Both sources' stock, as the catalogue prices it (``skins.repricing``).
-            count_auto=item.count_auto + item.skinslink_count,
+            count_auto=item.stock_count,  # every source's stock, as the catalogue prices it
             margin_override_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,
@@ -119,11 +123,6 @@ class _ItemSnapshot:
             phase=self.phase,
             cheapest_auto=self.cheapest_auto,
         )
-
-
-def usd_of(uzs: Decimal, rate: Decimal) -> Decimal:
-    """The USD a soʻm amount is worth at ``rate``, to 6 places (the order's ``price_usd``)."""
-    return (uzs / rate).quantize(_USD_PLACES, rounding=ROUND_HALF_UP)
 
 
 def _price(
@@ -144,9 +143,10 @@ def _price(
 
 
 def _choose(
-    priced: list[_Priced], body: OrderCreateIn, settings: Settings, rate: Decimal
+    priced: list[_Priced], body: OrderCreateIn, settings: Settings
 ) -> tuple[Offer, Decimal, Decimal]:
-    """``(offer, price_usd, price_uzs)`` to bill, or a 409 — the ±2 % rule and R4.
+    """``(offer, price_usd, price_uzs)`` to bill, or a 409 — the ±2 % rule; a gone offer is
+    never replaced (ADR-0013).
 
     Raises:
         ConflictError: ``price_changed`` (with the new ``price_uzs``) or ``offer_gone``
@@ -159,19 +159,12 @@ def _choose(
         if abs(uzs - shown) > shown * settings.order_price_tolerance:
             raise ConflictError("the price has changed", code="price_changed", price_uzs=str(uzs))
         return row, usd, uzs
-    ceiling = shown * (1 + settings.order_substitute_ceiling)
-    # Waxpeer first on a tie: its delivery is instant (``merge_offers``).
     cheapest = min(
         priced,
-        key=lambda p: (p[1][1], p[0].source != "waxpeer", p[0].offer_id),
+        # Waxpeer, Skinslink, LIS-SKINS on a tie.
+        key=lambda p: (p[1][1], TIE_ORDER[p[0].source], p[0].offer_id),
         default=None,
     )
-    if cheapest is not None:
-        row, (usd, uzs) = cheapest
-        if uzs <= shown:
-            return row, usd, uzs
-        if uzs <= ceiling:
-            return row, usd_of(shown, rate), shown
     raise ConflictError(
         "this offer was just sold",
         code="offer_gone",
@@ -221,7 +214,7 @@ class _Quoted:
     snap: _ItemSnapshot
     rules: PricingRules
     rate: UsdUzs
-    #: Skinslink's offers, read from the mirror inside the read transaction.
+    #: Skinslink's and LIS-SKINS' offers, read inside the read transaction.
     extra: list[Offer]
 
 
@@ -237,7 +230,11 @@ async def _read(
     rate = await current_usd_uzs(db, redis, max_age_days=settings.fx_max_age_days)
     if rate is None:
         raise RateUnavailableError("no soʻm rate", code="rate_unavailable")
-    extra = await offers_for(db, item.id, settings=settings, now=now())
+    at = now()
+    extra = [
+        *await skinslink_offers(db, item.id, settings=settings, now=at),
+        *await lisskins_offers(db, item.id, settings=settings, now=at),
+    ]
     return _Quoted(
         user_id=user.id,
         trade_link=link,
@@ -282,6 +279,7 @@ async def create_order(
     idempotency_key: str,
     client: SearchClient,
     settings: Settings,
+    availability: AvailabilityClient | None = None,
 ) -> tuple[Order, bool]:
     """Open an order for one skin at the price the buyer saw (within the rules).
 
@@ -293,7 +291,9 @@ async def create_order(
         idempotency_key: The request's key; a replay returns the stored order whatever
             ``body`` says.
         client: The Waxpeer listings client.
-        settings: Settings (tolerance, ceiling, expiry, the buying switch).
+        settings: Settings (tolerance, expiry, the buying switch).
+        availability: LIS-SKINS, for the chosen ``ls:`` lot's live price (ADR-0012); ``None``
+            checks nothing.
 
     Returns:
         ``(order, created)`` — ``created`` is ``False`` for a replayed key.
@@ -319,8 +319,12 @@ async def create_order(
             budget_per_minute=listings_budget(settings),
         )
     offers = merge_offers([from_listing(r) for r in rows], q.extra)
+    if availability is not None:  # one call, only for a chosen LIS-SKINS lot; no session held
+        offers = await recheck_chosen(
+            offers, str(body.listing_id), redis=redis, client=availability
+        )
     priced = [(o, _price(o.price_units, q.snap, q.rules, q.rate.rate)) for o in offers]
-    row, usd, uzs = _choose(priced, body, settings, q.rate.rate)
+    row, usd, uzs = _choose(priced, body, settings)
     order = _build(q, row, usd, uzs, key=idempotency_key, settings=settings)
     order.number = await allocate(db, Order.number, order_number)
     db.add(order)
@@ -338,10 +342,9 @@ async def create_order(
         number=order.number,
         price_uzs=str(uzs),
         source=row.source,
-        substituted=row.offer_id != body.listing_id,
         degraded=degraded,
     )
     return order, True
 
 
-__all__ = ["RateUnavailableError", "create_order", "usd_of"]
+__all__ = ["RateUnavailableError", "create_order"]

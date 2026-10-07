@@ -17,6 +17,7 @@ from csmarket.core.errors import NotFoundError
 from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_key
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import current_user, guard_ip
+from csmarket.modules.lisskins.api import AvailabilityClient, availability_client
 from csmarket.modules.orders.checkout import create_order
 from csmarket.modules.orders.paying import pay_order
 from csmarket.modules.orders.schemas import (
@@ -56,6 +57,7 @@ async def post_order(
     user: Annotated[User, Depends(current_user)],
     db: Annotated[AsyncSession, Depends(db_session)],
     client: Annotated[SearchClient, Depends(search_client)],
+    availability: Annotated[AvailabilityClient, Depends(availability_client)],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> OrderOut:
     """Open an order for the chosen offer at the price the panel showed.
@@ -69,6 +71,7 @@ async def post_order(
     key = require_idempotency_key(idempotency_key)
     user_id = user.id  # checkout ends the session's transaction: read it first
     await guard_ip(request, bucket="order-create", subject=user_id)
+    settings = get_settings()
     order, created = await create_order(
         db,
         redis=get_redis(),
@@ -76,7 +79,8 @@ async def post_order(
         body=body,
         idempotency_key=key,
         client=client,
-        settings=get_settings(),
+        settings=settings,
+        availability=availability if settings.lisskins_active else None,
     )
     if not created:
         response.status_code = 200

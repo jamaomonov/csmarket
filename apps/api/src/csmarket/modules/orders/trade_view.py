@@ -27,6 +27,10 @@ A Skinslink order (spec 2026-10-06 §6) reads its purchase instead: ``new``/``pe
 ``buying``, ``active`` → ``offer_sent``, ``hold`` / ``completed`` → ``accepted`` (``hold`` with
 its end as ``release_date``),
 ``failed``/``canceled``/``reverted`` → ``failed``; no seller or deadline.
+
+A LIS-SKINS order (spec 2026-10-07 §6) reads its purchase too: ``processing`` → ``buying``,
+``wait_accept`` → ``offer_sent`` (its expiry as ``send_until``), ``accepted`` or a delivered
+order → ``accepted``, ``return`` → ``failed``.
 """
 
 from __future__ import annotations
@@ -37,6 +41,7 @@ from typing import Any, Literal
 import pydantic
 from pydantic import BaseModel
 
+from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.models import ATTENTION_REASONS, Order, SkinTrade
 from csmarket.modules.skinslink.api import SkinslinkPurchase
 
@@ -110,7 +115,7 @@ def purchase_state(order: Order, purchase: SkinslinkPurchase | None) -> SkinTrad
     return _PURCHASE_STATES.get(status or "", "buying")
 
 
-def _needs_support(trade: SkinTrade | SkinslinkPurchase | None) -> bool:
+def _needs_support(trade: SkinTrade | SkinslinkPurchase | LisskinsPurchase | None) -> bool:
     """An unresolved attention the buyer reads as «we are checking the purchase»."""
     return (
         trade is not None
@@ -119,7 +124,9 @@ def _needs_support(trade: SkinTrade | SkinslinkPurchase | None) -> bool:
     )
 
 
-def _reason(order: Order, trade: SkinTrade | SkinslinkPurchase | None) -> SkinTradeReason:
+def _reason(
+    order: Order, trade: SkinTrade | SkinslinkPurchase | LisskinsPurchase | None
+) -> SkinTradeReason:
     if _needs_support(trade):
         return "support"
     return _FAILURE_REASONS.get(order.failure_reason or "", "other")
@@ -154,8 +161,46 @@ def _purchase_out(order: Order, purchase: SkinslinkPurchase) -> SkinTradeOut:
     )
 
 
+_LISSKINS_STATES: dict[str, SkinTradeState] = {
+    "wait_accept": "offer_sent",
+    "accepted": "accepted",
+    "return": "failed",
+}
+
+
+def lisskins_state(order: Order, purchase: LisskinsPurchase | None) -> SkinTradeState:
+    """A LIS-SKINS order's trade state as the buyer reads it."""
+    if order.status in ("failed", "returned"):
+        return "failed"
+    if order.status == "delivered":
+        return "accepted"  # a later rollback shows as ``support``, never as a failure
+    status = None if purchase is None else purchase.status
+    return _LISSKINS_STATES.get(status or "", "buying")
+
+
+def _lisskins_out(order: Order, purchase: LisskinsPurchase) -> SkinTradeOut:
+    """A LIS-SKINS order's trade card."""
+    state = lisskins_state(order, purchase)
+    reason: SkinTradeReason | None = None
+    if state == "failed":
+        reason = _reason(order, purchase)
+    elif _needs_support(purchase):
+        reason = "support"
+    offer = purchase.steam_trade_offer_id
+    return SkinTradeOut(
+        state=state,
+        reason_code=reason,
+        offer_url=f"https://steamcommunity.com/tradeoffer/{offer}/" if offer else None,
+        send_until=purchase.offer_expiry_at if state == "offer_sent" else None,
+        refunded_to="balance" if order.refunded_to == "balance" else None,
+    )
+
+
 def skin_trade_out(
-    order: Order, trade: SkinTrade | None, *, purchase: SkinslinkPurchase | None = None
+    order: Order,
+    trade: SkinTrade | None,
+    *,
+    purchase: SkinslinkPurchase | LisskinsPurchase | None = None,
 ) -> SkinTradeOut | None:
     """Map an order and its trade mirror (or Skinslink purchase) to the buyer's view.
 
@@ -170,6 +215,8 @@ def skin_trade_out(
     """
     if order.status in _NO_TRADE:
         return None
+    if isinstance(purchase, LisskinsPurchase):
+        return _lisskins_out(order, purchase)
     if purchase is not None:
         return _purchase_out(order, purchase)
     state = trade_state(order, trade)
@@ -196,6 +243,7 @@ __all__ = [
     "SkinTradeOut",
     "SkinTradeReason",
     "SkinTradeState",
+    "lisskins_state",
     "purchase_state",
     "skin_trade_out",
     "trade_state",
