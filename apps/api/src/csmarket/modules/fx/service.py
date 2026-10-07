@@ -57,6 +57,8 @@ class UsdUzs:
 
     def uplifted(self, pct: Decimal) -> UsdUzs:
         """This snapshot's rate with ``pct`` percent added."""
+        if not pct:  # no uplift: the snapshot's own value, digits and all
+            return replace(self, rate=self.cbu_rate, uplift_pct=pct)
         rate = (self.cbu_rate * (1 + pct / 100)).quantize(_RATE_PLACES, rounding=ROUND_HALF_UP)
         return replace(self, rate=rate, uplift_pct=pct)
 

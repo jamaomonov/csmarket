@@ -167,3 +167,12 @@ async def test_no_uplift_is_the_cbu_rate(db_session: AsyncSession) -> None:
     rate = await current_usd_uzs(db_session, get_redis(), max_age_days=7, uplift_pct=Decimal(0))
     assert rate is not None
     assert (rate.rate, rate.cbu_rate) == (Decimal("11790.79"), Decimal("11790.79"))
+
+
+async def test_no_uplift_keeps_the_stored_rate_exactly(db_session: AsyncSession) -> None:
+    """With no uplift the buyer's rate is the snapshot's own value, digits and all."""
+    await refresh_usd_uzs(db_session, get_redis(), fetch=_fetch_12700)
+    await db_session.commit()
+    rate = await current_usd_uzs(db_session, get_redis(), max_age_days=7, uplift_pct=Decimal(0))
+    assert rate is not None
+    assert str(rate.rate) == str(rate.cbu_rate)
