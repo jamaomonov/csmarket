@@ -8,6 +8,7 @@ A scripted LIS-SKINS stands in; the database is real.
 
 from __future__ import annotations
 
+import asyncio
 from datetime import timedelta
 from decimal import Decimal
 
@@ -19,15 +20,17 @@ from csmarket.modules.lisskins.api import (
     LisskinsForbiddenError,
     LisskinsRateLimitedError,
     LisskinsUnavailableError,
+    Purchase,
 )
 from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsPurchase, LisskinsState
+from csmarket.modules.orders import lisskins_buying
 from csmarket.modules.orders.api import drain_paid
 from csmarket.modules.orders.lisskins_buying import attempt_lisskins_buy
 from csmarket.modules.orders.models import Order
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkPurchase, SkinslinkState
 from csmarket.modules.wallet.api import user_balance
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from tests.integration.fake_lisskins_client import FakeLisskinsClient, purchase
 from tests.integration.fake_trade_client import FakeTradeClient
@@ -367,3 +370,103 @@ async def test_drain_paid_buys_a_lisskins_order(
     assert fake.calls[0]["custom_id"] == order.id
     p = await _purchase(db_session, order)
     assert (p.skin_id, p.paid_units, p.buy_pending) == (5, COST, False)
+
+
+# --- the attempt's exits: a timeout, a crash, rows moved during the call -----------------
+
+
+class _Slow(FakeLisskinsClient):
+    """Answers after the attempt's budget ran out."""
+
+    async def buy(self, **kw: object) -> Purchase:  # type: ignore[override]
+        self.calls.append(dict(kw))
+        await asyncio.sleep(5)
+        raise AssertionError("never reached")
+
+
+class _Crash(FakeLisskinsClient):
+    """A bug after the buy request went out."""
+
+    async def buy(self, **kw: object) -> Purchase:  # type: ignore[override]
+        self.calls.append(dict(kw))
+        raise RuntimeError("a bug after the buy was sent")
+
+
+class _Moves(FakeLisskinsClient):
+    """The order leaves ``buying`` while LIS-SKINS answers (a sweep, an admin)."""
+
+    def __init__(self, engine: AsyncEngine, answer: object) -> None:
+        super().__init__(answer)
+        self.engine = engine
+
+    async def buy(self, **kw: object) -> Purchase:  # type: ignore[override]
+        async with AsyncSession(bind=self.engine) as other:
+            await other.execute(
+                update(Order).values(status="failed").where(Order.id == kw["custom_id"])
+            )
+            await other.commit()
+        return await super().buy(**kw)  # type: ignore[arg-type]
+
+
+async def test_a_buy_that_outlives_its_budget_is_unconfirmed_never_rebought(
+    db_session: AsyncSession, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(lisskins_buying, "ATTEMPT_BUDGET", timedelta(milliseconds=300))
+    order = await _buying(db_session)
+    fake = _Slow()
+    outcome = await attempt_lisskins_buy(db_session, fake, order_id=order.id, settings=settings)
+    assert outcome == "unconfirmed"
+    p = await _purchase(db_session, order)
+    assert (p.buy_pending, p.buy_unconfirmed_at is not None) == (False, True)
+    again = await attempt_lisskins_buy(db_session, fake, order_id=order.id, settings=settings)
+    assert again == "nothing_to_do"
+    assert len(fake.calls) == 1
+
+
+async def test_an_unrecordable_timeout_keeps_the_lease(
+    db_session: AsyncSession, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(lisskins_buying, "ATTEMPT_BUDGET", timedelta(milliseconds=300))
+
+    async def broken(*_: object, **__: object) -> bool:
+        raise RuntimeError("the database is gone")
+
+    monkeypatch.setattr(lisskins_buying, "secure_sent", broken)
+    order = await _buying(db_session)
+    outcome = await attempt_lisskins_buy(db_session, _Slow(), order_id=order.id, settings=settings)
+    assert outcome == "unrecorded"
+    assert (await _purchase(db_session, order)).buy_pending is True
+    row = await _order(db_session, order)
+    assert row.next_check_at is not None
+    assert row.next_check_at > clock.now()  # the lease lapses, nobody buys again within it
+
+
+async def test_a_crash_after_the_request_marks_the_buy_unconfirmed(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    with pytest.raises(RuntimeError):
+        await attempt_lisskins_buy(db_session, _Crash(), order_id=order.id, settings=settings)
+    p = await _purchase(db_session, order)
+    assert (p.buy_pending, p.buy_unconfirmed_at is not None) == (False, True)
+
+
+async def test_a_purchase_landing_on_moved_rows_is_flagged(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    fake = _Moves(db_engine, purchase("processing", custom_id=order.id))
+    outcome = await attempt_lisskins_buy(db_session, fake, order_id=order.id, settings=settings)
+    assert outcome == "stale_bought"
+    assert (await _purchase(db_session, order)).attention_reason == "ambiguous_trade"
+
+
+async def test_a_refusal_on_moved_rows_writes_nothing(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    refused = LisskinsError("broke", status=400, code="insufficient_funds")
+    fake = _Moves(db_engine, refused)
+    outcome = await attempt_lisskins_buy(db_session, fake, order_id=order.id, settings=settings)
+    assert outcome == "nothing_to_do"
+    assert (await _order(db_session, order)).refunded_at is None
