@@ -1,0 +1,77 @@
+sequenceDiagram
+    autonumber
+    actor B as Buyer
+    participant Web as Storefront
+    participant API as API
+    participant DB as Postgres
+    participant W as Worker (orders queue)
+    participant S as Scheduler (lisskins.snapshot, lisskins.reconcile)
+    participant LS as LIS-SKINS
+
+    loop every 5 min (lisskins.snapshot)
+        S->>LS: GET market_export_json/api_csgo_full.json (~855 MB, streamed, no key)
+        Note over S: keep instant, unlocked lots; map to the catalogue; 10 cheapest per item
+        S->>DB: pricing lock → upsert / delete lisskins_offers, roll up onto skin_items, lisskins_state, reprice
+        Note over S,DB: under half of the last tick's lots → refused, nothing written
+    end
+
+    B->>Web: opens an item page
+    Web->>API: GET /skins/{slug}/listings
+    API->>DB: lisskins_offers (no external call; stale > 20 min = none), merged with Skinslink by price
+    API-->>Web: offers (ls:<id>, sl:<id>)
+
+    B->>Web: picks an offer (ls:<id>)
+    Web->>API: POST /orders {slug, listing_id: "ls:…", price_uzs} + Idempotency-Key
+    API->>DB: read the item, rules, rate, stored offers; end the transaction
+    API->>LS: GET /market/check-availability?ids[]=<id> (4 s, ≤ 100/min, 120 s breaker)
+    alt available
+        Note over API: the live price replaces the snapshot's (dearer > 2 % → price_changed)
+    else gone
+        Note over API: substitute ≤ 3 % of any source, else offer_gone
+    else no answer
+        Note over API: the snapshot price stands (the worker's max_price guards)
+    end
+    API->>DB: insert order (source = lisskins, offer_id, cost_units) pending
+    API-->>Web: 201 OrderOut
+    B->>API: POST /orders/{number}/pay (balance or a kassa)
+    API->>DB: paid + NOTIFY orders
+
+    DB-->>W: NOTIFY orders
+    W->>DB: drain_paid: claim → buying; lisskins_purchases (custom_id = order id, buy_pending)
+    W->>DB: take the lease (source = lisskins), read the snapshot
+    W->>LS: POST /market/buy {ids: [id], partner, token, max_price, custom_id} (no lock held)
+    alt processing / wait_accept
+        W->>DB: lock order → purchase, record purchase_id + status, buy_pending = false
+    else custom_id_already_exists
+        W->>LS: GET /market/info?custom_ids[]=… → adopt the stored purchase
+    else skins_unavailable / price higher than max_price
+        W->>DB: one substitute of any source ≤ cost × 1.03 (LIS-SKINS: retarget to <id>:2 first)
+        Note over W,DB: none → failed + refund to balance (sold_out)
+    else trade-link code
+        W->>DB: failed + refund to balance (invalid_trade_link)
+    else insufficient_funds
+        W->>DB: failed + refund to balance (source_low_balance)
+    else 401 / 403
+        W->>DB: attention source_forbidden, buy_pending kept
+    else timeout / 5xx / network
+        W->>DB: buy_unconfirmed_at (the reconcile asks market/info under the same custom_id)
+    end
+    W->>DB: release the lease
+
+    loop every 30 s (lisskins.reconcile)
+        S->>DB: pending buys (≤ 20) → the buy path above
+        S->>DB: open purchases + delivered ones in trade protection (≤ 200)
+        S->>LS: GET /market/info?custom_ids[]=…&custom_ids[]=… (one call)
+        S->>DB: lock order → purchase, apply each status
+        alt wait_accept with an offer
+            S->>DB: buying → trade_sent (offer URL, letter, nudge)
+        else accepted
+            S->>DB: trade_sent → delivered (then polled every 10 min for 8 days)
+        else return before acceptance
+            S->>DB: returned + refund (not_accepted), or failed + refund (trade_create_error)
+        else return with rollback_* / after delivery
+            S->>DB: attention rolled_back
+        else not found, unconfirmed past order_unconfirmed_minutes
+            S->>DB: buy_pending again → bought under the same custom_id
+        end
+    end

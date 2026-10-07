@@ -9,9 +9,9 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 
 - `orders` — the purchase and the worker's queue: `number` (8 Crockford chars, unique),
   `user_id`, `status`, the item (`skin_item_id`, `market_hash_name`, `phase`, `slug`), the
-  offer after any checkout substitution (`source` = `waxpeer` | `skinslink`, `offer_id` =
-  `wx:<id>` / `sl:<id>`, and `listing_id` for a Waxpeer order, `NULL` for a Skinslink one —
-  migration `0018_skinslink`) and its cost (`cost_units` — Waxpeer
+  offer after any checkout substitution (`source` = `waxpeer` | `skinslink` | `lisskins`,
+  `offer_id` = `wx:<id>` / `sl:<id>` / `ls:<id>`, and `listing_id` for a Waxpeer order, `NULL`
+  otherwise — migrations `0018_skinslink`, `0022_lisskins`) and its cost (`cost_units` — Waxpeer
   units, 1000 = $1, the worker's price cap — `cost_usd`), the price billed (`price_usd`,
   `price_uzs` in whole soʻm, `fx_snapshot_id`), the `trade_link` snapshot (PII, never
   logged), `idempotency_key` (unique per user), `paid_with` (`wallet` | `click` | `payme` |
@@ -38,7 +38,9 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
 `RETRYABLE`, `CONFLICTS`), the buy (`drain_paid`, `attempt_buy`), and the trade sweeps (`reconcile`, `expire_pending`,
 `watch_protected`, `audit_recent`; the scheduler's jobs import `orders.sweeps` directly), and
 Skinslink's buy and status flow (`attempt_skinslink_buy`, `check_purchase`, `drain_checks`,
-`reconcile_skinslink`). `api.py` never imports `payments`
+`reconcile_skinslink`), LIS-SKINS' (`attempt_lisskins_buy`, `apply_lisskins_report`,
+`reconcile_lisskins`) and the purchase row of either (`purchase_of`, `PurchaseRow`). `api.py`
+never imports `payments`
 (`test_orders_api_never_imports_payments`: a cold `import csmarket.modules.orders.api`
 leaves `csmarket.modules.payments` out of `sys.modules`).
 
@@ -64,11 +66,15 @@ the body; `skins_buy_enabled` off → 409 `buying_disabled`; the trade-link gate
 unknown or hidden), the pricing rules and a fresh soʻm rate (503 `rate_unavailable`).
 Those scalars are copied out and the read transaction ends **before** the listings read
 (`skins.listings.listings_for` with the shared `search_client` — cached 90 s, budgeted,
-breaker-guarded; a degraded answer is accepted) and Skinslink's offers from the mirror
-(`skinslink.api.offers_for`, no external call; none while Skinslink is off or the mirror is
-stale). Both are merged by price (`skins.merge_offers`, Waxpeer first on a tie, also when
-choosing). The chosen `listing_id` is parsed by `skins.parse_offer_id` (`wx:` / `sl:`; a bare
-integer is Waxpeer's for one release). Every live offer is priced with the item
+breaker-guarded; a degraded answer is accepted) and the stored offers of Skinslink and
+LIS-SKINS (`skinslink.api.offers_for`, `lisskins.api.offers_for`, no external call; none while
+a source is off or stale). All are merged by price (`skins.merge_offers`, ties Waxpeer, then
+Skinslink, then LIS-SKINS; one Steam asset shown once). The chosen `listing_id` is parsed by
+`skins.parse_offer_id` (`wx:` / `sl:` / `ls:`; a bare integer is Waxpeer's for one release).
+A chosen `ls:` lot is re-checked live (`lisskins.api.recheck_chosen`, ADR-0012: one
+`check-availability` call, 4 s, 100/min for the API, a 120 s breaker, no DB connection held;
+only while LIS-SKINS is active): sold → dropped (the substitute rule below); a new price →
+the offer repriced; no answer → the snapshot price stands. Every live offer is priced with the item
 page's `quote` + `to_uzs`; then:
 
 - the chosen offer is listed → billed at the server price if within
@@ -237,9 +243,10 @@ again. Flow: `docs/architecture/sequence-diagrams/buy.mmd`.
 - `drain_paid(db, *, client=None, settings=None, limit=10) -> int` — the queue's drain:
   claims up to `limit` `paid` orders by `paid_at` (`FOR UPDATE SKIP LOCKED`), moves them to
   `buying`, stamps `claimed_at`, `claimed_by` (`hostname:pid`) and `next_check_at = now`,
-  opens the row that holds the pending buy by `order.source` — a Waxpeer trade (`listing_id`,
-  `paid_units = cost_units`, `buy_pending`) or a Skinslink purchase (below) — commits, then
-  runs `attempt_buy` or `attempt_skinslink_buy` per order. An exception in one order is rolled back and logged
+  opens the row that holds the pending buy by `order.source` (`substitutes.pending_buy`) — a
+  Waxpeer trade (`listing_id`, `paid_units = cost_units`, `buy_pending`), a Skinslink or a
+  LIS-SKINS purchase (below) — commits, then runs `attempt_buy`, `attempt_skinslink_buy` or
+  `attempt_lisskins_buy` per order. An exception in one order is rolled back and logged
   (`orders.buy.crashed`, the type only); the order stays `buying` with `buy_pending` and the
   reconcile sweep retries it once its lease lapses. Builds the purchase client
   (`skins.api.trade_client`) only when it claimed something. Returns the number claimed.
@@ -400,6 +407,87 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `skin_trades` only, so they do not list a Skinslink attention and refuse a Skinslink order
   (`docs/tech-debt.md`).
 
+## Buying at LIS-SKINS (`lisskins_buying.py`, `lisskins_writes.py`, `lisskins_status.py`, `lisskins_reconcile.py`; ADR-0012)
+
+A `source = lisskins` order is bought at LIS-SKINS under the same rules: at most once, no lock
+across a call, a lost answer resolved by asking, never by buying blind. There is no webhook:
+statuses are polled. Flow: `docs/architecture/sequence-diagrams/lisskins-buy.mmd`. The
+purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these files write it.
+
+- **Shared parts.** `substitutes.py`: `next_offer` (the cheapest other offer of the item, any
+  source, within the ceiling; the stored offers from our tables, Waxpeer's through the cached
+  listings read only while Waxpeer buying is on), `pending_buy` (the row that holds an order's
+  pending buy, by source) and `switch_source` (hand a locked order to another source's path,
+  keyed `<order id>:2`, due at once). Both the Skinslink and LIS-SKINS paths use them.
+  `purchase_rows.py`: `purchase_of(db, order, *, lock)` (a Skinslink or LIS-SKINS order's
+  purchase; `None` for Waxpeer) and `PENDING_TABLES` (where `take_lease` looks per source).
+- `drain_paid` opens `lisskins_purchases` (`custom_id` = the order id, `skin_id`,
+  `paid_units = cost_units`, `buy_pending`). `take_lease(db, order_id, source="lisskins")`
+  takes the same 5-minute lease.
+- `attempt_lisskins_buy(db, client, *, order_id, settings, waxpeer=None) -> str` — the lease,
+  the snapshot, then `POST /market/buy` with `partner` + `token` from the trade-link snapshot,
+  `max_price` = `paid_units / 1000` (cents, rounded down) and `custom_id`. LIS-SKINS refuses a
+  `custom_id` it knows, so a repeat can never buy twice. Outcomes
+  (`csmarket_order_buys_total`, log `orders.lisskins_buy`):
+
+  | LIS-SKINS answers                                                     | Outcome        | Writes                                                                            |
+  | --------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+  | trade link does not parse                                             | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
+  | 200, the purchase                                                     | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
+  | `custom_id_already_exists`                                            | `adopted`      | the stored purchase read by `market/info`; not shown yet → `unconfirmed`          |
+  | `skins_unavailable`, `skins_price_higher_than_max_price`, other codes | (substitute)   | one substitute, then `sold_out` + refund                                          |
+  | a trade-link code (`BUY_LINK_ERRORS`)                                 | `invalid_link` | `failed` + refund `invalid_trade_link` (no substitute)                            |
+  | `insufficient_funds`                                                  | `low_balance`  | `failed` + refund `source_low_balance`                                            |
+  | HTTP 401 / 403                                                        | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
+  | HTTP 429                                                              | `rate_limited` | nothing; next try after 20 s or its `Retry-After` (capped at the lease)           |
+  | timeout, 408, 5xx, network                                            | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
+  | a buy that went through but the rows moved during the call            | `stale_bought` | attention `ambiguous_trade`                                                       |
+
+  The substitute is counted from the order's `cost_units` (× `1 + order_substitute_ceiling`),
+  once: a rerun after `<id>:2` takes no second one. A LIS-SKINS substitute is **retargeted
+  first** (`custom_id` = `<order id>:2`, its `skin_id`, `paid_units` = its price) and
+  committed before the request. Another source's substitute switches the order to that path.
+  A buy or adoption clears a `source_forbidden` attention. A sent request whose exit failed
+  to record it is secured as unconfirmed in a fresh session.
+
+- **Writes** (`lisskins_writes.py`): lock the order, then the purchase (ruling K), re-check
+  `buying` and `buy_pending`, write, commit; nothing when a sweep moved the rows (except
+  `stale_bought`).
+- **Status** (`lisskins_status.py`): `apply_report(db, *, order, purchase, report)` mirrors
+  LIS-SKINS' report onto the purchase (`purchase_id`, `status`, `return_reason`, `error`, the
+  offer id and expiry, `amount_units`; a missing field never erases ours) and moves the order:
+
+  | LIS-SKINS skin status                                  | Order                                                                       |
+  | ------------------------------------------------------ | --------------------------------------------------------------------------- |
+  | `processing`                                           | nothing                                                                     |
+  | `wait_accept` with an offer                            | `buying → trade_sent` (+ the `trade_sent` letter with the offer's expiry)   |
+  | `accepted`                                             | `→ delivered`                                                               |
+  | `return`, `rollback_…`, or any `return` after delivery | attention `rolled_back` (the skin may be spent; no automatic refund)        |
+  | `return`, `trade_create_error`, before an offer        | `failed` + refund `invalid_trade_link` (a buyer-side `error`) or `sold_out` |
+  | `return`, any other reason                             | `returned` + refund `not_accepted`                                          |
+  | `wait_unlock` / `wait_withdraw`                        | attention `ambiguous_trade` (we never buy locked lots)                      |
+
+  A refund an open attention blocks leaves the order as it is (`held`).
+
+- **Reconcile** (`lisskins_reconcile.py`, scheduler `lisskins.reconcile`, every 30 s; runs
+  while the key is set, switch or not): up to 20 orders whose buy is pending go through
+  `attempt_lisskins_buy` (its lease decides who acts); then **one** `GET /market/info` call
+  for up to 200 purchases — every open one (`buying` / `trade_sent`, not pending) first, then
+  delivered ones in **trade protection** (status `accepted`, delivered within 8 days, last
+  polled ≥ 10 min ago), longest-unpolled first. Each answer is applied in its own session.
+  **The unconfirmed rule:** LIS-SKINS showing nothing under the `custom_id` of a lost buy past
+  `order_unconfirmed_minutes` **re-arms the buy** (`buy_pending = true`, the order due now;
+  log `orders.lisskins.repeat_unseen`) under the same `custom_id`. A purchase we hold an id for
+  is never settled by its absence, and a silence is never refunded. A failed `info` call skips
+  the tick (`orders.lisskins.info_failed`).
+- **Reads:** the owner's order reads join `lisskins_purchases` in the same query (no N+1);
+  `trade_view.lisskins_state` maps `wait_accept` → `offer_sent`, `accepted` → `accepted`,
+  `return` → `failed`, anything else → `buying`; a `delivered` order reads `accepted` (a later
+  rollback reads `support`). An open attention reads `support` and blocks `refund_to_balance`.
+- **Admin:** the order page carries the purchase (`lisskins` block); the margin uses what
+  LIS-SKINS charged when known. `resolve_attention` («Разобрано») resolves its attention. The
+  trades list and the refund / retry actions read `skin_trades` only (`docs/tech-debt.md`).
+
 ## Trade sweeps (`sweeps.py`, `expiry.py`, `trade_audit.py`, `sweep_base.py`, `trades.py`, rulings R3, R5, K, M)
 
 Timed by the scheduler (`apps/scheduler/src/csmarket_scheduler/jobs/`, which import
@@ -488,9 +576,9 @@ never), the count of unresolved attentions, and Waxpeer's balance in USD (`balan
 `csmarket_orders_stuck{state}`, `csmarket_trades_attention` and `csmarket_waxpeer_balance_*`
 gauges from it and reads the balance on every 5th tick (the first included). The alerts are in
 `infra/prometheus/alerts/orders.yml`; the gauges in `docs/architecture/metrics.md`.
-Source-aware since ADR-0010: the counts coalesce the trade's and the Skinslink purchase's
-`last_polled_at` and attention fields, and the attention count covers both `skin_trades` and
-`skinslink_purchases`.
+Source-aware since ADR-0010: the counts coalesce the trade's and the purchase's
+`last_polled_at` and attention fields, and the attention count covers `skin_trades`,
+`skinslink_purchases` and (ADR-0012) `lisskins_purchases`.
 
 ## Nudges and letters (`letters.py`, M4b rulings R4, R5)
 
@@ -511,7 +599,9 @@ row per Tashkent day (zeros included; days cut in Postgres with `AT TIME ZONE
 'Asia/Tashkent'`, the window start in Python at the fixed UTC+5), and the Waxpeer balance the
 `orders.health` job cached (`health.cache_balance`, Redis `orders:waxpeer:balance`, 1 h).
 Since ADR-0010 also the Skinslink balance (available and on hold) the `skinslink.balance`
-job cached (`skinslink.api.skinslink_cached_balance`, Redis `skinslink:balance`, 1 h).
+job cached (`skinslink.api.skinslink_cached_balance`, Redis `skinslink:balance`, 1 h), and
+since ADR-0012 the LIS-SKINS balance (available and locked; `lisskins.api.cached_balance`,
+Redis `lisskins:balance`, 1 h). The attention count reads every source's table.
 Four queries whatever the window; `ix_orders_paid_at` / `ix_orders_refunded_at` (0016).
 
 ## Erase (`erase.py`, decision D3, M4b ruling R11)
@@ -533,9 +623,10 @@ Waxpeer → `FOR UPDATE` re-read → re-check → write.
 
 Runbooks: `docs/runbooks/orders.md` (lifecycle, every alert, attention reasons and the safe
 admin action), `docs/runbooks/waxpeer.md` (key and IP whitelist, balance, the fake versus
-the real key) and `docs/runbooks/skinslink.md` (keys, whitelist, webhook, switching on and
+the real key), `docs/runbooks/skinslink.md` (keys, whitelist, webhook, switching on and
+off) and `docs/runbooks/lisskins.md` (key, snapshot, balance, attentions, switching on and
 off). Flow: `docs/product/flows/buy.md`; diagrams
-`docs/architecture/sequence-diagrams/{checkout,buy,trade-reconcile,skinslink-buy}.mmd`.
+`docs/architecture/sequence-diagrams/{checkout,buy,trade-reconcile,skinslink-buy,lisskins-buy}.mmd`.
 
 ## Milestones
 
@@ -546,3 +637,6 @@ off). Flow: `docs/product/flows/buy.md`; diagrams
   the `my-history` orphan-buy probe.
 - **Skinslink** (ADR-0010, branch `skinslink-buy`) — a second buy source: `source` on the
   order, checkout across sources, the Skinslink buy, status flow and reconcile.
+- **LIS-SKINS** (ADR-0012, branch `lisskins-buy`) — a third buy source: the shared substitute
+  rule, the LIS-SKINS buy, the polled status flow and the reconcile, with trade-protection
+  polling.

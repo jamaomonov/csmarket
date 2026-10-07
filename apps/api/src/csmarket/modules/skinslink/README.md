@@ -19,7 +19,7 @@ price anything (`skins`) and does not own orders (`orders`); both reach it throu
 | `CSMARKET_SKINSLINK_BALANCE_ALERT_USD`       | `100`                              | `SkinslinkBalanceLow` fires below it             |
 
 `skinslink_active` = the switch **and** both keys. Off: the mirror and balance jobs skip, the
-`skinslink.prices` job only clears what an earlier roll-up left, the item page and the price
+`sources.prices` job only clears what an earlier roll-up left, the item page and the price
 syncs see no Skinslink stock and the webhook answers 404. The reconcile and the check drain
 follow the API key, not the switch: orders already in flight settle after switching off.
 `max_price` goes out in cents rounded down — never above the agreed cost. Both keys are on the log redaction list.
@@ -56,7 +56,9 @@ worker and the scheduler import only this.
   unreadable body / no key → `SkinslinkUnavailableError`; any other refusal → `SkinslinkError`
   with `status` and `code`. Error bodies are never logged. Each call counts in
   `csmarket_skinslink_calls_total{endpoint, outcome}`.
-- **`stream.py`** — `ItemsScanner`: the full list is ~490k items (~200 MB of JSON), so
+- **The full-list scanner** — `core.json_stream.ItemsScanner` (it lived here as `stream.py`
+  until ADR-0012 moved it to `core` for LIS-SKINS' export too): the full list is ~490k items
+  (~200 MB of JSON), so
   `client.available_batches` walks it by `page` (1..16, fixed slices keyed by id: a walk
   never skips or repeats an item; a page answering 503 + `Retry-After` is asked again, up to
   4 times) and streams each page, handing the mirror 1000 items at a time — never the whole
@@ -79,12 +81,13 @@ worker and the scheduler import only this.
   wins) before its upserts and removes are written; a full load dedupes ids the same way. Names map to our catalogue by `(market_hash_name, phase)`
   through `skins.canonical_name` (a phase in the name moves out, as for Waxpeer).
   `mirror_fresh`: synced within `skinslink_mirror_stale_minutes`.
-- **`rollup.py`** — `rollup`, run by the scheduler's `skinslink.prices` job
-  (`skins.prices.sync_skinslink_prices`, every 120 s: `lock_pricing`, roll-up,
+- **`rollup.py`** — `rollup`, run by the scheduler's `sources.prices` job (was
+  `skinslink.prices`; `skins.source_prices.sync_source_prices`, every 120 s: `lock_pricing`,
+  this roll-up and LIS-SKINS',
   `reprice_rows`, a catalogue-version bump; it runs while Skinslink is active, or while an
   earlier roll-up remains to clear) and also inside the Waxpeer `skins.prices.sync_prices`: per item the cheapest Skinslink price and the count; an item with Skinslink stock
-  is active even with no Waxpeer listing. Off or stale → cleared, and items only Skinslink
-  kept on sale go inactive.
+  is active even with no Waxpeer listing. Off or stale → cleared, and items no other source
+  (Waxpeer, LIS-SKINS) keeps on sale go inactive.
 - **`offers.py`** — `offers_for(db, skin_item_id, …)`: the item's Skinslink offers from the
   mirror as source-neutral `skins.Offer` (`sl:<asset id>`, no stickers); none when off or
   stale. No external call.
@@ -106,13 +109,13 @@ Skinslink»): they move orders and refund, which only `orders` may do.
 
 ## Processes
 
-| Where     | Name                  | Every   | Does                                                       |
-| --------- | --------------------- | ------- | ---------------------------------------------------------- |
-| scheduler | `skinslink.mirror`    | 15 s    | `sync_mirror`; stamps `csmarket_skinslink_mirror_synced_…` |
-| scheduler | `skinslink.prices`    | 120 s   | `skins.prices.sync_skinslink_prices` (roll-up + reprice)   |
-| scheduler | `skinslink.reconcile` | 30 s    | `orders.reconcile_skinslink` (polls, retries pending buys) |
-| scheduler | `skinslink.balance`   | 5 min   | `refresh_balance`; sets `csmarket_skinslink_enabled`       |
-| worker    | queue `skinslink`     | on wake | `orders.drain_checks` (one drainer)                        |
+| Where     | Name                  | Every   | Does                                                        |
+| --------- | --------------------- | ------- | ----------------------------------------------------------- |
+| scheduler | `skinslink.mirror`    | 15 s    | `sync_mirror`; stamps `csmarket_skinslink_mirror_synced_…`  |
+| scheduler | `sources.prices`      | 120 s   | `skins.source_prices.sync_source_prices` (roll-ups + price) |
+| scheduler | `skinslink.reconcile` | 30 s    | `orders.reconcile_skinslink` (polls, retries pending buys)  |
+| scheduler | `skinslink.balance`   | 5 min   | `refresh_balance`; sets `csmarket_skinslink_enabled`        |
+| worker    | queue `skinslink`     | on wake | `orders.drain_checks` (one drainer)                         |
 
 Alerts (`infra/prometheus/alerts/orders.yml`): `SkinslinkMirrorStale`, `SkinslinkBalanceLow`,
 `SkinslinkBuyFailures` — runbook `docs/runbooks/skinslink.md`. Decision: ADR-0010. Flow:

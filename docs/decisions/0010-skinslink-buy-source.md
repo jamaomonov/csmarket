@@ -164,3 +164,12 @@ Waxpeer price sync keeps the Steam price but writes no stock, `skinslink.prices`
 an earlier Waxpeer tick wrote, the item page and checkout offer Skinslink only, and a
 Skinslink buy never substitutes from Waxpeer. It also ends the double count of one asset
 listed by both. Trade-link checks and orders already bought at Waxpeer are untouched.
+
+## Update 2026-10-07: LIS-SKINS joins
+
+LIS-SKINS joins as a third source ([ADR-0012](./0012-lisskins-buy-source.md)). Waxpeer buying
+stays off in prod (`CSMARKET_WAXPEER_BUY_ENABLED=false`). The cost is the cheapest present
+source. The `skinslink.prices` job is now `sources.prices`
+(`skins.source_prices.sync_source_prices`), and the full-list scanner moved to
+`core/json_stream.py`. A Skinslink buy's substitute may come from LIS-SKINS
+(`orders/substitutes.py`).

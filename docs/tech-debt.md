@@ -45,7 +45,8 @@ None of these touches money or order state.
    the next deploy, accept only `wx:` / `sl:` strings, drop the branch and its tests, and
    regenerate the API client.
 2. **The admin attention queue and refund / retry are Waxpeer-only.** The trades list, its
-   `attention` view and counts and the dashboard's attention tile read `skin_trades`, so a
+   `attention` view and counts read `skin_trades` (the dashboard's attention count reads
+   every source since ADR-0012), so a
    Skinslink attention (`source_forbidden`, `ambiguous_trade`, `rolled_back` on
    `skinslink_purchases`) is not listed there — yet `csmarket_trades_attention` counts it, so
    `TradesNeedAttention` can fire for an order the queue does not show. The operator finds it
@@ -54,3 +55,20 @@ None of these touches money or order state.
    read attentions from both tables in `admin.orders_service` and teach refund / retry the
    purchase row (refund: ask Skinslink by `merchant_tx_id` first, as ADR-0007 Y asks
    Waxpeer).
+
+## LIS-SKINS buy source (ADR-0012, 2026-10-07)
+
+1. **The admin trades page and its attention queue list Waxpeer trades only.** A Skinslink or
+   LIS-SKINS attention (`source_forbidden`, `ambiguous_trade`, `rolled_back` on its purchase
+   row) shows on the order page («Покупка Skinslink» / «Покупка LIS-SKINS»), in the
+   dashboard's attention count and in the `TradesNeedAttention` alert, but not in the queue.
+   Admin refund and retry refuse a LIS-SKINS order (409). _Fix:_ as Skinslink's item above —
+   read every purchase table in `admin.orders_service`; teach refund / retry the purchase row
+   (refund: ask LIS-SKINS `market/info` by `custom_id` first).
+2. **The export is fetched with a browser-like `User-Agent`.** Its CDN refused httpx's own
+   agent on 2026-10-07 (`lisskins/export.py`, `USER_AGENT`). If the CDN changes its rules, the
+   snapshot fails and `LisskinsSnapshotStale` fires. _Fix:_ revisit if LIS-SKINS publishes an
+   API for the export.
+3. **The snapshot downloads ~855 MB every 5 minutes** (~250 GB a day). Watch the VPS's traffic
+   and CPU. _Fix:_ a longer interval, or LIS-SKINS' WebSocket feed, if either becomes a
+   problem.
