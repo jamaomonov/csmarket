@@ -23,7 +23,7 @@ from csmarket.core.logging import get_logger
 from csmarket.modules.orders import buy_writes
 from csmarket.modules.orders.buy_writes import BuySnapshot
 from csmarket.modules.orders.models import Order, SkinTrade
-from csmarket.modules.skinslink.api import SkinslinkPurchase
+from csmarket.modules.orders.purchase_rows import PENDING_TABLES
 
 log = get_logger("csmarket.orders.buying")
 
@@ -43,21 +43,17 @@ async def take_lease(
 ) -> datetime | None:
     """Hold a ``buying`` order whose buy is pending for :data:`BUY_LEASE`.
 
-    ``source`` names where the pending buy lives: ``skin_trades`` (Waxpeer) or
-    ``skinslink_purchases``.
+    ``source`` names where the pending buy lives (``purchase_rows.PENDING_TABLES``).
 
     Returns:
         The lease (the ``next_check_at`` written), or ``None`` when the order is not
         buying, its buy is no longer pending, or another attempt holds it.
     """
     at = now()
+    table = PENDING_TABLES.get(source, SkinTrade)
     pending = (
-        select(SkinTrade.order_id)
-        .where(SkinTrade.order_id == Order.id, SkinTrade.buy_pending.is_(True))
-        .exists()
-        if source == "waxpeer"
-        else select(SkinslinkPurchase.order_id)
-        .where(SkinslinkPurchase.order_id == Order.id, SkinslinkPurchase.buy_pending.is_(True))
+        select(table.order_id)
+        .where(table.order_id == Order.id, table.buy_pending.is_(True))
         .exists()
     )
     lease = await db.scalar(

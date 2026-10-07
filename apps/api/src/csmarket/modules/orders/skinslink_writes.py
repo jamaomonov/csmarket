@@ -6,15 +6,16 @@ nothing when a sweep moved the rows during the Skinslink call. Each returns the 
 from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import TradeAttentionReason
-from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.refunds import refund_to_balance
 from csmarket.modules.orders.skinslink_status import apply_report
+from csmarket.modules.orders.substitutes import switch_source
 from csmarket.modules.orders.trades import flag
 from csmarket.modules.skins.api import Offer
 from csmarket.modules.skinslink.api import Purchase, SkinslinkPurchase
@@ -136,28 +137,15 @@ async def retarget(db: AsyncSession, snap: PurchaseSnapshot, offer: Offer) -> Pu
     )
 
 
-async def switch_to_waxpeer(db: AsyncSession, snap: PurchaseSnapshot, offer: Offer) -> str:
-    """A Waxpeer substitute: the order becomes a Waxpeer order whose buy is pending (the
-    Waxpeer path buys it on its next attempt); the Skinslink purchase row goes."""
+async def switch(db: AsyncSession, snap: PurchaseSnapshot, offer: Offer) -> str:
+    """A substitute of another source: the order becomes that source's order whose buy is
+    pending (its path buys it next); the Skinslink purchase row goes."""
     pair = await _locked(db, snap)
-    if pair is None or offer.listing_id is None:
+    if pair is None or (offer.source == "waxpeer" and offer.listing_id is None):
         return _stale(snap, "lookup_later")
-    order, _ = pair
-    order.source, order.offer_id, order.listing_id = "waxpeer", offer.offer_id, offer.listing_id
-    await db.execute(delete(SkinslinkPurchase).where(SkinslinkPurchase.order_id == order.id))
-    db.add(
-        SkinTrade(
-            order_id=order.id,
-            project_id=order.id,
-            listing_id=offer.listing_id,
-            paid_units=offer.price_units,
-            buy_pending=True,
-            seller={},
-        )
-    )
-    order.next_check_at = None
+    await switch_source(db, pair[0], offer)
     await db.commit()
-    log.info("orders.skinslink_buy.to_waxpeer", number=snap.number)
+    log.info("orders.skinslink_buy.switched", number=snap.number, source=offer.source)
     return "lookup_later"
 
 
@@ -221,6 +209,6 @@ __all__ = [
     "refund",
     "retarget",
     "secure_sent",
-    "switch_to_waxpeer",
+    "switch",
     "unconfirmed",
 ]

@@ -14,6 +14,7 @@ import pytest
 from csmarket.core import clock
 from csmarket.core.config import Settings, get_settings
 from csmarket.core.redis import get_redis
+from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsPurchase, LisskinsState
 from csmarket.modules.orders.api import attempt_buy
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
@@ -359,3 +360,32 @@ async def test_with_waxpeer_buying_off_a_substitute_never_goes_to_waxpeer(
     )
     assert outcome == "sold_out"
     assert waxpeer.search_calls == 0
+
+
+async def test_a_lisskins_substitute_hands_the_order_to_the_lisskins_path(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    db_session.add(
+        LisskinsOffer(id=5, skin_item_id=order.skin_item_id, price_units=COST, asset_id="9")
+    )
+    await db_session.merge(LisskinsState(id=1, snapshot_at=clock.now(), lots=1))
+    await db_session.commit()
+    on = settings.model_copy(update={"lisskins_enabled": True, "lisskins_api_key": "k"})
+    fake = FakeSkinslinkClient(purchase("failed", fail_reason="item_sold"))
+    assert await attempt_skinslink_buy(db_session, fake, order_id=order.id, settings=on) == (
+        "lookup_later"
+    )
+    row = await _order(db_session, order)
+    assert (row.source, row.offer_id, row.status) == ("lisskins", "ls:5", "buying")
+    p = await db_session.scalar(
+        select(LisskinsPurchase)
+        .where(LisskinsPurchase.order_id == order.id)
+        .execution_options(populate_existing=True)
+    )
+    assert p is not None
+    assert (p.custom_id, p.paid_units, p.buy_pending) == (
+        f"{order.id}:2",
+        COST,
+        True,
+    )

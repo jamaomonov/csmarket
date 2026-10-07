@@ -67,6 +67,7 @@ from csmarket.modules.orders.buy_writes import (
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
+from csmarket.modules.orders.substitutes import pending_buy
 from csmarket.modules.orders.trades import FAILED_STATUS, AmbiguousTradeError, pick_trade
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skins.api import (
@@ -76,10 +77,9 @@ from csmarket.modules.skins.api import (
     WaxpeerRateLimitedError,
     WaxpeerTrade,
     WaxpeerUnavailableError,
-    parse_offer_id,
     trade_client,
 )
-from csmarket.modules.skinslink.api import SkinslinkPurchase, SkinslinkPurchaseClient, client_for
+from csmarket.modules.skinslink.api import SkinslinkPurchaseClient, client_for
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
 log = get_logger("csmarket.orders.buying")
@@ -106,27 +106,6 @@ def worker_id() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"[:64]
 
 
-def _pending_buy(order: Order) -> SkinTrade | SkinslinkPurchase:
-    """The row that holds a just-claimed order's pending buy, by its source."""
-    if order.source == "skinslink":
-        _, asset_id = parse_offer_id(order.offer_id or "")
-        return SkinslinkPurchase(
-            order_id=order.id,
-            merchant_tx_id=order.id,
-            asset_id=asset_id,
-            paid_units=order.cost_units,
-            buy_pending=True,
-        )
-    return SkinTrade(
-        order_id=order.id,
-        project_id=order.id,
-        listing_id=order.listing_id,
-        paid_units=order.cost_units,
-        buy_pending=True,
-        seller={},
-    )
-
-
 async def _claim(db: AsyncSession, *, limit: int) -> list[tuple[str, str]]:
     """Move up to ``limit`` ``paid`` orders, oldest first, to ``buying``; commit.
 
@@ -147,7 +126,7 @@ async def _claim(db: AsyncSession, *, limit: int) -> list[tuple[str, str]]:
     for order in orders:
         move(order, "buying")
         order.claimed_at, order.claimed_by, order.next_check_at = at, me, at
-        db.add(_pending_buy(order))
+        db.add(pending_buy(order, units=order.cost_units, key=order.id))
     for order in orders:
         await nudge(db, user_id=order.user_id, number=order.number)
     claimed = [(order.id, order.source) for order in orders]

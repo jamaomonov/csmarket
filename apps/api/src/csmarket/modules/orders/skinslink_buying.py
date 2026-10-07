@@ -29,14 +29,11 @@ from typing import cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from csmarket.core.clock import now
 from csmarket.core.config import Settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
-from csmarket.core.redis import get_redis
 from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, release_fresh, take_lease
-from csmarket.modules.orders.buy_rules import TradeSearch
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.skinslink_writes import (
     PurchaseSnapshot,
@@ -45,18 +42,12 @@ from csmarket.modules.orders.skinslink_writes import (
     refund,
     retarget,
     secure_sent,
-    switch_to_waxpeer,
+    switch,
     unconfirmed,
 )
+from csmarket.modules.orders.substitutes import next_offer
 from csmarket.modules.skins.api import (
-    Listing,
-    Offer,
-    SkinItem,
     TradeClient,
-    from_listing,
-    listings_budget,
-    listings_for,
-    merge_offers,
     offer_id_of,
 )
 from csmarket.modules.skinslink.api import (
@@ -68,7 +59,6 @@ from csmarket.modules.skinslink.api import (
     SkinslinkPurchaseClient,
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
-    offers_for,
 )
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
@@ -234,13 +224,18 @@ async def _buy(
         if attempt == 2:
             break
         log.info("orders.skinslink_buy.refused", number=snap.number)
-        nxt = await _substitute(
-            db, snap, ceiling=ceiling, tried=tried, settings=settings, waxpeer=waxpeer
+        nxt = await next_offer(
+            db,
+            skin_item_id=snap.skin_item_id,
+            ceiling=ceiling,
+            tried=tried,
+            settings=settings,
+            waxpeer=waxpeer,
         )
         if nxt is None:
             break
-        if nxt.source == "waxpeer":
-            return await switch_to_waxpeer(db, snap, nxt)
+        if nxt.source != "skinslink":
+            return await switch(db, snap, nxt)
         tried.add(nxt.offer_id)
         try:
             snap = run.snap = await retarget(db, snap, nxt)
@@ -302,35 +297,6 @@ async def _adopt(
     if report.status not in _TAKEN:
         return None
     return await record_purchase(db, snap, report, outcome="adopted")
-
-
-async def _substitute(
-    db: AsyncSession,
-    snap: PurchaseSnapshot,
-    *,
-    ceiling: int,
-    tried: set[str],
-    settings: Settings,
-    waxpeer: TradeClient | None,
-) -> Offer | None:
-    """The cheapest other offer of the item, either market, at most ``ceiling`` units."""
-    item = await db.get(SkinItem, snap.skin_item_id)
-    if item is not None:
-        db.expunge(item)  # read below with no transaction open
-    extra = await offers_for(db, snap.skin_item_id, settings=settings, now=now())
-    await db.commit()
-    rows: list[Listing] = []
-    if item is not None and waxpeer is not None and settings.waxpeer_buy_enabled:
-        rows, _ = await listings_for(
-            item,
-            client=TradeSearch(waxpeer),
-            redis=get_redis(),
-            budget_per_minute=listings_budget(settings),
-        )
-    offers = merge_offers([from_listing(r) for r in rows], extra)
-    return next(
-        (o for o in offers if o.offer_id not in tried and 0 < o.price_units <= ceiling), None
-    )
 
 
 __all__ = ["ATTEMPT_BUDGET", "RELEASE_BACKOFF", "attempt_skinslink_buy"]
