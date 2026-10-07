@@ -29,6 +29,7 @@ from csmarket.modules.lisskins.export import (
     read_export,
     to_units,
 )
+from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsPurchase, LisskinsState
 
 __all__ = [
     "BUY_LINK_ERRORS",
@@ -43,7 +44,10 @@ __all__ = [
     "LisskinsClient",
     "LisskinsError",
     "LisskinsForbiddenError",
+    "LisskinsOffer",
+    "LisskinsPurchase",
     "LisskinsRateLimitedError",
+    "LisskinsState",
     "LisskinsUnavailableError",
     "Lot",
     "Purchase",

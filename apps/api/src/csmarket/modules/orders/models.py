@@ -48,7 +48,7 @@ ORDER_STATUSES = (
     "returned",
 )
 #: Where an order's skin is bought (spec 2026-10-06).
-ORDER_SOURCES = ("waxpeer", "skinslink")
+ORDER_SOURCES = ("waxpeer", "skinslink", "lisskins")
 #: Statuses an order never leaves.
 TERMINAL: frozenset[str] = frozenset({"delivered", "cancelled", "failed", "returned"})
 #: Paid, not yet settled: the money is ours and the skin is on its way (no refund now).
@@ -109,7 +109,7 @@ class Order(Base):
     source: Mapped[str] = mapped_column(
         String(12), nullable=False, server_default=text("'waxpeer'"), default="waxpeer"
     )
-    #: The prefixed offer id the buyer chose (``wx:<item_id>`` / ``sl:<asset_id>``), after
+    #: The prefixed offer id the buyer chose (``wx:<item_id>`` / ``sl:<asset_id>`` / ``ls:<skin id>``), after
     #: any checkout substitution (R4).
     offer_id: Mapped[str | None] = mapped_column(String(310), nullable=True)
     #: The Waxpeer listing behind ``offer_id``; ``NULL`` for a Skinslink order.
