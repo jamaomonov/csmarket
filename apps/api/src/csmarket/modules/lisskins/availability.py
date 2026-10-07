@@ -4,7 +4,7 @@
 snapshot can be minutes old. Bounded like the item page's Waxpeer read (AGENTS §11): a 4 s
 timeout (``lisskins_check_timeout_seconds``), :data:`BUDGET_PER_MINUTE` calls a minute for
 the whole API, and a :data:`BREAKER_TTL` breaker after an outage. Gone → the offer is
-dropped (checkout's substitute rule); no answer → the snapshot price stands (the worker's
+dropped (checkout answers ``offer_gone``); no answer → the snapshot price stands (the worker's
 ``max_price`` is the money guard).
 """
 

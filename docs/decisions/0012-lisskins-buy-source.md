@@ -72,7 +72,7 @@ smallest new moving part: a periodic download and a periodic poll, both in the s
 - **The checkout carve-out (AGENTS §11).** `POST /orders` for a chosen `ls:` lot asks
   `GET /market/check-availability` once: 4 s timeout, 100 calls/min for the whole API (a
   Redis counter per minute), a 120 s breaker after an outage. Gone → the usual substitute
-  rule (or `offer_gone`). A dearer live price → the usual `price_changed` check. A failed
+  rule (or `offer_gone`; Superseded by ADR-0013: no substitutes.). A dearer live price → the usual `price_changed` check. A failed
   call → the snapshot price stands; the worker's `max_price` is the money guard. No DB
   connection is held across the call.
 - **Buying.** `drain_paid` routes a `lisskins` order to `attempt_lisskins_buy`
@@ -82,7 +82,7 @@ smallest new moving part: a periodic download and a periodic poll, both in the s
 - **One substitute rule for every source** (`orders/substitutes.py`): the cheapest other
   offer of the item, any source, within `cost_units × (1 + order_substitute_ceiling)`, once.
   A LIS-SKINS substitute is retargeted to `<order id>:2` before the request; another source's
-  hands the order to that path.
+  hands the order to that path. Superseded by ADR-0013: no substitutes.
 - **Statuses polled.** The scheduler's `lisskins.reconcile` (every 30 s) buys the pending
   buys, then asks `GET /market/info?custom_ids[]=…` once for up to 200 purchases.
 

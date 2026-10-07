@@ -206,7 +206,6 @@ def test_orders_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     assert s.skins_buy_enabled is False
     assert s.order_expiry_minutes == 15
     assert s.order_price_tolerance == Decimal("0.02")
-    assert s.order_substitute_ceiling == Decimal("0.03")
     assert isinstance(s.order_price_tolerance, Decimal)
     assert s.order_unconfirmed_minutes == 10
     assert s.trades_reconcile_seconds == 10

@@ -146,12 +146,11 @@ Signed in (401 without a token). One skin per order.
   `price_uzs` is the whole soʻm the panel showed for it (a JSON **integer** > 0). The server
   re-prices the offer from the same live listings: within ±2 % of `price_uzs` it bills **its
   own** price; further off → 409 `price_changed` with the new `price_uzs`. An offer sold in
-  the meantime is replaced by the cheapest other offer of the item priced at most 3 % above
-  `price_uzs`, billed at the lower of its price and `price_uzs` (never more than shown);
-  none → 409 `offer_gone` with `next_offer: {listing_id, price_uzs}` (a string id, either
+  the meantime is never replaced (ADR-0013): 409 `offer_gone` with
+  `next_offer: {listing_id, price_uzs}` (the cheapest offer left, a string id, either
   market) or `null`. A chosen `ls:` offer is re-checked live at LIS-SKINS (ADR-0012: one
   `check-availability` call, 4 s timeout, 100 a minute for the API, a 120 s breaker): sold →
-  as an offer sold in the meantime (substitute or `offer_gone`); a live price beyond ±2 % of
+  as an offer sold in the meantime (`offer_gone`); a live price beyond ±2 % of
   the shown one → `price_changed`; no answer → the snapshot price stands. So `POST /orders` for an `ls:`
   offer can take up to ~4 s. The same key
   again → **200** with the stored order, whatever the body. Rate-limited by the
@@ -191,7 +190,7 @@ checked by hand (never promise a refund then).
 | 409    | `conflict`         | `trade_link_missing` | No trade link saved                                                                  |
 | 409    | `conflict`         | `trade_link_bad`     | The saved link was checked bad (`reason`: `invalid`, `private`, `trade_ban`, `hold`) |
 | 409    | `conflict`         | `price_changed`      | The offer's price moved beyond ±2 % (`price_uzs`)                                    |
-| 409    | `conflict`         | `offer_gone`         | Sold, no substitute within 3 % (`next_offer` or `null`)                              |
+| 409    | `conflict`         | `offer_gone`         | Sold; never replaced (`next_offer` or `null`)                                        |
 | 404    | `not-found`        | —                    | Unknown or hidden item                                                               |
 | 503    | `rate-unavailable` | `rate_unavailable`   | No fresh soʻm rate                                                                   |
 | 422    | `validation`       | —                    | Malformed body or missing/short/over-long key                                        |

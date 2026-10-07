@@ -39,7 +39,7 @@ def fake() -> FakeTradeClient:
 
 
 async def _go(db: AsyncSession, fake: FakeTradeClient, order_id: str, settings: Settings) -> str:
-    return await attempt_buy(db, fake, order_id=order_id, settings=settings)
+    return await attempt_buy(db, fake, order_id=order_id)
 
 
 @pytest.mark.parametrize("first", ["bought", "unconfirmed"])

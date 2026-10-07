@@ -1,5 +1,5 @@
 """``POST /orders`` for a LIS-SKINS lot (ADR-0012): one live check — the live price is
-billed, a dearer one is ``price_changed``, a sold lot falls to the next offer, a failed call
+billed, a dearer one is ``price_changed``, a sold lot is ``offer_gone`` with the next one, a failed call
 accepts the snapshot price; another source's offer is never checked."""
 
 from __future__ import annotations
@@ -180,7 +180,7 @@ async def test_a_dearer_live_price_is_price_changed_never_the_snapshot_price(
     assert int(r.json()["price_uzs"]) > shown
 
 
-async def test_a_sold_lot_falls_to_the_next_offer(
+async def test_a_sold_lot_is_offer_gone_with_the_next_offer(
     integration_client: AsyncClient,
     headers: dict[str, str],
     stub: StubListings,
@@ -190,10 +190,9 @@ async def test_a_sold_lot_falls_to_the_next_offer(
     shown = await _shown(integration_client, f"ls:{LOT}")
     live(Availability(available={}, unavailable=frozenset({LOT})))
     r = await _post(integration_client, headers, f"ls:{LOT}", shown)
-    assert r.status_code == 201, r.text
-    order = await _order(db_session, r.json()["number"])
-    assert (order.source, order.offer_id) == ("skinslink", "sl:380")
-    assert order.price_uzs == shown  # within the ceiling: never more than the buyer saw
+    assert r.status_code == 409, r.text
+    assert r.json()["code"] == "offer_gone"
+    assert r.json()["next_offer"]["listing_id"] == "sl:380"
 
 
 async def test_a_failed_check_accepts_the_snapshot_price_and_opens_the_breaker(

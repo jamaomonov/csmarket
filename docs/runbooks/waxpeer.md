@@ -12,7 +12,7 @@ admin actions: [`orders.md`](./orders.md). Catalogue and price sync:
 | Call                            | Who                                  | How often                                                   |
 | ------------------------------- | ------------------------------------ | ----------------------------------------------------------- |
 | `GET /v1/check-many-project-id` | worker (before every buy), scheduler | reconcile every 10 s (≤ 100 orders a call), hourly, nightly |
-| `GET /v1/buy-one-p2p`           | worker, reconcile (a pending buy)    | once per order (one substitute at most)                     |
+| `GET /v1/buy-one-p2p`           | worker, reconcile (a pending buy)    | once per order                                              |
 | `GET /v1/user` (balance)        | scheduler `orders.health`; the buy   | every 5 min; on a buy refusal                               |
 | `GET /v2/search-items-by-name`  | API (item page, checkout), worker    | cached 90 s, ≤ 18 a minute shared (Redis budget)            |
 | price snapshot, `/v1/prices`    | scheduler `skins.price_sync`         | every 5 min                                                 |
@@ -142,7 +142,5 @@ Before buying is switched on for customers (`CSMARKET_SKINS_BUY_ENABLED=true`):
   audit reads trades back by our own `project_id`. Detecting them needs Waxpeer's
   `my-history`, whose answer shape was never captured. M4b probes it once with the owner's
   locally whitelisted key, then extends the audit.
-- **A refused buy followed by a substitute under the same `project_id`** has not been seen
-  against the real Waxpeer. The code picks our trade by the Waxpeer id the buy returned, so a
-  refused attempt under the same key is ignored; if Waxpeer rejects a reused key, the
-  substitute is simply refused and the order refunds (`sold_out`).
+- **A refused buy** refunds the order (`sold_out`); no other listing is bought under the same
+  `project_id` (ADR-0013). The code picks our trade by the Waxpeer id the buy returned.

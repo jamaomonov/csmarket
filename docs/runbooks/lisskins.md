@@ -16,7 +16,7 @@ design: [ADR-0012](../decisions/0012-lisskins-buy-source.md); flow:
 | --------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
 | `GET lis-skins.com/market_export_json/api_csgo_full.json` | scheduler `lisskins.snapshot`                 | every 5 min (~855 MB, streamed; no key)                    |
 | `GET /market/check-availability?ids[]=…`                  | API, `POST /orders` for a chosen `ls:` lot    | once per checkout; ≤ 100/min for the API; 120 s breaker    |
-| `POST /market/buy`                                        | worker (`orders` queue), `lisskins.reconcile` | once per order (one substitute at most)                    |
+| `POST /market/buy`                                        | worker (`orders` queue), `lisskins.reconcile` | once per order                                             |
 | `GET /market/info?custom_ids[]=…`                         | scheduler `lisskins.reconcile`, the buy       | one call every 30 s for up to 200 purchases; on a known id |
 | `GET /user/balance`                                       | scheduler `lisskins.balance`                  | every 5 min                                                |
 
@@ -132,13 +132,12 @@ key, the IP, the balance or LIS-SKINS itself.
      is sent again under the **same** `custom_id` (log `orders.lisskins.repeat_unseen`):
      LIS-SKINS refuses a known `custom_id`, so this can never buy twice. A repeat that
      LIS-SKINS refuses for the lot (`skins_unavailable`, `skins_price_higher_than_max_price`,
-     an unknown code) may be refused because our first send bought it: no substitute, no
-     refund — `market/info` is asked once more, and if it still shows nothing the purchase
+     an unknown code) may be refused because our first send bought it: no refund — `market/info` is asked once more, and if it still shows nothing the purchase
      gets the `buy_unconfirmed` attention. A silence is never refunded. Many at once →
      LIS-SKINS' outage; wait.
    - `refused`: the `code` says why. `skins_unavailable` or
-     `skins_price_higher_than_max_price` → one substitute (any source, ≤ 3 % above the
-     agreed cost), then a refund `sold_out`. Many at once can mean a stale snapshot (see
+     `skins_price_higher_than_max_price` → a refund `sold_out`; no other offer is bought in its place
+     (ADR-0013). Many at once can mean a stale snapshot (see
      [Snapshot stale](#snapshot-stale)). `insufficient_funds` → see
      [Balance low](#balance-low). A trade-link code (`invalid_trade_url`, `user_trade_ban`,
      `user_cant_trade`, `private_inventory`, `too_many_failed_attempts_for_user`) refunds
@@ -153,7 +152,7 @@ A LIS-SKINS attention sits on `lisskins_purchases`. It counts in `csmarket_trade
 page and its attention queue do not list it (`docs/tech-debt.md`). Find the order by number in
 the admin order search; its «Покупка LIS-SKINS» block shows the purchase, its status, the
 `custom_id` and the attention. Look the purchase up in the LIS-SKINS cabinet's purchase history
-by that `custom_id` (the order id, or `<order id>:2` after a substitute).
+by that `custom_id` (the order id; an order bought before ADR-0013 may carry `<order id>:2`).
 
 - `rolled_back` — a `return` with `rollback_user` / `rollback_supplier`, or a `return` after
   delivery. Steam undid an accepted trade; the skin may be gone from the buyer. Decide with the

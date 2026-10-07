@@ -22,7 +22,6 @@ from csmarket.core.logging import get_logger
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
 from csmarket.modules.orders.skinslink_status import check_purchase
-from csmarket.modules.skins.api import TradeClient
 from csmarket.modules.skinslink.api import SkinslinkPurchase, SkinslinkPurchaseClient
 
 log = get_logger("csmarket.orders.skinslink_reconcile")
@@ -75,7 +74,6 @@ async def reconcile_skinslink(
     client: SkinslinkPurchaseClient,
     *,
     settings: Settings,
-    waxpeer: TradeClient | None = None,
 ) -> int:
     """One tick: poll or buy every due Skinslink order.
 
@@ -83,7 +81,6 @@ async def reconcile_skinslink(
         db_factory: Makes a session per order.
         client: Skinslink.
         settings: Settings.
-        waxpeer: Waxpeer, for a buy's substitute search.
 
     Returns:
         How many orders the tick looked at.
@@ -94,9 +91,7 @@ async def reconcile_skinslink(
         try:
             async with db_factory() as db:
                 if pending:
-                    await attempt_skinslink_buy(
-                        db, client, order_id=order_id, settings=settings, waxpeer=waxpeer
-                    )
+                    await attempt_skinslink_buy(db, client, order_id=order_id)
                 else:
                     await check_purchase(db, client, order_id=order_id, settings=settings)
         except Exception as exc:  # noqa: BLE001 -- one order must not stop the tick

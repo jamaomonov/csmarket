@@ -15,9 +15,7 @@ from csmarket.core.metrics import TradeAttentionReason
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.refunds import refund_to_balance
 from csmarket.modules.orders.skinslink_status import apply_report
-from csmarket.modules.orders.substitutes import switch_source
 from csmarket.modules.orders.trades import flag
-from csmarket.modules.skins.api import Offer
 from csmarket.modules.skinslink.api import Purchase, SkinslinkPurchase
 
 log = get_logger("csmarket.orders.skinslink_buying")
@@ -42,7 +40,7 @@ class PurchaseSnapshot(BaseModel):
     merchant_tx_id: str
     asset_id: str
     paid_units: int
-    #: The order's agreed cost: the substitute ceiling is counted from it.
+    #: The order's agreed cost.
     cost_units: int
 
 
@@ -116,39 +114,6 @@ async def record_purchase(
     return outcome
 
 
-async def retarget(db: AsyncSession, snap: PurchaseSnapshot, offer: Offer) -> PurchaseSnapshot:
-    """Point the purchase at a Skinslink substitute under ``<order id>:2``, committed before
-    the request goes out — a lost answer is then resolved under the id actually used."""
-    pair = await _locked(db, snap)
-    if pair is None:
-        raise LookupError("the order left buying")
-    _, purchase = pair
-    tx = f"{snap.order_id}:2"
-    purchase.merchant_tx_id, purchase.paid_units = tx, offer.price_units
-    purchase.asset_id = offer.asset_id or purchase.asset_id
-    purchase.updated_at = now()
-    await db.commit()
-    return snap.model_copy(
-        update={
-            "merchant_tx_id": tx,
-            "asset_id": purchase.asset_id,
-            "paid_units": offer.price_units,
-        }
-    )
-
-
-async def switch(db: AsyncSession, snap: PurchaseSnapshot, offer: Offer) -> str:
-    """A substitute of another source: the order becomes that source's order whose buy is
-    pending (its path buys it next); the Skinslink purchase row goes."""
-    pair = await _locked(db, snap)
-    if pair is None or (offer.source == "waxpeer" and offer.listing_id is None):
-        return _stale(snap, "lookup_later")
-    await switch_source(db, pair[0], offer)
-    await db.commit()
-    log.info("orders.skinslink_buy.switched", number=snap.number, source=offer.source)
-    return "lookup_later"
-
-
 async def unconfirmed(db: AsyncSession, snap: PurchaseSnapshot) -> str:
     """The purchase's answer was lost: resolved by repeating the same ``merchant_tx_id``."""
     pair = await _locked(db, snap)
@@ -207,8 +172,6 @@ __all__ = [
     "attention",
     "record_purchase",
     "refund",
-    "retarget",
     "secure_sent",
-    "switch",
     "unconfirmed",
 ]

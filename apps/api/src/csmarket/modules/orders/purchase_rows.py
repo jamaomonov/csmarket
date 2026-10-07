@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.skins.api import parse_offer_id
 from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 #: A non-Waxpeer order's purchase row (the attention columns are the same on both).
@@ -33,4 +34,30 @@ async def purchase_of(db: AsyncSession, order: Order, *, lock: bool) -> Purchase
     return None
 
 
-__all__ = ["PENDING_TABLES", "PurchaseRow", "purchase_of"]
+def pending_buy(
+    order: Order, *, units: int, key: str
+) -> SkinTrade | SkinslinkPurchase | LisskinsPurchase:
+    """The row that holds ``order``'s pending buy at its source, keyed ``key`` (Skinslink's
+    ``merchant_tx_id``, LIS-SKINS' ``custom_id``; Waxpeer's ``project_id`` is the order id,
+    which its lookup searches by; an older Waxpeer order carries no ``offer_id``)."""
+    if order.source == "skinslink":
+        _, raw = parse_offer_id(order.offer_id or "")
+        return SkinslinkPurchase(
+            order_id=order.id, merchant_tx_id=key, asset_id=raw, paid_units=units, buy_pending=True
+        )
+    if order.source == "lisskins":
+        _, raw = parse_offer_id(order.offer_id or "")
+        return LisskinsPurchase(
+            order_id=order.id, custom_id=key, skin_id=int(raw), paid_units=units, buy_pending=True
+        )
+    return SkinTrade(
+        order_id=order.id,
+        project_id=order.id,
+        listing_id=order.listing_id,
+        paid_units=units,
+        buy_pending=True,
+        seller={},
+    )
+
+
+__all__ = ["PENDING_TABLES", "PurchaseRow", "pending_buy", "purchase_of"]

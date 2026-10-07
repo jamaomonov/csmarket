@@ -39,7 +39,7 @@ from tests.integration.fake_trade_client import FakeTradeClient, waxpeer_trade
 from tests.integration.lisskins_factory import make_lisskins_order
 from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.skinslink_factory import make_skinslink_order
-from tests.integration.trade_sweeps_kit import load, reconcile_once, sweep_settings
+from tests.integration.trade_sweeps_kit import load, reconcile_once
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 PRICE = Decimal(171_800)
@@ -661,7 +661,7 @@ async def test_a_running_attempt_blocks_refund_and_retry_until_released(
     assert page["trade"]["buy_pending"] is False
     # No attempt can start after the refund: nothing is bought.
     fake = FakeTradeClient()
-    outcome = await attempt_buy(db_session, fake, order_id=order.id, settings=sweep_settings())
+    outcome = await attempt_buy(db_session, fake, order_id=order.id)
     assert (outcome, fake.lookup_calls, fake.buy_calls) == ("nothing_to_do", 0, 0)
 
 

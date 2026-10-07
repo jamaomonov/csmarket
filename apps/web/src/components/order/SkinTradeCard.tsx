@@ -164,7 +164,13 @@ interface RefundedProps {
 function Refunded({ reason }: RefundedProps) {
   const t = useTranslations("web.orders.trade");
   const line =
-    reason === "try_later" ? "tryLater" : reason === "trade_link" ? "tradeLink" : "refunded";
+    reason === "try_later"
+      ? "tryLater"
+      : reason === "trade_link"
+        ? "tradeLink"
+        : reason === "sold_out"
+          ? "soldOut"
+          : "refunded";
   return (
     <div className="flex flex-col items-start gap-2">
       <p>{t(line)}</p>

@@ -171,7 +171,7 @@ async def test_next_offer_crosses_sources(
     assert r.json()["next_offer"]["listing_id"] == f"sl:{ASSET}"
 
 
-async def test_on_a_tie_the_substitute_is_waxpeers(
+async def test_on_a_tie_the_next_offer_is_waxpeers(
     integration_client: AsyncClient,
     headers: dict[str, str],
     stub: StubListings,
@@ -183,9 +183,8 @@ async def test_on_a_tie_the_substitute_is_waxpeers(
     shown = await _shown(integration_client, "wx:112")
     await stub.set(SLUG, [(111, 9_000)])  # 112 sold; a Waxpeer and a Skinslink offer tie
     r = await _post(integration_client, headers, "wx:112", shown)
-    assert r.status_code == 201, r.text
-    order = await _order(db_session, r.json()["number"])
-    assert (order.source, order.offer_id) == ("waxpeer", "wx:111")
+    assert r.status_code == 409, r.text
+    assert r.json()["next_offer"]["listing_id"] == "wx:111"
 
 
 @pytest.mark.parametrize("bad", ["ebay:1", "sl:", "sl:xyz", "wx:-1", 0, -5, True, "x" * 80])

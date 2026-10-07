@@ -67,6 +67,7 @@ hardened, and every Skinslink offer competes on price from day one.
   the same id, never by buying again.
 - **One substitute of either source** within `paid_units × (1 + order_substitute_ceiling)`. A
   Waxpeer substitute turns the order into a Waxpeer order for the Waxpeer path.
+  Superseded by ADR-0013: no substitutes.
 - **Status flow.** The webhook verifies `sign` and only enqueues a `skinslink_checks` row
   (`NOTIFY skinslink`); the worker's `skinslink` queue asks Skinslink and applies the answer.
   The scheduler's `skinslink.reconcile` (every 30 s) polls open purchases and retries pending
@@ -85,7 +86,7 @@ hardened, and every Skinslink offer competes on price from day one.
   counted from a substitute's price). A rerun after a Skinslink substitute (`<id>:2`) never
   looks for another.
 - Any other `failed` reason (incl. `provider_unavailable`) and any 4xx that is neither a
-  trade-link code nor 409 is a refused offer: substitute once, then refund `sold_out`. A 409
+  trade-link code nor 409 is a refused offer: substitute once, then refund `sold_out`. Superseded by ADR-0013: no substitutes. A 409
   or `duplicate_purchase` adopts the stored purchase; a stored failed one counts as refused.
 - `hold` with an offer on a `buying` order moves it to `trade_sent` (a missed `active`). The
   buyer reads `hold` as `accepted`, with `release_date = hold_end_date` (Steam protects the
@@ -172,4 +173,4 @@ stays off in prod (`CSMARKET_WAXPEER_BUY_ENABLED=false`). The cost is the cheape
 source. The `skinslink.prices` job is now `sources.prices`
 (`skins.source_prices.sync_source_prices`), and the full-list scanner moved to
 `core/json_stream.py`. A Skinslink buy's substitute may come from LIS-SKINS
-(`orders/substitutes.py`).
+(`orders/substitutes.py`). Superseded by ADR-0013: no substitutes.

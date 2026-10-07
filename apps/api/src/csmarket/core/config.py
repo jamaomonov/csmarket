@@ -358,11 +358,6 @@ class Settings(BaseSettings):
         ge=0,
         description="Checkout refuses an offer whose price moved more than this share.",
     )
-    order_substitute_ceiling: Decimal = Field(
-        default=Decimal("0.03"),
-        ge=0,
-        description="A gone offer is replaced only by one within the paid price plus this share.",
-    )
     order_unconfirmed_minutes: int = Field(
         default=10,
         ge=1,

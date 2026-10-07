@@ -14,7 +14,6 @@ from csmarket.core.db import get_session_factory
 from csmarket.core.logging import get_logger
 from csmarket.modules.lisskins.api import client_for
 from csmarket.modules.orders.api import reconcile_lisskins
-from csmarket.modules.skins.api import trade_client
 
 from csmarket_scheduler.startup import first_run_after
 
@@ -31,12 +30,7 @@ async def run() -> None:
     if not settings.lisskins_api_key:
         return
     try:
-        looked = await reconcile_lisskins(
-            get_session_factory(),
-            client_for(settings, timeout_seconds=settings.lisskins_buy_timeout_seconds),
-            settings=settings,
-            waxpeer=trade_client(settings),
-        )
+        looked = await reconcile_lisskins(get_session_factory(), client_for(settings, timeout_seconds=settings.lisskins_buy_timeout_seconds), settings=settings)
     except Exception as exc:  # noqa: BLE001 -- a tick never raises; the next one retries
         log.warning("lisskins.reconcile.failed", error=type(exc).__name__)
         return

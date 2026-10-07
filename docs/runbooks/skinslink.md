@@ -15,7 +15,7 @@ design: [ADR-0010](../decisions/0010-skinslink-buy-source.md); flow:
 | ---------------------------------- | ---------------------------------------------- | ----------------------------------------- |
 | `GET /merchant/purchase/available` | scheduler `skinslink.mirror`                   | the first tick, and after `reset`         |
 | `GET /merchant/purchase/events`    | scheduler `skinslink.mirror`                   | every 15 s (more pages at once if `more`) |
-| `POST /merchant/purchase`          | worker (`orders` queue), `skinslink.reconcile` | once per order (one substitute at most)   |
+| `POST /merchant/purchase`          | worker (`orders` queue), `skinslink.reconcile` | once per order                            |
 | `GET /merchant/purchase/status`    | worker (`skinslink` queue), reconcile, buy     | per webhook; every 30 s per open purchase |
 | `GET /merchant/balance`            | scheduler `skinslink.balance`                  | every 5 min                               |
 
@@ -132,8 +132,8 @@ the key, the IP whitelist or Skinslink itself.
      (10), the buy is sent again under the **same** `merchant_tx_id` (log
      `orders.skinslink.repeat_unseen`): Skinslink is idempotent on it, so this can never buy
      twice. A silence is never refunded.
-   - `refused`: sold or price moved. Each order tries one substitute (any source, ≤ 3 %
-     above), then is refunded `sold_out`. Many at once can mean a stale mirror (see
+   - `refused`: sold or price moved. The order is refunded `sold_out`; no other
+     offer is bought in its place (ADR-0013). Many at once can mean a stale mirror (see
      [Mirror stale](#mirror-stale)).
 3. A refusal naming the trade link (`trade_link_*`, `trade_banned`, `profile_private`,
    `hold`, `permissions`, …) refunds `invalid_trade_link`: the buyer fixes the link.

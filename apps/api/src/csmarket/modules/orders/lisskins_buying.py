@@ -8,11 +8,10 @@
    ``max_price`` = the agreed cost. LIS-SKINS refuses a ``custom_id`` it knows, so a repeat
    never buys twice: ``custom_id_already_exists`` is answered from ``market/info`` and the
    stored purchase adopted;
-4. sold or dearer than our cap → the cheapest other offer of any source within the
-   ceiling, once (``orders.substitutes``: a LIS-SKINS one under ``<order id>:2``, another
-   source's hands the order to that path) — except on a repeat of a lost buy, whose refusal
-   of the lot may be our own first purchase: ``market/info`` decides, else the
-   ``buy_unconfirmed`` attention (``lisskins_writes.held``); ``insufficient_funds`` → refund
+4. sold or dearer than our cap → refund ``sold_out``, never another lot (ADR-0013) — except
+   on a repeat of a lost buy, whose refusal of the lot may be our own first purchase:
+   ``market/info`` decides, else the ``buy_unconfirmed`` attention
+   (``lisskins_writes.held``); ``insufficient_funds`` → refund
    ``source_low_balance``; a refusal naming the trade link → refund ``invalid_trade_link``;
    401/403 → attention ``source_forbidden``, the buy kept pending; 429 → retried after its
    ``Retry-After``; no answer, a timeout or a 5xx → ``buy_unconfirmed_at``, settled by the
@@ -32,7 +31,6 @@ from typing import cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from csmarket.core.config import Settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
@@ -52,14 +50,10 @@ from csmarket.modules.orders.lisskins_writes import (
     held,
     record_purchase,
     refund,
-    retarget,
     secure_sent,
-    switch,
     unconfirmed,
 )
 from csmarket.modules.orders.models import Order
-from csmarket.modules.orders.substitutes import next_offer
-from csmarket.modules.skins.api import TradeClient, offer_id_of
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
 log = get_logger("csmarket.orders.lisskins_buying")
@@ -104,8 +98,6 @@ async def attempt_lisskins_buy(
     client: LisskinsBuyClient,
     *,
     order_id: str,
-    settings: Settings,
-    waxpeer: TradeClient | None = None,
 ) -> str:
     """Buy order ``order_id`` at LIS-SKINS, unless it was bought or is being bought.
 
@@ -113,14 +105,11 @@ async def attempt_lisskins_buy(
         db: Session; each step commits its own short transaction.
         client: LIS-SKINS (the buy timeout).
         order_id: The order.
-        settings: For the substitute ceiling and the listings budget.
-        waxpeer: Waxpeer, for a substitute among its listings; ``None`` looks at our own
-            tables only.
 
     Returns:
         ``bought``, ``adopted``, ``sold_out``, ``low_balance``, ``invalid_link``,
         ``forbidden``, ``rate_limited``, ``unconfirmed``, ``stale_bought``, ``unrecorded``,
-        ``lookup_later`` (handed to another source's path) or ``nothing_to_do``.
+        ``lookup_later`` (nothing sent before the budget ran out) or ``nothing_to_do``.
     """
     deadline = asyncio.get_running_loop().time() + ATTEMPT_BUDGET.total_seconds()
     lease = await take_lease(db, order_id, source="lisskins")
@@ -129,9 +118,7 @@ async def attempt_lisskins_buy(
     run = _Run()
     try:
         async with asyncio.timeout_at(deadline):
-            outcome = await _leased(
-                db, client, order_id=order_id, settings=settings, waxpeer=waxpeer, run=run
-            )
+            outcome = await _leased(db, client, order_id=order_id, run=run)
     except TimeoutError:
         outcome = await _after_timeout(db, order_id=order_id, lease=lease, run=run)
     except BaseException:
@@ -180,8 +167,6 @@ async def _leased(
     client: LisskinsBuyClient,
     *,
     order_id: str,
-    settings: Settings,
-    waxpeer: TradeClient | None,
     run: _Run,
 ) -> str:
     """Read the snapshot under the lease, then buy."""
@@ -210,50 +195,11 @@ async def _leased(
         link = parse_tradelink(order.trade_link)
     except ValidationError:
         return await refund(db, run.snap, "invalid_trade_link")
-    return await _buy(db, client, link=link, settings=settings, waxpeer=waxpeer, run=run)
-
-
-async def _buy(
-    db: AsyncSession,
-    client: LisskinsBuyClient,
-    *,
-    link: TradeLink,
-    settings: Settings,
-    waxpeer: TradeClient | None,
-    run: _Run,
-) -> str:
-    """The chosen lot at the agreed units, then at most one substitute per order: a rerun
-    after the substitute was taken (``<id>:2``) never looks for another."""
-    assert run.snap is not None
-    snap = run.snap
-    ceiling = int(snap.cost_units * (1 + settings.order_substitute_ceiling))
-    tried = {offer_id_of("lisskins", snap.skin_id)}
-    first = 1 if snap.custom_id == snap.order_id else 2
-    for attempt in range(first, 3):
-        settled = await _buy_once(db, client, snap, link, run)
-        if settled is not None:
-            return settled
-        if attempt == 2:
-            break
-        log.info("orders.lisskins_buy.refused", number=snap.number)
-        nxt = await next_offer(
-            db,
-            skin_item_id=snap.skin_item_id,
-            ceiling=ceiling,
-            tried=tried,
-            settings=settings,
-            waxpeer=waxpeer,
-        )
-        if nxt is None:
-            break
-        if nxt.source != "lisskins":
-            return await switch(db, snap, nxt)
-        tried.add(nxt.offer_id)
-        try:
-            snap = run.snap = await retarget(db, snap, nxt)
-        except LookupError:
-            return "nothing_to_do"
-    return await refund(db, snap, "sold_out")
+    settled = await _buy_once(db, client, run.snap, link, run)
+    if settled is not None:
+        return settled
+    log.info("orders.lisskins_buy.refused", number=run.snap.number)
+    return await refund(db, run.snap, "sold_out")  # never another offer (ADR-0013)
 
 
 async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table

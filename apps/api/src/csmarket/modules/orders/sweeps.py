@@ -181,7 +181,7 @@ async def reconcile(db_factory: SessionFactory, client: TradeClient, *, settings
                 await _poll(db, client, polled, settings=settings)
             for row in (r for r in due if r.buy_pending):
                 try:
-                    await attempt_buy(db, client, order_id=row.order_id, settings=settings)
+                    await attempt_buy(db, client, order_id=row.order_id)
                 except Exception as exc:  # noqa: BLE001 -- the next tick retries this buy
                     await db.rollback()
                     crashed("orders.reconcile.buy_crashed", row.order_id, exc)

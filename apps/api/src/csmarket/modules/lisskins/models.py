@@ -103,7 +103,7 @@ class LisskinsPurchase(Base):
     order_id: Mapped[str] = mapped_column(
         UUID(as_uuid=False), ForeignKey("orders.id", ondelete="CASCADE"), primary_key=True
     )
-    #: Our idempotency key at LIS-SKINS: the order id, ``<order id>:2`` for a substitute.
+    #: Our idempotency key at LIS-SKINS: the order id (a row from before ADR-0013 may carry ``<order id>:2``).
     custom_id: Mapped[str] = mapped_column(String(64), nullable=False)
     #: The LIS-SKINS lot being bought.
     skin_id: Mapped[int] = mapped_column(BigInteger, nullable=False)

@@ -27,7 +27,7 @@ sequenceDiagram
     alt available
         Note over API: the live price replaces the snapshot's (dearer > 2 % → price_changed)
     else gone
-        Note over API: substitute ≤ 3 % of any source, else offer_gone
+        Note over API: offer_gone with next_offer (never a replacement)
     else no answer
         Note over API: the snapshot price stands (the worker's max_price guards)
     end
@@ -45,8 +45,7 @@ sequenceDiagram
     else custom_id_already_exists
         W->>LS: GET /market/info?custom_ids[]=… → adopt the stored purchase
     else skins_unavailable / price higher than max_price
-        W->>DB: one substitute of any source ≤ cost × 1.03 (LIS-SKINS: retarget to <id>:2 first)
-        Note over W,DB: none → failed + refund to balance (sold_out)
+        W->>DB: failed + refund to balance (sold_out), no other offer bought
     else trade-link code
         W->>DB: failed + refund to balance (invalid_trade_link)
     else insufficient_funds

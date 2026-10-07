@@ -79,7 +79,7 @@ sequenceDiagram
 
     U->>Web: «Купить за …»
     Web->>API: POST /orders + Idempotency-Key
-    API->>X: listings (cached 90 s, budgeted) — re-price: ±2 %, substitute ≤ +3 %
+    API->>X: listings (cached 90 s, budgeted) — re-price: ±2 %; a gone offer → 409 offer_gone + next_offer
     API->>DB: order pending (15 min)
     API-->>Web: 201 order
     Web->>API: POST /orders/{number}/pay {provider} + Idempotency-Key
@@ -98,8 +98,7 @@ sequenceDiagram
     alt bought
         W->>DB: waxpeer_id, bought_units
     else sold / price moved
-        W->>X: one substitute ≤ paid × 1.03
-        W->>DB: or failed + refund to the balance
+        W->>DB: failed + refund sold_out to the balance (no other offer)
     else answer lost / 5xx
         W->>DB: unconfirmed — resolved by lookup, never by buying again
     end

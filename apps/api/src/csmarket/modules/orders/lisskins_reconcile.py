@@ -32,7 +32,6 @@ from csmarket.modules.lisskins.api import (
 from csmarket.modules.orders.lisskins_buying import attempt_lisskins_buy
 from csmarket.modules.orders.lisskins_status import apply_report, lock
 from csmarket.modules.orders.models import Order
-from csmarket.modules.skins.api import TradeClient
 
 log = get_logger("csmarket.orders.lisskins_reconcile")
 
@@ -121,7 +120,7 @@ async def apply_polled(
     """Apply one polled answer under the locks; commits.
 
     ``report`` ``None``: LIS-SKINS holds no purchase under ``custom_id``. A row that went
-    pending, or was pointed at a substitute, during the call is left alone.
+    pending during the call is left alone.
     """
     pair = await lock(db, order_id)
     if pair is None or pair[1].buy_pending or pair[1].custom_id != custom_id:
@@ -171,7 +170,6 @@ async def reconcile_lisskins(
     client: LisskinsBuyClient,
     *,
     settings: Settings,
-    waxpeer: TradeClient | None = None,
 ) -> int:
     """One tick: buy the due buys, then poll everything else in one call.
 
@@ -185,9 +183,7 @@ async def reconcile_lisskins(
     for order_id in pending:
         try:
             async with db_factory() as db:
-                await attempt_lisskins_buy(
-                    db, client, order_id=order_id, settings=settings, waxpeer=waxpeer
-                )
+                await attempt_lisskins_buy(db, client, order_id=order_id)
         except Exception as exc:  # noqa: BLE001 -- one order must not stop the tick
             log.error("orders.lisskins.reconcile_failed", error=type(exc).__name__)  # noqa: TRY400
     if due:

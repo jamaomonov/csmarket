@@ -1,10 +1,9 @@
 """Checkout: ``POST /orders`` re-prices the chosen offer from the live listings (spec §7.4).
 
 The price the buyer was shown is a courtesy check within ±``order_price_tolerance``; the
-server's number is what is billed. A chosen offer that is gone is replaced by the cheapest
-other offer of the same item priced within the shown price × (1 + ``order_substitute_ceiling``),
-billed at the lower of its own price and the shown one — never more than the buyer saw
-(ruling R4). Nothing fits → 409 ``offer_gone`` with the next offer.
+server's number is what is billed. A chosen offer that is gone is never replaced — another lot
+has its own float, pattern and stickers: 409 ``offer_gone`` with the cheapest offer left, and
+the buyer decides (ADR-0013).
 
 The order snapshots everything buying needs: the offer and its cost in Waxpeer units (the
 worker's price cap), the price in soʻm and dollars, the rate it was priced at, and the
@@ -15,14 +14,14 @@ into a frozen value object and the read transaction ends first (AGENTS §11). Th
 read is the cached, budgeted, degradable one the item page uses (ruling R11); a degraded
 answer is accepted — the worker's price cap is the money guard. A chosen LIS-SKINS lot is
 re-checked live (``lisskins.recheck_chosen``, one call, 4 s, budgeted, breaker-guarded): sold →
-the substitute rule; no answer → the snapshot price.
+``offer_gone``; no answer → the snapshot price.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 from typing import Any
 
 from redis.asyncio import Redis
@@ -126,11 +125,6 @@ class _ItemSnapshot:
         )
 
 
-def usd_of(uzs: Decimal, rate: Decimal) -> Decimal:
-    """The USD a soʻm amount is worth at ``rate``, to 6 places (the order's ``price_usd``)."""
-    return (uzs / rate).quantize(_USD_PLACES, rounding=ROUND_HALF_UP)
-
-
 def _price(
     units: int, snap: _ItemSnapshot, rules: PricingRules, rate: Decimal
 ) -> tuple[Decimal, Decimal]:
@@ -149,9 +143,10 @@ def _price(
 
 
 def _choose(
-    priced: list[_Priced], body: OrderCreateIn, settings: Settings, rate: Decimal
+    priced: list[_Priced], body: OrderCreateIn, settings: Settings
 ) -> tuple[Offer, Decimal, Decimal]:
-    """``(offer, price_usd, price_uzs)`` to bill, or a 409 — the ±2 % rule and R4.
+    """``(offer, price_usd, price_uzs)`` to bill, or a 409 — the ±2 % rule; a gone offer is
+    never replaced (ADR-0013).
 
     Raises:
         ConflictError: ``price_changed`` (with the new ``price_uzs``) or ``offer_gone``
@@ -164,20 +159,12 @@ def _choose(
         if abs(uzs - shown) > shown * settings.order_price_tolerance:
             raise ConflictError("the price has changed", code="price_changed", price_uzs=str(uzs))
         return row, usd, uzs
-    ceiling = shown * (1 + settings.order_substitute_ceiling)
-    # Waxpeer first on a tie: its delivery is instant (``merge_offers``).
     cheapest = min(
         priced,
         # Waxpeer, Skinslink, LIS-SKINS on a tie.
         key=lambda p: (p[1][1], TIE_ORDER[p[0].source], p[0].offer_id),
         default=None,
     )
-    if cheapest is not None:
-        row, (usd, uzs) = cheapest
-        if uzs <= shown:
-            return row, usd, uzs
-        if uzs <= ceiling:
-            return row, usd_of(shown, rate), shown
     raise ConflictError(
         "this offer was just sold",
         code="offer_gone",
@@ -304,7 +291,7 @@ async def create_order(
         idempotency_key: The request's key; a replay returns the stored order whatever
             ``body`` says.
         client: The Waxpeer listings client.
-        settings: Settings (tolerance, ceiling, expiry, the buying switch).
+        settings: Settings (tolerance, expiry, the buying switch).
         availability: LIS-SKINS, for the chosen ``ls:`` lot's live price (ADR-0012); ``None``
             checks nothing.
 
@@ -337,7 +324,7 @@ async def create_order(
             offers, str(body.listing_id), redis=redis, client=availability
         )
     priced = [(o, _price(o.price_units, q.snap, q.rules, q.rate.rate)) for o in offers]
-    row, usd, uzs = _choose(priced, body, settings, q.rate.rate)
+    row, usd, uzs = _choose(priced, body, settings)
     order = _build(q, row, usd, uzs, key=idempotency_key, settings=settings)
     order.number = await allocate(db, Order.number, order_number)
     db.add(order)
@@ -355,10 +342,9 @@ async def create_order(
         number=order.number,
         price_uzs=str(uzs),
         source=row.source,
-        substituted=row.offer_id != body.listing_id,
         degraded=degraded,
     )
     return order, True
 
 
-__all__ = ["RateUnavailableError", "create_order", "usd_of"]
+__all__ = ["RateUnavailableError", "create_order"]

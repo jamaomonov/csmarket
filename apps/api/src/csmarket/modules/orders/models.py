@@ -109,8 +109,8 @@ class Order(Base):
     source: Mapped[str] = mapped_column(
         String(12), nullable=False, server_default=text("'waxpeer'"), default="waxpeer"
     )
-    #: The prefixed offer id the buyer chose (``wx:<item_id>`` / ``sl:<asset_id>`` / ``ls:<skin id>``), after
-    #: any checkout substitution (R4).
+    #: The prefixed offer id the buyer chose (``wx:<item_id>`` / ``sl:<asset_id>`` / ``ls:<skin id>``); never
+    #: replaced by another offer (ADR-0013).
     offer_id: Mapped[str | None] = mapped_column(String(310), nullable=True)
     #: The Waxpeer listing behind ``offer_id``; ``NULL`` for a Skinslink order.
     listing_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
