@@ -122,8 +122,8 @@ key, the IP, the balance or LIS-SKINS itself.
 1. The worker log: `orders.lisskins_buy number=… outcome=…`; refusals log
    `lisskins.refused endpoint=buy status=… code=…`.
 2. `csmarket_lisskins_calls_total{endpoint="buy"}` by outcome:
-   - `forbidden` (401 / 403): the key is wrong or revoked, or the call did not come from
-     `57.131.198.69`. The order stays `buying` with the buy pending and the attention
+   - `forbidden` (401 / 403): the key is wrong, revoked or missing
+     (`CSMARKET_LISSKINS_API_KEY` empty), or the call did not come from `57.131.198.69`. The order stays `buying` with the buy pending and the attention
      `source_forbidden`; nothing is refunded. Fix the key or the IP; the reconcile buys again
      (same `custom_id`, never a second purchase) and clears the attention.
    - `unavailable` (timeout, 5xx, network): the buy may have gone through. The order keeps

@@ -239,6 +239,8 @@ async def test_an_empty_available_list_reads_as_none_available() -> None:
     assert (a.available, a.unavailable) == ({}, frozenset({7}))
 
 
-async def test_no_key_is_unavailable_without_a_call() -> None:
-    with pytest.raises(LisskinsUnavailableError):
+async def test_no_key_is_forbidden_without_a_call() -> None:
+    """A missing key keeps a buy pending under ``source_forbidden`` (never "unconfirmed")."""
+    with pytest.raises(LisskinsForbiddenError) as err:
         await LisskinsClient(api_key="", base_url=BASE, timeout_seconds=1).balance()
+    assert err.value.code == "no_api_key"

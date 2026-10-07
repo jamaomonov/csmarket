@@ -48,3 +48,14 @@ def test_a_body_cut_inside_the_array_is_truncated() -> None:
     scanner.feed(BODY[: BODY.index('{"id": 2')])
     with pytest.raises(ValueError, match="truncated"):
         scanner.finish()
+
+
+def test_a_broken_item_never_holds_the_rest_of_the_body() -> None:
+    """A malformed element is not "an item cut by the chunk": the buffer stops growing."""
+    scanner = ItemsScanner()
+    scanner.feed('{"success": true, "data": {"items": [{"id": 1}, {"id": oops}, ')
+    filler = '{"id": 2, "pad": "' + "x" * 4096 + '"}, '
+    for _ in range(250):  # ~1 MB after the broken element: still within the cap
+        scanner.feed(filler)
+    with pytest.raises(ValueError, match="item"):
+        scanner.feed(filler * 10)

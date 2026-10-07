@@ -72,3 +72,12 @@ None of these touches money or order state.
 3. **The snapshot downloads ~855 MB every 5 minutes** (~250 GB a day). Watch the VPS's traffic
    and CPU. _Fix:_ a longer interval, or LIS-SKINS' WebSocket feed, if either becomes a
    problem.
+4. **A refused snapshot sticks.** A snapshot whose lot count drops below half of the last
+   applied one is refused, and the baseline (`lisskins_state.lots`) only moves on an applied
+   one. If the market really halves, every tick refuses: prices clear after 20 minutes and
+   `LisskinsSnapshotStale` fires. The reset is in `docs/runbooks/lisskins.md`. _Fix:_ accept
+   the lower count after a few refusals in a row that agree within ±10 %.
+5. **An open attention hides a later rollback.** If a delivered LIS-SKINS order already
+   carries an unresolved `ambiguous_trade` or `audit_divergence`, a rollback does not raise
+   `rolled_back` on its own (`flag` keeps the open one), and the protection poll stops once
+   the status is `return`. _Fix:_ let `rolled_back` replace a milder open attention.

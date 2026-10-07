@@ -230,3 +230,22 @@ async def test_a_repeat_refused_for_its_lot_is_never_refunded_nor_substituted(
     assert (row.status, row.refunded_at) == ("buying", None)
     assert (p.custom_id, p.buy_pending, p.attention_reason) == (order.id, False, "buy_unconfirmed")
     assert await user_balance(db_session, order.user_id) == before
+
+
+async def test_a_rolled_back_open_order_is_not_polled_forever(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """A rollback seen before ``accepted`` leaves the order to an admin: LIS-SKINS' answer is
+    final, so the 200-id call never spends a slot on it again."""
+    order, _ = await make_lisskins_order(
+        db_session,
+        skin_status="return",
+        return_reason="rollback_user",
+        attention_reason="rolled_back",
+        resolved_at=clock.now(),
+    )
+    fake = FakeLisskinsClient()
+    await _tick(db_engine, fake)
+    assert all(order.id not in ids for ids in fake.info_calls)
+    row, _ = await _state(db_session, order)
+    assert (row.status, row.refunded_at) == ("trade_sent", None)

@@ -62,7 +62,13 @@ async def _to_poll(db: AsyncSession) -> dict[str, str]:
     in trade protection, each longest-unpolled first."""
     at = now()
     open_ = and_(
-        Order.status.in_(("buying", "trade_sent")), LisskinsPurchase.buy_pending.is_(False)
+        Order.status.in_(("buying", "trade_sent")),
+        LisskinsPurchase.buy_pending.is_(False),
+        # A rollback before ``accepted`` is LIS-SKINS' last word and waits for an admin.
+        or_(
+            LisskinsPurchase.status.is_distinct_from("return"),
+            LisskinsPurchase.attention_reason.is_distinct_from("rolled_back"),
+        ),
     )
     protected = and_(
         Order.status == "delivered",

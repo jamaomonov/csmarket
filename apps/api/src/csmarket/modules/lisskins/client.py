@@ -71,11 +71,12 @@ class LisskinsError(Exception):
 
 
 class LisskinsForbiddenError(LisskinsError):
-    """401 / 403: the key is wrong or revoked, or this host may not use it."""
+    """401 / 403: the key is wrong or revoked, or this host may not use it; also no key at
+    all (``code="no_api_key"``), raised before any call."""
 
 
 class LisskinsUnavailableError(Exception):
-    """No answer worth reading: transport, 408/5xx, an unreadable body, or no key."""
+    """No answer worth reading: transport, 408/5xx, or an unreadable body."""
 
 
 class LisskinsRateLimitedError(LisskinsUnavailableError):
@@ -238,8 +239,8 @@ class LisskinsClient:
         json_body: Mapping[str, object] | None = None,
     ) -> Any:  # Any: LIS-SKINS' ``data``, narrowed by each caller
         """``{method} {base_url}{path}`` → ``data``; every failure as a typed error."""
-        if not self._api_key:
-            raise LisskinsUnavailableError("no api key")
+        if not self._api_key:  # as a revoked key: a buy waits under ``source_forbidden``
+            raise LisskinsForbiddenError("no api key", status=401, code="no_api_key")
         try:
             async with self._session() as client:
                 resp = await client.request(

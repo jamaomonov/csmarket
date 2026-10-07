@@ -21,6 +21,8 @@ _TOTAL_PAGES = re.compile(r'"total_pages"\s*:\s*([0-9]+)')
 _SKIP = " \t\r\n,"
 #: The head before ``"items": [`` is a few short fields; more means it is not this body.
 _MAX_HEAD = 64 * 1024
+#: One element is a few kB; an unfinished one this long is broken, not cut by the chunk.
+_MAX_ITEM = 1024 * 1024
 _DECODER = json.JSONDecoder()
 
 
@@ -49,7 +51,8 @@ class ItemsScanner:
         """Add ``text``; return the items it completed, in order.
 
         Raises:
-            ValueError: No ``items`` array where one must be (not this body).
+            ValueError: No ``items`` array where one must be (not this body), or an element
+                that never completes (a broken one would otherwise hold the rest).
         """
         self._buf += text
         found: list[Any] = []
@@ -63,6 +66,8 @@ class ItemsScanner:
             self._state = "items"
         if self._state == "items":
             found = self._items()
+            if self._state == "items" and len(self._buf) > _MAX_ITEM:
+                raise ValueError("an item never completes")
         if self._state == "tail":
             self._tail += self._buf
             self._buf = ""
