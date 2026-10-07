@@ -136,3 +136,15 @@ alias edit makes).
 `make seed-skins` loads about 60 priced items without Waxpeer. It refuses to run in
 production and marks other catalogue rows inactive: never run it against a shared
 database.
+
+## Sticker images do not load
+
+Steam serves an image by two kinds of path:
+
+- `/economy/image/<hash>` works on `community.*.steamstatic.com`.
+- `/apps/730/icons/econ/…` works only on `cdn.*.steamstatic.com`. On `community.*`, Steam
+  redirects it to its home page (checked 2026-10-07). LIS-SKINS names every sticker this way.
+
+The API rewrites both on the way out (`skins.images.steam_image`): `CSMARKET_SKINS_IMAGE_HOST`
+for the first kind, its `cdn.` twin for the second. If images break again, `curl -I` one
+URL from the listings answer and look where it redirects.
