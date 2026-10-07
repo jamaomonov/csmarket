@@ -24,6 +24,7 @@ from csmarket.modules.orders.dashboard import summary as dashboard_summary
 from csmarket.modules.orders.erase import erase_old_trade_links, erase_old_verify_addresses
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
 from csmarket.modules.orders.health import Health, cache_balance, measure
+from csmarket.modules.orders.lisskins_status import apply_report as apply_lisskins_report
 from csmarket.modules.orders.models import (
     ATTENTION_REASONS,
     FAILURE_REASONS,
@@ -83,6 +84,7 @@ __all__ = [
     "SkinTradeOut",
     "SkinTradeState",
     "admin_refund",
+    "apply_lisskins_report",
     "attempt_buy",
     "attempt_skinslink_buy",
     "audit_recent",

@@ -18,6 +18,7 @@ from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.numbers import is_number, is_topup_number
+from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.schemas import OrderOut, OrderStatusOut
 from csmarket.modules.orders.trade_view import skin_trade_out
@@ -37,7 +38,7 @@ class OrderRow:
     #: The item's image, already on our image host.
     image_url: str | None
     #: A Skinslink order's purchase.
-    purchase: SkinslinkPurchase | None = None
+    purchase: SkinslinkPurchase | LisskinsPurchase | None = None
 
 
 def is_expired(order: Order, at: datetime | None = None) -> bool:
@@ -55,7 +56,7 @@ def order_out(
     order: Order,
     trade: SkinTrade | None,
     image_url: str | None,
-    purchase: SkinslinkPurchase | None = None,
+    purchase: SkinslinkPurchase | LisskinsPurchase | None = None,
 ) -> OrderOut:
     """The owner's view of ``order``.
 
@@ -87,24 +88,29 @@ def order_out(
     )
 
 
-def _rows() -> Select[Order, SkinTrade, str | None, SkinslinkPurchase]:
-    # Outer joins: ``SkinTrade`` / ``SkinslinkPurchase`` is ``None`` on a row without one.
+def _rows() -> Select[Order, SkinTrade, str | None, SkinslinkPurchase, LisskinsPurchase]:
+    # Outer joins: each of the three is ``None`` on a row without one.
     return (
-        select(Order, SkinTrade, SkinItem.image_url, SkinslinkPurchase)
+        select(Order, SkinTrade, SkinItem.image_url, SkinslinkPurchase, LisskinsPurchase)
         .join(SkinItem, SkinItem.id == Order.skin_item_id)
         .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
         .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
+        .outerjoin(LisskinsPurchase, LisskinsPurchase.order_id == Order.id)
     )
 
 
 def _row(
-    order: Order, trade: SkinTrade | None, image: str | None, purchase: SkinslinkPurchase | None
+    order: Order,
+    trade: SkinTrade | None,
+    image: str | None,
+    sl: SkinslinkPurchase | None,
+    ls: LisskinsPurchase | None,
 ) -> OrderRow:
     return OrderRow(
         order=order,
         trade=trade,
         image_url=steam_image(image, host=get_settings().skins_image_host),
-        purchase=purchase,
+        purchase=sl or ls,
     )
 
 
@@ -117,8 +123,8 @@ async def get_owned(db: AsyncSession, user_id: str, number: str) -> OrderRow | N
     ).one_or_none()
     if found is None:
         return None
-    order, trade, image, purchase = found
-    return _row(order, trade, image, purchase)
+    order, trade, image, sl, ls = found
+    return _row(order, trade, image, sl, ls)
 
 
 async def list_for_user(

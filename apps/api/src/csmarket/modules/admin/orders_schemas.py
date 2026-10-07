@@ -110,7 +110,7 @@ class AdminOrderFull(BaseModel):
     phase: str | None
     slug: str
     #: Where the skin is bought (spec 2026-10-06).
-    source: Literal["waxpeer", "skinslink"]
+    source: Literal["waxpeer", "skinslink", "lisskins"]
     #: The prefixed offer chosen at checkout (``wx:<id>`` / ``sl:<id>``).
     offer_id: str | None
     #: The Waxpeer listing behind it; ``None`` for a Skinslink order.

@@ -26,9 +26,10 @@ from redis.asyncio import Redis
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.health import cached_balance
 from csmarket.modules.orders.models import IN_FLIGHT, Order, SkinTrade
-from csmarket.modules.skinslink.api import skinslink_cached_balance
+from csmarket.modules.skinslink.api import SkinslinkPurchase, skinslink_cached_balance
 
 Days = Literal[1, 7, 30]
 TASHKENT = timezone(timedelta(hours=5))
@@ -128,18 +129,19 @@ async def _refunds(db: AsyncSession, since: datetime, at: datetime) -> Refunds:
 
 
 async def _now_counts(db: AsyncSession) -> tuple[int, int]:
-    """Orders in flight and open attentions, right now (one query)."""
+    """Orders in flight and open attentions of every source, right now (one query)."""
     in_flight = (
         select(func.count()).select_from(Order).where(Order.status.in_(IN_FLIGHT)).scalar_subquery()
     )
-    attention = (
+    waiting = [
         select(func.count())
-        .select_from(SkinTrade)
-        .where(SkinTrade.attention_reason.is_not(None), SkinTrade.resolved_at.is_(None))
+        .select_from(table)
+        .where(table.attention_reason.is_not(None), table.resolved_at.is_(None))
         .scalar_subquery()
-    )
-    a, b = (await db.execute(select(in_flight, attention))).one()
-    return int(a), int(b)
+        for table in (SkinTrade, SkinslinkPurchase, LisskinsPurchase)
+    ]
+    a, b, c, d = (await db.execute(select(in_flight, *waiting))).one()
+    return int(a), int(b) + int(c) + int(d)
 
 
 def _sales(rows: dict[date, tuple[int, Decimal, Decimal, Decimal]]) -> Sales:

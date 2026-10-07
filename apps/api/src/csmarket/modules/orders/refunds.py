@@ -29,8 +29,8 @@ from csmarket.core.metrics import OrderRefundReason, record_order_refund
 from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.letters import enqueue_refunded
 from csmarket.modules.orders.models import FAILURE_REASONS, IN_FLIGHT, Order, SkinTrade
+from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
 from csmarket.modules.realtime.api import nudge
-from csmarket.modules.skinslink.api import SkinslinkPurchase
 from csmarket.modules.wallet.api import credit_order_refund
 
 log = get_logger("csmarket.orders.refunds")
@@ -82,13 +82,10 @@ async def _trade_of(db: AsyncSession, order: Order) -> SkinTrade | None:
 
 async def _refuse_while_unresolved(db: AsyncSession, order: Order) -> None:
     """409 ``order_needs_attention`` while the trade's outcome is unknown or spent (R3)."""
-    trade: SkinTrade | SkinslinkPurchase | None = await _trade_of(db, order)
-    if trade is None:  # a Skinslink order keeps its attention on the purchase
-        trade = await db.scalar(
-            select(SkinslinkPurchase)
-            .where(SkinslinkPurchase.order_id == order.id)
-            .execution_options(populate_existing=True)
-        )
+    # A Skinslink or LIS-SKINS order keeps its attention on its purchase row.
+    trade: SkinTrade | PurchaseRow | None = await _trade_of(db, order) or await purchase_of(
+        db, order, lock=False
+    )
     if trade is not None and trade.attention_reason in BLOCKS_REFUND and trade.resolved_at is None:
         raise ConflictError("this order waits for an admin's check", code="order_needs_attention")
 
@@ -168,10 +165,26 @@ async def refund_to_balance(
     return True
 
 
+async def refund_or_hold(db: AsyncSession, order: Order, to: RefundStatus, reason: str) -> str:
+    """Refund ``order`` (actor ``orders``); ``held`` while an open attention blocks it (R3).
+
+    Returns:
+        ``to``, or ``held``.
+    """
+    try:
+        await refund_to_balance(db, order=order, to_status=to, reason=reason, actor="orders")
+    except ConflictError as exc:
+        if exc.extra.get("code") != "order_needs_attention":
+            raise
+        return "held"
+    return to
+
+
 __all__ = [
     "ADMIN_REFUNDABLE",
     "BLOCKS_REFUND",
     "RefundStatus",
     "in_flight",
+    "refund_or_hold",
     "refund_to_balance",
 ]
