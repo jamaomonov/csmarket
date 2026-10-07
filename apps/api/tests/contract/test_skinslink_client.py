@@ -12,6 +12,7 @@ from decimal import Decimal
 import httpx
 import pytest
 import respx
+from csmarket.core.json_stream import ItemsScanner
 from csmarket.modules.skinslink.api import (
     CatalogueItem,
     Purchase,
@@ -21,7 +22,6 @@ from csmarket.modules.skinslink.api import (
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
 )
-from csmarket.modules.skinslink.stream import ItemsScanner
 
 BASE = "https://api.skinslink.com/api/v1"
 PARTNER = 39734273

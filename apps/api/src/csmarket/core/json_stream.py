@@ -1,7 +1,7 @@
-"""Read Skinslink's full sale list without holding it in memory.
+"""Read a huge ``{…, "items": [ … ], …}`` JSON body without holding it in memory.
 
-``GET /merchant/purchase/available?full=true`` is one JSON object of ~500k items (~200 MB);
-parsed whole it does not fit the scheduler's memory. :class:`ItemsScanner` is fed the body
+Skinslink's full sale list (~500k items, ~200 MB) and LIS-SKINS' price export (~2.4 M lots,
+~855 MB) are each one JSON object; parsed whole neither fits the scheduler's memory. :class:`ItemsScanner` is fed the body
 in text chunks and hands back each element of ``data.items`` as soon as it is complete; what
 precedes and follows the array (``success``, ``last_update_at``) is kept as text and read
 once the stream ends.
@@ -14,8 +14,9 @@ import re
 from typing import Any
 
 _ITEMS = re.compile(r'"items"\s*:\s*\[')
-_SUCCESS = re.compile(r'"success"\s*:\s*true')
-_CURSOR = re.compile(r'"last_update_at"\s*:\s*"([^"]*)"')
+#: Skinslink's envelope: ``{"success": true, "data": {…, "last_update_at": "…"}}``.
+SUCCESS_TRUE = re.compile(r'"success"\s*:\s*true')
+LAST_UPDATE_AT = re.compile(r'"last_update_at"\s*:\s*"([^"]*)"')
 _TOTAL_PAGES = re.compile(r'"total_pages"\s*:\s*([0-9]+)')
 _SKIP = " \t\r\n,"
 #: The head before ``"items": [`` is a few short fields; more means it is not this body.
@@ -24,13 +25,24 @@ _DECODER = json.JSONDecoder()
 
 
 class ItemsScanner:
-    """Incremental reader of ``{"success": …, "data": {…, "items": [ … ], …}}``."""
+    """Incremental reader of one JSON object whose ``"items": [ … ]`` array is huge.
 
-    def __init__(self) -> None:
+    Args:
+        success: Must match the text around the array once the body ended
+            (Skinslink: :data:`SUCCESS_TRUE`; LIS-SKINS: ``"status": "success"``).
+        cursor: Its group 1 is what :meth:`finish` returns
+            (Skinslink: :data:`LAST_UPDATE_AT`; LIS-SKINS: ``last_update``).
+    """
+
+    def __init__(
+        self, *, success: re.Pattern[str] = SUCCESS_TRUE, cursor: re.Pattern[str] = LAST_UPDATE_AT
+    ) -> None:
         self._buf = ""
         self._head = ""
         self._tail = ""
         self._state = "head"
+        self._success = success
+        self._cursor = cursor
 
     # Any: one raw item object, validated by the caller (``client._item``).
     def feed(self, text: str) -> list[Any]:
@@ -94,10 +106,10 @@ class ItemsScanner:
         """
         if self._state != "tail":
             raise ValueError("truncated body")
-        if not _SUCCESS.search(self._head + self._tail):
+        if not self._success.search(self._head + self._tail):
             raise ValueError("not a success")
-        match = _CURSOR.search(self._tail) or _CURSOR.search(self._head)
+        match = self._cursor.search(self._tail) or self._cursor.search(self._head)
         return match.group(1) if match else None
 
 
-__all__ = ["ItemsScanner"]
+__all__ = ["LAST_UPDATE_AT", "SUCCESS_TRUE", "ItemsScanner"]

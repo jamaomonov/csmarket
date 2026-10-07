@@ -95,6 +95,21 @@ _SKINSLINK_OUTCOMES = frozenset(
     ("ok", "refused", "forbidden", "rate_limited", "unavailable", "not_found")
 )
 
+#: A LIS-SKINS API call (spec 2026-10-07); ``export`` is the public price export.
+LisskinsEndpoint = Literal["export", "buy", "info", "check", "balance"]
+#: ``refused`` = a 4xx with an ``error`` code; ``unavailable`` = transport, 408/5xx, an
+#: unreadable or cut body.
+LisskinsOutcome = Literal["ok", "refused", "forbidden", "rate_limited", "unavailable"]
+
+_LISSKINS_ENDPOINTS = frozenset(("export", "buy", "info", "check", "balance"))
+_LISSKINS_OUTCOMES = frozenset(("ok", "refused", "forbidden", "rate_limited", "unavailable"))
+
+LISSKINS_CALLS = Counter(
+    "csmarket_lisskins_calls_total",
+    "LIS-SKINS API calls by endpoint and outcome (alert: LisskinsBuyFailures).",
+    ("endpoint", "outcome"),
+)
+
 SKINSLINK_CALLS = Counter(
     "csmarket_skinslink_calls_total",
     "Skinslink API calls by endpoint and outcome (alert: SkinslinkBuyFailures).",
@@ -481,6 +496,21 @@ def record_waxpeer_call(endpoint: WaxpeerEndpoint, outcome: WaxpeerOutcome) -> N
     )
 
 
+def record_lisskins_call(endpoint: LisskinsEndpoint, outcome: LisskinsOutcome) -> None:
+    """Count one LIS-SKINS call by how it ended.
+
+    A value outside the closed sets becomes ``"other"``. Never raises.
+    """
+    _inc(
+        LISSKINS_CALLS,
+        "csmarket_lisskins_calls_total",
+        {
+            "endpoint": endpoint if endpoint in _LISSKINS_ENDPOINTS else "other",
+            "outcome": outcome if outcome in _LISSKINS_OUTCOMES else "other",
+        },
+    )
+
+
 def record_skinslink_call(endpoint: SkinslinkEndpoint, outcome: SkinslinkOutcome) -> None:
     """Count one Skinslink call by how it ended.
 
@@ -574,6 +604,8 @@ __all__ = [
     "EmailOutcome",
     "KassaProvider",
     "KassaRejectionReason",
+    "LisskinsEndpoint",
+    "LisskinsOutcome",
     "OrderBuyOutcome",
     "OrderRefundReason",
     "OrderStuckState",
@@ -588,6 +620,7 @@ __all__ = [
     "mark_orders_health_success",
     "record_email",
     "record_kassa_rejection",
+    "record_lisskins_call",
     "record_order_buy",
     "record_order_refund",
     "record_skinslink_call",
