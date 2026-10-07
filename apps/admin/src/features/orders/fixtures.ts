@@ -1,6 +1,7 @@
 /** Shared fixtures for the orders and trades tests. Fake numbers and ids only. */
 import {
   type AdminOrderDetail,
+  type AdminLisskinsPurchaseOut,
   type AdminOrderRow,
   type AdminSkinslinkPurchaseOut,
   type AdminTradeOut,
@@ -74,6 +75,7 @@ export const DETAIL: AdminOrderDetail = {
   user: { id: "u-1", display_name: "Ivan" },
   trade: TRADE,
   skinslink: null,
+  lisskins: null,
   payments: [
     {
       id: "p-1",
@@ -120,6 +122,23 @@ export const SKINSLINK: AdminSkinslinkPurchaseOut = {
   fail_reason: null,
   amount_usd: "12.000000",
   hold_end_date: null,
+  buy_pending: false,
+  buy_unconfirmed_at: null,
+  attention_reason: "rolled_back",
+  resolved_at: null,
+};
+
+export const LISSKINS: AdminLisskinsPurchaseOut = {
+  custom_id: "6f1c2a52-0000-4000-8000-000000000001",
+  skin_id: 125345,
+  purchase_id: 55,
+  status: "wait_accept",
+  return_reason: null,
+  error: null,
+  offer_id: "7252638866",
+  offer_url: "https://steamcommunity.com/tradeoffer/7252638866/",
+  offer_expiry_at: "2026-10-07T19:50:35Z",
+  amount_usd: "12.340000",
   buy_pending: false,
   buy_unconfirmed_at: null,
   attention_reason: "rolled_back",

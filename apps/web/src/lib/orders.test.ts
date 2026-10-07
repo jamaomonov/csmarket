@@ -87,6 +87,16 @@ describe("createOrder", () => {
       listing_id: "sl:38029384123",
       price_uzs: "393700",
     });
+    const lis = await createError(
+      conflict({
+        code: "offer_gone",
+        next_offer: { listing_id: "ls:125345", price_uzs: "171800" },
+      }),
+    );
+    expect((lis as OfferGoneError).nextOffer).toEqual({
+      listing_id: "ls:125345",
+      price_uzs: "171800",
+    });
     const none = await createError(conflict({ code: "offer_gone", next_offer: null }));
     expect((none as OfferGoneError).nextOffer).toBeNull();
     const junk = await createError(conflict({ code: "offer_gone", next_offer: { id: "x" } }));

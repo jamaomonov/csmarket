@@ -1,6 +1,6 @@
 /**
  * «Дашборд»: today / 7 / 30 Tashkent days — sales, revenue, margin, refunds — and what needs
- * a look now: orders in flight, open attentions, the Waxpeer and Skinslink balances. Re-read every minute.
+ * a look now: orders in flight, open attentions, the Waxpeer, Skinslink and LIS-SKINS balances. Re-read every minute.
  */
 import { Button } from "@csmarket/ui";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +32,7 @@ function Tile({ title, children }: TileProps) {
 }
 
 function Tiles({ data }: { data: DashboardOut }) {
-  const { sales, refunds, waxpeer, skinslink } = data;
+  const { sales, refunds, waxpeer, skinslink, lisskins } = data;
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
       <Tile title="Продажи">{sales.count}</Tile>
@@ -75,6 +75,19 @@ function Tiles({ data }: { data: DashboardOut }) {
             <span>${skinslink.available_usd}</span>
             <span className="text-fg-muted text-sm">в холде ${skinslink.hold_usd ?? "0"}</span>
             <span className="text-fg-muted text-sm">{freshness(skinslink.read_at)}</span>
+          </>
+        )}
+      </Tile>
+      <Tile title="Баланс LIS-SKINS">
+        {lisskins.available_usd === null || lisskins.read_at === null ? (
+          <span>неизвестно</span>
+        ) : (
+          <>
+            <span>${lisskins.available_usd}</span>
+            <span className="text-fg-muted text-sm">
+              заблокировано ${lisskins.locked_usd ?? "0"}
+            </span>
+            <span className="text-fg-muted text-sm">{freshness(lisskins.read_at)}</span>
           </>
         )}
       </Tile>

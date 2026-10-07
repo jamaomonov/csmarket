@@ -106,8 +106,10 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
     });
   };
 
+  // A Skinslink or LIS-SKINS order keeps its attention on its purchase.
+  const watched = trade ?? detail.skinslink ?? detail.lisskins;
   const needsResolve =
-    trade !== null && trade.attention_reason !== null && trade.resolved_at === null;
+    watched !== null && watched.attention_reason !== null && watched.resolved_at === null;
   if (!needsResolve && !detail.can_refund && !detail.can_retry && error === null) return null;
 
   const busy = mutation.isPending;

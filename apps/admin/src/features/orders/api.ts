@@ -39,7 +39,7 @@ export interface AdminOrderFull {
   phase: string | null;
   slug: string;
   /** Where the offer is bought. */
-  source: "waxpeer" | "skinslink";
+  source: "waxpeer" | "skinslink" | "lisskins";
   /** The offer the buyer chose: `wx:<id>` / `sl:<id>`. */
   offer_id: string | null;
   /** The Waxpeer listing; `null` for a Skinslink order. */
@@ -121,12 +121,34 @@ export interface AdminSkinslinkPurchaseOut {
   resolved_at: string | null;
 }
 
+/** A LIS-SKINS order's purchase (spec 2026-10-07). */
+export interface AdminLisskinsPurchaseOut {
+  /** Our idempotency key at LIS-SKINS — what its purchase history is searched by. */
+  custom_id: string;
+  skin_id: number;
+  purchase_id: number | null;
+  status: string | null;
+  return_reason: string | null;
+  error: string | null;
+  offer_id: string | null;
+  offer_url: string | null;
+  offer_expiry_at: string | null;
+  /** USD with six places. */
+  amount_usd: string | null;
+  buy_pending: boolean;
+  buy_unconfirmed_at: string | null;
+  attention_reason: AttentionReason | null;
+  resolved_at: string | null;
+}
+
 export interface AdminOrderDetail {
   order: AdminOrderFull;
   user: OrderUser;
   trade: AdminTradeOut | null;
   /** `null` for a Waxpeer order. */
   skinslink: AdminSkinslinkPurchaseOut | null;
+  /** `null` unless a LIS-SKINS order. */
+  lisskins: AdminLisskinsPurchaseOut | null;
   payments: AdminOrderPayment[];
   can_refund: boolean;
   can_retry: boolean;
