@@ -15,6 +15,13 @@ export interface LiquidityBand {
 }
 
 /** The whole pricing document; decimals travel as strings. */
+/** Lighter sticker and thin-liquidity markups under a cost bound (ADR-0015). */
+export interface CheapTail {
+  max_cost_usd: string;
+  sticker_pp: string;
+  low_liquidity_pp: string;
+}
+
 export interface PricingRules {
   expenses_percent: string;
   retail: Bracket[];
@@ -25,6 +32,8 @@ export interface PricingRules {
   price_floor_usd: string;
   uzs_round_to: number;
   cap_at_steam: boolean;
+  /** `null`: no cheap tail. */
+  cheap_tail: CheapTail | null;
 }
 
 export interface PricingOut {

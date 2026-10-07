@@ -61,6 +61,23 @@ describe("RulesForm", () => {
     expect(saved.category_pp).toEqual({ stickers: "5", knives: "2" });
   });
 
+  it("edits the cheap tail, and clearing its bound turns it off", () => {
+    const onSave = vi.fn();
+    render(<Harness onSave={onSave} />);
+    fireEvent.change(screen.getByLabelText("Хвост: наклейки, п.п."), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(toRules(onSave.mock.calls[0]?.[0] as RulesDraft).cheap_tail).toEqual({
+      max_cost_usd: "1",
+      sticker_pp: "3",
+      low_liquidity_pp: "1",
+    });
+    fireEvent.change(screen.getByLabelText("Хвост: себестоимость до, $"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(toRules(onSave.mock.calls[1]?.[0] as RulesDraft).cheap_tail).toBeNull();
+  });
+
   it("the Steam cap is a checkbox", () => {
     const onSave = vi.fn();
     render(<Harness onSave={onSave} />);

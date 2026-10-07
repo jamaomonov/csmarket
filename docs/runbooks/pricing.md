@@ -2,8 +2,13 @@
 
 The sell price of every item is `pricing.quote` over the item's cost (the cheapest Waxpeer
 auto listing) and the **pricing document**: expenses %, margin brackets, liquidity bands,
-category and weapon markups, minimum margin, floor price, soʻm rounding, the Steam cap.
-The admin page «Цены» edits it (M4b, ADR-0008 R8). Code: `skins.pricing_admin`,
+category and weapon markups, minimum margin, floor price, soʻm rounding, the Steam cap, the
+cheap tail. The admin page «Цены» edits it (M4b, ADR-0008 R8).
+
+**The cheap tail** (ADR-0015) applies to items whose cost is under «Хвост: себестоимость до, $»
+(1 $). For them, a sticker gets «Хвост: наклейки, п.п.» (2) instead of its category markup
+(5), and an item with under 4 lots gets «Хвост: мало лотов, п.п.» (1) instead of +3. Every
+other band and category is unchanged. Clear the bound to switch the tail off. Code: `skins.pricing_admin`,
 `skins/README.md` «Pricing editor».
 
 ## Before saving: preview
