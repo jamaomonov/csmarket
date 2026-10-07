@@ -19,6 +19,10 @@ export interface RulesDraft {
   liquidity: { min_count: string; pp: string }[];
   category_pp: KeyRow[];
   weapon_pp: KeyRow[];
+  /** An empty bound turns the cheap tail off. */
+  tail_max_cost_usd: string;
+  tail_sticker_pp: string;
+  tail_low_liquidity_pp: string;
 }
 
 const rows = (map: Record<string, string>): KeyRow[] =>
@@ -40,6 +44,9 @@ export function fromRules(rules: PricingRules): RulesDraft {
     liquidity: rules.liquidity.map((b) => ({ min_count: String(b.min_count), pp: b.pp })),
     category_pp: rows(rules.category_pp),
     weapon_pp: rows(rules.weapon_pp),
+    tail_max_cost_usd: rules.cheap_tail?.max_cost_usd ?? "",
+    tail_sticker_pp: rules.cheap_tail?.sticker_pp ?? "",
+    tail_low_liquidity_pp: rules.cheap_tail?.low_liquidity_pp ?? "",
   };
 }
 
@@ -57,5 +64,13 @@ export function toRules(d: RulesDraft): PricingRules {
     })),
     category_pp: map(d.category_pp),
     weapon_pp: map(d.weapon_pp),
+    cheap_tail:
+      d.tail_max_cost_usd.trim() === ""
+        ? null
+        : {
+            max_cost_usd: d.tail_max_cost_usd.trim(),
+            sticker_pp: d.tail_sticker_pp.trim(),
+            low_liquidity_pp: d.tail_low_liquidity_pp.trim(),
+          },
   };
 }

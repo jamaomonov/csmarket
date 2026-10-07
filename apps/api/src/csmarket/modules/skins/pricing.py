@@ -14,6 +14,7 @@ So the rules document (:class:`PricingRules`) has:
 - per-category and per-weapon adjustments in percentage points;
 - per-item overrides (``item_pp``, or a pinned price that never undercuts
   cost + min margin);
+- a cheap tail: under a cost bound, lighter sticker and thin-liquidity markups;
 - a minimum margin in dollars for the cents-priced tail, a price floor for
   the acquirers' minimum charge, UZS rounding, and an optional cap at the
   Steam Market price.
@@ -56,6 +57,19 @@ class LiquidityBand(BaseModel):
     pp: Decimal = Field(ge=-100, le=100, max_digits=6, decimal_places=2)
 
 
+class CheapTail(BaseModel):
+    """Lighter markups under ``max_cost_usd`` of cost (ADR-0015): there a few points are a
+    large share of the price, and skinsavdo marks up less."""
+
+    model_config = ConfigDict(frozen=True)
+
+    max_cost_usd: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    #: Replaces ``category_pp["stickers"]`` for a sticker under the bound.
+    sticker_pp: Decimal = Field(ge=-100, le=100, max_digits=6, decimal_places=2)
+    #: Replaces the last (thinnest, ``min_count`` 0) liquidity band under the bound.
+    low_liquidity_pp: Decimal = Field(ge=-100, le=100, max_digits=6, decimal_places=2)
+
+
 class PricingRules(BaseModel):
     """The whole pricing document, as stored in ``skin_pricing_rules.rules``."""
 
@@ -74,6 +88,8 @@ class PricingRules(BaseModel):
     price_floor_usd: Decimal = Field(default=Decimal("0.20"), ge=0, decimal_places=2)
     uzs_round_to: int = Field(default=100, ge=1, le=10000)
     cap_at_steam: bool = False
+    #: Lighter sticker and thin-liquidity markups for cheap items; ``None`` → none.
+    cheap_tail: CheapTail | None = None
 
     @model_validator(mode="after")
     def _shape(self) -> PricingRules:
@@ -108,11 +124,17 @@ DEFAULT_RULES = PricingRules(
         LiquidityBand(min_count=0, pp=Decimal("3")),
     ],
     category_pp={"stickers": Decimal("5")},
-    # A $0.10 minimum margin made skins under $0.9 ~9 % dearer than skinsavdo (2026-09-29).
-    min_margin_usd=Decimal("0.03"),
+    # A $0.10 minimum margin made skins under $0.9 ~9 % dearer than skinsavdo (2026-09-29);
+    # 0.03 → 0.02 with the cheap tail below (2026-10-07, ADR-0015).
+    min_margin_usd=Decimal("0.02"),
     # The acquirers' minimum payment is 1000 soʻm: $0.10 is ~1200 at ~11 800 soʻm/$.
     # Revisit if the rate ever falls near 10 000.
     price_floor_usd=Decimal("0.10"),
+    # Under 1 $ the +5 sticker and +3 thin-liquidity markups made us dearer than skinsavdo
+    # on half the shared items (8 423 measured 2026-10-07, ADR-0015).
+    cheap_tail=CheapTail(
+        max_cost_usd=Decimal("1"), sticker_pp=Decimal("2"), low_liquidity_pp=Decimal("1")
+    ),
 )
 
 
@@ -145,14 +167,33 @@ def bracket_margin(cost: Decimal, brackets: list[Bracket]) -> Decimal:
     return margin
 
 
+def _band(count_auto: int | None, bands: list[LiquidityBand]) -> LiquidityBand | None:
+    if count_auto is None:
+        return None
+    return next((band for band in bands if count_auto >= band.min_count), None)
+
+
 def liquidity_pp(count_auto: int | None, bands: list[LiquidityBand]) -> Decimal:
     """The first band whose ``min_count`` the count reaches; 0 when the count is unknown."""
-    if count_auto is None:
-        return Decimal(0)
-    for band in bands:
-        if count_auto >= band.min_count:
-            return band.pp
-    return Decimal(0)
+    band = _band(count_auto, bands)
+    return band.pp if band is not None else Decimal(0)
+
+
+def _markups(
+    cost: Decimal, rules: PricingRules, *, category: str, count_auto: int | None
+) -> tuple[Decimal, Decimal]:
+    """``(category_pp, liquidity_pp)`` — the cheap tail's under its bound (ADR-0015)."""
+    cat_pp = rules.category_pp.get(category, Decimal(0))
+    band = _band(count_auto, rules.liquidity)
+    liq_pp = band.pp if band is not None else Decimal(0)
+    tail = rules.cheap_tail
+    if tail is None or cost >= tail.max_cost_usd:
+        return cat_pp, liq_pp
+    if category == "stickers":
+        cat_pp = tail.sticker_pp
+    if band is not None and band is rules.liquidity[-1]:
+        liq_pp = tail.low_liquidity_pp
+    return cat_pp, liq_pp
 
 
 def quote(
@@ -176,9 +217,8 @@ def quote(
     cost = Decimal(cost_units) / _UNITS_PER_USD
     margin = bracket_margin(cost, rules.retail)
     expenses = cost * rules.expenses_percent / Decimal(100)
-    cat_pp = rules.category_pp.get(category, Decimal(0))
+    cat_pp, liq_pp = _markups(cost, rules, category=category, count_auto=count_auto)
     wpn_pp = rules.weapon_pp.get(weapon, Decimal(0)) if weapon else Decimal(0)
-    liq_pp = liquidity_pp(count_auto, rules.liquidity)
     pp = Decimal(item_pp or 0)
     price = cost + expenses + margin + cost * (cat_pp + wpn_pp + liq_pp + pp) / Decimal(100)
     applied: Applied = "formula"
@@ -243,6 +283,7 @@ __all__ = [
     "DEFAULT_RULES",
     "Applied",
     "Bracket",
+    "CheapTail",
     "LiquidityBand",
     "PricingRules",
     "Quote",

@@ -123,8 +123,10 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
 ## Pricing (M2)
 
 - **`pricing`** — `PricingRules` (retail brackets, expenses, liquidity bands, category and
-  weapon pp, min margin, floor, UZS rounding, Steam cap) and `quote()`; `DEFAULT_RULES` is
-  the owner's launch seed. Retail only: there is no merchant channel. A stored document
+  weapon pp, min margin, floor, UZS rounding, Steam cap, the cheap tail) and `quote()`;
+  `DEFAULT_RULES` is the owner's launch seed. The cheap tail (`cheap_tail`, ADR-0015) applies
+  under `max_cost_usd` of cost: `sticker_pp` replaces `category_pp["stickers"]`, and
+  `low_liquidity_pp` replaces the last liquidity band (`min_count` 0). `null` turns it off. Retail only: there is no merchant channel. A stored document
   with a stray `b2b` key still loads (extra keys are ignored).
 - **`repricing`** — `reprice_rows` writes `sell_price_usd` / `discount_percent` for every
   active row after each price tick and each rules write. The cost is the cheapest present

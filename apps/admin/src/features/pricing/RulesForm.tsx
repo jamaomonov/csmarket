@@ -14,13 +14,27 @@ interface RulesFormProps {
   onSave: () => void;
 }
 
-type NumberField = "expenses_percent" | "min_margin_usd" | "price_floor_usd" | "uzs_round_to";
+type NumberField =
+  | "expenses_percent"
+  | "min_margin_usd"
+  | "price_floor_usd"
+  | "uzs_round_to"
+  | "tail_max_cost_usd"
+  | "tail_sticker_pp"
+  | "tail_low_liquidity_pp";
 
 const NUMBERS: [NumberField, string][] = [
   ["expenses_percent", "Расходы, %"],
   ["min_margin_usd", "Мин. маржа, $"],
   ["price_floor_usd", "Нижняя цена, $"],
   ["uzs_round_to", "Округление, сум"],
+];
+
+/** The cheap tail: under the bound, these replace the sticker and the thinnest band. */
+const TAIL: [NumberField, string][] = [
+  ["tail_max_cost_usd", "Хвост: себестоимость до, $"],
+  ["tail_sticker_pp", "Хвост: наклейки, п.п."],
+  ["tail_low_liquidity_pp", "Хвост: мало лотов, п.п."],
 ];
 
 const keyRows = (rows: Record<string, string>[]): KeyRow[] =>
@@ -41,31 +55,35 @@ export function RulesForm({
   return (
     <section className="border-border bg-surface flex flex-col gap-5 rounded-lg border p-5">
       <h2 className="text-lg font-semibold">Правила</h2>
-      <div className="flex flex-wrap items-end gap-4">
-        {NUMBERS.map(([field, label]) => (
-          <label key={field} className="flex flex-col gap-1 text-sm">
-            {label}
-            <input
-              inputMode="decimal"
-              value={draft[field]}
-              onChange={(e) => {
-                set({ [field]: e.target.value });
-              }}
-              className="border-border bg-bg h-10 w-32 rounded-md border px-3"
-            />
-          </label>
-        ))}
-        <label className="flex h-10 items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={draft.cap_at_steam}
-            onChange={(e) => {
-              set({ cap_at_steam: e.target.checked });
-            }}
-          />
-          Не дороже Steam
-        </label>
-      </div>
+      {[NUMBERS, TAIL].map((fields) => (
+        <div key={fields[0]?.[0]} className="flex flex-wrap items-end gap-4">
+          {fields.map(([field, label]) => (
+            <label key={field} className="flex flex-col gap-1 text-sm">
+              {label}
+              <input
+                inputMode="decimal"
+                value={draft[field]}
+                onChange={(e) => {
+                  set({ [field]: e.target.value });
+                }}
+                className="border-border bg-bg h-10 w-32 rounded-md border px-3"
+              />
+            </label>
+          ))}
+          {fields === NUMBERS && (
+            <label className="flex h-10 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={draft.cap_at_steam}
+                onChange={(e) => {
+                  set({ cap_at_steam: e.target.checked });
+                }}
+              />
+              Не дороже Steam
+            </label>
+          )}
+        </div>
+      ))}
       <div className="grid gap-5 md:grid-cols-2">
         <RowsTable
           title="Брекеты маржи (доля себестоимости в каждом диапазоне)"

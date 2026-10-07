@@ -151,10 +151,11 @@ def test_launch_rules_match_the_owners_2026_09_29_call() -> None:
 
     Measured on 19 103 shared items (2026-09-29): a $0.10 minimum margin made skins under
     $0.9 ~9 % dearer than skinsavdo; $0.03 and a $0.10 floor bring them in line. 3 % on
-    $100–1000 and 2 % above keep parity while earning 0.6–0.9 pp more.
+    $100–1000 and 2 % above keep parity while earning 0.6–0.9 pp more. The minimum margin
+    went to $0.02 with the cheap tail (2026-10-07, ADR-0015).
     """
     rules = DEFAULT_RULES
-    assert rules.min_margin_usd == Decimal("0.03")
+    assert rules.min_margin_usd == Decimal("0.02")
     # The acquirers' minimum payment is 1000 soʻm; $0.10 is ~1200 at ~11 800 soʻm/$.
     assert rules.price_floor_usd == Decimal("0.10")
     assert [(b.from_usd, b.percent) for b in rules.retail] == [

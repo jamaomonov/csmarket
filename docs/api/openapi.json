@@ -2714,6 +2714,86 @@
         "title": "CatalogStatusOut",
         "type": "object"
       },
+      "CheapTail-Input": {
+        "description": "Lighter markups under ``max_cost_usd`` of cost (ADR-0015): there a few points are a\nlarge share of the price, and skinsavdo marks up less.",
+        "properties": {
+          "low_liquidity_pp": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Low Liquidity Pp"
+          },
+          "max_cost_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Max Cost Usd"
+          },
+          "sticker_pp": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": -100.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Sticker Pp"
+          }
+        },
+        "required": [
+          "max_cost_usd",
+          "sticker_pp",
+          "low_liquidity_pp"
+        ],
+        "title": "CheapTail",
+        "type": "object"
+      },
+      "CheapTail-Output": {
+        "description": "Lighter markups under ``max_cost_usd`` of cost (ADR-0015): there a few points are a\nlarge share of the price, and skinsavdo marks up less.",
+        "properties": {
+          "low_liquidity_pp": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)",
+            "title": "Low Liquidity Pp",
+            "type": "string"
+          },
+          "max_cost_usd": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+            "title": "Max Cost Usd",
+            "type": "string"
+          },
+          "sticker_pp": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,4}|(?=[\\d.]{1,7}0*$)\\d{0,4}\\.\\d{0,2}0*$)",
+            "title": "Sticker Pp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "max_cost_usd",
+          "sticker_pp",
+          "low_liquidity_pp"
+        ],
+        "title": "CheapTail",
+        "type": "object"
+      },
       "DashboardOut": {
         "description": "Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look.",
         "properties": {
@@ -3989,6 +4069,16 @@
             "title": "Category Pp",
             "type": "object"
           },
+          "cheap_tail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheapTail-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "expenses_percent": {
             "anyOf": [
               {
@@ -4091,6 +4181,16 @@
             },
             "title": "Category Pp",
             "type": "object"
+          },
+          "cheap_tail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CheapTail-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "expenses_percent": {
             "default": "3",
