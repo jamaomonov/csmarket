@@ -31,7 +31,9 @@ async def _clear(db: AsyncSession, *, keep: Select[tuple[int | None]] | None = N
         stmt = stmt.where(SkinItem.id.not_in(keep))
     result = await db.execute(
         stmt.values(
-            skinslink_min_units=None, skinslink_count=0, active=SkinItem.count_auto > 0
+            skinslink_min_units=None,
+            skinslink_count=0,
+            active=(SkinItem.count_auto > 0) | (SkinItem.lisskins_count > 0),
         ).execution_options(synchronize_session=False)
     )
     return _rowcount(result)

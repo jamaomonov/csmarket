@@ -242,6 +242,10 @@ WAXPEER_BALANCE_THRESHOLD_USD = Gauge(
     "csmarket_waxpeer_balance_threshold_usd",
     "The balance below which WaxpeerBalanceLow fires (setting waxpeer_balance_alert_usd).",
 )
+LISSKINS_SNAPSHOT_TIMESTAMP = Gauge(
+    "csmarket_lisskins_snapshot_timestamp_seconds",
+    "Unix time LIS-SKINS made the last export we applied (alert: LisskinsSnapshotStale).",
+)
 SKINSLINK_MIRROR_SYNCED_TIMESTAMP = Gauge(
     "csmarket_skinslink_mirror_synced_timestamp_seconds",
     "Unix time of the last good Skinslink mirror tick (alert: SkinslinkMirrorStale).",
@@ -285,6 +289,7 @@ SKINSLINK_BALANCE_READ_TIMESTAMP.set(time.time())
 # pinned to job="scheduler".
 WAXPEER_BALANCE_READ_TIMESTAMP.set(time.time())
 SKINSLINK_MIRROR_SYNCED_TIMESTAMP.set(time.time())
+LISSKINS_SNAPSHOT_TIMESTAMP.set(time.time())
 ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP.set(time.time())
 
 
@@ -375,6 +380,18 @@ def set_waxpeer_balance(balance_usd: float, threshold_usd: float) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_waxpeer_balance", error=type(exc).__name__
+        )
+
+
+def set_lisskins_snapshot(at_unix: float) -> None:
+    """Stamp the time LIS-SKINS made the export we applied. Never raises."""
+    try:
+        LISSKINS_SNAPSHOT_TIMESTAMP.set(at_unix)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed",
+            metric="csmarket_lisskins_snapshot_timestamp_seconds",
+            error=type(exc).__name__,
         )
 
 
@@ -580,6 +597,7 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 __all__ = [
     "EMAILS",
     "KASSA_REJECTIONS",
+    "LISSKINS_SNAPSHOT_TIMESTAMP",
     "ORDERS_HEALTH_LAST_SUCCESS_TIMESTAMP",
     "ORDERS_STUCK",
     "ORDER_BUYS",
@@ -629,6 +647,7 @@ __all__ = [
     "record_waxpeer_call",
     "record_ws_nudges",
     "serve_metrics",
+    "set_lisskins_snapshot",
     "set_orders_stuck",
     "set_skinslink_balance",
     "set_skinslink_enabled",

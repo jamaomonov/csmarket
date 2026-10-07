@@ -10,3 +10,9 @@ def test_cost_is_the_cheaper_source_or_the_one_present() -> None:
     assert cost_units(12_345, None) == 12_345
     assert cost_units(None, 9_000) == 9_000
     assert cost_units(None, None) is None
+
+
+def test_cost_is_the_cheapest_of_any_number_of_sources() -> None:
+    assert cost_units(12_345, None, 11_500) == 11_500
+    assert cost_units(None, None, None) is None
+    assert cost_units(None, 9_000, 9_000) == 9_000
