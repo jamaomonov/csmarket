@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { SkinFloatBar } from "./SkinFloatBar";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
+import { StickerImage } from "./StickerImage";
 
 import { displayPrice } from "@/lib/skins";
 
@@ -110,15 +111,11 @@ export function SkinListings({
             >
               {l.stickers.map((s, i) =>
                 s.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <StickerImage
                     key={`${String(i)}-${s.name}`}
                     src={s.image}
-                    alt={s.name}
-                    title={s.name}
-                    width={32}
-                    height={24}
-                    loading="lazy"
+                    name={s.name}
+                    size={32}
                     className="h-6 w-8 object-contain"
                   />
                 ) : (

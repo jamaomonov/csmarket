@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 
 import { SkinFloatBar } from "./SkinFloatBar";
 import { useCheapestOffer } from "./SkinOffers";
+import { StickerImage } from "./StickerImage";
 
 /**
  * The item's picture with the cheapest live offer on it: its float on the wear bar and the
@@ -83,9 +84,12 @@ export function SkinHero({
               title={s.name}
             >
               {s.image ? (
-                // Steam CDN sticker thumbnails: next/image adds nothing here.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={s.image} alt={s.name} className="size-10 object-contain sm:size-12" />
+                <StickerImage
+                  src={s.image}
+                  name={s.name}
+                  size={48}
+                  className="size-10 object-contain sm:size-12"
+                />
               ) : (
                 <span role="img" aria-label={s.name} className="bg-surface-2 size-8 rounded" />
               )}

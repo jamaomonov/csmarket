@@ -148,3 +148,10 @@ Steam serves an image by two kinds of path:
 The API rewrites both on the way out (`skins.images.steam_image`): `CSMARKET_SKINS_IMAGE_HOST`
 for the first kind, its `cdn.` twin for the second. If images break again, `curl -I` one
 URL from the listings answer and look where it redirects.
+
+A Steam CDN node can also fail a file it has not cached yet: Fastly answers
+`503 Backend unavailable` (seen 2026-10-07 from the Vienna node). For that reason the
+storefront loads sticker thumbnails through our own `/_next/image`, which fetches each file
+from Steam once and keeps it for 30 days (`images.minimumCacheTTL` and `remotePatterns` in
+`apps/web/next.config.ts`). A new Steam image host has to be added to `remotePatterns`, or
+`/_next/image` answers it with 400.

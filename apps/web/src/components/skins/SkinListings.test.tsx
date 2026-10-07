@@ -78,6 +78,10 @@ describe("SkinListings", () => {
     );
     // Stickers are thumbnails named for screen readers, not a comma-joined string.
     expect(screen.getByRole("img", { name: "Sticker | X" })).toBeInTheDocument();
+    // Through our own server (cached there): a flaky Steam CDN node never blanks a sticker.
+    expect(screen.getByRole("img", { name: "Sticker | X" }).getAttribute("src")).toMatch(
+      /^\/_next\/image\?url=https%3A%2F%2Fcommunity\.fastly\.steamstatic\.com/,
+    );
     // Every offer we sell is instant: said once by the price, not on each row.
     expect(screen.queryByText("Мгновенно")).not.toBeInTheDocument();
   });
