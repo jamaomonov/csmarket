@@ -29,6 +29,7 @@ from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.skins.cachekeys import catalog_version
 from csmarket.modules.skins.images import steam_image, steam_image_only
 from csmarket.modules.skins.listings import (
+    Listing,
     SearchClient,
     listings_budget,
     listings_for,
@@ -324,9 +325,12 @@ async def get_listings(
     # Skinslink's offers come from our mirror (a DB read, no external call); this route
     # composes the two sources — ``skins`` itself never imports ``skinslink``.
     extra = await offers_for(db, item.id, settings=settings, now=now())
-    rows, degraded = await listings_for(
-        item, client=client, redis=get_redis(), budget_per_minute=listings_budget(settings)
-    )
+    rows: list[Listing] = []
+    degraded = False
+    if settings.waxpeer_buy_enabled:  # off: Skinslink resells the same listings, cheaper
+        rows, degraded = await listings_for(
+            item, client=client, redis=get_redis(), budget_per_minute=listings_budget(settings)
+        )
     items: list[SkinListingOut] = []
     for row in merge_offers([from_listing(r) for r in rows], extra):
         usd = quote(

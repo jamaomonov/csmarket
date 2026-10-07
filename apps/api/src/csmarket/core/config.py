@@ -322,6 +322,14 @@ class Settings(BaseSettings):
         default=False,
         description="Buying is on: the item page shows the buy panel and POST /orders works.",
     )
+    waxpeer_buy_enabled: bool = Field(
+        default=True,
+        description=(
+            "Waxpeer is a buy source. Off: the catalogue, offers and checkout use Skinslink "
+            "only (it resells Waxpeer's listings, often cheaper); Waxpeer still brings the "
+            "Steam price, checks trade links and settles orders already bought there."
+        ),
+    )
     order_expiry_minutes: int = Field(
         default=15, ge=1, description="An unpaid order is cancelled after this many minutes."
     )

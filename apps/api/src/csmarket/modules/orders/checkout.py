@@ -37,6 +37,7 @@ from csmarket.modules.fx.api import UsdUzs, current_usd_uzs
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.schemas import OrderCreateIn
 from csmarket.modules.skins.api import (
+    Listing,
     Offer,
     PricingRules,
     SearchClient,
@@ -308,9 +309,15 @@ async def create_order(
         return existing, False
     q = await _read(db, redis, user, body, settings)
     await db.rollback()  # release the connection before the listings read
-    rows, degraded = await listings_for(
-        q.snap.item_view(), client=client, redis=redis, budget_per_minute=listings_budget(settings)
-    )
+    rows: list[Listing] = []
+    degraded = False
+    if settings.waxpeer_buy_enabled:  # off: Skinslink's offers only
+        rows, degraded = await listings_for(
+            q.snap.item_view(),
+            client=client,
+            redis=redis,
+            budget_per_minute=listings_budget(settings),
+        )
     offers = merge_offers([from_listing(r) for r in rows], q.extra)
     priced = [(o, _price(o.price_units, q.snap, q.rules, q.rate.rate)) for o in offers]
     row, usd, uzs = _choose(priced, body, settings, q.rate.rate)

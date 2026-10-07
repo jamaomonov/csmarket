@@ -153,3 +153,14 @@ the point of adding it.
 - Runbook [`skinslink.md`](../runbooks/skinslink.md); flow
   [`skinslink-buy.mmd`](../architecture/sequence-diagrams/skinslink-buy.mmd).
 - Skinslink API reference: <https://docs.skinslink.com/llm> (read 2026-10-06).
+
+## Update 2026-10-07: Waxpeer off as a buy source
+
+A comparison by Steam asset id found 437 643 of Skinslink's 439 072 listings (99.7 %) are
+Waxpeer's own auto listings, at the same price (49 %) or cheaper (51 %, mostly −2.9 % to
+−4.8 %), almost never dearer. Skinslink gets Waxpeer's stock cheaper than we do and passes
+the price on. `CSMARKET_WAXPEER_BUY_ENABLED=false` (prod, `docker-compose.prod.yml`): the
+Waxpeer price sync keeps the Steam price but writes no stock, `skinslink.prices` clears what
+an earlier Waxpeer tick wrote, the item page and checkout offer Skinslink only, and a
+Skinslink buy never substitutes from Waxpeer. It also ends the double count of one asset
+listed by both. Trade-link checks and orders already bought at Waxpeer are untouched.

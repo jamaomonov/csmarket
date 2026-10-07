@@ -305,6 +305,8 @@ async def sync_prices(
             return ApplyResult(changed=0, deactivated=0, stubs=0, refused=True)
         await lock_pricing(db)
         at = now()
+        if not get_settings().waxpeer_buy_enabled:
+            aggregates = {key: _without_stock(agg) for key, agg in aggregates.items()}
         result = await apply_prices(db, aggregates, meta=meta, at=at)
         await rollup(db, settings=get_settings(), now=at)
         await reprice_rows(db, await load_rules(db, fresh=True))
@@ -318,6 +320,22 @@ async def sync_prices(
         stubs=result.stubs,
     )
     return result
+
+
+def _without_stock(agg: PriceAggregate) -> PriceAggregate:
+    """Waxpeer buying is off: its snapshot still names the item (and its Steam price), but
+    none of its listings is stock we sell."""
+    return PriceAggregate(min_all=agg.min_all, count_all=agg.count_all)
+
+
+async def _clear_waxpeer_stock(db: AsyncSession) -> None:
+    """Waxpeer buying is off: forget the stock an earlier Waxpeer tick wrote."""
+    await db.execute(
+        update(SkinItem)
+        .where(SkinItem.count_auto > 0)
+        .values(min_auto_units=None, count_auto=0, cheapest_auto=[], price_hash=None)
+        .execution_options(synchronize_session=False)
+    )
 
 
 async def sync_skinslink_prices(
@@ -343,6 +361,8 @@ async def sync_skinslink_prices(
             if left is None:
                 return False
         await lock_pricing(db)
+        if not settings.waxpeer_buy_enabled:
+            await _clear_waxpeer_stock(db)
         await rollup(db, settings=settings, now=at)
         await reprice_rows(db, await load_rules(db, fresh=True))
         await db.commit()

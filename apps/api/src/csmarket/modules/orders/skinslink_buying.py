@@ -320,7 +320,7 @@ async def _substitute(
     extra = await offers_for(db, snap.skin_item_id, settings=settings, now=now())
     await db.commit()
     rows: list[Listing] = []
-    if item is not None and waxpeer is not None:
+    if item is not None and waxpeer is not None and settings.waxpeer_buy_enabled:
         rows, _ = await listings_for(
             item,
             client=TradeSearch(waxpeer),

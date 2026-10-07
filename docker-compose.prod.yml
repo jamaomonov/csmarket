@@ -22,6 +22,10 @@ x-app-env: &app-env
   # Soʻm prices use the CBU rate + 1 % (ADR-0011); the snapshots stay the CBU's own rate.
   # Set here, in git, not in secrets: it is pricing policy, and this value wins over env_file.
   CSMARKET_FX_UPLIFT_PCT: "1"
+  # Waxpeer is not a buy source for now (2026-10-07): Skinslink resells the same Waxpeer
+  # listings (99.7 % the same assets) at the same price or cheaper. Waxpeer still brings the
+  # Steam price, checks trade links and settles orders bought there. ADR-0010.
+  CSMARKET_WAXPEER_BUY_ENABLED: "false"
 
 # Bound every container's json-file logs. Without this the driver keeps an
 # unbounded log per container, which fills the disk and gets replayed on every

@@ -341,3 +341,21 @@ async def test_a_switch_to_waxpeer_keeps_the_orders_ceiling(
     assert await attempt_buy(db_session, waxpeer, order_id=order.id, settings=settings) == (
         "sold_out"
     )
+
+
+async def test_with_waxpeer_buying_off_a_substitute_never_goes_to_waxpeer(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    waxpeer = FakeTradeClient()
+    waxpeer.listings(order.market_hash_name, [(777, COST)])
+    fake = FakeSkinslinkClient(purchase("failed", fail_reason="item_sold"))
+    outcome = await attempt_skinslink_buy(
+        db_session,
+        fake,
+        order_id=order.id,
+        settings=settings.model_copy(update={"waxpeer_buy_enabled": False}),
+        waxpeer=waxpeer,
+    )
+    assert outcome == "sold_out"
+    assert waxpeer.search_calls == 0
