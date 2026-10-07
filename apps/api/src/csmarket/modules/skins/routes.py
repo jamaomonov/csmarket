@@ -26,6 +26,7 @@ from csmarket.core.errors import ValidationError
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import guard_ip
 from csmarket.modules.fx.api import current_usd_uzs
+from csmarket.modules.lisskins.api import offers_for as lisskins_offers
 from csmarket.modules.skins.cachekeys import catalog_version
 from csmarket.modules.skins.images import steam_image, steam_image_only
 from csmarket.modules.skins.listings import (
@@ -69,7 +70,7 @@ from csmarket.modules.skins.service import (
     suggest,
 )
 from csmarket.modules.skins.settings import enabled_categories, load_rules
-from csmarket.modules.skinslink.api import offers_for
+from csmarket.modules.skinslink.api import offers_for as skinslink_offers
 
 _PAGE_TTL = 60
 
@@ -121,7 +122,7 @@ def _item_out(item: SkinItem, rules: PricingRules, rate: Decimal | None) -> Skin
         price_uzs=_to_uzs(price, rate, rules),
         steam_price_usd=_units_to_usd(item.steam_price_units),
         discount_percent=discount,
-        count=item.count_auto + item.skinslink_count,
+        count=item.stock_count,
         min_float=None if item.min_float is None else str(item.min_float),
         max_float=None if item.max_float is None else str(item.max_float),
     )
@@ -268,7 +269,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
             rules=rules,
             category=item.category,
             weapon=item.weapon,
-            count_auto=item.count_auto + item.skinslink_count,
+            count_auto=item.stock_count,
             item_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,
@@ -288,7 +289,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
             souvenir=m.souvenir,
             price_usd=None if m.sell_price_usd is None else str(m.sell_price_usd),
             price_uzs=_to_uzs(m.sell_price_usd, rate, rules),
-            count=m.count_auto + m.skinslink_count,
+            count=m.stock_count,
         )
         for m in await family(db, item, categories=categories)
     ]
@@ -322,9 +323,13 @@ async def get_listings(
     item = await get_item(db, slug, categories=enabled_categories(settings))
     rules = await load_rules(db)
     rate = await usd_uzs_rate(db)
-    # Skinslink's offers come from our mirror (a DB read, no external call); this route
-    # composes the two sources — ``skins`` itself never imports ``skinslink``.
-    extra = await offers_for(db, item.id, settings=settings, now=now())
+    # Skinslink's and LIS-SKINS' offers come from our own tables (no external call); this
+    # route composes the sources — ``skins`` itself never imports them.
+    at = now()
+    extra = [
+        *await skinslink_offers(db, item.id, settings=settings, now=at),
+        *await lisskins_offers(db, item.id, settings=settings, now=at),
+    ]
     rows: list[Listing] = []
     degraded = False
     if settings.waxpeer_buy_enabled:  # off: Skinslink resells the same listings, cheaper
@@ -338,7 +343,7 @@ async def get_listings(
             rules=rules,
             category=item.category,
             weapon=item.weapon,
-            count_auto=item.count_auto + item.skinslink_count,
+            count_auto=item.stock_count,
             item_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,

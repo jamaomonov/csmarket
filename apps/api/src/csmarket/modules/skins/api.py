@@ -14,6 +14,7 @@ from csmarket.modules.skins.listings import (
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.naming import canonical_name
 from csmarket.modules.skins.offers import (
+    TIE_ORDER,
     Offer,
     Source,
     from_listing,
@@ -55,6 +56,7 @@ from csmarket.modules.skins.waxpeer_trades import (
 
 __all__ = [
     "LOOKUP_MAX_IDS",
+    "TIE_ORDER",
     "AppliedKind",
     "FakeAction",
     "FakeTradeClient",

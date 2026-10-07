@@ -34,6 +34,9 @@ from csmarket.modules.lisskins.models import (
     LisskinsPurchase,
     LisskinsState,
 )
+from csmarket.modules.lisskins.offers import (
+    offers_for,
+)
 from csmarket.modules.lisskins.rollup import (
     rollup,
 )
@@ -80,6 +83,7 @@ __all__ = [
     "client_for",
     "load_index",
     "lot_of",
+    "offers_for",
     "read_export",
     "rollup",
     "snapshot_fresh",
