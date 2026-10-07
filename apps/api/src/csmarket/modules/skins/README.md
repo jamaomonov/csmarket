@@ -330,3 +330,14 @@ Unit: `tests/unit/test_skins_*.py`. Integration: `tests/integration/test_skins_*
 Redis testcontainers; respx for GitHub and Waxpeer, never the real ones). Contract: respx
 recordings of Waxpeer's shapes in `tests/fixtures/skins/`, used by `tests/contract/`. A fixture
 never holds a real trade-link token. Scheduler jobs: `apps/scheduler/tests/test_skins_*.py`.
+
+## Inspect links (2026-10-07)
+
+`inspect.decode_inspect(url)` reads CS2's self-contained inspect links
+(`…csgo_econ_action_preview%20<hex>`: XOR key byte, protobuf `CEconItemPreviewDataBlock`,
+CRC checksum) offline: asset id, defindex, paint index and seed, float, stickers and charms
+(`def_index`, slot, wear). ~99.9 % of Skinslink's links are of this kind; an old `S…A…D…`
+link, a bad checksum or anything else is `None`. Our own ~120 lines, cross-checked against the
+`cs2inspect` library (GPL-3.0, not a dependency) on 2 000 real links. `skin_items.def_index`
+(migration `0021`, written by the ByMykel import for `stickers` and `keychains`) and
+`stickers.applied_cards` turn a `def_index` into a name and an image.

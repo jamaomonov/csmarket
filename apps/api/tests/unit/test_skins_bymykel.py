@@ -69,3 +69,12 @@ def test_a_weapon_has_no_side() -> None:
         [{"market_hash_name": "AK-47 | Redline (Field-Tested)", "weapon": {"name": "AK-47"}}]
     )
     assert rows[0].team is None
+
+
+def test_stickers_and_charms_keep_their_def_index_for_inspect_links() -> None:
+    sticker = {"market_hash_name": "Sticker | Shooter", "def_index": "1", "image": "x"}
+    charm = {"market_hash_name": "Charm | Lil' Ava", "def_index": "1"}
+    agent = {"market_hash_name": "Agent | X", "def_index": "4619"}
+    assert [r.def_index for r in rows_from_file("stickers", [sticker])] == [1]
+    assert [r.def_index for r in rows_from_file("keychains", [charm])] == [1]
+    assert [r.def_index for r in rows_from_file("agents", [agent])] == [None]

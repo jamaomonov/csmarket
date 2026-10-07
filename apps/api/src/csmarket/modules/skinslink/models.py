@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import (
     BigInteger,
@@ -29,7 +30,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from csmarket.core.db import Base
@@ -77,6 +78,15 @@ class SkinslinkItem(Base):
     #: Our catalogue item; ``NULL`` = not in our catalogue (never offered, never priced).
     skin_item_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("skin_items.id", ondelete="SET NULL"), nullable=True
+    )
+    # Any: ``[{"slot": int | None, "def_index": int, "wear": float | None}]``, decoded from
+    # ``inspect_url`` (``skins.inspect``) when the row is written.
+    stickers: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb"), default=list
+    )
+    # Any: as ``stickers``, for charms.
+    keychains: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb"), default=list
     )
     updated_at: Mapped[datetime] = _ts()
 

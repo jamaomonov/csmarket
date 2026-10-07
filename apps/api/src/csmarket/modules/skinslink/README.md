@@ -63,6 +63,12 @@ worker and the scheduler import only this.
   list in memory (~100 MB peak; the scheduler has 512 MB). The cursor is the oldest page's
   `last_update_at`, so the events replay whatever changed during the walk. The prod
   incident of 2026-10-06 (the scheduler OOM-looped on a one-piece full load) is why.
+- **Stickers and charms.** On each write the mirror decodes the listing's inspect link
+  (`skins.inspect.decode_inspect`, no external call) into `skinslink_items.stickers` /
+  `keychains` (`{slot, def_index, wear}`); `offers_for` names them through
+  `skins.applied_cards` (our catalogue's ByMykel stickers and charms by `def_index`) and the
+  item page shows them like Waxpeer's. Old `S…A…D…` links and ids the catalogue does not know
+  show nothing.
 - **Offer ids.** Skinslink's `id` identifies the offer and is what a purchase sends: a Steam
   asset id, or — for ~43k offers it holds in stock, with no particular asset — a lowercase hex
   id up to ~270 characters (`skins.offers` accepts `sl:[0-9a-f]{1,300}`; columns 300 wide,

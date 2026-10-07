@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -297,3 +298,22 @@ async def test_offers_held_in_stock_keep_their_hex_id(
     rows = await _rows(db_session)
     assert sorted(rows) == sorted(["1", stock])
     assert rows[stock].price_units == 1100
+
+
+async def test_the_mirror_keeps_what_an_inspect_link_carries(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    item, _ = await make_item_and_rate(db_session)
+    link = (
+        "steam://run/730//+csgo_econ_action_preview%20"
+        "1303E5CC9FB9DB120B143389113B1623172BA1F6FEE61053E81771161B1303A73A71161B1203A73A71161B11"
+        "03A73A71161B1003A73A7B909393931F631B4996D743"
+    )
+    card = replace(_item("1", item.market_hash_name, "9.00"), inspect_url=link)
+    plain = _item("2", item.market_hash_name, "9.50")
+    page = AvailablePage(items=[card, plain], last_update_at="c0")
+    await sync_mirror(_factory(db_engine), ScriptedClient(page), now=NOW)
+    rows = await _rows(db_session)
+    assert [s["def_index"] for s in rows["1"].stickers] == [5300, 5300, 5300, 5300]
+    assert [s["slot"] for s in rows["1"].stickers] == [0, 1, 2, 3]
+    assert (rows["1"].keychains, rows["2"].stickers) == ([], [])

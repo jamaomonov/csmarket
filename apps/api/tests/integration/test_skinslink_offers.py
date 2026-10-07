@@ -6,6 +6,8 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from csmarket.core.config import get_settings
+from csmarket.core.ids import new_id
+from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from csmarket.modules.skinslink.offers import offers_for
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,3 +70,60 @@ async def test_stale_mirror_offers_nothing(db_session: AsyncSession) -> None:
     item_id = await _seed(db_session, NOW - timedelta(minutes=11))
     settings = get_settings().model_copy(update=ACTIVE)
     assert await offers_for(db_session, item_id, settings=settings, now=NOW) == []
+
+
+async def test_an_offer_shows_the_stickers_and_charms_its_link_carries(
+    db_session: AsyncSession,
+) -> None:
+    """Stickers come by ``def_index`` from our catalogue (ByMykel); an unknown one is left
+    out, a charm is listed after the stickers."""
+    item, _ = await make_item_and_rate(db_session)
+    db_session.add_all(
+        [
+            SkinItem(
+                id=new_id(),
+                market_hash_name="Sticker | Shooter",
+                phase="",
+                slug="st-shooter",
+                category="stickers",
+                search_text="shooter",
+                def_index=5300,
+                image_url="https://community.akamai.steamstatic.com/economy/image/st",
+            ),
+            SkinItem(
+                id=new_id(),
+                market_hash_name="Charm | Lil' Ava",
+                phase="",
+                slug="ch-ava",
+                category="charms",
+                search_text="ava",
+                def_index=1,
+                image_url=None,
+            ),
+            SkinslinkItem(
+                id="55",
+                market_hash_name=item.market_hash_name,
+                phase="",
+                price_units=9000,
+                skin_item_id=item.id,
+                stickers=[
+                    {"slot": 0, "def_index": 5300, "wear": 0.25},
+                    {"slot": 1, "def_index": 999_999, "wear": None},
+                ],
+                keychains=[{"slot": 0, "def_index": 1, "wear": None}],
+            ),
+            SkinslinkState(id=1, mirror_synced_at=NOW, cursor="c"),
+        ]
+    )
+    await db_session.commit()
+    settings = get_settings().model_copy(update=ACTIVE)
+    (offer,) = await offers_for(db_session, item.id, settings=settings, now=NOW)
+    assert offer.stickers == [
+        {
+            "name": "Sticker | Shooter",
+            "image": "https://community.akamai.steamstatic.com/economy/image/st",
+            "slot": 0,
+            "wear": 0.25,
+        },
+        {"name": "Charm | Lil' Ava", "image": None, "slot": None, "wear": None},
+    ]

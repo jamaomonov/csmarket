@@ -15,7 +15,7 @@ flushed in batches of 1 000. Streaming JSON would need a new dependency.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -62,6 +62,8 @@ class CatalogRow:
     search_text: str
     #: An agent's side (``ct`` / ``t``); ``None`` for everything that is not an agent.
     team: str | None = None
+    #: Stickers and charms only: the id an inspect link names them by.
+    def_index: int | None = None
 
 
 @dataclass(frozen=True)
@@ -152,6 +154,10 @@ def rows_from_skins(entries: list[dict[str, Any]]) -> list[CatalogRow]:
     return rows
 
 
+#: Files whose ``def_index`` an inspect link refers to.
+_DEF_INDEXED = frozenset({"stickers", "keychains"})
+
+
 def rows_from_file(file_key: str, entries: list[dict[str, Any]]) -> list[CatalogRow]:
     """Rows for any non-skin file; the category is the file's."""
     category = category_for_file(file_key)
@@ -159,6 +165,8 @@ def rows_from_file(file_key: str, entries: list[dict[str, Any]]) -> list[Catalog
     for entry in entries:
         row = _row(entry, lambda _parsed: category, weapons=False)
         if row is not None:
+            if file_key in _DEF_INDEXED:
+                row = replace(row, def_index=_int(entry.get("def_index")))
             rows.append(row)
     return rows
 
@@ -200,6 +208,7 @@ _METADATA_COLUMNS: tuple[str, ...] = (
     "min_float",
     "max_float",
     "paint_index",
+    "def_index",
     "search_text",
     "team",
 )

@@ -15,7 +15,7 @@ from collections.abc import Awaitable, Callable, Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from sqlalchemy import delete, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -23,7 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
-from csmarket.modules.skins.api import SkinItem, canonical_name, offer_id_of, parse_offer_id
+from csmarket.modules.skins.api import (
+    SkinItem,
+    canonical_name,
+    decode_inspect,
+    offer_id_of,
+    parse_offer_id,
+)
 from csmarket.modules.skinslink.client import (
     CatalogueEvent,
     CatalogueItem,
@@ -101,6 +107,18 @@ async def _keys_to_items(
     return found
 
 
+# Any: JSONB rows, ``{"slot", "def_index", "wear"}`` each.
+def _applied_of(inspect_url: str | None) -> dict[str, list[dict[str, Any]]]:
+    """The stickers and charms the listing's inspect link carries (``skins.inspect``)."""
+    item = decode_inspect(inspect_url)
+    if item is None:
+        return {"stickers": [], "keychains": []}
+    return {
+        "stickers": [a.model_dump() for a in item.stickers],
+        "keychains": [a.model_dump() for a in item.keychains],
+    }
+
+
 def listable(item: CatalogueItem) -> bool:
     """An offer we can sell by its id: a Steam asset id or the hex id of an offer Skinslink
     holds in stock (``skins.offers`` defines the shape; anything else is skipped)."""
@@ -130,6 +148,7 @@ async def _upsert(db: AsyncSession, items: Sequence[CatalogueItem], *, now: date
             "inspect_url": i.inspect_url,
             "image_url": i.image_url,
             "skin_item_id": ids.get((name, phase)),
+            **_applied_of(i.inspect_url),
             "updated_at": now,
         }
         for i, (name, phase) in keyed
@@ -150,6 +169,8 @@ async def _upsert(db: AsyncSession, items: Sequence[CatalogueItem], *, now: date
                         "inspect_url",
                         "image_url",
                         "skin_item_id",
+                        "stickers",
+                        "keychains",
                         "updated_at",
                     )
                 },

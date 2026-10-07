@@ -224,3 +224,37 @@ async def test_an_offer_held_in_stock_opens_an_order_by_its_hex_id(
     assert r.status_code == 201, r.text
     order = await _order(db_session, r.json()["number"])
     assert (order.source, order.offer_id) == ("skinslink", offer)
+
+
+async def test_the_item_page_shows_a_skinslink_offers_stickers(
+    integration_client: AsyncClient, stub: StubListings, item: SkinItem, db_session: AsyncSession
+) -> None:
+    await stub.set(SLUG, [])
+    db_session.add_all(
+        [
+            SkinItem(
+                id=new_id(),
+                market_hash_name="Sticker | Shooter",
+                phase="",
+                slug="sticker-shooter",
+                category="stickers",
+                search_text="shooter",
+                def_index=5300,
+                image_url="https://community.akamai.steamstatic.com/economy/image/st",
+            ),
+            SkinslinkItem(
+                id=ASSET,
+                market_hash_name=item.market_hash_name,
+                phase="",
+                price_units=9_000,
+                skin_item_id=item.id,
+                stickers=[{"slot": 2, "def_index": 5300, "wear": 0.5}],
+            ),
+        ]
+    )
+    await db_session.commit()
+    r = await integration_client.get(f"/api/v1/skins/{SLUG}/listings")
+    (offer,) = r.json()["items"]
+    (sticker,) = offer["stickers"]
+    assert (sticker["name"], sticker["slot"], sticker["wear"]) == ("Sticker | Shooter", 2, 0.5)
+    assert sticker["image"].endswith("/economy/image/st")

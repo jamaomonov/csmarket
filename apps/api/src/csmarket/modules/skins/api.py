@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from csmarket.modules.skins.images import steam_image
+from csmarket.modules.skins.inspect import decode_inspect
 from csmarket.modules.skins.listings import (
     Listing,
     SearchClient,
@@ -23,6 +24,8 @@ from csmarket.modules.skins.offers import (
 from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
 from csmarket.modules.skins.service import get_item
 from csmarket.modules.skins.settings import enabled_categories, load_rules
+from csmarket.modules.skins.stickers import Kind as AppliedKind
+from csmarket.modules.skins.stickers import applied_cards
 from csmarket.modules.skins.waxpeer import (
     SnapshotRow,
     WaxpeerClient,
@@ -52,6 +55,7 @@ from csmarket.modules.skins.waxpeer_trades import (
 
 __all__ = [
     "LOOKUP_MAX_IDS",
+    "AppliedKind",
     "FakeAction",
     "FakeTradeClient",
     "Listing",
@@ -72,7 +76,9 @@ __all__ = [
     "WaxpeerTrade",
     "WaxpeerTradeClient",
     "WaxpeerUnavailableError",
+    "applied_cards",
     "canonical_name",
+    "decode_inspect",
     "enabled_categories",
     "fake_active",
     "fake_client",

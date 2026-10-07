@@ -59,6 +59,8 @@ class SkinItem(Base):
     min_float: Mapped[Decimal | None] = mapped_column(Numeric(6, 5), nullable=True)
     max_float: Mapped[Decimal | None] = mapped_column(Numeric(6, 5), nullable=True)
     paint_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: A sticker's or a charm's id in the item schema: what an inspect link names it by.
+    def_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     #: An agent's side, ``'ct'`` or ``'t'``; ``None`` for everything else.
     team: Mapped[str | None] = mapped_column(String(2), nullable=True)
     #: ``'bymykel'`` once the daily import has written the row, ``'stub'``
@@ -120,6 +122,7 @@ class SkinItem(Base):
         Index("ix_skin_items_active", "active"),
         Index("ix_skin_items_category_sell", "category", "sell_price_usd"),
         Index("ix_skin_items_discount", "discount_percent"),
+        Index("ix_skin_items_category_def_index", "category", "def_index"),
         Index(
             "ix_skin_items_search_trgm",
             "search_text",
