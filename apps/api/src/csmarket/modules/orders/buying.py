@@ -46,6 +46,8 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
+from csmarket.modules.lisskins.api import LisskinsBuyClient
+from csmarket.modules.lisskins.api import client_for as lisskins_client_for
 from csmarket.modules.orders.buy_lease import (
     BUY_LEASE,
     discard,
@@ -65,6 +67,7 @@ from csmarket.modules.orders.buy_writes import (
     unconfirmed,
 )
 from csmarket.modules.orders.fsm import move
+from csmarket.modules.orders.lisskins_buying import attempt_lisskins_buy
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.skinslink_buying import attempt_skinslink_buy
 from csmarket.modules.orders.substitutes import pending_buy
@@ -139,6 +142,7 @@ async def drain_paid(
     *,
     client: TradeClient | None = None,
     skinslink_client: SkinslinkPurchaseClient | None = None,
+    lisskins_client: LisskinsBuyClient | None = None,
     settings: Settings | None = None,
     limit: int = 10,
 ) -> int:
@@ -151,6 +155,7 @@ async def drain_paid(
         db: The drainer's own session; committed here.
         client: Waxpeer; the process's :func:`trade_client` when omitted.
         skinslink_client: Skinslink; built (buy timeout) when a Skinslink order is claimed.
+        lisskins_client: LIS-SKINS; built (buy timeout) when a LIS-SKINS order is claimed.
         settings: The process settings when omitted.
         limit: Orders claimed per call.
 
@@ -170,6 +175,13 @@ async def drain_paid(
                 )
                 await attempt_skinslink_buy(
                     db, skinslink_client, order_id=order_id, settings=settings, waxpeer=client
+                )
+            elif source == "lisskins":
+                lisskins_client = lisskins_client or lisskins_client_for(
+                    settings, timeout_seconds=settings.lisskins_buy_timeout_seconds
+                )
+                await attempt_lisskins_buy(
+                    db, lisskins_client, order_id=order_id, settings=settings, waxpeer=client
                 )
             else:
                 await attempt_buy(db, client, order_id=order_id, settings=settings)
