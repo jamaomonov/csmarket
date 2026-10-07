@@ -208,3 +208,48 @@ groups:
             More than five Skinslink purchases were refused, forbidden or unanswered in 15
             minutes. Check the worker's orders.skinslink_buy lines and Skinslink's status.
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/skinslink.md#buy-failures"
+
+      # --- LIS-SKINS, the third buy source (spec 2026-10-07). Gated by
+      # csmarket_lisskins_enabled (the scheduler's balance job sets it every 5 minutes).
+
+      # The applied export is over 20 minutes old: LIS-SKINS lots and prices are hidden (a
+      # stale snapshot sells nothing) until a fresh export is applied.
+      - alert: LisskinsSnapshotStale
+        expr: >
+          (time() - max(csmarket_lisskins_snapshot_timestamp_seconds{job="scheduler"}) > 1200)
+          and on() (max(csmarket_lisskins_enabled{job="scheduler"}) == 1)
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "The LIS-SKINS snapshot is over 20 minutes old"
+          description: >
+            LIS-SKINS lots are off the storefront until a fresh export is applied. Check the
+            scheduler's lisskins.snapshot log lines and whether the export URL answers.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/lisskins.md#snapshot-stale"
+
+      - alert: LisskinsBalanceLow
+        expr: >
+          (min(csmarket_lisskins_balance_available_usd{job="scheduler"})
+            < min(csmarket_lisskins_balance_threshold_usd{job="scheduler"}))
+          and on() (max(csmarket_lisskins_enabled{job="scheduler"}) == 1)
+        for: 10m
+        labels: { severity: page }
+        annotations:
+          summary: 'LIS-SKINS balance ${{ $value | printf "%.2f" }}, below the alert threshold'
+          description: >
+            Top up the LIS-SKINS balance before its purchases start failing and refunding
+            customers.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/lisskins.md#balance-low"
+
+      # Purchases refused, forbidden or unanswered: several in 15 minutes means the key, the
+      # IP, the balance or LIS-SKINS itself, not one sold lot.
+      - alert: LisskinsBuyFailures
+        expr: >
+          sum(increase(csmarket_lisskins_calls_total{endpoint="buy",outcome=~"refused|forbidden|unavailable"}[15m])) > 5
+        labels: { severity: warn }
+        annotations:
+          summary: "LIS-SKINS purchases keep failing"
+          description: >
+            More than five LIS-SKINS purchases were refused, forbidden or unanswered in 15
+            minutes. Check the worker's orders.lisskins_buy lines and LIS-SKINS' status.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/lisskins.md#buy-failures"

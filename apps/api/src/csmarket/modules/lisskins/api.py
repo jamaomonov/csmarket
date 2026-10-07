@@ -10,6 +10,12 @@ from csmarket.modules.lisskins.availability import (
     live_price,
     recheck_chosen,
 )
+from csmarket.modules.lisskins.balance import (
+    BALANCE_KEY,
+    BalanceClient,
+    cached_balance,
+    refresh_balance,
+)
 from csmarket.modules.lisskins.client import (
     BUY_LINK_ERRORS,
     INFO_MAX_IDS,
@@ -60,6 +66,7 @@ from csmarket.modules.lisskins.snapshot import (
 )
 
 __all__ = [
+    "BALANCE_KEY",
     "BREAKER_KEY",
     "BREAKER_TTL",
     "BUDGET_PER_MINUTE",
@@ -72,6 +79,7 @@ __all__ = [
     "Availability",
     "AvailabilityClient",
     "Balance",
+    "BalanceClient",
     "CatalogueIndex",
     "Collector",
     "ExportReader",
@@ -92,6 +100,7 @@ __all__ = [
     "Sticker",
     "apply_snapshot",
     "availability_client",
+    "cached_balance",
     "client_for",
     "live_price",
     "load_index",
@@ -99,6 +108,7 @@ __all__ = [
     "offers_for",
     "read_export",
     "recheck_chosen",
+    "refresh_balance",
     "rollup",
     "snapshot_fresh",
     "to_units",

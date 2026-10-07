@@ -270,6 +270,26 @@ SKINSLINK_ENABLED = Gauge(
     "csmarket_skinslink_enabled",
     "1 while Skinslink is switched on and keyed, else 0 (gates the Skinslink alerts).",
 )
+LISSKINS_BALANCE_AVAILABLE_USD = Gauge(
+    "csmarket_lisskins_balance_available_usd",
+    "The LIS-SKINS balance free to spend, USD (alert: LisskinsBalanceLow).",
+)
+LISSKINS_BALANCE_LOCKED_USD = Gauge(
+    "csmarket_lisskins_balance_locked_usd", "The LIS-SKINS balance locked by open purchases, USD."
+)
+LISSKINS_BALANCE_THRESHOLD_USD = Gauge(
+    "csmarket_lisskins_balance_threshold_usd",
+    "The balance below which LisskinsBalanceLow fires (setting lisskins_balance_alert_usd).",
+)
+LISSKINS_BALANCE_READ_TIMESTAMP = Gauge(
+    "csmarket_lisskins_balance_read_timestamp_seconds",
+    "Unix time of the last successful LIS-SKINS balance read.",
+)
+LISSKINS_ENABLED = Gauge(
+    "csmarket_lisskins_enabled",
+    "1 while LIS-SKINS is switched on and keyed, else 0 (gates the LIS-SKINS alerts).",
+)
+
 WAXPEER_BALANCE_READ_TIMESTAMP = Gauge(
     "csmarket_waxpeer_balance_read_timestamp_seconds",
     "Unix time of the last successful Waxpeer balance read (alert: WaxpeerBalanceUnknown).",
@@ -283,6 +303,10 @@ WAXPEER_BALANCE_THRESHOLD_USD.set(float("nan"))
 SKINSLINK_BALANCE_AVAILABLE_USD.set(float("nan"))
 SKINSLINK_BALANCE_HOLD_USD.set(float("nan"))
 SKINSLINK_BALANCE_THRESHOLD_USD.set(float("nan"))
+LISSKINS_BALANCE_AVAILABLE_USD.set(float("nan"))
+LISSKINS_BALANCE_LOCKED_USD.set(float("nan"))
+LISSKINS_BALANCE_THRESHOLD_USD.set(float("nan"))
+LISSKINS_BALANCE_READ_TIMESTAMP.set(time.time())
 SKINSLINK_BALANCE_READ_TIMESTAMP.set(time.time())
 # Start at process start, not 0: "never succeeded" then reads as stale only after the alert's
 # own window, instead of at once. The API and the worker keep these values; the alerts are
@@ -427,6 +451,29 @@ def set_skinslink_enabled(*, enabled: bool) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_skinslink_enabled", error=type(exc).__name__
+        )
+
+
+def set_lisskins_balance(available_usd: float, locked_usd: float, threshold_usd: float) -> None:
+    """Export a successful LIS-SKINS balance read and the alert threshold. Never raises."""
+    try:
+        LISSKINS_BALANCE_AVAILABLE_USD.set(available_usd)
+        LISSKINS_BALANCE_LOCKED_USD.set(locked_usd)
+        LISSKINS_BALANCE_THRESHOLD_USD.set(threshold_usd)
+        LISSKINS_BALANCE_READ_TIMESTAMP.set(time.time())
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_lisskins_balance", error=type(exc).__name__
+        )
+
+
+def set_lisskins_enabled(*, enabled: bool) -> None:
+    """Whether LIS-SKINS is on (``csmarket_lisskins_enabled``). Never raises."""
+    try:
+        LISSKINS_ENABLED.set(1 if enabled else 0)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_lisskins_enabled", error=type(exc).__name__
         )
 
 
@@ -647,6 +694,8 @@ __all__ = [
     "record_waxpeer_call",
     "record_ws_nudges",
     "serve_metrics",
+    "set_lisskins_balance",
+    "set_lisskins_enabled",
     "set_lisskins_snapshot",
     "set_orders_stuck",
     "set_skinslink_balance",

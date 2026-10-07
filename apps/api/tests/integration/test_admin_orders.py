@@ -19,6 +19,7 @@ from httpx import AsyncClient
 from sqlalchemy import event, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from tests.integration.lisskins_factory import OFFER, make_lisskins_order
 from tests.integration.orders_factory import build_order, make_item_and_rate, make_trade
 from tests.integration.payments_factory import make_user
 from tests.integration.skinslink_factory import make_skinslink_order
@@ -502,3 +503,30 @@ async def test_a_detail_after_the_order_moved_reads_fresh(
     await db_session.commit()
     again = (await integration_client.get(f"/api/v1/admin/orders/{order.number}", headers=h)).json()
     assert (first["order"]["status"], again["order"]["status"]) == ("buying", "trade_sent")
+
+
+async def test_a_lisskins_orders_page_names_its_source_and_shows_its_purchase(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    order, _ = await make_lisskins_order(db_session, amount_units=12_340)
+    r = await integration_client.get(
+        f"/api/v1/admin/orders/{order.number}", headers=await admin_headers()
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert (body["order"]["source"], body["order"]["offer_id"], body["order"]["listing_id"]) == (
+        "lisskins",
+        "ls:125345",
+        None,
+    )
+    assert body["trade"] is None
+    assert body["skinslink"] is None
+    ls = body["lisskins"]
+    assert (ls["custom_id"], ls["skin_id"], ls["purchase_id"], ls["status"]) == (
+        order.id,
+        125345,
+        55,
+        "wait_accept",
+    )
+    assert ls["offer_url"] == f"https://steamcommunity.com/tradeoffer/{OFFER}/"
+    assert ls["amount_usd"] == "12.340000"

@@ -31,6 +31,7 @@ from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 from csmarket_scheduler.jobs import (
     click_timeout,
     fx_refresh,
+    lisskins_balance,
     lisskins_reconcile,
     lisskins_snapshot,
     orders_erase,
@@ -73,6 +74,7 @@ def build_scheduler() -> AsyncIOScheduler:
     source_prices.register(scheduler)
     lisskins_snapshot.register(scheduler)
     lisskins_reconcile.register(scheduler)
+    lisskins_balance.register(scheduler)
     topup_expiry.register(scheduler)
     click_timeout.register(scheduler)
     payme_timeout.register(scheduler)

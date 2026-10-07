@@ -27,6 +27,7 @@ from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.lisskins.api import LisskinsPurchase
+from csmarket.modules.lisskins.api import cached_balance as lisskins_cached_balance
 from csmarket.modules.orders.health import cached_balance
 from csmarket.modules.orders.models import IN_FLIGHT, Order, SkinTrade
 from csmarket.modules.skinslink.api import SkinslinkPurchase, skinslink_cached_balance
@@ -72,6 +73,12 @@ class SkinslinkBalance(_Frozen):
     read_at: datetime | None
 
 
+class LisskinsBalance(_Frozen):
+    available_usd: Decimal | None
+    locked_usd: Decimal | None
+    read_at: datetime | None
+
+
 class Dashboard(_Frozen):
     """Everything the dashboard shows for one window."""
 
@@ -84,6 +91,7 @@ class Dashboard(_Frozen):
     by_day: list[DayRow]
     waxpeer: WaxpeerBalance
     skinslink: SkinslinkBalance
+    lisskins: LisskinsBalance
 
 
 def window_start(at: datetime, days: int) -> datetime:
@@ -168,6 +176,7 @@ async def summary(db: AsyncSession, redis: Redis, *, days: Days, at: datetime) -
     in_flight, attention = await _now_counts(db)
     balance, read_at = await cached_balance(redis)
     sl_available, sl_hold, sl_read_at = await skinslink_cached_balance(redis)
+    ls_available, ls_locked, ls_read_at = await lisskins_cached_balance(redis)
     first = since.date()
     by_day = []
     for n in range(days):
@@ -186,6 +195,9 @@ async def summary(db: AsyncSession, redis: Redis, *, days: Days, at: datetime) -
         skinslink=SkinslinkBalance(
             available_usd=sl_available, hold_usd=sl_hold, read_at=sl_read_at
         ),
+        lisskins=LisskinsBalance(
+            available_usd=ls_available, locked_usd=ls_locked, read_at=ls_read_at
+        ),
     )
 
 
@@ -193,6 +205,7 @@ __all__ = [
     "Dashboard",
     "DayRow",
     "Days",
+    "LisskinsBalance",
     "Refunds",
     "Sales",
     "SkinslinkBalance",

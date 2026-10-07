@@ -98,6 +98,172 @@
         "title": "AdminEntryOut",
         "type": "object"
       },
+      "AdminLisskinsPurchaseOut": {
+        "description": "A LIS-SKINS order's purchase as the operator needs it (spec 2026-10-07 \u00a77).",
+        "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "buy_unconfirmed",
+                  "ambiguous_trade",
+                  "rolled_back",
+                  "source_forbidden",
+                  "audit_divergence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "buy_pending": {
+            "title": "Buy Pending",
+            "type": "boolean"
+          },
+          "buy_unconfirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buy Unconfirmed At"
+          },
+          "custom_id": {
+            "title": "Custom Id",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "offer_expiry_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Expiry At"
+          },
+          "offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
+          },
+          "offer_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Url"
+          },
+          "purchase_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purchase Id"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "return_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Reason"
+          },
+          "skin_id": {
+            "title": "Skin Id",
+            "type": "integer"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "custom_id",
+          "skin_id",
+          "purchase_id",
+          "status",
+          "return_reason",
+          "error",
+          "offer_id",
+          "offer_url",
+          "offer_expiry_at",
+          "amount_usd",
+          "buy_pending",
+          "buy_unconfirmed_at",
+          "attention_reason",
+          "resolved_at"
+        ],
+        "title": "AdminLisskinsPurchaseOut",
+        "type": "object"
+      },
       "AdminOrderDetail": {
         "description": "The order page: the order, its buyer, its trade, its payments and what may be done.",
         "properties": {
@@ -108,6 +274,16 @@
           "can_retry": {
             "title": "Can Retry",
             "type": "boolean"
+          },
+          "lisskins": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminLisskinsPurchaseOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "order": {
             "$ref": "#/components/schemas/AdminOrderFull"
@@ -391,7 +567,8 @@
           "source": {
             "enum": [
               "waxpeer",
-              "skinslink"
+              "skinslink",
+              "lisskins"
             ],
             "title": "Source",
             "type": "string"
@@ -2559,6 +2736,9 @@
             "title": "In Flight",
             "type": "integer"
           },
+          "lisskins": {
+            "$ref": "#/components/schemas/LisskinsOut"
+          },
           "refunds": {
             "$ref": "#/components/schemas/RefundsOut"
           },
@@ -2586,7 +2766,8 @@
           "attention",
           "by_day",
           "waxpeer",
-          "skinslink"
+          "skinslink",
+          "lisskins"
         ],
         "title": "DashboardOut",
         "type": "object"
@@ -3024,6 +3205,51 @@
           "pp"
         ],
         "title": "LiquidityBand",
+        "type": "object"
+      },
+      "LisskinsOut": {
+        "properties": {
+          "available_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Usd"
+          },
+          "locked_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked Usd"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          }
+        },
+        "required": [
+          "available_usd",
+          "locked_usd",
+          "read_at"
+        ],
+        "title": "LisskinsOut",
         "type": "object"
       },
       "MeOut": {

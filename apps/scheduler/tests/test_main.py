@@ -30,6 +30,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "sources.prices",
         "lisskins.snapshot",
         "lisskins.reconcile",
+        "lisskins.balance",
         "wallet.topup_expiry",
         "click.timeout",
         "payme.timeout",

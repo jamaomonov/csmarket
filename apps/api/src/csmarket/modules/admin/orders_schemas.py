@@ -216,6 +216,30 @@ class AdminSkinslinkPurchaseOut(BaseModel):
     resolved_at: datetime | None
 
 
+class AdminLisskinsPurchaseOut(BaseModel):
+    """A LIS-SKINS order's purchase as the operator needs it (spec 2026-10-07 §7)."""
+
+    #: Our idempotency key at LIS-SKINS — what its purchase history is searched by.
+    custom_id: str
+    #: The LIS-SKINS lot bought.
+    skin_id: int
+    purchase_id: int | None
+    #: The skin's status word (``processing`` … ``return``).
+    status: str | None
+    return_reason: str | None
+    error: str | None
+    #: Steam's trade offer id.
+    offer_id: str | None
+    offer_url: str | None
+    offer_expiry_at: datetime | None
+    #: What LIS-SKINS charged, USD with six places.
+    amount_usd: str | None
+    buy_pending: bool
+    buy_unconfirmed_at: datetime | None
+    attention_reason: AttentionReason | None
+    resolved_at: datetime | None
+
+
 class AdminOrderDetail(BaseModel):
     """The order page: the order, its buyer, its trade, its payments and what may be done."""
 
@@ -224,6 +248,8 @@ class AdminOrderDetail(BaseModel):
     trade: AdminTradeOut | None
     #: A Skinslink order's purchase; ``None`` for a Waxpeer order.
     skinslink: AdminSkinslinkPurchaseOut | None = None
+    #: A LIS-SKINS order's purchase; ``None`` otherwise.
+    lisskins: AdminLisskinsPurchaseOut | None = None
     #: Oldest first.
     payments: list[AdminOrderPaymentOut]
     #: «Вернуть деньги на баланс» would succeed now.
@@ -241,6 +267,7 @@ class AdminResolveIn(BaseModel):
 
 
 __all__ = [
+    "AdminLisskinsPurchaseOut",
     "AdminOrderDetail",
     "AdminOrderFull",
     "AdminOrderPaymentOut",
