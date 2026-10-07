@@ -106,12 +106,19 @@ export function wearChoices(
  * not render), drawn as a silhouette. `wide` items (long guns, knives) are sized by
  * width. `null` means a lucide glyph instead — a music kit's image is a square card.
  */
-export const CATEGORY_ICONS: Record<SkinCategory, { file: string; wide: boolean } | null> = {
+/**
+ * A category's silhouette: its file, whether it is drawn wide, and an optional mask size
+ * for a shape taller than the rest (the karambit: fitted by height, never cropped).
+ */
+export const CATEGORY_ICONS: Record<
+  SkinCategory,
+  { file: string; wide: boolean; mask?: string } | null
+> = {
   rifles: { file: "rifles.png", wide: true },
   pistols: { file: "pistols.png", wide: false },
   smgs: { file: "smgs.png", wide: true },
   heavy: { file: "heavy.png", wide: true },
-  knives: { file: "knives.png", wide: true },
+  knives: { file: "knives.png", wide: true, mask: "auto 140%" },
   gloves: { file: "gloves.png", wide: false },
   agents: { file: "agents.png", wide: false },
   cases: { file: "cases.png", wide: false },

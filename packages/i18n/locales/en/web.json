@@ -252,6 +252,7 @@
       "smgs": "All SMGs",
       "heavy": "All heavy weapons"
     },
+    "selectAll": "Select all",
     "models": "Models: {category}",
     "modelsFailed": "Could not load the models",
     "stattrakTitle": "StatTrak™",

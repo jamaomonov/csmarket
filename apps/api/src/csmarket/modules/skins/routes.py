@@ -59,6 +59,7 @@ from csmarket.modules.skins.schemas import (
     SkinsPageOut,
     SkinStickerOut,
     SkinSuggestOut,
+    WeaponFacetOut,
 )
 from csmarket.modules.skins.service import (
     CatalogQuery,
@@ -150,12 +151,31 @@ async def _cached(key_parts: dict[str, Any], build: Callable[[], Awaitable[_Body
     return value
 
 
+#: The most models one catalogue request may ask for (``weapon=AK-47,AWP``).
+MAX_WEAPONS = 30
+
+
+def _weapons(raw: str | None) -> str | None:
+    """``weapon``: one model or several, comma-separated — sorted and deduplicated, so the
+    page cache sees one key per set.
+
+    Raises:
+        ValidationError: More than :data:`MAX_WEAPONS` models.
+    """
+    if raw is None:
+        return None
+    names = sorted({n.strip() for n in raw.split(",") if n.strip()})
+    if len(names) > MAX_WEAPONS:
+        raise ValidationError(f"at most {MAX_WEAPONS} weapons")
+    return ",".join(names) or None
+
+
 @router.get("/catalog", response_model=SkinsPageOut, summary="Browse the skins catalogue")
 async def get_catalog(
     *,
     db: Annotated[AsyncSession, Depends(db_session)],
     category: str | None = None,
-    weapon: str | None = None,
+    weapon: Annotated[str | None, Query(max_length=2000)] = None,
     exterior: str | None = None,
     stattrak: bool | None = None,
     souvenir: bool | None = None,
@@ -182,7 +202,7 @@ async def get_catalog(
             max_usd = max_usd_for_uzs(max_uzs, rate, round_to=round_to)
     query = CatalogQuery(
         category=category,
-        weapon=weapon,
+        weapon=_weapons(weapon),
         exterior=exterior,
         stattrak=stattrak,
         souvenir=souvenir,
@@ -223,7 +243,15 @@ async def get_facets(
         f = await facets(db, categories=categories, category=category)
         return SkinFacetsOut(
             categories=[FacetOut(value=v, count=c) for v, c in f.categories],
-            weapons=[FacetOut(value=v, count=c) for v, c in f.weapons],
+            weapons=[
+                WeaponFacetOut(
+                    value=v,
+                    count=c,
+                    category=f.weapon_info[v][0],
+                    image=steam_image(f.weapon_info[v][1], host=get_settings().skins_image_host),
+                )
+                for v, c in f.weapons
+            ],
             exteriors=[FacetOut(value=v, count=c) for v, c in f.exteriors],
             rarities=[RarityFacetOut(value=v, count=c, color=k) for v, c, k in f.rarities],
             teams=[FacetOut(value=v, count=c) for v, c in f.teams],

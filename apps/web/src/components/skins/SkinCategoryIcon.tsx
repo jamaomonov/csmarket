@@ -19,6 +19,7 @@ export function SkinCategoryIcon({ category, size = "md" }: SkinCategoryIconProp
   if (category === "all") return <LayoutGrid className={glyph} aria-hidden />;
   if (icon === null) return <Music className={glyph} aria-hidden />;
   const url = `url(/skins/categories/${icon.file})`;
+  const mask = icon.mask ?? (icon.wide ? "100% auto" : "118% auto");
   return (
     <span
       data-skin-icon
@@ -31,8 +32,8 @@ export function SkinCategoryIcon({ category, size = "md" }: SkinCategoryIconProp
       style={{
         maskImage: url,
         WebkitMaskImage: url,
-        maskSize: icon.wide ? "100% auto" : "118% auto",
-        WebkitMaskSize: icon.wide ? "100% auto" : "118% auto",
+        maskSize: mask,
+        WebkitMaskSize: mask,
         maskPosition: "center",
         WebkitMaskPosition: "center",
         maskRepeat: "no-repeat",

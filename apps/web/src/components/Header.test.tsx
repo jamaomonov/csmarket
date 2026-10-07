@@ -41,6 +41,10 @@ describe("Header", () => {
     renderHeader();
     const link = screen.getByRole("link", { name: "Войти через Steam" });
     expect(link.getAttribute("href")).toContain("app=web&locale=ru");
+    expect(link.querySelector("[data-steam-icon]")).not.toBeNull();
+    expect(
+      screen.getByRole("link", { name: "Пополнить Steam" }).querySelector("[data-steam-icon]"),
+    ).not.toBeNull();
   });
 
   it("shows the balance chip and the account menu to a signed-in user", () => {

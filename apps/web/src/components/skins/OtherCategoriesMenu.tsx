@@ -50,6 +50,7 @@ export function OtherCategoriesMenu({ categories, query, active }: OtherCategori
       triggerClassName={cn(
         chipVariants({ active: active !== undefined }),
         active === undefined && "bg-transparent",
+        "lg:w-full lg:justify-center",
       )}
       LinkComponent={AppLink}
       items={items}

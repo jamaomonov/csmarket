@@ -1,6 +1,7 @@
 "use client";
 
 import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
+import { cn } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 import { useId, type ReactNode } from "react";
 
@@ -8,6 +9,7 @@ import { SkinBuyForm } from "./SkinBuyForm";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
 import { useTradeLinkGate } from "./useTradeLinkGate";
 
+import { SteamIcon } from "@/components/icons/SteamIcon";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { displayPrice } from "@/lib/skins";
@@ -43,7 +45,11 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
     body = <p className="text-danger text-sm">{tauth("suspended")}</p>;
   } else if (!signedIn) {
     body = (
-      <a href={signInHref(locale)} className={CTA}>
+      <a
+        href={signInHref(locale)}
+        className={cn(CTA, "inline-flex items-center justify-center gap-2")}
+      >
+        <SteamIcon className="size-5" aria-hidden />
         {t("signIn")}
       </a>
     );

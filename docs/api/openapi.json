@@ -4614,7 +4614,7 @@
           },
           "weapons": {
             "items": {
-              "$ref": "#/components/schemas/FacetOut"
+              "$ref": "#/components/schemas/WeaponFacetOut"
             },
             "title": "Weapons",
             "type": "array"
@@ -5676,6 +5676,41 @@
           "read_at"
         ],
         "title": "WaxpeerOut",
+        "type": "object"
+      },
+      "WeaponFacetOut": {
+        "description": "A weapon model: its category and a picture for the filter menu.",
+        "properties": {
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "count",
+          "category"
+        ],
+        "title": "WeaponFacetOut",
         "type": "object"
       }
     }
@@ -8927,6 +8962,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maxLength": 2000,
                   "type": "string"
                 },
                 {

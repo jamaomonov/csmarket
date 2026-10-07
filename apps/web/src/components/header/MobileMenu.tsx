@@ -2,11 +2,12 @@
 
 import { LOCALES } from "@csmarket/i18n";
 import { Dropdown, type DropdownEntry } from "@csmarket/ui";
-import { Languages, LogIn, LogOut, Menu } from "lucide-react";
+import { Languages, LogOut, Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AppLink } from "./AccountMenu";
 import { ACCOUNT_NAV, MAIN_NAV, type NavEntry } from "./nav";
+import { SteamIcon } from "../icons/SteamIcon";
 
 import { getPathname, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
@@ -53,7 +54,7 @@ export function MobileMenu({ locale }: { locale: string }) {
             label: t("signIn"),
             href: signInHref(locale),
             tone: "accent" as const,
-            icon: <LogIn className="size-4 shrink-0" aria-hidden />,
+            icon: <SteamIcon className="size-4 shrink-0" aria-hidden />,
           },
         ]),
   ];

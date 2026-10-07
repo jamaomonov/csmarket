@@ -1,16 +1,8 @@
-import {
-  ArrowLeftRight,
-  Gamepad2,
-  Gift,
-  HandCoins,
-  ReceiptText,
-  Star,
-  Store,
-  User,
-} from "lucide-react";
+import { ArrowLeftRight, Gift, HandCoins, ReceiptText, Star, Store, User } from "lucide-react";
 
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType } from "react";
 
+import { SteamIcon } from "@/components/icons/SteamIcon";
 import {
   ACCOUNT,
   HOME,
@@ -21,6 +13,9 @@ import {
   TRADES,
   TRANSACTIONS,
 } from "@/lib/paths";
+
+/** A lucide icon or one of ours (`SteamIcon`): sized and coloured by `className`. */
+export type NavIcon = ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
 
 export interface NavEntry {
   /** The key under `web.nav`. */
@@ -34,14 +29,14 @@ export interface NavEntry {
     | "trades"
     | "referral";
   href: string;
-  icon: LucideIcon;
+  icon: NavIcon;
 }
 
 /** The header's sections, in order. */
 export const MAIN_NAV: NavEntry[] = [
   { key: "sell", href: SELL, icon: HandCoins },
   { key: "market", href: HOME, icon: Store },
-  { key: "steamTopup", href: STEAM_TOPUP, icon: Gamepad2 },
+  { key: "steamTopup", href: STEAM_TOPUP, icon: SteamIcon },
   { key: "reviews", href: REVIEWS, icon: Star },
 ];
 

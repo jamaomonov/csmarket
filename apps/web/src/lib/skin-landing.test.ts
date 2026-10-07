@@ -9,10 +9,10 @@ const FACETS = {
     { value: "knives", count: 3505 },
   ],
   weapons: [
-    { value: "AK-47", count: 594 },
-    { value: "M4A1-S", count: 405 },
-    { value: "Desert Eagle", count: 381 },
-    { value: "★ Karambit", count: 120 },
+    { value: "AK-47", count: 594, category: "rifles" },
+    { value: "M4A1-S", count: 405, category: "rifles" },
+    { value: "Desert Eagle", count: 381, category: "rifles" },
+    { value: "★ Karambit", count: 120, category: "rifles" },
   ],
   exteriors: [],
   rarities: [],
@@ -27,7 +27,11 @@ describe("skin landings", () => {
   });
 
   it("finds the weapon behind a slug, or nothing", () => {
-    expect(findWeapon(FACETS, "desert-eagle")).toEqual({ value: "Desert Eagle", count: 381 });
+    expect(findWeapon(FACETS, "desert-eagle")).toEqual({
+      value: "Desert Eagle",
+      count: 381,
+      category: "rifles",
+    });
     expect(findWeapon(FACETS, "nope")).toBeNull();
   });
 
@@ -61,15 +65,15 @@ describe("skin landings", () => {
 describe("every weapon the item page links to has a landing", () => {
   // The item page links `weaponPath(weaponSlug(item.weapon))`; the landing must resolve it.
   const WEAPONS = [
-    { value: "AK-47", count: 594 },
-    { value: "★ Karambit", count: 120 },
-    { value: "★ Bayonet", count: 80 },
-    { value: "★ Butterfly Knife", count: 60 },
-    { value: "★ Sport Gloves", count: 40 },
-    { value: "★ Moto Gloves", count: 30 },
-    { value: "Desert Eagle", count: 381 },
-    { value: "MP5-SD", count: 12 },
-    { value: "SSG 08", count: 40 },
+    { value: "AK-47", count: 594, category: "rifles" },
+    { value: "★ Karambit", count: 120, category: "rifles" },
+    { value: "★ Bayonet", count: 80, category: "rifles" },
+    { value: "★ Butterfly Knife", count: 60, category: "rifles" },
+    { value: "★ Sport Gloves", count: 40, category: "rifles" },
+    { value: "★ Moto Gloves", count: 30, category: "rifles" },
+    { value: "Desert Eagle", count: 381, category: "rifles" },
+    { value: "MP5-SD", count: 12, category: "rifles" },
+    { value: "SSG 08", count: 40, category: "rifles" },
   ];
   const facets = { categories: [], weapons: WEAPONS, exteriors: [], rarities: [] };
 

@@ -37,9 +37,10 @@ const facets: SkinFacets = {
     { value: "heavy", count: 2 },
   ],
   weapons: [
-    { value: "AK-47", count: 5 },
-    { value: "AWP", count: 4 },
-    { value: "Galil AR", count: 9 },
+    { value: "AK-47", count: 5, category: "rifles" },
+    { value: "AWP", count: 4, category: "rifles" },
+    { value: "Galil AR", count: 9, category: "rifles" },
+    { value: "MP9", count: 2, category: "smgs" },
   ],
   exteriors: [],
   rarities: [],
@@ -53,24 +54,48 @@ function bar(query: SkinQuery) {
   );
 }
 
-it("chips carry silhouettes, knives first, and weapon categories get a model menu", () => {
+it("chips carry silhouettes, knives first, weapon categories get a model menu, no «Все»", () => {
   bar({ sort: "-price" });
   const links = screen.getAllByRole("link").map((a) => a.textContent);
-  expect(links).toEqual(["Все", "Ножи", "Винтовки", "П-пулемёты", "Тяжёлое"]);
+  expect(links).toEqual(["Ножи", "Винтовки", "П-пулемёты", "Тяжёлое"]);
   expect(screen.getByRole("button", { name: "menu:Ножи" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "menu:Винтовки" })).toBeInTheDocument();
   expect(document.querySelectorAll("[data-skin-icon]").length).toBeGreaterThanOrEqual(3);
-  expect(screen.getByRole("link", { name: "Все" })).toHaveAttribute("aria-current", "page");
+  expect(screen.queryByRole("link", { name: "Все" })).toBeNull();
 });
 
-it("keeps a chosen weapon visible and clearable on the category chip", () => {
+it("the chosen category's chip clears it", () => {
+  bar({ sort: "-price", category: "rifles" });
+  const chip = screen.getByRole("link", { name: "Винтовки" });
+  expect(chip).toHaveAttribute("aria-current", "page");
+  expect(chip).toHaveAttribute("href", "/");
+});
+
+it("a chosen weapon shows on its chip; the chip clears the models", () => {
   bar({ sort: "-price", category: "rifles", weapon: "AK-47" });
   const chip = screen.getByRole("link", { name: /Винтовки · AK-47/ });
   expect(chip).toHaveAttribute("aria-current", "page");
-  expect(chip).toHaveAttribute("href", "/?category=rifles");
+  expect(chip).toHaveAttribute("href", "/");
 });
 
-it("unknown model stays clearable: the chip shows it and links back to the category", () => {
+it("several models across categories light each chip with its own", () => {
+  bar({ sort: "-price", weapon: "AK-47,AWP,MP9" });
+  expect(screen.getByRole("link", { name: /Винтовки · 2/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  // Clearing the rifles keeps the other category's model.
+  expect(screen.getByRole("link", { name: /Винтовки · 2/ })).toHaveAttribute(
+    "href",
+    "/?weapon=MP9",
+  );
+  expect(screen.getByRole("link", { name: /П-пулемёты · MP9/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
+it("an unknown model stays clearable from the category chip", () => {
   bar({ sort: "-price", category: "rifles", weapon: "Foo" });
   const chip = screen.getByRole("link", { name: /Foo/ });
   expect(chip).toHaveAttribute("aria-current", "page");
@@ -99,10 +124,18 @@ it("agents, cases, keys and the rest collapse into one «Другое» menu aft
 
 it("one row: chips never wrap, inactive ones are flat inside the panel", () => {
   bar({ sort: "-price", category: "rifles" });
-  const all = screen.getByRole("link", { name: "Все" });
-  const row = all.parentElement;
+  const knives = screen.getByRole("link", { name: "Ножи" }).parentElement;
+  const row = knives?.parentElement;
   expect(row?.className.split(" ")).not.toContain("lg:flex-wrap");
   expect(row?.className.split(" ")).toContain("overflow-x-auto");
-  expect(all.className.split(" ")).toContain("bg-transparent");
-  expect(all.className.split(" ")).not.toContain("bg-surface");
+  expect(knives?.className.split(" ")).toContain("bg-transparent");
+  expect(knives?.className.split(" ")).not.toContain("bg-surface");
+});
+
+it("on a wide screen the chips share the panel's width, none left over at the end", () => {
+  bar({ sort: "-price" });
+  const knives = screen.getByRole("link", { name: "Ножи" }).parentElement;
+  expect(knives?.className.split(" ")).toContain("lg:flex-1");
+  const other = screen.getByRole("button", { name: /other:/ }).parentElement;
+  expect(other?.className.split(" ")).toContain("lg:flex-1");
 });

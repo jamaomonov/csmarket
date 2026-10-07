@@ -24,6 +24,11 @@ export interface DropdownItem {
   icon?: ReactNode;
   tone?: "default" | "danger" | "accent";
   current?: boolean;
+  /**
+   * A checkbox item (`menuitemcheckbox`): shows a box, runs `onSelect` and keeps the menu
+   * open, so several can be ticked in a row. `href` is ignored.
+   */
+  checked?: boolean;
 }
 export interface DropdownSeparator {
   key: string;
@@ -171,7 +176,10 @@ export function Dropdown({
   );
 
   const menuItems = (): HTMLElement[] =>
-    Array.from(menu.current?.querySelectorAll<HTMLElement>("[role='menuitem']") ?? []);
+    Array.from(
+      menu.current?.querySelectorAll<HTMLElement>("[role='menuitem'], [role='menuitemcheckbox']") ??
+        [],
+    );
 
   // A keyboard open focuses the first item — also once lazily loaded items arrive.
   const itemCount = items.length;
@@ -309,6 +317,44 @@ export function Dropdown({
                   )}
                 </>
               );
+              if (entry.checked !== undefined) {
+                return (
+                  <button
+                    key={entry.key}
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={entry.checked}
+                    tabIndex={-1}
+                    onClick={() => {
+                      entry.onSelect?.();
+                    }}
+                    className={itemClass(entry.tone, false)}
+                  >
+                    {body}
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "flex size-5 shrink-0 items-center justify-center rounded border",
+                        entry.checked
+                          ? "border-accent bg-accent text-accent-fg"
+                          : "border-border-strong",
+                      )}
+                    >
+                      {entry.checked && (
+                        <svg viewBox="0 0 16 16" className="size-3.5" fill="none">
+                          <path
+                            d="M3.5 8.5l3 3 6-7"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+                );
+              }
               if (entry.href !== undefined) {
                 return (
                   <LinkComponent

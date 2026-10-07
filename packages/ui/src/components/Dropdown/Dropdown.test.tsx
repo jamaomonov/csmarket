@@ -85,6 +85,31 @@ describe("Dropdown", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
+  it("a checkbox item toggles without closing, and arrows still reach it", () => {
+    const onSelect = vi.fn();
+    render(
+      <Dropdown
+        label="m"
+        items={[
+          { key: "a", label: "AK-47", checked: true, onSelect },
+          { key: "b", label: "AWP", checked: false, onSelect },
+        ]}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "m" }));
+    const ak = screen.getByRole("menuitemcheckbox", { name: "AK-47" });
+    expect(ak).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("menuitemcheckbox", { name: "AWP" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    fireEvent.click(ak);
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("menu"), { key: "End" });
+    expect(screen.getByRole("menuitemcheckbox", { name: "AWP" })).toHaveFocus();
+  });
+
   it("tells the owner when it opens (lazy loading) and shows loading / status rows", () => {
     const onOpenChange = vi.fn();
     render(

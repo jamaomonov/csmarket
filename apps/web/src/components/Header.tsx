@@ -9,6 +9,7 @@ import { BalanceChip } from "./header/BalanceChip";
 import { LanguageSwitcher } from "./header/LanguageSwitcher";
 import { MobileMenu } from "./header/MobileMenu";
 import { isCurrent, MAIN_NAV } from "./header/nav";
+import { SteamIcon } from "./icons/SteamIcon";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
@@ -91,8 +92,9 @@ function SignIn({ locale }: { locale: string }) {
   return (
     <a
       href={signInHref(locale)}
-      className={cn(buttonVariants({ size: "md" }), "hidden md:inline-flex")}
+      className={cn(buttonVariants({ size: "md" }), "hidden gap-2 md:inline-flex")}
     >
+      <SteamIcon className="size-[18px]" aria-hidden />
       {t("signIn")}
     </a>
   );

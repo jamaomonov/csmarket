@@ -441,3 +441,20 @@ async def test_card_counts_both_sources_and_matches_the_item_page(
     assert listings["items"][0]["listing_id"] == "sl:70"
     assert listings["items"][0]["price_usd"] == card["price_usd"]
     cfg.get_settings.cache_clear()
+
+
+async def test_several_weapons_at_once_across_categories(
+    integration_client: AsyncClient, seeded: None
+) -> None:
+    r = await integration_client.get(
+        "/api/v1/skins/catalog", params={"weapon": "Glock-18,AWP", "sort": "price"}
+    )
+    assert r.status_code == 200, r.text
+    assert [i["name"] for i in r.json()["items"]] == [
+        "Glock-18 | Water Elemental (Field-Tested)",
+        "AWP | Asiimov (Field-Tested)",
+    ]
+    too_many = ",".join(f"W{i}" for i in range(31))
+    assert (
+        await integration_client.get("/api/v1/skins/catalog", params={"weapon": too_many})
+    ).status_code == 422

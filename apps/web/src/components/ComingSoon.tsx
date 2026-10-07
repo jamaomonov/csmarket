@@ -1,7 +1,7 @@
 import { Badge, buttonVariants } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
-import type { LucideIcon } from "lucide-react";
+import type { NavIcon } from "@/components/header/nav";
 
 import { Link } from "@/i18n/navigation";
 import { HOME } from "@/lib/paths";
@@ -9,7 +9,7 @@ import { HOME } from "@/lib/paths";
 interface ComingSoonProps {
   /** The section's key under `web.nav`. */
   section: "sell" | "steamTopup" | "reviews" | "referral";
-  icon: LucideIcon;
+  icon: NavIcon;
 }
 
 /** A section that is on its way: its name, «Скоро» and the way back to the market. */

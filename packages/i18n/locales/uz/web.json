@@ -252,6 +252,7 @@
       "smgs": "Barcha pistolet-pulemyotlar",
       "heavy": "Barcha ogʻir qurollar"
     },
+    "selectAll": "Hammasini tanlash",
     "models": "Modellar: {category}",
     "modelsFailed": "Modellarni yuklab boʻlmadi",
     "stattrakTitle": "StatTrak™",

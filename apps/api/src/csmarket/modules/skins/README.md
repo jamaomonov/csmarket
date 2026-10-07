@@ -230,11 +230,13 @@ on (no feature flag, ruling Q1).
 - **`service`** — `list_items` (filters; keyset `(sort value, id)` cursor for `price`, `-price`,
   `discount`, `popular`; `q` switches to trigram similarity with an offset cursor after
   `expand_aliases`), `facets` (categories counted catalogue-wide, the rest scoped to `category`;
-  weapons led by `WEAPON_PRIORITY`, rarities by `RARITY_TIER`, agents' `teams` only inside a
+  weapons led by `WEAPON_PRIORITY`, each with its `category` and the `image` of its
+  dearest Covert skin (else the dearest) for the filter menu; rarities by `RARITY_TIER`, agents' `teams` only inside a
   category), `suggest`, `get_item` (a sold-out item still resolves; an unknown, hidden or
   disabled-category slug is `NotFoundError`), `family` (every visible wear / StatTrak / Souvenir
   twin). A bad cursor is a 422.
-- **`routes`** (`/skins`): `GET /catalog` (`category, weapon, exterior, stattrak, souvenir,
+- **`routes`** (`/skins`): `GET /catalog` (`category, weapon` (one model, or up to 30
+  comma-separated, sorted for the cache key)`, exterior, stattrak, souvenir,
 rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..100 default
   48), `GET /facets?category=` (an unknown category is a 422), `GET /suggest?q=`,
   `GET /{slug}` (card + `cheapest` from the last tick's ten cheapest auto listings, re-quoted

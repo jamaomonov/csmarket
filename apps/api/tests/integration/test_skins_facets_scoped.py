@@ -3,6 +3,8 @@ and wear/rarity counts match the grid the customer is looking at."""
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import pytest
 from csmarket.core.ids import new_id
 from csmarket.modules.skins.models import SkinItem
@@ -115,3 +117,51 @@ async def test_the_catalogue_filters_agents_by_side(
     assert [i["name"] for i in body["items"]] == ["Cmdr. Mae | SWAT"]
     bad = await integration_client.get("/api/v1/skins/catalog?category=agents&team=zz")
     assert bad.status_code == 422
+
+
+async def test_each_weapon_carries_its_category_and_a_covert_picture(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    """The menu shows a handsome skin: the dearest Covert one, else the dearest at all."""
+    pic = "https://community.akamai.steamstatic.com/economy/image/{}"
+    covert = {"rarity": "Covert", "rarity_color": "#eb4b4b"}
+    db_session.add_all(
+        [
+            _row(
+                "AK-47 | Plain (Field-Tested)",
+                "rifles",
+                "AK-47",
+                "FT",
+                count=90,
+                image_url=pic.format("plain"),
+                sell_price_usd=Decimal("900"),
+            ),
+            _row(
+                "AK-47 | Cheap Red (Field-Tested)",
+                "rifles",
+                "AK-47",
+                "FT",
+                count=50,
+                image_url=pic.format("cheap-red"),
+                sell_price_usd=Decimal("5"),
+                **covert,
+            ),
+            _row(
+                "AK-47 | Dear Red (Field-Tested)",
+                "rifles",
+                "AK-47",
+                "FT",
+                count=1,
+                image_url=pic.format("dear-red"),
+                sell_price_usd=Decimal("80"),
+                **covert,
+            ),
+            _row("Glock-18 | G (Field-Tested)", "pistols", "Glock-18", "FT", count=3),
+        ]
+    )
+    await db_session.commit()
+    body = (await integration_client.get("/api/v1/skins/facets")).json()
+    by = {w["value"]: w for w in body["weapons"]}
+    assert by["AK-47"]["category"] == "rifles"
+    assert by["AK-47"]["image"] == "https://community.fastly.steamstatic.com/economy/image/dear-red"
+    assert (by["Glock-18"]["category"], by["Glock-18"]["image"]) == ("pistols", None)

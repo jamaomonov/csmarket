@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { filterSections, isFilteredQuery, parseSkinQuery, skinQueryString } from "./query";
+import {
+  filterSections,
+  isFilteredQuery,
+  parseSkinQuery,
+  skinQueryString,
+  weaponParam,
+  weaponsOf,
+} from "./query";
 
 import type { SkinFacets } from "./query";
 
@@ -159,5 +166,18 @@ describe("isFilteredQuery", () => {
     ]) {
       expect(isFilteredQuery(parseSkinQuery(raw))).toBe(true);
     }
+  });
+});
+
+describe("several weapons", () => {
+  it("parses a comma-separated set, drops unsafe names, sorts and dedupes", () => {
+    expect(parseSkinQuery({ weapon: "M4A4,AK-47,AK-47,<x>" }).weapon).toBe("AK-47,M4A4");
+    expect(weaponsOf({ sort: "-price", weapon: "AK-47,AWP" })).toEqual(["AK-47", "AWP"]);
+    expect(weaponsOf({ sort: "-price" })).toEqual([]);
+  });
+
+  it("joins a set back for the URL", () => {
+    expect(weaponParam(["AWP", "AK-47"])).toBe("AK-47,AWP");
+    expect(weaponParam([])).toBeUndefined();
   });
 });

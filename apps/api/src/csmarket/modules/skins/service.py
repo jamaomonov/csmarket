@@ -18,6 +18,7 @@ from decimal import Decimal
 from typing import Any, Literal
 
 from sqlalchemy import ColumnElement, Select, case, func, literal, or_, select, tuple_
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.errors import NotFoundError, ValidationError
@@ -56,6 +57,8 @@ class Facets:
     categories: list[tuple[str, int]]
     teams: list[tuple[str, int]]
     weapons: list[tuple[str, int]]
+    #: weapon → (its category, the picture of its dearest Covert skin or ``None``).
+    weapon_info: dict[str, tuple[str, str | None]]
     exteriors: list[tuple[str, int]]
     #: (name, count, colour) — the colour is the game's for that grade.
     rarities: list[tuple[str, int, str | None]]
@@ -104,8 +107,11 @@ def _filtered(query: CatalogQuery, categories: list[str]) -> Select[SkinItem]:
     stmt = _base(categories)
     if query.category:
         stmt = stmt.where(SkinItem.category == query.category)
-    if query.weapon:
-        stmt = stmt.where(SkinItem.weapon == query.weapon)
+    if query.weapon:  # one model, or several comma-separated (any category)
+        names = query.weapon.split(",")
+        stmt = stmt.where(
+            SkinItem.weapon == names[0] if len(names) == 1 else SkinItem.weapon.in_(names)
+        )
     if query.exterior:
         stmt = stmt.where(SkinItem.exterior == query.exterior)
     if query.stattrak is not None:
@@ -251,6 +257,22 @@ async def facets(db: AsyncSession, *, categories: list[str], category: str | Non
     weapons = await count_by(SkinItem.weapon, scoped)
     rank = {w: i for i, w in enumerate(WEAPON_PRIORITY)}
     weapons.sort(key=lambda wc: (rank.get(wc[0], len(rank)), -wc[1], wc[0]))
+    stock = SkinItem.count_auto + SkinItem.skinslink_count + SkinItem.lisskins_count
+    info_rows = await db.execute(
+        select(SkinItem.weapon, SkinItem.category, SkinItem.image_url)
+        .where(*scoped, SkinItem.weapon.is_not(None))
+        .ext(distinct_on(SkinItem.weapon))
+        # The menu's picture: the dearest Covert skin (red, handsome), else the dearest.
+        .order_by(
+            SkinItem.weapon,
+            SkinItem.image_url.is_(None),
+            SkinItem.rarity.is_distinct_from("Covert"),
+            SkinItem.sell_price_usd.desc().nulls_last(),
+            stock.desc(),
+            SkinItem.id,
+        )
+    )
+    weapon_info = {str(w): (str(c), img) for w, c, img in info_rows.all()}
     rarity_rows = await db.execute(
         select(SkinItem.rarity, func.count(), func.max(SkinItem.rarity_color))
         .where(*scoped, SkinItem.rarity.is_not(None))
@@ -260,6 +282,7 @@ async def facets(db: AsyncSession, *, categories: list[str], category: str | Non
     return Facets(
         categories=await count_by(SkinItem.category, live),
         weapons=weapons,
+        weapon_info=weapon_info,
         exteriors=await count_by(SkinItem.exterior, scoped),
         # Only inside a category: agents are the one category with sides.
         teams=await count_by(SkinItem.team, scoped) if category else [],

@@ -55,11 +55,18 @@ class RarityFacetOut(FacetOut):
     color: str | None = None
 
 
+class WeaponFacetOut(FacetOut):
+    """A weapon model: its category and a picture for the filter menu."""
+
+    category: str
+    image: str | None = None
+
+
 class SkinFacetsOut(BaseModel):
     """Counts per category, weapon, wear, rarity and (for agents) side."""
 
     categories: list[FacetOut]
-    weapons: list[FacetOut]
+    weapons: list[WeaponFacetOut]
     exteriors: list[FacetOut]
     rarities: list[RarityFacetOut]
     #: An agent's side (``ct`` / ``t``); empty outside a category that has sides.

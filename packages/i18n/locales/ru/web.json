@@ -252,6 +252,7 @@
       "smgs": "Все пистолеты-пулемёты",
       "heavy": "Всё тяжёлое оружие"
     },
+    "selectAll": "Выбрать все",
     "models": "Модели: {category}",
     "modelsFailed": "Не удалось загрузить модели",
     "stattrakTitle": "StatTrak™",

@@ -1,8 +1,8 @@
-import { Gamepad2 } from "lucide-react";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { ComingSoon } from "@/components/ComingSoon";
+import { SteamIcon } from "@/components/icons/SteamIcon";
 import { routing } from "@/i18n/routing";
 
 interface Props {
@@ -22,5 +22,5 @@ export default async function Page({ params }: Props) {
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
     setRequestLocale(locale);
   }
-  return <ComingSoon section="steamTopup" icon={Gamepad2} />;
+  return <ComingSoon section="steamTopup" icon={SteamIcon} />;
 }

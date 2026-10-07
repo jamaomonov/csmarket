@@ -60,9 +60,14 @@ export interface Facet {
   /** Rarity facets only: the grade's colour. */
   color?: string | null;
 }
+/** A weapon model: its category and a picture of one of its skins. */
+export interface WeaponFacet extends Facet {
+  category: string;
+  image?: string | null;
+}
 export interface SkinFacets {
   categories: Facet[];
-  weapons: Facet[];
+  weapons: WeaponFacet[];
   exteriors: Facet[];
   rarities: Facet[];
   /** An agent's side, counted inside a category; the schema marks it optional (default `[]`). */
@@ -119,6 +124,7 @@ export interface SkinSlugs {
 
 export interface SkinQuery {
   category?: SkinCategory;
+  /** One weapon model, or several comma-separated (`weaponsOf`, `weaponParam`). */
   weapon?: string;
   exterior?: Exterior;
   rarity?: string;
@@ -146,14 +152,30 @@ function amount(v: string | undefined): number | undefined {
   return Number(v);
 }
 
+/** The weapon models a query asks for (`weapon` holds one, or several comma-separated). */
+export function weaponsOf(q: SkinQuery): string[] {
+  return q.weapon ? q.weapon.split(",") : [];
+}
+
+/** A set of models as the `weapon` param: sorted and deduplicated; none → `undefined`. */
+export function weaponParam(names: readonly string[]): string | undefined {
+  const set = [...new Set(names)].sort();
+  return set.length > 0 ? set.join(",") : undefined;
+}
+
 export function parseSkinQuery(params: Params): SkinQuery {
   const q: SkinQuery = { sort: DEFAULT_SORT };
   const category = first(params.category);
   if (category && (SKIN_CATEGORIES as readonly string[]).includes(category)) {
     q.category = category as SkinCategory; // narrowed by the includes() check above
   }
-  const weapon = first(params.weapon);
-  if (weapon && SAFE_TEXT.test(weapon)) q.weapon = weapon;
+  const weapon = weaponParam(
+    (first(params.weapon) ?? "")
+      .split(",")
+      .map((w) => w.trim())
+      .filter((w) => SAFE_TEXT.test(w)),
+  );
+  if (weapon) q.weapon = weapon;
   const exterior = first(params.exterior);
   if (exterior && (EXTERIORS as readonly string[]).includes(exterior)) {
     q.exterior = exterior as Exterior; // narrowed by the includes() check above
