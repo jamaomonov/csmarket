@@ -148,6 +148,26 @@ class Settings(BaseSettings):
         description="POST /merchant/purchase blocks up to 30 s on their side.",
     )
     skinslink_balance_alert_usd: Decimal = Field(default=Decimal(100))
+    # --- lisskins (third buy source; spec 2026-10-07) ---
+    lisskins_enabled: bool = Field(
+        default=False,
+        description="Snapshot LIS-SKINS' instant lots, show them, buy from LIS-SKINS.",
+    )
+    lisskins_api_key: str = Field(default="", description="LIS-SKINS API key (Bearer).")
+    lisskins_base_url: str = Field(default="https://api.lis-skins.com/v1")
+    lisskins_export_url: str = Field(
+        default="https://lis-skins.com/market_export_json/api_csgo_full.json",
+        description="The public price export (no key; ~855 MB, streamed).",
+    )
+    lisskins_stale_minutes: int = Field(
+        default=20, ge=1, description="A snapshot older than this offers and prices nothing."
+    )
+    lisskins_request_timeout_seconds: float = Field(default=10.0, gt=0)
+    lisskins_buy_timeout_seconds: float = Field(default=35.0, gt=0)
+    lisskins_check_timeout_seconds: float = Field(
+        default=4.0, gt=0, description="The checkout's check-availability call (ADR-0012)."
+    )
+    lisskins_balance_alert_usd: Decimal = Field(default=Decimal(100))
     dev_login_enabled: bool = Field(
         default=False,
         description="POST /auth/dev-login for local work and e2e. Ignored when environment=prod.",
@@ -425,6 +445,11 @@ class Settings(BaseSettings):
     def skinslink_active(self) -> bool:
         """Skinslink is used: switched on with both credentials present."""
         return self.skinslink_enabled and bool(self.skinslink_api_key and self.skinslink_secret)
+
+    @property
+    def lisskins_active(self) -> bool:
+        """LIS-SKINS is used: switched on with the key present."""
+        return self.lisskins_enabled and bool(self.lisskins_api_key)
 
     @property
     def is_prod(self) -> bool:
