@@ -31,10 +31,11 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from csmarket.core.db import Base
 from csmarket.modules.orders.models import ATTENTION_REASONS
+from csmarket.modules.skins.models import SkinItem
 
 
 def _in(values: tuple[str, ...]) -> str:
@@ -73,6 +74,8 @@ class LisskinsOffer(Base):
         JSONB, nullable=False, server_default=text("'[]'::jsonb"), default=list
     )
     updated_at: Mapped[datetime] = _ts()
+    #: Never loaded (``raise``): it only tells the unit of work to insert the item first.
+    item: Mapped[SkinItem] = relationship(lazy="raise")
 
     __table_args__ = (Index("ix_lisskins_offers_item_price", "skin_item_id", "price_units"),)
 
