@@ -63,7 +63,8 @@ class SkinslinkItem(Base):
     __tablename__ = "skinslink_items"
 
     #: Skinslink's item id = the Steam asset id Create Purchase takes.
-    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    #: Skinslink's offer id: a Steam asset id, or a hex id for an offer held in stock.
+    id: Mapped[str] = mapped_column(String(300), primary_key=True)
     market_hash_name: Mapped[str] = mapped_column(String(255), nullable=False)
     #: Doppler / Gamma Doppler phase; ``''`` for none.
     phase: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("''"))
@@ -107,7 +108,7 @@ class SkinslinkPurchase(Base):
     #: Our idempotency key at Skinslink: the order id, ``<order id>:2`` for a substitute.
     merchant_tx_id: Mapped[str] = mapped_column(String(64), nullable=False)
     #: The Skinslink item (Steam asset) being bought.
-    asset_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    asset_id: Mapped[str] = mapped_column(String(300), nullable=False)
     #: The cap we agreed to pay, units.
     paid_units: Mapped[int] = mapped_column(Integer, nullable=False)
     #: Skinslink's purchase id, once an answer names it.

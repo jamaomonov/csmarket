@@ -272,25 +272,28 @@ async def test_a_full_load_streamed_in_batches_keeps_the_last_copy_of_an_id(
     assert {k: v.price_units for k, v in rows.items()} == {"1": 8500, "2": 7000}
 
 
-async def test_pooled_items_without_a_numeric_id_are_skipped(
+async def test_offers_held_in_stock_keep_their_hex_id(
     db_session: AsyncSession, db_engine: AsyncEngine
 ) -> None:
-    """Skinslink also lists pooled offers under a shared hash id (bought by name, no asset):
-    they are not one skin we can sell by its id, so the mirror keeps only numeric ids."""
+    """Skinslink names offers held in stock (no particular asset) by a long hex id; they
+    are offers like any other, bought by that id."""
     item, _ = await make_item_and_rate(db_session)
     name = item.market_hash_name
-    pooled = "b02411dfd3c832a218902fba32064b26eb22de0719ed1937f128a57276f1a417f7d77e"
+    stock = "b02411dfd3c832a218902fba32064b26eb22de0719ed1937f128a57276f1a417f7d77e" * 3
     page = AvailablePage(
-        items=[_item("1", name, "9.00"), _item(pooled, name, "1.05")], last_update_at="c0"
+        items=[_item("1", name, "9.00"), _item(stock, name, "1.05"), _item("Bad-Id", name, "1")],
+        last_update_at="c0",
     )
     events = EventsPage(
         since="c0",
         next="c1",
         more=False,
         reset=False,
-        events=[CatalogueEvent(type="upsert", at="x", id=pooled, item=_item(pooled, name, "1"))],
+        events=[CatalogueEvent(type="upsert", at="x", id=stock, item=_item(stock, name, "1.10"))],
     )
     client = ScriptedClient(page, events)
     for _ in range(2):
         await sync_mirror(_factory(db_engine), client, now=NOW)
-    assert list(await _rows(db_session)) == ["1"]
+    rows = await _rows(db_session)
+    assert sorted(rows) == sorted(["1", stock])
+    assert rows[stock].price_units == 1100

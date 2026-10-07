@@ -111,7 +111,7 @@ class Order(Base):
     )
     #: The prefixed offer id the buyer chose (``wx:<item_id>`` / ``sl:<asset_id>``), after
     #: any checkout substitution (R4).
-    offer_id: Mapped[str | None] = mapped_column(String(48), nullable=True)
+    offer_id: Mapped[str | None] = mapped_column(String(310), nullable=True)
     #: The Waxpeer listing behind ``offer_id``; ``NULL`` for a Skinslink order.
     listing_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     #: Units we agreed to pay at checkout (1000 = $1); the worker's price cap.

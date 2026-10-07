@@ -3229,7 +3229,7 @@
                 "type": "integer"
               },
               {
-                "maxLength": 40,
+                "maxLength": 310,
                 "type": "string"
               }
             ],

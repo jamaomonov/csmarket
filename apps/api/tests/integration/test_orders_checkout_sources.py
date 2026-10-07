@@ -188,7 +188,7 @@ async def test_on_a_tie_the_substitute_is_waxpeers(
     assert (order.source, order.offer_id) == ("waxpeer", "wx:111")
 
 
-@pytest.mark.parametrize("bad", ["ebay:1", "sl:", "sl:abc", "wx:-1", 0, -5, True, "x" * 80])
+@pytest.mark.parametrize("bad", ["ebay:1", "sl:", "sl:xyz", "wx:-1", 0, -5, True, "x" * 80])
 async def test_a_bad_offer_id_is_422(
     integration_client: AsyncClient, headers: dict[str, str], bad: object
 ) -> None:
@@ -198,3 +198,29 @@ async def test_a_bad_offer_id_is_422(
         json={"slug": SLUG, "listing_id": bad, "price_uzs": 1000},
     )
     assert r.status_code == 422, r.text
+
+
+async def test_an_offer_held_in_stock_opens_an_order_by_its_hex_id(
+    integration_client: AsyncClient,
+    headers: dict[str, str],
+    stub: StubListings,
+    item: SkinItem,
+    db_session: AsyncSession,
+) -> None:
+    stock = "b02411dfd3c832a218902fba32064b26eb22de0719ed1937f128a57276f1a417f7d77e" * 3
+    await stub.set(SLUG, [])
+    db_session.add(
+        SkinslinkItem(
+            id=stock,
+            market_hash_name=item.market_hash_name,
+            phase="",
+            price_units=9_000,
+            skin_item_id=item.id,
+        )
+    )
+    await db_session.commit()
+    offer = f"sl:{stock}"
+    r = await _post(integration_client, headers, offer, await _shown(integration_client, offer))
+    assert r.status_code == 201, r.text
+    order = await _order(db_session, r.json()["number"])
+    assert (order.source, order.offer_id) == ("skinslink", offer)

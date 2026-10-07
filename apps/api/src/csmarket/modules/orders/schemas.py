@@ -23,7 +23,7 @@ class OrderCreateIn(BaseModel):
     slug: Annotated[str, Field(min_length=1, max_length=160)]
     #: The offer picked on the item page: ``wx:<id>`` / ``sl:<id>``; a bare integer reads as
     #: Waxpeer's (one release). Normalised to the prefixed string.
-    listing_id: StrictInt | Annotated[str, Field(strict=True, max_length=40)]
+    listing_id: StrictInt | Annotated[str, Field(strict=True, max_length=310)]
     #: Whole soʻm the panel showed; a JSON integer only.
     price_uzs: Annotated[int, Field(strict=True, gt=0)]
 

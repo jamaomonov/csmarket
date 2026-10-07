@@ -416,3 +416,54 @@ async def test_a_list_without_a_cursor_starts_from_now() -> None:
     got, cursor = await _batches(_client())
     assert [i.id for b in got for i in b] == ["38029384123"]
     assert cursor.startswith("20")
+
+
+def _page(n: int, total: int, ids: list[str], cursor: str) -> dict[str, object]:
+    return _ok(
+        {
+            "game": "csgo",
+            "page": n,
+            "total_pages": total,
+            "items": [{**ITEM, "id": i} for i in ids],
+            "last_update_at": cursor,
+        }
+    )
+
+
+@respx.mock
+async def test_the_full_list_is_walked_page_by_page() -> None:
+    pages = {
+        1: _page(1, 3, ["1", "2"], "c3"),
+        2: _page(2, 3, [], "c1"),
+        3: _page(3, 3, ["3"], "c2"),
+    }
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=pages[int(request.url.params["page"])])
+
+    route = respx.get(f"{BASE}/merchant/purchase/available").mock(side_effect=answer)
+    got, cursor = await _batches(_client(), size=10)
+    assert [int(c.request.url.params["page"]) for c in route.calls] == [1, 2, 3]
+    assert [i.id for b in got for i in b] == ["1", "2", "3"]
+    assert cursor == "c1"  # the oldest page: events from there replay whatever changed after
+
+
+@respx.mock
+async def test_a_page_being_rebuilt_is_asked_again_after_its_retry_after() -> None:
+    respx.get(f"{BASE}/merchant/purchase/available").mock(
+        side_effect=[
+            httpx.Response(503, headers={"Retry-After": "0"}, json={"success": False}),
+            httpx.Response(200, json=_page(1, 1, ["1"], "c1")),
+        ]
+    )
+    got, cursor = await _batches(_client())
+    assert ([i.id for b in got for i in b], cursor) == (["1"], "c1")
+
+
+@respx.mock
+async def test_a_page_that_stays_unavailable_fails_the_load() -> None:
+    respx.get(f"{BASE}/merchant/purchase/available").mock(
+        return_value=httpx.Response(503, headers={"Retry-After": "0"}, json={"success": False})
+    )
+    with pytest.raises(SkinslinkUnavailableError):
+        await _batches(_client())

@@ -68,3 +68,20 @@ def test_from_listing_keeps_the_fields() -> None:
         [{"name": "s"}],
     )
     assert o.asset_id is None
+
+
+HEX = "b02411dfd3c832a218902fba32064b26eb22de0719ed1937f128a57276f1a417f7d77e" * 3
+
+
+def test_a_skinslink_stock_offer_has_a_hex_id() -> None:
+    """Skinslink names offers held in stock by a hex id (up to ~270 characters)."""
+    assert parse_offer_id(f"sl:{HEX}") == ("skinslink", HEX)
+    assert parse_offer_id("sl:3f9a00c1d2") == ("skinslink", "3f9a00c1d2")
+
+
+@pytest.mark.parametrize(
+    "bad", [f"wx:{HEX}", "wx:3f9a", f"sl:{'a' * 301}", "sl:ab-cd", "sl:ab cd", "sl:ABCDEF"]
+)
+def test_hex_is_skinslinks_only_and_bounded(bad: str) -> None:
+    with pytest.raises(ValueError, match="offer id"):
+        parse_offer_id(bad)

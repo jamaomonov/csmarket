@@ -16,6 +16,7 @@ from typing import Any
 _ITEMS = re.compile(r'"items"\s*:\s*\[')
 _SUCCESS = re.compile(r'"success"\s*:\s*true')
 _CURSOR = re.compile(r'"last_update_at"\s*:\s*"([^"]*)"')
+_TOTAL_PAGES = re.compile(r'"total_pages"\s*:\s*([0-9]+)')
 _SKIP = " \t\r\n,"
 #: The head before ``"items": [`` is a few short fields; more means it is not this body.
 _MAX_HEAD = 64 * 1024
@@ -73,6 +74,12 @@ class ItemsScanner:
             found.append(obj)
         self._buf = buf[pos:]
         return found
+
+    @property
+    def total_pages(self) -> int | None:
+        """``total_pages`` of a paginated answer (it precedes the items), else ``None``."""
+        match = _TOTAL_PAGES.search(self._head) or _TOTAL_PAGES.search(self._tail)
+        return int(match.group(1)) if match else None
 
     @property
     def headless(self) -> str | None:

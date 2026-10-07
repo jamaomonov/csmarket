@@ -7,6 +7,7 @@ as ``Decimal`` built from the JSON number's text, never through a float.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import AsyncIterator, Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
@@ -51,6 +52,9 @@ LINK_ERROR_CODES = frozenset(
 )
 _RETRYABLE = frozenset({408, 500, 502, 503, 504})
 _THREE_PLACES = Decimal("0.001")
+#: Asks of one catalogue page while Skinslink rebuilds it, and the longest wait between.
+_PAGE_TRIES = 4
+_MAX_PAGE_WAIT = 30
 
 
 class SkinslinkError(Exception):
@@ -242,6 +246,14 @@ def _code(body: Mapping[str, Any]) -> str | None:
     return None
 
 
+class _PageRebuildingError(Exception):
+    """A catalogue page is being rebuilt: ask again after ``seconds``."""
+
+    def __init__(self, seconds: int) -> None:
+        super().__init__(f"retry after {seconds} s")
+        self.seconds = seconds
+
+
 def _loads(text: str) -> object:
     try:
         return json.loads(text)
@@ -339,11 +351,15 @@ class SkinslinkClient:
         game: str = "csgo",
         batch_size: int = 1000,
     ) -> str:
-        """``GET /merchant/purchase/available`` (full, extended), streamed: ``on_batch`` gets
-        the readable items ``batch_size`` at a time; the whole list is never in memory.
+        """``GET /merchant/purchase/available`` (full, extended), walked page by page (1..16,
+        each a fixed slice keyed by id, so a walk never skips or repeats an item) and each
+        page streamed: ``on_batch`` gets the readable items ``batch_size`` at a time; the
+        list is never in memory whole. A page being rebuilt (503 + ``Retry-After``) is asked
+        again after the wait.
 
         Returns:
-            The ``last_update_at`` cursor (now, when Skinslink gave none).
+            The oldest page's ``last_update_at``: events from there replay any change made
+            during the walk (now, when Skinslink gave none).
 
         Raises:
             SkinslinkError: A refusal. SkinslinkForbiddenError: HTTP 403.
@@ -351,26 +367,64 @@ class SkinslinkClient:
         """
         if not self._api_key:
             raise SkinslinkUnavailableError("no api key")
-        scanner = ItemsScanner()
+        cursors: list[str] = []
+        page, total = 1, 1
+        while page <= total:
+            scanner = await self._page(game, page, on_batch, batch_size)
+            cursors.append(self._cursor_of(scanner))
+            total = scanner.total_pages or 1  # an unpaginated answer is page 1 of 1
+            page += 1
+        return min(cursors)
+
+    async def _page(
+        self,
+        game: str,
+        page: int,
+        on_batch: Callable[[list[CatalogueItem]], Awaitable[None]],
+        batch_size: int,
+    ) -> ItemsScanner:
+        """One page, asked again while Skinslink says it is being rebuilt."""
+        for _ in range(_PAGE_TRIES):
+            scanner = ItemsScanner()
+            try:
+                await self._stream_page(game, page, scanner, on_batch, batch_size)
+            except _PageRebuildingError as wait:
+                await asyncio.sleep(min(wait.seconds, _MAX_PAGE_WAIT))
+                continue
+            return scanner
+        record_skinslink_call("available", "unavailable")
+        raise SkinslinkUnavailableError(f"page {page} kept being rebuilt")
+
+    async def _stream_page(
+        self,
+        game: str,
+        page: int,
+        scanner: ItemsScanner,
+        on_batch: Callable[[list[CatalogueItem]], Awaitable[None]],
+        batch_size: int,
+    ) -> None:
+        params = {"game": game, "full": "true", "extended": "true", "page": str(page)}
         try:
             async with (
                 self._session() as client,
                 client.stream(
                     "GET",
                     f"{self._base_url}/merchant/purchase/available",
-                    params={"game": game, "full": "true", "extended": "true"},
+                    params=params,
                     headers={"X-Api-Key": self._api_key},
                 ) as resp,
             ):
                 if resp.status_code != 200:
                     await resp.aread()
+                    retry_after = resp.headers.get("Retry-After", "")
+                    if resp.status_code == 503 and retry_after.isdigit():
+                        raise _PageRebuildingError(int(retry_after))
                     self._verdict(resp.status_code, _json_or_none(resp), "available")
                     raise SkinslinkUnavailableError(f"http {resp.status_code}")
                 await self._scan(resp, scanner, on_batch, batch_size)
         except httpx.HTTPError as exc:
             record_skinslink_call("available", "unavailable")
             raise SkinslinkUnavailableError(type(exc).__name__) from exc
-        return self._cursor_of(scanner)
 
     async def _scan(
         self,

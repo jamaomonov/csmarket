@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import Settings
 from csmarket.core.logging import get_logger
-from csmarket.modules.skins.api import SkinItem, canonical_name
+from csmarket.modules.skins.api import SkinItem, canonical_name, offer_id_of, parse_offer_id
 from csmarket.modules.skinslink.client import (
     CatalogueEvent,
     CatalogueItem,
@@ -101,14 +101,14 @@ async def _keys_to_items(
     return found
 
 
-#: The longest item id kept (``skinslink_items.id``).
-_MAX_ID = 32
-
-
 def listable(item: CatalogueItem) -> bool:
-    """One skin we can sell by its id: a numeric Steam asset id. Skinslink also lists pooled
-    offers under a shared hash id (no asset, bought by name) — those are skipped."""
-    return item.id.isdigit() and len(item.id) <= _MAX_ID
+    """An offer we can sell by its id: a Steam asset id or the hex id of an offer Skinslink
+    holds in stock (``skins.offers`` defines the shape; anything else is skipped)."""
+    try:
+        parse_offer_id(offer_id_of("skinslink", item.id))
+    except ValueError:
+        return False
+    return True
 
 
 async def _upsert(db: AsyncSession, items: Sequence[CatalogueItem], *, now: datetime) -> int:
