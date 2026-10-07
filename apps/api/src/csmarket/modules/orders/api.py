@@ -25,6 +25,7 @@ from csmarket.modules.orders.erase import erase_old_trade_links, erase_old_verif
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
 from csmarket.modules.orders.health import Health, cache_balance, measure
 from csmarket.modules.orders.lisskins_buying import attempt_lisskins_buy
+from csmarket.modules.orders.lisskins_reconcile import reconcile_lisskins
 from csmarket.modules.orders.lisskins_status import apply_report as apply_lisskins_report
 from csmarket.modules.orders.models import (
     ATTENTION_REASONS,
@@ -110,6 +111,7 @@ __all__ = [
     "move",
     "order_out",
     "reconcile",
+    "reconcile_lisskins",
     "reconcile_skinslink",
     "refund_to_balance",
     "resolve_attention",
