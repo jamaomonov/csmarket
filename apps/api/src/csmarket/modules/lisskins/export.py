@@ -99,6 +99,21 @@ def _stickers(value: object) -> tuple[Sticker, ...]:
     return tuple(found)
 
 
+#: ``lisskins_offers.asset_id`` is ``VARCHAR(32)``; ``paint_seed`` an ``INTEGER``.
+_ASSET_ID_MAX = 32
+_SEED_MAX = 2**31 - 1
+
+
+def _fitting(asset_id: str | None) -> str | None:
+    """An asset id that fits its column; a longer one is dropped, never the lot."""
+    return asset_id if asset_id is not None and len(asset_id) <= _ASSET_ID_MAX else None
+
+
+def _bounded(seed: int | None) -> int | None:
+    """A paint seed that fits ``INTEGER``, else ``None``."""
+    return seed if seed is not None and 0 <= seed <= _SEED_MAX else None
+
+
 # Any: one lot object of the export, read field by field.
 def lot_of(raw: Mapping[str, Any]) -> Lot | None:
     """A lot we may sell, or ``None``: slow delivery, trade-locked, or unusable."""
@@ -118,8 +133,8 @@ def lot_of(raw: Mapping[str, Any]) -> Lot | None:
         price_units=to_units(price),
         paint_index=int_of(raw.get("item_paint_index")),
         float_value=_float(raw.get("item_float")),
-        paint_seed=int_of(raw.get("item_paint_seed")),
-        asset_id=str_of(raw.get("item_asset_id")),
+        paint_seed=_bounded(int_of(raw.get("item_paint_seed"))),
+        asset_id=_fitting(str_of(raw.get("item_asset_id"))),
         inspect_url=link if isinstance(link, str) and link.startswith("steam://") else None,
         stickers=_stickers(raw.get("stickers")),
     )

@@ -61,15 +61,24 @@ def _when(text: str | None) -> datetime | None:
     return at if at.tzinfo is not None else at.replace(tzinfo=UTC)
 
 
+#: The ``lisskins_purchases`` column widths: ``status`` and the other reported words.
+_STATUS_MAX, _TEXT_MAX = 16, 32
+
+
+def _cut(text: str | None, limit: int) -> str | None:
+    """``text`` cut to its column: an oversized word must not fail the order's write."""
+    return None if text is None else text[:limit]
+
+
 def mirror_report(purchase: LisskinsPurchase, report: Purchase) -> PurchasedSkin:
     """Copy what LIS-SKINS reports onto ``purchase`` (a missing field never erases ours);
     returns the skin the order bought."""
     skin = next((s for s in report.skins if s.id == purchase.skin_id), report.skin)
     purchase.purchase_id = report.purchase_id
-    purchase.status = skin.status
-    purchase.return_reason = skin.return_reason or purchase.return_reason
-    purchase.error = skin.error or purchase.error
-    purchase.steam_trade_offer_id = skin.offer_id or purchase.steam_trade_offer_id
+    purchase.status = _cut(skin.status, _STATUS_MAX)
+    purchase.return_reason = _cut(skin.return_reason, _TEXT_MAX) or purchase.return_reason
+    purchase.error = _cut(skin.error, _TEXT_MAX) or purchase.error
+    purchase.steam_trade_offer_id = _cut(skin.offer_id, _TEXT_MAX) or purchase.steam_trade_offer_id
     purchase.offer_expiry_at = _when(skin.offer_expiry_at) or purchase.offer_expiry_at
     if skin.price_usd is not None:
         purchase.amount_units = to_units(skin.price_usd)
