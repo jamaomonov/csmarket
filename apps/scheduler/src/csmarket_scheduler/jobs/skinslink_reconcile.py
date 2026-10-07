@@ -31,7 +31,11 @@ async def run() -> None:
     if not settings.skinslink_api_key:
         return
     try:
-        looked = await reconcile_skinslink(get_session_factory(), client_for(settings, timeout_seconds=settings.skinslink_buy_timeout_seconds), settings=settings)
+        looked = await reconcile_skinslink(
+            get_session_factory(),
+            client_for(settings, timeout_seconds=settings.skinslink_buy_timeout_seconds),
+            settings=settings,
+        )
     except Exception as exc:  # noqa: BLE001 -- a tick never raises; the next one retries
         log.warning("skinslink.reconcile.failed", error=type(exc).__name__)
         return
