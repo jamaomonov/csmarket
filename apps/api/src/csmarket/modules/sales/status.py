@@ -106,11 +106,29 @@ async def apply_deposit(
             outcome = await _open(db, sale, report)
         else:
             outcome = await _settled(db, sale, report.status)
+    await _moved(db, sale, outcome)
+    return outcome
+
+
+async def _moved(db: AsyncSession, sale: Sale, outcome: Outcome) -> None:
+    """Count a move, nudge the seller's socket and flush; nothing for ``unchanged``."""
     if outcome != "unchanged":
         record_sale_outcome(outcome)
         await nudge_sale(db, user_id=sale.user_id, number=sale.number)
         log.info("sales.moved", number=sale.number, outcome=outcome)
     await db.flush()
+
+
+async def close(db: AsyncSession, sale: Sale, *, reason: str, letter: bool = False) -> Outcome:
+    """Close a ``creating`` sale Skinslink refused (no deposit exists); flushes, never commits.
+
+    The caller holds ``sale`` ``FOR UPDATE``. Any other status is left as it is. A refused
+    sale sends no letter by default: the seller was told by the answer to ``POST /sell``.
+    """
+    if sale.status != "creating":
+        return "unchanged"
+    outcome = await _close(db, sale, reason, letter=letter)
+    await _moved(db, sale, outcome)
     return outcome
 
 
@@ -237,4 +255,4 @@ async def check_sale(db: AsyncSession, client: DepositClient, *, sale_id: str) -
     return outcome
 
 
-__all__ = ["NOT_FOUND_GRACE", "Outcome", "apply_deposit", "check_sale", "lock_sale"]
+__all__ = ["NOT_FOUND_GRACE", "Outcome", "apply_deposit", "check_sale", "close", "lock_sale"]

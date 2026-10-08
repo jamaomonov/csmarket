@@ -3610,6 +3610,32 @@
         "title": "MePatchIn",
         "type": "object"
       },
+      "NewCardIn": {
+        "description": "A card typed in the cart. PII: ``number`` never appears in a repr or a log.",
+        "properties": {
+          "number": {
+            "maxLength": 32,
+            "minLength": 12,
+            "title": "Number",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "uzcard",
+              "humo",
+              "uzum_visa"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "number"
+        ],
+        "title": "NewCardIn",
+        "type": "object"
+      },
       "OrderCreateIn": {
         "additionalProperties": false,
         "description": "Buy one skin: the offer the buyer chose and the price the panel showed them.",
@@ -3882,6 +3908,46 @@
           "next_cursor"
         ],
         "title": "OrdersPage",
+        "type": "object"
+      },
+      "PayoutIn": {
+        "description": "Where the money goes: the balance, a saved card, or a new card.",
+        "properties": {
+          "card_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Id"
+          },
+          "new_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NewCardIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "to": {
+            "enum": [
+              "balance",
+              "card"
+            ],
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "PayoutIn",
         "type": "object"
       },
       "PreviewIn": {
@@ -4411,6 +4477,230 @@
         "title": "RefundsOut",
         "type": "object"
       },
+      "SaleCardOut": {
+        "description": "The card a sale pays to.",
+        "properties": {
+          "last4": {
+            "title": "Last4",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "uzcard",
+              "humo",
+              "uzum_visa"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "last4"
+        ],
+        "title": "SaleCardOut",
+        "type": "object"
+      },
+      "SaleItemOut": {
+        "description": "An item of a sale at the price the seller saw.",
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "name",
+          "image_url",
+          "price_uzs"
+        ],
+        "title": "SaleItemOut",
+        "type": "object"
+      },
+      "SaleOfferOut": {
+        "description": "The Steam offer to accept, while the sale is ``offered``.",
+        "properties": {
+          "bot_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Name"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "bot_name",
+          "expires_at"
+        ],
+        "title": "SaleOfferOut",
+        "type": "object"
+      },
+      "SaleOut": {
+        "description": "A sale as its seller sees it. Money in whole so\u02bbm, as strings.",
+        "properties": {
+          "bonus_uzs": {
+            "title": "Bonus Uzs",
+            "type": "string"
+          },
+          "card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleCardOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "fee_uzs": {
+            "title": "Fee Uzs",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SaleItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "items_uzs": {
+            "title": "Items Uzs",
+            "type": "string"
+          },
+          "money_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Money At"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "offer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SaleOfferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "payout_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "waiting_hold",
+                  "to_pay",
+                  "paid",
+                  "rejected",
+                  "canceled"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Status"
+          },
+          "payout_to": {
+            "enum": [
+              "balance",
+              "card"
+            ],
+            "title": "Payout To",
+            "type": "string"
+          },
+          "payout_uzs": {
+            "title": "Payout Uzs",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "creating",
+              "offered",
+              "hold",
+              "credited",
+              "payout",
+              "closed",
+              "reverted"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "payout_to",
+          "card",
+          "items_uzs",
+          "bonus_uzs",
+          "fee_uzs",
+          "payout_uzs",
+          "items",
+          "offer",
+          "money_at",
+          "payout_status",
+          "created_at"
+        ],
+        "title": "SaleOut",
+        "type": "object"
+      },
       "SalesOut": {
         "properties": {
           "cost_usd": {
@@ -4503,6 +4793,35 @@
           "max_cards"
         ],
         "title": "SellConfigOut",
+        "type": "object"
+      },
+      "SellIn": {
+        "description": "``POST /sell``: the chosen asset ids, where the money goes, the payout the cart showed.",
+        "properties": {
+          "asset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "expected_payout_uzs": {
+            "minimum": 0.0,
+            "title": "Expected Payout Uzs",
+            "type": "integer"
+          },
+          "payout": {
+            "$ref": "#/components/schemas/PayoutIn"
+          }
+        },
+        "required": [
+          "asset_ids",
+          "payout",
+          "expected_payout_uzs"
+        ],
+        "title": "SellIn",
         "type": "object"
       },
       "SellItemOut": {
@@ -9264,6 +9583,92 @@
           }
         },
         "summary": "Forget a payout card",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/v1/sell": {
+      "post": {
+        "description": "Sell the chosen items at the payout the cart showed; one Steam offer follows.\n\n``Idempotency-Key`` (16..160 chars) is required; a replayed key answers 200 with the stored\nsale whatever the body says. 409 ``code``s: ``sales_disabled``, ``trade_link_missing``,\n``trade_link_bad``, ``prices_changed`` (read the inventory again), ``below_minimum``\n(+ ``min_sum_uzs``), ``below_card_minimum`` (+ ``card_min_uzs``), ``too_many_items``,\n``steam_refused`` (+ ``reason``), ``cards_limit``. 422 ``card_invalid``. 404 for a card\nthat is not mine. 503 ``sales_unavailable`` / ``rate_unavailable``.",
+        "operationId": "post_sell_api_v1_sell_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SellIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOut"
+                }
+              }
+            },
+            "description": "replayed key"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sell skins",
         "tags": [
           "sales"
         ]

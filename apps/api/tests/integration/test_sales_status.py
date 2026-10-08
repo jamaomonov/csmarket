@@ -13,7 +13,7 @@ from csmarket.modules.notifications.models import EmailOutbox
 from csmarket.modules.realtime.api import CHANNEL
 from csmarket.modules.sales.models import Sale
 from csmarket.modules.sales.payouts import request_of
-from csmarket.modules.sales.status import Outcome, apply_deposit, check_sale, lock_sale
+from csmarket.modules.sales.status import Outcome, apply_deposit, check_sale, close, lock_sale
 from csmarket.modules.skinslink.api import Deposit, SkinslinkUnavailableError
 from csmarket.modules.wallet.api import WalletTransaction, user_balance
 from sqlalchemy import func, select
@@ -272,3 +272,19 @@ async def test_check_sale_on_an_outage_changes_nothing(db_session: AsyncSession)
     client = FakeDepositClient(status=SkinslinkUnavailableError("down"))
     assert await check_sale(db_session, client, sale_id=sale.id) == "unchanged"
     assert (await _fresh(db_session, sale)).status == "offered"
+
+
+async def test_close_ends_only_a_creating_sale_and_counts_the_move(
+    db_session: AsyncSession,
+) -> None:
+    creating = await make_sale(db_session, status="creating")
+    offered = await make_sale(db_session, status="offered")
+    for sale, want in ((creating, "closed"), (offered, "unchanged")):
+        locked = await lock_sale(db_session, sale.id)
+        assert locked is not None
+        assert await close(db_session, locked, reason="profile_private") == want
+        await db_session.commit()
+    row = await _fresh(db_session, creating)
+    assert (row.status, row.fail_reason) == ("closed", "profile_private")
+    assert (await _fresh(db_session, offered)).status == "offered"
+    assert await _letters(db_session, creating) == []
