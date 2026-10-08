@@ -146,7 +146,9 @@
       "purchase": "Purchase",
       "refund": "Refund to balance",
       "sale_credit": "Skins sold",
-      "payout_return": "Payout to balance"
+      "payout_return": "Payout to balance",
+      "fx_convert": "Transfer to USD",
+      "admin_adjust_usd": "USD adjustment"
     },
     "topup": {
       "waiting": "Waiting for payment",
@@ -161,7 +163,18 @@
       "reversed": "Top-up cancelled.",
       "notFound": "Top-up not found."
     },
-    "pending": "On its way: {sum}"
+    "pending": "On its way: {sum}",
+    "usd": {
+      "title": "USD wallet",
+      "hint": "For purchases through the API",
+      "convertLabel": "Amount in soʻm",
+      "convertSubmit": "Convert",
+      "preview": "≈ ${usd} at {rate}",
+      "rateUnavailable": "The rate is unavailable right now",
+      "tooLow": "Not enough money on the balance",
+      "failed": "Could not convert. Please try again.",
+      "done": "Converted."
+    }
   },
   "skins": {
     "meta": {

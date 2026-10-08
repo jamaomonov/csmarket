@@ -146,7 +146,9 @@
       "purchase": "Xarid",
       "refund": "Balansga qaytarish",
       "sale_credit": "Skin sotuvi",
-      "payout_return": "Balansga toʻlov"
+      "payout_return": "Balansga toʻlov",
+      "fx_convert": "USD ga oʻtkazma",
+      "admin_adjust_usd": "USD tuzatish"
     },
     "topup": {
       "waiting": "Toʻlov kutilmoqda",
@@ -161,7 +163,18 @@
       "reversed": "Toʻldirish bekor qilindi.",
       "notFound": "Toʻldirish topilmadi."
     },
-    "pending": "Tushishi kutilmoqda: {sum}"
+    "pending": "Tushishi kutilmoqda: {sum}",
+    "usd": {
+      "title": "USD hamyon",
+      "hint": "API orqali xaridlar uchun",
+      "convertLabel": "Soʻmdagi summa",
+      "convertSubmit": "Balansdan oʻtkazish",
+      "preview": "≈ ${usd}, kurs {rate}",
+      "rateUnavailable": "Kurs hozircha mavjud emas",
+      "tooLow": "Balansda mablagʻ yetarli emas",
+      "failed": "Oʻtkazib boʻlmadi. Qayta urinib koʻring.",
+      "done": "Oʻtkazildi."
+    }
   },
   "skins": {
     "meta": {

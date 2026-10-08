@@ -26,6 +26,8 @@ function entry(over: Partial<Entry>): Entry {
     amount_uzs: "+50000",
     created_at: "2026-10-01T09:00:00Z",
     reference_number: "T1",
+    currency: "UZS",
+    amount_usd: null,
     ...over,
   };
 }
