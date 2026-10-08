@@ -295,9 +295,13 @@ amount_uzs, status, provider, created_at, succeeded_at}], orders: [AdminOrderRow
 - `POST /admin/users/{id}/unban` `{reason: 3..500}` → card. 409 `not_banned`.
 - `POST /admin/users/{id}/wallet/adjust` `{amount_uzs: JSON integer ≠ 0, |x| ≤ 100 000 000,
 reason: 4..500}` → card. 409 `balance_too_low` for a clawback beyond the balance.
+- `POST /admin/users/{id}/wallet/adjust-usd` `{amount_usd: "250.000" (string, ≠ 0, ≤ 3 decimals,
+|x| ≤ 100000), reason: 4..500}` → card (`balance_usd`, `usd_entries`). 409 `balance_too_low`.
+- `PUT /admin/users/{id}/usd-wallet` `{enabled, reason: 3..500}` → card. Switching off with money
+  on it is allowed: the balance stays, conversion and API purchases stop.
 - Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise). A replay returns
   the stored card and writes nothing; the same key with another body or user is 409
-  `idempotency_mismatch`. Audited: `users.ban`, `users.unban`, `wallet.adjust`.
+  `idempotency_mismatch`. Audited: `users.ban`, `users.unban`, `wallet.adjust`, `wallet.adjust_usd`, `wallet.usd_switch`.
 
 ### Admin orders and trades (M4a)
 

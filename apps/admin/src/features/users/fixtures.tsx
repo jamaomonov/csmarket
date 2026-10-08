@@ -31,6 +31,8 @@ export const CARD: AdminUserCard = {
     {
       id: "e-2",
       kind: "admin_adjust",
+      currency: "UZS",
+      amount_usd: null,
       amount_uzs: "-20000",
       created_at: "2026-09-30T11:00:00Z",
       reference_number: null,
@@ -40,6 +42,8 @@ export const CARD: AdminUserCard = {
     {
       id: "e-1",
       kind: "topup",
+      currency: "UZS",
+      amount_usd: null,
       amount_uzs: "+50000",
       created_at: "2026-09-30T10:00:00Z",
       reference_number: "T100001",
@@ -58,6 +62,9 @@ export const CARD: AdminUserCard = {
     },
   ],
   orders: [ORDER_ROW],
+  usd_wallet_enabled: false,
+  balance_usd: "0.000",
+  usd_entries: [],
 };
 
 export function renderCard(qc: QueryClient, seed?: (qc: QueryClient) => void) {

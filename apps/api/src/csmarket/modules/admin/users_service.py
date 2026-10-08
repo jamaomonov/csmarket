@@ -23,7 +23,7 @@ from csmarket.core.clock import now
 from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.idempotency import load_replay, save_replay
-from csmarket.core.money import wire_uzs
+from csmarket.core.money import wire_usd, wire_uzs
 from csmarket.modules.admin.audit import record
 from csmarket.modules.admin.deps import has_role
 from csmarket.modules.admin.orders_service import recent_orders
@@ -39,9 +39,11 @@ from csmarket.modules.payments.api import Payment, WalletTopup
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import (
     admin_adjust,
+    admin_adjust_usd,
     entries_for_admin,
     user_balance,
     user_balance_column,
+    user_usd_balance,
 )
 
 #: Latest entries and top-ups on a card.
@@ -150,12 +152,16 @@ async def _topups(db: AsyncSession, user_id: str) -> list[AdminTopupOut]:
 async def user_card(db: AsyncSession, user: User) -> AdminUserCard:
     """The user page: profile, balance, the latest 20 ledger lines, top-ups and orders."""
     entries = await entries_for_admin(db, user.id, limit=CARD_ROWS)
+    usd_entries = await entries_for_admin(db, user.id, limit=CARD_ROWS, currency="USD")
     return AdminUserCard(
         user=AdminUserDetail.of(user),
         balance_uzs=wire_uzs(await user_balance(db, user.id)),
         entries=[AdminEntryOut.of(e) for e in entries],
         topups=await _topups(db, user.id),
         orders=await recent_orders(db, user.id),
+        usd_wallet_enabled=user.usd_wallet_enabled,
+        balance_usd=wire_usd(await user_usd_balance(db, user.id)),
+        usd_entries=[AdminEntryOut.of(e, "USD") for e in usd_entries],
     )
 
 
@@ -277,14 +283,63 @@ async def adjust(
     )
 
 
+async def adjust_usd(
+    db: AsyncSession, *, admin: User, user: User, units: int, reason: str, key: str
+) -> None:
+    """Credit or claw back ``units`` milli-USD; audited ``wallet.adjust_usd``.
+
+    Raises:
+        InsufficientBalanceError: ``balance_too_low`` — a clawback below zero.
+        ConflictError: ``idempotency_mismatch`` — the ledger key booked another adjustment.
+    """
+    await admin_adjust_usd(
+        db,
+        user_id=user.id,
+        amount=Decimal(units),
+        reason=reason,
+        admin_id=admin.id,
+        idempotency_key=key,
+    )
+    await record(
+        db,
+        actor_id=admin.id,
+        action="wallet.adjust_usd",
+        target_type="user",
+        target_id=user.id,
+        payload={"amount_usd": wire_usd(units), "reason": reason},
+    )
+
+
+async def switch_usd(
+    db: AsyncSession, *, admin: User, user: User, enabled: bool, reason: str
+) -> None:
+    """Turn the USD wallet on or off; audited ``wallet.usd_switch``.
+
+    Switching off with a non-zero dollar balance is allowed: the money stays on the
+    account, conversion and API purchases stop until it is switched on again.
+    """
+    user.usd_wallet_enabled = enabled
+    user.updated_at = now()
+    await record(
+        db,
+        actor_id=admin.id,
+        action="wallet.usd_switch",
+        target_type="user",
+        target_id=user.id,
+        payload={"enabled": enabled, "reason": reason},
+    )
+
+
 __all__ = [
     "CARD_ROWS",
     "adjust",
+    "adjust_usd",
     "ban",
     "get_user",
     "list_users",
     "remember",
     "replayed",
+    "switch_usd",
     "unban",
     "user_card",
 ]

@@ -46,8 +46,11 @@ export interface AdminUserDetail {
 export interface AdminEntry {
   id: string;
   kind: string;
-  /** Signed whole soʻm, e.g. `"+50000"` or `"-20000"`. */
+  currency: "UZS" | "USD";
+  /** Signed whole soʻm, e.g. `"+50000"` or `"-20000"`; `"0"` on a dollar line. */
   amount_uzs: string;
+  /** Signed dollars, e.g. `"+250.000"`, on a dollar line; `null` on a soʻm line. */
+  amount_usd: string | null;
   created_at: string;
   reference_number: string | null;
   /** `payments`, `admin:<admin id>` or `null`. */
@@ -73,6 +76,11 @@ export interface AdminUserCard {
   topups: AdminTopup[];
   /** The latest 20 orders, newest first. */
   orders: AdminOrderRow[];
+  usd_wallet_enabled: boolean;
+  /** Dollars with three decimals, e.g. `"250.000"`. */
+  balance_usd: string;
+  /** The latest 20 dollar lines, newest first. */
+  usd_entries: AdminEntry[];
 }
 
 export interface ListUsersParams {
@@ -121,6 +129,34 @@ export function adjustBalance(
   return session.apiPost<AdminUserCard>(
     `${BASE}/${encodeURIComponent(id)}/wallet/adjust`,
     { amount_uzs: amount, reason },
+    { idempotencyKey: key },
+  );
+}
+
+/** Credit (`"250.000"`) or claw back (`"-30.000"`) dollars. `key` is one per confirmed submission. */
+export function adjustUsdBalance(
+  id: string,
+  amountUsd: string,
+  reason: string,
+  key: string,
+): Promise<AdminUserCard> {
+  return session.apiPost<AdminUserCard>(
+    `${BASE}/${encodeURIComponent(id)}/wallet/adjust-usd`,
+    { amount_usd: amountUsd, reason },
+    { idempotencyKey: key },
+  );
+}
+
+/** Switch the USD wallet on or off. Money left on it stays; conversion and API buying stop. */
+export function switchUsdWallet(
+  id: string,
+  enabled: boolean,
+  reason: string,
+  key: string,
+): Promise<AdminUserCard> {
+  return session.apiPut<AdminUserCard>(
+    `${BASE}/${encodeURIComponent(id)}/usd-wallet`,
+    { enabled, reason },
     { idempotencyKey: key },
   );
 }

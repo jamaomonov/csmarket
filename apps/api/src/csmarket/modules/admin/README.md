@@ -73,13 +73,15 @@ Every admin write records one `admin_audit_log` row (spec §5, ruling Q5), migra
 `users_routes.py` (router), `users_service.py` (logic), `users_schemas.py` (wire shapes).
 All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as above).
 
-| Route                                  | Body                                 | Answer          |
-| -------------------------------------- | ------------------------------------ | --------------- |
-| `GET /admin/users?q=&cursor=&limit=`   | —                                    | `AdminUsersOut` |
-| `GET /admin/users/{id}`                | —                                    | `AdminUserCard` |
-| `POST /admin/users/{id}/ban`           | `{reason: 3..500}`                   | `AdminUserCard` |
-| `POST /admin/users/{id}/unban`         | `{reason: 3..500}`                   | `AdminUserCard` |
-| `POST /admin/users/{id}/wallet/adjust` | `{amount_uzs: ±int, reason: 4..500}` | `AdminUserCard` |
+| Route                                      | Body                                       | Answer          |
+| ------------------------------------------ | ------------------------------------------ | --------------- |
+| `GET /admin/users?q=&cursor=&limit=`       | —                                          | `AdminUsersOut` |
+| `GET /admin/users/{id}`                    | —                                          | `AdminUserCard` |
+| `POST /admin/users/{id}/ban`               | `{reason: 3..500}`                         | `AdminUserCard` |
+| `POST /admin/users/{id}/unban`             | `{reason: 3..500}`                         | `AdminUserCard` |
+| `POST /admin/users/{id}/wallet/adjust`     | `{amount_uzs: ±int, reason: 4..500}`       | `AdminUserCard` |
+| `POST /admin/users/{id}/wallet/adjust-usd` | `{amount_usd: "±250.000", reason: 4..500}` | `AdminUserCard` |
+| `PUT /admin/users/{id}/usd-wallet`         | `{enabled, reason: 3..500}`                | `AdminUserCard` |
 
 - **List:** newest first, keyset on `(created_at DESC, id DESC)` with an opaque cursor;
   `limit` 1..100 (20). `q` matches the display name (case-insensitive substring, `%` and `_`
