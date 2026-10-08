@@ -54,14 +54,16 @@
 - `wallet_accounts` gains `currency` (`UZS` | `USD`, existing rows `UZS`). Amounts stay
   `Numeric(14,0)`: whole soʻm for UZS, milli-USD for USD.
 - New account kinds: `user_wallet_usd`, `house_payments_received_usd`,
-  `house_adjustments_usd`, `house_fx` (both currencies: the conversion's counter-account).
+  `house_adjustments_usd`, `house_fx_uzs` (D-normal) and `house_fx_usd` (C-normal): the
+  conversion's counter-accounts (one `house_fx` cannot hold two currencies under the
+  `(owner_type, owner_id, kind)` key).
 - `service.post` checks every leg's account currency and that D = C **per currency**; a
   transaction may span two currencies only as two balanced pairs (the conversion).
 - New transaction kinds: `fx_convert`, `admin_adjust_usd`; `purchase` and `refund` work on
   either currency (the account decides).
 - **Conversion** `POST /wallet/convert {amount_uzs}` (Idempotency-Key): rate = the current
   CBU rate × (1 + `fx_uplift_pct`); `usd_units = floor(amount_uzs × 1000 / rate)`; one
-  transaction: D user_wallet / C house_fx (UZS) and D house_fx / C user_wallet_usd (USD); rate,
+  transaction: C user_wallet / D house_fx_uzs (UZS) and D user_wallet_usd / C house_fx_usd (USD); rate,
   snapshot id and both amounts in its metadata. Refused without a fresh rate (503
   `rate_unavailable`), without the USD wallet (403 `usd_wallet_disabled`), on a short soʻm
   balance (402 `insufficient_balance`), or when the result is under 1 milli-USD.

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import ARRAY, CheckConstraint, DateTime, String, Text, text
+from sqlalchemy import ARRAY, Boolean, CheckConstraint, DateTime, String, Text, text
 from sqlalchemy.dialects.postgresql import CITEXT, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -38,6 +38,10 @@ class User(Base):
     trade_link_reason: Mapped[str | None] = mapped_column(String(16), nullable=True)
     roles: Mapped[list[str]] = mapped_column(
         ARRAY(String(32)), nullable=False, server_default=text("'{}'::varchar[]")
+    )
+    #: An admin switched the USD wallet on (spec 2026-10-09 §2.2).
+    usd_wallet_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
     )
     banned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     ban_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

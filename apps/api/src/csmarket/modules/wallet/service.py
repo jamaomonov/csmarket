@@ -8,6 +8,7 @@ soʻm. Other modules call these through ``wallet.api``.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Literal
@@ -43,6 +44,20 @@ NORMAL_SIDE: dict[str, Direction] = {
     # Credit partner of ``user_wallet`` when a user's sale is paid to their balance
     # (spec 2026-10-08): grows with what we paid for skins, so its normal side is C.
     "house_skin_buys": "C",
+    # The same roles in milli-USD (1000 = $1), spec 2026-10-09 §3.
+    "user_wallet_usd": "D",
+    "house_payments_received_usd": "D",
+    "house_adjustments_usd": "D",
+    # A conversion's counter-accounts: soʻm in (D-normal), dollars out (C-normal).
+    "house_fx_uzs": "D",
+    "house_fx_usd": "C",
+}
+
+Currency = Literal["UZS", "USD"]
+
+#: The currency of each account kind; amounts are whole soʻm or milli-USD units.
+KIND_CURRENCY: dict[str, Currency] = {
+    kind: ("USD" if kind.endswith("_usd") else "UZS") for kind in NORMAL_SIDE
 }
 
 #: Transaction kinds (spec §5): ``purchase`` and ``refund`` book an order (M4a);
@@ -55,6 +70,8 @@ TX_KINDS: tuple[str, ...] = (
     "refund",
     "sale_credit",
     "payout_return",
+    "fx_convert",
+    "admin_adjust_usd",
 )
 
 #: ``numeric(14,0)`` holds at most 14 digits.
@@ -92,25 +109,36 @@ def _validate_leg(leg: Leg) -> None:
     if not leg.amount.is_finite() or leg.amount <= 0:
         raise ValidationError("leg amount must be positive", amount=str(leg.amount))
     if leg.amount != leg.amount.to_integral_value():
-        raise ValidationError("ledger amounts are whole soʻm", amount=str(leg.amount))
+        raise ValidationError(
+            "ledger amounts are whole units (soʻm or milli-USD)", amount=str(leg.amount)
+        )
     if leg.amount >= _MAX_AMOUNT:
         raise ValidationError("leg amount is too large", amount=str(leg.amount))
 
 
-def _validate_legs(legs: list[Leg]) -> None:
-    """At least two legs, each valid, and ``SUM(D) == SUM(C)``."""
+def _validate_legs(legs: list[Leg], currencies: Mapping[str, str] | None = None) -> None:
+    """At least two legs, each valid, and ``SUM(D) == SUM(C)`` in every currency.
+
+    ``currencies`` maps a leg's account id to its currency; without it all legs are one pool
+    (the unit tests' shape). A transaction may carry two currencies only as pairs that each
+    balance on their own (a conversion).
+    """
     if len(legs) < 2:
         raise ValidationError("a wallet transaction needs at least 2 legs")
-    sums = {"D": Decimal(0), "C": Decimal(0)}
+    sums: dict[tuple[str, str], Decimal] = {}
     for leg in legs:
         _validate_leg(leg)
-        sums[leg.direction] += leg.amount
-    if sums["D"] != sums["C"]:
-        raise ValidationError(
-            "ledger invariant break: SUM(D) != SUM(C)",
-            debit=str(sums["D"]),
-            credit=str(sums["C"]),
-        )
+        cur = currencies.get(leg.account_id, "UZS") if currencies else "UZS"
+        sums[(cur, leg.direction)] = sums.get((cur, leg.direction), Decimal(0)) + leg.amount
+    for cur in {c for c, _ in sums}:
+        debit, credit = sums.get((cur, "D"), Decimal(0)), sums.get((cur, "C"), Decimal(0))
+        if debit != credit:
+            raise ValidationError(
+                "ledger invariant break: SUM(D) != SUM(C) per currency",
+                currency=cur,
+                debit=str(debit),
+                credit=str(credit),
+            )
 
 
 async def _find_account(
@@ -144,7 +172,13 @@ async def ensure_account(
     existing = await _find_account(db, owner_type=owner_type, owner_id=owner_id, kind=kind)
     if existing is not None:
         return existing
-    account = WalletAccount(id=new_id(), owner_type=owner_type, owner_id=owner_id, kind=kind)
+    account = WalletAccount(
+        id=new_id(),
+        owner_type=owner_type,
+        owner_id=owner_id,
+        kind=kind,
+        currency=KIND_CURRENCY[kind],
+    )
     try:
         async with db.begin_nested():
             db.add(account)
@@ -196,8 +230,8 @@ def _replay(existing: WalletTransaction, kind: str) -> WalletTransaction:
     return existing
 
 
-async def _check_accounts(db: AsyncSession, legs: list[Leg]) -> None:
-    """Every leg's account exists and is ``active``."""
+async def _check_accounts(db: AsyncSession, legs: list[Leg]) -> dict[str, str]:
+    """Every leg's account exists and is ``active``; returns account id → currency."""
     ids = {leg.account_id for leg in legs}
     rows = (await db.execute(select(WalletAccount).where(WalletAccount.id.in_(ids)))).scalars()
     by_id = {a.id: a for a in rows}
@@ -206,6 +240,7 @@ async def _check_accounts(db: AsyncSession, legs: list[Leg]) -> None:
     for account in by_id.values():
         if account.status != "active":
             raise ConflictError("wallet account is frozen", account_id=account.id)
+    return {a.id: a.currency for a in by_id.values()}
 
 
 async def post(
@@ -238,8 +273,10 @@ async def post(
         return _replay(existing, kind)
     if kind not in TX_KINDS:
         raise ValidationError("unknown wallet transaction kind", kind=kind)
-    _validate_legs(legs)
-    await _check_accounts(db, legs)
+    for leg in legs:
+        _validate_leg(leg)
+    currencies = await _check_accounts(db, legs)
+    _validate_legs(legs, currencies)
 
     txn = WalletTransaction(
         id=new_id(),

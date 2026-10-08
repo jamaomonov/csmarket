@@ -4,7 +4,8 @@
 - :class:`WalletTransaction` — one business event, unique by ``idempotency_key``.
 - :class:`WalletPosting` — the debit/credit legs of a transaction; ``SUM(D) == SUM(C)``.
 
-UZS only: there is no currency column, amounts are whole soʻm (``numeric(14,0)``).
+Balanced per currency: an account's ``currency`` is ``UZS`` (whole soʻm) or ``USD``
+(milli-USD, 1000 = $1), fixed by its kind; amounts are ``numeric(14,0)``.
 Written only by :mod:`csmarket.modules.wallet.service`.
 """
 
@@ -40,7 +41,13 @@ ACCOUNT_KINDS = (
     "house_payments_received",
     "house_adjustments",
     "house_skin_buys",
+    "user_wallet_usd",
+    "house_payments_received_usd",
+    "house_adjustments_usd",
+    "house_fx_uzs",
+    "house_fx_usd",
 )
+CURRENCIES = ("UZS", "USD")
 ACCOUNT_STATUSES = ("active", "frozen")
 
 
@@ -60,6 +67,8 @@ class WalletAccount(Base):
     owner_id: Mapped[str] = mapped_column(String(64), nullable=False)
     kind: Mapped[str] = mapped_column(String(48), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'active'"))
+    #: ``UZS`` (whole soʻm) or ``USD`` (milli-USD units); fixed by the kind.
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, server_default=text("'UZS'"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
@@ -75,6 +84,7 @@ class WalletAccount(Base):
         CheckConstraint(f"owner_type IN {_in(OWNER_TYPES)}", name="owner_type"),
         CheckConstraint(f"kind IN {_in(ACCOUNT_KINDS)}", name="kind"),
         CheckConstraint(f"status IN {_in(ACCOUNT_STATUSES)}", name="status"),
+        CheckConstraint(f"currency IN {_in(CURRENCIES)}", name="currency"),
         Index(
             "ix_wallet_accounts_user_wallet",
             "owner_id",
@@ -143,6 +153,7 @@ class WalletPosting(Base):
 __all__ = [
     "ACCOUNT_KINDS",
     "ACCOUNT_STATUSES",
+    "CURRENCIES",
     "OWNER_TYPES",
     "WalletAccount",
     "WalletPosting",
