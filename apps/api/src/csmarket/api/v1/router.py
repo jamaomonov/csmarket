@@ -29,6 +29,7 @@ from csmarket.modules.payments.routes import router as payments_router
 from csmarket.modules.payments.routes import wallet_router as topups_router
 from csmarket.modules.realtime.routes import router as realtime_router
 from csmarket.modules.sales.cards_routes import router as payout_cards_router
+from csmarket.modules.sales.routes import router as sales_router
 from csmarket.modules.skins.admin_routes import router as skins_admin_router
 from csmarket.modules.skins.dev_routes import router as skins_dev_router
 from csmarket.modules.skins.pricing_routes import router as skins_pricing_router
@@ -58,6 +59,7 @@ router.include_router(payme_router)
 router.include_router(payments_dev_router)
 router.include_router(payments_router)
 router.include_router(payout_cards_router)
+router.include_router(sales_router)
 router.include_router(realtime_router)
 router.include_router(skins_admin_router)
 router.include_router(skins_pricing_router)

@@ -3099,6 +3099,39 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "InventoryOut": {
+        "description": "The priced inventory; ``max_items`` is the most one sale may carry.",
+        "properties": {
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SellItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "max_items": {
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "min_sum_uzs": {
+            "title": "Min Sum Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "max_items",
+          "min_sum_uzs",
+          "fetched_at"
+        ],
+        "title": "InventoryOut",
+        "type": "object"
+      },
       "ItemPricingIn": {
         "additionalProperties": false,
         "description": "One item's pricing overrides; ``null`` clears one.",
@@ -4414,6 +4447,134 @@
           "margin_percent"
         ],
         "title": "SalesOut",
+        "type": "object"
+      },
+      "SellConfigOut": {
+        "description": "What the sell page shows before anything is chosen (public).",
+        "properties": {
+          "balance_bonus_pct": {
+            "title": "Balance Bonus Pct",
+            "type": "string"
+          },
+          "card_fee_pct": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "uzcard",
+                "humo",
+                "uzum_visa"
+              ]
+            },
+            "title": "Card Fee Pct",
+            "type": "object"
+          },
+          "card_min_uzs": {
+            "title": "Card Min Uzs",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_cards": {
+            "title": "Max Cards",
+            "type": "integer"
+          },
+          "min_sum_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Sum Uzs"
+          }
+        },
+        "required": [
+          "enabled",
+          "balance_bonus_pct",
+          "card_fee_pct",
+          "card_min_uzs",
+          "min_sum_uzs",
+          "max_cards"
+        ],
+        "title": "SellConfigOut",
+        "type": "object"
+      },
+      "SellItemOut": {
+        "description": "One item the seller can sell now, at our price.",
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
+          }
+        },
+        "required": [
+          "asset_id",
+          "name",
+          "image_url",
+          "exterior",
+          "rarity_color",
+          "category",
+          "price_uzs"
+        ],
+        "title": "SellItemOut",
         "type": "object"
       },
       "SkinDetailOut": {
@@ -9103,6 +9264,88 @@
           }
         },
         "summary": "Forget a payout card",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/v1/sell/config": {
+      "get": {
+        "description": "Public: whether selling is on, the bonus, the card fees and minimums.",
+        "operationId": "get_sell_config_api_v1_sell_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "How selling works now",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/v1/sell/inventory": {
+      "get": {
+        "description": "The items we buy now, at our so\u02bbm prices; kept 5 minutes, ``?refresh=1`` asks again.\n\n409 ``code``s: ``sales_disabled``, ``trade_link_missing``, ``trade_link_bad`` (+ ``reason``),\n``steam_refused`` (+ ``reason``: Skinslink's Steam account code). 503 ``sales_unavailable``\nor ``rate_unavailable``.",
+        "operationId": "get_sell_inventory_api_v1_sell_inventory_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My inventory, priced",
         "tags": [
           "sales"
         ]
