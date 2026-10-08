@@ -360,18 +360,18 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `merchant_tx_id`, so the reconcile repeats the same call after a lost answer. Outcomes
   (`csmarket_order_buys_total`, log `orders.skinslink_buy`):
 
-  | Skinslink answers                                                            | Outcome        | Writes                                                                            |
-  | ---------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-  | trade link does not parse                                                    | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
-  | taken (`new`, `pending`, `active`, `hold`, `completed`)                      | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
-  | 409 or `duplicate_purchase`                                                  | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
+  | Skinslink answers                                                                     | Outcome        | Writes                                                                            |
+  | ------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+  | trade link does not parse                                                             | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
+  | taken (`new`, `pending`, `active`, `hold`, `completed`)                               | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
+  | 409 or `duplicate_purchase`                                                           | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
   | a trade-link code (`LINK_ERROR_CODES`); `hold`, `hold_and_permissions` → `trade_hold` | `invalid_link` | `failed` + refund `invalid_trade_link` (`trade_hold` for a hold)                  |
-  | `insufficient_balance`                                                       | `low_balance`  | `failed` + refund `source_low_balance`                                            |
-  | HTTP 403                                                                     | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
-  | HTTP 429                                                                     | `rate_limited` | nothing; next try after 20 s                                                      |
-  | timeout, 408, 5xx, network                                                   | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
-  | any other `failed` reason or 4xx (sold, price moved, `provider_unavailable`) | `sold_out`     | `failed` + refund `sold_out`                                                      |
-  | a buy that went through but the rows moved during the call                   | `stale_bought` | attention `ambiguous_trade`                                                       |
+  | `insufficient_balance`                                                                | `low_balance`  | `failed` + refund `source_low_balance`                                            |
+  | HTTP 403                                                                              | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
+  | HTTP 429                                                                              | `rate_limited` | nothing; next try after 20 s                                                      |
+  | timeout, 408, 5xx, network                                                            | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
+  | any other `failed` reason or 4xx (sold, price moved, `provider_unavailable`)          | `sold_out`     | `failed` + refund `sold_out`                                                      |
+  | a buy that went through but the rows moved during the call                            | `stale_bought` | attention `ambiguous_trade`                                                       |
 
   The chosen asset is the only one bought: no substitute, no switch to another source
   (ADR-0013). An order bought before that change under `merchant_tx_id` = `<order id>:2`
