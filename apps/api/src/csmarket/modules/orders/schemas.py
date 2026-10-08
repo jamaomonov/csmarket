@@ -71,6 +71,9 @@ class OrderOut(BaseModel):
     refunded_to: RefundedTo | None
     #: The order can be paid now (``pending`` and not expired).
     payable: bool
+    #: ``site`` for a storefront order, ``api`` for one bought over the public API (paid from
+    #: the USD wallet: ``price_usd`` is what was charged and ``price_uzs`` is ``"0"``).
+    channel: Literal["site", "api"]
     trade: SkinTradeOut | None
 
 

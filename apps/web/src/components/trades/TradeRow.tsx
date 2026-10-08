@@ -25,7 +25,9 @@ export function OrderRow({ order, locale, when }: RowProps & { order: OrderOut }
   const badge = orderBadge(order);
   const refunded = order.refunded_to === "balance";
   const spent = order.paid_at !== null && !refunded;
-  const price = formatUzs(locale, order.price_uzs);
+  const viaApi = order.channel === "api";
+  // API orders are paid in dollars: `price_uzs` is "0", `price_usd` what the wallet was charged.
+  const price = viaApi ? formatUsd(order.price_usd) : formatUzs(locale, order.price_uzs);
   return (
     <Row
       href={orderPath(order.number)}
@@ -33,14 +35,29 @@ export function OrderRow({ order, locale, when }: RowProps & { order: OrderOut }
       state={order.status}
       thumb={<ItemThumb imageUrl={order.image_url} rarityColor={order.rarity_color} />}
       name={order.name}
-      kind={t("purchase")}
+      kind={viaApi ? t("api") : t("purchase")}
       badge={badge}
       meta={`#${order.number} · ${when.format(new Date(order.created_at))}`}
       amount={spent ? `−${price}` : price}
       amountClass={spent ? undefined : "text-fg-dim"}
-      note={refunded ? t("returned") : order.paid_with === "wallet" ? t("paidBalance") : null}
+      note={orderNote(t, order, refunded)}
     />
   );
+}
+
+/** A dollar amount to three decimals (display only; the wire string carries six). */
+function formatUsd(usd: string): string {
+  return `$${Number(usd).toFixed(3)}`;
+}
+
+function orderNote(
+  t: ReturnType<typeof useTranslations<"web.trades">>,
+  order: OrderOut,
+  refunded: boolean,
+): string | null {
+  if (refunded) return t("returned");
+  if (order.paid_with !== "wallet") return null;
+  return t(order.channel === "api" ? "paidUsdWallet" : "paidBalance");
 }
 
 /** One sale on «Обмены»: the first item («+N» more) and the money coming in as «+». */

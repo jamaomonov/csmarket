@@ -121,4 +121,24 @@ describe("TradesView", () => {
     );
     expect(api.listOrders).not.toHaveBeenCalled();
   });
+
+  it("shows an API order as «API», paid from the USD wallet", async () => {
+    api.listOrders.mockResolvedValue(
+      page([
+        orderOut("A1", {
+          status: "delivered",
+          channel: "api",
+          price_uzs: "0",
+          price_usd: "12.345000",
+          paid_at: "2026-10-02T10:01:00Z",
+          paid_with: "wallet",
+        }),
+      ]),
+    );
+    view("all");
+    const card = await screen.findByTestId("order-card");
+    expect(within(card).getByText("API")).toBeInTheDocument();
+    expect(within(card).getByText("−$12.345")).toBeInTheDocument();
+    expect(within(card).getByText("с USD-кошелька")).toBeInTheDocument();
+  });
 });

@@ -68,6 +68,8 @@ export interface OrderOut {
   refunded_to: "balance" | null;
   /** The order can still be paid (`status === "pending"`). */
   payable: boolean;
+  /** `api`: bought over the public API from the USD wallet (`price_uzs` is `"0"`). */
+  channel: "site" | "api";
   trade: SkinTradeOut | null;
 }
 

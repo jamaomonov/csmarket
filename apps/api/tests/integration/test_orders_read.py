@@ -9,6 +9,7 @@ from decimal import Decimal
 import pytest
 from csmarket.core import clock
 from csmarket.modules.orders.service import list_for_user
+from csmarket.modules.public_api.keys import issue
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
 from sqlalchemy import event, select
@@ -60,6 +61,32 @@ async def test_the_owner_reads_the_order(
     assert (body["paid_with"], body["refunded_to"], body["paid_at"]) == (None, None, None)
     assert "trade_link" not in body
     assert "cost_units" not in body
+
+
+async def test_the_order_reads_its_channel(
+    integration_client: AsyncClient,
+    headers: dict[str, str],
+    buyer: User,
+    db_session: AsyncSession,
+) -> None:
+    buyer.usd_wallet_enabled = True
+    key, _token = await issue(db_session, user=buyer)
+    site = await make_order(db_session, user=buyer)
+    via_api = await make_order(
+        db_session,
+        user=buyer,
+        channel="api",
+        api_key_id=key.id,
+        client_order_id="c-1",
+        pricing_profile="retail",
+    )
+    one = (await integration_client.get(f"{ORDERS}/{site.number}", headers=headers)).json()
+    assert one["channel"] == "site"
+    mine = (await integration_client.get(MINE, headers=headers)).json()["items"]
+    assert {o["number"]: o["channel"] for o in mine} == {
+        site.number: "site",
+        via_api.number: "api",
+    }
 
 
 async def test_an_old_order_reads_null_float_seed_and_look(

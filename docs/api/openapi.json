@@ -4582,6 +4582,14 @@
       "OrderOut": {
         "description": "An order as its owner sees it.",
         "properties": {
+          "channel": {
+            "enum": [
+              "site",
+              "api"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -4774,6 +4782,7 @@
           "paid_with",
           "refunded_to",
           "payable",
+          "channel",
           "trade"
         ],
         "title": "OrderOut",
