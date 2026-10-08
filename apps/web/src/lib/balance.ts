@@ -39,7 +39,14 @@ export interface Topup {
   awaiting_kassa: boolean;
 }
 
-export type EntryKind = "topup" | "topup_reversal" | "admin_adjust" | "purchase" | "refund";
+export type EntryKind =
+  | "topup"
+  | "topup_reversal"
+  | "admin_adjust"
+  | "purchase"
+  | "refund"
+  | "sale_credit"
+  | "payout_return";
 
 /** `EntryOut`: one line of the balance history. */
 export interface Entry {
@@ -48,7 +55,8 @@ export interface Entry {
   /** Signed whole soʻm: `"+50000"` credited, `"-10000"` debited. */
   amount_uzs: string;
   created_at: string;
-  /** The top-up's number for `topup` / `topup_reversal`; else `null`. */
+  /** The top-up's number for `topup` / `topup_reversal`, the sale's for `sale_credit` /
+   * `payout_return`; else `null`. */
   reference_number: string | null;
 }
 

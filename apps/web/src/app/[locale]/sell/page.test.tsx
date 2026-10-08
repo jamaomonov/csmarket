@@ -1,63 +1,44 @@
 // @vitest-environment jsdom
-import { render } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import SellPage from "./page";
-
-import type { SellItem } from "@/lib/sell";
 
 vi.mock("next-intl/server", () => ({
   getTranslations: () => Promise.resolve((key: string) => key),
   setRequestLocale: () => undefined,
 }));
-const skins = vi.hoisted(() => ({ getSkinsPage: vi.fn() }));
-vi.mock("@/lib/skins", () => skins);
+const server = vi.hoisted(() => ({ apiGet: vi.fn() }));
+vi.mock("@/lib/server-api", () => server);
 vi.mock("@/components/ComingSoon", () => ({ ComingSoon: () => null }));
-const shown = vi.hoisted((): { inventory: SellItem[] | null } => ({ inventory: null }));
-vi.mock("@/components/sell/SellView", () => ({
-  SellView: ({ inventory }: { inventory: SellItem[] }) => {
-    shown.inventory = inventory;
-    return null;
-  },
-}));
+vi.mock("@/components/sell/SellView", () => ({ SellView: () => null }));
 
 import { ComingSoon } from "@/components/ComingSoon";
-
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
+import { SellView } from "@/components/sell/SellView";
 
 const page = () => SellPage({ params: Promise.resolve({ locale: "ru" }) });
 
 describe("sell page", () => {
-  it("in production it is still «Скоро» and asks the API for nothing", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-    const out = await page();
-    expect(out.type).toBe(ComingSoon);
-    expect(skins.getSkinsPage).not.toHaveBeenCalled();
+  it("is «Скоро» while selling is switched off", async () => {
+    server.apiGet.mockResolvedValue({ enabled: false });
+    expect((await page()).type).toBe(ComingSoon);
   });
 
-  it("in dev it shows the sell page on a demo inventory from the catalogue", async () => {
-    vi.stubEnv("NODE_ENV", "development");
-    skins.getSkinsPage.mockResolvedValue({
-      items: [
-        {
-          slug: "ak",
-          name: "AK-47 | Redline (Field-Tested)",
-          category: "rifles",
-          weapon: "AK-47",
-          skin: "Redline",
-          exterior: "FT",
-          stattrak: false,
-          rarity_color: null,
-          image_url: "https://img.test/ak.png",
-          price_uzs: "300000",
-        },
-      ],
-      next_cursor: null,
-    });
-    render(await page());
-    expect(shown.inventory).toHaveLength(1);
-    expect(shown.inventory?.[0]?.priceUzs).toBe(240_000);
+  it("is «Скоро» when the API cannot say", async () => {
+    server.apiGet.mockRejectedValue(new Error("down"));
+    expect((await page()).type).toBe(ComingSoon);
+  });
+
+  it("shows the sell page with the config when selling is on", async () => {
+    const config = { enabled: true, balance_bonus_pct: "2" };
+    server.apiGet.mockResolvedValue(config);
+    const out = await page();
+    expect(server.apiGet).toHaveBeenCalledWith("/sell/config", { noStore: true });
+    // The page returns a JSX element; its props are untyped, so the child is narrowed by shape.
+    const view = (out.props as { children: unknown }).children as {
+      type: unknown;
+      props: { config: unknown };
+    };
+    expect(view.type).toBe(SellView);
+    expect(view.props.config).toBe(config);
   });
 });

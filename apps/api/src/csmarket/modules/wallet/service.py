@@ -40,10 +40,22 @@ NORMAL_SIDE: dict[str, Direction] = {
     "house_payments_received": "D",
     # Contra-account of admin balance adjustments.
     "house_adjustments": "D",
+    # Credit partner of ``user_wallet`` when a user's sale is paid to their balance
+    # (spec 2026-10-08): grows with what we paid for skins, so its normal side is C.
+    "house_skin_buys": "C",
 }
 
-#: Transaction kinds (spec §5): ``purchase`` and ``refund`` book an order (M4a).
-TX_KINDS: tuple[str, ...] = ("topup", "topup_reversal", "admin_adjust", "purchase", "refund")
+#: Transaction kinds (spec §5): ``purchase`` and ``refund`` book an order (M4a);
+#: ``sale_credit`` and ``payout_return`` a sale (2026-10-08).
+TX_KINDS: tuple[str, ...] = (
+    "topup",
+    "topup_reversal",
+    "admin_adjust",
+    "purchase",
+    "refund",
+    "sale_credit",
+    "payout_return",
+)
 
 #: ``numeric(14,0)`` holds at most 14 digits.
 _MAX_AMOUNT = Decimal(10) ** 14

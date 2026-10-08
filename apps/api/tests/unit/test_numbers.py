@@ -72,3 +72,15 @@ async def test_allocate_gives_up_after_the_attempts() -> None:
     with pytest.raises(RuntimeError):
         await allocate(db, User.id, lambda: "AAAAAAAA", attempts=3)  # type: ignore[arg-type]
     assert db.calls == 3
+
+
+def test_sale_numbers_are_s_plus_7_and_orders_never_start_with_s() -> None:
+    from csmarket.core.numbers import is_sale_number, sale_number
+
+    for _ in range(200):
+        sale, order = sale_number(), order_number()
+        assert sale.startswith("S")
+        assert is_number(sale)
+        assert is_sale_number(sale)
+        assert order[0] not in {"S", "T"}
+        assert not is_sale_number(order)

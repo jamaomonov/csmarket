@@ -1,155 +1,251 @@
+// apps/web/src/components/sell/SellView.test.tsx
 // @vitest-environment jsdom
+import { SessionApiError } from "@csmarket/api-client";
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SellView } from "./SellView";
 
-import type { SellItem } from "@/lib/sell";
+import type { Inventory, SellConfig } from "@/lib/sell";
 
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
-vi.mock("@/lib/api", () => ({ session: { apiPut: vi.fn(), apiPost: vi.fn() } }));
+const api = vi.hoisted(() => ({
+  apiGet: vi.fn(),
+  apiPost: vi.fn(),
+  apiPut: vi.fn(),
+  api: vi.fn(),
+}));
+vi.mock("@/lib/api", () => ({ session: api }));
+const push = vi.hoisted(() => vi.fn());
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
     <a href={href} {...rest}>
       {children}
     </a>
   ),
+  useRouter: () => ({ push }),
 }));
 
-const item = (over: Partial<SellItem>): SellItem => ({
-  assetId: "1",
-  slug: "ak",
-  name: "AK-47 | Redline (Field-Tested)",
-  category: "rifles",
-  weapon: "AK-47",
-  skin: "Redline",
-  exterior: "FT",
-  stattrak: false,
-  imageUrl: "https://img.test/ak.png",
-  rarityColor: "#d32ce6",
-  priceUzs: 300_000,
-  unavailable: null,
-  ...over,
-});
+const CONFIG: SellConfig = {
+  enabled: true,
+  balance_bonus_pct: "2",
+  card_fee_pct: { uzcard: "5", humo: "5", uzum_visa: "5" },
+  card_min_uzs: "30000",
+  min_sum_uzs: "11300",
+  max_cards: 3,
+};
+const INVENTORY: Inventory = {
+  items: [
+    {
+      asset_id: "101",
+      name: "P250 | Sand Dune (Field-Tested)",
+      image_url: "https://img.test/101.png",
+      exterior: "Field-Tested",
+      rarity_color: null,
+      category: null,
+      price_uzs: "5600",
+    },
+    {
+      asset_id: "100",
+      name: "AK-47 | Redline (Field-Tested)",
+      image_url: "https://img.test/100.png",
+      exterior: "Field-Tested",
+      rarity_color: "#d32ce6",
+      category: "rifles",
+      price_uzs: "149600",
+    },
+  ],
+  max_items: 50,
+  min_sum_uzs: "11300",
+  fetched_at: "2026-10-08T10:00:00Z",
+};
+const SIGNED_IN = {
+  status: "signed_in",
+  user: {
+    id: "u1",
+    trade_link: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE",
+  },
+  signInHref: () => "/auth",
+  refreshMe: vi.fn(),
+};
 
-const INVENTORY: SellItem[] = [
-  item({}),
-  item({
-    assetId: "2",
-    slug: "awp",
-    name: "AWP | Asiimov (Field-Tested)",
-    weapon: "AWP",
-    skin: "Asiimov",
-    priceUzs: 900_000,
-  }),
-  item({
-    assetId: "3",
-    slug: "knife",
-    name: "★ Karambit | Fade",
-    category: "knives",
-    weapon: "Karambit",
-    skin: "Fade",
-    priceUzs: 9_000_000,
-    unavailable: { reason: "tradeLock", until: "2026-10-12T00:00:00Z" },
-  }),
-];
-
-const plain = (s: string | null | undefined) => (s ?? "").replace(/\s/g, " ");
-
-function view() {
-  render(
-    <NextIntlClientProvider locale="ru" messages={{ web: ru, common }} timeZone="UTC">
-      <SellView locale="ru" inventory={INVENTORY} />
-    </NextIntlClientProvider>,
+function routeGets(inventory: () => Promise<unknown> = () => Promise.resolve(INVENTORY)) {
+  api.apiGet.mockImplementation((path: string) =>
+    path.startsWith("/api/v1/sell/inventory")
+      ? inventory()
+      : path === "/api/v1/payout-cards"
+        ? Promise.resolve({ items: [] })
+        : Promise.reject(new Error(path)),
   );
 }
 
-const signedIn = {
-  status: "signed_in",
-  signInHref: () => "",
-  refreshMe: vi.fn(),
-  user: {
-    trade_link: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=Fake1234",
-    trade_link_verdict: "ok",
-    trade_link_reason: null,
-  },
+function view() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={qc}>
+      <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
+        <SellView locale="ru" config={CONFIG} />
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
+  );
+}
+
+/** The first of the cart copies (the desktop aside and the mobile sheet share the text). */
+const first = (els: HTMLElement[]): HTMLElement => {
+  const [el] = els;
+  if (!el) throw new Error("no element");
+  return el;
 };
+const card = (name: RegExp) => screen.getByRole("button", { name });
 
 describe("SellView", () => {
   beforeEach(() => {
-    auth.value = signedIn;
+    Object.values(api).forEach((f) => f.mockReset());
+    push.mockReset();
+    auth.value = SIGNED_IN;
+    routeGets();
   });
 
-  it("shows the inventory with its total, the unavailable item says why", () => {
+  it("asks a visitor to sign in", () => {
+    auth.value = { status: "signed_out", user: null, signInHref: () => "/auth" };
     view();
-    expect(plain(screen.getByText(/предмета на/).textContent)).toContain(
-      "3 предмета на 10 200 000 сум",
-    );
-    expect(screen.getByText("доступно 2")).toBeInTheDocument();
-    expect(screen.getByText("Обмен с 12 окт.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Karambit/ })).toBeDisabled();
+    expect(screen.getByText("Войдите через Steam, чтобы продать скины.")).toBeInTheDocument();
+    expect(api.apiGet).not.toHaveBeenCalled();
   });
 
-  it("picking skins fills the cart; a cross takes one out", () => {
-    view();
-    fireEvent.click(screen.getByRole("button", { name: /AK-47/ }));
-    fireEvent.click(screen.getByRole("button", { name: /AWP/ }));
-    expect(screen.getByRole("button", { name: /AK-47/, pressed: true })).toBeInTheDocument();
-    const cart = screen.getByRole("complementary", { name: /Выбрано 2 скина/ });
-    expect(within(cart).getAllByRole("listitem")).toHaveLength(2);
-    fireEvent.click(within(cart).getByRole("button", { name: /Убрать AWP/ }));
-    expect(screen.getByRole("complementary", { name: /Выбран 1 скин/ })).toBeInTheDocument();
-  });
-
-  it("«Выбрать все» takes only the available ones", () => {
-    view();
-    fireEvent.click(screen.getByRole("button", { name: "Выбрать все" }));
-    expect(screen.getByRole("complementary", { name: /Выбрано 2 скина/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Снять выбор" })).toBeInTheDocument();
-  });
-
-  it("the balance pays a bonus, a card pays the fee and needs its number", () => {
-    view();
-    fireEvent.click(screen.getByRole("button", { name: /AK-47/ }));
-    const payout = () => plain(screen.getByTestId("sell-payout").textContent);
-    expect(payout()).toBe("306 000 сум"); // +2 %
-    fireEvent.click(screen.getByRole("radio", { name: /Uzcard/ }));
-    expect(payout()).toBe("285 000 сум"); // −5 %
-    const card = screen.getByLabelText("Номер карты Uzcard");
-    fireEvent.change(card, { target: { value: "9860123456781234" } });
-    expect(card).toHaveValue("9860 1234 5678 1234");
-    expect(screen.getByText("Это не карта Uzcard")).toBeInTheDocument();
-  });
-
-  it("selling is not open yet: the button says so", () => {
-    view();
-    fireEvent.click(screen.getByRole("button", { name: /AK-47/ }));
-    expect(screen.getByRole("button", { name: "Продажа скоро откроется" })).toBeDisabled();
-  });
-
-  it("search and category narrow the grid", () => {
-    view();
-    fireEvent.change(screen.getByPlaceholderText("Поиск по названию"), {
-      target: { value: "awp" },
-    });
-    expect(screen.queryByRole("button", { name: /AK-47/ })).toBeNull();
-    fireEvent.change(screen.getByPlaceholderText("Поиск по названию"), { target: { value: "" } });
-    fireEvent.click(screen.getByRole("button", { name: "Ножи" }));
-    expect(screen.queryByRole("button", { name: /AWP/ })).toBeNull();
-    expect(screen.getByRole("button", { name: /Karambit/ })).toBeInTheDocument();
-  });
-
-  it("without a trade link it asks for one; signed out it asks to sign in", () => {
-    auth.value = {
-      ...signedIn,
-      user: { trade_link: null, trade_link_verdict: null, trade_link_reason: null },
-    };
+  it("asks for a trade link first", () => {
+    auth.value = { ...SIGNED_IN, user: { id: "u1", trade_link: null } };
     view();
     expect(screen.getByText(/Добавьте ссылку на обмен/)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /AK-47/ })).toBeNull();
+  });
+
+  it("lists the items we buy, dearest first, and says what is shown", async () => {
+    view();
+    const names = await screen.findAllByText(/Redline|Sand Dune/);
+    expect(names[0]).toHaveTextContent("Redline");
+    expect(
+      screen.getByText("Показаны предметы, которые можно продать сейчас."),
+    ).toBeInTheDocument();
+  });
+
+  it("adds the balance bonus to the payout", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(card(/Sand Dune/));
+    expect(screen.getAllByTestId("sell-payout")[0]).toHaveTextContent(/158\s300/);
+  });
+
+  it("keeps «Продать» off under the minimum and says how much to add", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Sand Dune/ }));
+    const submit = screen.getAllByRole("button", { name: /Добавьте ещё на 5\s700/ })[0];
+    expect(submit).toBeDisabled();
+  });
+
+  it("lets ten cheap items through: rounding each down must not block the sale", async () => {
+    const letters = "ABCDEFGHIJ".split("");
+    const base = INVENTORY.items[0];
+    if (!base) throw new Error("no base item");
+    routeGets(() =>
+      Promise.resolve({
+        ...INVENTORY,
+        items: letters.map((l, i) => ({
+          ...base,
+          asset_id: String(200 + i),
+          name: `Skin ${l}`,
+          price_uzs: "1100", // 0.10 $ each, rounded down to 100
+        })),
+      }),
+    );
+    view();
+    for (const l of letters) {
+      fireEvent.click(await screen.findByRole("button", { name: new RegExp(`Skin ${l}`) }));
+    }
+    // 10 x 1 100 = 11 000 is under the 11 300 hint, yet the API accepts it (spec §3).
+    const submit = first(screen.getAllByRole("button", { name: /Продать за/ }));
+    expect(submit).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Добавьте ещё/ })).toBeNull();
+  });
+
+  it("sells with a key and the payout it showed, then opens the sale", async () => {
+    api.apiPost.mockResolvedValue({ number: "S7K2M9QX" });
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за 152\s500/ })));
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith("/account/sales/S7K2M9QX");
+    });
+    const [path, body, options] = api.apiPost.mock.calls[0] as [
+      string,
+      unknown,
+      { idempotencyKey: string },
+    ];
+    expect(path).toBe("/api/v1/sell");
+    expect(body).toEqual({
+      asset_ids: ["100"],
+      payout: { to: "balance" },
+      expected_payout_uzs: 152_500,
+    });
+    expect(options.idempotencyKey).toMatch(/^web-sell-/);
+  });
+
+  it("re-reads the inventory when the prices moved", async () => {
+    api.apiPost.mockRejectedValue(new SessionApiError(409, "Conflict", { code: "prices_changed" }));
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за/ })));
+    expect(await screen.findAllByText(/Цены обновились/)).not.toHaveLength(0);
+    await waitFor(() => {
+      expect(api.apiGet).toHaveBeenCalledWith("/api/v1/sell/inventory?refresh=1");
+    });
+  });
+
+  it("mints a new key after a refusal, and keeps it after a lost answer", async () => {
+    api.apiPost
+      .mockRejectedValueOnce(new SessionApiError(503, "Unavailable", { code: "sales_unavailable" }))
+      .mockRejectedValueOnce(new Error("network"))
+      .mockRejectedValueOnce(new Error("network"));
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    const sell = async () => {
+      fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за/ })));
+      await waitFor(() => {
+        expect(screen.getAllByRole("button", { name: /Продать за/ })[0]).toBeEnabled();
+      });
+    };
+    await sell();
+    await sell();
+    await sell();
+    const keys = api.apiPost.mock.calls.map(
+      (c) => (c[2] as { idempotencyKey: string }).idempotencyKey,
+    ); // test: the options shape is known
+    expect(keys[1]).not.toBe(keys[0]);
+    expect(keys[2]).toBe(keys[1]);
+  });
+
+  it("explains a Steam refusal of the account", async () => {
+    routeGets(() =>
+      Promise.reject(
+        new SessionApiError(409, "Conflict", { code: "steam_refused", reason: "profile_private" }),
+      ),
+    );
+    view();
+    expect(await screen.findByText(/Профиль Steam скрыт/)).toBeInTheDocument();
+  });
+
+  it("checks a new card's number against its type", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("radio", { name: /Новая карта Humo/ })));
+    fireEvent.change(first(screen.getAllByLabelText(/Номер карты Humo/)), {
+      target: { value: "8600 1234 5678 9012" },
+    });
+    expect(screen.getAllByText("Это не карта Humo")[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Продать за/ })[0]).toBeDisabled();
   });
 });

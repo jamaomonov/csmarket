@@ -31,6 +31,7 @@ describe("AccountSidebar", () => {
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
       ["Обмены", "/account/trades"],
+      ["Мои карты", "/account/cards"],
       ["Реферал", "/account/referral"],
     ]);
     for (const a of links) expect(a.querySelector("svg")).not.toBeNull();

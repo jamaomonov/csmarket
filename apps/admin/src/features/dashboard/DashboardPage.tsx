@@ -8,6 +8,7 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { type DashboardOut, type Days, getDashboard } from "./api";
+import { DASHBOARD_KEY } from "./keys";
 import { freshness, shortDay, TAB_KEYS, TABS } from "./labels";
 
 import { ApiError, formatApiError } from "@/lib/api";
@@ -56,6 +57,15 @@ function Tiles({ data }: { data: DashboardOut }) {
         >
           {data.attention}
         </Link>
+      </Tile>
+      <Tile title="К выплате">
+        <Link
+          to="/payouts"
+          className={data.payouts.to_pay_count > 0 ? "text-danger underline" : "underline"}
+        >
+          {data.payouts.to_pay_count}
+        </Link>
+        <span className="text-fg-muted text-sm">{formatSum(data.payouts.to_pay_uzs)}</span>
       </Tile>
       <Tile title="Баланс Waxpeer">
         {waxpeer.balance_usd === null || waxpeer.read_at === null ? (
@@ -125,7 +135,7 @@ export function DashboardPage() {
   const key = pick(TAB_KEYS, url.get("days")) ?? "1";
   const days: Days = TABS.find(([k]) => k === key)?.[1] ?? 1;
   const query = useQuery({
-    queryKey: ["admin", "dashboard", days],
+    queryKey: [...DASHBOARD_KEY, days],
     queryFn: () => getDashboard(days),
     refetchInterval: REFRESH_MS,
   });

@@ -95,8 +95,9 @@ worker and the scheduler import only this.
   on `bootstrap._exempt_self_authenticating_routes`; no `Idempotency-Key`). Body ≤ 4 KiB;
   `sign == base64(sha256(str(id) + secret))` checked in constant time (403 `bad_signature`
   otherwise). The signature covers only the id, so the body is not trusted: a purchase
-  webhook queues a check, a deposit webhook (`trade_id`) is answered and ignored. 404 while
-  off.
+  webhook queues a check, a deposit webhook (`trade_id`, ADR-0016) queues a check of the sale
+  its `merchant_tx_id` names (`sales.api.enqueue_sale_check`). 404 while Skinslink buying
+  **and** selling are both off.
 - **`checks.py`** — `enqueue_check` (row + `NOTIFY skinslink` in the caller's transaction) and
   `claim_checks` (`FOR UPDATE SKIP LOCKED`, deletes what it takes, one id once). The drain
   itself is `orders.skinslink_status.drain_checks` (it applies statuses to orders).

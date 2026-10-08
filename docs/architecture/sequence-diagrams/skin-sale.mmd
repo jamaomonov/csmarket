@@ -1,0 +1,55 @@
+sequenceDiagram
+    autonumber
+    actor U as Seller
+    participant Web as Storefront
+    participant API as API
+    participant R as Redis
+    participant DB as Postgres
+    participant W as Worker (sales queue)
+    participant S as Scheduler (sales.poll)
+    participant SL as Skinslink
+    actor A as Admin
+
+    U->>Web: opens /sell
+    Web->>API: GET /sell/inventory
+    API->>DB: switches, trade link, CBU rate (then the transaction ends)
+    API->>R: kept snapshot? (sales:inventory:{user}:{hash(link)}, 5 min)
+    alt miss or ?refresh=1
+        API->>SL: POST /merchant/inventory {partner, token} (6 s, breaker)
+        API->>R: keep the snapshot 5 min
+    end
+    API-->>Web: items priced in soʻm, max_items, the minimum
+    U->>Web: picks items, the balance or a card, «Продать за …»
+    Web->>API: POST /sell {asset_ids, payout, expected_payout_uzs} + Idempotency-Key
+    API->>R: re-price from the kept snapshot (never the browser's numbers)
+    API->>DB: insert sale (creating), items, a new card (encrypted); COMMIT
+    API->>SL: POST /merchant/create-deposit {merchant_tx_id = sale id, min_prices = 99 %} (10 s)
+    alt active
+        API->>DB: lock the sale → offered (bot, offer id, expiry); NOTIFY order_events
+    else price under the floor / stale snapshot
+        API->>DB: closed (fail_reason); drop the kept snapshot
+        API-->>Web: 409 prices_changed
+    else timeout / 5xx
+        Note over API,DB: stays creating; the poll settles it
+    end
+    API-->>Web: the sale → /account/sales/{number}
+    U->>SL: accepts the Steam offer
+    SL->>API: POST /skinslink/webhook {trade_id, sign, merchant_tx_id, status: hold}
+    API->>API: verify sign = base64(sha256(trade_id + secret)) before reading anything
+    API->>DB: insert sale_checks row; NOTIFY sales
+    W->>SL: GET /merchant/deposit/status?merchant_tx_id
+    W->>DB: lock the sale → hold (a card sale's request: waiting_hold); letter sale_hold
+    loop every 60 s (creating, offered) / 30 min (hold)
+        S->>SL: GET /merchant/deposit/status
+        S->>DB: apply under the lock
+    end
+    SL->>API: webhook status: completed (7 days later)
+    W->>SL: GET /merchant/deposit/status
+    alt balance
+        W->>DB: D user_wallet / C house_skin_buys, key sale:{id} → credited; letter sale_paid
+    else card
+        W->>DB: request → to_pay → sale payout
+        A->>API: «Скопировать номер» (audited), pays by hand, «Выплачено» (audited)
+        API->>DB: request paid; letter sale_paid
+    end
+    Note over SL,DB: reverted before the money left → reverted, nothing paid; after → rolled_back for an admin

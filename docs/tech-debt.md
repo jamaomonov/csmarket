@@ -31,11 +31,9 @@ None of these touches money or order state.
 
 ## Sell page (2026-10-06)
 
-1. **The sell page is UI only.** `/sell` shows a demo inventory in dev and «Скоро» in
-   production. The fee (5 %), the balance bonus (2 %) and the card minimum (50 000 soʻm) are
-   placeholders in `apps/web/src/lib/sell.ts`; with the sell API they come from it, the demo
-   inventory (`sell-demo.ts`) goes, and the button starts selling. The payout card brands'
-   logos are in `apps/web/public/payout/` (supplied by the owner).
+1. **Resolved by ADR-0016 (2026-10-08).** `/sell` now sells for real through Skinslink
+   deposits; the demo inventory and the placeholder constants are gone. Remaining gaps live in
+   `docs/runbooks/sales.md` («Known gaps»).
 
 ## Skinslink buy source (ADR-0010, 2026-10-06)
 

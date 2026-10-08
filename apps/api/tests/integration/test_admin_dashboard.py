@@ -200,3 +200,15 @@ async def test_attention_counts_every_source(
     await make_lisskins_order(db_session, attention_reason="buy_unconfirmed")
     body = await _get(integration_client, headers, 1)
     assert body["attention"] == 3
+
+
+async def test_the_dashboard_counts_the_payouts_to_pay(
+    integration_client: AsyncClient, db_session: AsyncSession, headers: dict[str, str]
+) -> None:
+    from tests.integration.sales_factory import make_request, make_sale
+
+    for _ in range(2):
+        sale = await make_sale(db_session, status="payout", payout_to="card")
+        await make_request(db_session, sale, status="to_pay")
+    r = await integration_client.get("/api/v1/admin/dashboard", headers=headers)
+    assert r.json()["payouts"] == {"to_pay_count": 2, "to_pay_uzs": "310400"}

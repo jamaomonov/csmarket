@@ -3,7 +3,8 @@
 Only the customer's ``user_wallet`` leg of each transaction, newest first, keyset-paged on
 ``(posting.created_at DESC, posting.id DESC)``. A line carries the kind, the signed amount
 and the public number of what it is about — the top-up's ``T…`` number for
-``topup``/``topup_reversal``, the order's number for ``purchase``/``refund``; never the actor
+``topup``/``topup_reversal``, the order's number for ``purchase``/``refund``, the sale's
+number for ``sale_credit``/``payout_return``; never the actor
 or the transaction metadata (an admin's identity and reason stay in admin views:
 ``entries_for_admin``, which shares the query and adds them).
 
@@ -43,8 +44,10 @@ from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletT
 _TOPUPS = table("wallet_topups", column("id", UUID(as_uuid=False)), column("number", String))
 #: ``orders``' orders, as far as an entry needs them (id → public number).
 _ORDERS = table("orders", column("id", UUID(as_uuid=False)), column("number", String))
+#: ``sales``' sales, as far as an entry needs them (id → public ``S…`` number).
+_SALES = table("sales", column("id", UUID(as_uuid=False)), column("number", String))
 #: The ``reference_type`` whose public number a line shows, and the table holding it.
-_NUMBERED = {"topup": _TOPUPS, "order": _ORDERS}
+_NUMBERED = {"topup": _TOPUPS, "order": _ORDERS, "sale": _SALES}
 #: A line's ``(reference_type, reference_id)`` → that row's public number.
 Numbers = dict[tuple[str, str], str]
 #: The customer's filters over their history (``GET /wallet/entries?type=``) and the ledger

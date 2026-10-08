@@ -1,10 +1,14 @@
 """``POST /skinslink/webhook`` — Skinslink's status webhook (spec 2026-10-06 §6).
 
 Authenticated by ``sign`` before anything is read from the body; the body is then not
-trusted: a purchase webhook queues a check (the worker asks Skinslink), a deposit webhook
-(``trade_id``, the future sell side) is answered and ignored. 404 while Skinslink is off.
+trusted: a purchase webhook queues a purchase check, a deposit webhook (``trade_id``, spec
+2026-10-08) a check of the sale its ``merchant_tx_id`` names (``sales.checks``); the worker asks
+Skinslink either way. 404 while neither Skinslink buying nor selling is active.
 Machine-to-machine: no ``Idempotency-Key`` (a repeat queues one more idempotent check) and
 off the coarse limiter (``bootstrap._exempt_self_authenticating_routes``).
+
+The route answers while buying OR selling is active, so a purchase check may be queued while
+buying is off; that is harmless, because the check asks Skinslink.
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from csmarket.core.config import get_settings
 from csmarket.core.errors import ForbiddenError, NotFoundError, ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.request_body import read_capped
+from csmarket.modules.sales.api import enqueue_sale_check
 from csmarket.modules.skinslink.checks import enqueue_check
 from csmarket.modules.skinslink.webhook import verify
 
@@ -40,7 +45,7 @@ class _BadBodyError(ValidationError):
 async def skinslink_webhook(request: Request, db: DbSession) -> dict[str, bool]:
     """Skinslink's purchase / deposit status webhook (signed; the status is not read)."""
     settings = get_settings()
-    if not settings.skinslink_active:
+    if not (settings.skinslink_active or settings.sales_active):
         raise NotFoundError("not found")
     raw = await read_capped(request, _MAX_BODY)
     try:
@@ -55,7 +60,9 @@ async def skinslink_webhook(request: Request, db: DbSession) -> dict[str, bool]:
     kind = "purchase" if "purchase_id" in body else "deposit"
     if kind == "purchase":
         await enqueue_check(db, pid)
-        await db.commit()
+    else:
+        await enqueue_sale_check(db, body.get("merchant_tx_id"))
+    await db.commit()
     log.info("skinslink.webhook", kind=kind)
     return {"ok": True}
 

@@ -14,7 +14,12 @@ vi.mock("@/i18n/navigation", () => ({
     </a>
   ),
 }));
+const auth = vi.hoisted((): { value: Record<string, unknown> } => ({
+  value: { status: "signed_in", user: { id: "u1" } },
+}));
+vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
 vi.mock("@/components/account/OrdersList", () => ({ OrdersList: () => <p>orders-list</p> }));
+vi.mock("@/components/account/SalesList", () => ({ SalesList: () => <p>sales-list</p> }));
 
 function view(type: "all" | "purchases" | "sales") {
   render(
@@ -35,16 +40,25 @@ describe("TradesView", () => {
     ]);
     expect(links[0]).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("orders-list")).toBeInTheDocument();
+    expect(screen.getByText("sales-list")).toBeInTheDocument();
+  });
+
+  it("signed out, the all view has no empty «Продажи» heading", () => {
+    auth.value = { status: "signed_out", user: null };
+    view("all");
+    expect(screen.queryByRole("heading", { name: "Продажи" })).toBeNull();
+    auth.value = { status: "signed_in", user: { id: "u1" } };
   });
 
   it("purchases are the orders", () => {
     view("purchases");
     expect(screen.getByText("orders-list")).toBeInTheDocument();
+    expect(screen.queryByText("sales-list")).toBeNull();
   });
 
-  it("sales: none yet", () => {
+  it("sales are the sales list", () => {
     view("sales");
     expect(screen.queryByText("orders-list")).toBeNull();
-    expect(screen.getByText("Продаж пока нет.")).toBeInTheDocument();
+    expect(screen.getByText("sales-list")).toBeInTheDocument();
   });
 });

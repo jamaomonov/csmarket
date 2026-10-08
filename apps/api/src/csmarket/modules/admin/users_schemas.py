@@ -90,12 +90,21 @@ class AdminEntryOut(BaseModel):
     """One balance-history line with who booked it and why."""
 
     id: str
-    kind: Literal["topup", "topup_reversal", "admin_adjust", "purchase", "refund"]
+    kind: Literal[
+        "topup",
+        "topup_reversal",
+        "admin_adjust",
+        "purchase",
+        "refund",
+        "sale_credit",
+        "payout_return",
+    ]
     #: Signed whole soʻm: ``+50000`` credited, ``-10000`` debited.
     amount_uzs: str
     created_at: datetime
     #: The top-up's number for ``topup``/``topup_reversal``, the order's number for
-    #: ``purchase``/``refund``; else ``null``.
+    #: ``purchase``/``refund``, the sale's number for ``sale_credit``/``payout_return``; else
+    #: ``null``.
     reference_number: str | None
     #: ``payments`` or ``admin:<admin user id>``.
     actor: str | None

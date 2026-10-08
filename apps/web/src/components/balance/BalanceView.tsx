@@ -13,6 +13,7 @@ import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY, getBalance } from "@/lib/balance";
 import { DEPOSIT, TRANSACTIONS } from "@/lib/paths";
+import { getPendingSales, PENDING_KEY } from "@/lib/sales";
 
 export type TransactionsType = "all" | "topup" | "withdrawal";
 
@@ -37,6 +38,7 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
     queryFn: getBalance,
     enabled: signedIn,
   });
+  const pending = useQuery({ queryKey: PENDING_KEY, queryFn: getPendingSales, enabled: signedIn });
   if (status === "loading") {
     return <div aria-busy className="bg-surface h-40 animate-pulse rounded-lg" />;
   }
@@ -70,6 +72,11 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
           ) : (
             <div aria-busy className="bg-surface-2 mt-2 h-9 w-40 animate-pulse rounded-md" />
           )}
+          {pending.data && Number(pending.data.pending_uzs) > 0 ? (
+            <p className="text-fg-dim mt-1 text-sm">
+              {t("pending", { sum: formatUzs(locale, pending.data.pending_uzs) })}
+            </p>
+          ) : null}
         </div>
         <Link href={DEPOSIT} className={buttonVariants({ size: "lg" })}>
           <Plus className="size-4" strokeWidth={3} aria-hidden />

@@ -2,6 +2,7 @@
 
 import { Button } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -12,61 +13,92 @@ import { SellToolbar, type SellSort } from "./SellToolbar";
 
 import { TradeLinkForm } from "@/components/account/TradeLinkForm";
 import { useAuth } from "@/lib/auth";
-import { sellSummary, type PayoutMethod, type SellItem } from "@/lib/sell";
+import {
+  getInventory,
+  INVENTORY_KEY,
+  sellError,
+  sellSummary,
+  type Inventory,
+  type Payout,
+  type SellConfig,
+  type SellItem,
+} from "@/lib/sell";
 
 interface SellViewProps {
   locale: string;
-  inventory: SellItem[];
+  config: SellConfig;
 }
 
+const price = (x: SellItem): number => Number(x.price_uzs);
 const ORDER: Record<SellSort, (a: SellItem, b: SellItem) => number> = {
-  expensive: (a, b) => b.priceUzs - a.priceUzs,
-  cheap: (a, b) => a.priceUzs - b.priceUzs,
+  expensive: (a, b) => price(b) - price(a),
+  cheap: (a, b) => price(a) - price(b),
   name: (a, b) => a.name.localeCompare(b.name),
 };
+const NO_ITEMS: SellItem[] = [];
 
-/** «Продайте скины»: the inventory to pick from, and a cart with the payout beside it. */
-export function SellView({ locale, inventory }: SellViewProps) {
+/** «Продайте скины»: the items we buy now, and a cart with the payout beside them. */
+export function SellView({ locale, config }: SellViewProps) {
   const t = useTranslations("web.sell");
   const nav = useTranslations("web.nav");
   const { status, user, signInHref, refreshMe } = useAuth();
+  const ready = status === "signed_in" && user !== null && Boolean(user.trade_link);
+  const qc = useQueryClient();
+  const inventory = useQuery({
+    queryKey: INVENTORY_KEY,
+    queryFn: () => getInventory(),
+    enabled: ready,
+    retry: false,
+  });
   const [chosen, setChosen] = useState<ReadonlySet<string>>(new Set());
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SellSort>("expensive");
   const [category, setCategory] = useState<string | null>(null);
-  const [method, setMethod] = useState<PayoutMethod>("balance");
-  const [card, setCard] = useState("");
+  const [payout, setPayout] = useState<Payout>({ to: "balance" });
   const [sheet, setSheet] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const sellable = inventory.filter((x) => x.unavailable === null);
-  const categories = useMemo(() => [...new Set(inventory.map((x) => x.category))], [inventory]);
+  const items = inventory.data?.items ?? NO_ITEMS;
+  const maxItems = inventory.data?.max_items ?? 0;
+  const categories = useMemo(
+    () => [...new Set(items.flatMap((x) => (x.category ? [x.category] : [])))],
+    [items],
+  );
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (
-      inventory
-        .filter(
-          (x) => (category === null || x.category === category) && x.name.toLowerCase().includes(q),
-        )
-        // Sellable first, then the chosen order.
-        .sort(
-          (a, b) =>
-            Number(a.unavailable !== null) - Number(b.unavailable !== null) || ORDER[sort](a, b),
-        )
-    );
-  }, [inventory, query, category, sort]);
-  const picked = inventory.filter((x) => chosen.has(x.assetId));
-  const allChosen = sellable.length > 0 && picked.length === sellable.length;
+    return items
+      .filter(
+        (x) => (category === null || x.category === category) && x.name.toLowerCase().includes(q),
+      )
+      .sort(ORDER[sort]);
+  }, [items, query, category, sort]);
+  const picked = items.filter((x) => chosen.has(x.asset_id));
+  const allChosen = items.length > 0 && picked.length === Math.min(items.length, maxItems);
   const toggle = (id: string) => {
     setChosen((cur) => {
       const next = new Set(cur);
-      if (!next.delete(id)) next.add(id);
+      if (!next.delete(id) && next.size < maxItems) next.add(id);
       return next;
     });
+  };
+  const reload = async () => {
+    setRefreshing(true);
+    try {
+      const fresh: Inventory = await getInventory(true);
+      qc.setQueryData(INVENTORY_KEY, fresh);
+      setChosen(
+        (cur) => new Set([...cur].filter((id) => fresh.items.some((x) => x.asset_id === id))),
+      );
+    } catch {
+      await inventory.refetch();
+    } finally {
+      setRefreshing(false);
+    }
   };
   const uzs = (n: number) => formatUzs(locale, n);
 
   let body;
-  if (status === "loading") {
+  if (status === "loading" || (ready && inventory.isPending)) {
     body = <div aria-busy className="bg-surface h-96 animate-pulse rounded-xl" />;
   } else if (status !== "signed_in" || !user) {
     body = (
@@ -92,16 +124,34 @@ export function SellView({ locale, inventory }: SellViewProps) {
         />
       </div>
     );
+  } else if (inventory.isError || !inventory.data) {
+    const refusal = sellError(inventory.error);
+    const reason = refusal?.reason ?? "other";
+    body = (
+      <div className="bg-surface flex flex-col items-start gap-4 rounded-xl p-6">
+        <p className="text-fg-muted">
+          {refusal?.code === "steam_refused"
+            ? t.has(`steam.${reason}`)
+              ? t(`steam.${reason}`)
+              : t("steam.other")
+            : t("loadFailed")}
+        </p>
+        <Button variant="secondary" onClick={() => void reload()}>
+          {t("retry")}
+        </Button>
+      </div>
+    );
   } else {
     const cart = (
       <SellCart
         locale={locale}
+        config={config}
+        inventory={inventory.data}
         chosen={picked}
         onRemove={toggle}
-        method={method}
-        onMethod={setMethod}
-        card={card}
-        onCard={setCard}
+        payout={payout}
+        onPayout={setPayout}
+        onPricesChanged={() => void reload()}
       />
     );
     body = (
@@ -117,50 +167,47 @@ export function SellView({ locale, inventory }: SellViewProps) {
             onCategory={setCategory}
             allChosen={allChosen}
             onToggleAll={() => {
-              setChosen(allChosen ? new Set() : new Set(sellable.map((x) => x.assetId)));
+              setChosen(
+                allChosen ? new Set() : new Set(shown.slice(0, maxItems).map((x) => x.asset_id)),
+              );
             }}
+            onRefresh={() => void reload()}
+            refreshing={refreshing}
           />
           <p className="text-fg-muted text-sm">
-            {t("total", {
-              count: inventory.length,
-              sum: uzs(inventory.reduce((a, x) => a + x.priceUzs, 0)),
-            })}
-            <span aria-hidden className="text-fg-dim">
-              {" · "}
-            </span>
-            <span className="text-fg-dim">{t("available", { count: sellable.length })}</span>
+            {t("total", { count: items.length, sum: uzs(items.reduce((a, x) => a + price(x), 0)) })}
           </p>
           {shown.length === 0 ? (
-            <p className="text-fg-muted py-16 text-center">{t("empty")}</p>
+            <p className="text-fg-muted py-16 text-center">
+              {items.length === 0 ? t("emptyInventory") : t("empty")}
+            </p>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
               {shown.map((x) => (
                 <SellItemCard
-                  key={x.assetId}
+                  key={x.asset_id}
                   item={x}
                   locale={locale}
-                  selected={chosen.has(x.assetId)}
+                  selected={chosen.has(x.asset_id)}
                   onToggle={() => {
-                    toggle(x.assetId);
+                    toggle(x.asset_id);
                   }}
                 />
               ))}
             </div>
           )}
+          <p className="text-fg-dim text-sm">{t("shownNote")}</p>
+          {picked.length >= maxItems && maxItems > 0 ? (
+            <p className="text-fg-dim text-sm">{t("cart.max", { count: maxItems })}</p>
+          ) : null}
         </div>
         <div className="hidden lg:sticky lg:top-4 lg:block">{cart}</div>
-        {/* Phones: a bar with the count and the sum; the cart opens as a sheet. */}
         {picked.length > 0 ? (
           <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
             <span className="flex-1 text-sm font-semibold">
               {t("cart.title", { count: picked.length })}
               <span className="text-accent num block">
-                {uzs(
-                  sellSummary(
-                    picked.map((x) => x.priceUzs),
-                    method,
-                  ).payout,
-                )}
+                {uzs(sellSummary(picked.map(price), payout, config).payout)}
               </span>
             </span>
             <Button

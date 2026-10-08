@@ -22,6 +22,7 @@ from csmarket.modules.notifications import models as _notifications_models  # no
 from csmarket.modules.orders import models as _orders_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
+from csmarket.modules.sales import models as _sales_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.skinslink import models as _skinslink_models  # noqa: F401
 from csmarket.modules.users import models as _users_models  # noqa: F401
@@ -39,6 +40,7 @@ from csmarket_scheduler.jobs import (
     orders_health,
     payme_timeout,
     purge_refresh_tokens,
+    sales_poll,
     skins_catalog_import,
     skins_price_sync,
     skinslink_balance,
@@ -75,6 +77,7 @@ def build_scheduler() -> AsyncIOScheduler:
     lisskins_snapshot.register(scheduler)
     lisskins_reconcile.register(scheduler)
     lisskins_balance.register(scheduler)
+    sales_poll.register(scheduler)
     topup_expiry.register(scheduler)
     click_timeout.register(scheduler)
     payme_timeout.register(scheduler)

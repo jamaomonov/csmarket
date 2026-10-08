@@ -84,11 +84,14 @@ class OrderEventsListener:
             log.warning("realtime.listener_lost")
 
     def _on_notify(self, _conn: object, _pid: int, _channel: str, payload: str) -> None:
-        """asyncpg's callback: ``user_id:number`` → the user's sockets."""
-        user_id, sep, number = payload.partition(":")
+        """asyncpg's callback: ``user_id:number`` (an order) or ``user_id:number:sale``."""
+        user_id, sep, rest = payload.partition(":")
+        number, _, kind = rest.partition(":")
         if not sep or not user_id or not number:
             return
-        send = asyncio.create_task(self._target.publish(user_id, number))
+        send = asyncio.create_task(
+            self._target.publish(user_id, number, kind="sale" if kind == "sale" else "order")
+        )
         self._sends.add(send)
         send.add_done_callback(self._sends.discard)
 

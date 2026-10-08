@@ -60,7 +60,7 @@ https://api.csmarket.uz/api/v1/skinslink/webhook
 The webhook only says "something happened to purchase N". We check `sign` (sha256 of the
 id and the secret), queue a check and answer 200; the worker then asks Skinslink for the
 status. The body's own status is never trusted. A bad or missing `sign` is 403; the route is
-404 while Skinslink is off. Deposit webhooks (the future sell side) are answered and ignored.
+404 while Skinslink is off. A deposit webhook (`trade_id`, ADR-0016) queues a check of the sale its `merchant_tx_id` names; the worker asks `deposit/status` (`docs/runbooks/sales.md`). The route answers while Skinslink buying **or** selling is active.
 A lost webhook costs at most 30 s: `skinslink.reconcile` polls every open purchase.
 
 ## Enabling

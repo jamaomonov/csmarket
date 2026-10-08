@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY } from "@/lib/balance";
 import { orderKey, ORDERS_KEY } from "@/lib/orders";
 import { OrderSocket, wsUrl } from "@/lib/realtime";
+import { PENDING_KEY, saleKey, SALES_KEY } from "@/lib/sales";
 
 /** The access token, re-minted from the refresh cookie when memory has none. */
 async function currentToken(): Promise<string | null> {
@@ -35,6 +36,13 @@ export function useOrderSocket(): void {
       onChanged: (number) => {
         void qc.invalidateQueries({ queryKey: orderKey(number) });
         void qc.invalidateQueries({ queryKey: ORDERS_KEY });
+        void qc.invalidateQueries({ queryKey: BALANCE_KEY });
+        void qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+      },
+      onSaleChanged: (number) => {
+        void qc.invalidateQueries({ queryKey: saleKey(number) });
+        void qc.invalidateQueries({ queryKey: SALES_KEY });
+        void qc.invalidateQueries({ queryKey: PENDING_KEY });
         void qc.invalidateQueries({ queryKey: BALANCE_KEY });
         void qc.invalidateQueries({ queryKey: ENTRIES_KEY });
       },

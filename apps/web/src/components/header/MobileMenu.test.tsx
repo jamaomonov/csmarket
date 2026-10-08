@@ -40,6 +40,7 @@ describe("MobileMenu", () => {
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
       ["Обмены", "/account/trades"],
+      ["Мои карты", "/account/cards"],
       ["Реферал", "/account/referral"],
     ]);
     expect(screen.getByRole("menuitem", { name: "Маркет" }).querySelector("svg")).not.toBeNull();

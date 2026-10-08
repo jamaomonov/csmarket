@@ -65,6 +65,11 @@ export interface DropdownProps {
   strategy?: "absolute" | "fixed";
   /** The menu's height cap in px; longer lists scroll. A fixed menu also fits the viewport. */
   maxHeight?: number;
+  /**
+   * What a `fixed` menu opens under: the trigger (default), or the element around the
+   * dropdown — a chip whose ▾ is the trigger opens under the whole chip, at least as wide.
+   */
+  anchor?: "trigger" | "parent";
 }
 
 /** Keep a fixed menu this far from the viewport's edges. */
@@ -79,6 +84,7 @@ interface Place {
   bottom?: number;
   left: number;
   maxHeight: number;
+  minWidth?: number;
 }
 
 const isSeparator = (e: DropdownEntry): e is DropdownSeparator => "separator" in e;
@@ -110,6 +116,7 @@ function menuStyle(
       ...(place.bottom !== undefined ? { bottom: px(place.bottom) } : {}),
       left: px(place.left),
       maxHeight: px(place.maxHeight),
+      ...(place.minWidth !== undefined ? { minWidth: px(place.minWidth) } : {}),
       overflowY: "auto",
       ...(align === "end" ? { transform: "translateX(-100%)" } : {}),
     };
@@ -135,6 +142,7 @@ export function Dropdown({
   LinkComponent = PlainLink,
   strategy = "absolute",
   maxHeight,
+  anchor = "trigger",
 }: DropdownProps) {
   const [open, setOpen] = useState(false);
   const [place, setPlace] = useState<Place | null>(null);
@@ -146,8 +154,10 @@ export function Dropdown({
 
   /** Viewport coordinates under the trigger (the `fixed` strategy). */
   const placeFromTrigger = useCallback(() => {
-    if (!trigger.current) return;
-    const box = trigger.current.getBoundingClientRect();
+    const target = anchor === "parent" ? root.current?.parentElement : trigger.current;
+    if (!target) return;
+    const box = target.getBoundingClientRect();
+    const minWidth = anchor === "parent" ? { minWidth: box.width } : {};
     const left = align === "end" ? box.right : box.left;
     // Start-aligned menus are at least MENU_MIN wide: keep that much on screen.
     const right = align === "end" ? window.innerWidth - EDGE : window.innerWidth - MENU_MIN - EDGE;
@@ -160,11 +170,12 @@ export function Dropdown({
         bottom: window.innerHeight - box.top + 8,
         left: x,
         maxHeight: Math.min(cap, above),
+        ...minWidth,
       });
     } else {
-      setPlace({ top: box.bottom + 8, left: x, maxHeight: Math.min(cap, below) });
+      setPlace({ top: box.bottom + 8, left: x, maxHeight: Math.min(cap, below), ...minWidth });
     }
-  }, [align, maxHeight]);
+  }, [align, maxHeight, anchor]);
 
   const setOpenState = useCallback(
     (next: boolean) => {

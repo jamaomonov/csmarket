@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 
 import { HistoryFilter } from "@/components/account/HistoryFilter";
 import { OrdersList } from "@/components/account/OrdersList";
+import { SalesList } from "@/components/account/SalesList";
+import { useAuth } from "@/lib/auth";
 import { TRADES } from "@/lib/paths";
 
 export type TradesType = "all" | "purchases" | "sales";
@@ -13,9 +15,11 @@ interface TradesViewProps {
   type: TradesType;
 }
 
-/** «Обмены»: the buyer's orders; sales join when selling opens (none yet). */
+/** «Обмены»: the buyer's orders and the seller's sales. */
 export function TradesView({ locale, type }: TradesViewProps) {
   const t = useTranslations("web.trades");
+  const { status, user } = useAuth();
+  const signedIn = status === "signed_in" && user !== null;
   return (
     <div className="flex flex-col gap-5">
       <HistoryFilter
@@ -26,12 +30,16 @@ export function TradesView({ locale, type }: TradesViewProps) {
           { key: "sales", label: t("sales"), href: `${TRADES}?type=sales` },
         ]}
       />
-      {type === "sales" ? (
-        <p className="text-fg-muted">{t("salesEmpty")}</p>
-      ) : (
-        // OrdersList asks a visitor to sign in itself.
-        <OrdersList locale={locale} />
-      )}
+      {/* Each list asks a visitor to sign in itself. */}
+      {type === "purchases" ? <OrdersList locale={locale} /> : null}
+      {type === "sales" ? <SalesList locale={locale} /> : null}
+      {type === "all" ? (
+        <>
+          <OrdersList locale={locale} />
+          {signedIn ? <h2 className="mt-4 text-xl font-bold">{t("sales")}</h2> : null}
+          <SalesList locale={locale} />
+        </>
+      ) : null}
     </div>
   );
 }

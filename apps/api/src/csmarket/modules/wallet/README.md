@@ -17,11 +17,13 @@ refunds (M4a): ADR-0007, `docs/runbooks/orders.md`.
 
 **Interface (`api.py`):** `post`, `ensure_account`, `user_account`, `balance`,
 `user_balance`, `user_balance_column`, `credit_topup`, `reverse_topup`, `debit_purchase`,
-`credit_order_refund`, `admin_adjust`,
+`credit_order_refund`, `credit_sale`, `credit_payout_return`, `admin_adjust`,
 `ADMIN_ADJUST_MAX`, `entries_for_user`, `entries_for_admin`, `Entry`, `AdminEntry`,
 `EntriesPage`, `Leg`, `Reference`, `Direction`, `NORMAL_SIDE`, `TX_KINDS`, `WALLET`
 (`"wallet"`: `orders.paid_with` / `payments.provider` of a balance payment),
 `InsufficientBalanceError`, and the three models.
+
+**Sales (2026-10-08):** transaction kinds `sale_credit` (key `sale:{sale_id}`) and `payout_return` (key `payout_return:{request_id}`) post D `user_wallet` / C `house_skin_buys`; `house_skin_buys` is a credit-side house account.
 
 **Routes (`routes.py`):** `GET /wallet` → `{balance_uzs}` and `GET /wallet/entries` for
 the signed-in customer. The top-up routes under `/wallet/topups` are mounted from

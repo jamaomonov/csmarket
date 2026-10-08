@@ -1,7 +1,7 @@
 """Short public numbers (spec §6): 8 Crockford base32 chars, random, never sequential.
 
 Orders (M4) and top-ups share the namespace the kassas see in the account field: a top-up is
-``T`` + 7 chars, so an order number must never start with ``T`` — the payable resolver
+``T`` + 7 chars, so an order number must never start with ``T`` (or ``S``, a sale's) — the payable resolver
 (``payments.payable``) tells them apart by that one letter.
 """
 
@@ -16,7 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 TOPUP_PREFIX = "T"
-_FIRST = ALPHABET.replace(TOPUP_PREFIX, "")
+#: A sale's number (spec 2026-10-08) is ``S`` + 7 chars; an order's never starts with it.
+SALE_PREFIX = "S"
+_FIRST = ALPHABET.replace(TOPUP_PREFIX, "").replace(SALE_PREFIX, "")
 _LEN = 8
 
 
@@ -34,6 +36,11 @@ def topup_number() -> str:
     return TOPUP_PREFIX + _chars(_LEN - 1)
 
 
+def sale_number() -> str:
+    """A sale number: ``S`` + 7 chars."""
+    return SALE_PREFIX + _chars(_LEN - 1)
+
+
 def is_number(value: str) -> bool:
     """Whether ``value`` is 8 chars, all from the alphabet (upper case)."""
     return len(value) == _LEN and all(c in ALPHABET for c in value)
@@ -42,6 +49,11 @@ def is_number(value: str) -> bool:
 def is_topup_number(value: str) -> bool:
     """Whether ``value`` is a well-formed top-up number."""
     return is_number(value) and value.startswith(TOPUP_PREFIX)
+
+
+def is_sale_number(value: str) -> bool:
+    """Whether ``value`` is a well-formed sale number."""
+    return is_number(value) and value.startswith(SALE_PREFIX)
 
 
 async def allocate(

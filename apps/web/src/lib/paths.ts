@@ -15,6 +15,11 @@ export function weaponPath(weaponSlug: string): string {
   return `/weapon/${weaponSlug}`;
 }
 
+/** A sale's page; the number is escaped (it is a path segment). */
+export function salePath(number: string): string {
+  return `/account/sales/${encodeURIComponent(number)}`;
+}
+
 /** An order's page; the number is escaped (it is a path segment). */
 export function orderPath(number: string): string {
   return `/orders/${encodeURIComponent(number)}`;
@@ -29,8 +34,13 @@ export const TRADES = "/account/trades";
 /** «Транзакции»: the balance, top-up and its history; `?type=topup|withdrawal` filters. */
 export const TRANSACTIONS = "/account/transactions";
 
-/** Sections that are on their way («Скоро» pages for now). */
+/** «Мои карты»: the saved payout cards. */
+export const CARDS = "/account/cards";
+
+/** «Продать скины». */
 export const SELL = "/sell";
+
+/** Sections that are on their way («Скоро» pages for now). */
 export const STEAM_TOPUP = "/steam";
 export const REVIEWS = "/reviews";
 export const REFERRAL = "/account/referral";

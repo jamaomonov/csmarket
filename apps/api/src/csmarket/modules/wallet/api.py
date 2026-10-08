@@ -18,6 +18,7 @@ from csmarket.modules.wallet.entries import (
 )
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
 from csmarket.modules.wallet.purchases import WALLET, credit_order_refund, debit_purchase
+from csmarket.modules.wallet.sales import credit_payout_return, credit_sale
 from csmarket.modules.wallet.service import (
     NORMAL_SIDE,
     TX_KINDS,
@@ -52,6 +53,8 @@ __all__ = [
     "admin_adjust",
     "balance",
     "credit_order_refund",
+    "credit_payout_return",
+    "credit_sale",
     "credit_topup",
     "debit_purchase",
     "ensure_account",

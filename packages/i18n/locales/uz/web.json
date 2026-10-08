@@ -33,7 +33,8 @@
     "reviews": "Sharhlar",
     "transactions": "Tranzaksiyalar",
     "referral": "Referal",
-    "trades": "Almashuvlar"
+    "trades": "Almashuvlar",
+    "cards": "Kartalarim"
   },
   "auth": {
     "callback": {
@@ -127,7 +128,9 @@
       "topup_reversal": "Toʻldirish bekor qilindi",
       "admin_adjust": "Tuzatish",
       "purchase": "Xarid",
-      "refund": "Balansga qaytarish"
+      "refund": "Balansga qaytarish",
+      "sale_credit": "Skin sotuvi",
+      "payout_return": "Balansga toʻlov"
     },
     "topup": {
       "waiting": "Toʻlov kutilmoqda",
@@ -141,7 +144,8 @@
       "expired": "Toʻlov vaqti tugadi. Yangi toʻldirish yarating.",
       "reversed": "Toʻldirish bekor qilindi.",
       "notFound": "Toʻldirish topilmadi."
-    }
+    },
+    "pending": "Tushishi kutilmoqda: {sum}"
   },
   "skins": {
     "meta": {
@@ -366,25 +370,37 @@
     "clearAll": "Tanlovni bekor qilish",
     "refresh": "Inventarni yangilash",
     "total": "{count, plural, other {# ta buyum}} — {sum}",
-    "available": "mavjud: {count}",
-    "unavailable": {
-      "tradeLock": "Almashuv {date} dan",
-      "tooCheap": "Juda arzon",
-      "notAccepted": "Qabul qilmaymiz"
-    },
+    "shownNote": "Hozir sotish mumkin boʻlgan buyumlar koʻrsatilgan.",
     "empty": "Hech narsa topilmadi.",
+    "emptyInventory": "Hozir sotadigan narsa yoʻq: inventarda biz sotib oladigan buyumlar yoʻq.",
     "needTradeLink": "Almashuv havolasini qoʻshing — u orqali inventaringizni koʻrsatamiz va taklif yuboramiz.",
     "signedOut": "Skin sotish uchun Steam orqali kiring.",
+    "loadFailed": "Inventarni yuklab boʻlmadi. Yana urinib koʻring.",
+    "retry": "Qayta urinish",
+    "steam": {
+      "trade_link_revoked": "Almashuv havolasi Steamʼda yangilangan. Profilda yangisini qoʻshing.",
+      "trade_link_invalid": "Almashuv havolasi ishlamayapti. Profilda tekshiring.",
+      "trade_banned": "Steam akkauntida almashuv taqiqlangan — hozir skin sotib boʻlmaydi.",
+      "profile_private": "Steam profili yopiq. Inventarni koʻrishimiz uchun uni oching.",
+      "limited_account": "Steam akkaunti cheklangan: Steamʼda 5 $ xariddan keyin almashuvlar ochiladi.",
+      "hold": "Steam akkauntida vaqtinchalik almashuv taqiqi bor. Keyinroq urinib koʻring.",
+      "permissions": "CS2 inventari yopiq. Uni Steam maxfiylik sozlamalarida oching.",
+      "hold_and_permissions": "CS2 inventari yopiq va akkauntda vaqtinchalik almashuv taqiqi bor.",
+      "other": "Steam bu akkaunt bilan almashuvga ruxsat bermayapti."
+    },
     "cart": {
       "title": "{count, plural, =0 {Hech narsa tanlanmagan} other {# ta skin tanlandi}}",
       "hint": "Skinlarni bu yerga qoʻshish uchun ustiga bosing.",
-      "remove": "{name} ni olib tashlash"
+      "remove": "{name} ni olib tashlash",
+      "max": "Bir martada {count} tadan koʻp boʻlmagan buyum."
     },
     "payout": {
       "title": "Qayerga olish",
       "balance": "csmarket balansi",
-      "balanceNote": "Darhol, +{percent}%",
-      "cardNote": "Komissiya {percent}%"
+      "balanceNote": "Summaga +{percent}%",
+      "cardNote": "Komissiya {percent}%",
+      "newCard": "Yangi karta",
+      "cardsLimit": "{count} ta karta saqlangan — yangisini qoʻshish uchun profilda bittasini oʻchiring."
     },
     "card": {
       "label": "{method} karta raqami",
@@ -397,9 +413,101 @@
       "bonus": "Balans uchun bonus +{percent}%",
       "payout": "Siz olasiz"
     },
+    "when": "Pul almashuvdan 7 kun keyin tushadi.",
     "submit": "{sum} ga sotish",
-    "soon": "Sotish tez orada ochiladi",
+    "addMore": "Yana {sum} qoʻshing",
+    "sending": "Yuborilmoqda…",
+    "errors": {
+      "prices_changed": "Narxlar yangilandi — summani tekshirib, yana bosing.",
+      "below_minimum": "Summa eng kam miqdordan kam — buyum qoʻshing.",
+      "below_card_minimum": "Kartaga eng kam summadan boshlab. Balansni tanlang yoki buyum qoʻshing.",
+      "too_many_items": "Bir martada juda koʻp buyum — bir qismini olib tashlang.",
+      "steam_refused": "Steam bu akkaunt bilan almashuvga ruxsat bermayapti.",
+      "sales_disabled": "Sotish hozir yopiq. Keyinroq kiring.",
+      "cards_limit": "{count} ta karta saqlangan — profilda bittasini oʻchiring.",
+      "card_invalid": "Karta raqamini tekshiring.",
+      "trade_link_missing": "Almashuv havolasini qoʻshing.",
+      "trade_link_bad": "Almashuv havolasi ishlamayapti. Profilda tekshiring.",
+      "rate_unavailable": "Valyuta kursi hozir mavjud emas. Bir daqiqadan keyin urinib koʻring.",
+      "sales_unavailable": "Boʻlmadi. Bir daqiqadan keyin urinib koʻring.",
+      "generic": "Boʻlmadi. Yana urinib koʻring."
+    },
     "continue": "Davom etish",
     "close": "Yopish"
+  },
+  "sales": {
+    "number": "#{number} sotuv",
+    "back": "Almashuvlarga",
+    "openOffer": "Steamʼda almashuvni ochish",
+    "fee": "Kartaga oʻtkazish komissiyasi",
+    "bonus": "Balans uchun bonus",
+    "more": "Yana koʻrsatish",
+    "notFound": "Sotuv topilmadi.",
+    "loadFailed": "Sotuvni yuklab boʻlmadi. Sahifani yangilang.",
+    "listFailed": "Sotuvlarni yuklab boʻlmadi. Sahifani yangilang.",
+    "status": {
+      "creating": "Almashuv tayyorlanmoqda",
+      "offered": "Almashuvni qabul qiling",
+      "hold": "7 kun kutamiz",
+      "credited": "Balansda",
+      "payout": "Kartaga yuborilmoqda",
+      "closed": "Amalga oshmadi",
+      "reverted": "Almashuv bekor qilindi"
+    },
+    "payout": {
+      "waiting_hold": "7 kun kutamiz",
+      "to_pay": "Kartaga yuborilmoqda",
+      "paid": "Kartaga yuborildi",
+      "rejected": "Balansda",
+      "canceled": "Amalga oshmadi"
+    },
+    "state": {
+      "creating": {
+        "title": "Almashuv tayyorlanmoqda",
+        "text": "Bir daqiqada Steamʼga almashuv taklifi keladi."
+      },
+      "offered": {
+        "title": "Almashuvni qabul qiling",
+        "text": "{bot} Steamʼda taklif yubordi. Uni {time} gacha qabul qiling.",
+        "textNoOffer": "Almashuv taklifini yubordik — Steamʼni ochib, uni qabul qiling."
+      },
+      "hold": {
+        "title": "Skinlar qabul qilindi",
+        "text": "{amount} {date} tushadi."
+      },
+      "credited": {
+        "title": "Pul balansda",
+        "text": "{amount} csmarket balansiga oʻtkazildi."
+      },
+      "payout": {
+        "title": "Pul yuborilmoqda",
+        "text": "Tez orada {amount} ni {card} kartasiga yuboramiz."
+      },
+      "paid": {
+        "title": "Pul yuborildi",
+        "text": "{amount} {card} kartasiga yuborildi."
+      },
+      "rejected": {
+        "title": "Pul balansda",
+        "text": "Kartaga oʻtkazma oʻtmadi: {reason}. {amount} balansingizga oʻtkazildi.",
+        "textPlain": "Kartaga oʻtkazma oʻtmadi. {amount} balansingizga oʻtkazildi."
+      },
+      "closed": {
+        "title": "Sotuv amalga oshmadi",
+        "text": "Almashuv amalga oshmadi, skinlar sizda qoldi."
+      },
+      "reverted": {
+        "title": "Almashuv bekor qilindi",
+        "text": "Almashuv Steamʼda bekor qilindi — bu sotuv uchun pul hisoblanmaydi."
+      }
+    }
+  },
+  "cards": {
+    "title": "Kartalarim",
+    "empty": "Hozircha karta yoʻq. Kartani skin sotishda qoʻshish mumkin.",
+    "loadFailed": "Kartalarni yuklab boʻlmadi. Sahifani yangilang.",
+    "delete": "{name} ni oʻchirish",
+    "deleteShort": "Oʻchirish",
+    "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring."
   }
 }

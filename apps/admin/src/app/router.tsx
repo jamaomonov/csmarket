@@ -17,6 +17,11 @@ import { OrdersPage } from "@/features/orders/OrdersPage";
 import { PaymentDetail } from "@/features/payments/PaymentDetail";
 import { PaymentsPage } from "@/features/payments/PaymentsPage";
 import { PricingPage } from "@/features/pricing/PricingPage";
+import { PayoutDetail } from "@/features/sales/PayoutDetail";
+import { PayoutsPage } from "@/features/sales/PayoutsPage";
+import { SaleDetail } from "@/features/sales/SaleDetail";
+import { SaleSettingsPage } from "@/features/sales/SaleSettingsPage";
+import { SalesPage } from "@/features/sales/SalesPage";
 import { TradesPage } from "@/features/trades/TradesPage";
 import { UserCard } from "@/features/users/UserCard";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -42,6 +47,11 @@ export const router = createBrowserRouter([
           { path: "/payments", element: <PaymentsPage /> },
           { path: "/payments/:id", element: <PaymentDetail /> },
           { path: "/audit", element: <AuditPage /> },
+          { path: "/payouts", element: <PayoutsPage /> },
+          { path: "/payouts/:id", element: <PayoutDetail /> },
+          { path: "/sales", element: <SalesPage /> },
+          { path: "/sales/:number", element: <SaleDetail /> },
+          { path: "/sale-settings", element: <SaleSettingsPage /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },

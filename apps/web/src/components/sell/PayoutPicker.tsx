@@ -3,48 +3,90 @@
 import { cn, LogoMark } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
-import {
-  BALANCE_BONUS_PERCENT,
-  PAYOUT_METHODS,
-  SELL_FEE_PERCENT,
-  type PayoutMethod,
-} from "@/lib/sell";
+import type { SavedCard } from "@/lib/sales";
 
-/** The card brands' logos (`public/payout/*.png`) and names, never translated. */
-export const CARD_BRANDS: Readonly<Record<Exclude<PayoutMethod, "balance">, string>> = {
+import { CARD_TYPES, type CardType, type Payout, type SellConfig } from "@/lib/sell";
+
+/** The card brands' names, never translated, and their logos in `public/payout/`. */
+export const CARD_BRANDS: Readonly<Record<CardType, string>> = {
   uzcard: "Uzcard",
   humo: "Humo",
-  "uzum-visa": "Uzum Visa",
+  uzum_visa: "Uzum Visa",
+};
+const LOGO: Readonly<Record<CardType, string>> = {
+  uzcard: "/payout/uzcard.png",
+  humo: "/payout/humo.png",
+  uzum_visa: "/payout/uzum-visa.png",
 };
 
 interface PayoutPickerProps {
-  method: PayoutMethod;
-  onPick: (method: PayoutMethod) => void;
+  config: SellConfig;
+  cards: SavedCard[];
+  value: Payout;
+  onPick: (payout: Payout) => void;
 }
 
-/** Where the money goes: the csmarket balance (a bonus) or a card (a fee). A radio group. */
-export function PayoutPicker({ method, onPick }: PayoutPickerProps) {
+interface Option {
+  key: string;
+  payout: Payout;
+  name: string;
+  note: string;
+  type: CardType | null;
+}
+
+const same = (a: Payout, b: Payout): boolean =>
+  a.to === b.to &&
+  (a.to !== "saved" || (b.to === "saved" && a.cardId === b.cardId)) &&
+  (a.to !== "new" || (b.to === "new" && a.type === b.type));
+
+/** Where the money goes: the balance (a bonus), a saved card or a new one (a fee). Radios. */
+export function PayoutPicker({ config, cards, value, onPick }: PayoutPickerProps) {
   const t = useTranslations("web.sell.payout");
+  const fee = (type: CardType) => t("cardNote", { percent: config.card_fee_pct[type] });
+  const options: Option[] = [
+    {
+      key: "balance",
+      payout: { to: "balance" },
+      name: t("balance"),
+      note: t("balanceNote", { percent: config.balance_bonus_pct }),
+      type: null,
+    },
+    ...cards.map((c) => ({
+      key: c.id,
+      payout: { to: "saved", cardId: c.id, type: c.type } as const, // keeps the literal types of the union, no widening
+      name: `${CARD_BRANDS[c.type]} •••• ${c.last4}`,
+      note: fee(c.type),
+      type: c.type,
+    })),
+    ...(cards.length < config.max_cards
+      ? CARD_TYPES.map((type) => ({
+          key: `new-${type}`,
+          payout: {
+            to: "new",
+            type,
+            digits: value.to === "new" && value.type === type ? value.digits : "",
+          } as const, // keeps the literal types of the union, no widening
+          name: `${t("newCard")} ${CARD_BRANDS[type]}`,
+          note: fee(type),
+          type,
+        }))
+      : []),
+  ];
   return (
     <fieldset>
       <legend className="text-fg-muted mb-2 text-sm font-semibold">{t("title")}</legend>
       <div role="radiogroup" className="grid grid-cols-2 gap-2">
-        {PAYOUT_METHODS.map((m) => {
-          const on = m === method;
-          const name = m === "balance" ? t("balance") : CARD_BRANDS[m];
-          const note =
-            m === "balance"
-              ? t("balanceNote", { percent: BALANCE_BONUS_PERCENT })
-              : t("cardNote", { percent: SELL_FEE_PERCENT });
+        {options.map((o) => {
+          const on = same(o.payout, value);
           return (
             <button
-              key={m}
+              key={o.key}
               type="button"
               role="radio"
               aria-checked={on}
-              aria-label={`${name}. ${note}`}
+              aria-label={`${o.name}. ${o.note}`}
               onClick={() => {
-                onPick(m);
+                onPick(o.payout);
               }}
               className={cn(
                 "flex flex-col items-start gap-2 rounded-lg border-2 p-2.5 text-left transition-colors",
@@ -52,17 +94,17 @@ export function PayoutPicker({ method, onPick }: PayoutPickerProps) {
                 on
                   ? "border-accent bg-accent/10"
                   : "border-border bg-surface-2 hover:border-border-strong",
-                m === "balance" && "col-span-2 flex-row items-center",
+                o.type === null && "col-span-2 flex-row items-center",
               )}
             >
-              {m === "balance" ? (
+              {o.type === null ? (
                 <span className="bg-bg grid size-10 shrink-0 place-items-center rounded-lg">
                   <LogoMark className="text-accent size-6" />
                 </span>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element -- static brand logos from /public
                 <img
-                  src={`/payout/${m}.png`}
+                  src={LOGO[o.type]}
                   alt=""
                   width={60}
                   height={36}
@@ -70,17 +112,20 @@ export function PayoutPicker({ method, onPick }: PayoutPickerProps) {
                 />
               )}
               <span className="min-w-0">
-                <span className="block text-sm font-semibold">{name}</span>
+                <span className="block text-sm font-semibold">{o.name}</span>
                 <span
-                  className={cn("block text-xs", m === "balance" ? "text-accent" : "text-fg-dim")}
+                  className={cn("block text-xs", o.type === null ? "text-accent" : "text-fg-dim")}
                 >
-                  {note}
+                  {o.note}
                 </span>
               </span>
             </button>
           );
         })}
       </div>
+      {cards.length >= config.max_cards ? (
+        <p className="text-fg-dim mt-2 text-xs">{t("cardsLimit", { count: config.max_cards })}</p>
+      ) : null}
     </fieldset>
   );
 }

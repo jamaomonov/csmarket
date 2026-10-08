@@ -54,3 +54,18 @@ def test_shutdown_cancellation_from_apscheduler_is_dropped() -> None:
         "exception": {"values": [{"type": "CancelledError"}]},
     }
     assert _before_send(other, {}) == other
+
+
+def test_request_bodies_are_never_attached(captured_init: dict[str, Any]) -> None:
+    """A card number in a ``POST /sell`` body must not reach Sentry on a 500."""
+    init_sentry(Settings(sentry_dsn="https://public@example.invalid/1"))
+    assert captured_init["max_request_body_size"] == "never"
+
+
+def test_before_send_drops_a_request_body() -> None:
+    from csmarket.core.observability import _before_send
+
+    event: Any = {"request": {"url": "/x", "data": {"number": "8600123412341234"}}}
+    out = _before_send(event, {})
+    assert out is not None
+    assert "data" not in out["request"]

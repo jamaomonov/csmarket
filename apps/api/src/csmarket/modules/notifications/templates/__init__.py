@@ -8,13 +8,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from csmarket.modules.notifications.templates import receipt, refunded, trade_sent, verify
+from csmarket.modules.notifications.templates import receipt, refunded, sale, trade_sent, verify
 from csmarket.modules.notifications.templates.base import EmailContent, Links, Locale
 
 _ORDER_LETTERS = {
     "receipt": receipt.build,
     "trade_sent": trade_sent.build,
     "refunded": refunded.build,
+    "sale_hold": sale.hold,
+    "sale_paid": sale.paid,
+    "sale_canceled": sale.canceled,
 }
 
 
@@ -29,9 +32,9 @@ def render(
     """Render one letter.
 
     Args:
-        kind: ``receipt``, ``trade_sent``, ``refunded`` or ``verify``.
+        kind: ``receipt``, ``trade_sent``, ``refunded``, a sale letter or ``verify``.
         locale: The reader's locale.
-        number: The order number of an order letter; ``None`` for ``verify``.
+        number: The order's or sale's number; ``None`` for ``verify``.
         payload: The outbox row's strings.
         links: Absolute storefront links in ``locale``.
 

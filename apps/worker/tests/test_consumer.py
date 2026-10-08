@@ -373,12 +373,13 @@ async def test_an_empty_queue_costs_one_query_and_returns() -> None:
 
 
 def test_registers_the_orders_and_emails_queues() -> None:
-    """Orders two drainers wide, emails one, each on the channel its module NOTIFYs."""
+    """Orders two drainers wide, the rest one, each on the channel its module NOTIFYs."""
     from csmarket.modules.notifications.api import EMAILS_CHANNEL
     from csmarket.modules.orders.api import ORDERS_CHANNEL
+    from csmarket.modules.sales.api import SALES_CHANNEL
     from csmarket.modules.skinslink.api import SKINSLINK_CHANNEL
 
-    orders, emails, skinslink = _queues(get_settings())
+    orders, emails, skinslink, sales = _queues(get_settings())
     assert (orders.name, orders.channel, orders.concurrency) == ("orders", ORDERS_CHANNEL, 2)
     assert orders.drain is consumer._drain_orders
     assert (emails.name, emails.channel, emails.concurrency) == ("emails", EMAILS_CHANNEL, 1)
@@ -389,6 +390,8 @@ def test_registers_the_orders_and_emails_queues() -> None:
         1,
     )
     assert skinslink.drain is consumer._drain_skinslink_checks
+    assert (sales.name, sales.channel, sales.concurrency) == ("sales", SALES_CHANNEL, 1)
+    assert sales.drain is consumer._drain_sale_checks
 
 
 async def test_the_emails_drain_is_the_notifications_modules(

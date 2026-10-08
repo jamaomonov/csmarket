@@ -84,13 +84,26 @@ WAXPEER_CALLS = Counter(
     ("endpoint", "outcome"),
 )
 
-#: A Skinslink merchant API call (spec 2026-10-06).
-SkinslinkEndpoint = Literal["available", "events", "purchase", "status", "balance"]
+#: A Skinslink merchant API call (spec 2026-10-06; deposits since 2026-10-08).
+SkinslinkEndpoint = Literal[
+    "available", "events", "purchase", "status", "balance", "inventory", "deposit", "deposit_status"
+]
 #: ``refused`` = a 4xx or ``success: false``; ``not_found`` = 404 (a status lookup of an
 #: unknown purchase); ``unavailable`` = transport, 408/5xx or an unreadable body.
 SkinslinkOutcome = Literal["ok", "refused", "forbidden", "rate_limited", "unavailable", "not_found"]
 
-_SKINSLINK_ENDPOINTS = frozenset(("available", "events", "purchase", "status", "balance"))
+_SKINSLINK_ENDPOINTS = frozenset(
+    (
+        "available",
+        "events",
+        "purchase",
+        "status",
+        "balance",
+        "inventory",
+        "deposit",
+        "deposit_status",
+    )
+)
 _SKINSLINK_OUTCOMES = frozenset(
     ("ok", "refused", "forbidden", "rate_limited", "unavailable", "not_found")
 )
@@ -114,6 +127,16 @@ SKINSLINK_CALLS = Counter(
     "csmarket_skinslink_calls_total",
     "Skinslink API calls by endpoint and outcome (alert: SkinslinkBuyFailures).",
     ("endpoint", "outcome"),
+)
+
+#: Where the status machine moved a sale (``sales.status.apply_deposit``; spec 2026-10-08).
+_SALE_OUTCOMES = frozenset(
+    ("offered", "hold", "credited", "payout", "closed", "reverted", "attention")
+)
+SALE_OUTCOMES = Counter(
+    "csmarket_sale_outcomes_total",
+    "Sales moved by the status machine, by where they went (spec 2026-10-08).",
+    ("outcome",),
 )
 
 
@@ -216,6 +239,7 @@ _precreate(TRADE_ATTENTIONS, reason=_TRADE_ATTENTION_REASONS)
 _precreate(ORDER_BUYS, outcome=_ORDER_BUY_OUTCOMES)
 _precreate(WAXPEER_CALLS, endpoint=_WAXPEER_ENDPOINTS, outcome=_WAXPEER_OUTCOMES)
 _precreate(SKINSLINK_CALLS, endpoint=_SKINSLINK_ENDPOINTS, outcome=_SKINSLINK_OUTCOMES)
+_precreate(SALE_OUTCOMES, outcome=_SALE_OUTCOMES)
 _precreate(KASSA_REJECTIONS, provider=_KASSA_PROVIDERS, reason=_KASSA_REASONS)
 
 
@@ -229,6 +253,10 @@ ORDERS_STUCK = Gauge(
     "csmarket_orders_stuck",
     "Orders waiting longer than they should, by state (alerts: OrdersPaidStuck and friends).",
     ("state",),
+)
+SALE_PAYOUTS_OVERDUE = Gauge(
+    "csmarket_sale_payouts_overdue",
+    "Card payouts payable for over 48 h (alert: SalePayoutsOverdue; set by sales.poll).",
 )
 TRADES_ATTENTION = Gauge(
     "csmarket_trades_attention",
@@ -383,6 +411,16 @@ def set_orders_stuck(state: OrderStuckState, count: int) -> None:
         ORDERS_STUCK.labels(state=state).set(count)
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning("metrics.set_failed", metric="csmarket_orders_stuck", error=type(exc).__name__)
+
+
+def set_sale_payouts_overdue(count: int) -> None:
+    """Set how many card payouts wait past 48 h. Never raises."""
+    try:
+        SALE_PAYOUTS_OVERDUE.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_sale_payouts_overdue", error=type(exc).__name__
+        )
 
 
 def set_trades_attention(count: int) -> None:
@@ -575,6 +613,15 @@ def record_lisskins_call(endpoint: LisskinsEndpoint, outcome: LisskinsOutcome) -
     )
 
 
+def record_sale_outcome(outcome: str) -> None:
+    """Count one move of a sale; a value outside the set becomes ``"other"``. Never raises."""
+    _inc(
+        SALE_OUTCOMES,
+        "csmarket_sale_outcomes_total",
+        {"outcome": outcome if outcome in _SALE_OUTCOMES else "other"},
+    )
+
+
 def record_skinslink_call(endpoint: SkinslinkEndpoint, outcome: SkinslinkOutcome) -> None:
     """Count one Skinslink call by how it ended.
 
@@ -698,6 +745,7 @@ __all__ = [
     "set_lisskins_enabled",
     "set_lisskins_snapshot",
     "set_orders_stuck",
+    "set_sale_payouts_overdue",
     "set_skinslink_balance",
     "set_skinslink_enabled",
     "set_skinslink_mirror_synced",

@@ -30,6 +30,7 @@ MODULES = (
     "realtime",
     "skinslink",
     "lisskins",
+    "sales",
 )
 THRESHOLD = 95.0
 

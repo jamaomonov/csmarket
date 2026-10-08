@@ -1,0 +1,18 @@
+groups:
+  - name: sales
+    rules:
+      # The gauge comes from the scheduler's `sales.poll` job (every minute), so the selector
+      # is pinned to job="scheduler": the API and the worker expose it but never set it.
+
+      # A card payout payable for 48 h and still not paid: a seller waits for their money.
+      # Spec 2026-10-08 §7.
+      - alert: SalePayoutsOverdue
+        expr: max(csmarket_sale_payouts_overdue{job="scheduler"}) > 0
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} card payout(s) payable for over 48 h'
+          description: >
+            Open «Выкуп» → «Заявки на выплату» → «К выплате» in the admin and pay them by
+            hand, or reject one with a reason (its money then goes to the seller's balance).
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#overdue"
