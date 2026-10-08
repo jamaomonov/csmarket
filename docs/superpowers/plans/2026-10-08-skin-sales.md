@@ -19,7 +19,7 @@
 - **Ledger:** no posting before `completed`. A balance sale: D `user_wallet` / C `house_skin_buys`, key `sale:{sale_id}`. A rejected card payout: the same legs for `items_uzs` (the amount before the card fee), key `payout_return:{request_id}`. A card payout an admin marks paid books nothing (the money left our bank by hand).
 - **Webhook:** `sign = base64(sha256(str(trade_id) + secret))` is verified before anything else is read; the body is then never trusted — a check is queued and `deposit/status` decides. The webhook payload carries the seller's `steam_id`: it is never read or logged.
 - **No external call holds a DB lock or an open transaction.** Two new AGENTS §11 carve-outs (ADR-0016): `GET /sell/inventory` (Skinslink `inventory`, 6 s timeout, a 120 s breaker, a 5-minute per-user Redis cache, its own `ip_guard` bucket `sell-inventory`) and `POST /sell` (one `create-deposit`, 10 s timeout, nothing open across it, bucket `sell-create`). Both routes join the `handler` regexes of `ApiHighLatency` / `ApiWaxpeerLatency`.
-- **Card number = PII:** checked (16 digits, the type's prefix — Uzcard `8600`, Humo `9860`, Uzum Visa `4` — Luhn), encrypted at rest under the purpose `csmarket:payout-card:v1`; logs, metrics, lists, letters and idempotency replays carry `last4` only; the full number leaves the database only through `POST /admin/sales/payouts/{id}/reveal`, audited every time (`sales.card.show` / `sales.card.copy`) and never stored as a replay. At most 3 live cards per user.
+- **Card number = PII:** checked (16 digits, the type's prefix — Uzcard `8600` or `5614`, Humo `9860`, Uzum Visa `4` — Luhn), encrypted at rest under the purpose `csmarket:payout-card:v1`; logs, metrics, lists, letters and idempotency replays carry `last4` only; the full number leaves the database only through `POST /admin/sales/payouts/{id}/reveal`, audited every time (`sales.card.show` / `sales.card.copy`) and never stored as a replay. At most 3 live cards per user.
 - **Never log:** the trade link, its token or `partner`; a Steam id; a card number; Skinslink error bodies (the refusal `code` only).
 - **Banned words** under `apps/*/src` (`scripts/check-no-yupay.sh`): never write `supplier`, `merchants`, `merchant_api`, `voucher`, `game_id` or an identifier shaped like `sku`. `merchant_tx_id` is fine.
 - **Copy:** ru / uz / en in the same commit; «вы»; outcome, not mechanism; no "Skinslink", no "hold", no "deposit" in customer copy; skin names stay English.
@@ -2751,6 +2751,7 @@ def test_luhn_refuses_a_typo() -> None:
     [
         ("humo", "9860 1234 5678 9015", HUMO),
         ("uzcard", "8600-1234-5678-9012", UZCARD),
+        ("uzcard", "5614 1234 5678 9012", "5614123456789012"),  # Uzcard's 5614 range (owner)
         ("uzum_visa", VISA, VISA),
     ],
 )
@@ -2936,7 +2937,7 @@ MAX_LIVE_CARDS = 3
 _LENGTH = 16
 #: The first digits of each card type we pay to (Uzcard, Humo, Uzum Visa).
 _PREFIXES: dict[str, tuple[str, ...]] = {
-    "uzcard": ("8600",),
+    "uzcard": ("8600", "5614"),
     "humo": ("9860",),
     "uzum_visa": ("4",),
 }
@@ -8840,12 +8841,17 @@ export function formatCard(digits: string): string {
   return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
-/** The first digits of each card type we pay to. */
-export const CARD_PREFIX: Readonly<Record<CardType, string>> = {
-  uzcard: "8600",
-  humo: "9860",
-  uzum_visa: "4",
+/** The first digits of each card type we pay to (Uzcard has two ranges). */
+export const CARD_PREFIX: Readonly<Record<CardType, readonly string[]>> = {
+  uzcard: ["8600", "5614"],
+  humo: ["9860"],
+  uzum_visa: ["4"],
 };
+
+/** Whether `digits` start with one of `type`'s prefixes. */
+export function hasPrefix(type: CardType, digits: string): boolean {
+  return CARD_PREFIX[type].some((p) => digits.startsWith(p));
+}
 
 /** The Luhn check: every second digit from the right doubled. */
 export function luhnOk(digits: string): boolean {
@@ -8859,7 +8865,7 @@ export function luhnOk(digits: string): boolean {
 
 /** A complete number of `type` that passes Luhn. */
 export function cardFits(type: CardType, digits: string): boolean {
-  return digits.length === 16 && digits.startsWith(CARD_PREFIX[type]) && luhnOk(digits);
+  return digits.length === 16 && hasPrefix(type, digits) && luhnOk(digits);
 }
 
 /** «StatTrak™ AK-47 | Redline (Field-Tested)» → AK-47, Redline, StatTrak. */
@@ -9359,11 +9365,11 @@ import { useRouter } from "@/i18n/navigation";
 import { salePath } from "@/lib/paths";
 import { CARDS_KEY, listCards } from "@/lib/sales";
 import {
-  CARD_PREFIX,
   cardDigits,
   cardFits,
   createSale,
   formatCard,
+  hasPrefix,
   mintSellKey,
   payoutCardType,
   sellBody,
@@ -9431,8 +9437,8 @@ export function SellCart(p: SellCartProps) {
   // it fails Luhn.
   const wrongCard =
     newCard !== null &&
-    newCard.digits.length >= CARD_PREFIX[newCard.type].length &&
-    (!newCard.digits.startsWith(CARD_PREFIX[newCard.type]) ||
+    newCard.digits.length >= 4 &&
+    (!hasPrefix(newCard.type, newCard.digits) ||
       (newCard.digits.length === 16 && !cardFits(newCard.type, newCard.digits)));
   const belowMin = p.chosen.length > 0 && sum.items < min;
   const belowCardMin = toCard && sum.payout > 0 && sum.payout < cardMin;
