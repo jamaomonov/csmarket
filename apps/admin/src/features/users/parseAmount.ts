@@ -27,12 +27,13 @@ export function parseAmount(input: string): number | null {
   return value === 0 ? 0 : value;
 }
 
-const USD_AMOUNT = /^([+-]?)(\d{1,6})(?:[.,](\d{1,3}))?$/;
+const USD_AMOUNT = /^([+-]?)(\d{1,6})(?:\.(\d{1,3}))?$/;
 
 /**
  * Parse operator input into the API's dollar string (`amount_usd`).
  *
- * @param input - What the operator typed, e.g. `"250"`, `"-30,5"` or `"1 000.250"`.
+ * @param input - What the operator typed, e.g. `"250"`, `"-30.5"` or `"1 000.250"`. Only a
+ *   dot is a decimal separator: `"1,000"` is refused, never read as one dollar.
  * @returns A signed string with three decimals (`"250.000"`, `"-30.500"`), or `null` when the
  *   input is not dollars with at most three decimals. Zero stays `"0.000"` for the form to refuse.
  */

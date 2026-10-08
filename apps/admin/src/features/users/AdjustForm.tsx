@@ -32,6 +32,7 @@ interface Draft {
 function validate(currency: Currency, amountText: string, reasonText: string): Draft | string {
   const reason = reasonText.trim();
   if (currency === "USD") {
+    if (amountText.includes(",")) return "Только точка: 1000 или 1000.5.";
     const usd = parseUsd(amountText);
     if (usd === null) return "Введите сумму в долларах, до трёх знаков: 250 или -30.5.";
     if (Number(usd) === 0) return "Сумма не может быть нулём.";
@@ -49,11 +50,17 @@ function validate(currency: Currency, amountText: string, reasonText: string): D
   return { currency, amount: String(amount), reason };
 }
 
+/** `"1000.000"` -> `"1\u00a0000.000"`, so a thousand dollars cannot be read as one. */
+function groupDollars(usd: string): string {
+  const [whole = "0", frac = ""] = usd.split(".");
+  return `${whole.replace(/\B(?=(\d{3})+$)/g, "\u00a0")}.${frac}`;
+}
+
 /** `Начислить 50 000 сум` / `Списать $10.000`. */
 function outcome(draft: Draft): string {
   const credit = !draft.amount.startsWith("-");
   const abs = draft.amount.replace(/^-/, "");
-  const sum = draft.currency === "USD" ? formatUsd(abs) : formatSum(abs);
+  const sum = draft.currency === "USD" ? formatUsd(groupDollars(abs)) : formatSum(abs);
   return `${credit ? "Начислить" : "Списать"} ${sum}`;
 }
 
@@ -148,6 +155,8 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
             aria-pressed={currency === c}
             onClick={() => {
               setCurrency(c);
+              // A typed amount means another unit after the switch: start over.
+              setAmountText("");
               setFormError(null);
             }}
           >

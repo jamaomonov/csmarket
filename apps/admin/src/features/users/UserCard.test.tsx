@@ -306,6 +306,39 @@ describe("UserCard", () => {
       expect(api.adjustBalance).not.toHaveBeenCalled();
     });
 
+    it("refuses a comma and groups the confirm amount so 1000 is not read as 1", async () => {
+      api.adjustUsdBalance.mockResolvedValue(USD_CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1,000" } });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Только точка");
+      fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1000" } });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(
+        await screen.findByRole("button", { name: "Начислить $1\u00a0000.000" }),
+      ).toBeInTheDocument();
+    });
+
+    it("clears the amount and the error when the currency is switched", async () => {
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.change(screen.getByLabelText("Сумма, сум"), { target: { value: "50 000" } });
+      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      expect(screen.getByLabelText("Сумма, USD")).toHaveValue("");
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(await screen.findByRole("alert")).toBeInTheDocument();
+      expect(screen.queryByTestId("adjust-confirm-step")).not.toBeInTheDocument();
+      expect(api.adjustUsdBalance).not.toHaveBeenCalled();
+    });
+
     it("refuses a dollar amount with four decimals", async () => {
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));

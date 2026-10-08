@@ -49,7 +49,9 @@ describe("parseAmount", () => {
 describe("parseUsd", () => {
   it.each([
     ["250", "250.000"],
-    ["-30,5", "-30.500"],
+    ["-30.5", "-30.500"],
+    ["1000", "1000.000"],
+    ["1000.5", "1000.500"],
     ["1 000.250", "1000.250"],
     ["+0.001", "0.001"],
     ["0", "0.000"],
@@ -58,7 +60,10 @@ describe("parseUsd", () => {
     expect(parseUsd(input)).toBe(expected);
   });
 
-  it.each(["", "1.2345", "abc", "1e3", "--5", "1.", "1234567"])("refuses %j", (input) => {
-    expect(parseUsd(input)).toBeNull();
-  });
+  it.each(["", "1.2345", "abc", "1e3", "--5", "1.", "1234567", "1,000", "1 000,5", "-30,5", "1,5"])(
+    "refuses %j",
+    (input) => {
+      expect(parseUsd(input)).toBeNull();
+    },
+  );
 });
