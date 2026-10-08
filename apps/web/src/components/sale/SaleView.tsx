@@ -251,7 +251,7 @@ export function SaleView({ locale, number }: SaleViewProps) {
     body = <SaleBody sale={sale.data} locale={locale} />;
   }
   return (
-    <div className="flex max-w-3xl flex-col gap-5">
+    <div className="flex flex-col gap-5">
       <Link href={TRADES} className="text-fg-dim hover:text-fg text-sm">
         ← {t("back")}
       </Link>
