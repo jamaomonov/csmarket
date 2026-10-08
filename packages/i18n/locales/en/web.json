@@ -366,25 +366,37 @@
     "clearAll": "Clear selection",
     "refresh": "Refresh inventory",
     "total": "{count, plural, one {# item} other {# items}} worth {sum}",
-    "available": "{count} available",
-    "unavailable": {
-      "tradeLock": "Tradable from {date}",
-      "tooCheap": "Too cheap",
-      "notAccepted": "Not accepted"
-    },
+    "shownNote": "Showing the items you can sell now.",
     "empty": "Nothing found.",
+    "emptyInventory": "Nothing to sell right now: your inventory has no items we buy.",
     "needTradeLink": "Add your trade link — we use it to show your inventory and send the offer.",
     "signedOut": "Sign in with Steam to sell skins.",
+    "loadFailed": "Could not load your inventory. Try again.",
+    "retry": "Try again",
+    "steam": {
+      "trade_link_revoked": "Your trade link was reset in Steam. Add the new one in your profile.",
+      "trade_link_invalid": "Your trade link does not work. Check it in your profile.",
+      "trade_banned": "Your Steam account is trade banned — selling is not possible now.",
+      "profile_private": "Your Steam profile is private. Make it public so we can see your inventory.",
+      "limited_account": "Your Steam account is limited: trading opens after 5 $ of Steam purchases.",
+      "hold": "Your Steam account has a temporary trade restriction. Try later.",
+      "permissions": "Your CS2 inventory is private. Make it public in Steam's privacy settings.",
+      "hold_and_permissions": "Your CS2 inventory is private and the account has a temporary trade restriction.",
+      "other": "Steam does not allow trading with this account."
+    },
     "cart": {
       "title": "{count, plural, =0 {Nothing selected} one {# skin selected} other {# skins selected}}",
       "hint": "Tap skins to add them here.",
-      "remove": "Remove {name}"
+      "remove": "Remove {name}",
+      "max": "Up to {count} items at a time."
     },
     "payout": {
       "title": "Get paid to",
       "balance": "csmarket balance",
-      "balanceNote": "Instant, +{percent}%",
-      "cardNote": "Fee {percent}%"
+      "balanceNote": "+{percent}% on top",
+      "cardNote": "Fee {percent}%",
+      "newCard": "New card",
+      "cardsLimit": "{count, plural, one {# card} other {# cards}} saved — delete one in your profile to add another."
     },
     "card": {
       "label": "{method} card number",
@@ -397,8 +409,25 @@
       "bonus": "Balance bonus +{percent}%",
       "payout": "You get"
     },
+    "when": "The money arrives 7 days after the trade.",
     "submit": "Sell for {sum}",
-    "soon": "Selling opens soon",
+    "addMore": "Add {sum} more",
+    "sending": "Sending…",
+    "errors": {
+      "prices_changed": "Prices changed — check the sum and press again.",
+      "below_minimum": "The sum is under the minimum — add items.",
+      "below_card_minimum": "A card needs at least the minimum sum. Choose the balance or add items.",
+      "too_many_items": "Too many items at a time — remove some.",
+      "steam_refused": "Steam does not allow trading with this account.",
+      "sales_disabled": "Selling is closed right now. Come back later.",
+      "cards_limit": "{count, plural, one {# card} other {# cards}} saved — delete one in your profile.",
+      "card_invalid": "Check the card number.",
+      "trade_link_missing": "Add your trade link.",
+      "trade_link_bad": "Your trade link does not work. Check it in your profile.",
+      "rate_unavailable": "The exchange rate is unavailable right now. Try again in a minute.",
+      "sales_unavailable": "That did not work. Try again in a minute.",
+      "generic": "That did not work. Try again."
+    },
     "continue": "Continue",
     "close": "Close"
   }

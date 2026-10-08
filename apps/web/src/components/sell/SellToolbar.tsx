@@ -16,6 +16,8 @@ interface SellToolbarProps {
   onCategory: (c: string | null) => void;
   allChosen: boolean;
   onToggleAll: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
 }
 
 /** Search, sort, select-all / clear, refresh, and the category chips. */
@@ -73,9 +75,11 @@ export function SellToolbar(p: SellToolbarProps) {
             type="button"
             aria-label={t("refresh")}
             title={t("refresh")}
-            className="bg-surface-2 hover:bg-border-strong grid size-10 shrink-0 place-items-center rounded-lg"
+            onClick={p.onRefresh}
+            disabled={p.refreshing}
+            className="bg-surface-2 hover:bg-border-strong grid size-10 shrink-0 place-items-center rounded-lg disabled:opacity-60"
           >
-            <RefreshCw className="size-4" aria-hidden />
+            <RefreshCw className={cn("size-4", p.refreshing && "animate-spin")} aria-hidden />
           </button>
         </div>
       </div>
