@@ -22,4 +22,9 @@ async def nudge(db: AsyncSession, *, user_id: str, number: str) -> None:
     await db.execute(select(func.pg_notify(CHANNEL, f"{user_id}:{number}")))
 
 
-__all__ = ["CHANNEL", "nudge"]
+async def nudge_sale(db: AsyncSession, *, user_id: str, number: str) -> None:
+    """Like :func:`nudge`, for a sale: the owner's sockets get ``sale.updated``. Never commits."""
+    await db.execute(select(func.pg_notify(CHANNEL, f"{user_id}:{number}:sale")))
+
+
+__all__ = ["CHANNEL", "nudge", "nudge_sale"]

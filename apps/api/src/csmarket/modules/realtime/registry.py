@@ -7,7 +7,7 @@ process runs its own Postgres listener, so each serves exactly the sockets it ac
 from __future__ import annotations
 
 import json
-from typing import Protocol
+from typing import Literal, Protocol
 
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import record_ws_nudges
@@ -45,13 +45,17 @@ class Registry:
         """How many sockets ``user_id`` has open here."""
         return len(self._sockets.get(user_id, ()))
 
-    async def publish(self, user_id: str, number: str) -> int:
-        """Send ``{"type": "order.changed", "number": …}`` to every socket of ``user_id``.
+    async def publish(
+        self, user_id: str, number: str, *, kind: Literal["order", "sale"] = "order"
+    ) -> int:
+        """Send ``{"type": "order.changed" | "sale.updated", "number": …}`` to every socket of
+        ``user_id``.
 
         Returns:
             How many sockets it reached.
         """
-        frame = json.dumps({"type": "order.changed", "number": number}, separators=(",", ":"))
+        kind_type = "sale.updated" if kind == "sale" else "order.changed"
+        frame = json.dumps({"type": kind_type, "number": number}, separators=(",", ":"))
         reached = 0
         for socket in list(self._sockets.get(user_id, ())):
             try:

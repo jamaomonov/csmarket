@@ -129,6 +129,16 @@ SKINSLINK_CALLS = Counter(
     ("endpoint", "outcome"),
 )
 
+#: Where the status machine moved a sale (``sales.status.apply_deposit``; spec 2026-10-08).
+_SALE_OUTCOMES = frozenset(
+    ("offered", "hold", "credited", "payout", "closed", "reverted", "attention")
+)
+SALE_OUTCOMES = Counter(
+    "csmarket_sale_outcomes_total",
+    "Sales moved by the status machine, by where they went (spec 2026-10-08).",
+    ("outcome",),
+)
+
 
 #: Why an order's money went back to the balance (``orders.failure_reason``).
 OrderRefundReason = Literal[
@@ -229,6 +239,7 @@ _precreate(TRADE_ATTENTIONS, reason=_TRADE_ATTENTION_REASONS)
 _precreate(ORDER_BUYS, outcome=_ORDER_BUY_OUTCOMES)
 _precreate(WAXPEER_CALLS, endpoint=_WAXPEER_ENDPOINTS, outcome=_WAXPEER_OUTCOMES)
 _precreate(SKINSLINK_CALLS, endpoint=_SKINSLINK_ENDPOINTS, outcome=_SKINSLINK_OUTCOMES)
+_precreate(SALE_OUTCOMES, outcome=_SALE_OUTCOMES)
 _precreate(KASSA_REJECTIONS, provider=_KASSA_PROVIDERS, reason=_KASSA_REASONS)
 
 
@@ -585,6 +596,15 @@ def record_lisskins_call(endpoint: LisskinsEndpoint, outcome: LisskinsOutcome) -
             "endpoint": endpoint if endpoint in _LISSKINS_ENDPOINTS else "other",
             "outcome": outcome if outcome in _LISSKINS_OUTCOMES else "other",
         },
+    )
+
+
+def record_sale_outcome(outcome: str) -> None:
+    """Count one move of a sale; a value outside the set becomes ``"other"``. Never raises."""
+    _inc(
+        SALE_OUTCOMES,
+        "csmarket_sale_outcomes_total",
+        {"outcome": outcome if outcome in _SALE_OUTCOMES else "other"},
     )
 
 

@@ -44,3 +44,11 @@ async def test_remove_forgets_an_empty_user() -> None:
     reg.remove("a", s)
     assert reg.count("a") == 0
     assert await reg.publish("a", "A0000001") == 0
+
+
+async def test_a_sale_nudge_says_sale_updated() -> None:
+    reg = Registry()
+    socket = _Socket()
+    reg.add("a", socket)
+    assert await reg.publish("a", "S0000001", kind="sale") == 1
+    assert socket.sent == ['{"type":"sale.updated","number":"S0000001"}']

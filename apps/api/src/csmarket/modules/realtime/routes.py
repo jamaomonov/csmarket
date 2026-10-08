@@ -2,7 +2,7 @@
 
 Protocol: the client opens the socket, then sends ``{"type": "auth", "token": <access
 token>}`` within ``realtime_auth_timeout_seconds``. The server answers only with
-``{"type": "order.changed", "number": …}`` and ``{"type": "ping"}`` (every
+``{"type": "order.changed", "number": …}``, ``{"type": "sale.updated", "number": …}`` and ``{"type": "ping"}`` (every
 ``realtime_ping_seconds``) and closes with 4401 on a bad, revoked or expired token — at the
 latest when the token expires, so the client reconnects with a fresh one — and with 4429
 past the ``ws-connect`` ip_guard bucket. Nothing secret travels in the URL. No database
