@@ -95,7 +95,8 @@ class ApiOrderIn(BaseModel):
     #: The most the caller pays, USD with up to three decimals.
     max_price_usd: Annotated[str, Field(pattern=r"^\d{1,6}(\.\d{1,3})?$")]
     trade_link: Annotated[str, Field(min_length=1, max_length=512)]
-    #: The caller's own id; a repeat answers 409 ``duplicate_client_order_id``.
+    #: The caller's own id, unique per account (any of its keys); a repeat answers 409
+    #: ``duplicate_client_order_id``.
     client_order_id: Annotated[
         str, Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_.:-]+$")
     ]
@@ -132,7 +133,7 @@ class PublicRefundOut(BaseModel):
 
 
 class PublicOrderOut(BaseModel):
-    """An API order as its key sees it — never the source market or its ids."""
+    """An API order as its owner sees it — never the source market or its ids."""
 
     model_config = ConfigDict(frozen=True)
 
@@ -148,7 +149,7 @@ class PublicOrderOut(BaseModel):
 
 
 class PublicOrdersPage(BaseModel):
-    """A page of the key's orders, newest first."""
+    """A page of the account's API orders, newest first."""
 
     model_config = ConfigDict(frozen=True)
 

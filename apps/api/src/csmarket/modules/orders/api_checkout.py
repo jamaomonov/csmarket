@@ -5,10 +5,12 @@ the key's tariff — no market is called), insert the order, debit the USD walle
 ``paid`` (NOTIFY the worker). There is no pending stage: the caller already holds the money
 with us. A short balance rolls everything back (no order, no posting).
 
-A repeated ``client_order_id`` returns the order already placed under it. Two requests racing
-with the same one meet at the unique ``(api_key_id, client_order_id)``: the loser's insert waits
-for the winner's commit, fails, rolls back to its savepoint and reads the winner. Its debit key
-is the order id, so a rolled-back loser has debited nothing.
+A ``client_order_id`` belongs to the key's owner, not the key: a repeat — with this key or
+with a reissued one — returns the order already placed under it. Two requests racing with the
+same one meet at the partial unique index ``uq_orders_user_client_order_id`` (``user_id``,
+``client_order_id`` of ``api`` orders): the loser's insert waits for the winner's commit, fails,
+rolls back to its savepoint and reads the winner. Its debit key is the order id, so a
+rolled-back loser has debited nothing. ``api_key_id`` records the key that placed the order.
 
 Ruling R1: the order stores ``price_uzs = 0``, the newest rate snapshot (any age) and
 ``fx_uplift_pct = 0``; ``price_usd`` is the charged price. The trade link is PII: never logged.
@@ -30,7 +32,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.money import wire_usd
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import FxSnapshot
-from csmarket.modules.orders.checkout import RateUnavailableError, _float_of
+from csmarket.modules.orders.checkout import RateUnavailableError, float_of
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.paid import mark_paid
 from csmarket.modules.public_api.api import (
@@ -50,10 +52,14 @@ _UNITS_PER_USD = Decimal(1000)
 _USD_PLACES = Decimal("0.000001")
 
 
-async def _by_client_id(db: AsyncSession, key_id: str, client_order_id: str) -> Order | None:
-    """The order placed under ``client_order_id`` with key ``key_id``, if any."""
+async def _by_client_id(db: AsyncSession, user_id: str, client_order_id: str) -> Order | None:
+    """The API order ``user_id`` placed under ``client_order_id`` with any of their keys."""
     return await db.scalar(
-        select(Order).where(Order.api_key_id == key_id, Order.client_order_id == client_order_id)
+        select(Order).where(
+            Order.user_id == user_id,
+            Order.channel == "api",
+            Order.client_order_id == client_order_id,
+        )
     )
 
 
@@ -153,7 +159,7 @@ def _build(
         source=offer.source,
         offer_id=offer.offer_id,
         listing_id=None,
-        float_value=_float_of(offer.float_value),
+        float_value=float_of(offer.float_value),
         paint_seed=offer.paint_seed,
         cost_units=offer.price_units,
         cost_usd=_usd(offer.price_units),
@@ -162,7 +168,7 @@ def _build(
         fx_snapshot_id=snapshot_id,
         fx_uplift_pct=Decimal(0),
         trade_link=link,
-        idempotency_key=f"api:{caller.key.id}:{body.client_order_id}",
+        idempotency_key=f"api:{caller.user.id}:{body.client_order_id}",
         expires_at=now() + timedelta(minutes=settings.order_expiry_minutes),
     )
 
@@ -179,8 +185,9 @@ async def create_api_order(
         settings: Settings (the buying switch, the sources, the order expiry).
 
     Returns:
-        ``(order, created)`` — ``created`` is ``False`` when the key already placed an order
-        under ``client_order_id`` (that order is returned, nothing is written).
+        ``(order, created)`` — ``created`` is ``False`` when the owner already placed an
+        order under ``client_order_id`` with any of their keys (that order is returned,
+        nothing is written).
 
     Raises:
         ConflictError: ``buying_disabled``, ``offer_gone``, ``price_above_max``.
@@ -191,7 +198,7 @@ async def create_api_order(
         RateUnavailableError: no rate snapshot at all.
     """
     key_id, user_id = caller.key.id, caller.user.id
-    existing = await _by_client_id(db, key_id, body.client_order_id)
+    existing = await _by_client_id(db, user_id, body.client_order_id)
     if existing is not None:
         return existing, False
     link = _gate(caller, body, settings)
@@ -212,7 +219,7 @@ async def create_api_order(
             db.add(order)
             await db.flush()
     except IntegrityError:  # the same client_order_id raced us: the winner's order stands
-        winner = await _by_client_id(db, key_id, body.client_order_id)
+        winner = await _by_client_id(db, user_id, body.client_order_id)
         if winner is None:
             raise
         return winner, False

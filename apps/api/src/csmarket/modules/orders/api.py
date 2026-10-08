@@ -38,7 +38,7 @@ from csmarket.modules.orders.models import (
     SkinTrade,
 )
 from csmarket.modules.orders.paid import ORDERS_CHANNEL, mark_paid
-from csmarket.modules.orders.public_view import get_for_key, list_for_key, public_order
+from csmarket.modules.orders.public_view import get_for_owner, list_for_owner, public_order
 from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
 from csmarket.modules.orders.refunds import (
     ADMIN_REFUNDABLE,
@@ -108,10 +108,10 @@ __all__ = [
     "erase_old_trade_links",
     "erase_old_verify_addresses",
     "expire_pending",
-    "get_for_key",
+    "get_for_owner",
     "in_flight",
     "is_expired",
-    "list_for_key",
+    "list_for_owner",
     "lock_order",
     "mark_paid",
     "measure",

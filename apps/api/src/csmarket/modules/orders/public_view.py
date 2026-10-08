@@ -1,4 +1,4 @@
-"""An order as the public API shows it, and the key's order reads (spec 2026-10-09 §5).
+"""An order as the public API shows it, and the owner's API-order reads (spec 2026-10-09 §5).
 
 No new FSM states (ADR-0007): ``paid`` / ``buying`` read ``buying``; ``trade_sent`` reads
 ``trade_sent`` until the buyer accepts, then ``delivered`` (Steam's trade protection may still
@@ -91,7 +91,7 @@ def _trade(order: Order, trade: SkinTrade | None, purchase: Purchase | None) -> 
 def public_order(
     order: Order, trade: SkinTrade | None, purchase: Purchase | None
 ) -> PublicOrderOut:
-    """``order`` as its key sees it.
+    """``order`` as its owner sees it over the API.
 
     Args:
         order: An API order.
@@ -168,26 +168,29 @@ def _status_filter(status: PublicOrderStatus) -> ColumnElement[bool]:
             return and_(open_, Order.status.not_in(("delivered", "trade_sent")))
 
 
-async def get_for_key(db: AsyncSession, key_id: str, number: str) -> PublicOrderOut | None:
-    """Order ``number`` placed with key ``key_id``; ``None`` for another key's or unknown."""
+async def get_for_owner(db: AsyncSession, user_id: str, number: str) -> PublicOrderOut | None:
+    """API order ``number`` of ``user_id`` (placed with any of their keys); ``None`` for another
+    user's, a site order or an unknown number."""
     if not is_number(number) or is_topup_number(number):
         return None
-    stmt = _rows().where(Order.number == number, Order.api_key_id == key_id)
+    stmt = _rows().where(Order.number == number, Order.user_id == user_id, Order.channel == "api")
     found = (await db.execute(stmt)).one_or_none()
     return None if found is None else _out(cast(_Row, found))
 
 
-async def list_for_key(
-    db: AsyncSession, key_id: str, cursor: str | None, status: PublicOrderStatus | None
+async def list_for_owner(
+    db: AsyncSession, user_id: str, cursor: str | None, status: PublicOrderStatus | None
 ) -> tuple[list[PublicOrderOut], str | None]:
-    """One newest-first page of the key's orders (optionally of one status) and the next cursor.
+    """One newest-first page of the owner's API orders (optionally of one status) + next cursor.
+
+    Every key the user ever had: a reissue hides nothing. ``ix_orders_user_created`` serves it.
 
     Raises:
         ValidationError: ``cursor`` is not one this API issued (``code="cursor"``).
     """
     stmt = (
         _rows()
-        .where(Order.api_key_id == key_id)
+        .where(Order.user_id == user_id, Order.channel == "api")
         .order_by(Order.created_at.desc(), Order.id.desc())
         .limit(PAGE_SIZE + 1)
     )
@@ -206,4 +209,4 @@ async def list_for_key(
     return [_out(row) for row in page], next_cursor
 
 
-__all__ = ["PAGE_SIZE", "get_for_key", "list_for_key", "public_order", "public_status"]
+__all__ = ["PAGE_SIZE", "get_for_owner", "list_for_owner", "public_order", "public_status"]

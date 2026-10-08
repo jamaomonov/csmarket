@@ -26,7 +26,11 @@ from csmarket.modules.public_api.schemas import ApiOrderIn
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkPurchase, SkinslinkState
 from csmarket.modules.users.models import User
-from csmarket.modules.wallet.api import admin_adjust_usd, user_usd_balance
+from csmarket.modules.wallet.api import (
+    InsufficientBalanceError,
+    admin_adjust_usd,
+    user_usd_balance,
+)
 from csmarket.modules.wallet.models import WalletPosting
 from httpx import AsyncClient
 from sqlalchemy import delete, func, select, update
@@ -669,3 +673,51 @@ async def test_no_rate_snapshot_at_all_is_503(
     assert r.status_code == 503
     assert r.json()["code"] == "rate_unavailable"
     assert await _orders(db_session) == 0
+
+
+async def test_a_reissued_key_keeps_the_orders_and_their_ids(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    item = await _item(db_session, (9000, 9500))
+    user, old = await _customer(db_session, customer_headers, profile="cost")
+    first = (await integration_client.post(ORDERS, json=_body(item), headers=_h(old))).json()
+    _, new = await keys.issue(db_session, user=user)
+    await db_session.commit()
+    assert (await integration_client.get(ORDERS, headers=_h(old))).status_code == 401
+    r = await integration_client.get(f"{ORDERS}/{first['order_id']}", headers=_h(new))
+    assert r.status_code == 200
+    assert r.json() == first
+    listed = (await integration_client.get(ORDERS, headers=_h(new))).json()["items"]
+    assert [o["order_id"] for o in listed] == [first["order_id"]]
+    again = await integration_client.post(ORDERS, json=_body(item), headers=_h(new))
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "duplicate_client_order_id"
+    assert again.json()["order"]["order_id"] == first["order_id"]
+    assert await _orders(db_session) == 1
+    assert await user_usd_balance(db_session, user.id) == Decimal(50_000 - 9000)
+
+
+async def test_two_ids_at_once_on_a_balance_for_one(
+    customer_headers: Headers, db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    item = await _item(db_session, (9000, 9100))
+    user, _ = await _customer(db_session, customer_headers, profile="cost", units=12_000)
+    key = await keys.live_key(db_session, user.id)
+    assert key is not None
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    settings = cfg.get_settings()
+
+    async def one(cid: str) -> str:
+        db, caller = await _callers(factory, key.id, user.id)
+        async with db:
+            body = ApiOrderIn.model_validate(_body(item, cid=cid))
+            try:
+                await create_api_order(db, caller=caller, body=body, settings=settings)
+            except InsufficientBalanceError:
+                return "402"
+            return "201"
+
+    results = await asyncio.gather(one("two-1"), one("two-2"))
+    assert sorted(results) == ["201", "402"]
+    assert await _orders(db_session) == 1
+    assert await user_usd_balance(db_session, user.id) == Decimal(12_000 - 9000)

@@ -101,7 +101,7 @@ UTC.
 | GET          | `/catalog/{item_id}/offers`                   | `offer_id`, `float`, `paint_seed`, `stickers[]`, `price_usd` (+ `retail_price_usd`), `delivery`                                              |
 | POST         | `/orders`                                     | buy: `item_id`, `offer_id?`, `max_price_usd`, `trade_link`, `client_order_id`                                                                |
 | GET          | `/orders/{order_id}`                          | the order: `status`, `item`, `price_usd`, `trade{offer_sent_at, accepted_at, release_at}`, `refund{amount_usd, reason}`, `client_order_id`   |
-| GET          | `/orders?cursor=&status=`                     | the key's orders, newest first                                                                                                               |
+| GET          | `/orders?cursor=&status=`                     | the account's API orders (every key it had), newest first                                                                                    |
 | PUT / DELETE | `/webhook`                                    | set / clear the webhook URL; `GET /webhook` shows it and the last delivery                                                                   |
 
 - **`item_id`** is our `skin_items.id`; **`offer_id`** is the internal offer id encrypted with
@@ -112,11 +112,11 @@ UTC.
   tariff; 409 `price_above_max` if above `max_price_usd`; debit the USD wallet (402
   `insufficient_balance`); insert the order **already `paid`** (`channel = api`, `api_key_id`,
   `client_order_id`, `charged_units`, `pricing_profile`, the trade link); NOTIFY the worker. A
-  repeated `client_order_id` returns 409 `duplicate_client_order_id` with the existing order in
-  the body. No pending stage: the client already holds the money with us.
+  `client_order_id` already used by the account (with any of its keys, a reissued one included)
+  returns 409 `duplicate_client_order_id` with the existing order in the body. No pending stage: the client already holds the money with us.
 - **Errors:** 401 `unauthorized`; 403 `usd_wallet_disabled`, `ip_not_allowed`,
-  `account_suspended`; 402 `insufficient_balance`; 404 unknown item / order (another key's
-  order is 404); 409 `offer_gone`, `price_above_max`, `duplicate_client_order_id`,
+  `account_suspended`; 402 `insufficient_balance`; 404 unknown item / order (another user's
+  order is 404; a reissued key sees the account's older orders); 409 `offer_gone`, `price_above_max`, `duplicate_client_order_id`,
   `buying_disabled`; 422 `trade_link_invalid` and body errors; 429 with `Retry-After`.
 - **Status mapping** (no new FSM states, ADR-0007):
 
@@ -138,7 +138,8 @@ UTC.
 ## 6. Orders and the worker
 
 - `orders` gains `channel` (`site` | `api`, default `site`), `api_key_id` (nullable FK),
-  `client_order_id` (nullable; unique with `api_key_id`), `pricing_profile` (nullable); CHECK
+  `client_order_id` (nullable; unique per owner — `user_id` — among `api` orders, so a key
+  reissue keeps it; `api_key_id` records the key that placed the order), `pricing_profile` (nullable); CHECK
   `channel_fields`: a `site` order has no key, an `api` order has key, client id and profile.
   **R1 (plan B):** `price_uzs`, `fx_snapshot_id` and `fx_uplift_pct` stay NOT NULL (nullable
   columns would retype every site call site): an API order stores `price_uzs = 0`,

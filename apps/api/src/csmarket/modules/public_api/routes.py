@@ -2,8 +2,9 @@
 
 Catalogue: a paged feed read from the Redis snapshot (:mod:`feed`) and the offers of one
 item, priced by the key's tariff. Buying: ``POST /orders`` pays from the USD wallet in one
-transaction (``orders.api_checkout``); the key's orders read through ``orders.public_view``;
-``/me`` shows the balance, the key and its limits. No request here calls a market.
+transaction (``orders.api_checkout``); the owner's API orders (any of their keys) read through
+``orders.public_view``; ``/me`` shows the balance, the key and its limits. No request here
+calls a market.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from csmarket.core.config import get_settings
 from csmarket.core.errors import AppError, ConflictError, NotFoundError, PaymentRequiredError
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
-from csmarket.modules.orders.api import create_api_order, get_for_key, list_for_key
+from csmarket.modules.orders.api import create_api_order, get_for_owner, list_for_owner
 from csmarket.modules.public_api import feed
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
 from csmarket.modules.public_api.limits import LIMITS, enforce
@@ -220,12 +221,13 @@ async def place_order(
     """Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).
 
     One transaction: the USD wallet is debited and the order is already paid on 201 (status
-    ``buying``). A repeated ``client_order_id`` writes nothing and answers 409
+    ``buying``). A ``client_order_id`` already used by this account (with this key or an earlier
+    one) writes nothing and answers 409
     ``duplicate_client_order_id`` with that order in ``order``. Counts against the
     10 per minute ``order`` limit.
     """
     await enforce(caller, "order")
-    key_id = caller.key.id
+    user_id = caller.user.id
     try:
         order, created = await create_api_order(
             db, caller=caller, body=body, settings=get_settings()
@@ -234,8 +236,8 @@ async def place_order(
         raise PaymentRequiredError(
             "the USD balance does not cover this order", code="insufficient_balance"
         ) from exc
-    out = await get_for_key(db, key_id, order.number)
-    if out is None:  # pragma: no cover -- the key's own order, just read or written
+    out = await get_for_owner(db, user_id, order.number)
+    if out is None:  # pragma: no cover -- the owner's order, just read or written
         raise NotFoundError("no such order", code="order_not_found")
     if not created:
         raise ConflictError(
@@ -249,7 +251,7 @@ async def place_order(
 @router.get(
     "/orders/{order_id}",
     response_model=PublicOrderOut,
-    summary="One order of this key",
+    summary="One API order of this account",
     responses={**_AUTH_ERRORS, 404: {"description": "`order_not_found`"}},
 )
 async def get_order(
@@ -257,9 +259,10 @@ async def get_order(
     caller: Annotated[ApiCaller, Depends(api_caller)],
     db: Annotated[AsyncSession, Depends(db_session)],
 ) -> PublicOrderOut:
-    """The order ``order_id`` placed with this key; another key's or an unknown one is 404."""
+    """The API order ``order_id`` of this key's owner (any of their keys); another user's or
+    an unknown one is 404."""
     await enforce(caller, "read")
-    out = await get_for_key(db, caller.key.id, order_id)
+    out = await get_for_owner(db, caller.user.id, order_id)
     if out is None:
         raise NotFoundError("no such order", code="order_not_found")
     return out
@@ -268,7 +271,7 @@ async def get_order(
 @router.get(
     "/orders",
     response_model=PublicOrdersPage,
-    summary="Orders of this key",
+    summary="API orders of this account",
     responses={**_AUTH_ERRORS, 422: {"description": "`cursor` or a bad `status`"}},
 )
 async def list_orders(
@@ -277,9 +280,10 @@ async def list_orders(
     cursor: Annotated[str | None, Query(max_length=256)] = None,
     status: PublicOrderStatus | None = None,
 ) -> PublicOrdersPage:
-    """The key's orders, newest first, 50 a page; ``status`` keeps one status."""
+    """The owner's API orders (every key they had), newest first, 50 a page; ``status`` keeps
+    one status."""
     await enforce(caller, "read")
-    items, next_cursor = await list_for_key(db, caller.key.id, cursor, status)
+    items, next_cursor = await list_for_owner(db, caller.user.id, cursor, status)
     return PublicOrdersPage(items=items, next_cursor=next_cursor)
 
 

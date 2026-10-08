@@ -195,8 +195,8 @@ csmarket/
   identifier shape (`sku`, `skus`, `sku_id`, `SkuId` hit; `skull`, `skunk` do not). Exit
   codes: 0 clean, 1 hits, 2 a guard failure (bad allow regex, missing perl or find).
   Exceptions go in `scripts/check-no-yupay.allow`, one regex per line, with a reason —
-  today only Click's `merchant_trans_id`. `CHECK_NO_YUPAY_ALLOW` overrides the allow-file
-  path (the tests use it). Tests, docs and infra are not scanned and may name YuPay.
+  today Click's `merchant_trans_id` and the public API's refund reason `supplier_refused` (a
+  contract value). `CHECK_NO_YUPAY_ALLOW` overrides the allow-file path (the tests use it). Tests, docs and infra are not scanned and may name YuPay.
 - **Tests and docs travel with code.** A ported module brings its YuPay tests, adapted, and a
   `README.md` describing what it owns here (not YuPay's README verbatim). (Spec §4; ADR-0002.)
 

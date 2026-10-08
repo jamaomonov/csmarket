@@ -74,20 +74,36 @@ async def test_site_order_must_have_no_key(db_session: AsyncSession) -> None:
         await db_session.commit()
 
 
-async def test_client_order_id_is_unique_per_key(db_session: AsyncSession) -> None:
+async def test_client_order_id_is_unique_per_owner_across_keys(db_session: AsyncSession) -> None:
     user = await make_user(db_session)
-    key = _key(user.id)
-    db_session.add(key)
+    old = _key(user.id, revoked_at=datetime.now(UTC))
+    new = _key(user.id)
+    db_session.add_all([old, new])
     await db_session.commit()
     item, fx = await make_item_and_rate(db_session)
-    api = {
-        "channel": "api",
-        "api_key_id": key.id,
-        "client_order_id": "c-1",
-        "pricing_profile": "retail",
-    }
-    await build_order(db_session, user=user, item=item, fx=fx, **api)
+    api = {"channel": "api", "client_order_id": "c-1", "pricing_profile": "retail"}
+    await build_order(db_session, user=user, item=item, fx=fx, api_key_id=old.id, **api)
     await db_session.commit()
-    await build_order(db_session, user=user, item=item, fx=fx, **api)
-    with pytest.raises(IntegrityError, match="uq_orders_api_key_id_client_order_id"):
+    await build_order(db_session, user=user, item=item, fx=fx, api_key_id=new.id, **api)
+    with pytest.raises(IntegrityError, match="uq_orders_user_client_order_id"):
+        await db_session.commit()
+
+
+async def test_another_owner_may_reuse_a_client_order_id(db_session: AsyncSession) -> None:
+    item, fx = await make_item_and_rate(db_session)
+    for _ in range(2):
+        user = await make_user(db_session)
+        key = _key(user.id)
+        db_session.add(key)
+        await db_session.commit()
+        await build_order(
+            db_session,
+            user=user,
+            item=item,
+            fx=fx,
+            channel="api",
+            api_key_id=key.id,
+            client_order_id="c-1",
+            pricing_profile="retail",
+        )
         await db_session.commit()

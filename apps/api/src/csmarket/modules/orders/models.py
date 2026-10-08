@@ -161,7 +161,7 @@ class Order(Base):
     api_key_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("api_keys.id", ondelete="RESTRICT"), nullable=True
     )
-    #: The client's own id for an ``api`` order; unique per key.
+    #: The client's own id for an ``api`` order; unique per owner (any of their keys).
     client_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     #: The key's tariff when the order was placed (``retail`` / ``cost``).
     pricing_profile: Mapped[str | None] = mapped_column(String(8), nullable=True)
@@ -198,21 +198,20 @@ class Order(Base):
             " NULL AND client_order_id IS NOT NULL AND pricing_profile IS NOT NULL)",
             name="channel_fields",
         ),
-        UniqueConstraint(
-            "api_key_id", "client_order_id", name="uq_orders_api_key_id_client_order_id"
+        # An API order's ``client_order_id`` is unique per owner, whichever key placed it: a
+        # reissued key must not buy twice under an old id (plan B ruling, Task 5 review).
+        Index(
+            "uq_orders_user_client_order_id",
+            "user_id",
+            "client_order_id",
+            unique=True,
+            postgresql_where=text("channel = 'api'"),
         ),
         CheckConstraint(f"refunded_to IN {_in(REFUND_TARGETS)}", name="refunded_to"),
         Index("ix_orders_status_next_check", "status", "next_check_at"),
         Index("ix_orders_user_created", "user_id", text("created_at DESC")),
         # text_pattern_ops: the admin search's prefix LIKE uses it under any collation.
         Index("ix_orders_number", "number", postgresql_ops={"number": "text_pattern_ops"}),
-        # ``GET /public/orders``: the key's orders, newest first.
-        Index(
-            "ix_orders_api_key_created",
-            "api_key_id",
-            text("created_at DESC"),
-            postgresql_where=text("api_key_id IS NOT NULL"),
-        ),
         # The dashboard's windows (M4b R9).
         Index("ix_orders_paid_at", "paid_at", postgresql_where=text("paid_at IS NOT NULL")),
         Index(

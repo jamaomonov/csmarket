@@ -5691,7 +5691,7 @@
         "type": "object"
       },
       "PublicOrderOut": {
-        "description": "An API order as its key sees it \u2014 never the source market or its ids.",
+        "description": "An API order as its owner sees it \u2014 never the source market or its ids.",
         "properties": {
           "client_order_id": {
             "title": "Client Order Id",
@@ -5758,7 +5758,7 @@
         "type": "object"
       },
       "PublicOrdersPage": {
-        "description": "A page of the key's orders, newest first.",
+        "description": "A page of the account's API orders, newest first.",
         "properties": {
           "items": {
             "items": {
@@ -12770,7 +12770,7 @@
     },
     "/api/v1/public/orders": {
       "get": {
-        "description": "The key's orders, newest first, 50 a page; ``status`` keeps one status.",
+        "description": "The owner's API orders (every key they had), newest first, 50 a page; ``status`` keeps\none status.",
         "operationId": "list_orders_api_v1_public_orders_get",
         "parameters": [
           {
@@ -12853,13 +12853,13 @@
             "description": "`rate_limited`, with `Retry-After`"
           }
         },
-        "summary": "Orders of this key",
+        "summary": "API orders of this account",
         "tags": [
           "public-api"
         ]
       },
       "post": {
-        "description": "Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n``buying``). A repeated ``client_order_id`` writes nothing and answers 409\n``duplicate_client_order_id`` with that order in ``order``. Counts against the\n10 per minute ``order`` limit.",
+        "description": "Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n``buying``). A ``client_order_id`` already used by this account (with this key or an earlier\none) writes nothing and answers 409\n``duplicate_client_order_id`` with that order in ``order``. Counts against the\n10 per minute ``order`` limit.",
         "operationId": "place_order_api_v1_public_orders_post",
         "parameters": [
           {
@@ -12930,7 +12930,7 @@
     },
     "/api/v1/public/orders/{order_id}": {
       "get": {
-        "description": "The order ``order_id`` placed with this key; another key's or an unknown one is 404.",
+        "description": "The API order ``order_id`` of this key's owner (any of their keys); another user's or\nan unknown one is 404.",
         "operationId": "get_order_api_v1_public_orders__order_id__get",
         "parameters": [
           {
@@ -12993,7 +12993,7 @@
             "description": "`rate_limited`, with `Retry-After`"
           }
         },
-        "summary": "One order of this key",
+        "summary": "One API order of this account",
         "tags": [
           "public-api"
         ]

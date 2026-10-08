@@ -91,8 +91,8 @@ ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
 
 ## Buying over the public API (`api_checkout.py`, `public_view.py`; plan B 2026-10-09)
 
-- `create_api_order` — `POST /public/orders`, one transaction: a repeated `client_order_id`
-  returns the stored order (409 `duplicate_client_order_id` at the route); gates
+- `create_api_order` — `POST /public/orders`, one transaction: a `client_order_id` the owner
+  already used (with this key or an earlier one) returns the stored order (409 `duplicate_client_order_id` at the route); gates
   `buying_disabled` (409), `usd_wallet_disabled` (403), `trade_link_invalid` (422); the item by
   id (`item_not_found`); the offer from `public_api.api_offers` (Skinslink + LIS-SKINS, the key's
   tariff) — the sealed `offer_id` or the cheapest within `max_price_usd` (`offer_gone`,
@@ -100,12 +100,14 @@ ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
   newest rate snapshot, `fx_uplift_pct = 0`, `price_usd` = the charged price — ruling R1) in a
   savepoint; `debit_purchase_usd`; `mark_paid(provider="usd_wallet")`; commit. A short balance
   rolls everything back (the route answers 402 `insufficient_balance`). Two requests racing on
-  one `client_order_id` meet at `uq_orders_api_key_id_client_order_id`: the loser waits for the
+  one `client_order_id` meet at the partial unique index `uq_orders_user_client_order_id`
+  (`user_id`, `client_order_id` where `channel = 'api'`, 0028): the loser waits for the
   winner's commit, rolls back its savepoint and returns the winner — one order, one debit.
 - `public_view` — the partner's status (`buying` / `trade_sent` / `delivered` / `refunded`, spec
   §5), the refund reason map, `trade {offer_sent_at = trade_sent_at, accepted_at, release_at}`,
-  and the key's reads (`get_for_key`, `list_for_key`: newest first, 50 a page, a `status` filter
-  that mirrors the mapping in SQL; index `ix_orders_api_key_created`, 0028).
+  and the owner's reads (`get_for_owner`, `list_for_owner`: the user's `api` orders from every
+  key they had, newest first, 50 a page, a `status` filter that mirrors the mapping in SQL; on
+  `ix_orders_user_created`). `api_key_id` stays on the order as the key that placed it.
 
 ## Paying (`paying.py`, ruling R8)
 
