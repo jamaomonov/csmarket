@@ -26,7 +26,10 @@ async def test_a_sale_and_its_items_round_trip(db_session: AsyncSession) -> None
             select(SaleItem).where(SaleItem.sale_id == sale.id).order_by(SaleItem.asset_id)
         )
     ).all()
-    assert [(i.asset_id, i.price_uzs) for i in items] == [("100", 149_600), ("101", 5_600)]
+    assert [(i.asset_id, i.price_uzs) for i in items] == [
+        ("100", Decimal(149_600)),
+        ("101", Decimal(5_600)),
+    ]
     assert sale.number.startswith("S")
     assert sale.items_uzs == Decimal(155_200)
 

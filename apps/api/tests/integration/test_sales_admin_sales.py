@@ -76,7 +76,7 @@ async def test_the_settings_audit_records_each_changed_field(
     doc = {**base, "balance_bonus_pct": "3.00", "card_min_uzs": 55_000}
     r = await integration_client.put(f"{BASE}/settings", json=doc, headers={**headers, **KEY})
     assert r.status_code == 200
-    payload = (await db_session.scalars(select(AdminAuditLog.payload))).one()
+    payload: dict[str, str] = (await db_session.scalars(select(AdminAuditLog.payload))).one()
     assert set(payload) == {"balance_bonus_pct", "card_min_uzs"}
     assert payload["balance_bonus_pct"].endswith('-> "3.00"')
     assert payload["card_min_uzs"].endswith("-> 55000")

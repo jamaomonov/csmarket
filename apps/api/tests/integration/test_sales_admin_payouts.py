@@ -96,9 +96,11 @@ async def test_the_card_number_leaves_only_through_the_audited_reveal(
         "sales.payout.paid",
     ]
     assert HUMO not in repr(await _audit(db_session))
-    replays = (
-        await db_session.execute(text("SELECT response_body::text FROM idempotent_responses"))
-    ).scalars()
+    replays: list[str] = list(
+        (
+            await db_session.execute(text("SELECT response_body::text FROM idempotent_responses"))
+        ).scalars()
+    )
     assert all(HUMO not in body for body in replays)
 
 

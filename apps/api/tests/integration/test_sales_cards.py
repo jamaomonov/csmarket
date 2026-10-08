@@ -14,6 +14,7 @@ from csmarket.modules.sales.cards import (
     reveal_number,
 )
 from csmarket.modules.sales.models import PayoutCard
+from csmarket.modules.sales.rules import CardType
 from httpx import AsyncClient
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,7 +61,12 @@ async def test_a_card_number_is_stored_encrypted_and_never_logged_or_listed(
 
 async def test_a_fourth_live_card_is_cards_limit(db_session: AsyncSession) -> None:
     user_id = (await make_user(db_session)).id  # read now: a rollback expires the row
-    for number, kind in ((HUMO, "humo"), (UZCARD, "uzcard"), (VISA, "uzum_visa")):
+    cards: tuple[tuple[str, CardType], ...] = (
+        (HUMO, "humo"),
+        (UZCARD, "uzcard"),
+        (VISA, "uzum_visa"),
+    )
+    for number, kind in cards:
         await add_card(db_session, user_id=user_id, card_type=kind, raw_number=number)
     await db_session.commit()
     with pytest.raises(ConflictError) as caught:
