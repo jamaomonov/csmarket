@@ -109,7 +109,17 @@
       "cancel": "Cancel",
       "groupSteam": "Steam",
       "groupAccount": "Account",
-      "notSet": "Not set"
+      "notSet": "Not set",
+      "add": "Add",
+      "setupTitle": "Profile setup",
+      "setupProgress": "{done} of {total}",
+      "stepDone": "done",
+      "stepLeft": "not set",
+      "steps": {
+        "steam": "Steam account",
+        "tradeLink": "Working trade link",
+        "email": "Confirmed email"
+      }
     }
   },
   "balance": {
@@ -537,6 +547,7 @@
     "loadFailed": "Could not load your cards. Refresh the page.",
     "delete": "Delete {name}",
     "deleteShort": "Delete",
-    "deleteFailed": "Could not delete the card. Try again."
+    "deleteFailed": "Could not delete the card. Try again.",
+    "count": "{count, plural, one {# card} other {# cards}}"
   }
 }

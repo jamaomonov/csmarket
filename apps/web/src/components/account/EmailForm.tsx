@@ -1,12 +1,12 @@
 "use client";
 
 import { SessionApiError } from "@csmarket/api-client";
-import { Button } from "@csmarket/ui";
-import { CheckCircle2, Mail } from "lucide-react";
+import { Button, Input } from "@csmarket/ui";
+import { CheckCircle2, Mail, Pencil, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type SyntheticEvent } from "react";
 
-import { SettingsCard } from "./SettingsCard";
+import { Notice, SettingsCard } from "./SettingsCard";
 
 import { session } from "@/lib/api";
 
@@ -29,14 +29,15 @@ function waitLeft(lastSent: number | null): number {
   return lastSent === null ? 0 : Math.max(0, lastSent + COOLDOWN_MS - Date.now());
 }
 
+/** «Email» on the profile: the address and whether it is confirmed, the form on demand. */
 export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps) {
   const t = useTranslations("web.account.email");
   const p = useTranslations("web.account.profile");
   const generic = useTranslations("web.account.tradeLink.errors");
   const [value, setValue] = useState(email ?? "");
   const [busy, setBusy] = useState(false);
-  // A saved address reads as text with «Изменить»; the form opens to add or change one.
-  const [editing, setEditing] = useState(email === null);
+  // The address reads as text (or «Добавить» when there is none); the form opens on demand.
+  const [editing, setEditing] = useState(false);
   const [shown, setShown] = useState(email);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [lastSent, setLastSent] = useState<number | null>(sentAt ? Date.parse(sentAt) : null);
@@ -72,7 +73,7 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
       setOutcome(deferred ? "wait" : changed ? "sent" : "saved");
       if (changed) setLastSent(Date.now());
       setShown(next);
-      setEditing(next === null);
+      setEditing(false);
       onChange();
     } catch (err) {
       setOutcome(err instanceof SessionApiError && err.status === 422 ? "invalid" : "failed");
@@ -106,15 +107,17 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
   }
 
   const unverified = shown !== null && !verified;
+  const done = shown !== null && verified;
   const notes = (
     <>
-      {unverified ? (
-        <div className="mt-3 flex flex-col items-start gap-2 text-sm">
+      {unverified && !editing ? (
+        <Notice tone="warn">
           <p>{t("unverified", { email: shown })}</p>
           <Button
             type="button"
             variant="secondary"
             size="sm"
+            className="mt-2"
             disabled={busy || cooling}
             onClick={() => {
               void resend();
@@ -122,22 +125,40 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
           >
             {t("resend")}
           </Button>
-        </div>
+        </Notice>
       ) : null}
-      {outcome === "saved" ? <p className="text-success mt-3 text-sm">{t("saved")}</p> : null}
-      {outcome === "sent" ? <p className="text-success mt-3 text-sm">{t("sent")}</p> : null}
-      {outcome === "wait" ? <p className="text-fg-muted mt-3 text-sm">{t("resendSoon")}</p> : null}
-      {outcome === "invalid" ? <p className="text-danger mt-3 text-sm">{t("invalid")}</p> : null}
+      {outcome === "saved" ? (
+        <Notice tone="ok" role="status">
+          {t("saved")}
+        </Notice>
+      ) : null}
+      {outcome === "sent" ? (
+        <Notice tone="ok" role="status">
+          {t("sent")}
+        </Notice>
+      ) : null}
+      {outcome === "wait" ? (
+        <Notice tone="muted" role="status">
+          {t("resendSoon")}
+        </Notice>
+      ) : null}
+      {outcome === "invalid" ? (
+        <Notice tone="bad" role="alert">
+          {t("invalid")}
+        </Notice>
+      ) : null}
       {outcome === "failed" ? (
-        <p className="text-danger mt-3 text-sm">{generic("generic")}</p>
+        <Notice tone="bad" role="alert">
+          {generic("generic")}
+        </Notice>
       ) : null}
     </>
   );
   const title = (
     <>
       {t("title")}
-      {shown !== null && verified ? (
-        <CheckCircle2 className="text-success size-[18px]" aria-label={t("verified")} role="img" />
+      {done ? (
+        <CheckCircle2 className="text-success size-4" aria-label={t("verified")} role="img" />
       ) : null}
     </>
   );
@@ -145,17 +166,26 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
     return (
       <SettingsCard
         icon={Mail}
+        done={done}
         title={title}
-        hint={<span className="block truncate">{shown}</span>}
+        hint={shown === null ? t("hint") : <span className="block truncate">{shown}</span>}
         aside={
           <Button
             variant="secondary"
+            size="sm"
+            className="max-sm:size-9 max-sm:px-0"
             onClick={() => {
+              setValue(shown ?? "");
               setOutcome(null);
               setEditing(true);
             }}
           >
-            {p("edit")}
+            {shown === null ? (
+              <Plus className="size-4" aria-hidden />
+            ) : (
+              <Pencil className="size-3.5" aria-hidden />
+            )}
+            <span className="max-sm:sr-only">{shown === null ? p("add") : p("edit")}</span>
           </Button>
         }
       >
@@ -169,9 +199,9 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
         onSubmit={(e) => {
           void save(e);
         }}
-        className="mt-4 flex flex-col gap-3 sm:flex-row"
+        className="mt-3 flex flex-col gap-2 sm:flex-row"
       >
-        <input
+        <Input
           type="email"
           inputMode="email"
           autoComplete="email"
@@ -180,25 +210,29 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
             setValue(e.target.value);
             setOutcome(null);
           }}
+          placeholder="name@example.com"
           aria-label={t("title")}
-          className="border-border bg-bg flex-1 rounded-md border px-3 py-2 text-sm"
+          className="min-w-0 flex-1"
+          // Opened by the visitor's own click on «Добавить» / «Изменить»: typing starts at once.
+          autoFocus
         />
-        <Button type="submit" disabled={busy}>
-          {t("save")}
-        </Button>
-        {shown !== null ? (
+        <div className="flex gap-2">
+          <Button type="submit" disabled={busy} className="flex-1 sm:flex-none">
+            {t("save")}
+          </Button>
           <Button
             type="button"
             variant="secondary"
+            className="flex-1 sm:flex-none"
             onClick={() => {
-              setValue(shown);
+              setValue(shown ?? "");
               setOutcome(null);
               setEditing(false);
             }}
           >
             {p("cancel")}
           </Button>
-        ) : null}
+        </div>
       </form>
       {notes}
     </SettingsCard>

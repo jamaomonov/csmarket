@@ -2,7 +2,7 @@
 
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { SettingsCard } from "./SettingsCard";
@@ -40,27 +40,29 @@ export function CardsList({ locale }: CardsListProps) {
     );
   }
   let body;
+  let hint: string | undefined;
   if (cards.isPending) {
-    body = <div aria-busy className="bg-surface-2 mt-3 h-14 animate-pulse rounded-lg" />;
+    body = <div aria-busy className="bg-surface-2 mt-3 h-16 animate-pulse rounded-lg" />;
   } else if (cards.isError) {
-    body = <p className="text-fg-muted mt-1 text-sm">{t("loadFailed")}</p>;
+    hint = t("loadFailed");
   } else if (cards.data.items.length === 0) {
-    body = <p className="text-fg-muted mt-1 text-sm">{t("empty")}</p>;
+    hint = t("empty");
   } else {
+    hint = t("count", { count: cards.data.items.length });
     body = (
-      <div className="mt-3 flex flex-col gap-2">
+      <>
         {forget.isError ? (
-          <p role="alert" className="text-danger text-sm">
+          <p role="alert" className="text-danger mt-3 text-sm">
             {t("deleteFailed")}
           </p>
         ) : null}
-        <ul className="flex flex-col gap-2">
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {cards.data.items.map((c) => {
             const name = `${CARD_BRANDS[c.type]} •••• ${c.last4}`;
             return (
               <li
                 key={c.id}
-                className="bg-surface-2 flex items-center gap-3 rounded-lg py-2 pl-2 pr-3"
+                className="border-border bg-bg/40 flex items-center gap-3 rounded-lg border py-2 pl-2 pr-1.5"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- static brand logos from /public */}
                 <img
@@ -68,32 +70,34 @@ export function CardsList({ locale }: CardsListProps) {
                   alt=""
                   width={60}
                   height={36}
-                  className="h-9 w-auto shrink-0 rounded"
+                  className="h-9 w-auto shrink-0 rounded-md"
                 />
-                <span className="min-w-0 flex-1">
+                <span className="min-w-0 flex-1 leading-tight">
                   <span className="block text-sm font-semibold">{CARD_BRANDS[c.type]}</span>
-                  <span className="num text-fg-muted block text-sm">•••• {c.last4}</span>
+                  <span className="num text-fg-muted mt-0.5 block text-[13px]">•••• {c.last4}</span>
                 </span>
                 <Button
-                  variant="secondary"
+                  variant="ghost"
                   size="sm"
                   aria-label={t("delete", { name })}
+                  title={t("deleteShort")}
                   disabled={forget.isPending}
+                  className="hover:text-danger size-9 px-0"
                   onClick={() => {
                     forget.mutate(c.id);
                   }}
                 >
-                  {t("deleteShort")}
+                  <Trash2 className="size-4" aria-hidden />
                 </Button>
               </li>
             );
           })}
         </ul>
-      </div>
+      </>
     );
   }
   return (
-    <SettingsCard icon={CreditCard} title={t("title")}>
+    <SettingsCard icon={CreditCard} title={t("title")} hint={hint}>
       {body}
     </SettingsCard>
   );

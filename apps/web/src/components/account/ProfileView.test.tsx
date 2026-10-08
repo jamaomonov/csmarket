@@ -50,7 +50,7 @@ describe("ProfileView", () => {
     renderView();
     expect(screen.getByRole("heading", { level: 2, name: "Player" })).toBeInTheDocument();
     expect(screen.getByText("P")).toBeInTheDocument(); // no Steam avatar: the initial
-    expect(screen.getByText(/На csmarket с 28 сентября 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/На csmarket с 28 сент\. 2026/)).toBeInTheDocument();
     expect(screen.getByText("76561198000000777")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Профиль в Steam" })).toHaveAttribute(
       "href",
@@ -74,6 +74,25 @@ describe("ProfileView", () => {
     expect(screen.getByText("p@example.com")).toBeInTheDocument();
     expect(screen.getByText("Реферальный код", { selector: "h3" })).toBeInTheDocument();
     expect(screen.getByText("Скоро")).toBeInTheDocument();
+  });
+
+  it("«Настройка профиля»: what is set, and links to what is left", () => {
+    auth.value = signedIn();
+    renderView();
+    expect(screen.getByText("1 из 3")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Настройка профиля" })).toHaveAttribute(
+      "aria-valuenow",
+      "1",
+    );
+    expect(screen.getByRole("link", { name: /Рабочая ссылка на обмен/ })).toHaveAttribute(
+      "href",
+      "#trade-link",
+    );
+    expect(screen.getByRole("link", { name: /Подтверждённая почта/ })).toHaveAttribute(
+      "href",
+      "#email",
+    );
+    expect(screen.queryByRole("link", { name: /Аккаунт Steam/ })).toBeNull();
   });
 });
 

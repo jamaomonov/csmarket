@@ -43,6 +43,7 @@ describe("CardsList", () => {
     view();
     expect(await screen.findByText("•••• 9015")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Мои карты" })).toBeInTheDocument();
+    expect(screen.getByText("1 карта")).toBeInTheDocument();
     expect(document.querySelector('img[src="/payout/humo.png"]')).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Удалить Humo •••• 9015" }));
     await waitFor(() => {

@@ -116,12 +116,14 @@ export function SellView({ locale, config }: SellViewProps) {
     body = (
       <div className="flex max-w-2xl flex-col gap-3">
         <p className="text-fg-muted">{t("needTradeLink")}</p>
-        <TradeLinkForm
-          initial={{ trade_link: null, verdict: null, reason: null }}
-          onChange={() => {
-            void refreshMe();
-          }}
-        />
+        <div className="bg-surface rounded-xl">
+          <TradeLinkForm
+            initial={{ trade_link: null, verdict: null, reason: null }}
+            onChange={() => {
+              void refreshMe();
+            }}
+          />
+        </div>
       </div>
     );
   } else if (inventory.isError || !inventory.data) {

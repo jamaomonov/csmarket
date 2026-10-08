@@ -42,10 +42,15 @@ describe("EmailForm", () => {
     vi.useRealTimers();
   });
 
-  it("without an email: the form and what it is for", () => {
+  it("without an email: what it is for and «Добавить», which opens the form", () => {
     setup();
     expect(screen.getByText("Для писем о заказах.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Отправить ещё раз" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+    expect(screen.getByRole("textbox")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 
   it("saves a new address with a key and says a letter is on its way", async () => {
@@ -102,6 +107,7 @@ describe("EmailForm", () => {
   it("asks to check the address on a 422, and editing clears it", async () => {
     api.apiPatch.mockRejectedValue(new SessionApiError(422, "Unprocessable", null));
     const { onChange } = setup();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "a@b" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {

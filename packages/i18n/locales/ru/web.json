@@ -109,7 +109,17 @@
       "cancel": "Отмена",
       "groupSteam": "Steam",
       "groupAccount": "Аккаунт",
-      "notSet": "Не указана"
+      "notSet": "Не указана",
+      "add": "Добавить",
+      "setupTitle": "Настройка профиля",
+      "setupProgress": "{done} из {total}",
+      "stepDone": "готово",
+      "stepLeft": "не указано",
+      "steps": {
+        "steam": "Аккаунт Steam",
+        "tradeLink": "Рабочая ссылка на обмен",
+        "email": "Подтверждённая почта"
+      }
     }
   },
   "balance": {
@@ -537,6 +547,7 @@
     "loadFailed": "Не получилось загрузить карты. Обновите страницу.",
     "delete": "Удалить {name}",
     "deleteShort": "Удалить",
-    "deleteFailed": "Не получилось удалить карту. Попробуйте ещё раз."
+    "deleteFailed": "Не получилось удалить карту. Попробуйте ещё раз.",
+    "count": "{count, plural, one {# карта} few {# карты} many {# карт} other {# карты}}"
   }
 }

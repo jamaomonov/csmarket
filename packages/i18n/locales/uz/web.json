@@ -109,7 +109,17 @@
       "cancel": "Bekor qilish",
       "groupSteam": "Steam",
       "groupAccount": "Akkaunt",
-      "notSet": "Koʻrsatilmagan"
+      "notSet": "Koʻrsatilmagan",
+      "add": "Qoʻshish",
+      "setupTitle": "Profilni sozlash",
+      "setupProgress": "{done} / {total}",
+      "stepDone": "tayyor",
+      "stepLeft": "koʻrsatilmagan",
+      "steps": {
+        "steam": "Steam akkaunti",
+        "tradeLink": "Ishlaydigan almashuv havolasi",
+        "email": "Tasdiqlangan pochta"
+      }
     }
   },
   "balance": {
@@ -537,6 +547,7 @@
     "loadFailed": "Kartalarni yuklab boʻlmadi. Sahifani yangilang.",
     "delete": "{name} ni oʻchirish",
     "deleteShort": "Oʻchirish",
-    "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring."
+    "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring.",
+    "count": "{count} ta karta"
   }
 }
