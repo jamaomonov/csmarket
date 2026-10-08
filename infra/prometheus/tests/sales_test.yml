@@ -1,0 +1,37 @@
+# Unit tests for ../alerts/sales.yml. Run from the repo root:
+#
+#   docker run --rm -v "$PWD/infra/prometheus:/p" --entrypoint promtool \
+#     prom/prometheus test rules /p/tests/sales_test.yml
+rule_files:
+  - ../alerts/sales.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_sale_payouts_overdue{job="scheduler"}'
+        values: "0 0 2 2 2 2 2 2 2 2"
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: SalePayoutsOverdue
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: SalePayoutsOverdue
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "2 card payout(s) payable for over 48 h"
+              description: "Open «Выкуп» → «Заявки на выплату» → «К выплате» in the admin and pay them by hand, or reject one with a reason (its money then goes to the seller's balance).\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#overdue"
+
+  # The API and the worker export the gauge too but never set it: only the scheduler's counts.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_sale_payouts_overdue{job="api"}'
+        values: "3 3 3 3 3 3 3 3 3 3"
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: SalePayoutsOverdue
+        exp_alerts: []

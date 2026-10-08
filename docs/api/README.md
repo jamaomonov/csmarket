@@ -406,10 +406,50 @@ OpenAPI schema.
   **200** `{ok: true}`; 403 `bad_signature` for a bad or missing `sign`; 400 `bad_body` for a
   body that is not a JSON object; **404 while Skinslink is off**.
 - The signature covers only the id, so the body is **not trusted**: a purchase webhook queues a
-  check and the worker reads the status from Skinslink's API; a deposit webhook (the future
-  sell side) is answered and ignored.
+  check and the worker reads the status from Skinslink's API; a deposit webhook (`trade_id`, ADR-0016) queues a check
+  of the sale its `merchant_tx_id` names.
 - No `Idempotency-Key`: a repeat queues one more check, and checks are idempotent. Details:
   `apps/api/src/csmarket/modules/skinslink/README.md`, `docs/runbooks/skinslink.md`.
+
+## Selling skins (ADR-0016)
+
+Signed in unless said. Money in whole soʻm as strings; a card by its type and last four.
+
+- `GET /sell/config` — **public**: `enabled`, `balance_bonus_pct`, `card_fee_pct`,
+  `card_min_uzs`, `min_sum_uzs` (a hint; `null` without a rate), `max_cards`.
+- `GET /sell/inventory?refresh=1` — the items Skinslink accepts now at our prices, `max_items`,
+  `min_sum_uzs`. Kept 5 minutes per user and trade link; `refresh` asks again. Rate-limited
+  (`ip_guard` bucket `sell-inventory`). An advisory external call (AGENTS §11): 6 s, a 120 s
+  breaker. 409 `sales_disabled` / `trade_link_missing` / `trade_link_bad` / `steam_refused`
+  (+ `reason`: Skinslink's Steam account code); 503 `sales_unavailable` / `rate_unavailable`
+  (no fresh soʻm rate).
+- `POST /sell` — **`Idempotency-Key` required** (16..160); a replay answers 200 with the stored
+  sale whatever the body. Body: `asset_ids`, `payout` (`{to: "balance"}` |
+  `{to: "card", card_id}` | `{to: "card", new_card: {type, number}}`),
+  `expected_payout_uzs` (the cart's figure; another is 409 `prices_changed`). Bucket
+  `sell-create`. One `create-deposit` call (10 s) after the sale is committed. 409
+  `prices_changed`, `below_minimum` (+ `min_sum_uzs`), `below_card_minimum`
+  (+ `card_min_uzs`), `too_many_items` (+ `max_items`), `steam_refused`, `cards_limit`,
+  `sales_disabled`, `trade_link_*`; 422 `card_invalid` (the number is never echoed); 404 a
+  card that is not mine; 503 `sales_unavailable` / `rate_unavailable`. 201 `SaleOut`; a timeout
+  answers `status: "creating"`. Two different keys make two sales (known gap,
+  `docs/runbooks/sales.md`).
+- `GET /sales?cursor=`, `GET /sales/{number}` (`S…`; 404 for anyone else's),
+  `GET /sales/pending` (`pending_uzs`: balance sales still in Steam's protection).
+- `GET /payout-cards`; `DELETE /payout-cards/{id}` — `Idempotency-Key` required, but **no replay
+  is stored**: the soft delete is its own replay (a repeat is a no-op 204).
+- Socket: `{"type": "sale.updated", "number"}` on the order socket.
+- Admin (`/admin/sales`): `GET /payouts?status=` (tabs with `counts`), `GET /payouts/{id}`,
+  `POST /payouts/{id}/reveal {purpose: show|copy}` (**keyless on purpose**: it changes only the
+  audit trail and a replay would store the number; audited on every call),
+  `POST /payouts/{id}/paid {note?}` and `POST /payouts/{id}/reject {reason}` (keyed, audited;
+  409 `payout_not_payable` unless `to_pay`; a reject credits the pre-fee amount to the seller's
+  balance and shows the reason to the seller), `GET`/`PUT /settings` (keyed, audited
+  `sales.settings.save`), `GET ""?status=&q=`, `GET /{number}`. The dashboard gains
+  `payouts: {to_pay_count, to_pay_uzs}`.
+- **422 shape (app-wide)**: a `RequestValidationError` handler (`bootstrap.py`) answers
+  `{"detail": [{type, loc, msg}]}` and drops pydantic's `input` and `ctx`, so a request body
+  (a card number, a trade link) is never echoed.
 
 ## Admin pricing and dashboard (M4b)
 
