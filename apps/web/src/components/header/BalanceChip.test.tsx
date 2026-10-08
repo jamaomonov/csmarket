@@ -22,12 +22,12 @@ vi.mock("@/lib/sales", () => ({
   getPendingSales: api.getPendingSales,
 }));
 
-function view() {
+function view(compact = false) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-        <BalanceChip />
+        <BalanceChip compact={compact} />
       </NextIntlClientProvider>
     </QueryClientProvider>,
   );
@@ -51,5 +51,13 @@ describe("BalanceChip", () => {
     view();
     expect(await screen.findByText(/86\s700/)).toBeInTheDocument();
     expect(screen.queryByTestId("balance-hold")).toBeNull();
+  });
+
+  it("on phones, fits one line: an hourglass and the sum, the words kept for screen readers", async () => {
+    api.getPendingSales.mockResolvedValue({ pending_uzs: "136350" });
+    view(true);
+    const hold = await screen.findByTestId("balance-hold");
+    expect(hold).toHaveTextContent(/^\+136\s350$/);
+    expect(hold).toHaveAccessibleName(/\+136\s350 сум в холде/);
   });
 });

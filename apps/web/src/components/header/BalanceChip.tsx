@@ -2,7 +2,7 @@
 
 import { formatUzs } from "@csmarket/utils";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Hourglass, Plus } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { Link } from "@/i18n/navigation";
@@ -35,13 +35,18 @@ export function BalanceChip({ compact = false }: { compact?: boolean }) {
           <Link
             href={`${TRADES}?type=hold`}
             data-testid="balance-hold"
-            className="text-warning num flex items-center text-[11px] font-medium hover:underline"
+            aria-label={t("inHold", { sum: formatUzs(locale, hold) })}
+            className="text-warning num flex items-center gap-0.5 whitespace-nowrap text-[11px] font-medium hover:underline"
           >
-            {t("inHold", {
-              sum: compact
-                ? formatUzs(locale, hold).replace(/\s\D+$/, "")
-                : formatUzs(locale, hold),
-            })}
+            {compact ? (
+              // Phones: no room for words — an hourglass and the sum.
+              <>
+                <Hourglass aria-hidden className="size-3" strokeWidth={2.5} />+
+                {formatUzs(locale, hold).replace(/\s\D+$/, "")}
+              </>
+            ) : (
+              t("inHold", { sum: formatUzs(locale, hold) })
+            )}
             <ChevronRight aria-hidden className="size-3" strokeWidth={2.5} />
           </Link>
         ) : null}
