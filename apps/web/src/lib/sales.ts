@@ -11,6 +11,16 @@ export type SaleStatus =
 
 export type PayoutStatus = "waiting_hold" | "to_pay" | "paid" | "rejected" | "canceled";
 
+/** `SaleItemOut`: an item at the price the seller saw; wear and rarity from our catalogue. */
+export interface SaleItemOut {
+  asset_id: string;
+  name: string;
+  image_url: string | null;
+  exterior: string | null;
+  rarity_color: string | null;
+  price_uzs: string;
+}
+
 /** `SaleOut`. Money in whole soʻm, as strings. */
 export interface SaleOut {
   number: string;
@@ -21,7 +31,7 @@ export interface SaleOut {
   bonus_uzs: string;
   fee_uzs: string;
   payout_uzs: string;
-  items: { asset_id: string; name: string; image_url: string | null; price_uzs: string }[];
+  items: SaleItemOut[];
   /** The Steam offer to accept, while `offered`. */
   offer: { url: string; bot_name: string | null; expires_at: string | null } | null;
   /** When the money is due, while `hold`. */
@@ -67,6 +77,8 @@ export interface SalesPage {
 }
 
 export const SALES_KEY = ["sales", "list"] as const;
+/** The sales still in Steam's 7-day protection. */
+export const HOLD_SALES_KEY = ["sales", "list", "hold"] as const;
 export const PENDING_KEY = ["sales", "pending"] as const;
 export const saleKey = (number: string) => ["sales", "one", number] as const;
 
@@ -75,9 +87,12 @@ export function getSale(number: string): Promise<SaleOut> {
   return session.apiGet<SaleOut>(`/api/v1/sales/${encodeURIComponent(number)}`);
 }
 
-/** `GET /sales?cursor=`. */
-export function listSales(cursor?: string): Promise<SalesPage> {
-  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+/** `GET /sales?cursor=&status=hold`. */
+export function listSales(cursor?: string, status?: "hold"): Promise<SalesPage> {
+  const params = new URLSearchParams();
+  if (cursor) params.set("cursor", cursor);
+  if (status) params.set("status", status);
+  const query = params.size > 0 ? `?${params.toString()}` : "";
   return session.apiGet<SalesPage>(`/api/v1/sales${query}`);
 }
 

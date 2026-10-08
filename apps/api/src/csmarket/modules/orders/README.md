@@ -131,7 +131,12 @@ returns the fake under the flag, so the worker's buys and every sweep run agains
 
 `get_owned` (owner only; malformed or top-up-shaped numbers are "not found"),
 `list_for_user` (20 a page, keyset on `created_at DESC, id DESC`, cancelled and expired
-unpaid orders hidden; orders, item images and trades in **one** query) and `order_out`. A
+unpaid orders hidden; orders, item images and trades in **one** query) and `order_out`
+(`OrderRow.out()`). The same join reads the catalogue item's `exterior` and `rarity_color`;
+`float_value` and `paint_seed` are the chosen offer's, copied at checkout into the order's own
+nullable columns (migration `0025_order_float_seed`; `NULL` before it, or when the market
+named none — a float outside 0..1 is dropped). `float_value` goes out without trailing zeros
+(`"0.6214"`). A
 `pending` order past `expires_at` reads `cancelled` (not payable) before the expiry sweep
 writes it. `skin_trade_out(order, trade)` maps the trade to the buyer's five states
 (`buying`, `offer_sent`, `accepted`, `released`, `failed`) and a `reason_code` (a refund

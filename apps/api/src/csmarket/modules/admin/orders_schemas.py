@@ -127,6 +127,9 @@ class AdminOrderFull(BaseModel):
     fx_uplift_pct: str
     #: ``price_usd`` − what Waxpeer charged (``bought_units`` / 1000), else − ``cost_usd``.
     margin_usd: str
+    #: The bought offer's float (trailing zeros dropped) and pattern; ``None`` on older orders.
+    float_value: str | None
+    paint_seed: int | None
     #: ``…?partner=<id>&token=••••<last 2>``.
     trade_link_masked: str | None
     paid_with: str | None

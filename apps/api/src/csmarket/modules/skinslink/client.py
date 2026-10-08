@@ -262,6 +262,19 @@ def _code(body: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _fields(body: Mapping[str, Any]) -> list[str]:
+    """The fields a validation refusal names (``field:code``), for the log. Field names and
+    validator tags only — never a value."""
+    data = body.get("data")
+    if not isinstance(data, list):
+        return []
+    return [
+        f"{entry.get('field')}:{entry.get('code')}"[:80]
+        for entry in data[:5]
+        if isinstance(entry, Mapping) and isinstance(entry.get("field"), str)
+    ]
+
+
 class _PageRebuildingError(Exception):
     """A catalogue page is being rebuilt: ask again after ``seconds``."""
 
@@ -355,7 +368,13 @@ class SkinslinkClient:
         if status >= 400 or body.get("success") is not True:
             record_skinslink_call(endpoint, "refused")
             code = _code(body)
-            log.info("skinslink.refused", endpoint=endpoint, status=status, code=code)
+            log.info(
+                "skinslink.refused",
+                endpoint=endpoint,
+                status=status,
+                code=code,
+                fields=_fields(body),
+            )
             raise SkinslinkError("refused", status=status, code=code)
         record_skinslink_call(endpoint, "ok")
         return body.get("data")

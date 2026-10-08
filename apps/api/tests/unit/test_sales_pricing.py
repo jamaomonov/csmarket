@@ -90,15 +90,16 @@ def test_min_prices_are_99_percent_rounded_down_to_a_tenth_of_a_cent() -> None:
     }
 
 
-def test_the_minimum_in_soum_is_one_dollar_priced_as_an_item() -> None:
-    assert min_sum_uzs(S, RATE) == Decimal(11_300)
+def test_the_minimum_in_soum_is_the_minimum_priced_as_an_item() -> None:
+    # 1.10 $ − (0.10 + 0.005) margin = 0.995 $ × 12650.5 = 12 587.25 → 12 500
+    assert min_sum_uzs(S, RATE) == Decimal(12_500)
 
 
 def test_the_defaults_ship_switched_off() -> None:
     assert S.enabled is False
     assert (S.card_min_uzs, S.min_sum_usd, S.balance_bonus_pct) == (
         30_000,
-        Decimal(1),
+        Decimal("1.10"),
         Decimal(2),
     )
 
@@ -117,9 +118,11 @@ def test_a_bad_margin_table_is_refused(margin: list[dict[str, str]]) -> None:
         SaleSettings.model_validate({**S.model_dump(mode="json"), "margin": margin})
 
 
-def test_a_minimum_under_skinslinks_one_dollar_is_refused() -> None:
+@pytest.mark.parametrize("minimum", ["0.5", "1"])
+def test_a_minimum_not_above_skinslinks_one_dollar_is_refused(minimum: str) -> None:
+    """Skinslink refuses a deposit of exactly 1 $ (400 ``gt``)."""
     with pytest.raises(ValidationError):
-        SaleSettings.model_validate({**S.model_dump(mode="json"), "min_sum_usd": "0.5"})
+        SaleSettings.model_validate({**S.model_dump(mode="json"), "min_sum_usd": minimum})
 
 
 @given(

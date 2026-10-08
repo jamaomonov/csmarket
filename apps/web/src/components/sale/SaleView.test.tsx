@@ -12,6 +12,8 @@ import { SaleView } from "./SaleView";
 import type * as SalesModule from "@/lib/sales";
 import type { SaleOut } from "@/lib/sales";
 
+import { saleOut } from "@/test/sales";
+
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
 const api = vi.hoisted(() => ({ getSale: vi.fn() }));
@@ -41,6 +43,8 @@ const SALE: SaleOut = {
       asset_id: "100",
       name: "AK-47 | Redline (Field-Tested)",
       image_url: null,
+      exterior: "FT",
+      rarity_color: "#eb4b4b",
       price_uzs: "149600",
     },
   ],
@@ -75,7 +79,7 @@ describe("SaleView", () => {
   it("asks to accept the trade with the offer's link and the bot", async () => {
     api.getSale.mockResolvedValue(SALE);
     view();
-    expect(await screen.findByText("Примите обмен")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Примите обмен" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Открыть обмен в Steam" })).toHaveAttribute(
       "href",
       SALE.offer?.url,
@@ -108,7 +112,7 @@ describe("SaleView", () => {
     });
     view();
     expect(await screen.findByText("Деньги отправлены")).toBeInTheDocument();
-    expect(screen.getByText(/•••• 9015/)).toBeInTheDocument();
+    expect(screen.getByText(/отправлены на карту .*•••• 9015/)).toBeInTheDocument();
   });
 
   it("shows why a card payout was rejected and that the money is on the balance", async () => {
@@ -161,7 +165,7 @@ describe("SaleView", () => {
   it("an offered sale without an offer yet asks to open Steam, with no blanks", async () => {
     api.getSale.mockResolvedValue({ ...SALE, offer: null });
     view();
-    expect(await screen.findByText("Примите обмен")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Примите обмен" })).toBeInTheDocument();
     expect(screen.getByText(/откройте Steam/)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/прислал|до\s*\./);
   });
@@ -170,5 +174,17 @@ describe("SaleView", () => {
     api.getSale.mockRejectedValue(new SessionApiError(404, "Not Found", null));
     view();
     expect(await screen.findByText("Продажа не найдена.")).toBeInTheDocument();
+  });
+
+  it("while held: the money's day as the badge, the 7 days as the current step, wear on items", async () => {
+    api.getSale.mockResolvedValue(saleOut("S7K2M9QX"));
+    view();
+    expect(await screen.findByTestId("status-badge")).toHaveTextContent("Деньги придут 15 окт.");
+    const steps = screen
+      .getAllByRole("listitem")
+      .map((li) => li.getAttribute("data-state"))
+      .filter((x) => x !== null);
+    expect(steps).toEqual(["done", "now", "todo"]);
+    expect(screen.getByText("Немного поношенное")).toBeInTheDocument();
   });
 });

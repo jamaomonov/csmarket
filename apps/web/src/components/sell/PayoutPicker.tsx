@@ -13,7 +13,7 @@ export const CARD_BRANDS: Readonly<Record<CardType, string>> = {
   humo: "Humo",
   uzum_visa: "Uzum Visa",
 };
-const LOGO: Readonly<Record<CardType, string>> = {
+export const CARD_LOGOS: Readonly<Record<CardType, string>> = {
   uzcard: "/payout/uzcard.png",
   humo: "/payout/humo.png",
   uzum_visa: "/payout/uzum-visa.png",
@@ -104,7 +104,7 @@ export function PayoutPicker({ config, cards, value, onPick }: PayoutPickerProps
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element -- static brand logos from /public
                 <img
-                  src={LOGO[o.type]}
+                  src={CARD_LOGOS[o.type]}
                   alt=""
                   width={60}
                   height={36}

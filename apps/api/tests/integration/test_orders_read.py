@@ -4,6 +4,7 @@ newest first by cursor, one query per page."""
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from csmarket.core import clock
@@ -59,6 +60,42 @@ async def test_the_owner_reads_the_order(
     assert (body["paid_with"], body["refunded_to"], body["paid_at"]) == (None, None, None)
     assert "trade_link" not in body
     assert "cost_units" not in body
+
+
+async def test_an_old_order_reads_null_float_seed_and_look(
+    integration_client: AsyncClient,
+    headers: dict[str, str],
+    buyer: User,
+    db_session: AsyncSession,
+) -> None:
+    order = await make_order(db_session, user=buyer)
+    body = (await integration_client.get(f"{ORDERS}/{order.number}", headers=headers)).json()
+    assert (body["float_value"], body["paint_seed"]) == (None, None)
+    assert (body["exterior"], body["rarity_color"]) == (None, None)
+
+
+async def test_the_order_shows_its_float_seed_and_the_catalogue_look(
+    integration_client: AsyncClient,
+    headers: dict[str, str],
+    buyer: User,
+    db_session: AsyncSession,
+) -> None:
+    item, fx = await make_item_and_rate(db_session)
+    item.exterior, item.rarity_color = "FT", "#eb4b4b"
+    order = await build_order(
+        db_session,
+        user=buyer,
+        item=item,
+        fx=fx,
+        float_value=Decimal("0.621400"),
+        paint_seed=661,
+    )
+    await db_session.commit()
+    one = (await integration_client.get(f"{ORDERS}/{order.number}", headers=headers)).json()
+    assert (one["float_value"], one["paint_seed"]) == ("0.6214", 661)
+    assert (one["exterior"], one["rarity_color"]) == ("FT", "#eb4b4b")
+    [listed] = (await integration_client.get(MINE, headers=headers)).json()["items"]
+    assert (listed["float_value"], listed["exterior"]) == ("0.6214", "FT")
 
 
 async def test_a_paid_order_shows_its_trade(

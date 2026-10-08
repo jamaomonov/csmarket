@@ -3,12 +3,12 @@
 import { SessionApiError } from "@csmarket/api-client";
 import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
 import { Button, buttonVariants } from "@csmarket/ui";
-import { assertNever, formatUzs } from "@csmarket/utils";
+import { assertNever } from "@csmarket/utils";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useEffect, type ReactNode } from "react";
 
-import { OrderItem } from "./OrderItem";
+import { OrderHero } from "./OrderHero";
 import { OrderPay } from "./OrderPay";
 import { SkinTradeCard } from "./SkinTradeCard";
 import { useArrivalKassa, useKassaAutoOpen } from "./useOrderArrival";
@@ -16,6 +16,8 @@ import { useArrivalKassa, useKassaAutoOpen } from "./useOrderArrival";
 import type { Locale } from "@csmarket/i18n";
 
 import { ENTRIES_KEY } from "@/components/balance/EntriesList";
+import { StatusBadge } from "@/components/trades/StatusBadge";
+import { TradeSteps, type TradeStep } from "@/components/trades/TradeSteps";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY } from "@/lib/balance";
@@ -29,6 +31,7 @@ import {
   type SkinTradeOut,
 } from "@/lib/orders";
 import { TRADES } from "@/lib/paths";
+import { orderBadge, orderReceived } from "@/lib/trade-status";
 
 const isNotFound = (err: unknown): boolean => err instanceof SessionApiError && err.status === 404;
 
@@ -120,13 +123,16 @@ export function OrderView({ locale, number }: OrderViewProps) {
   const data = order.data;
   return (
     <Panel state={data.status}>
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 className="text-2xl font-bold">{t("number", { number: data.number })}</h1>
-        <span data-testid="order-status-label" className="text-fg-muted text-sm font-semibold">
-          {t(`status.${data.status}`)}
-        </span>
+      <header className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-3xl font-bold">{t("number", { number: data.number })}</h1>
+          <span data-testid="order-status-label">
+            <StatusBadge badge={orderBadge(data)} />
+          </span>
+        </div>
+        <OrderSubtitle order={data} locale={locale} />
       </header>
-      <OrderItem order={data} price={formatUzs(locale, data.price_uzs)} />
+      <OrderHero order={data} locale={locale} />
       <OrderBody
         order={data}
         locale={apiLocale}
@@ -139,6 +145,51 @@ export function OrderView({ locale, number }: OrderViewProps) {
   );
 }
 
+/** When the order was placed, and how it was paid. */
+function OrderSubtitle({ order, locale }: { order: OrderOut; locale: string }) {
+  const t = useTranslations("web.trades");
+  const when = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(order.created_at));
+  const paid =
+    order.paid_with === "wallet"
+      ? t("paidBalance")
+      : order.paid_with && order.paid_with !== "mock"
+        ? order.paid_with.charAt(0).toUpperCase() + order.paid_with.slice(1)
+        : null;
+  return <p className="text-fg-dim text-sm">{paid ? `${when} · ${paid}` : when}</p>;
+}
+
+/** Paid → offer sent → received, with the times we know. A failed trade has no steps. */
+function useOrderSteps(order: OrderOut, locale: string): TradeStep[] | null {
+  const t = useTranslations("web.trades.steps");
+  const state = order.trade?.state ?? "buying";
+  if (state === "failed" || order.status === "failed" || order.status === "returned") return null;
+  const at = (iso: string | null) =>
+    iso
+      ? new Intl.DateTimeFormat(locale, {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(new Date(iso))
+      : null;
+  const received = orderReceived(order);
+  const sent = received || state === "offer_sent";
+  return [
+    { label: t("paid"), note: at(order.paid_at), state: "done" },
+    { label: t("sent"), state: sent ? "done" : "now" },
+    {
+      label: t("received"),
+      note: received ? at(order.delivered_at) : null,
+      state: received ? "done" : sent ? "now" : "todo",
+    },
+  ];
+}
+
 interface OrderBodyProps {
   order: OrderOut;
   locale: Locale;
@@ -148,6 +199,7 @@ interface OrderBodyProps {
 
 function OrderBody({ order, locale, kassa, onPaid }: OrderBodyProps) {
   const t = useTranslations("web.orders");
+  const steps = useOrderSteps(order, locale);
   switch (order.status) {
     case "pending":
       return order.payable ? (
@@ -168,7 +220,13 @@ function OrderBody({ order, locale, kassa, onPaid }: OrderBodyProps) {
     case "delivered":
     case "failed":
     case "returned":
-      return <SkinTradeCard trade={order.trade ?? BUYING} locale={locale} />;
+      return (
+        <SkinTradeCard
+          trade={order.trade ?? BUYING}
+          locale={locale}
+          steps={steps ? <TradeSteps steps={steps} /> : null}
+        />
+      );
     default:
       return assertNever(order.status);
   }
@@ -181,7 +239,7 @@ interface PanelProps {
 }
 
 function Panel({ state, children }: PanelProps) {
-  const t = useTranslations("web.orders");
+  const t = useTranslations("web.trades");
   return (
     <section
       data-testid="order-status"
@@ -189,10 +247,10 @@ function Panel({ state, children }: PanelProps) {
       aria-live="polite"
       className="flex flex-col items-start gap-5"
     >
-      {children}
-      <Link href={TRADES} className="text-fg-muted hover:text-fg text-sm">
-        {t("title")}
+      <Link href={TRADES} className="text-fg-dim hover:text-fg text-sm">
+        ← {t("back")}
       </Link>
+      {children}
     </section>
   );
 }

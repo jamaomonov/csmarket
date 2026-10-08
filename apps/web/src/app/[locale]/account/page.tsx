@@ -20,7 +20,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ locale
   const t = await getTranslations("web.account");
   return (
     <main id="main-content" className="min-w-0 flex-1">
-      <h1 className="mb-6 text-3xl font-bold">{t("title")}</h1>
+      <h1 className="sr-only">{t("title")}</h1>
       <ProfileView locale={locale} />
     </main>
   );

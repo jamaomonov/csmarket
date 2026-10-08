@@ -146,6 +146,10 @@ class SaleItemOut(BaseModel):
     asset_id: str
     name: str
     image_url: str | None
+    #: The catalogue's exterior code (``FT``); ``null`` for an item we do not list.
+    exterior: str | None
+    #: The catalogue's rarity colour (``#d32ce6``); ``null`` as ``exterior``.
+    rarity_color: str | None
     price_uzs: str
 
 

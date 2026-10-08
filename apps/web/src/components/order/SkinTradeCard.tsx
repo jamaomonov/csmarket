@@ -2,16 +2,9 @@
 
 import { buttonVariants } from "@csmarket/ui";
 import { assertNever } from "@csmarket/utils";
-import {
-  CheckCircle2,
-  ExternalLink,
-  Loader2,
-  SearchCheck,
-  ShieldCheck,
-  Wallet,
-} from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, SearchCheck, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 
 import type { SkinTradeOut, TradeReason } from "@/lib/orders";
 
@@ -35,16 +28,18 @@ function useMinuteTick(active: boolean): void {
 interface SkinTradeCardProps {
   trade: SkinTradeOut;
   locale: string;
+  /** The order's steps, shown under the title. */
+  steps?: ReactNode;
 }
 
 /**
  * The Steam trade on the order page: buying → the offer (open it in Steam, from whom,
- * accept by when) → received, protected by Steam until a date; or, failed, where the
+ * accept by when) → received; or, failed, where the
  * money went. A purchase we are checking (`reason_code: "support"`) says so whatever its
  * state — under the offer when there is one to accept, instead of the state otherwise —
  * and a refund is mentioned only when `refunded_to` says it happened.
  */
-export function SkinTradeCard({ trade, locale }: SkinTradeCardProps) {
+export function SkinTradeCard({ trade, locale, steps = null }: SkinTradeCardProps) {
   const t = useTranslations("web.orders.trade");
   useMinuteTick(trade.state === "offer_sent");
   const review = trade.reason_code === "support";
@@ -56,11 +51,12 @@ export function SkinTradeCard({ trade, locale }: SkinTradeCardProps) {
   return (
     <section
       aria-labelledby={titleId}
-      className="border-border bg-surface flex w-full flex-col gap-3 rounded-lg border p-5"
+      className="bg-surface flex w-full flex-col gap-4 rounded-xl p-5"
     >
       <h2 id={titleId} className="text-fg-dim text-xs font-semibold uppercase tracking-wider">
         {t("title")}
       </h2>
+      {steps}
       {review && !actionable ? null : <TradeBody trade={trade} locale={locale} />}
       {review ? (
         <p className="flex items-center gap-2">
@@ -93,18 +89,10 @@ function TradeBody({ trade, locale }: SkinTradeCardProps) {
     case "accepted":
     case "released":
       return (
-        <div className="flex flex-col gap-1">
-          <p className="text-success flex items-center gap-2 font-semibold">
-            <CheckCircle2 aria-hidden className="h-4 w-4" />
-            {t("accepted")}
-          </p>
-          {trade.state === "accepted" && trade.release_date ? (
-            <p className="text-fg-dim flex items-center gap-1.5 text-sm">
-              <ShieldCheck aria-hidden className="h-4 w-4" />
-              {t("protectedUntil", { date: formatDate(locale, trade.release_date) })}
-            </p>
-          ) : null}
-        </div>
+        <p className="text-success flex items-center gap-2 font-semibold">
+          <CheckCircle2 aria-hidden className="h-4 w-4" />
+          {t("accepted")}
+        </p>
       );
     case "failed":
       // What failed means for the money is said beside it (`Refunded` / no promise).
@@ -189,8 +177,4 @@ function formatTime(locale: string, iso: string): string {
   return new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(
     new Date(iso),
   );
-}
-
-function formatDate(locale: string, iso: string): string {
-  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(new Date(iso));
 }

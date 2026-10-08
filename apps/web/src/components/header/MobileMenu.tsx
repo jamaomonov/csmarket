@@ -9,11 +9,19 @@ import { AppLink } from "./AccountMenu";
 import { ACCOUNT_NAV, MAIN_NAV, type NavEntry } from "./nav";
 import { SteamIcon } from "../icons/SteamIcon";
 
+import type { ReactNode } from "react";
+
 import { getPathname, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 
+interface MobileMenuProps {
+  locale: string;
+  /** Signed in on a phone: the user's avatar opens the menu in place of ☰. */
+  avatar?: ReactNode;
+}
+
 /** Phones: one ☰ menu with the nav, the languages and the account. */
-export function MobileMenu({ locale }: { locale: string }) {
+export function MobileMenu({ locale, avatar }: MobileMenuProps) {
   const t = useTranslations("web.nav");
   const { status, signInHref, signOut } = useAuth();
   const pathname = usePathname();
@@ -62,10 +70,14 @@ export function MobileMenu({ locale }: { locale: string }) {
     <Dropdown
       align="end"
       triggerLabel={t("menu")}
-      triggerClassName="size-10 justify-center px-0"
+      triggerClassName={
+        avatar
+          ? "size-10 justify-center overflow-hidden rounded-full bg-transparent p-0"
+          : "size-10 justify-center px-0"
+      }
       menuClassName="w-[calc(100vw-2rem)] max-w-sm"
       LinkComponent={AppLink}
-      label={<Menu className="size-5" aria-hidden />}
+      label={avatar ?? <Menu className="size-5" aria-hidden />}
       items={items}
     />
   );

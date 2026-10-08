@@ -1,20 +1,10 @@
-import {
-  ArrowLeftRight,
-  CreditCard,
-  Gift,
-  HandCoins,
-  ReceiptText,
-  Star,
-  Store,
-  User,
-} from "lucide-react";
+import { ArrowLeftRight, Gift, HandCoins, ReceiptText, Star, Store, User } from "lucide-react";
 
 import type { ComponentType } from "react";
 
 import { SteamIcon } from "@/components/icons/SteamIcon";
 import {
   ACCOUNT,
-  CARDS,
   HOME,
   REFERRAL,
   REVIEWS,
@@ -37,7 +27,6 @@ export interface NavEntry {
     | "profile"
     | "transactions"
     | "trades"
-    | "cards"
     | "referral";
   href: string;
   icon: NavIcon;
@@ -56,9 +45,11 @@ export const ACCOUNT_NAV: NavEntry[] = [
   { key: "profile", href: ACCOUNT, icon: User },
   { key: "transactions", href: TRANSACTIONS, icon: ReceiptText },
   { key: "trades", href: TRADES, icon: ArrowLeftRight },
-  { key: "cards", href: CARDS, icon: CreditCard },
   { key: "referral", href: REFERRAL, icon: Gift },
 ];
+
+/** «Обмены» is the list and every order and sale page it opens. */
+const TRADE_PATHS = ["/orders", "/account/sales"];
 
 /** The market is the catalogue and everything under it. */
 const MARKET_PATHS = ["/category", "/weapon", "/item"];
@@ -68,5 +59,6 @@ export function isCurrent(entry: NavEntry, pathname: string): boolean {
   if (entry.href === HOME) {
     return pathname === HOME || MARKET_PATHS.some((p) => pathname.startsWith(`${p}/`));
   }
+  if (entry.href === TRADES && TRADE_PATHS.some((p) => pathname.startsWith(`${p}/`))) return true;
   return pathname === entry.href || pathname.startsWith(`${entry.href}/`);
 }

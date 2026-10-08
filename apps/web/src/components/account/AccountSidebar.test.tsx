@@ -1,14 +1,12 @@
 // @vitest-environment jsdom
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
 import { AccountSidebar } from "./AccountSidebar";
 
-const signOut = vi.fn(() => Promise.resolve());
-vi.mock("@/lib/auth", () => ({ useAuth: () => ({ status: "signed_in", signOut }) }));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
     <a href={href} {...rest}>
@@ -19,7 +17,7 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 describe("AccountSidebar", () => {
-  it("lists the profile sections with icons, marks the current one and signs out", () => {
+  it("lists the profile sections with icons, marks the current one", () => {
     render(
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
         <AccountSidebar />
@@ -31,7 +29,6 @@ describe("AccountSidebar", () => {
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
       ["Обмены", "/account/trades"],
-      ["Мои карты", "/account/cards"],
       ["Реферал", "/account/referral"],
     ]);
     for (const a of links) expect(a.querySelector("svg")).not.toBeNull();
@@ -40,7 +37,7 @@ describe("AccountSidebar", () => {
       "page",
     );
     expect(within(nav).getByRole("link", { name: "Профиль" })).not.toHaveAttribute("aria-current");
-    fireEvent.click(within(nav).getByRole("button", { name: "Выйти" }));
-    expect(signOut).toHaveBeenCalledOnce();
+    // «Выйти» lives in the account menu, not among the profile's tabs.
+    expect(within(nav).queryByRole("button", { name: "Выйти" })).toBeNull();
   });
 });

@@ -65,7 +65,7 @@ async def test_config_when_on_gives_the_minimum_in_soum(
     await enable_sales(db_session)
     await add_rate(db_session)
     body = (await integration_client.get("/api/v1/sell/config")).json()
-    assert (body["enabled"], body["min_sum_uzs"]) == (True, "11300")
+    assert (body["enabled"], body["min_sum_uzs"]) == (True, "12500")
 
 
 async def test_the_inventory_is_priced_in_soum_from_the_cbu_rate(
@@ -94,7 +94,7 @@ async def test_the_inventory_is_priced_in_soum_from_the_cbu_rate(
         ("100", "149600", "rifles"),
         ("101", "5600", None),
     ]  # dearest first; the 0.005 $ item prices to 0 soʻm and is left out
-    assert (body["max_items"], body["min_sum_uzs"]) == (50, "11300")
+    assert (body["max_items"], body["min_sum_uzs"]) == (50, "12500")
     # Skinslink's own prices never reach the browser: no USD field, only the soʻm price
     assert all(
         set(i)

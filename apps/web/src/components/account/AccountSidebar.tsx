@@ -1,29 +1,26 @@
 "use client";
 
 import { cn } from "@csmarket/ui";
-import { LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ACCOUNT_NAV, isCurrent } from "@/components/header/nav";
 import { Link, usePathname } from "@/i18n/navigation";
-import { useAuth } from "@/lib/auth";
 
 const item = (on: boolean) =>
   cn(
-    "flex shrink-0 items-center gap-3 whitespace-nowrap rounded-lg px-3.5 py-2.5 text-[15px] font-medium transition-colors",
-    on ? "bg-surface text-fg" : "text-fg-muted hover:bg-surface hover:text-fg",
+    "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-[15px] font-medium transition-colors",
+    on ? "border-accent text-fg" : "text-fg-muted hover:text-fg border-transparent",
   );
 
-/** The profile's sections: a column on desktop, a scrolling row of tabs on phones. */
+/** The profile's sections as tabs along the top, a scrolling row on phones; «Выйти» is in the account menu. */
 export function AccountSidebar() {
   const t = useTranslations("web.nav");
   const a = useTranslations("web.account");
   const pathname = usePathname();
-  const { status, signOut } = useAuth();
   return (
     <nav
       aria-label={a("profile.nav")}
-      className="-mx-4 flex gap-1 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:mx-0 lg:w-60 lg:shrink-0 lg:flex-col lg:self-start lg:overflow-visible lg:px-0"
+      className="border-border -mx-4 flex gap-6 overflow-x-auto border-b px-4 [scrollbar-width:none] sm:mx-0 sm:px-0"
     >
       {ACCOUNT_NAV.map((entry) => {
         // The profile is /account itself, not everything under it.
@@ -40,19 +37,6 @@ export function AccountSidebar() {
           </Link>
         );
       })}
-      {status === "signed_in" && (
-        <button
-          type="button"
-          onClick={() => void signOut()}
-          className={cn(
-            item(false),
-            "lg:border-border lg:mt-3 lg:rounded-none lg:border-t lg:pt-4",
-          )}
-        >
-          <LogOut className="size-[18px]" aria-hidden />
-          {t("signOut")}
-        </button>
-      )}
     </nav>
   );
 }

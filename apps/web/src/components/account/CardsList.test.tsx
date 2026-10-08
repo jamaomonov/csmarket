@@ -41,7 +41,10 @@ describe("CardsList", () => {
     });
     api.deleteCard.mockResolvedValue(undefined);
     view();
-    expect(await screen.findByText("Humo •••• 9015")).toBeInTheDocument();
+    expect(await screen.findByText("•••• 9015")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Мои карты" })).toBeInTheDocument();
+    expect(screen.getByText("1 карта")).toBeInTheDocument();
+    expect(document.querySelector('img[src="/payout/humo.png"]')).not.toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Удалить Humo •••• 9015" }));
     await waitFor(() => {
       expect(api.deleteCard).toHaveBeenCalledWith("c1", expect.stringMatching(/^web-card-/));

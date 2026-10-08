@@ -46,3 +46,20 @@ const KNOWN = new Set(["trade_link_invalid", "trade_link_not_yours"]);
 export function errorKey(code: string | undefined): string {
   return code && KNOWN.has(code) ? code : "generic";
 }
+
+/**
+ * A saved trade link for reading: the host and the query with the token hidden behind dots
+ * (`steamcommunity.com`, `?partner=1&token=••••••`), or null when it does not parse.
+ */
+export function shortTradeLink(url: string): { host: string; query: string } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  const partner = parsed.searchParams.get("partner");
+  if (partner === null) return null;
+  const token = parsed.searchParams.has("token") ? "&token=••••••" : "";
+  return { host: parsed.host, query: `?partner=${partner}${token}` };
+}

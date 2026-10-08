@@ -234,6 +234,9 @@ def _order_full(
             "price_uzs": wire_uzs(order.price_uzs),
             "fx_rate": f"{fx_rate:f}",
             "fx_uplift_pct": f"{order.fx_uplift_pct:f}",
+            "float_value": None
+            if order.float_value is None
+            else format(order.float_value.normalize(), "f"),
             "margin_usd": _usd(order.price_usd - spent),
             # An erased link is stored masked already (and would not parse again).
             "trade_link_masked": order.trade_link

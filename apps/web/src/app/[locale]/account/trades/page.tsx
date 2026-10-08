@@ -9,7 +9,7 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const TYPES: readonly TradesType[] = ["purchases", "sales"];
+const TYPES: readonly TradesType[] = ["purchases", "sales", "hold"];
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: t("title"), robots: { index: false, follow: false } };
 }
 
-/** «Обмены»: per-account, so it renders client-side; `?type=purchases|sales` filters. */
+/** «Обмены»: per-account, so it renders client-side; `?type=purchases|sales|hold` filters. */
 export default async function TradesPage({ params, searchParams }: Props) {
   const { locale } = await params;
   if (hasLocale(routing.locales, locale)) {

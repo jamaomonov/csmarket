@@ -12,11 +12,15 @@ const api = vi.hoisted(() => ({ apiPut: vi.fn(), apiPost: vi.fn() }));
 vi.mock("@/lib/api", () => ({ session: api }));
 const LINK = "https://steamcommunity.com/tradeoffer/new/?partner=39734273&token=AbCdEf12";
 
-function setup(initial: string | null = null, verdict: "ok" | null = null) {
+function setup(initial: string | null = null, verdict: "ok" | null = null, collapseEmpty = false) {
   const onChange = vi.fn();
   render(
     <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-      <TradeLinkForm initial={{ trade_link: initial, verdict, reason: null }} onChange={onChange} />
+      <TradeLinkForm
+        initial={{ trade_link: initial, verdict, reason: null }}
+        onChange={onChange}
+        collapseEmpty={collapseEmpty}
+      />
     </NextIntlClientProvider>,
   );
   return { onChange };
@@ -101,6 +105,12 @@ describe("TradeLinkForm", () => {
       new SessionApiError(422, "Unprocessable", { code: "trade_link_not_yours" }),
     );
     setup(LINK, "ok");
+    // Saved and working: the link as text (token hidden), a tick, «Изменить» opens the form.
+    expect(screen.getByText(/partner=39734273&token=••••••/)).toBeInTheDocument();
+    expect(screen.queryByText(/AbCdEf12/)).toBeNull();
+    expect(screen.getByRole("img", { name: /Ссылка работает/ })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить" }));
     expect(screen.getByText(/Ссылка работает/)).toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: LINK.replace("39734273", "39734274") },
@@ -124,5 +134,15 @@ describe("TradeLinkForm", () => {
     });
     fireEvent.change(screen.getByRole("textbox"), { target: { value: LINK } });
     expect(screen.queryByText(/Это не ссылка на обмен Steam/)).not.toBeInTheDocument();
+  });
+
+  it("in the profile, no link yet: «Добавить» opens the form and «Отмена» closes it", () => {
+    setup(null, null, true);
+    expect(screen.getByText(/Сюда продавец отправит скин/)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить" }));
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Отмена" }));
+    expect(screen.queryByRole("textbox")).toBeNull();
   });
 });

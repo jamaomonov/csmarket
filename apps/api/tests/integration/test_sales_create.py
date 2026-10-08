@@ -217,12 +217,12 @@ async def test_under_the_minimum_sum_is_409(
     assert (r.status_code, r.json()["code"], r.json()["min_sum_uzs"]) == (
         409,
         "below_minimum",
-        "11300",
+        "12500",
     )
     assert await db_session.scalar(select(func.count()).select_from(Sale)) == 0
 
 
-async def test_ten_cheap_items_reaching_the_minimum_are_accepted(
+async def test_cheap_items_reaching_the_minimum_are_accepted(
     db_session: AsyncSession,
     integration_client: AsyncClient,
     customer_headers: Headers,
@@ -231,16 +231,39 @@ async def test_ten_cheap_items_reaching_the_minimum_are_accepted(
 ) -> None:
     fake.inventories.clear()
     fake.inventories.append(
+        Inventory(items=[inv_item(str(n), "0.10") for n in range(11)], max_items=50)
+    )
+    headers = await _seller(db_session, integration_client, customer_headers)
+    body = {
+        "asset_ids": [str(n) for n in range(11)],
+        "payout": {"to": "balance"},
+        "expected_payout_uzs": 12_300,  # 11 × 1 100, +2 % = 12 342 → 12 300 (1.10 $)
+    }
+    r = await integration_client.post(URL, json=body, headers={**headers, **_key()})
+    assert r.status_code == 201, r.text
+
+
+async def test_exactly_one_dollar_is_under_the_minimum(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    fake: FakeDepositClient,
+) -> None:
+    """Skinslink refuses a deposit of exactly 1 $ (400 ``gt``, 2026-10-08)."""
+    fake.inventories.clear()
+    fake.inventories.append(
         Inventory(items=[inv_item(str(n), "0.10") for n in range(10)], max_items=50)
     )
     headers = await _seller(db_session, integration_client, customer_headers)
     body = {
         "asset_ids": [str(n) for n in range(10)],
         "payout": {"to": "balance"},
-        "expected_payout_uzs": 11_200,  # 10 × 1 100, +2 % = 11 220 → 11 200
+        "expected_payout_uzs": 11_200,
     }
     r = await integration_client.post(URL, json=body, headers={**headers, **_key()})
-    assert r.status_code == 201, r.text
+    assert (r.status_code, r.json()["code"]) == (409, "below_minimum")
+    assert fake.deposit_calls == []
 
 
 async def test_a_card_payout_under_the_card_minimum_is_409(

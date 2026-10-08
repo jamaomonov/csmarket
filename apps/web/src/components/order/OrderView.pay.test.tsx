@@ -79,10 +79,13 @@ describe("OrderView — paying", () => {
     ).toBeInTheDocument();
     expect(state()).toBe("pending");
     expect(screen.getByText("Ждёт оплаты")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "AK-47 | Redline (Field-Tested)" })).toHaveAttribute(
+    // The weapon above, the skin's own name (a link to it) below, the wear as a chip.
+    expect(screen.getByText("AK-47")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Redline" })).toHaveAttribute(
       "href",
       "/item/ak-47-redline-field-tested",
     );
+    expect(screen.getByText("После полевых испытаний")).toBeInTheDocument();
     expect(screen.getByText("Phase 2")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: /^Оплатить 381\s000 сум$/ })).toBeVisible();
     expect(m.get).toHaveBeenCalledWith(`/api/v1/orders/${number}`);

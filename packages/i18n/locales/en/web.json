@@ -34,7 +34,8 @@
     "transactions": "Transactions",
     "referral": "Referral",
     "trades": "Trades",
-    "cards": "My cards"
+    "cards": "My cards",
+    "inHold": "+{sum} on hold"
   },
   "auth": {
     "callback": {
@@ -103,7 +104,22 @@
       "yourAccount": "Your account",
       "referralTitle": "Referral code",
       "referralHint": "The referral programme is coming soon.",
-      "nav": "Profile sections"
+      "nav": "Profile sections",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "groupSteam": "Steam",
+      "groupAccount": "Account",
+      "notSet": "Not set",
+      "add": "Add",
+      "setupTitle": "Profile setup",
+      "setupProgress": "{done} of {total}",
+      "stepDone": "done",
+      "stepLeft": "not set",
+      "steps": {
+        "steam": "Steam account",
+        "tradeLink": "Working trade link",
+        "email": "Confirmed email"
+      }
     }
   },
   "balance": {
@@ -318,7 +334,6 @@
       "openOffer": "Open the trade in Steam",
       "seller": "Seller",
       "accepted": "Received",
-      "protectedUntil": "Steam protects the trade until {date}",
       "refunded": "The trade didn't happen — the money is back on your balance.",
       "soldOut": "Someone bought this skin before you — the money is back on your balance. Pick another one in the market.",
       "tryLater": "Couldn't buy the skin — the money is on your balance. Try again in a few minutes.",
@@ -344,7 +359,31 @@
     "all": "All",
     "purchases": "Purchases",
     "sales": "Sales",
-    "salesEmpty": "No sales yet."
+    "salesEmpty": "No sales yet.",
+    "hold": "On hold",
+    "empty": "No trades yet.",
+    "holdEmpty": "Nothing is waiting to be credited.",
+    "purchase": "Purchase",
+    "sale": "Sale",
+    "moneyOn": "Money on {date}",
+    "refunded": "Didn't happen · money on the balance",
+    "paidBalance": "from the balance",
+    "toBalance": "to the balance",
+    "toCard": "to the card",
+    "returned": "refunded",
+    "more": "Show more",
+    "back": "Back to trades",
+    "pattern": "Pattern",
+    "steps": {
+      "paid": "Paid",
+      "sent": "Trade sent",
+      "received": "Received",
+      "accepted": "Trade accepted",
+      "protection": "Steam protection",
+      "days7": "7 days",
+      "balance": "Money on the balance",
+      "card": "Money on the card"
+    }
   },
   "deposit": {
     "title": "Top up your balance",
@@ -508,6 +547,7 @@
     "loadFailed": "Could not load your cards. Refresh the page.",
     "delete": "Delete {name}",
     "deleteShort": "Delete",
-    "deleteFailed": "Could not delete the card. Try again."
+    "deleteFailed": "Could not delete the card. Try again.",
+    "count": "{count, plural, one {# card} other {# cards}}"
   }
 }

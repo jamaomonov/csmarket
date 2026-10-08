@@ -13,7 +13,7 @@ import { SteamIcon } from "./icons/SteamIcon";
 
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { ACCOUNT, HOME } from "@/lib/paths";
+import { HOME } from "@/lib/paths";
 
 interface HeaderProps {
   locale: string;
@@ -66,10 +66,11 @@ export function Header({ locale }: HeaderProps) {
             <span className="md:hidden">
               <BalanceChip compact />
             </span>
+            {/* Phones: the avatar is the menu — no separate ☰. */}
             {user && (
-              <Link href={ACCOUNT} aria-label={t("profile")} className="md:hidden">
-                <UserAvatar user={user} size={36} />
-              </Link>
+              <span className="md:hidden">
+                <MobileMenu locale={locale} avatar={<UserAvatar user={user} size={40} />} />
+              </span>
             )}
             <span className="hidden md:block">
               <AccountMenu />
@@ -78,7 +79,7 @@ export function Header({ locale }: HeaderProps) {
         ) : (
           <SignIn locale={locale} />
         )}
-        <span className="xl:hidden">
+        <span className={signedIn && user ? "hidden md:block xl:hidden" : "xl:hidden"}>
           <MobileMenu locale={locale} />
         </span>
       </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { errorKey, verdictMessage } from "./trade-link";
+import { errorKey, shortTradeLink, verdictMessage } from "./trade-link";
 
 describe("verdictMessage", () => {
   it("maps every state to copy", () => {
@@ -44,5 +44,18 @@ describe("errorKey", () => {
     expect(errorKey("trade_link_not_yours")).toBe("trade_link_not_yours");
     expect(errorKey("something_else")).toBe("generic");
     expect(errorKey(undefined)).toBe("generic");
+  });
+});
+
+describe("shortTradeLink", () => {
+  it("keeps the host and partner and hides the token", () => {
+    expect(
+      shortTradeLink("https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE"),
+    ).toEqual({ host: "steamcommunity.com", query: "?partner=1&token=••••••" });
+  });
+
+  it("gives up on anything else", () => {
+    expect(shortTradeLink("not a link")).toBeNull();
+    expect(shortTradeLink("https://example.com/x")).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import { AccountSidebar } from "@/components/account/AccountSidebar";
 import { OrderView } from "@/components/order/OrderView";
 import { routing } from "@/i18n/routing";
 
@@ -28,8 +29,12 @@ export default async function OrderPage({ params }: Props) {
     setRequestLocale(locale);
   }
   return (
-    <main id="main-content" className="mx-auto max-w-2xl px-6 py-10">
-      <OrderView locale={locale} number={number} />
-    </main>
+    // The profile's frame (as `account/layout.tsx`): the order lives on «Обмены».
+    <div className="mx-auto flex max-w-[1100px] flex-col gap-8 px-4 py-8 sm:px-6">
+      <AccountSidebar />
+      <main id="main-content" className="min-w-0 flex-1">
+        <OrderView locale={locale} number={number} />
+      </main>
+    </div>
   );
 }

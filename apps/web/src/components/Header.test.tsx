@@ -18,7 +18,11 @@ vi.mock("@/i18n/navigation", () => ({
   usePathname: () => "/",
 }));
 vi.mock("./header/LanguageSwitcher", () => ({ LanguageSwitcher: () => <span>lang</span> }));
-vi.mock("./header/MobileMenu", () => ({ MobileMenu: () => <span>menu</span> }));
+vi.mock("./header/MobileMenu", () => ({
+  MobileMenu: ({ avatar }: { avatar?: React.ReactNode }) => (
+    <span data-testid={avatar ? "menu-avatar" : "menu-burger"}>{avatar ?? "menu"}</span>
+  ),
+}));
 vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: { balance_uzs: "1250000" } }),
 }));
@@ -61,8 +65,11 @@ describe("Header", () => {
       "/deposit",
     );
     expect(screen.getByRole("button", { name: /Player/ })).toBeInTheDocument();
-    // Phones: the avatar alone, linking to the profile.
-    expect(screen.getByRole("link", { name: "Профиль" })).toHaveAttribute("href", "/account");
+    // Phones: the avatar opens the ☰ menu; the ☰ itself shows only from md to xl.
+    expect(screen.getByTestId("menu-avatar").parentElement).toHaveClass("md:hidden");
+    expect(screen.getByTestId("menu-burger").parentElement?.className).toBe(
+      "hidden md:block xl:hidden",
+    );
   });
 
   it("the nav: sell, market, Steam top-up and reviews, each with an icon", () => {

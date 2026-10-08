@@ -224,6 +224,28 @@ async def test_the_order_snapshots_offer_price_rate_and_link(
     assert (body["name"], body["phase"]) == (item_name, None)
 
 
+async def test_the_order_keeps_the_offers_float_and_pattern(
+    integration_client: AsyncClient,
+    user_headers: dict[str, str],
+    stub_listings: StubListings,
+    item: SkinItem,
+    db_session: AsyncSession,
+) -> None:
+    item.exterior, item.rarity_color = "FT", "#eb4b4b"
+    await db_session.commit()
+    await stub_listings.set(SLUG, [(111, 10_000)])
+    stub_listings.rows[item.market_hash_name][0].update(float=0.62140001, paintseed=661)
+    shown = await _shown_price(integration_client, SLUG, 111)
+    r = await _post(integration_client, user_headers, price_uzs=shown)
+    assert r.status_code == 201, r.text
+    order = await _order(db_session, r.json()["number"])
+    assert (order.float_value, order.paint_seed) == (Decimal("0.621400"), 661)
+    got = await integration_client.get(f"{ORDERS}/{order.number}", headers=user_headers)
+    body = got.json()
+    assert (body["float_value"], body["paint_seed"]) == ("0.6214", 661)
+    assert (body["exterior"], body["rarity_color"]) == ("FT", "#eb4b4b")
+
+
 # --- a gone offer: the buyer chooses again ------------------------------------------------
 
 

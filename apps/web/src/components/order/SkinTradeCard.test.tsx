@@ -94,10 +94,10 @@ describe("SkinTradeCard", () => {
     expect(screen.queryByText("Продавец")).toBeNull();
   });
 
-  it("says received and until when Steam protects it", () => {
+  it("says received, without Steam's protection date (the owner dropped it)", () => {
     card({ state: "accepted", release_date: "2026-10-09T16:00:00Z" });
     expect(screen.getByText("Получено")).toBeInTheDocument();
-    expect(screen.getByText(/^Steam защищает обмен до 9 октября$/)).toBeInTheDocument();
+    expect(screen.queryByText(/защищает/)).toBeNull();
   });
 
   it("a released trade reads received, with no protection line", () => {

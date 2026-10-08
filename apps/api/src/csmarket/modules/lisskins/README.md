@@ -108,7 +108,7 @@ LIS-SKINS»): they move orders and refund, which only `orders` may do.
 | worker    | queue `orders`       | on wake | `orders.drain_paid` → `attempt_lisskins_buy` for a `lisskins` order       |
 
 First runs after a scheduler start: `sources.prices` 105 s, `lisskins.snapshot` 320 s,
-`lisskins.reconcile` 340 s, `lisskins.balance` 360 s. Alerts
+`lisskins.reconcile` 90 s, `lisskins.balance` 360 s. Alerts
 (`infra/prometheus/alerts/orders.yml`): `LisskinsSnapshotStale`, `LisskinsBalanceLow`,
 `LisskinsBuyFailures` — runbook `docs/runbooks/lisskins.md`. Decision: ADR-0012. Flow:
 `docs/architecture/sequence-diagrams/lisskins-buy.mmd`.

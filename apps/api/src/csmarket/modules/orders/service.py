@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from decimal import Decimal
 
 from sqlalchemy import Select, and_, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,6 +40,20 @@ class OrderRow:
     image_url: str | None
     #: A Skinslink order's purchase.
     purchase: SkinslinkPurchase | LisskinsPurchase | None = None
+    #: The catalogue item's exterior code and rarity colour.
+    exterior: str | None = None
+    rarity_color: str | None = None
+
+    def out(self) -> OrderOut:
+        """The owner's view of this row."""
+        return order_out(
+            self.order,
+            self.trade,
+            self.image_url,
+            self.purchase,
+            exterior=self.exterior,
+            rarity_color=self.rarity_color,
+        )
 
 
 def is_expired(order: Order, at: datetime | None = None) -> bool:
@@ -57,6 +72,9 @@ def order_out(
     trade: SkinTrade | None,
     image_url: str | None,
     purchase: SkinslinkPurchase | LisskinsPurchase | None = None,
+    *,
+    exterior: str | None = None,
+    rarity_color: str | None = None,
 ) -> OrderOut:
     """The owner's view of ``order``.
 
@@ -65,6 +83,8 @@ def order_out(
         trade: Its ``skin_trades`` row, if the worker has created one.
         image_url: The item's image on our image host.
         purchase: A Skinslink order's purchase row.
+        exterior: The catalogue item's exterior code.
+        rarity_color: The catalogue item's rarity colour.
     """
     at = now()
     status = effective_status(order, at)
@@ -75,6 +95,10 @@ def order_out(
         name=order.market_hash_name,
         phase=order.phase or None,
         image_url=image_url,
+        float_value=_plain(order.float_value),
+        paint_seed=order.paint_seed,
+        exterior=exterior,
+        rarity_color=rarity_color,
         price_uzs=str(order.price_uzs),
         price_usd=str(order.price_usd),
         created_at=order.created_at,
@@ -88,10 +112,39 @@ def order_out(
     )
 
 
-def _rows() -> Select[Order, SkinTrade, str | None, SkinslinkPurchase, LisskinsPurchase]:
+def _plain(value: Decimal | None) -> str | None:
+    """``0.621400`` → ``"0.6214"``; ``None`` stays."""
+    if value is None:
+        return None
+    text = format(value.normalize(), "f")
+    return text.rstrip("0").rstrip(".") if "." in text else text
+
+
+_Row = tuple[
+    Order,
+    SkinTrade | None,
+    str | None,
+    SkinslinkPurchase | None,
+    LisskinsPurchase | None,
+    str | None,
+    str | None,
+]
+
+
+def _rows() -> Select[
+    Order, SkinTrade, str | None, SkinslinkPurchase, LisskinsPurchase, str | None, str | None
+]:
     # Outer joins: each of the three is ``None`` on a row without one.
     return (
-        select(Order, SkinTrade, SkinItem.image_url, SkinslinkPurchase, LisskinsPurchase)
+        select(
+            Order,
+            SkinTrade,
+            SkinItem.image_url,
+            SkinslinkPurchase,
+            LisskinsPurchase,
+            SkinItem.exterior,
+            SkinItem.rarity_color,
+        )
         .join(SkinItem, SkinItem.id == Order.skin_item_id)
         .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
         .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
@@ -99,18 +152,15 @@ def _rows() -> Select[Order, SkinTrade, str | None, SkinslinkPurchase, LisskinsP
     )
 
 
-def _row(
-    order: Order,
-    trade: SkinTrade | None,
-    image: str | None,
-    sl: SkinslinkPurchase | None,
-    ls: LisskinsPurchase | None,
-) -> OrderRow:
+def _row(found: _Row) -> OrderRow:
+    order, trade, image, sl, ls, exterior, rarity_color = found
     return OrderRow(
         order=order,
         trade=trade,
         image_url=steam_image(image, host=get_settings().skins_image_host),
         purchase=sl or ls,
+        exterior=exterior,
+        rarity_color=rarity_color,
     )
 
 
@@ -123,8 +173,7 @@ async def get_owned(db: AsyncSession, user_id: str, number: str) -> OrderRow | N
     ).one_or_none()
     if found is None:
         return None
-    order, trade, image, sl, ls = found
-    return _row(order, trade, image, sl, ls)
+    return _row(found)
 
 
 async def list_for_user(
@@ -155,7 +204,7 @@ async def list_for_user(
                 and_(Order.created_at == stamp, Order.id < order_id),
             )
         )
-    found = [_row(*row) for row in (await db.execute(stmt)).all()]
+    found = [_row(row) for row in (await db.execute(stmt)).all()]
     page = found[:limit]
     more = len(found) > limit
     next_cursor = encode_cursor(page[-1].order.created_at, page[-1].order.id) if more else None

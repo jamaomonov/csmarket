@@ -287,3 +287,19 @@ async def test_a_status_without_an_id_is_unavailable() -> None:
     )
     with pytest.raises(SkinslinkUnavailableError):
         await _client().deposit_status(merchant_tx_id="sale-1")
+
+
+@respx.mock
+async def test_a_validation_refusal_logs_the_field_it_names_never_a_value() -> None:
+    from structlog.testing import capture_logs
+
+    respx.post(f"{BASE}/merchant/create-deposit").mock(
+        return_value=_no(
+            "validation error",
+            [{"field": "CreateDepositRequest.Amount", "code": "gt", "message": "must be > 1"}],
+        )
+    )
+    with capture_logs() as logs, pytest.raises(SkinslinkError):
+        await _create()
+    refused = [e for e in logs if e["event"] == "skinslink.refused"]
+    assert refused[0]["fields"] == ["CreateDepositRequest.Amount:gt"]

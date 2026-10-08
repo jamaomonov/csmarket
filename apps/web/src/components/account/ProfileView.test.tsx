@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
+vi.mock("./CardsList", () => ({ CardsList: () => <p>cards-list</p> }));
 vi.mock("@/lib/api", () => ({ session: { apiPut: vi.fn(), apiPost: vi.fn(), apiPatch: vi.fn() } }));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) => (
@@ -49,7 +50,7 @@ describe("ProfileView", () => {
     renderView();
     expect(screen.getByRole("heading", { level: 2, name: "Player" })).toBeInTheDocument();
     expect(screen.getByText("P")).toBeInTheDocument(); // no Steam avatar: the initial
-    expect(screen.getByText(/На csmarket с 28 сентября 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/На csmarket с 28 сент\. 2026/)).toBeInTheDocument();
     expect(screen.getByText("76561198000000777")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Профиль в Steam" })).toHaveAttribute(
       "href",
@@ -68,9 +69,30 @@ describe("ProfileView", () => {
     renderView();
     expect(screen.getByRole("heading", { name: "Ваш аккаунт" })).toBeInTheDocument();
     expect(screen.getByText("Ссылка на обмен", { selector: "h3" })).toBeInTheDocument();
-    expect(screen.getByDisplayValue("p@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Steam" })).toBeInTheDocument();
+    // A saved address reads as text, with «Изменить».
+    expect(screen.getByText("p@example.com")).toBeInTheDocument();
     expect(screen.getByText("Реферальный код", { selector: "h3" })).toBeInTheDocument();
     expect(screen.getByText("Скоро")).toBeInTheDocument();
+  });
+
+  it("«Настройка профиля»: what is set, and links to what is left", () => {
+    auth.value = signedIn();
+    renderView();
+    expect(screen.getByText("1 из 3")).toBeInTheDocument();
+    expect(screen.getByRole("progressbar", { name: "Настройка профиля" })).toHaveAttribute(
+      "aria-valuenow",
+      "1",
+    );
+    expect(screen.getByRole("link", { name: /Рабочая ссылка на обмен/ })).toHaveAttribute(
+      "href",
+      "#trade-link",
+    );
+    expect(screen.getByRole("link", { name: /Подтверждённая почта/ })).toHaveAttribute(
+      "href",
+      "#email",
+    );
+    expect(screen.queryByRole("link", { name: /Аккаунт Steam/ })).toBeNull();
   });
 });
 

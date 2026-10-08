@@ -1,14 +1,17 @@
 # apps/api/src/csmarket/modules/sales/views.py
 """Sales as their seller sees them: one by number, and the shape of the answer.
 
-A page of sales loads its items, cards and requests in one query each (no N+1).
+A page of sales loads its items, their catalogue look, cards and requests in one query each
+(no N+1).
 """
 
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Literal
 
 from sqlalchemy import and_, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +27,12 @@ from csmarket.modules.sales.schemas import (
     SaleOfferOut,
     SaleOut,
 )
+from csmarket.modules.skins.api import SkinItem
+
+#: ``(exterior, rarity_color)`` of a catalogue item.
+Look = tuple[str | None, str | None]
+#: The statuses ``GET /sales`` filters by.
+SaleFilter = Literal["hold"]
 
 
 @dataclass(frozen=True)
@@ -34,10 +43,29 @@ class SaleRow:
     items: list[SaleItem]
     card: PayoutCard | None
     request: PayoutRequest | None
+    #: ``market_hash_name → (exterior, rarity_color)`` of the catalogue items among ``items``.
+    looks: Mapping[str, Look] = field(default_factory=dict)
+
+
+async def _looks(db: AsyncSession, names: Iterable[str]) -> dict[str, Look]:
+    """The catalogue look of each of ``names`` we list (one query).
+
+    A name may match several rows (a Doppler's phases); they share exterior and rarity.
+    """
+    wanted = set(names)
+    if not wanted:
+        return {}
+    rows = await db.execute(
+        select(SkinItem.market_hash_name, SkinItem.exterior, SkinItem.rarity_color).where(
+            SkinItem.market_hash_name.in_(wanted)
+        )
+    )
+    return {name: (exterior, color) for name, exterior, color in rows.all()}
 
 
 async def rows_of(db: AsyncSession, sales: list[Sale]) -> list[SaleRow]:
-    """``sales`` with their items, cards and requests: three queries for any number."""
+    """``sales`` with their items, cards, requests and the items' catalogue look: four queries
+    for any number."""
     if not sales:
         return []
     ids = [s.id for s in sales]
@@ -59,12 +87,14 @@ async def rows_of(db: AsyncSession, sales: list[Sale]) -> list[SaleRow]:
         r.sale_id: r
         for r in await db.scalars(select(PayoutRequest).where(PayoutRequest.sale_id.in_(ids)))
     }
+    looks = await _looks(db, (i.name for found in items.values() for i in found))
     return [
         SaleRow(
             sale=s,
             items=items[s.id],
             card=cards.get(s.payout_card_id) if s.payout_card_id else None,
             request=requests.get(s.id),
+            looks=looks,
         )
         for s in sales
     ]
@@ -104,6 +134,8 @@ def sale_out(row: SaleRow) -> SaleOut:
                 asset_id=i.asset_id,
                 name=i.name,
                 image_url=i.image_url,
+                exterior=row.looks.get(i.name, (None, None))[0],
+                rarity_color=row.looks.get(i.name, (None, None))[1],
                 price_uzs=wire_uzs(i.price_uzs),
             )
             for i in row.items
@@ -138,12 +170,18 @@ PAGE_SIZE = 20
 
 
 async def list_sales(
-    db: AsyncSession, user_id: str, cursor: str | None, *, limit: int = PAGE_SIZE
+    db: AsyncSession,
+    user_id: str,
+    cursor: str | None,
+    *,
+    status: SaleFilter | None = None,
+    limit: int = PAGE_SIZE,
 ) -> tuple[list[SaleRow], str | None]:
     """One newest-first page of ``user_id``'s sales and the cursor of the next page.
 
     A sale Skinslink refused at once (``closed`` with no deposit) is left out: the seller saw
-    the refusal on the spot.
+    the refusal on the spot. ``status`` keeps only the sales in it; its cursor is the same
+    ``(created_at, id)`` one, so the filter must travel with it.
 
     Raises:
         ValidationError: ``cursor`` is not one this API issued (``code="cursor"``).
@@ -156,6 +194,8 @@ async def list_sales(
         .order_by(Sale.created_at.desc(), Sale.id.desc())
         .limit(limit + 1)
     )
+    if status is not None:
+        stmt = stmt.where(Sale.status == status)
     if cursor is not None:
         stamp, sale_id = decode_cursor(cursor)
         stmt = stmt.where(
@@ -180,6 +220,8 @@ async def pending_uzs(db: AsyncSession, user_id: str) -> Decimal:
 
 __all__ = [
     "PAGE_SIZE",
+    "Look",
+    "SaleFilter",
     "SaleRow",
     "bonus_fee",
     "list_sales",

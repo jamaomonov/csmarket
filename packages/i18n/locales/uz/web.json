@@ -34,7 +34,8 @@
     "transactions": "Tranzaksiyalar",
     "referral": "Referal",
     "trades": "Almashuvlar",
-    "cards": "Kartalarim"
+    "cards": "Kartalarim",
+    "inHold": "+{sum} kutilmoqda"
   },
   "auth": {
     "callback": {
@@ -103,7 +104,22 @@
       "yourAccount": "Hisobingiz",
       "referralTitle": "Referal kod",
       "referralHint": "Referal dasturi tez orada paydo boʻladi.",
-      "nav": "Profil boʻlimlari"
+      "nav": "Profil boʻlimlari",
+      "edit": "Oʻzgartirish",
+      "cancel": "Bekor qilish",
+      "groupSteam": "Steam",
+      "groupAccount": "Akkaunt",
+      "notSet": "Koʻrsatilmagan",
+      "add": "Qoʻshish",
+      "setupTitle": "Profilni sozlash",
+      "setupProgress": "{done} / {total}",
+      "stepDone": "tayyor",
+      "stepLeft": "koʻrsatilmagan",
+      "steps": {
+        "steam": "Steam akkaunti",
+        "tradeLink": "Ishlaydigan almashuv havolasi",
+        "email": "Tasdiqlangan pochta"
+      }
     }
   },
   "balance": {
@@ -318,7 +334,6 @@
       "openOffer": "Almashuvni Steamʼda ochish",
       "seller": "Sotuvchi",
       "accepted": "Olindi",
-      "protectedUntil": "Steam almashuvni {date} gacha himoya qiladi",
       "refunded": "Almashuv boʻlmadi — pul balansga qaytdi.",
       "soldOut": "Bu skinni sizdan oldin sotib olishdi — pul balansga qaytdi. Marketdan boshqasini tanlang.",
       "tryLater": "Skinni sotib olib boʻlmadi — pul balansda. Bir necha daqiqadan keyin qayta urinib koʻring.",
@@ -344,7 +359,31 @@
     "all": "Hammasi",
     "purchases": "Xaridlar",
     "sales": "Sotuvlar",
-    "salesEmpty": "Hozircha sotuvlar yoʻq."
+    "salesEmpty": "Hozircha sotuvlar yoʻq.",
+    "hold": "Kutilmoqda",
+    "empty": "Hozircha almashuvlar yoʻq.",
+    "holdEmpty": "Hozir hech narsa hisobga tushishini kutmayapti.",
+    "purchase": "Xarid",
+    "sale": "Sotuv",
+    "moneyOn": "Pul {date} tushadi",
+    "refunded": "Boʻlmadi · pul balansda",
+    "paidBalance": "balansdan",
+    "toBalance": "balansga",
+    "toCard": "kartaga",
+    "returned": "qaytarildi",
+    "more": "Yana koʻrsatish",
+    "back": "Almashuvlarga",
+    "pattern": "Pattern",
+    "steps": {
+      "paid": "Toʻlandi",
+      "sent": "Almashuv yuborildi",
+      "received": "Olindi",
+      "accepted": "Almashuv qabul qilindi",
+      "protection": "Steam himoyasi",
+      "days7": "7 kun",
+      "balance": "Pul balansda",
+      "card": "Pul kartada"
+    }
   },
   "deposit": {
     "title": "Balansni toʻldirish",
@@ -508,6 +547,7 @@
     "loadFailed": "Kartalarni yuklab boʻlmadi. Sahifani yangilang.",
     "delete": "{name} ni oʻchirish",
     "deleteShort": "Oʻchirish",
-    "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring."
+    "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring.",
+    "count": "{count} ta karta"
   }
 }

@@ -50,6 +50,14 @@ export interface OrderOut {
   name: string;
   phase: string | null;
   image_url: string | null;
+  /** Catalogue wear code (`FN`…`BS`); `null` for items without wear. */
+  exterior: string | null;
+  /** Catalogue rarity colour, `#rrggbb`. */
+  rarity_color: string | null;
+  /** The bought offer's float, e.g. `"0.6214"`; `null` on older orders. */
+  float_value: string | null;
+  /** The bought offer's pattern (paint seed). */
+  paint_seed: number | null;
   price_uzs: string;
   price_usd: string;
   created_at: string;
