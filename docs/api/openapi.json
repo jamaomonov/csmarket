@@ -2634,6 +2634,58 @@
         "title": "Bracket",
         "type": "object"
       },
+      "CardOut": {
+        "description": "A saved card: its type and last four digits, never the number.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last4": {
+            "title": "Last4",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "uzcard",
+              "humo",
+              "uzum_visa"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "last4",
+          "created_at"
+        ],
+        "title": "CardOut",
+        "type": "object"
+      },
+      "CardsOut": {
+        "description": "The user's live cards, oldest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CardOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CardsOut",
+        "type": "object"
+      },
       "CatalogStatusOut": {
         "description": "The admin status card: catalogue size, job outcomes, rate and switches.",
         "properties": {
@@ -8931,6 +8983,128 @@
         "summary": "Uzum Merchant API: /status",
         "tags": [
           "uzum"
+        ]
+      }
+    },
+    "/api/v1/payout-cards": {
+      "get": {
+        "description": "Live cards, oldest first: type and last four digits.",
+        "operationId": "get_cards_api_v1_payout_cards_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My payout cards",
+        "tags": [
+          "sales"
+        ]
+      }
+    },
+    "/api/v1/payout-cards/{card_id}": {
+      "delete": {
+        "description": "Soft delete; the key is required but nothing is stored for it.\n\nA repeat is a no-op 204, so no replay is persisted (the AGENTS \u00a710 exception).",
+        "operationId": "remove_card_api_v1_payout_cards__card_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Not my card"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forget a payout card",
+        "tags": [
+          "sales"
         ]
       }
     },
