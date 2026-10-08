@@ -16,12 +16,14 @@ from csmarket.modules.skinslink.api import (
     SkinslinkForbiddenError,
     SkinslinkUnavailableError,
 )
+from csmarket.modules.users.models import User
 from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from structlog.testing import capture_logs
 
+from tests.integration.conftest import CUSTOMER_STEAM_ID
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit, inv_item
 from tests.integration.payments_factory import make_user
 from tests.integration.sales_factory import HUMO, make_card
@@ -468,3 +470,64 @@ async def test_the_sale_is_committed_before_the_one_skinslink_call(
     headers = await _seller(db_session, integration_client, customer_headers)
     await integration_client.post(URL, json=BALANCE, headers={**headers, **_key()})
     assert seen == ["creating"]
+
+
+@pytest.mark.parametrize(
+    "payout",
+    [
+        {"to": "card", "new_card": {"type": "humo", "number": HUMO}, "card_id": None},
+        {"to": "balance", "new_card": {"type": "humo", "number": HUMO}},
+    ],
+)
+async def test_a_malformed_body_never_echoes_the_card_number(
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    payout: dict[str, object],
+) -> None:
+    # no expected_payout_uzs, and (second case) a balance payout that carries a card
+    body = {"asset_ids": ["100"], "payout": payout}
+    r = await integration_client.post(
+        URL, json=body, headers={**await customer_headers(), **_key()}
+    )
+    assert r.status_code == 422
+    assert HUMO not in r.text
+    assert all("input" not in e and "ctx" not in e for e in r.json()["detail"])
+
+
+async def test_a_card_number_of_the_wrong_length_is_not_echoed(
+    integration_client: AsyncClient, customer_headers: Headers, sales_on: None
+) -> None:
+    long = HUMO * 3
+    body = {
+        **BALANCE,
+        "payout": {"to": "card", "new_card": {"type": "humo", "number": long}},
+    }
+    r = await integration_client.post(
+        URL, json=body, headers={**await customer_headers(), **_key()}
+    )
+    assert r.status_code == 422
+    assert HUMO not in r.text
+
+
+async def test_a_fourth_card_is_409_and_stores_no_sale(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    fake: FakeDepositClient,
+) -> None:
+    headers = await _seller(db_session, integration_client, customer_headers)
+    user = await db_session.scalar(select(User).where(User.steam_id == CUSTOMER_STEAM_ID))
+    assert user is not None
+    for _ in range(3):
+        await make_card(db_session, user)
+    body = {
+        **BALANCE,
+        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO}},
+        "expected_payout_uzs": 147_400,
+    }
+    r = await integration_client.post(URL, json=body, headers={**headers, **_key()})
+    assert (r.status_code, r.json()["code"]) == (409, "cards_limit")
+    assert await db_session.scalar(select(func.count()).select_from(Sale)) == 0
+    assert fake.deposit_calls == []

@@ -11,7 +11,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_fastapi_instrumentator import Instrumentator, metrics
@@ -246,6 +247,13 @@ def create_app() -> FastAPI:
     # Outermost of all: nothing the API answers is cacheable unless a route says so.
     app.add_middleware(NoStoreByDefault)
     app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_handler(_: Request, exc: RequestValidationError) -> JSONResponse:
+        """FastAPI's 422 shape without ``input`` and ``ctx``: bodies carry PII (card numbers,
+        trade links) and pydantic would echo them back."""
+        detail = [{"type": e["type"], "loc": list(e["loc"]), "msg": e["msg"]} for e in exc.errors()]
+        return JSONResponse(status_code=422, content={"detail": detail})
 
     @app.get("/healthz", tags=["meta"], summary="Liveness probe")
     @limiter.exempt  # type: ignore[untyped-decorator]
