@@ -6,6 +6,7 @@ Top-ups (``/wallet/topups``) are mounted from ``payments.routes``: ``wallet`` ne
 
 from __future__ import annotations
 
+import hashlib
 from decimal import Decimal
 from typing import Annotated, Literal
 
@@ -103,8 +104,9 @@ async def convert(
     rate = await current_usd_uzs(db, get_redis(), max_age_days=get_settings().fx_max_age_days)
     if rate is None:
         raise RateUnavailableError("no soʻm rate", code="rate_unavailable")
-    # Namespaced by user so two accounts' keys never collide.
-    ledger_key = f"{user.id}:{key}"
+    # Namespaced by user so two accounts' keys never collide; hashed to a fixed length so a
+    # long client key fits the ledger's String(160) column.
+    ledger_key = hashlib.sha256(f"{user.id}:{key}".encode()).hexdigest()
     replay = await conversion_booked(db, f"fx_convert:{ledger_key}")
     conv = await convert_to_usd(
         db,

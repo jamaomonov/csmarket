@@ -189,3 +189,17 @@ async def test_convert_needs_an_idempotency_key(
         "/api/v1/wallet/convert", json={"amount_uzs": 100_000}, headers=h
     )
     assert r.status_code == 422
+
+
+@pytest.mark.usefixtures("uplift_one")
+async def test_a_160_character_key_converts_and_replays(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await customer_headers()
+    await _setup(db_session)
+    key = "k" * 160
+    first = await _convert(integration_client, h, key=key)
+    assert first.status_code == 201, first.text  # type: ignore[attr-defined]
+    again = await _convert(integration_client, h, key=key)
+    assert again.status_code == 200  # type: ignore[attr-defined]
+    assert again.json() == first.json()  # type: ignore[attr-defined]
