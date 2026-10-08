@@ -1,7 +1,8 @@
 """An order's money arrived: :func:`mark_paid` moves it to ``paid`` and wakes the worker.
 
-Called by ``payments.hooks.settle`` (a kassa) and by the balance pay (ruling R8), each with
-the order row locked. ``NOTIFY orders``, the buyer's nudge and the ``receipt`` letter go out
+Called by ``payments.hooks.settle`` (a kassa), by the balance pay (ruling R8), each with
+the order row locked, and by the public API's buy (``api_checkout``) on the order it has just
+inserted. ``NOTIFY orders``, the buyer's nudge and the ``receipt`` letter go out
 in the caller's transaction, so each lands only once the payment is committed. Imports
 nothing from ``payments``.
 """
@@ -26,8 +27,8 @@ async def mark_paid(db: AsyncSession, order: Order, *, provider: str) -> None:
     Args:
         db: Session; the caller holds the order ``FOR UPDATE`` and commits.
         order: The order, locked.
-        provider: ``click``, ``payme``, ``uzum``, ``mock`` or ``wallet`` (stored in
-            ``orders.paid_with``).
+        provider: ``click``, ``payme``, ``uzum``, ``mock``, ``wallet`` or ``usd_wallet`` (the
+            public API; stored in ``orders.paid_with``).
 
     Raises:
         InvalidOrderTransitionError: the order is not ``pending``; nothing is written and

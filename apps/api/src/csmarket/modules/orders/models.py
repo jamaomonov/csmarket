@@ -151,7 +151,7 @@ class Order(Base):
     trade_link: Mapped[str] = mapped_column(Text, nullable=False)
     #: The customer's ``Idempotency-Key``; unique per user.
     idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
-    #: ``wallet``, ``click``, ``payme``, ``uzum`` or ``mock``; ``NULL`` until paid.
+    #: ``wallet``, ``usd_wallet``, ``click``, ``payme``, ``uzum`` or ``mock``; ``NULL`` until paid.
     paid_with: Mapped[str | None] = mapped_column(String(16), nullable=True)
     #: One of :data:`ORDER_CHANNELS`.
     channel: Mapped[str] = mapped_column(
@@ -170,6 +170,8 @@ class Order(Base):
     #: A ``pending`` order is cancelled after this.
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     paid_at: Mapped[datetime | None] = _at()
+    #: When the order moved to ``trade_sent`` (the offer went out); ``NULL`` before 0028.
+    trade_sent_at: Mapped[datetime | None] = _at()
     delivered_at: Mapped[datetime | None] = _at()
     cancelled_at: Mapped[datetime | None] = _at()
     #: Stamped by both ``failed`` and ``returned``.
@@ -204,6 +206,13 @@ class Order(Base):
         Index("ix_orders_user_created", "user_id", text("created_at DESC")),
         # text_pattern_ops: the admin search's prefix LIKE uses it under any collation.
         Index("ix_orders_number", "number", postgresql_ops={"number": "text_pattern_ops"}),
+        # ``GET /public/orders``: the key's orders, newest first.
+        Index(
+            "ix_orders_api_key_created",
+            "api_key_id",
+            text("created_at DESC"),
+            postgresql_where=text("api_key_id IS NOT NULL"),
+        ),
         # The dashboard's windows (M4b R9).
         Index("ix_orders_paid_at", "paid_at", postgresql_where=text("paid_at IS NOT NULL")),
         Index(

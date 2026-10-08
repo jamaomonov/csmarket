@@ -29,6 +29,14 @@ class NotFoundError(AppError):
     title = "Not found"
 
 
+class PaymentRequiredError(AppError):
+    """The money for the request is not there (the public API's short USD balance)."""
+
+    status_code = 402
+    type_uri = "https://csmarket.uz/errors/payment-required"
+    title = "Payment required"
+
+
 class ConflictError(AppError):
     """State conflict -- e.g. attempt to double-spend an idempotency key."""
 

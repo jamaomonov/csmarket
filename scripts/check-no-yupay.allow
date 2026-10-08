@@ -2,3 +2,6 @@
 # line before the forbidden-token check runs. Every entry needs a reason.
 # Click Shop API names its order-id field this way (Prepare/Complete, M3).
 merchant_trans_id
+# The public API's refund reason for a market's refusal (spec 2026-10-09 §5, a closed
+# contract list partners code against).
+supplier_refused

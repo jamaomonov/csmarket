@@ -1,7 +1,9 @@
 """``/api/v1/public`` -- the partner API, authenticated by ``Authorization: Bearer csm_…``.
 
 Catalogue: a paged feed read from the Redis snapshot (:mod:`feed`) and the offers of one
-item, priced by the key's tariff. No request here calls a supplier.
+item, priced by the key's tariff. Buying: ``POST /orders`` pays from the USD wallet in one
+transaction (``orders.api_checkout``); the key's orders read through ``orders.public_view``;
+``/me`` shows the balance, the key and its limits. No request here calls a market.
 """
 
 from __future__ import annotations
@@ -13,21 +15,32 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
 from csmarket.core.clock import now
 from csmarket.core.config import get_settings
-from csmarket.core.errors import AppError, ConflictError, NotFoundError
+from csmarket.core.errors import AppError, ConflictError, NotFoundError, PaymentRequiredError
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
+from csmarket.modules.orders.api import create_api_order, get_for_key, list_for_key
 from csmarket.modules.public_api import feed
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
-from csmarket.modules.public_api.limits import enforce
+from csmarket.modules.public_api.limits import LIMITS, enforce
 from csmarket.modules.public_api.offers import PricedOffer, api_offers
-from csmarket.modules.public_api.schemas import CatalogPageOut, OfferOut
-from csmarket.modules.skins.api import SkinItem, enabled_categories
+from csmarket.modules.public_api.schemas import (
+    ApiOrderIn,
+    CatalogPageOut,
+    MeKeyOut,
+    MeLimitsOut,
+    MeOut,
+    OfferOut,
+    PublicOrderOut,
+    PublicOrdersPage,
+    PublicOrderStatus,
+)
+from csmarket.modules.skins.api import enabled_categories, get_item_by_id
+from csmarket.modules.wallet.api import InsufficientBalanceError, user_usd_balance
 
 router = APIRouter(prefix="/public", tags=["public-api"])
 
@@ -165,16 +178,126 @@ async def item_offers(
     if cached is not None:
         return JSONResponse(content=json.loads(cached), headers=_REVALIDATE)
     settings = get_settings()
-    stmt = select(SkinItem).where(
-        SkinItem.id == item_id,
-        SkinItem.active.is_(True),
-        SkinItem.hidden.is_(False),
-        SkinItem.category.in_(enabled_categories(settings)),
-    )
-    item = (await db.execute(stmt)).scalar_one_or_none()
+    item = await get_item_by_id(db, item_id, categories=enabled_categories(settings))
     if item is None:
         raise NotFoundError("no such item", code="item_not_found")
     priced = await api_offers(db, item, profile=profile, settings=settings, now=now())
     out = [_offer_out(p, profile) for p in priced]
     await redis.set(cache_key, json.dumps(out), ex=OFFERS_TTL_SECONDS)
     return JSONResponse(content=out, headers=_REVALIDATE)
+
+
+_AUTH_ERRORS: dict[int | str, dict[str, Any]] = {
+    401: {"description": "`unauthorized`"},
+    403: {"description": "`account_suspended`, `ip_not_allowed`"},
+    429: {"description": "`rate_limited`, with `Retry-After`"},
+}
+_ORDER_ERRORS: dict[int | str, dict[str, Any]] = {
+    **_AUTH_ERRORS,
+    402: {"description": "`insufficient_balance` -- nothing was written"},
+    403: {"description": "`usd_wallet_disabled`, `account_suspended`, `ip_not_allowed`"},
+    404: {"description": "`item_not_found`"},
+    409: {
+        "description": "`offer_gone`, `price_above_max` (+ `price_usd`), `buying_disabled`, "
+        "`duplicate_client_order_id` (+ `order`: the order already placed under the id)"
+    },
+    422: {"description": "`trade_link_invalid` and body errors"},
+}
+
+
+@router.post(
+    "/orders",
+    response_model=PublicOrderOut,
+    status_code=201,
+    summary="Buy one skin from the USD wallet",
+    responses=_ORDER_ERRORS,
+)
+async def place_order(
+    body: ApiOrderIn,
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+) -> PublicOrderOut:
+    """Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).
+
+    One transaction: the USD wallet is debited and the order is already paid on 201 (status
+    ``buying``). A repeated ``client_order_id`` writes nothing and answers 409
+    ``duplicate_client_order_id`` with that order in ``order``. Counts against the
+    10 per minute ``order`` limit.
+    """
+    await enforce(caller, "order")
+    key_id = caller.key.id
+    try:
+        order, created = await create_api_order(
+            db, caller=caller, body=body, settings=get_settings()
+        )
+    except InsufficientBalanceError as exc:
+        raise PaymentRequiredError(
+            "the USD balance does not cover this order", code="insufficient_balance"
+        ) from exc
+    out = await get_for_key(db, key_id, order.number)
+    if out is None:  # pragma: no cover -- the key's own order, just read or written
+        raise NotFoundError("no such order", code="order_not_found")
+    if not created:
+        raise ConflictError(
+            "this client_order_id was already used",
+            code="duplicate_client_order_id",
+            order=out.model_dump(mode="json"),
+        )
+    return out
+
+
+@router.get(
+    "/orders/{order_id}",
+    response_model=PublicOrderOut,
+    summary="One order of this key",
+    responses={**_AUTH_ERRORS, 404: {"description": "`order_not_found`"}},
+)
+async def get_order(
+    order_id: str,
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+) -> PublicOrderOut:
+    """The order ``order_id`` placed with this key; another key's or an unknown one is 404."""
+    await enforce(caller, "read")
+    out = await get_for_key(db, caller.key.id, order_id)
+    if out is None:
+        raise NotFoundError("no such order", code="order_not_found")
+    return out
+
+
+@router.get(
+    "/orders",
+    response_model=PublicOrdersPage,
+    summary="Orders of this key",
+    responses={**_AUTH_ERRORS, 422: {"description": "`cursor` or a bad `status`"}},
+)
+async def list_orders(
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+    cursor: Annotated[str | None, Query(max_length=256)] = None,
+    status: PublicOrderStatus | None = None,
+) -> PublicOrdersPage:
+    """The key's orders, newest first, 50 a page; ``status`` keeps one status."""
+    await enforce(caller, "read")
+    items, next_cursor = await list_for_key(db, caller.key.id, cursor, status)
+    return PublicOrdersPage(items=items, next_cursor=next_cursor)
+
+
+@router.get("/me", response_model=MeOut, summary="Balance, key and limits", responses=_AUTH_ERRORS)
+async def me(
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+) -> MeOut:
+    """The USD balance, whether the USD wallet is on, the calling key and its limits."""
+    await enforce(caller, "read")
+    key = caller.key
+    return MeOut(
+        balance_usd=wire_usd(await user_usd_balance(db, caller.user.id)),
+        usd_wallet_enabled=caller.user.usd_wallet_enabled,
+        key=MeKeyOut(id=key.id, pricing_profile=key.pricing_profile, created_at=key.created_at),
+        limits=MeLimitsOut(
+            read_per_min=LIMITS["read"],
+            orders_per_min=LIMITS["order"],
+            feed_per_min=LIMITS["feed"],
+        ),
+    )

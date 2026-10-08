@@ -18,6 +18,7 @@ from csmarket.modules.orders.admin_actions import (
     resolve_attention,
     retry_buy,
 )
+from csmarket.modules.orders.api_checkout import create_api_order
 from csmarket.modules.orders.buying import attempt_buy, drain_paid
 from csmarket.modules.orders.dashboard import Dashboard, Days
 from csmarket.modules.orders.dashboard import summary as dashboard_summary
@@ -37,6 +38,7 @@ from csmarket.modules.orders.models import (
     SkinTrade,
 )
 from csmarket.modules.orders.paid import ORDERS_CHANNEL, mark_paid
+from csmarket.modules.orders.public_view import get_for_key, list_for_key, public_order
 from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
 from csmarket.modules.orders.refunds import (
     ADMIN_REFUNDABLE,
@@ -98,6 +100,7 @@ __all__ = [
     "can_refund",
     "can_retry",
     "check_purchase",
+    "create_api_order",
     "dashboard_summary",
     "drain_checks",
     "drain_paid",
@@ -105,13 +108,16 @@ __all__ = [
     "erase_old_trade_links",
     "erase_old_verify_addresses",
     "expire_pending",
+    "get_for_key",
     "in_flight",
     "is_expired",
+    "list_for_key",
     "lock_order",
     "mark_paid",
     "measure",
     "move",
     "order_out",
+    "public_order",
     "purchase_of",
     "reconcile",
     "reconcile_lisskins",

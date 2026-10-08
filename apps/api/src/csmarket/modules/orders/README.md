@@ -15,8 +15,8 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
   units, 1000 = $1, the worker's price cap — `cost_usd`), the price billed (`price_usd`,
   `price_uzs` in whole soʻm, `fx_snapshot_id`), the `trade_link` snapshot (PII, never
   logged), `idempotency_key` (unique per user), `paid_with` (`wallet` | `click` | `payme` |
-  `uzum` | `mock`), the times (`expires_at`, `paid_at`, `delivered_at`, `cancelled_at`,
-  `failed_at`, `refunded_at`), `refunded_to` (`balance` only), `failure_reason`
+  `uzum` | `mock`), the times (`expires_at`, `paid_at`, `trade_sent_at` (0028), `delivered_at`,
+  `cancelled_at`, `failed_at`, `refunded_at`), `refunded_to` (`balance` only), `failure_reason`
   (`FAILURE_REASONS`), and the queue claim (`claimed_at`, `claimed_by`, `next_check_at`).
 - `skin_trades` — one per order, keyed by `order_id` (`ON DELETE CASCADE`): `project_id`
   (= the order id; unique — a buy is looked up by it, never repeated), Waxpeer's
@@ -88,6 +88,24 @@ The order is inserted `pending`, expiring after `order_expiry_minutes` (15), wit
 snapshot. Two first requests racing on one key: the unique `(user_id, idempotency_key)`
 refuses the second, which returns the first's order. The route charges the `order-create`
 ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
+
+## Buying over the public API (`api_checkout.py`, `public_view.py`; plan B 2026-10-09)
+
+- `create_api_order` — `POST /public/orders`, one transaction: a repeated `client_order_id`
+  returns the stored order (409 `duplicate_client_order_id` at the route); gates
+  `buying_disabled` (409), `usd_wallet_disabled` (403), `trade_link_invalid` (422); the item by
+  id (`item_not_found`); the offer from `public_api.api_offers` (Skinslink + LIS-SKINS, the key's
+  tariff) — the sealed `offer_id` or the cheapest within `max_price_usd` (`offer_gone`,
+  `price_above_max` + `price_usd`); insert the order (`channel = api`, `price_uzs = 0`, the
+  newest rate snapshot, `fx_uplift_pct = 0`, `price_usd` = the charged price — ruling R1) in a
+  savepoint; `debit_purchase_usd`; `mark_paid(provider="usd_wallet")`; commit. A short balance
+  rolls everything back (the route answers 402 `insufficient_balance`). Two requests racing on
+  one `client_order_id` meet at `uq_orders_api_key_id_client_order_id`: the loser waits for the
+  winner's commit, rolls back its savepoint and returns the winner — one order, one debit.
+- `public_view` — the partner's status (`buying` / `trade_sent` / `delivered` / `refunded`, spec
+  §5), the refund reason map, `trade {offer_sent_at = trade_sent_at, accepted_at, release_at}`,
+  and the key's reads (`get_for_key`, `list_for_key`: newest first, 50 a page, a `status` filter
+  that mirrors the mapping in SQL; index `ix_orders_api_key_created`, 0028).
 
 ## Paying (`paying.py`, ruling R8)
 

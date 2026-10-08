@@ -3088,6 +3088,56 @@
         "title": "ApiKeyOut",
         "type": "object"
       },
+      "ApiOrderIn": {
+        "additionalProperties": false,
+        "description": "Buy one skin: an offer of the item (or its cheapest under the cap) for a trade link.",
+        "properties": {
+          "client_order_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Client Order Id",
+            "type": "string"
+          },
+          "item_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Item Id",
+            "type": "string"
+          },
+          "max_price_usd": {
+            "pattern": "^\\d{1,6}(\\.\\d{1,3})?$",
+            "title": "Max Price Usd",
+            "type": "string"
+          },
+          "offer_id": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
+          },
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "max_price_usd",
+          "trade_link",
+          "client_order_id"
+        ],
+        "title": "ApiOrderIn",
+        "type": "object"
+      },
       "AuditActor": {
         "description": "The admin who acted.",
         "properties": {
@@ -4313,161 +4363,53 @@
         "title": "LisskinsOut",
         "type": "object"
       },
-      "MeOut": {
-        "description": "The signed-in account as its owner sees it (the trade link is theirs to see).",
+      "MeKeyOut": {
+        "description": "The calling key.",
         "properties": {
-          "avatar_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Url"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "email_verification_sent_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email Verification Sent At"
-          },
-          "email_verified": {
-            "title": "Email Verified",
-            "type": "boolean"
-          },
           "id": {
             "title": "Id",
             "type": "string"
           },
-          "locale": {
-            "enum": [
-              "ru",
-              "uz",
-              "en"
-            ],
-            "title": "Locale",
+          "pricing_profile": {
+            "title": "Pricing Profile",
             "type": "string"
-          },
-          "roles": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Roles",
-            "type": "array"
-          },
-          "steam_id": {
-            "title": "Steam Id",
-            "type": "string"
-          },
-          "trade_link": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link"
-          },
-          "trade_link_checked_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Checked At"
-          },
-          "trade_link_reason": {
-            "anyOf": [
-              {
-                "enum": [
-                  "invalid",
-                  "private",
-                  "trade_ban",
-                  "hold",
-                  "unavailable"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Reason"
-          },
-          "trade_link_verdict": {
-            "anyOf": [
-              {
-                "enum": [
-                  "ok",
-                  "warn",
-                  "bad"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Verdict"
           }
         },
         "required": [
           "id",
-          "steam_id",
-          "display_name",
-          "avatar_url",
-          "email",
-          "email_verified",
-          "locale",
-          "trade_link",
-          "trade_link_verdict",
-          "trade_link_reason",
-          "trade_link_checked_at",
-          "roles",
+          "pricing_profile",
           "created_at"
         ],
-        "title": "MeOut",
+        "title": "MeKeyOut",
+        "type": "object"
+      },
+      "MeLimitsOut": {
+        "description": "Requests allowed per minute and key.",
+        "properties": {
+          "feed_per_min": {
+            "title": "Feed Per Min",
+            "type": "integer"
+          },
+          "orders_per_min": {
+            "title": "Orders Per Min",
+            "type": "integer"
+          },
+          "read_per_min": {
+            "title": "Read Per Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min"
+        ],
+        "title": "MeLimitsOut",
         "type": "object"
       },
       "MePatchIn": {
@@ -5722,6 +5664,201 @@
           "providers"
         ],
         "title": "ProvidersOut",
+        "type": "object"
+      },
+      "PublicOrderItemOut": {
+        "description": "The catalogue item an order bought.",
+        "properties": {
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "market_hash_name": {
+            "title": "Market Hash Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "slug",
+          "market_hash_name"
+        ],
+        "title": "PublicOrderItemOut",
+        "type": "object"
+      },
+      "PublicOrderOut": {
+        "description": "An API order as its key sees it \u2014 never the source market or its ids.",
+        "properties": {
+          "client_order_id": {
+            "title": "Client Order Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/PublicOrderItemOut"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicRefundOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "buying",
+              "trade_sent",
+              "delivered",
+              "refunded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicTradeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "order_id",
+          "client_order_id",
+          "status",
+          "item",
+          "price_usd",
+          "created_at",
+          "trade",
+          "refund"
+        ],
+        "title": "PublicOrderOut",
+        "type": "object"
+      },
+      "PublicOrdersPage": {
+        "description": "A page of the key's orders, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicOrderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "PublicOrdersPage",
+        "type": "object"
+      },
+      "PublicRefundOut": {
+        "description": "The money returned to the USD wallet.",
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "sold_out",
+              "invalid_trade_link",
+              "trade_hold",
+              "price_moved",
+              "supplier_refused",
+              "cancelled_by_support"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_usd",
+          "reason"
+        ],
+        "title": "PublicRefundOut",
+        "type": "object"
+      },
+      "PublicTradeOut": {
+        "description": "The Steam trade of an order whose offer is out; a time is ``None`` until known.",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "offer_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Sent At"
+          },
+          "release_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release At"
+          }
+        },
+        "required": [
+          "offer_sent_at",
+          "accepted_at",
+          "release_at"
+        ],
+        "title": "PublicTradeOut",
         "type": "object"
       },
       "RarityFacetOut": {
@@ -7858,6 +7995,190 @@
         ],
         "title": "WeaponFacetOut",
         "type": "object"
+      },
+      "csmarket__modules__public_api__schemas__MeOut": {
+        "description": "The caller's balance, wallet switch, key and limits.",
+        "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "key": {
+            "$ref": "#/components/schemas/MeKeyOut"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/MeLimitsOut"
+          },
+          "usd_wallet_enabled": {
+            "title": "Usd Wallet Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "usd_wallet_enabled",
+          "key",
+          "limits"
+        ],
+        "title": "MeOut",
+        "type": "object"
+      },
+      "csmarket__modules__users__schemas__MeOut": {
+        "description": "The signed-in account as its owner sees it (the trade link is theirs to see).",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "email_verification_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verification Sent At"
+          },
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "locale": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Locale",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "steam_id": {
+            "title": "Steam Id",
+            "type": "string"
+          },
+          "trade_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          },
+          "trade_link_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Checked At"
+          },
+          "trade_link_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid",
+                  "private",
+                  "trade_ban",
+                  "hold",
+                  "unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Reason"
+          },
+          "trade_link_verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ok",
+                  "warn",
+                  "bad"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Verdict"
+          }
+        },
+        "required": [
+          "id",
+          "steam_id",
+          "display_name",
+          "avatar_url",
+          "email",
+          "email_verified",
+          "locale",
+          "trade_link",
+          "trade_link_verdict",
+          "trade_link_reason",
+          "trade_link_checked_at",
+          "roles",
+          "created_at"
+        ],
+        "title": "MeOut",
+        "type": "object"
       }
     }
   },
@@ -8106,7 +8427,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "$ref": "#/components/schemas/csmarket__modules__users__schemas__MeOut"
                 }
               }
             },
@@ -11127,7 +11448,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "$ref": "#/components/schemas/csmarket__modules__users__schemas__MeOut"
                 }
               }
             },
@@ -11201,7 +11522,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "$ref": "#/components/schemas/csmarket__modules__users__schemas__MeOut"
                 }
               }
             },
@@ -12383,6 +12704,296 @@
           }
         },
         "summary": "Offers of one item",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/me": {
+      "get": {
+        "description": "The USD balance, whether the USD wallet is on, the calling key and its limits.",
+        "operationId": "me_api_v1_public_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__public_api__schemas__MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Balance, key and limits",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/orders": {
+      "get": {
+        "description": "The key's orders, newest first, 50 a page; ``status`` keeps one status.",
+        "operationId": "list_orders_api_v1_public_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "buying",
+                    "trade_sent",
+                    "delivered",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrdersPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`cursor` or a bad `status`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Orders of this key",
+        "tags": [
+          "public-api"
+        ]
+      },
+      "post": {
+        "description": "Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n``buying``). A repeated ``client_order_id`` writes nothing and answers 409\n``duplicate_client_order_id`` with that order in ``order``. Counts against the\n10 per minute ``order`` limit.",
+        "operationId": "place_order_api_v1_public_orders_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiOrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "402": {
+            "description": "`insufficient_balance` -- nothing was written"
+          },
+          "403": {
+            "description": "`usd_wallet_disabled`, `account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`"
+          },
+          "409": {
+            "description": "`offer_gone`, `price_above_max` (+ `price_usd`), `buying_disabled`, `duplicate_client_order_id` (+ `order`: the order already placed under the id)"
+          },
+          "422": {
+            "description": "`trade_link_invalid` and body errors"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Buy one skin from the USD wallet",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/orders/{order_id}": {
+      "get": {
+        "description": "The order ``order_id`` placed with this key; another key's or an unknown one is 404.",
+        "operationId": "get_order_api_v1_public_orders__order_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`order_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "One order of this key",
         "tags": [
           "public-api"
         ]
