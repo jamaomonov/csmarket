@@ -40,6 +40,9 @@
   Selling skins to us through Skinslink deposits (spec `2026-10-08-skin-sales-design.md`, ADR-0016)
   is built on branch `skin-sales` — off behind `CSMARKET_SALES_ENABLED` and the admin's «Выкуп
   включён» (`docs/runbooks/sales.md`).
+- **Public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017): plan A (the USD
+  wallet) is built on branch `public-api` — not merged; plans B (keys, buying) and C (webhooks,
+  ops) are to come.
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in

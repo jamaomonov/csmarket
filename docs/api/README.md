@@ -110,9 +110,20 @@ intent_url, awaiting_kassa}`. `amount_uzs` is a JSON **integer** of whole soʻm,
   top-up no kassa took up expires after 30 minutes. `awaiting_kassa` is `true` while the
   top-up is `pending` and a kassa holds an attempt (it may still settle past `expires_at`):
   show "checking the payment" and keep polling, not "expired".
-- `GET /wallet` → `{balance_uzs}`.
-- `GET /wallet/entries?cursor=&limit=` (1..100, default 20) → `{items: [{id, kind,
-amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount_uzs` is
+- `GET /wallet` → `{balance_uzs, usd: {balance_usd, rate_uzs | null} | null}`. `usd` is `null`
+  unless an admin switched the user's USD wallet on; `balance_usd` is a string with three
+  decimals (`"12.500"`), `rate_uzs` the current conversion rate (CBU plus the uplift) or `null`
+  while no fresh rate exists.
+- `POST /wallet/convert` `{amount_uzs: 1000..100 000 000}` + **required** `Idempotency-Key` (≥ 16
+  chars), signed in → **201** (a replay **200**) `{amount_uzs, amount_usd, rate_uzs, balance_uzs,
+balance_usd}`. `amount_usd = floor(amount_uzs × 1000 / rate)` milli-USD. Soʻm to dollars only,
+  never back. Errors: 403 `usd_wallet_disabled`; 409 `balance_too_low`, `idempotency_mismatch`
+  (the same key with another amount); 422 `convert_amount` (out of range), `convert_rate` (the
+  result is under 1 milli-USD); 503 `rate_unavailable`.
+- `GET /wallet/entries?cursor=&limit=&currency=uzs|usd` (1..100, default 20; `currency` default
+  `uzs`) → `{items: [{id, kind, currency, amount_uzs, amount_usd, created_at, reference_number}],
+next_cursor}`, newest first. A dollar line has `amount_usd` signed (`"-1.500"`) and `amount_uzs`
+  `"0"`; `fx_convert` shows on both lists (one leg each) and `admin_adjust_usd` on the dollar one. `amount_uzs` is
   **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal`,
   `admin_adjust`, `purchase`, `refund`, `sale_credit` (a skin sale paid to the balance) or
   `payout_return` (a rejected card payout returned to the balance); `reference_number` is the
@@ -286,8 +297,9 @@ roles, banned_at, created_at, balance_uzs}], next_cursor}` — newest first; `q`
   `target_type`, `target_id` on audit) refuse a NUL byte with 422.
 - `GET /admin/users/{id}` → `AdminUserCard {user: {id, steam_id, display_name, avatar_url,
 email, locale, roles, banned_at, ban_reason, created_at, trade_link_masked,
-trade_link_verdict, trade_link_reason, trade_link_checked_at}, balance_uzs, entries: [{id,
-kind, amount_uzs, created_at, reference_number, actor, reason}], topups: [{number,
+trade_link_verdict, trade_link_reason, trade_link_checked_at, usd_wallet_enabled}, balance_uzs,
+balance_usd (string), entries: [{id, kind, currency, amount_uzs, amount_usd, created_at,
+reference_number, actor, reason}], usd_entries (the same shape, dollar lines), topups: [{number,
 amount_uzs, status, provider, created_at, succeeded_at}], orders: [AdminOrderRow] (M4a)}` —
   the latest 20 of each. Unknown or malformed id → 404.
 - `POST /admin/users/{id}/ban` `{reason: 3..500}` → card. 409 `ban_self`, `ban_admin`,

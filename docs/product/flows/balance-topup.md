@@ -116,3 +116,24 @@ Source: `docs/architecture/sequence-diagrams/topup.mmd`.
   «Оплатить (тест)», which calls the dev-only `POST /api/v1/dev/topups/{number}/pay` and runs
   the same `settle`.
 - Rules: spec §5, §7.9, §13; module READMEs `payments`, `wallet`, `click`, `payme`, `uzum`.
+
+## The USD wallet (for users an admin switched on)
+
+Under the soʻm balance the page shows a second card, «USD-кошелёк», with the dollar balance and
+«Перевести с баланса»: the customer types an amount in soʻm and sees the dollars and the rate
+before confirming. Conversion goes one way, soʻm to dollars; the dollars are also credited by an
+admin by hand. History lists dollar lines apart. Design: ADR-0017; operations:
+`docs/runbooks/public-api.md`.
+
+```mermaid
+sequenceDiagram
+  participant U as Customer
+  participant W as web
+  participant A as API
+  participant L as Ledger
+  U->>W: amount in soʻm
+  W->>A: POST /wallet/convert (Idempotency-Key)
+  A->>A: rate = CBU x (1 + uplift)
+  A->>L: UZS C user_wallet / D house_fx_uzs, USD D user_wallet_usd / C house_fx_usd
+  A-->>W: 201 amount_usd, rate, both balances
+```

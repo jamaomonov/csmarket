@@ -1,7 +1,8 @@
 # wallet
 
 The double-entry ledger behind every soʻm balance (spec §5, rulings R1, R2; ADR-0006).
-Ported by allow-list (ADR-0002): UZS only, no currency column, whole soʻm. Operations
+Ported by allow-list (ADR-0002); since 2026-10-09 each account has a `currency` (`UZS`, whole
+soʻm, or `USD`, integer milli-USD, 1000 = $1; ADR-0017). Operations
 (reading a history, adjusting, refused reversals): `docs/runbooks/wallet.md`; order purchases and
 refunds (M4a): ADR-0007, `docs/runbooks/orders.md`.
 
@@ -25,7 +26,7 @@ refunds (M4a): ADR-0007, `docs/runbooks/orders.md`.
 
 **Sales (2026-10-08):** transaction kinds `sale_credit` (key `sale:{sale_id}`) and `payout_return` (key `payout_return:{request_id}`) post D `user_wallet` / C `house_skin_buys`; `house_skin_buys` is a credit-side house account.
 
-**Routes (`routes.py`):** `GET /wallet` → `{balance_uzs}` and `GET /wallet/entries` for
+**Routes (`routes.py`):** `GET /wallet` → `{balance_uzs, usd}` (`usd` is `null` unless switched on) and `GET /wallet/entries` for
 the signed-in customer. The top-up routes under `/wallet/topups` are mounted from
 `payments.routes`.
 
@@ -152,3 +153,16 @@ replays, `balance_too_low`, both refund shapes), `test_wallet_routes.py`
   `usd_wallet_disabled`, 409 `balance_too_low` / `idempotency_mismatch`, 422 `convert_amount`,
   503 `rate_unavailable`.
 - `GET /wallet/entries?currency=usd` lists dollar lines (`amount_usd`, signed; `amount_uzs` is `"0"`).
+
+## Ledger by currency (ADR-0017)
+
+- `wallet_accounts.currency`: `UZS` (existing rows) or `USD`. Kinds `user_wallet_usd`,
+  `house_payments_received_usd`, `house_adjustments_usd`, `house_fx_uzs` (debit-normal) and
+  `house_fx_usd` (credit-normal); transaction kinds `fx_convert` and `admin_adjust_usd`. Migration
+  0026 adds the column and `users.usd_wallet_enabled`.
+- `post` checks each leg's currency and that SUM(D) = SUM(C) **per currency**. A transaction spans
+  two currencies only as two balanced pairs: the conversion.
+- Conversion legs: UZS C `user_wallet` / D `house_fx_uzs`; USD D `user_wallet_usd` / C
+  `house_fx_usd`. Rate, snapshot and both amounts are in the transaction's metadata.
+- Admin credit or debit of dollars (`admin_adjust_usd`) books against `house_adjustments_usd`
+  and never takes the balance below zero. Operations: `docs/runbooks/public-api.md`.
