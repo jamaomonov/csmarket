@@ -45,6 +45,11 @@ def _before_send(event: Event, _hint: Hint) -> Event | None:
     """Drop the one class of non-error APScheduler reports on every deploy."""
     if _is_shutdown_cancellation(event):
         return None
+    request = event.get("request")
+    if isinstance(request, dict):
+        # Defence in depth: ``max_request_body_size="never"`` already keeps bodies out, but a
+        # card number must not depend on one setting (``POST /sell``).
+        request.pop("data", None)
     return event
 
 
@@ -99,6 +104,9 @@ def init_sentry(settings: Settings, *, integrations: str = "asgi") -> None:
         # third-party SaaS. AGENTS.md §9.
         send_default_pii=False,
         include_local_variables=False,
+        # The Starlette integration attaches JSON bodies whatever ``send_default_pii`` says,
+        # and the default scrubber does not know ``number`` (a payout card, ``POST /sell``).
+        max_request_body_size="never",
         before_send=_before_send,
         integrations=extras,
     )

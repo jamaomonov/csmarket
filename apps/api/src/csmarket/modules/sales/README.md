@@ -41,7 +41,7 @@ Imports `skinslink.api` (the deposit client), `wallet.api` (`credit_sale`,
 - The payout is fixed at creation and is what the cart showed (`expected_payout_uzs`).
 - No ledger posting before `completed`; the credit is keyed by the sale; a rejected card
   payout by the request.
-- A reversal never debits: `rolled_back` / `late_deposit` wait for an admin.
+- A reversal never debits: `rolled_back` / `late_deposit` wait for an admin; `credit_blocked` (a frozen wallet) keeps the sale in `hold` and retries each poll.
 
 ## Settings
 

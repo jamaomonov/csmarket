@@ -6,6 +6,9 @@ trusted: a purchase webhook queues a purchase check, a deposit webhook (``trade_
 Skinslink either way. 404 while neither Skinslink buying nor selling is active.
 Machine-to-machine: no ``Idempotency-Key`` (a repeat queues one more idempotent check) and
 off the coarse limiter (``bootstrap._exempt_self_authenticating_routes``).
+
+The route answers while buying OR selling is active, so a purchase check may be queued while
+buying is off; that is harmless, because the check asks Skinslink.
 """
 
 from __future__ import annotations

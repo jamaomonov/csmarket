@@ -25,6 +25,7 @@ export const SALE_LABELS: Record<SaleStatus, string> = {
 export const ATTENTION_LABELS: Record<string, string> = {
   rolled_back: "откат после выплаты — разобрать вручную",
   late_deposit: "закрыта, но Skinslink видит обмен — разобрать вручную",
+  credit_blocked: "кошелёк заморожен — зачисление ждёт разморозки",
 };
 
 export const CARD_BRANDS: Record<CardType, string> = {

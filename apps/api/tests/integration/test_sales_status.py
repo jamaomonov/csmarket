@@ -15,9 +15,10 @@ from csmarket.modules.sales.models import Sale
 from csmarket.modules.sales.payouts import request_of
 from csmarket.modules.sales.status import Outcome, apply_deposit, check_sale, close, lock_sale
 from csmarket.modules.skinslink.api import Deposit, SkinslinkUnavailableError
-from csmarket.modules.wallet.api import WalletTransaction, user_balance
+from csmarket.modules.wallet.api import WalletTransaction, user_account, user_balance
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
+from structlog.testing import capture_logs
 
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit
 from tests.integration.orders_factory import listen_channel
@@ -272,6 +273,66 @@ async def test_check_sale_on_an_outage_changes_nothing(db_session: AsyncSession)
     client = FakeDepositClient(status=SkinslinkUnavailableError("down"))
     assert await check_sale(db_session, client, sale_id=sale.id) == "unchanged"
     assert (await _fresh(db_session, sale)).status == "offered"
+
+
+async def test_a_failed_read_still_stamps_the_poll(db_session: AsyncSession) -> None:
+    sale = await make_sale(db_session, status="hold")
+    client = FakeDepositClient(status=SkinslinkUnavailableError("down"))
+    assert await check_sale(db_session, client, sale_id=sale.id) == "unchanged"
+    row = await _fresh(db_session, sale)
+    assert row.status == "hold"
+    assert row.last_polled_at is not None
+
+
+async def test_a_sale_whose_read_keeps_failing_does_not_starve_the_next_batch(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    from csmarket.modules.sales.reconcile import poll_sales
+
+    await make_sale(db_session, status="offered")
+    client = FakeDepositClient(status=SkinslinkUnavailableError("down"))
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    at = now()
+    assert await poll_sales(factory, client, at=at) == 1
+    healthy = await make_sale(db_session, status="offered")
+    later = at + timedelta(seconds=5)
+    client.status = deposit("active")
+    client.status_calls.clear()
+    await poll_sales(factory, client, at=later)
+    assert client.status_calls == [healthy.id]  # the broken one waits its interval
+
+
+async def test_an_unknown_skinslink_status_is_logged_and_changes_nothing(
+    db_session: AsyncSession,
+) -> None:
+    sale = await make_sale(db_session, status="offered")
+    with capture_logs() as logs:
+        assert await _apply(db_session, sale, deposit("weird")) == "unchanged"
+    assert any(
+        e["event"] == "sales.unknown_status" and e["status"] == "weird" and e["sale"] == sale.number
+        for e in logs
+    )
+
+
+async def test_a_frozen_wallet_leaves_the_sale_in_hold_flagged(db_session: AsyncSession) -> None:
+    sale = await make_sale(db_session, status="hold", payout_uzs=Decimal(158_300))
+    account = await user_account(db_session, sale.user_id)
+    account.status = "frozen"
+    await db_session.commit()
+    client = FakeDepositClient(status=deposit("completed"))
+    with capture_logs() as logs:
+        assert await check_sale(db_session, client, sale_id=sale.id) == "attention"
+    row = await _fresh(db_session, sale)
+    assert (row.status, row.attention_reason, row.credited_at) == ("hold", "credit_blocked", None)
+    assert any(e["event"] == "sales.attention" for e in logs)
+    assert await _credits(db_session, sale) == 0
+    # once unfrozen the next poll credits it and the flag clears
+    account = await user_account(db_session, sale.user_id)
+    account.status = "active"
+    await db_session.commit()
+    assert await check_sale(db_session, client, sale_id=sale.id) == "credited"
+    row = await _fresh(db_session, sale)
+    assert (row.status, row.attention_reason) == ("credited", None)
 
 
 async def test_close_ends_only_a_creating_sale_and_counts_the_move(

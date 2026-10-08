@@ -50,7 +50,7 @@ CARD_TYPES = ("uzcard", "humo", "uzum_visa")
 REQUEST_STATUSES = ("waiting_hold", "to_pay", "paid", "rejected", "canceled")
 #: ``rolled_back``: reverted after the money left; ``late_deposit``: a closed sale Skinslink
 #: reports alive. Both wait for an admin (``docs/runbooks/sales.md``).
-ATTENTION_REASONS = ("rolled_back", "late_deposit")
+ATTENTION_REASONS = ("rolled_back", "late_deposit", "credit_blocked")
 
 
 def _in(values: tuple[str, ...]) -> str:

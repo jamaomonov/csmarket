@@ -114,8 +114,10 @@ intent_url, awaiting_kassa}`. `amount_uzs` is a JSON **integer** of whole soʻm,
 - `GET /wallet/entries?cursor=&limit=` (1..100, default 20) → `{items: [{id, kind,
 amount_uzs, created_at, reference_number}], next_cursor}`, newest first. `amount_uzs` is
   **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal`,
-  `admin_adjust`, `purchase` or `refund`; `reference_number` is the top-up's number for the
-  first two, the order's number for `purchase` and `refund`, else `null`. The cursor is opaque; a malformed one is 422.
+  `admin_adjust`, `purchase`, `refund`, `sale_credit` (a skin sale paid to the balance) or
+  `payout_return` (a rejected card payout returned to the balance); `reference_number` is the
+  top-up's number for `topup` and `topup_reversal`, the order's number for `purchase` and `refund`,
+  the sale's number (`S…`) for `sale_credit` and `payout_return`, else `null`. The cursor is opaque; a malformed one is 422.
   `type=topup` keeps `topup` and `topup_reversal` lines; `type=withdrawal` is an empty list
   until payouts exist; any other `type` is 422 («Транзакции» filters).
 - `POST /dev/topups/{number}/pay` is not in this schema: it pays the owner's top-up through

@@ -7,6 +7,7 @@ transaction.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
 from decimal import Decimal
 
@@ -18,7 +19,7 @@ from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.errors import NotFoundError
 from csmarket.core.money import wire_uzs
 from csmarket.core.redis import get_redis
-from csmarket.modules.admin.api import record
+from csmarket.modules.admin.api import AuditPayload, record
 from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.sales.admin_schemas import (
     AdminSaleItemOut,
@@ -199,8 +200,18 @@ async def settings_view(db: AsyncSession) -> SaleSettingsOut:
     )
 
 
+def _diff(before: SaleSettings, after: SaleSettings) -> AuditPayload:
+    """Every changed field as ``"<old JSON> -> <new JSON>"`` (an audit payload is flat)."""
+    old, new = before.model_dump(mode="json"), after.model_dump(mode="json")
+    changed: AuditPayload = {
+        k: f"{json.dumps(old[k])} -> {json.dumps(v)}" for k, v in new.items() if old[k] != v
+    }
+    return changed or {"unchanged": "true"}
+
+
 async def save_settings(db: AsyncSession, *, doc: SaleSettings, admin_id: str) -> None:
     """Replace the document; audited ``sales.settings.save``. Flushes, never commits."""
+    before = await read_sale_settings(db)
     await save_sale_settings(db, settings=doc, admin_id=admin_id)
     await record(
         db,
@@ -208,7 +219,7 @@ async def save_settings(db: AsyncSession, *, doc: SaleSettings, admin_id: str) -
         action="sales.settings.save",
         target_type="sale_settings",
         target_id="1",
-        payload={"enabled": doc.enabled, "card_min_uzs": doc.card_min_uzs},
+        payload=_diff(before, doc),
     )
 
 

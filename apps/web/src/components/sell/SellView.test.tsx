@@ -147,6 +147,31 @@ describe("SellView", () => {
     expect(submit).toBeDisabled();
   });
 
+  it("lets ten cheap items through: rounding each down must not block the sale", async () => {
+    const letters = "ABCDEFGHIJ".split("");
+    const base = INVENTORY.items[0];
+    if (!base) throw new Error("no base item");
+    routeGets(() =>
+      Promise.resolve({
+        ...INVENTORY,
+        items: letters.map((l, i) => ({
+          ...base,
+          asset_id: String(200 + i),
+          name: `Skin ${l}`,
+          price_uzs: "1100", // 0.10 $ each, rounded down to 100
+        })),
+      }),
+    );
+    view();
+    for (const l of letters) {
+      fireEvent.click(await screen.findByRole("button", { name: new RegExp(`Skin ${l}`) }));
+    }
+    // 10 x 1 100 = 11 000 is under the 11 300 hint, yet the API accepts it (spec §3).
+    const submit = first(screen.getAllByRole("button", { name: /Продать за/ }));
+    expect(submit).toBeEnabled();
+    expect(screen.queryByRole("button", { name: /Добавьте ещё/ })).toBeNull();
+  });
+
   it("sells with a key and the payout it showed, then opens the sale", async () => {
     api.apiPost.mockResolvedValue({ number: "S7K2M9QX" });
     view();

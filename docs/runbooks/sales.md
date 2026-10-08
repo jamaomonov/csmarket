@@ -57,6 +57,10 @@ waiting for its 7 days cannot be decided (409 `payout_not_payable`).
 - **`late_deposit`**: a sale we closed (`not_created`, a refusal) that Skinslink reports alive.
   The seller may have handed over skins: check the cabinet; if the deposit completed, pay the
   seller by hand (an admin balance adjustment with the sale number in the note).
+- **`credit_blocked`**: Skinslink reports `completed` for a balance sale, but the seller's wallet
+  is frozen, so the credit was refused. The sale stays in `hold`; each poll (30 min) retries
+  and the flag clears when the credit lands. Unfreeze the wallet (or decide with the owner)
+  and the next poll credits it; nothing is lost.
 
 ## Switching off
 

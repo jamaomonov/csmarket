@@ -26,10 +26,11 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
+from csmarket.core.errors import ConflictError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import record_sale_outcome
 from csmarket.modules.realtime.api import nudge_sale
@@ -145,12 +146,13 @@ async def _open(db: AsyncSession, sale: Sale, report: Deposit) -> Outcome:
     if status == "hold":
         return await _hold(db, sale)
     if status == "completed":
-        return await _complete(db, sale)
+        return await _complete_guarded(db, sale)
     if status in _DEAD:
         reason = report.fail_reason or status
         return await _close(db, sale, reason, letter=sale.status != "creating")
     if status == "reverted":
         return await _revert(db, sale, report.fail_reason or status)
+    log.warning("sales.unknown_status", status=status, sale=sale.number)
     return "unchanged"
 
 
@@ -173,11 +175,25 @@ async def _hold(db: AsyncSession, sale: Sale) -> Outcome:
     return "hold"
 
 
+async def _complete_guarded(db: AsyncSession, sale: Sale) -> Outcome:
+    """:func:`_complete`, but a refused credit (a frozen wallet) leaves the sale where it is.
+
+    The sale stays open (``hold``), flagged ``credit_blocked``; the next poll tries again and
+    the flag clears once the credit lands.
+    """
+    try:
+        async with db.begin_nested():
+            return await _complete(db, sale)
+    except ConflictError as exc:
+        log.warning("sales.credit_blocked", number=sale.number, error=str(exc)[:80])
+        return _attention(sale, "credit_blocked")
+
+
 async def _complete(db: AsyncSession, sale: Sale) -> Outcome:
     at = now()
     if sale.payout_to == "balance":
         await credit_sale(db, user_id=sale.user_id, sale_id=sale.id, amount=sale.payout_uzs)
-        sale.status, sale.credited_at = "credited", at
+        sale.status, sale.credited_at, sale.attention_reason = "credited", at, None
         await enqueue_sale_letter(db, sale, "sale_paid", to="balance")
         return "credited"
     request = await open_request(db, sale, status="to_pay")
@@ -244,6 +260,10 @@ async def check_sale(db: AsyncSession, client: DepositClient, *, sale_id: str) -
         report = await client.deposit_status(merchant_tx_id=sale_id)
     except (SkinslinkError, SkinslinkUnavailableError) as exc:
         log.warning("sales.status_unread", number=number, error=type(exc).__name__)
+        # Still counts as a poll: a sale whose read keeps failing must not stay first in line
+        # and starve the others, nor be re-asked every minute while in ``hold``.
+        await db.execute(update(Sale).where(Sale.id == sale_id).values(last_polled_at=now()))
+        await db.commit()
         return "unchanged"
     locked = await lock_sale(db, sale_id)
     if locked is None:

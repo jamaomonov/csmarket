@@ -88,7 +88,10 @@ export function SellCart(p: SellCartProps) {
     newCard.digits.length >= 4 &&
     (!hasPrefix(newCard.type, newCard.digits) ||
       (newCard.digits.length === 16 && !cardFits(newCard.type, newCard.digits)));
-  const belowMin = p.chosen.length > 0 && sum.items < min;
+  // `min` is ONE item priced once; each chosen item was rounded down to 100 on its own, so up
+  // to 100 per extra item may be lost. The API's 409 `below_minimum` stays the authority.
+  const minItems = min - 100 * Math.max(p.chosen.length - 1, 0);
+  const belowMin = p.chosen.length > 0 && sum.items < minItems;
   const belowCardMin = toCard && sum.payout > 0 && sum.payout < cardMin;
   const sell = useMutation({
     // The variables hold the typed card number: do not keep them in the mutation cache.
@@ -231,7 +234,7 @@ export function SellCart(p: SellCartProps) {
         {sell.isPending
           ? t("sending")
           : belowMin
-            ? t("addMore", { sum: uzs(min - sum.items) })
+            ? t("addMore", { sum: uzs(minItems - sum.items) })
             : t("submit", { sum: uzs(sum.payout) })}
       </Button>
     </aside>
