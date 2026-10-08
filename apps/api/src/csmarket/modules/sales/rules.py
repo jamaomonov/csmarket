@@ -54,7 +54,10 @@ class SaleSettings(BaseModel):
     #: The smallest payout to a card, whole soʻm.
     card_min_uzs: int = Field(ge=0, le=100_000_000)
     #: The smallest sum of the chosen items' Skinslink prices, USD (Skinslink's floor is 1).
-    min_sum_usd: Decimal = Field(default=Decimal(1), ge=1, le=1000, max_digits=7, decimal_places=2)
+    #: Skinslink refuses a deposit of exactly 1 $ (400 ``gt``, 2026-10-08): strictly above it.
+    min_sum_usd: Decimal = Field(
+        default=Decimal("1.10"), gt=1, le=1000, max_digits=7, decimal_places=2
+    )
 
     @model_validator(mode="after")
     def _brackets(self) -> SaleSettings:
@@ -81,7 +84,7 @@ DEFAULT_SALE_SETTINGS = SaleSettings(
     balance_bonus_pct=Decimal(2),
     card_fee_pct=CardFees(uzcard=Decimal(5), humo=Decimal(5), uzum_visa=Decimal(5)),
     card_min_uzs=30_000,
-    min_sum_usd=Decimal(1),
+    min_sum_usd=Decimal("1.10"),
 )
 
 __all__ = ["DEFAULT_SALE_SETTINGS", "CardFees", "CardType", "PayoutTo", "SaleSettings"]

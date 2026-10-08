@@ -33,6 +33,6 @@ protection of the trade is over. Design: ADR-0016; operations:
 ## Rules
 
 - The payout is fixed when the sale is created; Skinslink crediting a little less is ours.
-- The minimum is on the sum of the items (1 $ at Skinslink's prices by default), not per item.
+- The minimum is on the sum of the items (1.10 $ at Skinslink's prices by default; Skinslink refuses exactly 1 $), not per item.
 - Nothing is paid before Steam's protection ends; nothing is paid twice; a reversal is never
   debited automatically.
