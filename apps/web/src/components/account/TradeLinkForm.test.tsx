@@ -101,6 +101,11 @@ describe("TradeLinkForm", () => {
       new SessionApiError(422, "Unprocessable", { code: "trade_link_not_yours" }),
     );
     setup(LINK, "ok");
+    // Saved and working: the link as text, a tick, «Изменить» opens the form.
+    expect(screen.getByText(LINK)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Ссылка работает/ })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Изменить" }));
     expect(screen.getByText(/Ссылка работает/)).toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: LINK.replace("39734273", "39734274") },

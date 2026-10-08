@@ -104,7 +104,12 @@
       "yourAccount": "Ваш аккаунт",
       "referralTitle": "Реферальный код",
       "referralHint": "Реферальная программа скоро появится.",
-      "nav": "Разделы профиля"
+      "nav": "Разделы профиля",
+      "edit": "Изменить",
+      "cancel": "Отмена",
+      "groupSteam": "Steam",
+      "groupAccount": "Аккаунт",
+      "notSet": "Не указана"
     }
   },
   "balance": {

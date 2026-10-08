@@ -58,49 +58,74 @@ export function ProfileView({ locale }: ProfileViewProps) {
   };
   return (
     <div className="flex flex-col gap-8">
-      <section className="bg-surface flex flex-wrap items-center gap-4 rounded-xl p-5">
-        <UserAvatar user={user} size={64} className="rounded-xl" />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-xl font-bold">{user.display_name ?? "Steam"}</h2>
-          <p className="text-fg-muted text-sm">{t("profile.joined", { date: joined })}</p>
-          <p className="mt-2 flex flex-wrap items-center gap-x-2 text-sm">
-            <span className="text-fg-dim whitespace-nowrap">{t("profile.steamId")}</span>
-            <span className="inline-flex items-center gap-1">
-              <span className="num">{user.steam_id}</span>
-              <button
-                type="button"
-                onClick={copy}
-                aria-label={t("profile.copy")}
-                className="text-fg-dim hover:text-fg focus-visible:ring-accent rounded p-1 focus-visible:outline-none focus-visible:ring-2"
-              >
-                {copied ? (
-                  <Check className="text-accent size-4" aria-hidden />
-                ) : (
-                  <Copy className="size-4" aria-hidden />
-                )}
-              </button>
-            </span>
-            {copied ? (
-              <span role="status" className="text-accent">
-                {t("profile.copied")}
+      <section className="bg-surface overflow-hidden rounded-2xl">
+        {/* The banner: a dotted field lit by the accent, as a backdrop for the avatar. */}
+        <div
+          aria-hidden
+          className="h-24 sm:h-32"
+          style={{
+            backgroundImage:
+              "radial-gradient(rgb(255 255 255 / 0.09) 1px, transparent 1.2px), " +
+              "radial-gradient(120% 140% at 0% 0%, rgb(75 243 100 / 0.16), transparent 55%), " +
+              "linear-gradient(180deg, #232b3e, #1d2434)",
+            backgroundSize: "14px 14px, auto, auto",
+          }}
+        />
+        <div className="flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-end gap-4">
+            <UserAvatar
+              user={user}
+              size={88}
+              className="ring-surface -mt-12 rounded-full ring-4 sm:-mt-14"
+            />
+            <div className="min-w-0 pb-1">
+              <h2 className="truncate text-2xl font-bold">{user.display_name ?? "Steam"}</h2>
+              <p className="text-fg-muted text-sm">{t("profile.joined", { date: joined })}</p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-3 sm:items-end">
+            <p className="flex flex-wrap items-center gap-x-2 text-sm">
+              <span className="text-fg-dim whitespace-nowrap">{t("profile.steamId")}</span>
+              <span className="inline-flex items-center gap-1">
+                <span className="num">{user.steam_id}</span>
+                <button
+                  type="button"
+                  onClick={copy}
+                  aria-label={t("profile.copy")}
+                  className="text-fg-dim hover:text-fg focus-visible:ring-accent rounded p-1 focus-visible:outline-none focus-visible:ring-2"
+                >
+                  {copied ? (
+                    <Check className="text-accent size-4" aria-hidden />
+                  ) : (
+                    <Copy className="size-4" aria-hidden />
+                  )}
+                </button>
               </span>
-            ) : null}
-          </p>
+              {copied ? (
+                <span role="status" className="text-accent">
+                  {t("profile.copied")}
+                </span>
+              ) : null}
+            </p>
+            <a
+              href={`https://steamcommunity.com/profiles/${user.steam_id}`}
+              target="_blank"
+              rel="noreferrer"
+              className={cn(
+                buttonVariants({ variant: "secondary", size: "md" }),
+                "w-full sm:w-auto",
+              )}
+            >
+              {t("profile.steamProfile")}
+              <ExternalLink className="size-4" aria-hidden />
+            </a>
+          </div>
         </div>
-        <a
-          href={`https://steamcommunity.com/profiles/${user.steam_id}`}
-          target="_blank"
-          rel="noreferrer"
-          className={cn(buttonVariants({ variant: "secondary", size: "md" }), "w-full sm:w-auto")}
-        >
-          {t("profile.steamProfile")}
-          <ExternalLink className="size-4" aria-hidden />
-        </a>
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col">
         <h2 className="text-fg-dim text-xs font-semibold uppercase tracking-wider">
-          {t("profile.yourAccount")}
+          {t("profile.groupSteam")}
         </h2>
         <TradeLinkForm
           initial={{
@@ -112,6 +137,12 @@ export function ProfileView({ locale }: ProfileViewProps) {
             void refreshMe();
           }}
         />
+      </section>
+
+      <section className="flex flex-col">
+        <h2 className="text-fg-dim text-xs font-semibold uppercase tracking-wider">
+          {t("profile.yourAccount")}
+        </h2>
         <EmailForm
           email={user.email}
           verified={user.email_verified}

@@ -69,7 +69,9 @@ describe("ProfileView", () => {
     renderView();
     expect(screen.getByRole("heading", { name: "Ваш аккаунт" })).toBeInTheDocument();
     expect(screen.getByText("Ссылка на обмен", { selector: "h3" })).toBeInTheDocument();
-    expect(screen.getByDisplayValue("p@example.com")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Steam" })).toBeInTheDocument();
+    // A saved address reads as text, with «Изменить».
+    expect(screen.getByText("p@example.com")).toBeInTheDocument();
     expect(screen.getByText("Реферальный код", { selector: "h3" })).toBeInTheDocument();
     expect(screen.getByText("Скоро")).toBeInTheDocument();
   });

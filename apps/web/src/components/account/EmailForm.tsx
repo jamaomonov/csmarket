@@ -2,7 +2,7 @@
 
 import { SessionApiError } from "@csmarket/api-client";
 import { Button } from "@csmarket/ui";
-import { Mail } from "lucide-react";
+import { CheckCircle2, Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type SyntheticEvent } from "react";
 
@@ -31,9 +31,13 @@ function waitLeft(lastSent: number | null): number {
 
 export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps) {
   const t = useTranslations("web.account.email");
+  const p = useTranslations("web.account.profile");
   const generic = useTranslations("web.account.tradeLink.errors");
   const [value, setValue] = useState(email ?? "");
   const [busy, setBusy] = useState(false);
+  // A saved address reads as text with «Изменить»; the form opens to add or change one.
+  const [editing, setEditing] = useState(email === null);
+  const [shown, setShown] = useState(email);
   const [outcome, setOutcome] = useState<Outcome>(null);
   const [lastSent, setLastSent] = useState<number | null>(sentAt ? Date.parse(sentAt) : null);
   const [cooling, setCooling] = useState(() => waitLeft(lastSent) > 0);
@@ -67,6 +71,8 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
       const deferred = changed && me.email_verification_sent_at === null;
       setOutcome(deferred ? "wait" : changed ? "sent" : "saved");
       if (changed) setLastSent(Date.now());
+      setShown(next);
+      setEditing(next === null);
       onChange();
     } catch (err) {
       setOutcome(err instanceof SessionApiError && err.status === 422 ? "invalid" : "failed");
@@ -99,45 +105,12 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
     }
   }
 
-  const unverified = email !== null && !verified;
-  return (
-    <SettingsCard
-      icon={Mail}
-      title={t("title")}
-      hint={t("hint")}
-      aside={
-        email !== null && verified ? (
-          <span className="bg-success text-success-fg rounded px-2 py-0.5 text-xs">
-            {t("verified")}
-          </span>
-        ) : null
-      }
-    >
-      <form
-        onSubmit={(e) => {
-          void save(e);
-        }}
-        className="mt-4 flex flex-col gap-3 sm:flex-row"
-      >
-        <input
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setOutcome(null);
-          }}
-          aria-label={t("title")}
-          className="border-border bg-surface flex-1 rounded-md border px-3 py-2 text-sm"
-        />
-        <Button type="submit" disabled={busy}>
-          {t("save")}
-        </Button>
-      </form>
+  const unverified = shown !== null && !verified;
+  const notes = (
+    <>
       {unverified ? (
         <div className="mt-3 flex flex-col items-start gap-2 text-sm">
-          <p>{t("unverified", { email })}</p>
+          <p>{t("unverified", { email: shown })}</p>
           <Button
             type="button"
             variant="secondary"
@@ -158,6 +131,76 @@ export function EmailForm({ email, verified, sentAt, onChange }: EmailFormProps)
       {outcome === "failed" ? (
         <p className="text-danger mt-3 text-sm">{generic("generic")}</p>
       ) : null}
+    </>
+  );
+  const title = (
+    <>
+      {t("title")}
+      {shown !== null && verified ? (
+        <CheckCircle2 className="text-success size-[18px]" aria-label={t("verified")} role="img" />
+      ) : null}
+    </>
+  );
+  if (!editing) {
+    return (
+      <SettingsCard
+        icon={Mail}
+        title={title}
+        hint={<span className="block truncate">{shown}</span>}
+        aside={
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setOutcome(null);
+              setEditing(true);
+            }}
+          >
+            {p("edit")}
+          </Button>
+        }
+      >
+        {notes}
+      </SettingsCard>
+    );
+  }
+  return (
+    <SettingsCard icon={Mail} title={title} hint={t("hint")}>
+      <form
+        onSubmit={(e) => {
+          void save(e);
+        }}
+        className="mt-4 flex flex-col gap-3 sm:flex-row"
+      >
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setOutcome(null);
+          }}
+          aria-label={t("title")}
+          className="border-border bg-bg flex-1 rounded-md border px-3 py-2 text-sm"
+        />
+        <Button type="submit" disabled={busy}>
+          {t("save")}
+        </Button>
+        {shown !== null ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => {
+              setValue(shown);
+              setOutcome(null);
+              setEditing(false);
+            }}
+          >
+            {p("cancel")}
+          </Button>
+        ) : null}
+      </form>
+      {notes}
     </SettingsCard>
   );
 }

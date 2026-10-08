@@ -104,7 +104,12 @@
       "yourAccount": "Your account",
       "referralTitle": "Referral code",
       "referralHint": "The referral programme is coming soon.",
-      "nav": "Profile sections"
+      "nav": "Profile sections",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "groupSteam": "Steam",
+      "groupAccount": "Account",
+      "notSet": "Not set"
     }
   },
   "balance": {

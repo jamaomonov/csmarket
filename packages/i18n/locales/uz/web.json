@@ -104,7 +104,12 @@
       "yourAccount": "Hisobingiz",
       "referralTitle": "Referal kod",
       "referralHint": "Referal dasturi tez orada paydo boʻladi.",
-      "nav": "Profil boʻlimlari"
+      "nav": "Profil boʻlimlari",
+      "edit": "Oʻzgartirish",
+      "cancel": "Bekor qilish",
+      "groupSteam": "Steam",
+      "groupAccount": "Akkaunt",
+      "notSet": "Koʻrsatilmagan"
     }
   },
   "balance": {

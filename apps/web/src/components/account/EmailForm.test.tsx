@@ -28,6 +28,10 @@ function setup({ email = null, verified = false, sentAt = null }: Props = {}) {
 }
 
 const resend = () => screen.getByRole("button", { name: "Отправить ещё раз" });
+/** A saved address reads as text; «Изменить» opens the form. */
+const edit = () => {
+  fireEvent.click(screen.getByRole("button", { name: "Изменить" }));
+};
 
 describe("EmailForm", () => {
   beforeEach(() => {
@@ -47,6 +51,8 @@ describe("EmailForm", () => {
   it("saves a new address with a key and says a letter is on its way", async () => {
     api.apiPatch.mockResolvedValue({});
     const { onChange } = setup({ email: "old@example.com", verified: true });
+    expect(screen.getByText("old@example.com")).toBeInTheDocument();
+    edit();
     const input = screen.getByRole("textbox");
     expect(input).toHaveValue("old@example.com");
     fireEvent.change(input, { target: { value: "new@example.com" } });
@@ -70,6 +76,7 @@ describe("EmailForm", () => {
   it("a second address within a minute is saved but says to send the letter later", async () => {
     api.apiPatch.mockResolvedValue({ email_verification_sent_at: null });
     setup({ email: "old@example.com" });
+    edit();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "new@example.com" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Отправить ещё раз можно через минуту.")).toBeInTheDocument();
@@ -81,6 +88,7 @@ describe("EmailForm", () => {
   it("clearing the field sends null and says saved", async () => {
     api.apiPatch.mockResolvedValue({});
     setup({ email: "old@example.com" });
+    edit();
     fireEvent.change(screen.getByRole("textbox"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
@@ -106,7 +114,8 @@ describe("EmailForm", () => {
 
   it("verified: a badge, no resend", () => {
     setup({ email: "a@example.com", verified: true });
-    expect(screen.getByText("Подтверждена")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Подтверждена" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).toBeNull();
     expect(screen.queryByRole("button", { name: "Отправить ещё раз" })).not.toBeInTheDocument();
   });
 

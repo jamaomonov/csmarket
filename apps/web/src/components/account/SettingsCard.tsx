@@ -5,27 +5,27 @@ interface SettingsCardProps {
   icon: LucideIcon;
   title: ReactNode;
   hint?: ReactNode;
-  /** Beside the title on wide screens (a badge, a button). */
+  /** On the right of the row (an «Изменить» button, a badge). */
   aside?: ReactNode;
   children?: ReactNode;
 }
 
-/** One row of «Ваш аккаунт»: an icon, a title with its hint, an optional action, a body. */
+/** One row of the profile's settings: a round icon, a title with its value or hint, an action. */
 export function SettingsCard({ icon: Icon, title, hint, aside, children }: SettingsCardProps) {
   return (
-    <section className="bg-surface rounded-xl p-5">
-      <div className="flex items-start gap-4">
-        <span className="bg-surface-2 text-fg-muted grid size-10 shrink-0 place-items-center rounded-full">
-          <Icon className="size-[18px]" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-            <h3 className="font-semibold">{title}</h3>
-            {aside}
+    <section className="border-border flex items-start gap-4 border-b py-5 last:border-b-0">
+      <span className="bg-surface text-fg-muted grid size-12 shrink-0 place-items-center rounded-full">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="flex items-center gap-2 text-[17px] font-semibold">{title}</h3>
+            {hint ? <div className="text-fg-muted mt-1 text-sm">{hint}</div> : null}
           </div>
-          {hint ? <div className="text-fg-muted mt-0.5 text-sm">{hint}</div> : null}
-          {children}
+          {aside ? <div className="shrink-0">{aside}</div> : null}
         </div>
+        {children}
       </div>
     </section>
   );
