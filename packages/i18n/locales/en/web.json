@@ -33,7 +33,8 @@
     "reviews": "Reviews",
     "transactions": "Transactions",
     "referral": "Referral",
-    "trades": "Trades"
+    "trades": "Trades",
+    "cards": "My cards"
   },
   "auth": {
     "callback": {
@@ -127,7 +128,9 @@
       "topup_reversal": "Top-up cancelled",
       "admin_adjust": "Adjustment",
       "purchase": "Purchase",
-      "refund": "Refund to balance"
+      "refund": "Refund to balance",
+      "sale_credit": "Skins sold",
+      "payout_return": "Payout to balance"
     },
     "topup": {
       "waiting": "Waiting for payment",
@@ -141,7 +144,8 @@
       "expired": "Time to pay has run out. Start a new top-up.",
       "reversed": "Top-up cancelled.",
       "notFound": "Top-up not found."
-    }
+    },
+    "pending": "On its way: {sum}"
   },
   "skins": {
     "meta": {
@@ -430,5 +434,78 @@
     },
     "continue": "Continue",
     "close": "Close"
+  },
+  "sales": {
+    "number": "Sale #{number}",
+    "back": "To trades",
+    "openOffer": "Open the trade in Steam",
+    "fee": "Card transfer fee",
+    "bonus": "Balance bonus",
+    "more": "Show more",
+    "notFound": "Sale not found.",
+    "loadFailed": "Could not load the sale. Refresh the page.",
+    "listFailed": "Could not load your sales. Refresh the page.",
+    "status": {
+      "creating": "Preparing the trade",
+      "offered": "Accept the trade",
+      "hold": "Waiting 7 days",
+      "credited": "On the balance",
+      "payout": "Sending to the card",
+      "closed": "Did not go through",
+      "reverted": "Trade reversed"
+    },
+    "payout": {
+      "waiting_hold": "Waiting 7 days",
+      "to_pay": "Sending to the card",
+      "paid": "Sent to the card",
+      "rejected": "On the balance",
+      "canceled": "Did not go through"
+    },
+    "state": {
+      "creating": {
+        "title": "Preparing the trade",
+        "text": "A trade offer will arrive in Steam within a minute."
+      },
+      "offered": {
+        "title": "Accept the trade",
+        "text": "{bot} sent you an offer in Steam. Accept it by {time}."
+      },
+      "hold": {
+        "title": "Skins received",
+        "text": "{amount} will arrive on {date}."
+      },
+      "credited": {
+        "title": "Money on your balance",
+        "text": "{amount} is on your csmarket balance."
+      },
+      "payout": {
+        "title": "Sending the money",
+        "text": "We will send {amount} to the card {card} soon."
+      },
+      "paid": {
+        "title": "Money sent",
+        "text": "{amount} was sent to the card {card}."
+      },
+      "rejected": {
+        "title": "Money on your balance",
+        "text": "The card transfer failed: {reason}. {amount} was added to your balance.",
+        "textPlain": "The card transfer failed. {amount} was added to your balance."
+      },
+      "closed": {
+        "title": "The sale did not go through",
+        "text": "The trade did not happen; your skins stay with you."
+      },
+      "reverted": {
+        "title": "Trade reversed",
+        "text": "The trade was reversed in Steam — nothing is paid for this sale."
+      }
+    }
+  },
+  "cards": {
+    "title": "My cards",
+    "empty": "No cards yet. You can add one when you sell skins.",
+    "loadFailed": "Could not load your cards. Refresh the page.",
+    "delete": "Delete {name}",
+    "deleteShort": "Delete"
   }
 }

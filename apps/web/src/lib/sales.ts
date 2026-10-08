@@ -27,6 +27,8 @@ export interface SaleOut {
   /** When the money is due, while `hold`. */
   money_at: string | null;
   payout_status: PayoutStatus | null;
+  /** Why a card payout was rejected; set only then. */
+  payout_reject_reason: string | null;
   created_at: string;
 }
 
@@ -56,4 +58,41 @@ export function deleteCard(id: string, key: string): Promise<undefined> {
 /** A fresh `DELETE /payout-cards/{id}` key. */
 export function mintCardKey(): string {
   return `web-card-${crypto.randomUUID()}`;
+}
+
+/** `SalesPage`: newest first; `next_cursor` is `null` on the last page. */
+export interface SalesPage {
+  items: SaleOut[];
+  next_cursor: string | null;
+}
+
+export const SALES_KEY = ["sales", "list"] as const;
+export const PENDING_KEY = ["sales", "pending"] as const;
+export const saleKey = (number: string) => ["sales", "one", number] as const;
+
+/** `GET /sales/{number}`. */
+export function getSale(number: string): Promise<SaleOut> {
+  return session.apiGet<SaleOut>(`/api/v1/sales/${encodeURIComponent(number)}`);
+}
+
+/** `GET /sales?cursor=`. */
+export function listSales(cursor?: string): Promise<SalesPage> {
+  const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
+  return session.apiGet<SalesPage>(`/api/v1/sales${query}`);
+}
+
+/** `GET /sales/pending`: what balance sales will credit once the 7 days pass. */
+export function getPendingSales(): Promise<{ pending_uzs: string }> {
+  return session.apiGet<{ pending_uzs: string }>("/api/v1/sales/pending");
+}
+
+/** How often the sale page asks again: often while the offer is out, rarely while the money
+ * waits, never once nothing can change. A socket nudge asks sooner. */
+export function salePollInterval(sale: SaleOut | undefined): number | false {
+  if (!sale) return false;
+  if (sale.status === "creating" || sale.status === "offered") return 5_000;
+  if (sale.status === "hold" || (sale.status === "payout" && sale.payout_status === "to_pay")) {
+    return 60_000;
+  }
+  return false;
 }

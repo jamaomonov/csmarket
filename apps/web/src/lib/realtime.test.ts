@@ -121,6 +121,27 @@ describe("OrderSocket", () => {
     expect(h.changed).toEqual(["AB12CD34"]);
   });
 
+  it("reports a changed sale apart from orders", async () => {
+    const sales: string[] = [];
+    const changed: string[] = [];
+    const socket = new OrderSocket({
+      url: "ws://api.test/api/v1/realtime/orders",
+      getToken: () => Promise.resolve("t1"),
+      onChanged: (n) => changed.push(n),
+      onSaleChanged: (n) => sales.push(n),
+      // The fake's shape is what OrderSocket uses of a WebSocket.
+      WebSocketImpl: FakeSocket as unknown as typeof WebSocket,
+      random: () => 0,
+    });
+    socket.start();
+    await flush();
+    last().open();
+    last().message({ type: "sale.updated", number: "S7K2M9QX" });
+    last().message({ type: "sale.updated" });
+    expect([sales, changed]).toEqual([["S7K2M9QX"], []]);
+    socket.stop();
+  });
+
   it("reconnects after a drop with a fresh token, backing off", async () => {
     const h = harness();
     h.socket.start();

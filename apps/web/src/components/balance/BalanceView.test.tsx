@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BalanceView } from "./BalanceView";
 
 import type * as BalanceModule from "@/lib/balance";
+import type * as SalesModule from "@/lib/sales";
 
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 const api = vi.hoisted(() => ({
@@ -20,6 +21,11 @@ vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
 vi.mock("@/lib/balance", async (importOriginal) => ({
   ...(await importOriginal<typeof BalanceModule>()),
   ...api,
+}));
+const sales = vi.hoisted(() => ({ getPendingSales: vi.fn() }));
+vi.mock("@/lib/sales", async (importOriginal) => ({
+  ...(await importOriginal<typeof SalesModule>()),
+  ...sales,
 }));
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -43,6 +49,7 @@ function renderView(type: "all" | "topup" | "withdrawal" = "all") {
 
 describe("BalanceView", () => {
   beforeEach(() => {
+    sales.getPendingSales.mockReset().mockResolvedValue({ pending_uzs: "0" });
     api.getBalance.mockReset().mockResolvedValue({ balance_uzs: "150000" });
     api.getProviders.mockReset().mockResolvedValue([{ slug: "click" }]);
     api.getEntries.mockReset().mockResolvedValue({ items: [], next_cursor: null });
@@ -89,5 +96,12 @@ describe("BalanceView", () => {
     expect(links[1]).toHaveAttribute("aria-current", "page");
     await screen.findByText("Пока пусто.");
     expect(api.getEntries).toHaveBeenCalledWith(undefined, "topup");
+  });
+
+  it("shows the money on its way from sales, only when there is some", async () => {
+    auth.value = { status: "signed_in", user: { id: "u1" }, signInHref: () => "/s" };
+    sales.getPendingSales.mockResolvedValue({ pending_uzs: "158300" });
+    renderView();
+    expect(await screen.findByText(/Ожидает зачисления: 158\s300/)).toBeInTheDocument();
   });
 });

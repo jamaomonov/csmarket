@@ -2,7 +2,7 @@
  * The order-updates socket (M4b, ADR-0008): `WS /api/v1/realtime/orders`.
  *
  * On open it sends `{"type":"auth","token":…}` — nothing secret travels in the URL. The
- * server answers with `{"type":"order.changed","number"}` nudges and a ping every 25 s; a
+ * server answers with `{"type":"order.changed","number"}` (or `{"type":"sale.updated","number"}`) nudges and a ping every 25 s; a
  * nudge carries no data, the caller re-reads the order. Polling stays the reconciler: the
  * socket only makes a change show sooner.
  *
@@ -25,6 +25,8 @@ export interface OrderSocketOptions {
   refreshToken?: () => Promise<boolean>;
   /** An order of the signed-in buyer changed. */
   onChanged: (number: string) => void;
+  /** A sale of the signed-in seller changed (`sale.updated`). */
+  onSaleChanged?: (number: string) => void;
   onState?: (state: SocketState) => void;
   /** For tests: the WebSocket constructor. */
   WebSocketImpl?: typeof WebSocket;
@@ -115,6 +117,9 @@ export class OrderSocket {
     const { type, number } = msg as { type?: unknown; number?: unknown };
     if (type === "order.changed" && typeof number === "string" && number) {
       this.opts.onChanged(number);
+    }
+    if (type === "sale.updated" && typeof number === "string" && number) {
+      this.opts.onSaleChanged?.(number);
     }
   }
 
