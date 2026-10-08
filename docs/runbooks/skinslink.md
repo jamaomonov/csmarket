@@ -71,7 +71,7 @@ A lost webhook costs at most 30 s: `skinslink.reconcile` polls every open purcha
    switch is on **and** both values are set (`skinslink_active`).
 3. `docker compose -f docker-compose.prod.yml up -d api worker scheduler`.
 4. Watch: the scheduler logs `skinslink.mirror.loaded mode=full` within a minute;
-   `csmarket_skinslink_enabled` reads 1 after the first balance tick (90 s);
+   `csmarket_skinslink_enabled` reads 1 after the first balance tick (340 s);
    `csmarket_skinslink_calls_total{outcome="ok"}` grows; the `sources.prices` tick
    (every 2 min, first run 105 s after start) fills `skin_items.skinslink_count` and
    reprices. An item page now lists offers of both sources.

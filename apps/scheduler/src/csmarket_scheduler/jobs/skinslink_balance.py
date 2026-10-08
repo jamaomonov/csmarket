@@ -34,13 +34,13 @@ async def run() -> None:
 
 
 def register(scheduler: AsyncIOScheduler) -> None:
-    """Every :data:`INTERVAL_SECONDS`; first run 90 s after start."""
+    """Every :data:`INTERVAL_SECONDS`; first run 340 s after start (not urgent; swapped with lisskins.reconcile)."""
     scheduler.add_job(
         run,
         trigger="interval",
         seconds=INTERVAL_SECONDS,
         id=JOB_ID,
-        next_run_time=first_run_after(90),
+        next_run_time=first_run_after(340),
         replace_existing=True,
         coalesce=True,
         max_instances=1,
