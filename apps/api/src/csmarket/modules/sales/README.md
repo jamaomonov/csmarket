@@ -14,3 +14,12 @@ ledger (`wallet`), the outbox (`notifications`), the socket (`realtime`).
 | `CSMARKET_SALES_ENABLED`                   | `false` | The env kill switch                        |
 | `CSMARKET_SALES_INVENTORY_TIMEOUT_SECONDS` | `6`     | Skinslink `inventory` on the request path  |
 | `CSMARKET_SALES_DEPOSIT_TIMEOUT_SECONDS`   | `10`    | Skinslink `create-deposit` on `POST /sell` |
+
+## Admin (`/api/v1/admin/sales`)
+
+`admin_routes.py` mounts the payout queue, a request's page, the sales list and page, and the
+settings editor; `payouts_summary` feeds the dashboard's «К выплате» tile. Paid and reject lock
+the sale, then its request (the order `status.py` takes) and need a `to_pay` request (409
+`payout_not_payable`); a reject credits `amount + fee` to the balance, keyed `payout_return:{id}`.
+The full card number leaves only through the keyless `POST /payouts/{id}/reveal`, audited
+`sales.card.show` / `sales.card.copy` on every call; everything else shows the last four.

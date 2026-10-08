@@ -14,6 +14,7 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.admin.dashboard_schemas import DashboardOut
 from csmarket.modules.admin.deps import require_admin
 from csmarket.modules.orders.api import Days, dashboard_summary
+from csmarket.modules.sales.api import payouts_summary
 
 _WINDOWS = frozenset({1, 7, 30})
 
@@ -31,4 +32,5 @@ async def dashboard(
     if days not in _WINDOWS:
         raise ValidationError("days must be 1, 7 or 30", code="dashboard_days")
     window = cast("Days", days)
-    return DashboardOut.of(await dashboard_summary(db, get_redis(), days=window, at=now()))
+    summary = await dashboard_summary(db, get_redis(), days=window, at=now())
+    return DashboardOut.of(summary, await payouts_summary(db))

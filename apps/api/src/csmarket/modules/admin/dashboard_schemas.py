@@ -8,6 +8,7 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 from csmarket.modules.orders.api import Dashboard
+from csmarket.modules.sales.api import PayoutsSummary
 
 
 def _money(value: Decimal) -> str:
@@ -29,6 +30,13 @@ class SalesOut(BaseModel):
 class RefundsOut(BaseModel):
     count: int
     amount_uzs: str
+
+
+class PayoutsOut(BaseModel):
+    """«К выплате»: card payouts payable now (spec 2026-10-08)."""
+
+    to_pay_count: int
+    to_pay_uzs: str
 
 
 class DayOut(BaseModel):
@@ -72,9 +80,10 @@ class DashboardOut(BaseModel):
     waxpeer: WaxpeerOut
     skinslink: SkinslinkOut
     lisskins: LisskinsOut
+    payouts: PayoutsOut
 
     @classmethod
-    def of(cls, d: Dashboard) -> DashboardOut:
+    def of(cls, d: Dashboard, payouts: PayoutsSummary) -> DashboardOut:
         """Strings for the money."""
         s = d.sales
         return cls(
@@ -119,5 +128,8 @@ class DashboardOut(BaseModel):
                 else _money(d.lisskins.available_usd),
                 locked_usd=None if d.lisskins.locked_usd is None else _money(d.lisskins.locked_usd),
                 read_at=d.lisskins.read_at,
+            ),
+            payouts=PayoutsOut(
+                to_pay_count=payouts.to_pay_count, to_pay_uzs=_money(payouts.to_pay_uzs)
             ),
         )

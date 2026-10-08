@@ -70,6 +70,13 @@ async def rows_of(db: AsyncSession, sales: list[Sale]) -> list[SaleRow]:
     ]
 
 
+def bonus_fee(sale: Sale) -> tuple[Decimal, Decimal]:
+    """``(bonus, fee)`` of ``sale`` in soʻm: a balance sale earns a bonus, a card sale pays a fee."""
+    if sale.payout_to == "card":
+        return Decimal(0), sale.items_uzs - sale.payout_uzs
+    return sale.payout_uzs - sale.items_uzs, Decimal(0)
+
+
 def sale_out(row: SaleRow) -> SaleOut:
     """The seller's view of ``row``."""
     s = row.sale
@@ -80,8 +87,7 @@ def sale_out(row: SaleRow) -> SaleOut:
             bot_name=s.bot_name,
             expires_at=s.offer_expiry_at,
         )
-    to_card = s.payout_to == "card"
-    zero = Decimal(0)
+    bonus, fee = bonus_fee(s)
     return SaleOut(
         number=s.number,
         status=s.status,  # type: ignore[arg-type]  # the column's check admits only these
@@ -90,8 +96,8 @@ def sale_out(row: SaleRow) -> SaleOut:
         if row.card is not None
         else None,
         items_uzs=wire_uzs(s.items_uzs),
-        bonus_uzs=wire_uzs(zero if to_card else s.payout_uzs - s.items_uzs),
-        fee_uzs=wire_uzs(s.items_uzs - s.payout_uzs if to_card else zero),
+        bonus_uzs=wire_uzs(bonus),
+        fee_uzs=wire_uzs(fee),
         payout_uzs=wire_uzs(s.payout_uzs),
         items=[
             SaleItemOut(
@@ -169,4 +175,13 @@ async def pending_uzs(db: AsyncSession, user_id: str) -> Decimal:
     return Decimal(total or 0)
 
 
-__all__ = ["PAGE_SIZE", "SaleRow", "list_sales", "owned_sale", "pending_uzs", "rows_of", "sale_out"]
+__all__ = [
+    "PAGE_SIZE",
+    "SaleRow",
+    "bonus_fee",
+    "list_sales",
+    "owned_sale",
+    "pending_uzs",
+    "rows_of",
+    "sale_out",
+]
