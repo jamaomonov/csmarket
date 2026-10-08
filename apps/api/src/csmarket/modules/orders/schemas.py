@@ -49,6 +49,15 @@ class OrderOut(BaseModel):
     name: str
     phase: str | None
     image_url: str | None
+    #: The bought offer's float without trailing zeros (``"0.6214"``); ``None`` when the
+    #: market named none and on older orders.
+    float_value: str | None
+    #: The bought offer's paint seed (pattern); ``None`` as ``float_value``.
+    paint_seed: int | None
+    #: The catalogue item's exterior code: ``FN``, ``MW``, ``FT``, ``WW``, ``BS``.
+    exterior: str | None
+    #: The catalogue item's rarity colour (``#eb4b4b``).
+    rarity_color: str | None
     #: Whole soʻm as digits.
     price_uzs: str
     price_usd: str

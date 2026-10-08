@@ -35,7 +35,7 @@ from csmarket.core.numbers import is_number, is_topup_number
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.paid import mark_paid
 from csmarket.modules.orders.schemas import OrderOut, OrderPayOut
-from csmarket.modules.orders.service import get_owned, order_out
+from csmarket.modules.orders.service import get_owned
 from csmarket.modules.payments.api import (
     Payable,
     Payment,
@@ -103,7 +103,7 @@ async def _owner_view(db: AsyncSession, *, user_id: str, number: str) -> OrderOu
     row = await get_owned(db, user_id, number)
     if row is None:  # pragma: no cover -- the order is locked and theirs; never seen
         raise NotFoundError("order not found")
-    return order_out(row.order, row.trade, row.image_url, row.purchase)
+    return row.out()
 
 
 async def _pay_from_balance(db: AsyncSession, order: Order) -> None:

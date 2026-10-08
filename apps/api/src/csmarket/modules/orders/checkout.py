@@ -62,6 +62,8 @@ from csmarket.modules.users.api import User, parse_tradelink
 log = get_logger("csmarket.orders.checkout")
 
 _USD_PLACES = Decimal("0.000001")
+#: ``orders.float_value``: numeric(7,6).
+_FLOAT_PLACES = Decimal("0.000001")
 _UNITS_PER_USD = Decimal(1000)
 #: Stored verdicts that refuse a link. ``warn`` is the pre-2026-10-01 verdict of a trade
 #: hold, which is refused now (owner decision D2); a stored or cached one still refuses.
@@ -245,6 +247,13 @@ async def _read(
     )
 
 
+def _float_of(value: float | None) -> Decimal | None:
+    """An offer's float as ``orders.float_value`` stores it (six places); ``None`` stays."""
+    if value is None or not 0 <= value <= 1:  # NaN, inf or nonsense from a market
+        return None
+    return Decimal(str(value)).quantize(_FLOAT_PLACES)
+
+
 def _build(
     q: _Quoted, row: Offer, usd: Decimal, uzs: Decimal, *, key: str, settings: Settings
 ) -> Order:
@@ -258,6 +267,8 @@ def _build(
         source=row.source,
         offer_id=row.offer_id,
         listing_id=row.listing_id,
+        float_value=_float_of(row.float_value),
+        paint_seed=row.paint_seed,
         cost_units=row.price_units,
         cost_usd=(Decimal(row.price_units) / _UNITS_PER_USD).quantize(_USD_PLACES),
         price_usd=usd,

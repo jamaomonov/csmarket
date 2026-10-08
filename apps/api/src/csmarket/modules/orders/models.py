@@ -114,6 +114,11 @@ class Order(Base):
     offer_id: Mapped[str | None] = mapped_column(String(310), nullable=True)
     #: The Waxpeer listing behind ``offer_id``; ``NULL`` for a Skinslink order.
     listing_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    #: The chosen offer's float (wear), as the market listed it; ``NULL`` when it named none
+    #: and on orders older than 0025.
+    float_value: Mapped[Decimal | None] = mapped_column(Numeric(7, 6), nullable=True)
+    #: The chosen offer's paint seed (pattern); ``NULL`` as ``float_value``.
+    paint_seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     #: Units we agreed to pay at checkout (1000 = $1); the worker's price cap.
     cost_units: Mapped[int] = mapped_column(Integer, nullable=False)
     cost_usd: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
