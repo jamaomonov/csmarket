@@ -233,6 +233,14 @@ def _purchase(raw: object) -> Purchase:
     )
 
 
+#: Refusals Skinslink names only in ``message`` (no ``data``), as stable codes.
+_MESSAGE_CODES = {
+    "item_specified_price_not_found": "item_specified_price_not_found",
+    "already exist error": "already_exists",
+}
+_TOO_MANY = "deposit exceeds the maximum"
+
+
 # Any: an error body's ``data`` (a list of field errors, or an object).
 def _code(body: Mapping[str, Any]) -> str | None:
     """The domain code of a refusal: the first field error's ``code``, or a ``fail_reason``."""
@@ -242,7 +250,15 @@ def _code(body: Mapping[str, Any]) -> str | None:
             if isinstance(entry, Mapping) and isinstance(entry.get("code"), str):
                 return str(entry["code"])
     if isinstance(data, Mapping):
-        return _str(data.get("fail_reason"))
+        code = _str(data.get("fail_reason"))
+        if code is not None:
+            return code
+    message = body.get("message")
+    if isinstance(message, str):
+        if message in _MESSAGE_CODES:
+            return _MESSAGE_CODES[message]
+        if message.startswith(_TOO_MANY):
+            return "too_many_items"
     return None
 
 

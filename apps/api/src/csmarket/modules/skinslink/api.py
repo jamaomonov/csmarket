@@ -22,6 +22,16 @@ from csmarket.modules.skinslink.client import (
     SkinslinkUnavailableError,
     client_for,
 )
+from csmarket.modules.skinslink.deposits import (
+    PRICE_CODES,
+    STEAM_ACCOUNT_CODES,
+    Deposit,
+    DepositClient,
+    Inventory,
+    InventoryItem,
+    SkinslinkDepositClient,
+    deposit_client_for,
+)
 from csmarket.modules.skinslink.mirror import MirrorResult, mirror_fresh, sync_mirror, to_units
 from csmarket.modules.skinslink.models import (
     SKINSLINK_CHANNEL,
@@ -35,17 +45,24 @@ from csmarket.modules.skinslink.rollup import rollup
 
 __all__ = [
     "LINK_ERROR_CODES",
+    "PRICE_CODES",
     "PURCHASE_FAIL_REASONS",
     "SKINSLINK_CHANNEL",
+    "STEAM_ACCOUNT_CODES",
     "AvailablePage",
     "Balance",
     "CatalogueEvent",
     "CatalogueItem",
+    "Deposit",
+    "DepositClient",
     "EventsPage",
+    "Inventory",
+    "InventoryItem",
     "MirrorResult",
     "Purchase",
     "SkinslinkCheck",
     "SkinslinkClient",
+    "SkinslinkDepositClient",
     "SkinslinkError",
     "SkinslinkForbiddenError",
     "SkinslinkItem",
@@ -56,6 +73,7 @@ __all__ = [
     "SkinslinkUnavailableError",
     "claim_checks",
     "client_for",
+    "deposit_client_for",
     "enqueue_check",
     "mirror_fresh",
     "offers_for",
