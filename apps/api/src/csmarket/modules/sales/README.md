@@ -26,6 +26,9 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
   `payouts.py` — a card sale's request; `checks.py` — the webhook's queue; `reconcile.py` —
   the poll and the overdue count; `letters.py` — the three letters.
 - `cards.py`, `views.py`, `schemas.py`, `routes.py`, `cards_routes.py` — the seller's API.
+  `views.rows_of` loads a page's items, cards, requests and the items' catalogue look
+  (`exterior`, `rarity_color` from `skin_items` by market name; `null` for an unlisted item) in
+  one query each. `GET /sales?status=hold` keeps only the sales in Steam's protection.
 - `admin_schemas.py`, `admin_sales.py`, `admin_payouts.py`, `admin_routes.py` — «Выкуп».
 
 ## Boundaries

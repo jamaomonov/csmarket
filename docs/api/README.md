@@ -177,7 +177,11 @@ Signed in (401 without a token). One skin per order.
 
 `OrderOut`: `number`, `status` (`pending`, `paid`, `buying`, `trade_sent`, `delivered`,
 `cancelled`, `failed`, `returned` — a `pending` order past `expires_at` already reads
-`cancelled`), `slug`, `name`, `phase`, `image_url`, `price_uzs` / `price_usd` (strings),
+`cancelled`), `slug`, `name`, `phase`, `image_url`, `float_value` (the bought offer's float
+as a string without trailing zeros, `"0.6214"`; `null` when the market named none and on orders
+before 2026-10-08), `paint_seed` (integer or `null`, likewise), `exterior` (the catalogue's
+`FN` / `MW` / `FT` / `WW` / `BS` or `null`), `rarity_color` (`"#eb4b4b"` or `null`),
+`price_uzs` / `price_usd` (strings),
 `created_at`, `expires_at`, `paid_at`, `delivered_at`, `paid_with`, `refunded_to`
 (`balance` or `null` — promise a refund only when it is set), `payable`, `trade`.
 `trade` is `null` for `pending`/`cancelled`, else `{state, reason_code, offer_url,
@@ -436,8 +440,12 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
   card that is not mine; 503 `sales_unavailable` / `rate_unavailable`. 201 `SaleOut`; a timeout
   answers `status: "creating"`. Two different keys make two sales (known gap,
   `docs/runbooks/sales.md`).
-- `GET /sales?cursor=`, `GET /sales/{number}` (`S…`; 404 for anyone else's),
+- `GET /sales?cursor=&status=`, `GET /sales/{number}` (`S…`; 404 for anyone else's),
   `GET /sales/pending` (`pending_uzs`: balance sales still in Steam's protection).
+  `status` is optional and only `hold` is accepted (another value is 422): it keeps the sales in
+  Steam's protection. Send the same `status` with the page's `cursor`. Each of a sale's
+  `items[]` (`asset_id`, `name`, `image_url`, `price_uzs`) also carries `exterior` and
+  `rarity_color` from our catalogue by market name — `null` for an item we do not list.
 - `GET /payout-cards`; `DELETE /payout-cards/{id}` — `Idempotency-Key` required, but **no replay
   is stored**: the soft delete is its own replay (a repeat is a no-op 204).
 - Socket: `{"type": "sale.updated", "number"}` on the order socket.

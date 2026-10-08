@@ -4191,6 +4191,28 @@
             "title": "Expires At",
             "type": "string"
           },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "float_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Float Value"
+          },
           "image_url": {
             "anyOf": [
               {
@@ -4233,6 +4255,17 @@
             ],
             "title": "Paid With"
           },
+          "paint_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Seed"
+          },
           "payable": {
             "title": "Payable",
             "type": "boolean"
@@ -4255,6 +4288,17 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
           },
           "refunded_to": {
             "anyOf": [
@@ -4304,6 +4348,10 @@
           "name",
           "phase",
           "image_url",
+          "float_value",
+          "paint_seed",
+          "exterior",
+          "rarity_color",
           "price_uzs",
           "price_usd",
           "created_at",
@@ -5332,6 +5380,17 @@
             "title": "Asset Id",
             "type": "string"
           },
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
           "image_url": {
             "anyOf": [
               {
@@ -5350,12 +5409,25 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
           }
         },
         "required": [
           "asset_id",
           "name",
           "image_url",
+          "exterior",
+          "rarity_color",
           "price_uzs"
         ],
         "title": "SaleItemOut",
@@ -5579,8 +5651,8 @@
           "min_sum_usd": {
             "anyOf": [
               {
+                "exclusiveMinimum": 1.0,
                 "maximum": 1000.0,
-                "minimum": 1.0,
                 "type": "number"
               },
               {
@@ -5588,7 +5660,7 @@
                 "type": "string"
               }
             ],
-            "default": "1",
+            "default": "1.10",
             "title": "Min Sum Usd"
           },
           "rate_cut_pct": {
@@ -5647,7 +5719,7 @@
             "type": "array"
           },
           "min_sum_usd": {
-            "default": "1",
+            "default": "1.10",
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,8}0*$)\\d{0,5}\\.\\d{0,2}0*$)",
             "title": "Min Sum Usd",
             "type": "string"
@@ -11323,7 +11395,7 @@
     },
     "/api/v1/sales": {
       "get": {
-        "description": "My sales, newest first, 20 a page.",
+        "description": "My sales, newest first, 20 a page; ``status=hold`` keeps only those in the hold.\n\nSend the same ``status`` with the ``cursor`` of its page.",
         "operationId": "get_my_sales_api_v1_sales_get",
         "parameters": [
           {
@@ -11340,6 +11412,23 @@
                 }
               ],
               "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "const": "hold",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
             }
           },
           {
