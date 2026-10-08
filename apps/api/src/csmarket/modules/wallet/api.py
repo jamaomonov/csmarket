@@ -7,7 +7,12 @@ on it. ``api``/``service`` are domain-pure; only ``wallet.routes`` reaches ``aut
 
 from __future__ import annotations
 
-from csmarket.modules.wallet.adjust import ADMIN_ADJUST_MAX, admin_adjust
+from csmarket.modules.wallet.adjust import (
+    ADMIN_ADJUST_MAX,
+    ADMIN_ADJUST_USD_MAX,
+    admin_adjust,
+    admin_adjust_usd,
+)
 from csmarket.modules.wallet.entries import (
     AdminEntry,
     EntriesPage,
@@ -20,8 +25,10 @@ from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletT
 from csmarket.modules.wallet.purchases import WALLET, credit_order_refund, debit_purchase
 from csmarket.modules.wallet.sales import credit_payout_return, credit_sale
 from csmarket.modules.wallet.service import (
+    KIND_CURRENCY,
     NORMAL_SIDE,
     TX_KINDS,
+    Currency,
     Direction,
     InsufficientBalanceError,
     Leg,
@@ -33,14 +40,19 @@ from csmarket.modules.wallet.service import (
     reverse_topup,
     user_account,
     user_balance,
+    user_usd_account,
+    user_usd_balance,
 )
 
 __all__ = [
     "ADMIN_ADJUST_MAX",
+    "ADMIN_ADJUST_USD_MAX",
+    "KIND_CURRENCY",
     "NORMAL_SIDE",
     "TX_KINDS",
     "WALLET",
     "AdminEntry",
+    "Currency",
     "Direction",
     "EntriesPage",
     "Entry",
@@ -51,6 +63,7 @@ __all__ = [
     "WalletPosting",
     "WalletTransaction",
     "admin_adjust",
+    "admin_adjust_usd",
     "balance",
     "credit_order_refund",
     "credit_payout_return",
@@ -65,4 +78,6 @@ __all__ = [
     "user_account",
     "user_balance",
     "user_balance_column",
+    "user_usd_account",
+    "user_usd_balance",
 ]

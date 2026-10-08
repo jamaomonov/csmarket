@@ -2,8 +2,8 @@
 
 This is the **only** writer of ``wallet_accounts``, ``wallet_transactions`` and
 ``wallet_postings``. Every balance change is one :func:`post` with at least two legs whose
-debits equal their credits, under one idempotency key per business event. UZS only, whole
-soʻm. Other modules call these through ``wallet.api``.
+debits equal their credits (per currency), under one idempotency key per business event.
+Amounts are whole units: soʻm, or milli-USD for the dollar accounts. Other modules call these through ``wallet.api``.
 """
 
 from __future__ import annotations
@@ -87,7 +87,7 @@ class InsufficientBalanceError(ConflictError):
 
 @dataclass(frozen=True)
 class Leg:
-    """One posting of a transaction: which account, which side, how many soʻm."""
+    """One posting of a transaction: which account, which side, how many whole units."""
 
     account_id: str
     direction: Direction
@@ -103,7 +103,7 @@ class Reference:
 
 
 def _validate_leg(leg: Leg) -> None:
-    """Refuse a leg with a bad side or an amount that is not a positive whole soʻm."""
+    """Refuse a leg with a bad side or an amount that is not a positive whole number of units (soʻm or milli-USD)."""
     if leg.direction not in ("D", "C"):
         raise ValidationError("leg direction must be D or C", direction=str(leg.direction))
     if not leg.amount.is_finite() or leg.amount <= 0:
@@ -191,14 +191,13 @@ async def ensure_account(
     return account
 
 
-async def user_account(db: AsyncSession, user_id: str, *, lock: bool = False) -> WalletAccount:
-    """The user's ``user_wallet`` account, created on first use.
-
-    With ``lock=True`` the row is re-read ``FOR UPDATE``: a caller that checks the balance
-    before debiting it holds this lock until commit, so two debits cannot both pass the
-    check (no overdraft by our code).
-    """
-    account = await ensure_account(db, owner_type="user", owner_id=user_id, kind="user_wallet")
+async def _user_wallet(
+    db: AsyncSession, user_id: str, kind: str, *, lock: bool = False
+) -> WalletAccount:
+    """The user's wallet account of ``kind``, created on first use; ``lock`` re-reads it
+    ``FOR UPDATE`` so a caller that checks the balance before debiting holds the row until
+    commit and two debits cannot both pass the check (no overdraft by our code)."""
+    account = await ensure_account(db, owner_type="user", owner_id=user_id, kind=kind)
     if not lock:
         return account
     stmt = (
@@ -208,6 +207,16 @@ async def user_account(db: AsyncSession, user_id: str, *, lock: bool = False) ->
         .execution_options(populate_existing=True)
     )
     return (await db.execute(stmt)).scalar_one()
+
+
+async def user_account(db: AsyncSession, user_id: str, *, lock: bool = False) -> WalletAccount:
+    """The user's ``user_wallet`` (soʻm) account, created on first use; see ``_user_wallet``."""
+    return await _user_wallet(db, user_id, "user_wallet", lock=lock)
+
+
+async def user_usd_account(db: AsyncSession, user_id: str, *, lock: bool = False) -> WalletAccount:
+    """The user's ``user_wallet_usd`` (milli-USD) account, created on first use."""
+    return await _user_wallet(db, user_id, "user_wallet_usd", lock=lock)
 
 
 async def _transaction_by_key(db: AsyncSession, idempotency_key: str) -> WalletTransaction | None:
@@ -263,7 +272,8 @@ async def post(
 
     Raises:
         ValidationError: unknown kind, fewer than two legs, a leg that is not a positive
-            whole soʻm, or ``SUM(D) != SUM(C)``.
+            whole number of units (soʻm or milli-USD), or ``SUM(D) != SUM(C)`` in any
+            currency.
         NotFoundError: a leg names an account that does not exist.
         ConflictError: a leg's account is frozen, or ``code="idempotency_mismatch"`` — the
             key already booked a transaction of another kind.
@@ -334,6 +344,14 @@ async def balance(db: AsyncSession, account_id: str) -> Decimal:
 async def user_balance(db: AsyncSession, user_id: str) -> Decimal:
     """The user's spendable soʻm; ``0`` when they have no wallet yet (none is created)."""
     account = await _find_account(db, owner_type="user", owner_id=user_id, kind="user_wallet")
+    if account is None:
+        return Decimal(0)
+    return await balance(db, account.id)
+
+
+async def user_usd_balance(db: AsyncSession, user_id: str) -> Decimal:
+    """The user's dollars in milli-USD units; ``0`` when they have no USD wallet yet."""
+    account = await _find_account(db, owner_type="user", owner_id=user_id, kind="user_wallet_usd")
     if account is None:
         return Decimal(0)
     return await balance(db, account.id)
