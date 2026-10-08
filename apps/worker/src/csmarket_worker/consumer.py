@@ -54,6 +54,7 @@ from csmarket.modules.notifications.api import EMAILS_CHANNEL, drain_emails
 from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_checks, drain_paid
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
+from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
 from csmarket.modules.sales.api import SALES_CHANNEL, drain_sale_checks
 from csmarket.modules.skins import models as _skins_models  # noqa: F401

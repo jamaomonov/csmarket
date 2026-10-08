@@ -329,11 +329,6 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
         "trade_link",
         "idempotency_key",
         "trade_link_erased_at",
-        # The API channel columns reach the admin in plan C.
-        "channel",
-        "api_key_id",
-        "client_order_id",
-        "pricing_profile",
     } | {
         "trade_link_masked",
         "fx_rate",

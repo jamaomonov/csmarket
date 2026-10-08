@@ -37,6 +37,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from csmarket.core.db import Base
 from csmarket.core.ids import new_id
 
+# The FK ``orders.api_key_id`` -> ``api_keys`` must resolve in every process that loads orders.
+from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
+
 ORDER_STATUSES = (
     "pending",
     "paid",

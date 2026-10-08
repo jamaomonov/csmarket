@@ -110,10 +110,12 @@ async def credit_order_refund(
         actor: Who books it (``orders`` for the automatic refunds, ``admin:<id>``).
 
     Raises:
-        ValueError: ``paid_with`` is none of :data:`REFUND_SOURCES` — a caller bug, refused
+        ValueError: ``paid_with`` is ``usd_wallet`` (use :func:`credit_order_refund_usd`) or none of :data:`REFUND_SOURCES` — a caller bug, refused
             before anything is written (it must not mint a stray clearing account).
         ConflictError: ``code="idempotency_mismatch"`` — the key booked another kind.
     """
+    if paid_with == USD_WALLET:
+        raise ValueError("a USD wallet order is refunded by credit_order_refund_usd")
     if paid_with not in REFUND_SOURCES:
         raise ValueError(f"paid_with {paid_with!r} is not a refund source")
     wallet = await user_account(db, user_id)
@@ -146,14 +148,14 @@ async def debit_purchase_usd(
     """Pay order ``order_id`` from the user's USD balance (milli-USD ``units``).
 
     As :func:`debit_purchase` on the dollar accounts: C ``user_wallet_usd`` /
-    D ``house_payments_received_usd``, key ``purchase:order:{order_id}``, the wallet locked
+    D ``house_payments_received_usd``, key ``purchase:order:usd:{order_id}``, the wallet locked
     first, a replay returned before the balance check. Flushes, never commits.
 
     Raises:
         InsufficientBalanceError: ``code="balance_too_low"`` — nothing is written.
         ConflictError: ``code="idempotency_mismatch"`` — the key booked another kind.
     """
-    key = f"purchase:order:{order_id}"
+    key = f"purchase:order:usd:{order_id}"
     wallet = await user_usd_account(db, user_id, lock=True)
     existing = await _transaction_by_key(db, key)
     if existing is not None:
@@ -178,7 +180,7 @@ async def credit_order_refund_usd(
 ) -> WalletTransaction:
     """Refund order ``order_id`` to the user's USD balance, once.
 
-    D ``user_wallet_usd`` / C ``house_payments_received_usd``, key ``refund:order:{order_id}``;
+    D ``user_wallet_usd`` / C ``house_payments_received_usd``, key ``refund:order:usd:{order_id}``;
     a refund already booked is returned as is. Flushes, never commits.
 
     Raises:
@@ -190,7 +192,7 @@ async def credit_order_refund_usd(
         db,
         kind="refund",
         legs=[Leg(wallet.id, "D", units), Leg(house.id, "C", units)],
-        idempotency_key=f"refund:order:{order_id}",
+        idempotency_key=f"refund:order:usd:{order_id}",
         reference=Reference(type="order", id=order_id),
         actor=actor,
         metadata={"paid_with": USD_WALLET},

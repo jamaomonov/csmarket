@@ -380,6 +380,17 @@
       "AdminOrderFull": {
         "description": "Every ``orders`` column (the trade link masked, the checkout's idempotency key left\nout) plus the money an operator weighs.",
         "properties": {
+          "api_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Id"
+          },
           "cancelled_at": {
             "anyOf": [
               {
@@ -391,6 +402,10 @@
               }
             ],
             "title": "Cancelled At"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
           },
           "claimed_at": {
             "anyOf": [
@@ -414,6 +429,17 @@
               }
             ],
             "title": "Claimed By"
+          },
+          "client_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Order Id"
           },
           "cost_units": {
             "title": "Cost Units",
@@ -603,6 +629,17 @@
             "title": "Price Uzs",
             "type": "string"
           },
+          "pricing_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Profile"
+          },
           "refunded_at": {
             "anyOf": [
               {
@@ -701,6 +738,10 @@
           "margin_usd",
           "float_value",
           "paint_seed",
+          "channel",
+          "api_key_id",
+          "client_order_id",
+          "pricing_profile",
           "trade_link_masked",
           "paid_with",
           "created_at",

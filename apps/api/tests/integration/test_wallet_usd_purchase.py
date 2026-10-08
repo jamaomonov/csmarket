@@ -8,6 +8,7 @@ import pytest
 from csmarket.modules.wallet.api import (
     InsufficientBalanceError,
     admin_adjust_usd,
+    credit_order_refund,
     credit_order_refund_usd,
     debit_purchase_usd,
     user_balance,
@@ -40,9 +41,17 @@ async def test_debit_then_refund_in_dollars(db_session: AsyncSession) -> None:
     await debit_purchase_usd(db_session, user_id=uid, order_id=ORDER, units=Decimal(12_345))
     assert await user_usd_balance(db_session, uid) == Decimal(7_655)
     again = await debit_purchase_usd(db_session, user_id=uid, order_id=ORDER, units=Decimal(12_345))
-    assert again.idempotency_key == f"purchase:order:{ORDER}"
+    assert again.idempotency_key == f"purchase:order:usd:{ORDER}"
     assert await user_usd_balance(db_session, uid) == Decimal(7_655)
-    await credit_order_refund_usd(db_session, user_id=uid, order_id=ORDER, units=Decimal(12_345))
+    refund = await credit_order_refund_usd(
+        db_session, user_id=uid, order_id=ORDER, units=Decimal(12_345)
+    )
+    assert refund.idempotency_key == f"refund:order:usd:{ORDER}"
+    assert await user_usd_balance(db_session, uid) == Decimal(20_000)
+    replay = await credit_order_refund_usd(
+        db_session, user_id=uid, order_id=ORDER, units=Decimal(12_345)
+    )
+    assert replay.id == refund.id
     assert await user_usd_balance(db_session, uid) == Decimal(20_000)
     assert await user_balance(db_session, uid) == Decimal(0)
 
@@ -52,3 +61,11 @@ async def test_short_usd_balance_books_nothing(db_session: AsyncSession) -> None
     with pytest.raises(InsufficientBalanceError):
         await debit_purchase_usd(db_session, user_id=uid, order_id=ORDER, units=Decimal(1_001))
     assert await user_usd_balance(db_session, uid) == Decimal(1_000)
+
+
+async def test_the_soum_refund_refuses_a_usd_wallet_order(db_session: AsyncSession) -> None:
+    uid = await _funded(db_session, 1_000)
+    with pytest.raises(ValueError, match="credit_order_refund_usd"):
+        await credit_order_refund(
+            db_session, user_id=uid, order_id=ORDER, amount=Decimal(0), paid_with="usd_wallet"
+        )

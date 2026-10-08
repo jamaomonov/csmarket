@@ -136,6 +136,11 @@ class AdminOrderFull(BaseModel):
     #: The bought offer's float (trailing zeros dropped) and pattern; ``None`` on older orders.
     float_value: str | None
     paint_seed: int | None
+    #: ``site`` or ``api``; for ``api`` the key, the client's own id and the tariff.
+    channel: str
+    api_key_id: str | None
+    client_order_id: str | None
+    pricing_profile: str | None
     #: ``…?partner=<id>&token=••••<last 2>``.
     trade_link_masked: str | None
     paid_with: str | None
