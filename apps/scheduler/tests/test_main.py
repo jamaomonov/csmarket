@@ -28,6 +28,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "skinslink.reconcile",
         "skinslink.balance",
         "sources.prices",
+        "public_api.feed",
         "lisskins.snapshot",
         "lisskins.reconcile",
         "lisskins.balance",

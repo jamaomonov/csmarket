@@ -13,14 +13,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
 from csmarket.core.client_ip import client_ip
-from csmarket.core.errors import AccountSuspendedError, ForbiddenError, UnauthorizedError
-from csmarket.modules.auth.api import hash_token
+from csmarket.core.errors import (
+    AccountSuspendedError,
+    ForbiddenError,
+    RateLimitedError,
+    UnauthorizedError,
+)
+from csmarket.modules.auth.api import hash_token, hit_counter
 from csmarket.modules.public_api.keys import TOKEN_PREFIX
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.users.api import User
 
 #: ``last_used_at`` is refreshed only when older than this.
 LAST_USED_REFRESH = timedelta(seconds=60)
+
+#: Failed key authentications allowed per client address per window (the public routes are
+#: exempt from the coarse per-IP limiter, so guessing a key must be throttled here).
+AUTH_FAIL_LIMIT = 30
+AUTH_FAIL_WINDOW = 60
 
 
 @dataclass(frozen=True)
@@ -64,11 +74,32 @@ async def api_caller(
 ) -> ApiCaller:
     """Resolve the caller from the bearer key.
 
+    Failed authentications are counted per client address; past :data:`AUTH_FAIL_LIMIT` a
+    minute they answer 429 instead of 401.
+
     Raises:
         UnauthorizedError: ``unauthorized`` -- missing, unknown or revoked key.
+        RateLimitedError: ``rate_limited`` -- too many failed attempts from this address.
         AccountSuspendedError: ``account_suspended`` -- the owner is banned.
         ForbiddenError: ``ip_not_allowed`` -- an allow-list is set and the client is outside it.
     """
+    try:
+        return await _resolve(request, db, authorization)
+    except UnauthorizedError:
+        over = await hit_counter(
+            f"public_api:authfail:{client_ip(request)}",
+            limit=AUTH_FAIL_LIMIT,
+            window=AUTH_FAIL_WINDOW,
+        )
+        if over:
+            raise RateLimitedError(
+                "too many failed attempts", code="rate_limited", retry_after=AUTH_FAIL_WINDOW
+            ) from None
+        raise
+
+
+async def _resolve(request: Request, db: AsyncSession, authorization: str | None) -> ApiCaller:
+    """The caller behind the header (see :func:`api_caller` for the errors)."""
     token = _token(authorization)
     stmt = select(ApiKey).where(ApiKey.token_hash == hash_token(token))
     key = (await db.execute(stmt)).scalar_one_or_none()
@@ -88,4 +119,4 @@ async def api_caller(
     return ApiCaller(key=key, user=user)
 
 
-__all__ = ["LAST_USED_REFRESH", "ApiCaller", "api_caller"]
+__all__ = ["AUTH_FAIL_LIMIT", "AUTH_FAIL_WINDOW", "LAST_USED_REFRESH", "ApiCaller", "api_caller"]

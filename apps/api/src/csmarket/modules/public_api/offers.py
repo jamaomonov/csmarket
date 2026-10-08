@@ -18,7 +18,7 @@ from csmarket.core.config import Settings
 from csmarket.core.crypto import NONCE_SIZE, decrypt, encrypt
 from csmarket.modules.lisskins.api import offers_for as lisskins_offers
 from csmarket.modules.skins.api import PricingRules, SkinItem, load_rules, quote
-from csmarket.modules.skins.offers import TIE_ORDER, Offer
+from csmarket.modules.skins.offers import TIE_ORDER, Offer, merge_offers
 from csmarket.modules.skinslink.api import offers_for as skinslink_offers
 
 _PURPOSE = "public_offer"
@@ -79,10 +79,11 @@ async def api_offers(
 ) -> list[PricedOffer]:
     """Skinslink + LIS-SKINS offers of ``item``, cheapest first, priced for ``profile``."""
     rules = await load_rules(db)
-    offers = [
-        *await skinslink_offers(db, item.id, settings=settings, now=now),
-        *await lisskins_offers(db, item.id, settings=settings, now=now),
-    ]
+    # ``merge_offers`` shows a Steam asset both sources list once, as the storefront does.
+    offers = merge_offers(
+        await skinslink_offers(db, item.id, settings=settings, now=now),
+        await lisskins_offers(db, item.id, settings=settings, now=now),
+    )
     stock = item.stock_count
     priced: list[PricedOffer] = []
     for offer in offers:

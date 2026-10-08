@@ -40,6 +40,7 @@ from csmarket_scheduler.jobs import (
     orders_expiry,
     orders_health,
     payme_timeout,
+    public_feed,
     purge_refresh_tokens,
     sales_poll,
     skins_catalog_import,
@@ -75,6 +76,7 @@ def build_scheduler() -> AsyncIOScheduler:
     skinslink_reconcile.register(scheduler)
     skinslink_balance.register(scheduler)
     source_prices.register(scheduler)
+    public_feed.register(scheduler)
     lisskins_snapshot.register(scheduler)
     lisskins_reconcile.register(scheduler)
     lisskins_balance.register(scheduler)
