@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -40,3 +41,7 @@ def test_registers_every_minute() -> None:
     registered = scheduler.get_job(job.JOB_ID)
     assert registered is not None
     assert registered.trigger.interval.total_seconds() == 60
+    assert registered.coalesce is True
+    assert registered.max_instances == 1
+    offset = (registered.next_run_time - datetime.now(UTC)).total_seconds()
+    assert 390 <= offset <= 401

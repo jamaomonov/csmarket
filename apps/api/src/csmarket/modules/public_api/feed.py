@@ -23,7 +23,9 @@ from csmarket.modules.public_api.offers import price_units_for
 from csmarket.modules.skins.api import SkinItem, enabled_categories, load_rules
 
 PAGE_SIZE = 1000
-SNAPSHOT_TTL_SECONDS = 600
+#: Pages outlive ``current`` by a margin, so a cursorless request never meets a missing page.
+SNAPSHOT_TTL_SECONDS = 1800
+CURRENT_TTL_SECONDS = 1500
 CURRENT_KEY = "public_api:feed:current"
 _YIELD_EVERY = 500
 
@@ -41,7 +43,7 @@ def cursor_of(snap: str, n: int) -> str:
 def parse_cursor(cursor: str) -> tuple[str, int] | None:
     """``(snap, page)`` of a cursor, or ``None`` if malformed."""
     snap, sep, raw = cursor.rpartition(".")
-    if not sep or not snap or not raw.isdigit():
+    if not sep or not snap or not (raw.isascii() and raw.isdigit()):
         return None
     return snap, int(raw)
 
@@ -90,12 +92,13 @@ async def build_snapshot(db: AsyncSession, redis: Redis, *, at: datetime) -> int
     for n, page in enumerate(pages):
         await redis.set(page_key(snap, n), json.dumps(page), ex=SNAPSHOT_TTL_SECONDS)
     meta = {"snap": snap, "pages": len(pages), "at": at.isoformat()}
-    await redis.set(CURRENT_KEY, json.dumps(meta), ex=SNAPSHOT_TTL_SECONDS)
+    await redis.set(CURRENT_KEY, json.dumps(meta), ex=CURRENT_TTL_SECONDS)
     return len(rows)
 
 
 __all__ = [
     "CURRENT_KEY",
+    "CURRENT_TTL_SECONDS",
     "PAGE_SIZE",
     "SNAPSHOT_TTL_SECONDS",
     "build_snapshot",

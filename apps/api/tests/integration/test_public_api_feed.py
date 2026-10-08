@@ -18,7 +18,7 @@ from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.conftest import CUSTOMER_STEAM_ID
@@ -124,6 +124,21 @@ async def test_etag_304_on_a_read_page(
     assert r2.content == b""
 
 
+async def test_etag_differs_between_tariffs(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    await _seed3(db_session)
+    token = await _token(db_session, customer_headers)
+    await build_snapshot(db_session, get_redis(), at=NOW)
+    retail = await integration_client.get(CATALOG, headers=_h(token))
+    await db_session.execute(text("UPDATE api_keys SET pricing_profile = 'cost'"))
+    await db_session.commit()
+    async for k in get_redis().scan_iter("public_api:rl:feed:*"):
+        await get_redis().delete(k)
+    cost = await integration_client.get(CATALOG, headers=_h(token))
+    assert retail.headers["etag"] != cost.headers["etag"]
+
+
 async def test_first_page_is_limited_to_one_a_minute(
     integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
 ) -> None:
@@ -158,8 +173,10 @@ async def test_stale_cursor_is_409(
     )
     assert r.status_code == 409
     assert r.json()["code"] == "cursor_expired"
-    bad = await integration_client.get(CATALOG, params={"cursor": "junk"}, headers=_h(token))
-    assert bad.json()["code"] == "cursor_expired"
+    for junk in ("junk", "x.²", "x.", ".1"):
+        bad = await integration_client.get(CATALOG, params={"cursor": junk}, headers=_h(token))
+        assert bad.status_code == 409, junk
+        assert bad.json()["code"] == "cursor_expired"
 
 
 async def test_catalog_needs_a_key(integration_client: AsyncClient) -> None:
@@ -258,13 +275,39 @@ async def test_a_forged_offer_id_is_never_listed(
     assert open_offer_id("ls:5", item.id) is None  # a raw id is not a sealed one
 
 
-async def test_a_failed_key_is_throttled_per_ip(integration_client: AsyncClient) -> None:
+async def test_a_failed_key_is_throttled_per_ip(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    token = await _token(db_session, customer_headers)
     codes = [
         (await integration_client.get(CATALOG, headers=_h("csm_wrong"))).status_code
         for _ in range(32)
     ]
     assert codes[0] == 401
     assert codes[-1] == 429
+    # a valid key from the same address still passes
+    ok = await integration_client.get(f"{CATALOG}/{uuid4()}/offers", headers=_h(token))
+    assert ok.status_code == 404
+
+
+async def test_no_snapshot_is_503_not_an_empty_catalogue(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    token = await _token(db_session, customer_headers)
+    r = await integration_client.get(CATALOG, headers=_h(token))
+    assert r.status_code == 503
+    assert r.json()["code"] == "feed_unavailable"
+    assert r.headers["retry-after"] == "60"
+
+
+async def test_a_real_empty_snapshot_is_200_empty(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    token = await _token(db_session, customer_headers)
+    assert await build_snapshot(db_session, get_redis(), at=NOW) == 0
+    r = await integration_client.get(CATALOG, headers=_h(token))
+    assert r.status_code == 200
+    assert r.json() == {"items": [], "next_cursor": None}
 
 
 async def test_api_offers_dedupes_a_shared_asset(db_session: AsyncSession) -> None:

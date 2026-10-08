@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.core.clock import now
 from csmarket.core.config import get_settings
-from csmarket.core.errors import ConflictError, NotFoundError
+from csmarket.core.errors import AppError, ConflictError, NotFoundError
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
 from csmarket.modules.public_api import feed
@@ -33,6 +33,14 @@ router = APIRouter(prefix="/public", tags=["public-api"])
 
 OFFERS_TTL_SECONDS = 60
 _REVALIDATE = {"Cache-Control": "private, no-cache"}
+
+
+class FeedUnavailableError(AppError):
+    """No snapshot yet (or it lapsed): the feed must not read as an empty catalogue."""
+
+    status_code = 503
+    type_uri = "https://csmarket.uz/errors/feed-unavailable"
+    title = "Feed unavailable"
 
 
 def _cursor_expired() -> ConflictError:
@@ -87,7 +95,13 @@ async def catalog(
     redis = get_redis()
     if parsed is None:
         raw_meta = await redis.get(feed.CURRENT_KEY)
-        if raw_meta is None or int(json.loads(raw_meta)["pages"]) == 0:
+        if raw_meta is None:
+            raise FeedUnavailableError(
+                "the catalogue feed is not ready; retry shortly",
+                code="feed_unavailable",
+                retry_after=60,
+            )
+        if int(json.loads(raw_meta)["pages"]) == 0:
             return _body_response(json.dumps({"items": [], "next_cursor": None}), if_none_match)
         snap = str(json.loads(raw_meta)["snap"])
     else:
