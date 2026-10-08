@@ -430,6 +430,17 @@
             ],
             "title": "Failure Reason"
           },
+          "float_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Float Value"
+          },
           "fx_rate": {
             "title": "Fx Rate",
             "type": "string"
@@ -514,6 +525,17 @@
               }
             ],
             "title": "Paid With"
+          },
+          "paint_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Seed"
           },
           "phase": {
             "anyOf": [
@@ -630,6 +652,8 @@
           "fx_rate",
           "fx_uplift_pct",
           "margin_usd",
+          "float_value",
+          "paint_seed",
           "trade_link_masked",
           "paid_with",
           "created_at",
