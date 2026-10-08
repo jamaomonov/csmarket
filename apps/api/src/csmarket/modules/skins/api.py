@@ -22,7 +22,7 @@ from csmarket.modules.skins.offers import (
     offer_id_of,
     parse_offer_id,
 )
-from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
+from csmarket.modules.skins.pricing import Bracket, PricingRules, bracket_margin, quote, to_uzs
 from csmarket.modules.skins.service import get_item
 from csmarket.modules.skins.settings import enabled_categories, load_rules
 from csmarket.modules.skins.stickers import Kind as AppliedKind
@@ -58,6 +58,7 @@ __all__ = [
     "LOOKUP_MAX_IDS",
     "TIE_ORDER",
     "AppliedKind",
+    "Bracket",
     "FakeAction",
     "FakeTradeClient",
     "Listing",
@@ -79,6 +80,7 @@ __all__ = [
     "WaxpeerTradeClient",
     "WaxpeerUnavailableError",
     "applied_cards",
+    "bracket_margin",
     "canonical_name",
     "decode_inspect",
     "enabled_categories",

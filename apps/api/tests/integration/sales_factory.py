@@ -17,7 +17,9 @@ from csmarket.modules.sales.models import (
     PayoutRequest,
     Sale,
     SaleItem,
+    SaleSettingsRow,
 )
+from csmarket.modules.sales.rules import DEFAULT_SALE_SETTINGS, SaleSettings
 from csmarket.modules.users.models import User
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -116,3 +118,16 @@ async def make_request(
     db.add(request)
     await db.commit()
     return request
+
+
+async def enable_sales(db: AsyncSession, **over: object) -> SaleSettings:
+    """Row 1 = the default document switched on (``over`` replaces any field); commit."""
+    doc = DEFAULT_SALE_SETTINGS.model_copy(update={"enabled": True, **over})
+    existing = await db.get(SaleSettingsRow, 1)
+    document = doc.model_dump(mode="json")
+    if existing is None:
+        db.add(SaleSettingsRow(id=1, settings=document))
+    else:
+        existing.settings = document
+    await db.commit()
+    return doc
