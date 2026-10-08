@@ -110,6 +110,32 @@ describe("Dropdown", () => {
     expect(screen.getByRole("menuitemcheckbox", { name: "AWP" })).toHaveFocus();
   });
 
+  it("a fixed menu anchored to its parent opens under the parent's left edge", () => {
+    render(
+      <div data-testid="chip">
+        <span>Винтовки</span>
+        <Dropdown label="m" strategy="fixed" anchor="parent" items={[{ key: "a", label: "A" }]} />
+      </div>,
+    );
+    const chip = screen.getByTestId("chip");
+    chip.getBoundingClientRect = () => ({
+      left: 40,
+      right: 240,
+      top: 10,
+      bottom: 50,
+      width: 200,
+      height: 40,
+      x: 40,
+      y: 10,
+      toJSON: () => ({}),
+    });
+    fireEvent.click(screen.getByRole("button", { name: "m" }));
+    const menu = screen.getByRole("menu");
+    expect(menu.style.left).toBe("40px");
+    expect(menu.style.top).toBe("58px");
+    expect(menu.style.minWidth).toBe("200px");
+  });
+
   it("tells the owner when it opens (lazy loading) and shows loading / status rows", () => {
     const onOpenChange = vi.fn();
     render(

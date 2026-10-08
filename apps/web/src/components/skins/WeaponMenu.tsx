@@ -141,6 +141,8 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
       status={failed ? t("modelsFailed") : undefined}
       onOpenChange={load}
       strategy="fixed"
+      // Under the whole category chip, not just its ▾ (as the markets do).
+      anchor="parent"
       maxHeight={420}
       menuClassName="min-w-[260px]"
     />
