@@ -40,6 +40,8 @@ const KINDS: Record<string, string> = {
   admin_adjust: "Изменение администратором",
   purchase: "Покупка",
   refund: "Возврат на баланс",
+  sale_credit: "Продажа скинов",
+  payout_return: "Выплата на баланс",
 };
 
 export function kindLabel(kind: string): string {

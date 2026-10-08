@@ -1,0 +1,86 @@
+import { type PayoutDetail, type PayoutRow, type SaleSettingsOut } from "./api";
+
+export const PAYOUT_ROW: PayoutRow = {
+  id: "p-1",
+  sale_number: "S7K2M9QX",
+  user: { id: "u-1", display_name: "Ivan" },
+  card_type: "humo",
+  card_masked: "•••• 9015",
+  amount_uzs: "147400",
+  fee_uzs: "7800",
+  status: "to_pay",
+  to_pay_at: "2026-10-15T10:00:00Z",
+  paid_at: null,
+  created_at: "2026-10-08T10:00:00Z",
+};
+
+export const PAYOUT_DETAIL: PayoutDetail = {
+  request: PAYOUT_ROW,
+  note: null,
+  reject_reason: null,
+  decided_by: null,
+  sale: {
+    number: "S7K2M9QX",
+    status: "payout",
+    user: { id: "u-1", display_name: "Ivan" },
+    payout_to: "card",
+    card_type: "humo",
+    card_masked: "•••• 9015",
+    quoted_usd: "12.95",
+    amount_usd: "12.83",
+    items_uzs: "155200",
+    bonus_uzs: "0",
+    fee_uzs: "7800",
+    payout_uzs: "147400",
+    rate: "12650.5",
+    margin_usd: "0.6735",
+    trade_id: 178,
+    trade_offer_id: "6912345678",
+    bot_name: "Bot #3",
+    offer_expiry_at: null,
+    hold_end_at: "2026-10-15T10:00:00Z",
+    fail_reason: null,
+    attention_reason: null,
+    credited_at: null,
+    created_at: "2026-10-08T10:00:00Z",
+    updated_at: "2026-10-15T10:00:00Z",
+    items: [
+      {
+        asset_id: "100",
+        name: "AK-47 | Redline (Field-Tested)",
+        price_usd: "12.45",
+        price_uzs: "149600",
+      },
+      {
+        asset_id: "101",
+        name: "P250 | Sand Dune (Field-Tested)",
+        price_usd: "0.5",
+        price_uzs: "5600",
+      },
+    ],
+    payout: PAYOUT_ROW,
+  },
+  history_sales: [],
+  history_payouts: [PAYOUT_ROW],
+  can_decide: true,
+};
+
+export const SETTINGS: SaleSettingsOut = {
+  settings: {
+    enabled: false,
+    margin: [
+      { from_usd: "0", percent: "10" },
+      { from_usd: "1", percent: "5" },
+      { from_usd: "10", percent: "3" },
+      { from_usd: "100", percent: "2" },
+    ],
+    rate_cut_pct: "0",
+    balance_bonus_pct: "2",
+    card_fee_pct: { uzcard: "5", humo: "5", uzum_visa: "5" },
+    card_min_uzs: 30000,
+    min_sum_usd: "1",
+  },
+  updated_at: null,
+  updated_by: null,
+  rate_uzs: "12650.5",
+};

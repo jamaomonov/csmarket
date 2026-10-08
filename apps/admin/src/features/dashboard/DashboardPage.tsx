@@ -57,6 +57,15 @@ function Tiles({ data }: { data: DashboardOut }) {
           {data.attention}
         </Link>
       </Tile>
+      <Tile title="К выплате">
+        <Link
+          to="/payouts"
+          className={data.payouts.to_pay_count > 0 ? "text-danger underline" : "underline"}
+        >
+          {data.payouts.to_pay_count}
+        </Link>
+        <span className="text-fg-muted text-sm">{formatSum(data.payouts.to_pay_uzs)}</span>
+      </Tile>
       <Tile title="Баланс Waxpeer">
         {waxpeer.balance_usd === null || waxpeer.read_at === null ? (
           <span>неизвестно</span>

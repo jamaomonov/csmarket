@@ -23,6 +23,7 @@ const DATA: DashboardOut = {
   refunds: { count: 2, amount_uzs: "177000" },
   in_flight: 3,
   attention: 1,
+  payouts: { to_pay_count: 2, to_pay_uzs: "310400" },
   by_day: [
     { day: "2026-10-01", sales_count: 0, revenue_uzs: "0", margin_usd: "0" },
     { day: "2026-10-02", sales_count: 12, revenue_uzs: "1524000", margin_usd: "15" },
@@ -107,6 +108,15 @@ describe("DashboardPage", () => {
     renderPage();
     await screen.findByTestId("tile-Продажи");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("неизвестно");
+  });
+
+  it("shows the card payouts to pay as a link to the queue", async () => {
+    api.getDashboard.mockResolvedValue(DATA);
+    renderPage();
+    const tile = await screen.findByTestId("tile-К выплате");
+    expect(within(tile).getByRole("link")).toHaveAttribute("href", "/payouts");
+    expect(tile).toHaveTextContent(/2/);
+    expect(tile).toHaveTextContent(/310\s400 сум/);
   });
 
   it("an unknown LIS-SKINS balance says so", async () => {
