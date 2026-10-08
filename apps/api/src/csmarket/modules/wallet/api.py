@@ -13,6 +13,12 @@ from csmarket.modules.wallet.adjust import (
     admin_adjust,
     admin_adjust_usd,
 )
+from csmarket.modules.wallet.convert import (
+    CONVERT_MAX_UZS,
+    Conversion,
+    convert_to_usd,
+    usd_units_for,
+)
 from csmarket.modules.wallet.entries import (
     AdminEntry,
     EntriesPage,
@@ -47,11 +53,13 @@ from csmarket.modules.wallet.service import (
 __all__ = [
     "ADMIN_ADJUST_MAX",
     "ADMIN_ADJUST_USD_MAX",
+    "CONVERT_MAX_UZS",
     "KIND_CURRENCY",
     "NORMAL_SIDE",
     "TX_KINDS",
     "WALLET",
     "AdminEntry",
+    "Conversion",
     "Currency",
     "Direction",
     "EntriesPage",
@@ -65,6 +73,7 @@ __all__ = [
     "admin_adjust",
     "admin_adjust_usd",
     "balance",
+    "convert_to_usd",
     "credit_order_refund",
     "credit_payout_return",
     "credit_sale",
@@ -75,6 +84,7 @@ __all__ = [
     "entries_for_user",
     "post",
     "reverse_topup",
+    "usd_units_for",
     "user_account",
     "user_balance",
     "user_balance_column",
