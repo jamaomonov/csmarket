@@ -8,7 +8,9 @@ from decimal import Decimal
 
 import pytest
 from csmarket.core.clock import now
+from csmarket.core.ids import new_id
 from csmarket.modules.sales.views import list_sales
+from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import credit_sale
 from httpx import AsyncClient
@@ -17,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.conftest import CUSTOMER_STEAM_ID
 from tests.integration.payments_factory import make_user
-from tests.integration.sales_factory import make_request, make_sale
+from tests.integration.sales_factory import ITEMS, make_request, make_sale
 
 pytestmark = pytest.mark.asyncio
 
@@ -63,14 +65,73 @@ async def test_pages_of_twenty(
     assert (bad.status_code, bad.json()["code"]) == (422, "cursor")
 
 
+async def test_only_my_held_sales_with_the_status_filter_and_its_cursor(
+    db_session: AsyncSession, integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    headers, me = await _me(db_session, customer_headers)
+    held = [
+        await make_sale(db_session, user=me, status="hold", created_at=now() - timedelta(minutes=n))
+        for n in range(21)
+    ]
+    await make_sale(db_session, user=me, status="offered")
+    await make_sale(db_session, user=me, status="credited")
+    await make_sale(db_session, status="hold")  # someone else's
+    first = await integration_client.get("/api/v1/sales?status=hold", headers=headers)
+    assert first.status_code == 200, first.text
+    page = first.json()
+    assert [s["number"] for s in page["items"]] == [s.number for s in held[:20]]
+    rest = await integration_client.get(
+        "/api/v1/sales", params={"status": "hold", "cursor": page["next_cursor"]}, headers=headers
+    )
+    assert [s["number"] for s in rest.json()["items"]] == [held[20].number]
+    assert rest.json()["next_cursor"] is None
+    bad = await integration_client.get("/api/v1/sales?status=offered", headers=headers)
+    assert bad.status_code == 422
+
+
+async def test_sale_items_carry_the_catalogue_exterior_and_rarity_colour(
+    db_session: AsyncSession, integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    headers, me = await _me(db_session, customer_headers)
+    await _catalogue(db_session, ITEMS[0][1], phases=("", "Phase 2"))
+    sale = await make_sale(db_session, user=me)
+    r = await integration_client.get(f"/api/v1/sales/{sale.number}", headers=headers)
+    looks = {i["name"]: (i["exterior"], i["rarity_color"]) for i in r.json()["items"]}
+    assert looks == {ITEMS[0][1]: ("FT", "#d32ce6"), ITEMS[1][1]: (None, None)}
+    [listed] = (await integration_client.get("/api/v1/sales", headers=headers)).json()["items"]
+    assert listed["items"][0]["exterior"] == "FT"
+
+
+async def _catalogue(db: AsyncSession, name: str, *, phases: tuple[str, ...]) -> None:
+    db.add_all(
+        SkinItem(
+            id=new_id(),
+            market_hash_name=name,
+            phase=phase,
+            slug=f"{name}-{phase}-{new_id()[:6]}".lower().replace(" ", "-"),
+            category="rifles",
+            search_text=name.lower(),
+            exterior="FT",
+            rarity_color="#d32ce6",
+        )
+        for phase in phases
+    )
+    await db.commit()
+
+
 async def test_a_page_costs_the_same_queries_for_any_number_of_sales(
     db_session: AsyncSession,
 ) -> None:
     async def _queries(count: int) -> int:
         user = await make_user(db_session)
+        await _catalogue(db_session, f"Item {count}", phases=("",))
         for n in range(count):
             sale = await make_sale(
-                db_session, user=user, payout_to="card" if n % 2 else "balance", status="payout"
+                db_session,
+                user=user,
+                payout_to="card" if n % 2 else "balance",
+                status="payout",
+                items=((str(n), f"Item {count}", Decimal(1), Decimal(12_700)), *ITEMS),
             )
             if n % 2:
                 await make_request(db_session, sale)

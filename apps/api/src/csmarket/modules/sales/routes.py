@@ -29,7 +29,13 @@ from csmarket.modules.sales.schemas import (
     SellIn,
 )
 from csmarket.modules.sales.service import create_sale
-from csmarket.modules.sales.views import list_sales, owned_sale, pending_uzs, sale_out
+from csmarket.modules.sales.views import (
+    SaleFilter,
+    list_sales,
+    owned_sale,
+    pending_uzs,
+    sale_out,
+)
 from csmarket.modules.skinslink.api import DepositClient
 from csmarket.modules.users.api import User
 
@@ -123,9 +129,14 @@ async def post_sell(
 
 
 @router.get("/sales", response_model=SalesPage, summary="My sales")
-async def get_my_sales(user: Me, db: Db, cursor: str | None = None) -> SalesPage:
-    """My sales, newest first, 20 a page."""
-    rows, next_cursor = await list_sales(db, user.id, cursor)
+async def get_my_sales(
+    user: Me, db: Db, cursor: str | None = None, status: SaleFilter | None = None
+) -> SalesPage:
+    """My sales, newest first, 20 a page; ``status=hold`` keeps only those in the hold.
+
+    Send the same ``status`` with the ``cursor`` of its page.
+    """
+    rows, next_cursor = await list_sales(db, user.id, cursor, status=status)
     return SalesPage(items=[sale_out(r) for r in rows], next_cursor=next_cursor)
 
 
