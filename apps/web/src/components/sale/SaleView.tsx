@@ -32,11 +32,12 @@ function useStateText(sale: SaleOut, locale: string): { title: string; text: str
     case "creating":
       return { title: t("creating.title"), text: t("creating.text") };
     case "offered":
+      if (!sale.offer) return { title: t("offered.title"), text: t("offered.textNoOffer") };
       return {
         title: t("offered.title"),
         text: t("offered.text", {
-          bot: sale.offer?.bot_name ?? "",
-          time: sale.offer?.expires_at
+          bot: sale.offer.bot_name ?? "",
+          time: sale.offer.expires_at
             ? new Intl.DateTimeFormat(locale, { timeStyle: "short", dateStyle: "short" }).format(
                 new Date(sale.offer.expires_at),
               )
@@ -53,6 +54,14 @@ function useStateText(sale: SaleOut, locale: string): { title: string; text: str
     case "payout":
       if (sale.payout_status === "paid")
         return { title: t("paid.title"), text: t("paid.text", { amount, card }) };
+      if (sale.payout_status === "canceled")
+        return { title: t("closed.title"), text: t("closed.text") };
+      if (sale.payout_status === "waiting_hold") {
+        return {
+          title: t("hold.title"),
+          text: t("hold.text", { amount, date: when(sale.money_at) }),
+        };
+      }
       if (sale.payout_status === "rejected") {
         const refunded = formatUzs(locale, sale.items_uzs);
         return {

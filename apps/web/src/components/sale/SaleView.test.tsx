@@ -129,6 +129,43 @@ describe("SaleView", () => {
     ).toBeInTheDocument();
   });
 
+  it("a cancelled card payout says the sale did not go through, not that money is coming", async () => {
+    api.getSale.mockResolvedValue({
+      ...SALE,
+      status: "payout",
+      payout_to: "card",
+      card: { type: "humo", last4: "9015" },
+      offer: null,
+      payout_status: "canceled",
+    });
+    view();
+    expect(await screen.findByText("Продажа не состоялась")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Скоро отправим/);
+  });
+
+  it("a card payout waiting out the days says when the money comes", async () => {
+    api.getSale.mockResolvedValue({
+      ...SALE,
+      status: "payout",
+      payout_to: "card",
+      card: { type: "humo", last4: "9015" },
+      offer: null,
+      payout_status: "waiting_hold",
+      money_at: "2026-10-15T10:00:00Z",
+    });
+    view();
+    expect(await screen.findByText("Скины получены")).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/Скоро отправим/);
+  });
+
+  it("an offered sale without an offer yet asks to open Steam, with no blanks", async () => {
+    api.getSale.mockResolvedValue({ ...SALE, offer: null });
+    view();
+    expect(await screen.findByText("Примите обмен")).toBeInTheDocument();
+    expect(screen.getByText(/откройте Steam/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/прислал|до\s*\./);
+  });
+
   it("says a sale it does not know is not found", async () => {
     api.getSale.mockRejectedValue(new SessionApiError(404, "Not Found", null));
     view();

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { HistoryFilter } from "@/components/account/HistoryFilter";
 import { OrdersList } from "@/components/account/OrdersList";
 import { SalesList } from "@/components/account/SalesList";
+import { useAuth } from "@/lib/auth";
 import { TRADES } from "@/lib/paths";
 
 export type TradesType = "all" | "purchases" | "sales";
@@ -17,6 +18,8 @@ interface TradesViewProps {
 /** «Обмены»: the buyer's orders and the seller's sales. */
 export function TradesView({ locale, type }: TradesViewProps) {
   const t = useTranslations("web.trades");
+  const { status, user } = useAuth();
+  const signedIn = status === "signed_in" && user !== null;
   return (
     <div className="flex flex-col gap-5">
       <HistoryFilter
@@ -33,7 +36,7 @@ export function TradesView({ locale, type }: TradesViewProps) {
       {type === "all" ? (
         <>
           <OrdersList locale={locale} />
-          <h2 className="mt-4 text-xl font-bold">{t("sales")}</h2>
+          {signedIn ? <h2 className="mt-4 text-xl font-bold">{t("sales")}</h2> : null}
           <SalesList locale={locale} />
         </>
       ) : null}

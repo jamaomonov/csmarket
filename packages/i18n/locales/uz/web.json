@@ -468,7 +468,8 @@
       },
       "offered": {
         "title": "Almashuvni qabul qiling",
-        "text": "{bot} Steamʼda taklif yubordi. Uni {time} gacha qabul qiling."
+        "text": "{bot} Steamʼda taklif yubordi. Uni {time} gacha qabul qiling.",
+        "textNoOffer": "Almashuv taklifini yubordik — Steamʼni ochib, uni qabul qiling."
       },
       "hold": {
         "title": "Skinlar qabul qilindi",
@@ -506,6 +507,7 @@
     "empty": "Hozircha karta yoʻq. Kartani skin sotishda qoʻshish mumkin.",
     "loadFailed": "Kartalarni yuklab boʻlmadi. Sahifani yangilang.",
     "delete": "{name} ni oʻchirish",
-    "deleteShort": "Oʻchirish"
+    "deleteShort": "Oʻchirish",
+    "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring."
   }
 }

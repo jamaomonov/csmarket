@@ -468,7 +468,8 @@
       },
       "offered": {
         "title": "Accept the trade",
-        "text": "{bot} sent you an offer in Steam. Accept it by {time}."
+        "text": "{bot} sent you an offer in Steam. Accept it by {time}.",
+        "textNoOffer": "We sent a trade offer — open Steam and accept it."
       },
       "hold": {
         "title": "Skins received",
@@ -506,6 +507,7 @@
     "empty": "No cards yet. You can add one when you sell skins.",
     "loadFailed": "Could not load your cards. Refresh the page.",
     "delete": "Delete {name}",
-    "deleteShort": "Delete"
+    "deleteShort": "Delete",
+    "deleteFailed": "Could not delete the card. Try again."
   }
 }

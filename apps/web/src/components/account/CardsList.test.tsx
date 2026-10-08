@@ -48,6 +48,16 @@ describe("CardsList", () => {
     });
   });
 
+  it("says so when forgetting a card fails", async () => {
+    api.listCards.mockResolvedValue({
+      items: [{ id: "c1", type: "humo", last4: "9015", created_at: "2026-10-08T10:00:00Z" }],
+    });
+    api.deleteCard.mockRejectedValue(new Error("boom"));
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Удалить Humo •••• 9015" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Не получилось удалить карту");
+  });
+
   it("says where a card comes from when there is none", async () => {
     api.listCards.mockResolvedValue({ items: [] });
     view();
