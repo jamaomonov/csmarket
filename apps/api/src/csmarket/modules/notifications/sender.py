@@ -231,6 +231,7 @@ def _links(settings: Settings, locale: str, *, number: str | None, token: str | 
         balance_url=f"{root}/account/transactions",
         confirm_url=f"{root}/account/email/confirm?token={quote(token)}" if token else "",
         home_url=root or home,
+        sale_url=f"{root}/account/sales/{number}" if number else "",
     )
 
 

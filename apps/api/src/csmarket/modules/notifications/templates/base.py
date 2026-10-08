@@ -28,6 +28,8 @@ class Links:
     balance_url: str
     confirm_url: str
     home_url: str = "https://csmarket.uz"
+    #: The sale's page (``/account/sales/{number}``); empty for other letters.
+    sale_url: str = ""
 
 
 @dataclass(frozen=True, slots=True)

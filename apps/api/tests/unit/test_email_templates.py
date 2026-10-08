@@ -100,3 +100,54 @@ def test_english_amounts_use_the_iso_code() -> None:
 def test_an_unknown_kind_is_refused() -> None:
     with pytest.raises(ValueError, match="kind"):
         render("marketing", locale="ru", number=None, payload={}, links=LINKS)
+
+
+SALE_LINKS = Links(
+    order_url="",
+    balance_url="https://csmarket.test/en/account/transactions",
+    confirm_url="",
+    sale_url="https://csmarket.test/en/account/sales/S7K2M9QX",
+)
+SALE_PAYLOADS = {
+    "sale_hold": {"number": "S7K2M9QX", "amount_uzs": "158300"},
+    "sale_paid": {"number": "S7K2M9QX", "amount_uzs": "158300", "to": "balance"},
+    "sale_canceled": {"number": "S7K2M9QX", "amount_uzs": "158300"},
+}
+#: Never in customer copy: who buys the skins, or the words for their mechanism.
+SALE_FORBIDDEN = ("Skinslink", "skinslink", "hold", "deposit", "депозит", "холд")
+
+
+@pytest.mark.parametrize("locale", ["ru", "uz", "en"])
+@pytest.mark.parametrize("kind", ["sale_hold", "sale_paid", "sale_canceled"])
+def test_every_sale_letter_renders_in_every_locale(kind: str, locale: str) -> None:
+    letter = render(
+        kind,
+        locale=locale,  # type: ignore[arg-type]
+        number="S7K2M9QX",
+        payload=SALE_PAYLOADS[kind],
+        links=SALE_LINKS,
+    )
+    assert "S7K2M9QX" in letter.subject
+    link = SALE_LINKS.balance_url if kind == "sale_paid" else SALE_LINKS.sale_url
+    assert link in letter.text
+    for leak in (*FORBIDDEN, *SALE_FORBIDDEN):
+        assert leak not in letter.subject + letter.text
+
+
+def test_a_card_payout_letter_names_the_card_by_its_last_four() -> None:
+    payload = {"number": "S7K2M9QX", "amount_uzs": "147400", "to": "card", "last4": "9015"}
+    letter = render("sale_paid", locale="ru", number="S7K2M9QX", payload=payload, links=SALE_LINKS)
+    assert "147 400 сум" in letter.text
+    assert "•••• 9015" in letter.text
+    assert SALE_LINKS.sale_url in letter.text
+
+
+def test_the_sale_copy_is_the_owners() -> None:
+    hold = render(
+        "sale_hold",
+        locale="ru",
+        number="S7K2M9QX",
+        payload=SALE_PAYLOADS["sale_hold"],
+        links=SALE_LINKS,
+    )
+    assert "158 300 сум поступят через 7 дней" in hold.text
