@@ -24,8 +24,9 @@ dollars-to-soʻm conversion.
 
 Card → the adjust form → the currency toggle «USD» → amount → reason (4..500 chars) → apply.
 Books D `user_wallet_usd` / C `house_adjustments_usd` (`admin_adjust_usd`), audited
-`wallet.adjust_usd`, at most 100 000 $ per step, never below zero. A comma is read as the decimal
-separator: type `1000`, not `1,000` (that would be one dollar).
+`wallet.adjust_usd`, at most 100 000 $ per step, never below zero. Only a dot is a decimal
+separator: type `1000` or `1000.5`; a comma is refused («Только точка»). The confirm button
+groups digits (`$1 000.000`).
 
 ### What was converted (`house_fx_*`)
 

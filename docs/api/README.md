@@ -118,8 +118,10 @@ intent_url, awaiting_kassa}`. `amount_uzs` is a JSON **integer** of whole soʻm,
   chars), signed in → **201** (a replay **200**) `{amount_uzs, amount_usd, rate_uzs, balance_uzs,
 balance_usd}`. `amount_usd = floor(amount_uzs × 1000 / rate)` milli-USD. Soʻm to dollars only,
   never back. Errors: 403 `usd_wallet_disabled`; 409 `balance_too_low`, `idempotency_mismatch`
-  (the same key with another amount); 422 `convert_amount` (out of range), `convert_rate` (the
-  result is under 1 milli-USD); 503 `rate_unavailable`.
+  (the same key with another amount); 422 `convert_amount` (the result is under 1 milli-USD), `convert_rate`
+  (a bad server rate), the generic 422 validation error (`amount_uzs` outside 1000..100 000 000);
+  503 `rate_unavailable`. A replay answers with the booked amounts and rate; `balance_*` are
+  current at the time of the answer.
 - `GET /wallet/entries?cursor=&limit=&currency=uzs|usd` (1..100, default 20; `currency` default
   `uzs`) → `{items: [{id, kind, currency, amount_uzs, amount_usd, created_at, reference_number}],
 next_cursor}`, newest first. A dollar line has `amount_usd` signed (`"-1.500"`) and `amount_uzs`
