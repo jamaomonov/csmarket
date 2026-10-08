@@ -7,8 +7,7 @@ import type { OrderOut } from "./orders";
 import type { SaleOut } from "./sales";
 
 export type TradeEntry =
-  | { kind: "order"; at: number; order: OrderOut }
-  | { kind: "sale"; at: number; sale: SaleOut };
+  { kind: "order"; at: number; order: OrderOut } | { kind: "sale"; at: number; sale: SaleOut };
 
 export interface Stream<T> {
   items: T[];

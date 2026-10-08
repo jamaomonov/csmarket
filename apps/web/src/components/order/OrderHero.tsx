@@ -10,9 +10,14 @@ import { itemPath } from "@/lib/paths";
 
 /** `"MAC-10 | Bronzer (Battle-Scarred)"` → the weapon above, the skin's own name below. */
 export function splitName(name: string): { weapon: string | null; skin: string } {
-  const bare = name.replace(/\s\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)$/, "");
+  const bare = name.replace(
+    /\s\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)$/,
+    "",
+  );
   const cut = bare.indexOf(" | ");
-  return cut < 0 ? { weapon: null, skin: bare } : { weapon: bare.slice(0, cut), skin: bare.slice(cut + 3) };
+  return cut < 0
+    ? { weapon: null, skin: bare }
+    : { weapon: bare.slice(0, cut), skin: bare.slice(cut + 3) };
 }
 
 interface OrderHeroProps {

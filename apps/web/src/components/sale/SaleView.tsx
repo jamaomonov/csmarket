@@ -4,13 +4,18 @@ import { SessionApiError } from "@csmarket/api-client";
 import { buttonVariants } from "@csmarket/ui";
 import { assertNever, formatUzs } from "@csmarket/utils";
 import { useQuery } from "@tanstack/react-query";
+import { Check, Hourglass, Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { CARD_BRANDS } from "@/components/sell/PayoutPicker";
+import { ItemThumb } from "@/components/trades/ItemThumb";
+import { StatusBadge } from "@/components/trades/StatusBadge";
+import { TradeSteps, type TradeStep } from "@/components/trades/TradeSteps";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { TRADES } from "@/lib/paths";
 import { getSale, saleKey, salePollInterval, type SaleOut } from "@/lib/sales";
+import { saleBadge, shortDay, type Tone } from "@/lib/trade-status";
 
 interface SaleViewProps {
   locale: string;
@@ -81,61 +86,140 @@ function useStateText(sale: SaleOut, locale: string): { title: string; text: str
   }
 }
 
+/** Trade accepted → Steam's 7 days → the money on the balance or the card. */
+function useSaleSteps(sale: SaleOut, locale: string): TradeStep[] | null {
+  const t = useTranslations("web.trades.steps");
+  const paid = sale.payout_status;
+  if (sale.status === "closed" || sale.status === "reverted" || paid === "canceled") return null;
+  const money = t(sale.payout_to === "card" && paid !== "rejected" ? "card" : "balance");
+  const due = sale.money_at ? shortDay(locale, sale.money_at) : null;
+  const waiting = sale.status === "hold" || paid === "waiting_hold";
+  const done = sale.status === "credited" || paid === "paid" || paid === "rejected";
+  const accepted = waiting || done || sale.status === "payout";
+  return [
+    { label: t("accepted"), state: accepted ? "done" : "now" },
+    {
+      label: t("protection"),
+      note: t("days7"),
+      state: waiting ? "now" : accepted ? "done" : "todo",
+    },
+    { label: money, note: due, state: done ? "done" : accepted && !waiting ? "now" : "todo" },
+  ];
+}
+
+const ICONS: Record<Tone, typeof Check> = {
+  ok: Check,
+  wait: Hourglass,
+  run: Loader2,
+  bad: X,
+  muted: X,
+};
+
+const ICON_TONES: Record<Tone, string> = {
+  ok: "bg-success/15 text-success",
+  wait: "bg-warning/15 text-warning",
+  run: "bg-info/15 text-info",
+  bad: "bg-danger/15 text-danger",
+  muted: "bg-surface-2 text-fg-dim",
+};
+
 function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
   const t = useTranslations("web.sales");
   const sell = useTranslations("web.sell");
+  const skins = useTranslations("web.skins");
   const state = useStateText(sale, locale);
+  const steps = useSaleSteps(sale, locale);
+  const tone = saleBadge(sale).tone;
+  const Icon = ICONS[tone];
   const uzs = (v: string) => formatUzs(locale, v);
   return (
-    <div className="flex flex-col gap-6">
-      <section
-        className="bg-surface flex flex-col items-start gap-3 rounded-xl p-5"
-        data-state={sale.status}
-      >
-        <h2 className="text-xl font-bold">{state.title}</h2>
-        <p className="text-fg-muted">{state.text}</p>
-        {sale.offer ? (
-          <a
-            href={sale.offer.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants({ size: "lg" })}
+    <div className="flex flex-col gap-5">
+      <section className="bg-surface flex flex-col gap-5 rounded-xl p-5" data-state={sale.status}>
+        <div className="flex items-start gap-4">
+          <span
+            aria-hidden
+            className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${ICON_TONES[tone]}`}
           >
-            {t("openOffer")}
-          </a>
-        ) : null}
-      </section>
-      <ul className="flex flex-col gap-1.5">
-        {sale.items.map((i) => (
-          <li key={i.asset_id} className="bg-surface flex items-center gap-3 rounded-lg p-2">
-            {i.image_url ? (
-              // eslint-disable-next-line @next/next/no-img-element -- Steam CDN images
-              <img src={i.image_url} alt="" className="h-8 w-12 shrink-0 object-contain" />
+            <Icon className="size-5" />
+          </span>
+          <div className="flex flex-col items-start gap-1">
+            <h2 className="text-lg font-bold">{state.title}</h2>
+            <p className="text-fg-muted">{state.text}</p>
+            {sale.offer ? (
+              <a
+                href={sale.offer.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ size: "lg", className: "mt-2" })}
+              >
+                {t("openOffer")}
+              </a>
             ) : null}
-            <span className="min-w-0 flex-1 truncate text-sm">{i.name}</span>
-            <span className="num text-sm font-semibold">{uzs(i.price_uzs)}</span>
-          </li>
-        ))}
-      </ul>
-      <dl className="grid grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
-        <dt className="text-fg-muted">{sell("summary.items")}</dt>
-        <dd className="num text-right">{uzs(sale.items_uzs)}</dd>
-        {sale.payout_to === "card" ? (
-          <>
-            <dt className="text-fg-muted">{t("fee")}</dt>
-            <dd className="num text-right">−{uzs(sale.fee_uzs)}</dd>
-          </>
-        ) : (
-          <>
-            <dt className="text-fg-muted">{t("bonus")}</dt>
-            <dd className="num text-right">+{uzs(sale.bonus_uzs)}</dd>
-          </>
-        )}
-        <dt className="font-bold">{sell("summary.payout")}</dt>
-        <dd className="num text-accent text-right font-bold">{uzs(sale.payout_uzs)}</dd>
-      </dl>
+          </div>
+        </div>
+        {steps ? <TradeSteps steps={steps} /> : null}
+      </section>
+      <div className="grid items-start gap-5 md:grid-cols-[1fr_300px]">
+        <ul className="bg-surface flex flex-col rounded-xl px-4 py-1">
+          {sale.items.map((i) => (
+            <li
+              key={i.asset_id}
+              className="border-border flex items-center gap-3 border-b py-2.5 last:border-0"
+            >
+              <ItemThumb
+                imageUrl={i.image_url}
+                rarityColor={i.rarity_color}
+                className="h-11 w-16"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">{i.name}</span>
+                {i.exterior ? (
+                  <span className="text-fg-dim block text-[12px]">
+                    {skins(`exterior.${i.exterior}`)}
+                  </span>
+                ) : null}
+              </span>
+              <span className="num text-sm font-semibold">{uzs(i.price_uzs)}</span>
+            </li>
+          ))}
+        </ul>
+        <dl className="bg-surface grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 rounded-xl p-5 text-sm">
+          <dt className="text-fg-muted">{sell("summary.items")}</dt>
+          <dd className="num text-right">{uzs(sale.items_uzs)}</dd>
+          {sale.payout_to === "card" ? (
+            <>
+              <dt className="text-fg-muted">{t("fee")}</dt>
+              <dd className="num text-right">−{uzs(sale.fee_uzs)}</dd>
+            </>
+          ) : (
+            <>
+              <dt className="text-fg-muted">{t("bonus")}</dt>
+              <dd className="num text-accent text-right">+{uzs(sale.bonus_uzs)}</dd>
+            </>
+          )}
+          <dt className="border-border border-t pt-2 font-bold">{sell("summary.payout")}</dt>
+          <dd className="num text-accent border-border border-t pt-2 text-right font-bold">
+            {uzs(sale.payout_uzs)}
+          </dd>
+        </dl>
+      </div>
     </div>
   );
+}
+
+/** When the sale was made, and where the money goes. */
+function SaleSubtitle({ sale, locale }: { sale: SaleOut; locale: string }) {
+  const t = useTranslations("web.trades");
+  const when = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(sale.created_at));
+  const to = sale.card
+    ? `${t("toCard")} ${CARD_BRANDS[sale.card.type]} •••• ${sale.card.last4}`
+    : t("toBalance");
+  return <p className="text-fg-dim text-sm">{`${when} · ${to}`}</p>;
 }
 
 /** A sale's page: what to do now (accept the offer), then the money's way, live. */
@@ -167,11 +251,17 @@ export function SaleView({ locale, number }: SaleViewProps) {
     body = <SaleBody sale={sale.data} locale={locale} />;
   }
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <Link href={`${TRADES}?type=sales`} className="text-fg-muted text-sm hover:underline">
+    <div className="flex max-w-3xl flex-col gap-5">
+      <Link href={TRADES} className="text-fg-dim hover:text-fg text-sm">
         ← {t("back")}
       </Link>
-      <h1 className="text-3xl font-bold">{t("number", { number })}</h1>
+      <header className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h1 className="text-3xl font-bold">{t("number", { number })}</h1>
+          {sale.data ? <StatusBadge badge={saleBadge(sale.data)} /> : null}
+        </div>
+        {sale.data ? <SaleSubtitle sale={sale.data} locale={locale} /> : null}
+      </header>
       {body}
     </div>
   );

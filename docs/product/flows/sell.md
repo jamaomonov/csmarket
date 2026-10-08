@@ -25,7 +25,9 @@ protection of the trade is over. Design: ADR-0016; operations:
    payout: «Перевод на карту не прошёл — {amount} зачислены на баланс», with the admin's
    reason on the sale page and in the letter. A declined or expired offer: «Продажа не
    состоялась»; a trade reversed in Steam: «Обмен отменён».
-5. **Account:** «Обмены» → «Продажи» lists the sales; «Мои карты» lists and forgets cards;
+5. **Account:** «Обмены» lists the sales beside the purchases («Продажи» and «В холде» filter
+   them; the sale page shows the steps Обмен принят → Защита Steam → Деньги, items with their
+   wear); the header shows «+{sum} в холде» under the balance; «Мои карты» lists and forgets cards;
    «Транзакции» shows «Ожидает зачисления: {sum}» while balance sales wait, and the credit
    as «Продажа скинов».
 6. **Letters** (to a confirmed address): skins received, money sent, sale did not go through.

@@ -89,13 +89,14 @@ describe("TradesView", () => {
       "/orders/03TVB3PM",
     ]);
     const [sale, order] = rows;
-    expect(within(sale!).getByText("+2")).toBeInTheDocument();
-    expect(within(sale!).getByText(/\+10\s900/)).toBeInTheDocument();
-    expect(within(sale!).getByText("Деньги придут 15 окт.")).toBeInTheDocument();
-    expect(within(order!).getByText(/−1\s200/)).toBeInTheDocument();
+    if (!sale || !order) throw new Error("two rows expected");
+    expect(within(sale).getByText("+2")).toBeInTheDocument();
+    expect(within(sale).getByText(/\+10\s900/)).toBeInTheDocument();
+    expect(within(sale).getByText("Деньги придут 15 окт.")).toBeInTheDocument();
+    expect(within(order).getByText(/−1\s200/)).toBeInTheDocument();
     // A trade accepted in Steam reads «Получен», though the order still says trade_sent.
-    expect(within(order!).getByText("Получен")).toBeInTheDocument();
-    expect(within(order!).getByText("с баланса")).toBeInTheDocument();
+    expect(within(order).getByText("Получен")).toBeInTheDocument();
+    expect(within(order).getByText("с баланса")).toBeInTheDocument();
   });
 
   it("asks only for the sales on hold on the hold tab", async () => {

@@ -13,9 +13,7 @@ interface ItemThumbProps {
 export function ItemThumb({ imageUrl, rarityColor, more = 0, className }: ItemThumbProps) {
   const glow = rarityGlow(rarityColor);
   return (
-    <span
-      className={cn("bg-surface-2 relative flex h-14 w-[76px] shrink-0 rounded-md", className)}
-    >
+    <span className={cn("bg-surface-2 relative flex h-14 w-[76px] shrink-0 rounded-md", className)}>
       {glow ? (
         <span aria-hidden className="absolute inset-0 rounded-md" style={{ background: glow }} />
       ) : null}

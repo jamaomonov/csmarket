@@ -13,8 +13,14 @@ const keys = (m: ReturnType<typeof mergeTrades>) =>
 describe("mergeTrades", () => {
   it("interleaves both streams newest first when both are complete", () => {
     const m = mergeTrades(
-      { items: [order("O2", "2026-10-08T15:50:00Z"), order("O1", "2026-10-08T15:40:00Z")], hasMore: false },
-      { items: [sale("S1", "2026-10-08T16:12:00Z"), sale("S0", "2026-10-01T10:00:00Z")], hasMore: false },
+      {
+        items: [order("O2", "2026-10-08T15:50:00Z"), order("O1", "2026-10-08T15:40:00Z")],
+        hasMore: false,
+      },
+      {
+        items: [sale("S1", "2026-10-08T16:12:00Z"), sale("S0", "2026-10-01T10:00:00Z")],
+        hasMore: false,
+      },
     );
     expect(keys(m)).toEqual(["S1", "O2", "O1", "S0"]);
     expect(m.next).toEqual([]);
@@ -23,7 +29,10 @@ describe("mergeTrades", () => {
   it("holds back what an unloaded page of the other stream could precede", () => {
     const m = mergeTrades(
       { items: [order("O2", "2026-10-08T15:50:00Z")], hasMore: true },
-      { items: [sale("S1", "2026-10-08T16:12:00Z"), sale("S0", "2026-10-01T10:00:00Z")], hasMore: false },
+      {
+        items: [sale("S1", "2026-10-08T16:12:00Z"), sale("S0", "2026-10-01T10:00:00Z")],
+        hasMore: false,
+      },
     );
     expect(keys(m)).toEqual(["S1", "O2"]);
     expect(m.next).toEqual(["orders"]);

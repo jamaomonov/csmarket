@@ -201,7 +201,10 @@ describe("OrderView — no order to show", () => {
     await tick();
     expect(screen.getByRole("heading", { name: "Заказ не найден." })).toBeInTheDocument();
     expect(state()).toBe("notFound");
-    expect(screen.getByRole("link", { name: "← К обменам" })).toHaveAttribute("href", "/account/trades");
+    expect(screen.getByRole("link", { name: "← К обменам" })).toHaveAttribute(
+      "href",
+      "/account/trades",
+    );
     await tick(60_000);
     expect(m.get).toHaveBeenCalledTimes(1);
   });

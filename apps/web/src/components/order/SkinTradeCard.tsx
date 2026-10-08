@@ -2,13 +2,7 @@
 
 import { buttonVariants } from "@csmarket/ui";
 import { assertNever } from "@csmarket/utils";
-import {
-  CheckCircle2,
-  ExternalLink,
-  Loader2,
-  SearchCheck,
-  Wallet,
-} from "lucide-react";
+import { CheckCircle2, ExternalLink, Loader2, SearchCheck, Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, type ReactNode } from "react";
 

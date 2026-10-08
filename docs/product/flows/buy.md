@@ -42,8 +42,16 @@ ADR-0007; operations: [`orders.md`](../../runbooks/orders.md),
    покупку. Статус обновится на этой странице.» — never a refund promise until an operator
    decides. An open offer stays visible with its link.
 
-«Мои заказы» (`/account/orders`, a tile on the account page) lists the orders, newest
-first; unpaid expired ones are left out.
+«Обмены» (`/account/trades`; the old `/account/orders` redirects there) lists purchases and
+sales in one list, newest first: a picture over its rarity glow (a sale shows its first item
+and «+N»), a «Покупка» / «Продажа» tag, a coloured status badge (green — with the user,
+yellow — waiting, blue — moving, red — did not happen, grey — nothing happened), the amount
+signed («−1 200 сум» left the balance, «+10 900 сум» comes in). Tabs: Все, Покупки, Продажи,
+В холде (sales whose money waits out Steam's 7 days; the header's «+{sum} в холде» under the
+balance links here). The order page sits in the profile frame: «← К обменам», the badge, the
+skin large with its float bar, wear and pattern, and the steps Оплачен → Обмен отправлен →
+Получен. A trade accepted in Steam reads «Получен» even while the order row still says
+`trade_sent` (a Skinslink purchase in Steam's hold); purchases show no protection date.
 
 Rules the buyer never has to know: an order is bought at most once; refunds go to the
 balance only (a kassa cannot reverse an order payment); nothing is refunded while the skin
