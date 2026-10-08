@@ -8,6 +8,7 @@ import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { type DashboardOut, type Days, getDashboard } from "./api";
+import { DASHBOARD_KEY } from "./keys";
 import { freshness, shortDay, TAB_KEYS, TABS } from "./labels";
 
 import { ApiError, formatApiError } from "@/lib/api";
@@ -134,7 +135,7 @@ export function DashboardPage() {
   const key = pick(TAB_KEYS, url.get("days")) ?? "1";
   const days: Days = TABS.find(([k]) => k === key)?.[1] ?? 1;
   const query = useQuery({
-    queryKey: ["admin", "dashboard", days],
+    queryKey: [...DASHBOARD_KEY, days],
     queryFn: () => getDashboard(days),
     refetchInterval: REFRESH_MS,
   });

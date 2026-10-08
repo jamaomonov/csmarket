@@ -59,4 +59,26 @@ describe("SaleSettingsPage", () => {
     fireEvent.click(last);
     expect(screen.getAllByLabelText(/^От, \$/)).toHaveLength(4);
   });
+
+  it("does not send an emptied minimum", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Минимум на карту, сум"), {
+      target: { value: "" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, сохранить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Минимум на карту");
+    expect(api.saveSaleSettings).not.toHaveBeenCalled();
+  });
+
+  it("keeps a row's input when an earlier row is removed", async () => {
+    renderPage();
+    await screen.findByLabelText("Выкуп включён");
+    const inputs = screen.getAllByLabelText(/^От, \$/);
+    inputs[0]?.focus();
+    const second = screen.getAllByRole("button", { name: "Убрать диапазон" }).at(1);
+    if (!second) throw new Error("no remove button");
+    fireEvent.click(second);
+    expect(inputs[0]).toBe(screen.getAllByLabelText(/^От, \$/)[0]);
+  });
 });

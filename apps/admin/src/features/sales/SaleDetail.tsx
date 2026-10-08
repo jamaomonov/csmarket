@@ -1,23 +1,14 @@
 /** «Продажа»: statuses, Skinslink's amount, our payout and margin, the items, the payout. */
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { getSale } from "./api";
 import { saleKey } from "./keys";
 import { ATTENTION_LABELS, cardLabel, PAYOUT_LABELS, SALE_LABELS } from "./labels";
+import { Field, ItemList } from "./Parts";
 
 import { errorText } from "@/features/users/labels";
 import { formatDateTime, formatSum } from "@/lib/format";
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="text-fg-muted w-44 shrink-0">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
 
 const at = (iso: string | null): string => (iso ? formatDateTime(iso) : "—");
 
@@ -79,19 +70,7 @@ export function SaleDetail() {
           </Field>
         ) : null}
       </dl>
-      <section>
-        <h2 className="mb-2 font-semibold">Предметы</h2>
-        <ul className="text-sm">
-          {s.items.map((i) => (
-            <li key={i.asset_id} className="border-border flex justify-between border-t py-1.5">
-              <span>{i.name}</span>
-              <span className="tabular-nums">
-                ${i.price_usd} · {formatSum(i.price_uzs)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <ItemList items={s.items} />
     </div>
   );
 }

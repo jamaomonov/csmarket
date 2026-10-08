@@ -5,35 +5,46 @@
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { getPayout, markPaid, type PayoutDetail as Detail, rejectPayout, revealCard } from "./api";
-import { PAYOUTS_KEY, payoutKey } from "./keys";
+import { PAYOUTS_KEY, payoutKey, saleKey } from "./keys";
 import { cardLabel, groupDigits, PAYOUT_LABELS, payoutErrorText, SALE_LABELS } from "./labels";
+import { Field, ItemList } from "./Parts";
 
+import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime, formatSum } from "@/lib/format";
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="text-fg-muted w-44 shrink-0">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
+const REVEAL_MS = 60_000;
 
 function CardBlock({ detail }: { detail: Detail }) {
   const [number, setNumber] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  // The number is set from inside mutationFn and the mutation returns nothing, so the
+  // mutation cache never holds it.
   const show = useMutation({
-    mutationFn: () => revealCard(detail.request.id, "show"),
-    onSuccess: (r) => {
+    mutationFn: async (): Promise<void> => {
+      const r = await revealCard(detail.request.id, "show");
       setNumber(r.number);
     },
   });
+  // Gone when the request is decided, and after a minute either way.
+  useEffect(() => {
+    setNumber(null);
+    setCopied(false);
+  }, [detail.request.status, detail.can_decide]);
+  useEffect(() => {
+    if (number === null) return;
+    const t = setTimeout(() => {
+      setNumber(null);
+    }, REVEAL_MS);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [number]);
   const copy = useMutation({
     mutationFn: async () => {
       const r = await revealCard(detail.request.id, "copy");
@@ -102,6 +113,8 @@ function Actions({ detail, onStale }: { detail: Detail; onStale: () => void }) {
       (p === "paid" ? paidKey : rejectKey).reset();
       qc.setQueryData(payoutKey(id), next);
       void qc.invalidateQueries({ queryKey: PAYOUTS_KEY });
+      void qc.invalidateQueries({ queryKey: saleKey(detail.sale.number) });
+      void qc.invalidateQueries({ queryKey: DASHBOARD_KEY });
       setPanel("none");
       setText("");
     },
@@ -207,7 +220,7 @@ export function PayoutDetail() {
           {PAYOUT_LABELS[d.request.status]} · {d.request.user.display_name ?? "Без имени"}
         </p>
       </header>
-      <CardBlock detail={d} />
+      <CardBlock key={d.request.id} detail={d} />
       <dl className="flex flex-col gap-1 text-sm">
         <Field label="Предметы">{formatSum(s.items_uzs)}</Field>
         <Field label="Комиссия карты">−{formatSum(s.fee_uzs)}</Field>
@@ -221,19 +234,7 @@ export function PayoutDetail() {
         {d.reject_reason ? <Field label="Причина отказа">{d.reject_reason}</Field> : null}
       </dl>
       <Actions detail={d} onStale={() => void detail.refetch()} />
-      <section>
-        <h2 className="mb-2 font-semibold">Предметы</h2>
-        <ul className="text-sm">
-          {s.items.map((i) => (
-            <li key={i.asset_id} className="border-border flex justify-between border-t py-1.5">
-              <span>{i.name}</span>
-              <span className="tabular-nums">
-                ${i.price_usd} · {formatSum(i.price_uzs)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <ItemList items={s.items} />
       <section>
         <h2 className="mb-2 font-semibold">История пользователя</h2>
         <ul className="text-sm">

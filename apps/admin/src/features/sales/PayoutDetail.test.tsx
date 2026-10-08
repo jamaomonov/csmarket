@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PAYOUT_DETAIL } from "./fixtures";
@@ -20,7 +20,15 @@ function renderPage() {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={["/payouts/p-1"]}>
         <Routes>
-          <Route path="/payouts/:id" element={<PayoutDetail />} />
+          <Route
+            path="/payouts/:id"
+            element={
+              <>
+                <Link to="/payouts/p-2">next</Link>
+                <PayoutDetail />
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -92,6 +100,49 @@ describe("PayoutDetail", () => {
         expect.stringMatching(/^admin-payout-reject-/),
       );
     });
+  });
+
+  it("drops the revealed number after a decision", async () => {
+    api.markPaid.mockResolvedValue({ ...PAYOUT_DETAIL, can_decide: false });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Показать номер" }));
+    await screen.findByText("9860 1234 5678 9015");
+    fireEvent.click(screen.getByRole("button", { name: "Выплачено" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, выплачено" }));
+    await waitFor(() => {
+      expect(screen.queryByText("9860 1234 5678 9015")).toBeNull();
+    });
+  });
+
+  it("hides the number again after a minute", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Показать номер" }));
+      await screen.findByText("9860 1234 5678 9015");
+      act(() => {
+        vi.advanceTimersByTime(61_000);
+      });
+      expect(screen.queryByText("9860 1234 5678 9015")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("never shows one payout's number under another payout", async () => {
+    const other = {
+      ...PAYOUT_DETAIL,
+      request: { ...PAYOUT_DETAIL.request, id: "p-2", card_masked: "•••• 1111" },
+    };
+    api.getPayout.mockImplementation((id: string) =>
+      Promise.resolve(id === "p-2" ? other : PAYOUT_DETAIL),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Показать номер" }));
+    await screen.findByText("9860 1234 5678 9015");
+    fireEvent.click(screen.getByRole("link", { name: "next" }));
+    await screen.findByText("Humo •••• 1111");
+    expect(screen.queryByText("9860 1234 5678 9015")).toBeNull();
   });
 
   it("hides the actions when the request can no longer be decided", async () => {

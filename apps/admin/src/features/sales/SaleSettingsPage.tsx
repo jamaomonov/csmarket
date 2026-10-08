@@ -1,7 +1,7 @@
 /** «Настройки выкупа»: the sale-settings document. A save affects new sales only; audited. */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { CARD_TYPES_ORDER, getSaleSettings, saveSaleSettings, type SaleSettings } from "./api";
 import { SALE_SETTINGS_KEY } from "./keys";
@@ -39,13 +39,25 @@ export function SaleSettingsPage() {
   const settings = useQuery({ queryKey: SALE_SETTINGS_KEY, queryFn: getSaleSettings });
   const [draft, setDraft] = useState<SaleSettings | null>(null);
   const [confirming, setConfirming] = useState(false);
+  // The minimum is kept as typed, so an emptied field is not silently turned into 0.
+  const [minText, setMinText] = useState<string | null>(null);
+  const [invalid, setInvalid] = useState<string | null>(null);
+  // Stable keys for the margin rows; null = one per row of the loaded document.
+  const [rowIds, setRowIds] = useState<number[] | null>(null);
+  const nextId = useRef(1000);
+  const discard = () => {
+    setDraft(null);
+    setMinText(null);
+    setRowIds(null);
+    setInvalid(null);
+  };
   const key = useIdempotencyKey("admin-sale-settings");
   const save = useMutation({
     mutationFn: (doc: SaleSettings) => saveSaleSettings(doc, key.keyFor(JSON.stringify(doc))),
     onSuccess: (out) => {
       key.reset();
       qc.setQueryData(SALE_SETTINGS_KEY, out);
-      setDraft(null);
+      discard();
       setConfirming(false);
     },
   });
@@ -58,6 +70,16 @@ export function SaleSettingsPage() {
   }
   if (!settings.data) return <p className="text-fg-muted">Загрузка…</p>;
   const doc = draft ?? settings.data.settings;
+  const ids = rowIds ?? doc.margin.map((_, i) => i);
+  const submit = () => {
+    const min = (minText ?? String(doc.card_min_uzs)).trim();
+    if (!/^\d+$/.test(min)) {
+      setInvalid("Минимум на карту: целое число сум.");
+      return;
+    }
+    setInvalid(null);
+    save.mutate({ ...doc, card_min_uzs: Number(min) });
+  };
   const set = (patch: Partial<SaleSettings>) => {
     setDraft({ ...doc, ...patch });
   };
@@ -88,7 +110,7 @@ export function SaleSettingsPage() {
       <section className="flex flex-col gap-2">
         <h2 className="font-semibold">Маржа по диапазонам цены Skinslink</h2>
         {doc.margin.map((b, i) => (
-          <div key={i} className="flex items-end gap-2">
+          <div key={ids[i]} className="flex items-end gap-2">
             <NumberField
               label={`От, $ (${String(i + 1)})`}
               value={b.from_usd}
@@ -109,6 +131,7 @@ export function SaleSettingsPage() {
               disabled={doc.margin.length === 1}
               onClick={() => {
                 set({ margin: doc.margin.filter((_, j) => j !== i) });
+                setRowIds(ids.filter((_, j) => j !== i));
               }}
             >
               ×
@@ -120,6 +143,7 @@ export function SaleSettingsPage() {
           className="self-start"
           onClick={() => {
             set({ margin: [...doc.margin, { from_usd: "", percent: "" }] });
+            setRowIds([...ids, nextId.current++]);
           }}
         >
           Добавить диапазон
@@ -152,9 +176,12 @@ export function SaleSettingsPage() {
         ))}
         <NumberField
           label="Минимум на карту, сум"
-          value={String(doc.card_min_uzs)}
+          value={minText ?? String(doc.card_min_uzs)}
           onChange={(v) => {
-            set({ card_min_uzs: Number(v) || 0 });
+            setMinText(v);
+            if (draft === null) {
+              setDraft(doc);
+            }
           }}
         />
         <NumberField
@@ -178,7 +205,7 @@ export function SaleSettingsPage() {
           variant="secondary"
           disabled={draft === null}
           onClick={() => {
-            setDraft(null);
+            discard();
           }}
         >
           Сбросить
@@ -190,7 +217,7 @@ export function SaleSettingsPage() {
           <Button
             disabled={save.isPending}
             onClick={() => {
-              save.mutate(doc);
+              submit();
             }}
           >
             Да, сохранить
@@ -204,6 +231,11 @@ export function SaleSettingsPage() {
             Отмена
           </Button>
         </div>
+      ) : null}
+      {invalid ? (
+        <p role="alert" className="text-danger">
+          {invalid}
+        </p>
       ) : null}
       {save.isError ? (
         <p role="alert" className="text-danger">
