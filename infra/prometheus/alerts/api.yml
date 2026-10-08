@@ -64,6 +64,8 @@ groups:
       # another means adding it here too, or this alert starts crying wolf.
       # Checkout also asks LIS-SKINS `check-availability` for a chosen `ls:` lot (ADR-0012) —
       # /v1/orders is already in the handler list below.
+      # Selling (ADR-0016) asks Skinslink on `GET /sell/inventory` (6 s) and `POST /sell`
+      # (`create-deposit`, 10 s); `/sell/config` and the sale reads do not match.
       - alert: ApiHighLatency
         expr: |
           histogram_quantile(
@@ -72,7 +74,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler!~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/admin/orders/[^/]+/refund)"
+                  handler!~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/admin/orders/[^/]+/refund|/v1/sell(/inventory)?)"
                 }[5m]
               )
             ) by (le)
@@ -98,7 +100,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler=~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/admin/orders/[^/]+/refund)"
+                  handler=~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/admin/orders/[^/]+/refund|/v1/sell(/inventory)?)"
                 }[5m]
               )
             ) by (le)

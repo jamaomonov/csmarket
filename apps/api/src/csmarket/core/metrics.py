@@ -254,6 +254,10 @@ ORDERS_STUCK = Gauge(
     "Orders waiting longer than they should, by state (alerts: OrdersPaidStuck and friends).",
     ("state",),
 )
+SALE_PAYOUTS_OVERDUE = Gauge(
+    "csmarket_sale_payouts_overdue",
+    "Card payouts payable for over 48 h (alert: SalePayoutsOverdue; set by sales.poll).",
+)
 TRADES_ATTENTION = Gauge(
     "csmarket_trades_attention",
     "Trades waiting for an admin right now (alert: TradesNeedAttention).",
@@ -407,6 +411,16 @@ def set_orders_stuck(state: OrderStuckState, count: int) -> None:
         ORDERS_STUCK.labels(state=state).set(count)
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning("metrics.set_failed", metric="csmarket_orders_stuck", error=type(exc).__name__)
+
+
+def set_sale_payouts_overdue(count: int) -> None:
+    """Set how many card payouts wait past 48 h. Never raises."""
+    try:
+        SALE_PAYOUTS_OVERDUE.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_sale_payouts_overdue", error=type(exc).__name__
+        )
 
 
 def set_trades_attention(count: int) -> None:
@@ -731,6 +745,7 @@ __all__ = [
     "set_lisskins_enabled",
     "set_lisskins_snapshot",
     "set_orders_stuck",
+    "set_sale_payouts_overdue",
     "set_skinslink_balance",
     "set_skinslink_enabled",
     "set_skinslink_mirror_synced",

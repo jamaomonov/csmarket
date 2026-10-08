@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from csmarket.modules.sales.cards import MAX_LIVE_CARDS, masked
+from csmarket.modules.sales.checks import drain_sale_checks, enqueue_sale_check
 from csmarket.modules.sales.models import SALES_CHANNEL
+from csmarket.modules.sales.reconcile import poll_sales
 from csmarket.modules.sales.status import Outcome, apply_deposit, check_sale, lock_sale
 
 __all__ = [
@@ -12,6 +14,9 @@ __all__ = [
     "Outcome",
     "apply_deposit",
     "check_sale",
+    "drain_sale_checks",
+    "enqueue_sale_check",
     "lock_sale",
     "masked",
+    "poll_sales",
 ]

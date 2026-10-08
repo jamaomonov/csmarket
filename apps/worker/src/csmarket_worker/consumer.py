@@ -55,6 +55,7 @@ from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_checks, drain_paid
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
+from csmarket.modules.sales.api import SALES_CHANNEL, drain_sale_checks
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.skinslink import models as _skinslink_models  # noqa: F401
 from csmarket.modules.skinslink.api import SKINSLINK_CHANNEL
@@ -113,13 +114,19 @@ async def _drain_skinslink_checks(db: AsyncSession) -> int:
     return await drain_checks(db)
 
 
+async def _drain_sale_checks(db: AsyncSession) -> int:
+    """Ask Skinslink about the sales its deposit webhook named (``sales.drain_sale_checks``)."""
+    return await drain_sale_checks(db)
+
+
 def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may read settings
     """The queues this process drains, in the order a wake drains them.
 
     ``orders``: two drainers, so one Waxpeer call that hangs to its timeout stalls one
     drainer, not every paid order. ``emails``: one drainer — letters are not urgent to the
     second, and one sender keeps the provider's rate limit far away. ``skinslink``: one
-    drainer — a status check is a single cheap read. Each channel constant
+    drainer — a status check is a single cheap read. `sales`: one drainer — a sale check is a single
+    cheap read. Each channel constant
     comes from the producing module's ``api`` — a channel spelled twice is a queue nobody
     drains and no test fails.
     """
@@ -132,6 +139,7 @@ def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may 
             drain=_drain_skinslink_checks,
             concurrency=1,
         ),
+        Queue(name="sales", channel=SALES_CHANNEL, drain=_drain_sale_checks, concurrency=1),
     )
 
 
