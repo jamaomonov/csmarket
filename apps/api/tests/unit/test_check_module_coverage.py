@@ -20,6 +20,7 @@ MODULES = (
     "realtime",
     "skinslink",
     "lisskins",
+    "sales",
 )
 
 

@@ -168,6 +168,17 @@ class Settings(BaseSettings):
         default=4.0, gt=0, description="The checkout's check-availability call (ADR-0012)."
     )
     lisskins_balance_alert_usd: Decimal = Field(default=Decimal(100))
+    # --- sales (users sell skins to us through Skinslink deposits; spec 2026-10-08) ---
+    sales_enabled: bool = Field(
+        default=False,
+        description="Let users sell skins (the admin's «Выкуп включён» must be on too).",
+    )
+    sales_inventory_timeout_seconds: float = Field(
+        default=6.0, gt=0, description="Skinslink inventory on GET /sell/inventory (ADR-0016)."
+    )
+    sales_deposit_timeout_seconds: float = Field(
+        default=10.0, gt=0, description="Skinslink create-deposit on POST /sell (ADR-0016)."
+    )
     dev_login_enabled: bool = Field(
         default=False,
         description="POST /auth/dev-login for local work and e2e. Ignored when environment=prod.",
@@ -211,6 +222,8 @@ class Settings(BaseSettings):
             "order-pay": 60,
             "ws-connect": 60,
             "email-verify": 60,
+            "sell-inventory": 60,
+            "sell-create": 60,
         },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "
@@ -445,6 +458,15 @@ class Settings(BaseSettings):
     def lisskins_active(self) -> bool:
         """LIS-SKINS is used: switched on with the key present."""
         return self.lisskins_enabled and bool(self.lisskins_api_key)
+
+    @property
+    def sales_active(self) -> bool:
+        """Selling is possible: switched on with both Skinslink credentials.
+
+        The admin's «Выкуп включён» (``sale_settings.enabled``) is checked beside it by
+        ``sales.gate.open_settings``.
+        """
+        return self.sales_enabled and bool(self.skinslink_api_key and self.skinslink_secret)
 
     @property
     def is_prod(self) -> bool:

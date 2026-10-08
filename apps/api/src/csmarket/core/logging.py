@@ -72,6 +72,10 @@ REDACTED_KEYS = frozenset(
         "x-api-key",
         # LIS-SKINS (spec 2026-10-07): the key rides an ``Authorization: Bearer`` header.
         "lisskins_api_key",
+        # A payout card's number (spec 2026-10-08): only ``last4`` may ever be logged.
+        "card_number",
+        "number_enc",
+        "new_card",
         # Waxpeer's trade entries name both Steam accounts; ``parse_trade`` drops them,
         # and these keys stay masked should a raw entry ever reach a log line.
         "for_steamid64",
