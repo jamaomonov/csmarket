@@ -1,20 +1,10 @@
-import {
-  ArrowLeftRight,
-  CreditCard,
-  Gift,
-  HandCoins,
-  ReceiptText,
-  Star,
-  Store,
-  User,
-} from "lucide-react";
+import { ArrowLeftRight, Gift, HandCoins, ReceiptText, Star, Store, User } from "lucide-react";
 
 import type { ComponentType } from "react";
 
 import { SteamIcon } from "@/components/icons/SteamIcon";
 import {
   ACCOUNT,
-  CARDS,
   HOME,
   REFERRAL,
   REVIEWS,
@@ -37,7 +27,6 @@ export interface NavEntry {
     | "profile"
     | "transactions"
     | "trades"
-    | "cards"
     | "referral";
   href: string;
   icon: NavIcon;
@@ -56,7 +45,6 @@ export const ACCOUNT_NAV: NavEntry[] = [
   { key: "profile", href: ACCOUNT, icon: User },
   { key: "transactions", href: TRANSACTIONS, icon: ReceiptText },
   { key: "trades", href: TRADES, icon: ArrowLeftRight },
-  { key: "cards", href: CARDS, icon: CreditCard },
   { key: "referral", href: REFERRAL, icon: Gift },
 ];
 

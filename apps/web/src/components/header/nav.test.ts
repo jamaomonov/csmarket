@@ -8,7 +8,7 @@ function entry(key: string) {
   return found;
 }
 const trades = entry("trades");
-const cards = entry("cards");
+const cards = entry("transactions");
 
 describe("isCurrent", () => {
   it("keeps «Обмены» current on an order's and a sale's page", () => {

@@ -24,7 +24,7 @@ vi.mock("@/i18n/navigation", () => ({
 }));
 
 describe("AccountMenu", () => {
-  it("lists profile, transactions, trades, cards, referral with icons and signs out", () => {
+  it("lists profile, transactions, trades, referral with icons and signs out", () => {
     render(
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
         <AccountMenu />
@@ -36,7 +36,6 @@ describe("AccountMenu", () => {
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
       ["Обмены", "/account/trades"],
-      ["Мои карты", "/account/cards"],
       ["Реферал", "/account/referral"],
       ["Выйти", null],
     ]);

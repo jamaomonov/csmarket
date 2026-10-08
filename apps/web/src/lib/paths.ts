@@ -34,9 +34,6 @@ export const TRADES = "/account/trades";
 /** «Транзакции»: the balance, top-up and its history; `?type=topup|withdrawal` filters. */
 export const TRANSACTIONS = "/account/transactions";
 
-/** «Мои карты»: the saved payout cards. */
-export const CARDS = "/account/cards";
-
 /** «Продать скины». */
 export const SELL = "/sell";
 

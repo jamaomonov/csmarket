@@ -5,6 +5,7 @@ import { Check, Copy, ExternalLink, Gift } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { CardsList } from "./CardsList";
 import { EmailForm } from "./EmailForm";
 import { SettingsCard } from "./SettingsCard";
 import { TradeLinkForm } from "./TradeLinkForm";
@@ -119,6 +120,7 @@ export function ProfileView({ locale }: ProfileViewProps) {
             void refreshMe();
           }}
         />
+        <CardsList locale={locale} />
         <SettingsCard
           icon={Gift}
           title={t("profile.referralTitle")}

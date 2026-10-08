@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
+vi.mock("./CardsList", () => ({ CardsList: () => <p>cards-list</p> }));
 vi.mock("@/lib/api", () => ({ session: { apiPut: vi.fn(), apiPost: vi.fn(), apiPatch: vi.fn() } }));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) => (

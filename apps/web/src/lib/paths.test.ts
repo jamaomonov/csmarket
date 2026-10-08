@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CARDS, orderPath, salePath, TRADES, TRANSACTIONS } from "./paths";
+import { orderPath, salePath, TRADES, TRANSACTIONS } from "./paths";
 
 describe("order paths", () => {
   it("escapes the order number as one path segment", () => {
@@ -8,10 +8,9 @@ describe("order paths", () => {
     expect(orderPath("a/b?c")).toBe("/orders/a%2Fb%3Fc");
   });
 
-  it("escapes the sale number and names the cards page", () => {
+  it("escapes the sale number as one path segment", () => {
     expect(salePath("S7K2M9QX")).toBe("/account/sales/S7K2M9QX");
     expect(salePath("a/b")).toBe("/account/sales/a%2Fb");
-    expect(CARDS).toBe("/account/cards");
   });
 
   it("names the account pages", () => {
