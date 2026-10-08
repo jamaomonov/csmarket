@@ -10,9 +10,10 @@ from collections import defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, not_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.money import wire_uzs
 from csmarket.core.numbers import is_sale_number
 from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale, SaleItem
@@ -123,4 +124,49 @@ async def owned_sale(db: AsyncSession, user_id: str, number: str) -> SaleRow | N
     return row
 
 
-__all__ = ["SaleRow", "owned_sale", "rows_of", "sale_out"]
+#: Sales per page of «Продажи».
+PAGE_SIZE = 20
+
+
+async def list_sales(
+    db: AsyncSession, user_id: str, cursor: str | None, *, limit: int = PAGE_SIZE
+) -> tuple[list[SaleRow], str | None]:
+    """One newest-first page of ``user_id``'s sales and the cursor of the next page.
+
+    A sale Skinslink refused at once (``closed`` with no deposit) is left out: the seller saw
+    the refusal on the spot.
+
+    Raises:
+        ValidationError: ``cursor`` is not one this API issued (``code="cursor"``).
+    """
+    stmt = (
+        select(Sale)
+        .where(
+            Sale.user_id == user_id, not_(and_(Sale.status == "closed", Sale.trade_id.is_(None)))
+        )
+        .order_by(Sale.created_at.desc(), Sale.id.desc())
+        .limit(limit + 1)
+    )
+    if cursor is not None:
+        stamp, sale_id = decode_cursor(cursor)
+        stmt = stmt.where(
+            or_(Sale.created_at < stamp, and_(Sale.created_at == stamp, Sale.id < sale_id))
+        )
+    found = list((await db.scalars(stmt)).all())
+    page = found[:limit]
+    more = len(found) > limit
+    next_cursor = encode_cursor(page[-1].created_at, page[-1].id) if more else None
+    return await rows_of(db, page), next_cursor
+
+
+async def pending_uzs(db: AsyncSession, user_id: str) -> Decimal:
+    """«Ожидает зачисления»: the payouts of ``user_id``'s balance sales still in ``hold``."""
+    total = await db.scalar(
+        select(func.coalesce(func.sum(Sale.payout_uzs), 0)).where(
+            Sale.user_id == user_id, Sale.status == "hold", Sale.payout_to == "balance"
+        )
+    )
+    return Decimal(total or 0)
+
+
+__all__ = ["PAGE_SIZE", "SaleRow", "list_sales", "owned_sale", "pending_uzs", "rows_of", "sale_out"]

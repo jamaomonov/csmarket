@@ -15,13 +15,21 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.errors import NotFoundError
 from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_key
+from csmarket.core.money import wire_uzs
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.sales.clients import deposit_client, inventory_client
 from csmarket.modules.sales.inventory import priced_inventory, sell_config
-from csmarket.modules.sales.schemas import InventoryOut, SaleOut, SellConfigOut, SellIn
+from csmarket.modules.sales.schemas import (
+    InventoryOut,
+    PendingOut,
+    SaleOut,
+    SalesPage,
+    SellConfigOut,
+    SellIn,
+)
 from csmarket.modules.sales.service import create_sale
-from csmarket.modules.sales.views import owned_sale, sale_out
+from csmarket.modules.sales.views import list_sales, owned_sale, pending_uzs, sale_out
 from csmarket.modules.skinslink.api import DepositClient
 from csmarket.modules.users.api import User
 
@@ -112,6 +120,30 @@ async def post_sell(
     if not created:
         response.status_code = 200
     return await _owned_out(db, user_id, sale.number)
+
+
+@router.get("/sales", response_model=SalesPage, summary="My sales")
+async def get_my_sales(user: Me, db: Db, cursor: str | None = None) -> SalesPage:
+    """My sales, newest first, 20 a page."""
+    rows, next_cursor = await list_sales(db, user.id, cursor)
+    return SalesPage(items=[sale_out(r) for r in rows], next_cursor=next_cursor)
+
+
+@router.get("/sales/pending", response_model=PendingOut, summary="Money on its way to my balance")
+async def get_pending(user: Me, db: Db) -> PendingOut:
+    """The sum my sales to the balance will credit once Steam's protection ends."""
+    return PendingOut(pending_uzs=wire_uzs(await pending_uzs(db, user.id)))
+
+
+@router.get(
+    "/sales/{number}",
+    response_model=SaleOut,
+    responses={404: {"description": "Not my sale"}},
+    summary="One of my sales",
+)
+async def get_my_sale(number: str, user: Me, db: Db) -> SaleOut:
+    """The owner's sale; anyone else's, an unknown or a malformed number is a 404."""
+    return await _owned_out(db, user.id, number)
 
 
 __all__ = ["router"]

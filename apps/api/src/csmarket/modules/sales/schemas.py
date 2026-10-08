@@ -182,3 +182,16 @@ class SaleOut(BaseModel):
     #: A card sale's payout request, once there is one.
     payout_status: PayoutStatusOut | None
     created_at: datetime
+
+
+class SalesPage(BaseModel):
+    """My sales, newest first; ``next_cursor`` is ``null`` on the last page."""
+
+    items: list[SaleOut]
+    next_cursor: str | None
+
+
+class PendingOut(BaseModel):
+    """What my balance sales still in Steam's protection will pay, whole soʻm."""
+
+    pending_uzs: str
