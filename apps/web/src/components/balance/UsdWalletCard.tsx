@@ -29,7 +29,7 @@ interface UsdWalletCardProps {
   usd: UsdWallet;
 }
 
-type Notice = "done" | "tooLow" | "failed" | null;
+type Notice = "done" | "tooLow" | "failed" | "rateUnavailable" | null;
 
 /** The USD wallet under the soʻm card: dollars on hand and a conversion from the soʻm balance. */
 export function UsdWalletCard({ locale, usd }: UsdWalletCardProps) {
@@ -49,6 +49,8 @@ export function UsdWalletCard({ locale, usd }: UsdWalletCardProps) {
     const digits = toDigits(raw);
     const grouped = groupDigits(digits, locale);
     const before = digitsBeforeCaret(raw, caret);
+    // A different amount is a different request: it needs its own key.
+    if (grouped !== amount) keyRef.current = null;
     setAmount(grouped);
     setNotice(null);
     requestAnimationFrame(() => {
@@ -64,25 +66,33 @@ export function UsdWalletCard({ locale, usd }: UsdWalletCardProps) {
     keyRef.current ??= `web-convert-${crypto.randomUUID()}`;
     setBusy(true);
     setNotice(null);
+    let converted = false;
     try {
       await convertToUsd(typed, keyRef.current);
+      converted = true;
       keyRef.current = null;
       setAmount("");
       setNotice("done");
-      await Promise.all([
-        client.invalidateQueries({ queryKey: BALANCE_KEY }),
-        client.invalidateQueries({ queryKey: ENTRIES_KEY }),
-      ]);
     } catch (err) {
       const code = err instanceof SessionApiError ? err.code : undefined;
       if (code === "balance_too_low") {
         setNotice("tooLow");
+      } else if (code === "rate_unavailable") {
+        setNotice("rateUnavailable");
       } else {
         setNotice("failed");
       }
-      if (code !== undefined && code !== "idempotency_mismatch") keyRef.current = null;
+      // A code-less failure (network) keeps the key so a retry replays; an answer drops it.
+      if (code !== undefined) keyRef.current = null;
     } finally {
       setBusy(false);
+    }
+    if (converted) {
+      // The money has moved; a failed re-read must not turn that into an error.
+      await Promise.all([
+        client.invalidateQueries({ queryKey: BALANCE_KEY }),
+        client.invalidateQueries({ queryKey: ENTRIES_KEY }),
+      ]).catch(() => undefined);
     }
   }
 

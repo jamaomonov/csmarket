@@ -95,4 +95,73 @@ describe("UsdWalletCard", () => {
     expect(field()).toBeDisabled();
     expect(screen.getByRole("button", { name: "Перевести" })).toBeDisabled();
   });
+
+  const type = (v: string) => {
+    fireEvent.change(field(), { target: { value: v } });
+  };
+  const send = () => {
+    fireEvent.click(screen.getByRole("button", { name: "Перевести" }));
+  };
+  const keyOf = (n: number) => mocks.convertToUsd.mock.calls[n]?.[1];
+
+  it("reuses the key after a code-less failure, drops it after an answer or a new amount", async () => {
+    mocks.convertToUsd
+      .mockRejectedValueOnce(new Error("network"))
+      .mockRejectedValueOnce(new Error("network"))
+      .mockRejectedValueOnce(new SessionApiError(409, "Conflict", { code: "balance_too_low" }))
+      .mockResolvedValue(OUT);
+    setup();
+    type("100000");
+    send();
+    await screen.findByText("Не получилось перевести. Попробуйте ещё раз.");
+    send();
+    await waitFor(() => {
+      expect(mocks.convertToUsd).toHaveBeenCalledTimes(2);
+    });
+    expect(keyOf(1)).toBe(keyOf(0));
+    await screen.findByText("Не получилось перевести. Попробуйте ещё раз.");
+    // New amount after a code-less failure: a fresh key.
+    type("200000");
+    send();
+    await waitFor(() => {
+      expect(mocks.convertToUsd).toHaveBeenCalledTimes(3);
+    });
+    expect(keyOf(2)).not.toBe(keyOf(1));
+    await screen.findByText("Не хватает денег на балансе");
+    // After balance_too_low: fresh key.
+    send();
+    await waitFor(() => {
+      expect(mocks.convertToUsd).toHaveBeenCalledTimes(4);
+    });
+    expect(keyOf(3)).not.toBe(keyOf(2));
+    await screen.findByText("Переведено.");
+    expect(field()).toHaveValue("");
+    // After success: fresh key.
+    type("200000");
+    send();
+    await waitFor(() => {
+      expect(mocks.convertToUsd).toHaveBeenCalledTimes(5);
+    });
+    expect(keyOf(4)).not.toBe(keyOf(3));
+  });
+
+  it("still says done when the re-read fails", async () => {
+    mocks.convertToUsd.mockResolvedValue(OUT);
+    const { invalidate } = setup();
+    invalidate.mockRejectedValue(new Error("down"));
+    type("100000");
+    send();
+    await screen.findByText("Переведено.");
+    expect(screen.queryByText("Не получилось перевести. Попробуйте ещё раз.")).toBeNull();
+  });
+
+  it("shows the rate copy on rate_unavailable", async () => {
+    mocks.convertToUsd.mockRejectedValueOnce(
+      new SessionApiError(503, "Unavailable", { code: "rate_unavailable" }),
+    );
+    setup();
+    type("100000");
+    send();
+    await screen.findByText("Курс сейчас недоступен");
+  });
 });
