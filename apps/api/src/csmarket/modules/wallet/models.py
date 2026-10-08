@@ -32,8 +32,15 @@ from csmarket.core.db import Base
 
 #: Who may own an account (ruling R2).
 OWNER_TYPES = ("user", "house", "provider")
-#: Account kinds (ruling R2); their normal sides live in ``service.NORMAL_SIDE``.
-ACCOUNT_KINDS = ("user_wallet", "provider_clearing", "house_payments_received", "house_adjustments")
+#: Account kinds (ruling R2; ``house_skin_buys`` since spec 2026-10-08); their normal sides
+#: live in ``service.NORMAL_SIDE``.
+ACCOUNT_KINDS = (
+    "user_wallet",
+    "provider_clearing",
+    "house_payments_received",
+    "house_adjustments",
+    "house_skin_buys",
+)
 ACCOUNT_STATUSES = ("active", "frozen")
 
 

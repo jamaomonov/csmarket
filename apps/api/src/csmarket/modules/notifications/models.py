@@ -16,9 +16,18 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from csmarket.core.db import Base
 from csmarket.core.ids import new_id
+from csmarket.modules.sales import models as _sales_models  # noqa: F401  # FK target sales.id
 
-#: Letter kinds: three order letters and the email confirmation.
-KINDS = ("receipt", "trade_sent", "refunded", "verify")
+#: Letter kinds: three order letters, the email confirmation, three sale letters (2026-10-08).
+KINDS = (
+    "receipt",
+    "trade_sent",
+    "refunded",
+    "verify",
+    "sale_hold",
+    "sale_paid",
+    "sale_canceled",
+)
 #: ``pending`` until sent; ``skipped`` = no verified address to send to (never retried);
 #: ``failed`` = rejected by the provider or out of attempts.
 STATUSES = ("pending", "sent", "skipped", "failed")
@@ -49,6 +58,10 @@ class EmailOutbox(Base):
     order_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("orders.id", ondelete="RESTRICT"), nullable=True
     )
+    #: The sale a sale letter reports; ``NULL`` otherwise.
+    sale_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("sales.id", ondelete="RESTRICT"), nullable=True
+    )
     #: The address a ``verify`` letter confirms (PII: never logged); ``NULL`` otherwise.
     address: Mapped[str | None] = mapped_column(CITEXT(), nullable=True)
     #: Strings the template needs (a token, an amount, a deadline).
@@ -75,6 +88,14 @@ class EmailOutbox(Base):
             "kind",
             unique=True,
             postgresql_where=text("order_id IS NOT NULL"),
+        ),
+        # A replayed sale event never enqueues the same sale letter twice.
+        Index(
+            "uq_email_outbox_sale_kind",
+            "sale_id",
+            "kind",
+            unique=True,
+            postgresql_where=text("sale_id IS NOT NULL"),
         ),
         Index(
             "ix_email_outbox_claimable",
