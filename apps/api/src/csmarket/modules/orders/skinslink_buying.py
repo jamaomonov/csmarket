@@ -32,6 +32,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
 from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, release_fresh, take_lease
 from csmarket.modules.orders.models import Order
+from csmarket.modules.orders.skinslink_status import link_failure_reason
 from csmarket.modules.orders.skinslink_writes import (
     PurchaseSnapshot,
     attention,
@@ -41,7 +42,6 @@ from csmarket.modules.orders.skinslink_writes import (
     unconfirmed,
 )
 from csmarket.modules.skinslink.api import (
-    LINK_ERROR_CODES,
     Purchase,
     SkinslinkError,
     SkinslinkForbiddenError,
@@ -210,8 +210,9 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
     except SkinslinkUnavailableError:
         return await unconfirmed(db, snap)  # it may have gone through: ask again later
     except SkinslinkError as err:
-        if err.code in LINK_ERROR_CODES:
-            return await refund(db, snap, "invalid_trade_link")
+        link_reason = link_failure_reason(err.code)
+        if link_reason is not None:
+            return await refund(db, snap, link_reason)
         if err.status == 409 or err.code == "duplicate_purchase":
             return await _adopt(db, client, snap)
         if err.code == "insufficient_balance":

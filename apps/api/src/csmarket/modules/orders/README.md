@@ -193,7 +193,10 @@ module's models and FSM — never `payments`.
   (the worker, the reconcile sweep, the admin). The caller holds the order `FOR UPDATE`.
   `refunded_at` already set → `False`, nothing written. Else `wallet.credit_order_refund`
   (key `refund:order:{order_id}`; balance-paid: D `user_wallet` / C
-  `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing:<kassa>`),
+  `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing:<kassa>`;
+  a `usd_wallet` order (public API) goes to `wallet.credit_order_refund_usd`, key
+  `refund:order:usd:{order_id}`, units = `price_usd * 1000`; letters are skipped for
+  `channel == "api"`),
   `move(order, to_status)` (`failed` | `returned`), `refunded_at`, `refunded_to="balance"`,
   `failure_reason = reason`, `csmarket_order_refunds_total{reason}` + 1, log
   `orders.refunded` (number, amount, reason, status — never the buyer) → `True`. Flushes,
@@ -362,7 +365,7 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   | trade link does not parse                                                    | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
   | taken (`new`, `pending`, `active`, `hold`, `completed`)                      | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
   | 409 or `duplicate_purchase`                                                  | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
-  | a trade-link code (`LINK_ERROR_CODES`)                                       | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
+  | a trade-link code (`LINK_ERROR_CODES`); `hold`, `hold_and_permissions` → `trade_hold` | `invalid_link` | `failed` + refund `invalid_trade_link` (`trade_hold` for a hold)                  |
   | `insufficient_balance`                                                       | `low_balance`  | `failed` + refund `source_low_balance`                                            |
   | HTTP 403                                                                     | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
   | HTTP 429                                                                     | `rate_limited` | nothing; next try after 20 s                                                      |

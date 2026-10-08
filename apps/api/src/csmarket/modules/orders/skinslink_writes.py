@@ -24,6 +24,7 @@ _ACTOR = "orders"
 #: Refund reason → outcome.
 _REFUND_OUTCOMES: dict[str, str] = {
     "invalid_trade_link": "invalid_link",
+    "trade_hold": "invalid_link",  # a hold is a link-side refusal too
     "sold_out": "sold_out",
     "source_low_balance": "low_balance",
 }

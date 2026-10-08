@@ -17,6 +17,7 @@ Imports ``wallet`` and the module's own models and FSM — never ``payments`` (r
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Literal
 
 from sqlalchemy import select
@@ -31,7 +32,7 @@ from csmarket.modules.orders.letters import enqueue_refunded
 from csmarket.modules.orders.models import FAILURE_REASONS, IN_FLIGHT, Order, SkinTrade
 from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
 from csmarket.modules.realtime.api import nudge
-from csmarket.modules.wallet.api import credit_order_refund
+from csmarket.modules.wallet.api import credit_order_refund, credit_order_refund_usd
 
 log = get_logger("csmarket.orders.refunds")
 
@@ -90,6 +91,32 @@ async def _refuse_while_unresolved(db: AsyncSession, order: Order) -> None:
         raise ConflictError("this order waits for an admin's check", code="order_needs_attention")
 
 
+def _milli_usd(order: Order) -> Decimal:
+    """The USD wallet units ``order`` was charged: ``price_usd`` in milli-USD, never rounded."""
+    units = order.price_usd * 1000
+    if units != units.to_integral_value():
+        raise ValueError(f"order {order.number} price_usd is not whole milli-USD")
+    return units.to_integral_value()
+
+
+async def _credit(db: AsyncSession, order: Order, actor: str) -> None:
+    """Book the refund into the wallet the order was paid from (an API order: USD)."""
+    if order.paid_with == "usd_wallet":
+        await credit_order_refund_usd(
+            db, user_id=order.user_id, order_id=order.id, units=_milli_usd(order), actor=actor
+        )
+        return
+    assert order.paid_with is not None  # refund_to_balance refuses an unpaid order
+    await credit_order_refund(
+        db,
+        user_id=order.user_id,
+        order_id=order.id,
+        amount=order.price_uzs,
+        paid_with=order.paid_with,
+        actor=actor,
+    )
+
+
 async def refund_to_balance(
     db: AsyncSession,
     *,
@@ -139,14 +166,7 @@ async def refund_to_balance(
         raise ConflictError("this order was never paid", code="order_not_paid")
     await _refuse_while_unresolved(db, order)
     move(order, to_status)
-    await credit_order_refund(
-        db,
-        user_id=order.user_id,
-        order_id=order.id,
-        amount=order.price_uzs,
-        paid_with=order.paid_with,
-        actor=actor,
-    )
+    await _credit(db, order, actor)
     order.refunded_at = now()
     order.refunded_to = "balance"
     order.failure_reason = reason

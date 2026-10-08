@@ -82,13 +82,18 @@ def mirror_report(purchase: SkinslinkPurchase, report: Purchase) -> None:
     purchase.last_polled_at = purchase.updated_at = now()
 
 
+def link_failure_reason(code: str | None) -> str | None:
+    """The refund reason for a trade-link code (a hold is ``trade_hold``), else ``None``."""
+    if code in ("hold", "hold_and_permissions"):
+        return "trade_hold"
+    return "invalid_trade_link" if code in LINK_ERROR_CODES else None
+
+
 def _failure_reason(fail_reason: str | None) -> str:
     """Why a purchase that never reached an offer failed, as the order's refund reason."""
     if fail_reason == "insufficient_balance":
         return "source_low_balance"
-    if fail_reason in LINK_ERROR_CODES:
-        return "invalid_trade_link"
-    return "sold_out"
+    return link_failure_reason(fail_reason) or "sold_out"
 
 
 async def _apply(  # noqa: PLR0911 -- one return per row of the status table

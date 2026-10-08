@@ -90,6 +90,9 @@ async def test_a_declined_offer_returns_the_money(db_session: AsyncSession, stat
     [
         ("insufficient_balance", "source_low_balance"),
         ("trade_banned", "invalid_trade_link"),
+        ("hold", "trade_hold"),
+        ("hold_and_permissions", "trade_hold"),
+        ("permissions", "invalid_trade_link"),
         ("item_sold", "sold_out"),
         (None, "sold_out"),
     ],
