@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import sys
 from collections.abc import MutableMapping
 from typing import Any
@@ -113,6 +114,10 @@ _TRACEBACK_RENDERER = structlog.processors.ExceptionRenderer(
 )
 
 
+#: A customer API token (``csm_`` + url-safe base64) anywhere inside a string value.
+_API_TOKEN = re.compile(r"csm_[A-Za-z0-9_-]+")
+
+
 def _redact_pii(
     _logger: Any,
     _name: str,
@@ -131,6 +136,8 @@ def _redact_pii(
         k = key.lower()
         if k in REDACTED_KEYS or _is_pii_stem(k):
             event_dict[key] = "<redacted>"
+        elif isinstance(event_dict[key], str) and "csm_" in event_dict[key]:
+            event_dict[key] = _API_TOKEN.sub("<redacted>", event_dict[key])
     return event_dict
 
 

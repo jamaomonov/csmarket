@@ -3020,6 +3020,74 @@
         "title": "AliasesOut",
         "type": "object"
       },
+      "ApiKeyIssuedOut": {
+        "description": "A freshly issued key: the token is shown this once.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "pricing_profile",
+          "created_at"
+        ],
+        "title": "ApiKeyIssuedOut",
+        "type": "object"
+      },
+      "ApiKeyOut": {
+        "description": "The live key's public facts (never the token).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pricing_profile",
+          "created_at",
+          "last_used_at"
+        ],
+        "title": "ApiKeyOut",
+        "type": "object"
+      },
       "AuditActor": {
         "description": "The admin who acted.",
         "properties": {
@@ -10985,6 +11053,185 @@
         "summary": "Edit locale or email",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/me/api-key": {
+      "delete": {
+        "description": "Revoke the live key; 404 ``api_key_missing`` when there is none. A replay answers 204.",
+        "operationId": "revoke_key_api_v1_me_api_key_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke my API key",
+        "tags": [
+          "api-key"
+        ]
+      },
+      "get": {
+        "description": "The live key's facts, or ``null`` when none. The token is never returned.",
+        "operationId": "get_key_api_v1_me_api_key_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiKeyOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Key Api V1 Me Api Key Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My API key",
+        "tags": [
+          "api-key"
+        ]
+      },
+      "post": {
+        "description": "Issue a key, revoking the live one; the token is shown once.\n\nThe token is never stored, so a replayed ``Idempotency-Key`` answers 409\n``key_already_issued`` with the ``key_id`` instead of the token again.",
+        "operationId": "issue_key_api_v1_me_api_key_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyIssuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue an API key",
+        "tags": [
+          "api-key"
         ]
       }
     },

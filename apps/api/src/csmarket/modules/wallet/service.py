@@ -219,6 +219,27 @@ async def user_usd_account(db: AsyncSession, user_id: str, *, lock: bool = False
     return await _user_wallet(db, user_id, "user_wallet_usd", lock=lock)
 
 
+async def has_topup(db: AsyncSession, user_id: str) -> bool:
+    """Whether a top-up was ever booked on the user's ``user_wallet`` (read-only).
+
+    Reads a ``topup`` transaction with a posting on that account; creates nothing, so an
+    eligibility check never makes an account.
+    """
+    stmt = (
+        select(WalletTransaction.id)
+        .join(WalletPosting, WalletPosting.transaction_id == WalletTransaction.id)
+        .join(WalletAccount, WalletAccount.id == WalletPosting.account_id)
+        .where(
+            WalletTransaction.kind == "topup",
+            WalletAccount.owner_type == "user",
+            WalletAccount.owner_id == user_id,
+            WalletAccount.kind == "user_wallet",
+        )
+        .limit(1)
+    )
+    return (await db.execute(stmt)).first() is not None
+
+
 async def _transaction_by_key(db: AsyncSession, idempotency_key: str) -> WalletTransaction | None:
     """The transaction posted under ``idempotency_key``, or ``None``."""
     stmt = select(WalletTransaction).where(WalletTransaction.idempotency_key == idempotency_key)
