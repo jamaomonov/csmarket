@@ -5463,6 +5463,17 @@
               }
             ]
           },
+          "payout_reject_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Reject Reason"
+          },
           "payout_status": {
             "anyOf": [
               {
@@ -5520,6 +5531,7 @@
           "offer",
           "money_at",
           "payout_status",
+          "payout_reject_reason",
           "created_at"
         ],
         "title": "SaleOut",

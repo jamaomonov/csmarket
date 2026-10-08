@@ -150,6 +150,14 @@ async def test_reject_credits_the_amount_before_the_fee_to_the_balance(
         "Карта заблокирована",
     )
     assert await user_balance(db_session, request.user_id) == Decimal(155_200)
+    letter = await db_session.scalar(select(EmailOutbox).where(EmailOutbox.kind == "sale_paid"))
+    assert letter is not None
+    assert letter.payload["reason"] == "Карта заблокирована"
+    assert (letter.payload["to"], letter.payload["rejected"], letter.payload["last4"]) == (
+        "balance",
+        "true",
+        "9015",
+    )
     again = await integration_client.post(
         f"{BASE}/{request.id}/reject", json={"reason": "again"}, headers={**headers, **_key(5)}
     )
@@ -197,14 +205,33 @@ async def test_the_page_shows_the_breakdown_items_and_history(
     assert body["can_decide"] is True
 
 
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("GET", "/settings", None),
+        ("PUT", "/settings", {}),
+        ("GET", "", None),
+        ("GET", "/S7K2M9QX", None),
+        ("GET", "/payouts", None),
+        ("GET", "/payouts/{id}", None),
+        ("POST", "/payouts/{id}/paid", {}),
+        ("POST", "/payouts/{id}/reject", {"reason": "x"}),
+        ("POST", "/payouts/{id}/reveal", {"purpose": "show"}),
+    ],
+)
 async def test_customers_are_403(
-    db_session: AsyncSession, integration_client: AsyncClient, customer_headers: Headers
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    *,
+    method: str,
+    path: str,
+    body: dict[str, object] | None,
 ) -> None:
     request = await _payable(db_session)
-    headers = await customer_headers()
-    assert (await integration_client.get(BASE, headers=headers)).status_code == 403
-    r = await integration_client.post(
-        f"{BASE}/{request.id}/reveal", json={"purpose": "show"}, headers=headers
+    headers = {**await customer_headers(), **_key(30)}
+    r = await integration_client.request(
+        method, "/api/v1/admin/sales" + path.format(id=request.id), json=body, headers=headers
     )
     assert r.status_code == 403
 

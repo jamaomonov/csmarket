@@ -154,3 +154,20 @@ async def test_a_sale_credit_shows_in_the_balance_history_with_its_number(
 async def test_signed_out_is_401(integration_client: AsyncClient) -> None:
     for url in ("/api/v1/sales", "/api/v1/sales/pending", "/api/v1/sales/S0000000"):
         assert (await integration_client.get(url)).status_code == 401
+
+
+async def test_a_rejected_payout_shows_its_reason_to_the_seller_only_then(
+    db_session: AsyncSession, integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    headers, me = await _me(db_session, customer_headers)
+    rejected = await make_sale(db_session, user=me, payout_to="card", status="payout")
+    await make_request(db_session, rejected, status="rejected", reject_reason="Карта заблокирована")
+    paying = await make_sale(db_session, user=me, payout_to="card", status="payout")
+    await make_request(db_session, paying, status="to_pay", reject_reason="stale")
+    got = await integration_client.get(f"/api/v1/sales/{rejected.number}", headers=headers)
+    assert (got.json()["payout_status"], got.json()["payout_reject_reason"]) == (
+        "rejected",
+        "Карта заблокирована",
+    )
+    other = await integration_client.get(f"/api/v1/sales/{paying.number}", headers=headers)
+    assert other.json()["payout_reject_reason"] is None

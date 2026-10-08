@@ -111,6 +111,9 @@ def sale_out(row: SaleRow) -> SaleOut:
         offer=offer,
         money_at=s.hold_end_at if s.status == "hold" else None,
         payout_status=row.request.status if row.request is not None else None,  # type: ignore[arg-type]
+        payout_reject_reason=row.request.reject_reason
+        if row.request is not None and row.request.status == "rejected"
+        else None,
         created_at=s.created_at,
     )
 

@@ -151,3 +151,37 @@ def test_the_sale_copy_is_the_owners() -> None:
         links=SALE_LINKS,
     )
     assert "158 300 сум поступят через 7 дней" in hold.text
+
+
+REJECTED = {
+    "number": "S7K2M9QX",
+    "amount_uzs": "155200",
+    "to": "balance",
+    "rejected": "true",
+    "reason": "Карта заблокирована",
+}
+
+
+@pytest.mark.parametrize("locale", ["ru", "uz", "en"])
+def test_a_rejected_card_payout_letter_gives_the_reason_and_the_balance(locale: str) -> None:
+    payload = {**REJECTED, "last4": "9015"}
+    letter = render(
+        "sale_paid",
+        locale=locale,  # type: ignore[arg-type]
+        number="S7K2M9QX",
+        payload=payload,
+        links=SALE_LINKS,
+    )
+    assert "Карта заблокирована" in letter.text
+    assert "•••• 9015" in letter.text
+    assert SALE_LINKS.balance_url in letter.text
+    assert "155" in letter.text
+    without = render(
+        "sale_paid",
+        locale=locale,  # type: ignore[arg-type]
+        number="S7K2M9QX",
+        payload=REJECTED,
+        links=SALE_LINKS,
+    )
+    assert "••••" not in without.text
+    assert "Карта заблокирована" in without.text

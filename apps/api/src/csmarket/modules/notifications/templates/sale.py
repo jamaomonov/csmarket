@@ -36,11 +36,14 @@ def paid(*, locale: Locale, number: str, payload: Mapping[str, str], links: Link
     words = COPY[locale]
     money = amount(payload.get("amount_uzs", "0"), locale)
     to_card = payload.get("to") == "card"
-    body = (
-        words["sale_paid.body_card"].format(amount=money, last4=payload.get("last4", ""))
-        if to_card
-        else words["sale_paid.body_balance"].format(amount=money)
-    )
+    last4 = payload.get("last4", "")
+    if payload.get("rejected") == "true":
+        key = "sale_paid.body_rejected_card" if last4 else "sale_paid.body_rejected"
+        body = words[key].format(amount=money, last4=last4, reason=payload.get("reason", ""))
+    elif to_card:
+        body = words["sale_paid.body_card"].format(amount=money, last4=last4)
+    else:
+        body = words["sale_paid.body_balance"].format(amount=money)
     return compose(
         locale=locale,
         subject=words["sale_paid.subject"].format(number=number),

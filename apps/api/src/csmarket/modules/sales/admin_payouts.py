@@ -242,7 +242,16 @@ async def reject(db: AsyncSession, *, request_id: str, admin_id: str, reason: st
         amount=amount,
         actor=f"admin:{admin_id}",
     )
-    await enqueue_sale_letter(db, sale, "sale_paid", amount_uzs=amount, to="balance")
+    card = await db.get(PayoutCard, request.card_id)
+    await enqueue_sale_letter(
+        db,
+        sale,
+        "sale_paid",
+        amount_uzs=amount,
+        to="balance",
+        last4=card.last4 if card else None,
+        reason=reason,
+    )
     await nudge_sale(db, user_id=sale.user_id, number=sale.number)
     await db.flush()
     log.info("sales.payout.rejected", number=sale.number, amount_uzs=str(amount))

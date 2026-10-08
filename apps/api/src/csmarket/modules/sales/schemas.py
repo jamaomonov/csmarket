@@ -181,6 +181,8 @@ class SaleOut(BaseModel):
     money_at: datetime | None
     #: A card sale's payout request, once there is one.
     payout_status: PayoutStatusOut | None
+    #: Why an admin rejected the card payout (the money went to the balance); else ``null``.
+    payout_reject_reason: str | None
     created_at: datetime
 
 
