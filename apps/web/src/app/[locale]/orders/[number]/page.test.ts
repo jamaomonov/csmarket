@@ -15,6 +15,7 @@ vi.mock("next-intl/server", () => ({
   setRequestLocale: () => undefined,
 }));
 vi.mock("@/components/order/OrderView", () => ({ OrderView: () => null }));
+vi.mock("@/components/account/AccountSidebar", () => ({ AccountSidebar: () => null }));
 
 import OrderPage, { generateMetadata } from "./page";
 

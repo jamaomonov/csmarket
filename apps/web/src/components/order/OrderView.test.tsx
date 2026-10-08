@@ -174,6 +174,23 @@ describe("OrderView — the trade", () => {
     expect(state()).toBe("delivered");
     expect(m.get).toHaveBeenCalledTimes(1);
   });
+
+  it("a trade accepted in Steam's hold reads «Получен», every step done", async () => {
+    m.get.mockResolvedValue(
+      orderOut(number, {
+        status: "trade_sent",
+        payable: false,
+        paid_at: "2026-10-08T15:50:00Z",
+        trade: tradeOut({ state: "accepted", release_date: "2026-10-15T15:52:00Z" }),
+      }),
+    );
+    view();
+    const label = await screen.findByTestId("order-status-label");
+    expect(label).toHaveTextContent("Получен");
+    const steps = screen.getAllByRole("listitem").map((li) => li.getAttribute("data-state"));
+    expect(steps).toEqual(["done", "done", "done"]);
+    expect(screen.queryByText(/защищает/)).toBeNull();
+  });
 });
 
 describe("OrderView — no order to show", () => {
@@ -184,7 +201,7 @@ describe("OrderView — no order to show", () => {
     await tick();
     expect(screen.getByRole("heading", { name: "Заказ не найден." })).toBeInTheDocument();
     expect(state()).toBe("notFound");
-    expect(screen.getByRole("link", { name: "Обмены" })).toHaveAttribute("href", "/account/trades");
+    expect(screen.getByRole("link", { name: "← К обменам" })).toHaveAttribute("href", "/account/trades");
     await tick(60_000);
     expect(m.get).toHaveBeenCalledTimes(1);
   });

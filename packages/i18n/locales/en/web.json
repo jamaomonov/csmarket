@@ -319,7 +319,6 @@
       "openOffer": "Open the trade in Steam",
       "seller": "Seller",
       "accepted": "Received",
-      "protectedUntil": "Steam protects the trade until {date}",
       "refunded": "The trade didn't happen — the money is back on your balance.",
       "soldOut": "Someone bought this skin before you — the money is back on your balance. Pick another one in the market.",
       "tryLater": "Couldn't buy the skin — the money is on your balance. Try again in a few minutes.",

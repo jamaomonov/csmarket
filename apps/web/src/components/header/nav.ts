@@ -60,6 +60,9 @@ export const ACCOUNT_NAV: NavEntry[] = [
   { key: "referral", href: REFERRAL, icon: Gift },
 ];
 
+/** «Обмены» is the list and every order and sale page it opens. */
+const TRADE_PATHS = ["/orders", "/account/sales"];
+
 /** The market is the catalogue and everything under it. */
 const MARKET_PATHS = ["/category", "/weapon", "/item"];
 
@@ -68,5 +71,6 @@ export function isCurrent(entry: NavEntry, pathname: string): boolean {
   if (entry.href === HOME) {
     return pathname === HOME || MARKET_PATHS.some((p) => pathname.startsWith(`${p}/`));
   }
+  if (entry.href === TRADES && TRADE_PATHS.some((p) => pathname.startsWith(`${p}/`))) return true;
   return pathname === entry.href || pathname.startsWith(`${entry.href}/`);
 }
