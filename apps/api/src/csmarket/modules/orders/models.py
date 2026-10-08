@@ -62,7 +62,17 @@ ATTENTION_REASONS = (
     "audit_divergence",
 )
 #: ``orders.failure_reason`` codes.
-FAILURE_REASONS = ("sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin")
+FAILURE_REASONS = (
+    "sold_out",
+    "source_low_balance",
+    "invalid_trade_link",
+    "not_accepted",
+    "admin",
+    "trade_hold",
+    "price_moved",
+)
+#: Where an order was placed: the storefront or the public API.
+ORDER_CHANNELS = ("site", "api")
 #: Where a refund goes (spec §7.8: the balance only).
 REFUND_TARGETS = ("balance",)
 
@@ -140,6 +150,18 @@ class Order(Base):
     idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
     #: ``wallet``, ``click``, ``payme``, ``uzum`` or ``mock``; ``NULL`` until paid.
     paid_with: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    #: One of :data:`ORDER_CHANNELS`.
+    channel: Mapped[str] = mapped_column(
+        String(4), nullable=False, server_default=text("'site'"), default="site"
+    )
+    #: The key an ``api`` order was placed with; ``NULL`` on the site.
+    api_key_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("api_keys.id", ondelete="RESTRICT"), nullable=True
+    )
+    #: The client's own id for an ``api`` order; unique per key.
+    client_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: The key's tariff when the order was placed (``retail`` / ``cost``).
+    pricing_profile: Mapped[str | None] = mapped_column(String(8), nullable=True)
     created_at: Mapped[datetime] = _ts()
     updated_at: Mapped[datetime] = _ts()
     #: A ``pending`` order is cancelled after this.
@@ -165,6 +187,15 @@ class Order(Base):
         # Bare suffixes: the metadata naming convention adds ``ck_orders_``.
         CheckConstraint(f"status IN {_in(ORDER_STATUSES)}", name="status"),
         CheckConstraint(f"source IN {_in(ORDER_SOURCES)}", name="source"),
+        CheckConstraint(f"channel IN {_in(ORDER_CHANNELS)}", name="channel"),
+        CheckConstraint(
+            "(channel = 'site' AND api_key_id IS NULL) OR (channel = 'api' AND api_key_id IS NOT"
+            " NULL AND client_order_id IS NOT NULL AND pricing_profile IS NOT NULL)",
+            name="channel_fields",
+        ),
+        UniqueConstraint(
+            "api_key_id", "client_order_id", name="uq_orders_api_key_id_client_order_id"
+        ),
         CheckConstraint(f"refunded_to IN {_in(REFUND_TARGETS)}", name="refunded_to"),
         Index("ix_orders_status_next_check", "status", "next_check_at"),
         Index("ix_orders_user_created", "user_id", text("created_at DESC")),
@@ -244,6 +275,7 @@ __all__ = [
     "ATTENTION_REASONS",
     "FAILURE_REASONS",
     "IN_FLIGHT",
+    "ORDER_CHANNELS",
     "ORDER_SOURCES",
     "ORDER_STATUSES",
     "REFUND_TARGETS",

@@ -26,6 +26,7 @@ from csmarket.modules.notifications import models as _notifications_models  # no
 from csmarket.modules.orders import models as _orders_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
+from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.lisskins import models as _lisskins_models  # noqa: F401

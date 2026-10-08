@@ -142,11 +142,25 @@ SALE_OUTCOMES = Counter(
 
 #: Why an order's money went back to the balance (``orders.failure_reason``).
 OrderRefundReason = Literal[
-    "sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin"
+    "sold_out",
+    "source_low_balance",
+    "invalid_trade_link",
+    "not_accepted",
+    "admin",
+    "trade_hold",
+    "price_moved",
 ]
 
 _ORDER_REFUND_REASONS = frozenset(
-    ("sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin")
+    (
+        "sold_out",
+        "source_low_balance",
+        "invalid_trade_link",
+        "not_accepted",
+        "admin",
+        "trade_hold",
+        "price_moved",
+    )
 )
 
 ORDER_REFUNDS = Counter(

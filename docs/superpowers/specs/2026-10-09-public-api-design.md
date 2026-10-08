@@ -76,7 +76,10 @@
   `pricing_profile` (`retail` | `cost`), `ip_allowlist` (CIDR list, empty = any), `created_at`,
   `last_used_at` (written at most once a minute), `revoked_at`. A partial unique index allows
   one live key per user.
-- Issuing needs a Steam sign-in and at least one successful top-up; 409 otherwise.
+- Issuing needs a Steam sign-in and a successful top-up **or** `usd_wallet_enabled` (R2, plan B:
+  YuPay is funded by an admin credit and may never top up); 409 otherwise. The token is never
+  stored, so a replayed `Idempotency-Key` answers 409 `key_already_issued` (with `key_id`), not
+  the token again (R3).
 - Profile: «API-ключ» block — issue, reissue (old one revoked at once), revoke; the token shown
   once with a copy button; `last_used_at`; a link to the docs.
 - Auth: a FastAPI dependency hashes the bearer token, loads the live key and its user
@@ -135,9 +138,14 @@ UTC.
 ## 6. Orders and the worker
 
 - `orders` gains `channel` (`site` | `api`, default `site`), `api_key_id` (nullable FK),
-  `client_order_id` (nullable; unique with `api_key_id`), `charged_units` (nullable int),
-  `pricing_profile` (nullable). `price_uzs`, `fx_snapshot_id`, `fx_uplift_pct` become nullable
-  under a CHECK: a `site` order has them, an `api` order has `charged_units` instead.
+  `client_order_id` (nullable; unique with `api_key_id`), `pricing_profile` (nullable); CHECK
+  `channel_fields`: a `site` order has no key, an `api` order has key, client id and profile.
+  **R1 (plan B):** `price_uzs`, `fx_snapshot_id` and `fx_uplift_pct` stay NOT NULL (nullable
+  columns would retype every site call site): an API order stores `price_uzs = 0`,
+  `fx_snapshot_id` = the newest snapshot (any age), `fx_uplift_pct = 0`, and `price_usd` holds
+  the charged price, so there is no `charged_units` column.
+- New failure reasons `trade_hold` and `price_moved` (R5): `price_moved` is kept for a supplier
+  refusal that names a price; Skinslink `hold` / `hold_and_permissions` map to `trade_hold`.
 - `paid_with` = `usd_wallet` for API orders; `credit_order_refund` books the refund on the
   wallet the order was paid from (`REFUND_SOURCES` gains `usd_wallet`).
 - The worker buys an API order exactly as a site order (same claim, lease, lookup-before-buy,
@@ -154,6 +162,8 @@ UTC.
   until the new one is complete. `updated_since` filters by the item's `prices_updated_at`.
 - **Offers** per item from `skinslink_items` / `lisskins_offers`, priced by tariff, cached 60 s
   per item and tariff.
+- **Feed pages** are fixed at 1000 items; `limit` is not a parameter; the page JSON is kept as
+  text in Redis (the client decodes strings) and compressed by Caddy (`encode gzip`) (R4).
 - **Limits** (Redis counters per `key_id`): 60/min reads, 10/min `POST /orders`, the feed's
   first page once a minute (later pages of the same snapshot free); 429 with `Retry-After`.
 - New Redis keys go to `docs/architecture/cache-keys.md`.

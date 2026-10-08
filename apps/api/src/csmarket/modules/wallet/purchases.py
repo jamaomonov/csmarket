@@ -30,12 +30,15 @@ from csmarket.modules.wallet.service import (
     ensure_account,
     post,
     user_account,
+    user_usd_account,
 )
 
 #: ``orders.paid_with`` (and ``payments.provider``) of an order paid from the balance.
 WALLET = "wallet"
 #: Every ``orders.paid_with`` a refund can come from: the balance or one of our kassas.
-REFUND_SOURCES: frozenset[str] = frozenset({WALLET, "click", "payme", "uzum", "mock"})
+#: ``orders.paid_with`` of an API order paid from the dollar balance.
+USD_WALLET = "usd_wallet"
+REFUND_SOURCES: frozenset[str] = frozenset({WALLET, "click", "payme", "uzum", "mock", USD_WALLET})
 
 
 async def _house_payments_received(db: AsyncSession) -> WalletAccount:
@@ -130,4 +133,76 @@ async def credit_order_refund(
     )
 
 
-__all__ = ["REFUND_SOURCES", "WALLET", "credit_order_refund", "debit_purchase"]
+async def _house_payments_received_usd(db: AsyncSession) -> WalletAccount:
+    """The house account that takes the dollars customers pay from their USD balance."""
+    return await ensure_account(
+        db, owner_type="house", owner_id="house", kind="house_payments_received_usd"
+    )
+
+
+async def debit_purchase_usd(
+    db: AsyncSession, *, user_id: str, order_id: str, units: Decimal
+) -> WalletTransaction:
+    """Pay order ``order_id`` from the user's USD balance (milli-USD ``units``).
+
+    As :func:`debit_purchase` on the dollar accounts: C ``user_wallet_usd`` /
+    D ``house_payments_received_usd``, key ``purchase:order:{order_id}``, the wallet locked
+    first, a replay returned before the balance check. Flushes, never commits.
+
+    Raises:
+        InsufficientBalanceError: ``code="balance_too_low"`` — nothing is written.
+        ConflictError: ``code="idempotency_mismatch"`` — the key booked another kind.
+    """
+    key = f"purchase:order:{order_id}"
+    wallet = await user_usd_account(db, user_id, lock=True)
+    existing = await _transaction_by_key(db, key)
+    if existing is not None:
+        return _replay(existing, "purchase")
+    if await balance(db, wallet.id) < units:
+        raise InsufficientBalanceError(
+            "the balance does not cover this order", code="balance_too_low"
+        )
+    house = await _house_payments_received_usd(db)
+    return await post(
+        db,
+        kind="purchase",
+        legs=[Leg(wallet.id, "C", units), Leg(house.id, "D", units)],
+        idempotency_key=key,
+        reference=Reference(type="order", id=order_id),
+        actor="orders",
+    )
+
+
+async def credit_order_refund_usd(
+    db: AsyncSession, *, user_id: str, order_id: str, units: Decimal, actor: str = "orders"
+) -> WalletTransaction:
+    """Refund order ``order_id`` to the user's USD balance, once.
+
+    D ``user_wallet_usd`` / C ``house_payments_received_usd``, key ``refund:order:{order_id}``;
+    a refund already booked is returned as is. Flushes, never commits.
+
+    Raises:
+        ConflictError: ``code="idempotency_mismatch"`` — the key booked another kind.
+    """
+    wallet = await user_usd_account(db, user_id)
+    house = await _house_payments_received_usd(db)
+    return await post(
+        db,
+        kind="refund",
+        legs=[Leg(wallet.id, "D", units), Leg(house.id, "C", units)],
+        idempotency_key=f"refund:order:{order_id}",
+        reference=Reference(type="order", id=order_id),
+        actor=actor,
+        metadata={"paid_with": USD_WALLET},
+    )
+
+
+__all__ = [
+    "REFUND_SOURCES",
+    "USD_WALLET",
+    "WALLET",
+    "credit_order_refund",
+    "credit_order_refund_usd",
+    "debit_purchase",
+    "debit_purchase_usd",
+]

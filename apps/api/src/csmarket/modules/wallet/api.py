@@ -29,7 +29,14 @@ from csmarket.modules.wallet.entries import (
     user_balance_column,
 )
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
-from csmarket.modules.wallet.purchases import WALLET, credit_order_refund, debit_purchase
+from csmarket.modules.wallet.purchases import (
+    USD_WALLET,
+    WALLET,
+    credit_order_refund,
+    credit_order_refund_usd,
+    debit_purchase,
+    debit_purchase_usd,
+)
 from csmarket.modules.wallet.sales import credit_payout_return, credit_sale
 from csmarket.modules.wallet.service import (
     KIND_CURRENCY,
@@ -58,6 +65,7 @@ __all__ = [
     "KIND_CURRENCY",
     "NORMAL_SIDE",
     "TX_KINDS",
+    "USD_WALLET",
     "WALLET",
     "AdminEntry",
     "Conversion",
@@ -77,10 +85,12 @@ __all__ = [
     "conversion_booked",
     "convert_to_usd",
     "credit_order_refund",
+    "credit_order_refund_usd",
     "credit_payout_return",
     "credit_sale",
     "credit_topup",
     "debit_purchase",
+    "debit_purchase_usd",
     "ensure_account",
     "entries_for_admin",
     "entries_for_user",

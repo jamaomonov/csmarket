@@ -21,7 +21,13 @@ AttentionReason = Literal[
 ]
 #: ``orders.failure_reason`` (``orders.models.FAILURE_REASONS``; a unit test pins it).
 FailureReason = Literal[
-    "sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin"
+    "sold_out",
+    "source_low_balance",
+    "invalid_trade_link",
+    "not_accepted",
+    "admin",
+    "trade_hold",
+    "price_moved",
 ]
 #: The trades page's tabs.
 TradesView = Literal["all", "active", "attention"]

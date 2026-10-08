@@ -465,7 +465,9 @@
                   "source_low_balance",
                   "invalid_trade_link",
                   "not_accepted",
-                  "admin"
+                  "admin",
+                  "trade_hold",
+                  "price_moved"
                 ],
                 "type": "string"
               },
