@@ -143,3 +143,12 @@ purchases and refunds with the balance never below zero), `test_wallet_purchase.
 replays, `balance_too_low`, both refund shapes), `test_wallet_routes.py`
 (balance, signed entries, redaction, keyset paging, owner only), `test_wallet_admin_adjust.py`
 (credit, clawback, never below zero, replay, admin entries).
+
+## Dollar wallet routes (public API plan A)
+
+- `GET /wallet` carries `usd: {balance_usd, rate_uzs}` once `users.usd_wallet_enabled`; else `null`.
+- `POST /wallet/convert {amount_uzs}` + `Idempotency-Key` converts soʻm to dollars at CBU plus the
+  uplift (201; a replay 200). Ledger key `fx_convert:<user id>:<key>`. Errors: 403
+  `usd_wallet_disabled`, 409 `balance_too_low` / `idempotency_mismatch`, 422 `convert_amount`,
+  503 `rate_unavailable`.
+- `GET /wallet/entries?currency=usd` lists dollar lines (`amount_usd`, signed; `amount_uzs` is `"0"`).

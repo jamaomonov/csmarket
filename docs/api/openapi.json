@@ -2998,6 +2998,16 @@
           "balance_uzs": {
             "title": "Balance Uzs",
             "type": "string"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsdWalletOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3358,6 +3368,57 @@
         "title": "CheapTail",
         "type": "object"
       },
+      "ConvertIn": {
+        "additionalProperties": false,
+        "description": "So\u02bbm to move into the dollar wallet.",
+        "properties": {
+          "amount_uzs": {
+            "maximum": 100000000.0,
+            "minimum": 1000.0,
+            "title": "Amount Uzs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_uzs"
+        ],
+        "title": "ConvertIn",
+        "type": "object"
+      },
+      "ConvertOut": {
+        "description": "A booked conversion and both balances after it.",
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "balance_uzs": {
+            "title": "Balance Uzs",
+            "type": "string"
+          },
+          "rate_uzs": {
+            "title": "Rate Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_uzs",
+          "amount_usd",
+          "rate_uzs",
+          "balance_uzs",
+          "balance_usd"
+        ],
+        "title": "ConvertOut",
+        "type": "object"
+      },
       "DashboardOut": {
         "description": "Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look.",
         "properties": {
@@ -3512,6 +3573,17 @@
       "EntryOut": {
         "description": "One line of the balance history. No actor, no metadata (customer view).",
         "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
           "amount_uzs": {
             "title": "Amount Uzs",
             "type": "string"
@@ -3519,6 +3591,15 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "default": "UZS",
+            "enum": [
+              "UZS",
+              "USD"
+            ],
+            "title": "Currency",
             "type": "string"
           },
           "id": {
@@ -3533,7 +3614,9 @@
               "purchase",
               "refund",
               "sale_credit",
-              "payout_return"
+              "payout_return",
+              "fx_convert",
+              "admin_adjust_usd"
             ],
             "title": "Kind",
             "type": "string"
@@ -7262,6 +7345,32 @@
           "display_name"
         ],
         "title": "UpdatedByOut",
+        "type": "object"
+      },
+      "UsdWalletOut": {
+        "description": "The dollar wallet; present only once an admin switched it on.",
+        "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "rate_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Uzs"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "rate_uzs"
+        ],
+        "title": "UsdWalletOut",
         "type": "object"
       },
       "ValidationError": {
@@ -12278,7 +12387,7 @@
     },
     "/api/v1/wallet": {
       "get": {
-        "description": "Spendable so\u02bbm; ``\"0\"`` before the first top-up.",
+        "description": "Spendable so\u02bbm; ``\"0\"`` before the first top-up.\n\n``usd`` carries the dollar wallet and today's conversion rate once an admin switched it on\nfor the account; ``null`` otherwise.",
         "operationId": "get_balance_api_v1_wallet_get",
         "parameters": [
           {
@@ -12326,9 +12435,85 @@
         ]
       }
     },
+    "/api/v1/wallet/convert": {
+      "post": {
+        "description": "So\u02bbm \u2192 the dollar wallet at the site rate (CBU plus the uplift).\n\nNeeds the dollar wallet switched on. A replayed key with the same amount answers 200 with\nthe same conversion; the same key with another amount is 409.",
+        "operationId": "convert_api_v1_wallet_convert_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Convert so\u02bbm into dollars",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
     "/api/v1/wallet/entries": {
       "get": {
-        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.\n\n``type=topup`` keeps top-ups and their reversals; ``type=withdrawal`` is empty until\npayouts exist.",
+        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.\n\n``type=topup`` keeps top-ups and their reversals; ``type=withdrawal`` is empty until\npayouts exist. ``currency=usd`` lists the dollar wallet's lines (``amount_usd``).",
         "operationId": "get_entries_api_v1_wallet_entries_get",
         "parameters": [
           {
@@ -12377,6 +12562,20 @@
                 }
               ],
               "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "default": "uzs",
+              "enum": [
+                "uzs",
+                "usd"
+              ],
+              "title": "Currency",
+              "type": "string"
             }
           },
           {

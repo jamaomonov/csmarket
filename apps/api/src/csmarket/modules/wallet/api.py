@@ -16,6 +16,7 @@ from csmarket.modules.wallet.adjust import (
 from csmarket.modules.wallet.convert import (
     CONVERT_MAX_UZS,
     Conversion,
+    conversion_booked,
     convert_to_usd,
     usd_units_for,
 )
@@ -73,6 +74,7 @@ __all__ = [
     "admin_adjust",
     "admin_adjust_usd",
     "balance",
+    "conversion_booked",
     "convert_to_usd",
     "credit_order_refund",
     "credit_payout_return",

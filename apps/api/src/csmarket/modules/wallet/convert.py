@@ -67,6 +67,11 @@ def _same(txn: WalletTransaction, user_id: str, amount_uzs: Decimal) -> Conversi
     return _of(txn)
 
 
+async def conversion_booked(db: AsyncSession, key: str) -> bool:
+    """Whether a transaction is already booked under the full ledger ``key``."""
+    return await _transaction_by_key(db, key) is not None
+
+
 async def convert_to_usd(
     db: AsyncSession,
     *,
@@ -83,11 +88,14 @@ async def convert_to_usd(
     booked conversion; the same key with another amount or user is 409. Flushes, never commits.
 
     Raises:
-        ValidationError: ``code="convert_amount"`` — not a positive whole soʻm within
+        ValidationError: ``code="convert_rate"`` — the rate is not finite and positive;
+            ``code="convert_amount"`` — not a positive whole soʻm within
             ``CONVERT_MAX_UZS``, or it buys less than one milli-USD ("too small").
         InsufficientBalanceError: ``code="balance_too_low"``.
         ConflictError: ``code="idempotency_mismatch"``.
     """
+    if not rate.is_finite() or rate <= 0:
+        raise ValidationError("the rate must be positive", code="convert_rate")
     if (
         not amount_uzs.is_finite()
         or amount_uzs <= 0

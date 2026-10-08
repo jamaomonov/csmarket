@@ -8,6 +8,7 @@ from decimal import Decimal
 import pytest
 from csmarket.core.errors import ConflictError, ValidationError
 from csmarket.modules.wallet.api import (
+    CONVERT_MAX_UZS,
     Conversion,
     InsufficientBalanceError,
     admin_adjust,
@@ -70,13 +71,15 @@ async def test_replay_returns_the_same_conversion(db_session: AsyncSession) -> N
     again = await _convert(db_session, uid, 100_000, "convert-key-000000002")
     assert again.transaction_id == first.transaction_id
     assert await user_balance(db_session, uid) == Decimal(50_000)
+    assert await user_usd_balance(db_session, uid) == Decimal(7826)
 
 
 async def test_same_key_other_amount_is_409(db_session: AsyncSession) -> None:
     uid = await _funded(db_session, 150_000)
     await _convert(db_session, uid, 100_000, "convert-key-000000003")
-    with pytest.raises(ConflictError, match="Idempotency-Key"):
+    with pytest.raises(ConflictError, match="Idempotency-Key") as exc:
         await _convert(db_session, uid, 20_000, "convert-key-000000003")
+    assert exc.value.extra["code"] == "idempotency_mismatch"
 
 
 async def test_more_than_the_balance_is_refused(db_session: AsyncSession) -> None:
@@ -87,8 +90,9 @@ async def test_more_than_the_balance_is_refused(db_session: AsyncSession) -> Non
 
 async def test_a_sum_under_one_unit_is_refused(db_session: AsyncSession) -> None:
     uid = await _funded(db_session, 50_000)
-    with pytest.raises(ValidationError, match="too small"):
+    with pytest.raises(ValidationError, match="too small") as exc:
         await _convert(db_session, uid, 12, "convert-key-000000005")
+    assert exc.value.extra["code"] == "convert_amount"
 
 
 async def test_two_at_once_never_overdraw(db_session: AsyncSession, db_engine: AsyncEngine) -> None:
@@ -107,3 +111,35 @@ async def test_two_at_once_never_overdraw(db_session: AsyncSession, db_engine: A
     results = await asyncio.gather(one("convert-race-0000001"), one("convert-race-0000002"))
     assert sorted(results) == [False, True]
     assert await user_balance(db_session, uid) == Decimal(30_000)
+
+
+@pytest.mark.parametrize(
+    "amount", [Decimal(0), Decimal(-1000), Decimal("1000.5"), CONVERT_MAX_UZS + 1]
+)
+async def test_a_bad_amount_is_refused(db_session: AsyncSession, amount: Decimal) -> None:
+    uid = await _funded(db_session, 50_000)
+    with pytest.raises(ValidationError) as exc:
+        await convert_to_usd(
+            db_session,
+            user_id=uid,
+            amount_uzs=amount,
+            rate=RATE,
+            snapshot_id="00000000-0000-4000-8000-0000000000f1",
+            idempotency_key="convert-bad-0000000001",
+        )
+    assert exc.value.extra["code"] == "convert_amount"
+
+
+@pytest.mark.parametrize("rate", [Decimal(0), Decimal(-1), Decimal("NaN"), Decimal("Infinity")])
+async def test_a_bad_rate_is_refused(db_session: AsyncSession, rate: Decimal) -> None:
+    uid = await _funded(db_session, 50_000)
+    with pytest.raises(ValidationError) as exc:
+        await convert_to_usd(
+            db_session,
+            user_id=uid,
+            amount_uzs=Decimal(10_000),
+            rate=rate,
+            snapshot_id="00000000-0000-4000-8000-0000000000f1",
+            idempotency_key="convert-bad-0000000002",
+        )
+    assert exc.value.extra["code"] == "convert_rate"
