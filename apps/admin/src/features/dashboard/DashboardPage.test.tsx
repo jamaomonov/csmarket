@@ -143,6 +143,6 @@ describe("DashboardPage", () => {
   it("days without sales are listed too", async () => {
     renderPage("/?days=7");
     const rows = await screen.findAllByRole("row");
-    expect(rows.map((r) => r.textContent)).toContain("01.100—$0");
+    expect(rows.map((r) => r.textContent)).toContain("01.100—$0.00");
   });
 });
