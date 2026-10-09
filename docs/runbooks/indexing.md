@@ -18,7 +18,14 @@ switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
   FAQ (`FAQPage`), `Organization` and `WebSite` (`SearchAction` → `/market?q=`) JSON-LD.
 - `/market` (+ `/uz/market`, `/en/market`) — the catalogue; filtered views are `noindex, follow`.
   Old filtered root URLs (`/?category=knives`) answer **301** to `/market` with the query kept.
-- `/item/…`, `/category/…`, `/weapon/…` — unchanged.
+- `/item/…` — `Product` + `Offer` in UZS, breadcrumbs; `/category/…`, `/weapon/…` — breadcrumbs and
+  an `ItemList` of the shown skins (the unfiltered `/market` carries one too).
+- Share previews: the landing, `/market`, categories and weapons use `public/og/<locale>.jpg`
+  (1200×630, from `docs/design/og.html`); item pages use the skin's own picture.
+- `/llms.txt` — the shop for language models, with live category counts; the partner API has
+  its own at `docs.csmarket.uz/llms.txt`. It is served (with `X-Robots-Tag: noindex`) while
+  indexing is closed.
+- `/sell`, `/steam`, `/reviews` are `noindex` on purpose and stay out of the sitemaps.
 - Before opening: add csmarket.uz to Google Search Console and Yandex Webmaster (region
   Uzbekistan) and submit `https://csmarket.uz/sitemap.xml`.
 

@@ -180,12 +180,13 @@
   },
   "skins": {
     "meta": {
-      "title": "CS2 skins in soʻm — buy in Uzbekistan",
+      "title": "CS2 skins market — knives, gloves and weapons in soʻm",
       "description": "CS2 skins with instant delivery: weapons, knives, gloves, agents and cases. Pay in soʻm.",
       "itemTitle": "{name} — buy in Uzbekistan for {price}",
       "itemTitleNoPrice": "{name} — buy in Uzbekistan for soʻm",
       "itemDescription": "Buy {name} in Uzbekistan: from {price}, {count, plural, one {# offer} other {# offers}}. Pay in soʻm; the skin arrives in Steam.",
-      "itemDescriptionNoPrice": "{name} — CS2 skin, buy in soʻm with instant delivery."
+      "itemDescriptionNoPrice": "{name} — CS2 skin, buy in soʻm with instant delivery.",
+      "marketDescription": "{count, plural, one {# CS2 skin} other {# CS2 skins}} in stock: knives, gloves, weapons, agents and cases. Filter by price, wear and rarity. Pay in soʻm with Click, Payme or Uzum."
     },
     "title": "CS2 skins",
     "searchPlaceholder": "Skin name…",

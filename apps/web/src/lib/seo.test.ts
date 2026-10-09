@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { alternates, localeUrl, ogLocale } from "./seo";
+import { alternates, localeUrl, ogLocale, shareImage } from "./seo";
 
 describe("seo", () => {
   it("ru has no prefix, others do", () => {
@@ -21,5 +21,12 @@ describe("seo", () => {
   });
   it("og locale lists the other two", () => {
     expect(ogLocale("uz")).toEqual({ locale: "uz_UZ", alternateLocale: ["ru_RU", "en_US"] });
+  });
+  it("the share preview is the locale's own 1200×630 picture, unknown → ru", () => {
+    expect(shareImage("uz", "alt")).toEqual({
+      openGraph: [{ url: "https://csmarket.uz/og/uz.jpg", width: 1200, height: 630, alt: "alt" }],
+      twitter: { card: "summary_large_image", images: ["https://csmarket.uz/og/uz.jpg"] },
+    });
+    expect(shareImage("xx", "a").openGraph[0]?.url).toBe("https://csmarket.uz/og/ru.jpg");
   });
 });

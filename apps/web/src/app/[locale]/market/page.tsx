@@ -12,6 +12,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import type { Metadata } from "next";
 
+import { JsonLd } from "@/components/JsonLd";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { SkinCategoryBar } from "@/components/skins/SkinCategoryBar";
 import { SkinFilterDrawer } from "@/components/skins/SkinFilterDrawer";
@@ -23,7 +24,16 @@ import { SkinSort } from "@/components/skins/SkinSort";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { MARKET } from "@/lib/paths";
-import { alternates, GEO_META, NOINDEX_FOLLOW, ogLocale, ROBOTS } from "@/lib/seo";
+import {
+  alternates,
+  GEO_META,
+  localeUrl,
+  NOINDEX_FOLLOW,
+  ogLocale,
+  ROBOTS,
+  shareImage,
+} from "@/lib/seo";
+import { itemListLd } from "@/lib/skin-seo";
 import { getSkinFacets, getSkinsPage } from "@/lib/skins";
 
 interface Props {
@@ -44,12 +54,20 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   // Only a recognised filter makes a duplicate of the hub (ruling Q9): utm_*, fbclid and
   // gclid are not in `SkinQuery`, so a tracked visit stays indexable.
   const filtered = isFilteredQuery(parseSkinQuery(await searchParams));
+  const count = (await getSkinFacets())?.categories.reduce((sum, c) => sum + c.count, 0) ?? 0;
   return {
     title: t("meta.title"),
-    description: t("meta.description"),
+    description: count > 0 ? t("meta.marketDescription", { count }) : t("meta.description"),
     alternates: alternates(locale, MARKET),
     robots: filtered ? NOINDEX_FOLLOW : ROBOTS,
-    openGraph: { type: "website", siteName: "csmarket", ...ogLocale(locale) },
+    openGraph: {
+      type: "website",
+      siteName: "csmarket",
+      url: localeUrl(locale, MARKET),
+      ...ogLocale(locale),
+      images: shareImage(locale, t("meta.title")).openGraph,
+    },
+    twitter: shareImage(locale, t("meta.title")).twitter,
     other: GEO_META,
   };
 }
@@ -65,9 +83,12 @@ export default async function HomePage({ params, searchParams }: Props) {
   // An API outage throws into `[locale]/error.tsx`. Facets are `null` only for a category
   // the API does not know: the home page still renders, without the category bar (Q10).
   const [page, facets] = await Promise.all([getSkinsPage(query), getSkinFacets(query.category)]);
+  // Only the indexable hub describes its list; a filtered view is noindex.
+  const listLd = filtered ? null : itemListLd(locale, page.items);
 
   return (
     <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-28 pt-2 sm:px-6">
+      {listLd && <JsonLd data={listLd} />}
       <h1 className="mb-5 text-center text-[26px] font-semibold">{t("title")}</h1>
       <div className="lg:flex lg:gap-3">
         {facets && (
