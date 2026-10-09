@@ -21,9 +21,9 @@ export const PURPOSE_LABELS: Record<PaymentPurpose, string> = {
 /** Tailwind classes of the status chip. */
 export const STATUS_CHIP: Record<PaymentStatus, string> = {
   created: "bg-surface-2 text-fg-muted",
-  pending: "bg-warning text-warning-fg",
-  succeeded: "bg-success text-success-fg",
-  failed: "bg-danger text-danger-fg",
+  pending: "bg-warning/15 text-warning",
+  succeeded: "bg-success/15 text-success",
+  failed: "bg-danger/15 text-danger",
   cancelled: "bg-surface-2 text-fg-muted",
   refunded: "bg-surface-2 text-fg",
 };

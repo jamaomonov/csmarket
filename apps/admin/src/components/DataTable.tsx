@@ -1,11 +1,13 @@
 /**
  * The admin's list table (review §4.1): padded cells, right-aligned tabular numbers, a hover
  * row, a red left bar for rows needing an operator, loading / empty / error states, a footer,
- * and cards instead of the table below `md` when `mobileCard` is given.
+ * and cards instead of the table on a narrow screen when `mobileCard` is given.
  */
 import { type ReactNode } from "react";
 
 import { EmptyState } from "./EmptyState";
+
+import { useNarrow } from "@/lib/useNarrow";
 
 export interface Column<R> {
   key: string;
@@ -48,6 +50,7 @@ export function DataTable<R>({
   mobileCard,
   below,
 }: DataTableProps<R>) {
+  const narrow = useNarrow();
   if (error !== undefined && error !== null && error !== false) {
     return <EmptyState tone="danger">{error}</EmptyState>;
   }
@@ -107,9 +110,9 @@ export function DataTable<R>({
 
   return (
     <div className="space-y-2">
-      {table}
-      {mobileCard !== undefined && (
-        <ul aria-label={label} className="space-y-2 md:hidden">
+      {(mobileCard === undefined || !narrow || showSkeleton) && table}
+      {mobileCard !== undefined && narrow && !showSkeleton && (
+        <ul aria-label={label} className="space-y-2">
           {list.map((row) => (
             <li
               key={rowKey(row)}

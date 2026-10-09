@@ -97,7 +97,7 @@ describe("UserCard", () => {
     api.getUserCard.mockResolvedValue({ ...CARD, orders: [] });
     renderCard();
     const orders = await screen.findByRole("region", { name: "Заказы" });
-    expect(orders).toHaveTextContent("Пока не было.");
+    expect(orders).toHaveTextContent("Заказов пока не было.");
   });
 
   it("credits after a confirm step with a signed amount, reason and key", async () => {
@@ -256,7 +256,7 @@ describe("UserCard", () => {
       api.getUserCard.mockResolvedValue(USD_CARD);
       renderCard();
       const block = await screen.findByTestId("usd-block");
-      expect(within(block).getByText("Включён")).toBeInTheDocument();
+      expect(within(block).getByText("включён")).toBeInTheDocument();
       expect(screen.getByTestId("user-balance-usd")).toHaveTextContent("Баланс: $250.000");
       const history = screen.getByRole("region", { name: "История USD" });
       expect(within(history).getByText("Корректировка USD")).toBeInTheDocument();
@@ -281,7 +281,7 @@ describe("UserCard", () => {
       ];
       expect([id, enabled, reason]).toEqual(["u-1", true, "Пилот"]);
       expect(key.length).toBeGreaterThanOrEqual(16);
-      expect(await screen.findByText("Включён")).toBeInTheDocument();
+      expect(await screen.findByText("включён")).toBeInTheDocument();
     });
 
     it("credits dollars through the USD endpoint after a confirm step", async () => {

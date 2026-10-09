@@ -17,7 +17,7 @@ export function OrderStatusChip({ status, protectedUntil = null }: OrderStatusCh
       <span
         data-testid="order-status"
         title={`Покупатель принял обмен. Защита Steam до ${until}, затем «получен».`}
-        className="bg-success text-success-fg whitespace-nowrap rounded px-2 py-0.5 text-xs"
+        className="bg-info/15 text-info whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium"
       >
         принят, защита до {until.slice(0, 5)}
       </span>
@@ -40,7 +40,7 @@ export function AttentionBadge({ reason }: { reason: AttentionReason | null }) {
     <span
       data-testid="order-attention"
       title={ATTENTION_LABELS[reason]}
-      className="bg-danger text-danger-fg whitespace-nowrap rounded px-2 py-0.5 text-xs"
+      className="bg-danger/15 text-danger whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium"
     >
       внимание
       <span className="sr-only">: {ATTENTION_LABELS[reason]}</span>

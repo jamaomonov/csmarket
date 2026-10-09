@@ -31,7 +31,8 @@ describe("BanDialog (on the user card)", () => {
       user: { ...CARD.user, banned_at: "2026-10-01T10:00:00Z", ban_reason: "Мошенничество" },
     });
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Заблокировать" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё действия" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Заблокировать" }));
     const dialog = screen.getByRole("dialog", { name: "Заблокировать пользователя" });
     fireEvent.click(within(dialog).getByRole("button", { name: "Заблокировать" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("причину");
@@ -48,7 +49,8 @@ describe("BanDialog (on the user card)", () => {
     expect([id, reason]).toEqual(["u-1", "Мошенничество"]);
     expect(key.length).toBeGreaterThanOrEqual(16);
     expect(await screen.findByText(/Заблокирован/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Разблокировать" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ещё действия" }));
+    expect(screen.getByRole("menuitem", { name: "Разблокировать" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
@@ -59,7 +61,8 @@ describe("BanDialog (on the user card)", () => {
     });
     api.unbanUser.mockResolvedValue(CARD);
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Разблокировать" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё действия" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Разблокировать" }));
     const dialog = screen.getByRole("dialog", { name: "Разблокировать пользователя" });
     fireEvent.change(within(dialog).getByLabelText("Причина"), {
       target: { value: "Разобрались" },
@@ -75,7 +78,8 @@ describe("BanDialog (on the user card)", () => {
       new ApiError(409, "Conflict", { code: "already_banned", detail: "already banned" }),
     );
     renderCard();
-    fireEvent.click(await screen.findByRole("button", { name: "Заблокировать" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ещё действия" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Заблокировать" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Причина"), {
       target: { value: "Мошенничество" },
@@ -87,7 +91,7 @@ describe("BanDialog (on the user card)", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Заблокировать" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Пользователь уже заблокирован.");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: "Разблокировать" })).toBeInTheDocument();
+    expect(await screen.findByTestId("user-banned")).toBeInTheDocument();
     expect(api.unbanUser).not.toHaveBeenCalled();
   });
 
@@ -97,7 +101,8 @@ describe("BanDialog (on the user card)", () => {
       .mockReturnValue(new Promise(() => undefined));
     renderCard();
     const submit = async () => {
-      fireEvent.click(await screen.findByRole("button", { name: "Заблокировать" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Ещё действия" }));
+      fireEvent.click(screen.getByRole("menuitem", { name: "Заблокировать" }));
       const dialog = screen.getByRole("dialog");
       fireEvent.change(within(dialog).getByLabelText("Причина"), {
         target: { value: "Мошенничество" },

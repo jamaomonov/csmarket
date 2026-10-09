@@ -2,7 +2,7 @@
 import { Button } from "@csmarket/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 
 import { AdjustForm } from "./AdjustForm";
 import { type AdminEntry, type AdminTopup, type AdminUserCard, getUserCard } from "./api";
@@ -18,9 +18,17 @@ import {
 } from "./labels";
 import { UsdSwitchDialog } from "./UsdSwitchDialog";
 import { useIdempotencyKey } from "./useIdempotencyKey";
+import { ApiKeyPanel } from "../apiKeys/ApiKeyCard";
 import { type AdminOrderRow } from "../orders/api";
-import { AttentionBadge, OrderStatusChip } from "../orders/StatusChip";
+import { OrdersTable } from "../orders/OrdersTable";
 
+import { DataTable } from "@/components/DataTable";
+import { Money } from "@/components/Money";
+import { MoreMenu } from "@/components/MoreMenu";
+import { PageHeader } from "@/components/PageHeader";
+import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { StatusChip } from "@/components/StatusChip";
+import { Tabs } from "@/components/Tabs";
 import { ApiError } from "@/lib/api";
 import {
   formatDateTime,
@@ -49,20 +57,11 @@ function Actor({ actor }: { actor: string | null }) {
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="text-fg-muted w-36 shrink-0">{label}</dt>
-      <dd className="min-w-0 break-all">{children}</dd>
-    </div>
-  );
-}
-
 function Profile({ card }: { card: AdminUserCard }) {
   const u = card.user;
   return (
-    <dl className="space-y-1 text-sm">
-      <Field label="Steam ID">
+    <dl>
+      <Row label="Steam ID">
         <span>{u.steam_id}</span>{" "}
         <a
           href={steamProfileUrl(u.steam_id)}
@@ -72,18 +71,18 @@ function Profile({ card }: { card: AdminUserCard }) {
         >
           Профиль в Steam
         </a>
-      </Field>
-      <Field label="Email">{u.email ?? "—"}</Field>
-      <Field label="Язык">{localeLabel(u.locale)}</Field>
-      <Field label="Роль">{roleLabel(u.roles)}</Field>
-      <Field label="Регистрация">{formatDateTime(u.created_at)}</Field>
-      <Field label="Трейд-ссылка">{u.trade_link_masked ?? "не указана"}</Field>
-      <Field label="Проверка ссылки">
+      </Row>
+      <Row label="Email">{u.email ?? "—"}</Row>
+      <Row label="Язык">{localeLabel(u.locale)}</Row>
+      <Row label="Роль">{roleLabel(u.roles)}</Row>
+      <Row label="Регистрация">{formatDateTime(u.created_at)}</Row>
+      <Row label="Трейд-ссылка">{u.trade_link_masked ?? "не указана"}</Row>
+      <Row label="Проверка ссылки">
         {tradeVerdictText(u)}
         {u.trade_link_checked_at && (
           <span className="text-fg-muted"> · {formatDateTime(u.trade_link_checked_at)}</span>
         )}
-      </Field>
+      </Row>
     </dl>
   );
 }
@@ -94,12 +93,9 @@ function entryAmount(e: AdminEntry): string {
 
 function History({ entries, id, title }: { entries: AdminEntry[]; id: string; title: string }) {
   return (
-    <section aria-labelledby={id} className="space-y-2">
-      <h2 id={id} className="text-lg font-semibold">
-        {title}
-      </h2>
+    <Section title={title} label={title}>
       {entries.length === 0 && <p className="text-fg-muted text-sm">Пока пусто.</p>}
-      <ul className="divide-border divide-y text-sm">
+      <ul id={id} className="divide-border divide-y text-sm">
         {entries.map((e) => (
           <li key={e.id} className="flex items-start justify-between gap-4 py-2">
             <div className="min-w-0">
@@ -119,126 +115,110 @@ function History({ entries, id, title }: { entries: AdminEntry[]; id: string; ti
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   );
 }
 
 function Topups({ topups }: { topups: AdminTopup[] }) {
   return (
-    <section aria-labelledby="user-topups" className="space-y-2">
-      <h2 id="user-topups" className="text-lg font-semibold">
-        Пополнения
-      </h2>
-      {topups.length === 0 && <p className="text-fg-muted text-sm">Пока не было.</p>}
-      {topups.length > 0 && (
-        <table className="w-full text-left text-sm">
-          <thead className="text-fg-muted">
-            <tr>
-              <th className="py-1 font-normal">Номер</th>
-              <th className="py-1 text-right font-normal">Сумма</th>
-              <th className="py-1 font-normal">Статус</th>
-              <th className="py-1 font-normal">Касса</th>
-              <th className="py-1 font-normal">Создано</th>
-            </tr>
-          </thead>
-          <tbody>
-            {topups.map((t) => (
-              <tr key={t.number} className="border-border border-t">
-                <td className="py-2">
-                  <Link
-                    to={`/payments?q=${encodeURIComponent(t.number)}`}
-                    className="font-mono hover:underline"
-                  >
-                    {t.number}
-                  </Link>
-                </td>
-                <td className="whitespace-nowrap py-2 text-right tabular-nums">
-                  {formatSum(t.amount_uzs)}
-                </td>
-                <td className="py-2">{topupStatusLabel(t.status)}</td>
-                <td className="py-2">{providerLabel(t.provider)}</td>
-                <td className="text-fg-muted whitespace-nowrap py-2">
-                  {formatDateTime(t.created_at)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+    <Section title="Пополнения">
+      <DataTable
+        label="Пополнения"
+        rows={topups}
+        rowKey={(t) => t.number}
+        empty="Пока не было."
+        columns={[
+          {
+            key: "number",
+            header: "Номер",
+            cell: (t) => (
+              <Link
+                to={`/payments?q=${encodeURIComponent(t.number)}`}
+                className="font-mono hover:underline"
+              >
+                {t.number}
+              </Link>
+            ),
+          },
+          {
+            key: "sum",
+            header: "Сумма",
+            align: "right",
+            cell: (t) => <Money uzs={t.amount_uzs} />,
+          },
+          { key: "status", header: "Статус", cell: (t) => topupStatusLabel(t.status) },
+          { key: "kassa", header: "Касса", cell: (t) => providerLabel(t.provider) },
+          {
+            key: "created",
+            header: "Создано",
+            cell: (t) => (
+              <span className="text-fg-muted whitespace-nowrap">
+                {formatDateTime(t.created_at)}
+              </span>
+            ),
+          },
+        ]}
+      />
+    </Section>
   );
 }
 
 function Orders({ orders }: { orders: AdminOrderRow[] }) {
   return (
-    <section aria-labelledby="user-orders" className="space-y-2">
-      <h2 id="user-orders" className="text-lg font-semibold">
-        Заказы
-      </h2>
-      {orders.length === 0 && <p className="text-fg-muted text-sm">Пока не было.</p>}
-      {orders.length > 0 && (
-        <table className="w-full text-left text-sm">
-          <thead className="text-fg-muted">
-            <tr>
-              <th className="py-1 font-normal">Номер</th>
-              <th className="py-1 font-normal">Скин</th>
-              <th className="py-1 text-right font-normal">Цена</th>
-              <th className="py-1 font-normal">Статус</th>
-              <th className="py-1 font-normal">Создан</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.number} className="border-border border-t">
-                <td className="py-2">
-                  <Link to={`/orders/${o.number}`} className="font-mono hover:underline">
-                    {o.number}
-                  </Link>
-                </td>
-                <td className="py-2 pr-3">{o.name}</td>
-                <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums">
-                  {formatSum(o.price_uzs)}
-                </td>
-                <td className="py-2 pr-3">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <OrderStatusChip status={o.status} />
-                    <AttentionBadge reason={o.attention_reason} />
-                  </div>
-                </td>
-                <td className="text-fg-muted whitespace-nowrap py-2">
-                  {formatDateTime(o.created_at)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+    <Section title="Заказы">
+      <OrdersTable orders={orders} label="Заказы пользователя" />
+    </Section>
   );
 }
 
 type Panel = "none" | "ban" | "adjust" | "usd";
+type Tab = "overview" | "api";
 
 function UsdBlock({ card, onSwitch }: { card: AdminUserCard; onSwitch: () => void }) {
   const on = card.usd_wallet_enabled;
   return (
-    <section aria-labelledby="user-usd" className="space-y-2" data-testid="usd-block">
-      <h2 id="user-usd" className="text-lg font-semibold">
-        USD-кошелёк
-      </h2>
-      <p className="text-sm">{on ? "Включён" : "Выключен"}</p>
-      <p className="text-xl font-semibold tabular-nums" data-testid="user-balance-usd">
-        Баланс: {formatUsd(card.balance_usd)}
-      </p>
-      <Button variant={on ? "danger" : "secondary"} onClick={onSwitch}>
-        {on ? "Выключить USD-кошелёк" : "Включить USD-кошелёк"}
-      </Button>
-    </section>
+    <Section title="USD-кошелёк">
+      <div className="space-y-3" data-testid="usd-block">
+        <div className="flex items-center gap-2 text-sm">
+          <StatusChip tone={on ? "success" : "muted"}>{on ? "включён" : "выключен"}</StatusChip>
+        </div>
+        <p className="text-lg font-semibold tabular-nums" data-testid="user-balance-usd">
+          Баланс: {formatUsd(card.balance_usd)}
+        </p>
+        <Button size="sm" variant={on ? "danger" : "secondary"} onClick={onSwitch}>
+          {on ? "Выключить USD-кошелёк" : "Включить USD-кошелёк"}
+        </Button>
+      </div>
+    </Section>
   );
+}
+
+function Overview({ card, onUsd }: { card: AdminUserCard; onUsd: () => void }) {
+  const main = (
+    <>
+      <History entries={card.entries} id="user-history" title="История баланса" />
+      {(card.usd_wallet_enabled || card.usd_entries.length > 0) && (
+        <History entries={card.usd_entries} id="user-history-usd" title="История USD" />
+      )}
+      <Orders orders={card.orders} />
+      <Topups topups={card.topups} />
+    </>
+  );
+  const side = (
+    <>
+      <Section title="Профиль">
+        <Profile card={card} />
+      </Section>
+      <UsdBlock card={card} onSwitch={onUsd} />
+    </>
+  );
+  return <DetailGrid main={main} side={side} />;
 }
 
 function CardBody({ card }: { card: AdminUserCard }) {
   const qc = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = params.get("tab") === "api" && card.api_key_id !== null ? "api" : "overview";
   const [panel, setPanel] = useState<Panel>("none");
   // One key per confirmed adjustment, kept across reopening the form (see useIdempotencyKey).
   // CardBody is keyed by the user id, so all of this state is per user.
@@ -268,53 +248,97 @@ function CardBody({ card }: { card: AdminUserCard }) {
   };
 
   return (
-    <section className="space-y-6">
-      <div className="flex items-center gap-4">
+    <section className="space-y-4">
+      <div className="flex items-start gap-4">
         {u.avatar_url && (
-          <img src={u.avatar_url} alt="" width={64} height={64} className="rounded" />
+          <img src={u.avatar_url} alt="" width={56} height={56} className="rounded-lg" />
         )}
-        <div>
-          <h1 className="text-2xl font-bold">{u.display_name ?? "Без имени"}</h1>
-          {u.banned_at && (
-            <p className="text-danger text-sm" data-testid="user-banned">
-              Заблокирован {formatDateTime(u.banned_at)}
-              {u.ban_reason && `: ${u.ban_reason}`}
-            </p>
-          )}
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            back={{ to: "/users", label: "Пользователи" }}
+            title={u.display_name ?? "Без имени"}
+            badges={
+              <>
+                {u.roles.includes("admin") && <StatusChip tone="info">админ</StatusChip>}
+                {banned && <StatusChip tone="danger">заблокирован</StatusChip>}
+                {card.api_key_id !== null && <StatusChip tone="neutral">API</StatusChip>}
+              </>
+            }
+            actions={
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    open("adjust");
+                  }}
+                >
+                  Изменить баланс
+                </Button>
+                <MoreMenu
+                  actions={[
+                    {
+                      key: "ban",
+                      label: banned ? "Разблокировать" : "Заблокировать",
+                      danger: !banned,
+                      onSelect: () => {
+                        open("ban");
+                      },
+                    },
+                  ]}
+                />
+              </>
+            }
+          />
         </div>
       </div>
-      <Profile card={card} />
-      <p className="text-xl font-semibold tabular-nums" data-testid="user-balance">
-        Баланс: {formatSum(card.balance_uzs)}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant={banned ? "secondary" : "danger"}
-          onClick={() => {
-            open("ban");
-          }}
-        >
-          {banned ? "Разблокировать" : "Заблокировать"}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            open("adjust");
-          }}
-        >
-          Изменить баланс
-        </Button>
+      {u.banned_at && (
+        <Banner>
+          <span data-testid="user-banned">
+            Заблокирован {formatDateTime(u.banned_at)}
+            {u.ban_reason && `: ${u.ban_reason}`}
+          </span>
+        </Banner>
+      )}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Tile label="Баланс">
+          <span data-testid="user-balance">Баланс: {formatSum(card.balance_uzs)}</span>
+        </Tile>
+        <Tile label="USD">
+          <Money usd={card.balance_usd} digits={3} />
+        </Tile>
+        <Tile label="Заказов (последние)">{card.orders.length}</Tile>
+        <Tile label="Пополнений (последние)">{card.topups.length}</Tile>
       </div>
-      <UsdBlock
-        card={card}
-        onSwitch={() => {
-          open("usd");
-        }}
-      />
       {notice !== null && (
         <p role="alert" className="text-danger text-sm">
           {notice}
         </p>
+      )}
+      {card.api_key_id !== null && (
+        <Tabs<Tab>
+          label="Разделы"
+          value={tab}
+          onChange={(next) => {
+            const nextParams = new URLSearchParams(params);
+            if (next === "api") nextParams.set("tab", "api");
+            else nextParams.delete("tab");
+            setParams(nextParams, { replace: true });
+          }}
+          items={[
+            { key: "overview", label: "Обзор" },
+            { key: "api", label: "API-ключ" },
+          ]}
+        />
+      )}
+      {tab === "api" && card.api_key_id !== null ? (
+        <ApiKeyPanel keyId={card.api_key_id} />
+      ) : (
+        <Overview
+          card={card}
+          onUsd={() => {
+            open("usd");
+          }}
+        />
       )}
       {panel === "adjust" && (
         <AdjustForm userId={u.id} idem={adjustKey} onDone={changed} onClose={close} />
@@ -340,13 +364,16 @@ function CardBody({ card }: { card: AdminUserCard }) {
           onClose={close}
         />
       )}
-      <History entries={card.entries} id="user-history" title="История баланса" />
-      {(card.usd_wallet_enabled || card.usd_entries.length > 0) && (
-        <History entries={card.usd_entries} id="user-history-usd" title="История USD" />
-      )}
-      <Orders orders={card.orders} />
-      <Topups topups={card.topups} />
     </section>
+  );
+}
+
+function Tile({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="border-border bg-surface rounded-lg border px-4 py-3">
+      <div className="text-fg-muted text-xs">{label}</div>
+      <div className="mt-1 text-lg font-semibold tabular-nums">{children}</div>
+    </div>
   );
 }
 

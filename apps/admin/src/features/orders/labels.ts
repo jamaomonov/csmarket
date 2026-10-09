@@ -18,13 +18,13 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 /** Tailwind classes of the status chip. */
 export const STATUS_CHIP: Record<OrderStatus, string> = {
   pending: "bg-surface-2 text-fg-muted",
-  paid: "bg-warning text-warning-fg",
-  buying: "bg-warning text-warning-fg",
-  trade_sent: "bg-warning text-warning-fg",
-  delivered: "bg-success text-success-fg",
+  paid: "bg-warning/15 text-warning",
+  buying: "bg-warning/15 text-warning",
+  trade_sent: "bg-warning/15 text-warning",
+  delivered: "bg-success/15 text-success",
   cancelled: "bg-surface-2 text-fg-muted",
-  failed: "bg-danger text-danger-fg",
-  returned: "bg-danger text-danger-fg",
+  failed: "bg-danger/15 text-danger",
+  returned: "bg-danger/15 text-danger",
 };
 
 export const ATTENTION_LABELS: Record<AttentionReason, string> = {

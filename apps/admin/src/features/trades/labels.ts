@@ -23,13 +23,13 @@ export const STATE_LABELS: Record<TradeRowState, string> = {
 /** Tailwind classes of the state chip. */
 export const STATE_CHIP: Record<TradeRowState, string> = {
   pending: "bg-surface-2 text-fg-muted",
-  buying: "bg-warning text-warning-fg",
-  sent: "bg-warning text-warning-fg",
-  hold: "bg-accent-subtle text-accent",
-  delivered: "bg-success text-success-fg",
+  buying: "bg-warning/15 text-warning",
+  sent: "bg-warning/15 text-warning",
+  hold: "bg-info/15 text-info",
+  delivered: "bg-success/15 text-success",
   refunded: "bg-surface-2 text-fg",
   cancelled: "bg-surface-2 text-fg-muted",
-  failed_held: "bg-danger text-danger-fg",
+  failed_held: "bg-danger/15 text-danger",
 };
 
 export const SOURCE_LABELS: Record<TradeSource, string> = {
