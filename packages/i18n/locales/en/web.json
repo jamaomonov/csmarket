@@ -610,7 +610,7 @@
   "landing": {
     "meta": {
       "title": "CS2 skins in Uzbekistan — buy in soʻm with Click, Payme, Uzum",
-      "description": "CS2 skins priced in soʻm: knives, gloves, rifles and cases. Pay with Click, Payme or Uzum — the skin arrives in Steam. Sell your skins to a Uzcard or Humo card.",
+      "description": "CS2 skins priced in soʻm: knives, gloves, rifles and cases. Pay with Click, Payme or Uzum — the skin arrives in Steam. Sell your skins to a Uzcard, Humo or Uzum Visa card.",
       "ogAlt": "csmarket — CS2 skins in Uzbekistan"
     },
     "eyebrow": "A skins shop for players in Uzbekistan",
@@ -624,18 +624,8 @@
     "openMarket": "Open the market",
     "sellSkins": "Sell skins",
     "payWith": "Pay with:",
-    "balance": "balance",
-    "toastTitle": "Steam trade",
-    "toastText": "Your skin is waiting in offers",
     "buy": "Buy",
     "showcase": "Skins on the showcase",
-    "search": {
-      "label": "Search skins",
-      "placeholder": "Find a skin: AK-47 Redline, Karambit, AWP Asiimov…",
-      "submit": "Search",
-      "often": "Popular searches:",
-      "cheap": "Under 100,000 soʻm"
-    },
     "popular": {
       "kicker": "In stock now",
       "title": "Popular CS2 skins",
@@ -662,31 +652,33 @@
       "kicker": "Catalogue",
       "title": "What to buy in CS2",
       "all": "Whole catalogue",
-      "from": "from {price}"
+      "from": "from {price}",
+      "count": "{count, plural, one {# skin} other {# skins}}"
     },
     "buyPanel": {
       "kicker": "Buying",
       "title": "Buy a skin in three steps",
       "lead": "No sign-up or passwords: sign in with Steam, pay in soʻm.",
       "s1": "Pick a skin",
-      "s1d": "Filter by price, wear and rarity",
       "s2": "Pay in soʻm",
-      "s2d": "Click, Payme, Uzum or balance",
       "s3": "Accept the Steam trade",
-      "s3d": "The skin comes to your trade link",
       "offer": "Trade offer",
       "accept": "Accept",
       "go": "Go to the market",
-      "assure": "Trade failed? The money goes back to your balance"
+      "assure": "Trade failed? The money goes back to your balance",
+      "picked": "Picked",
+      "toPay": "To pay",
+      "youGet": "You receive"
     },
     "sellPanel": {
       "kicker": "Selling",
       "title": "Sell skins, get soʻm",
-      "lead": "Pick items from your Steam inventory. Money goes to your site balance or a Uzcard or Humo card.",
+      "lead": "Pick items from your Steam inventory. Money goes to your site balance or a Uzcard, Humo or Uzum Visa card.",
       "where": "Where to get the money",
       "toBalance": "Balance",
-      "picked": "Pick skins — the sum is counted at once",
-      "cta": "Sell skins"
+      "picked": "Pick skins and withdraw the sum to a Uzcard, Humo or Uzum Visa card.",
+      "cta": "Sell skins",
+      "chosen": "{count, plural, one {# skin picked} other {# skins picked}}"
     },
     "why": {
       "kicker": "Why csmarket",
@@ -729,7 +721,7 @@
         },
         {
           "q": "How do I sell CS2 skins for soʻm?",
-          "a": "Open “Sell skins”, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard or Humo card."
+          "a": "Open “Sell skins”, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard, Humo or Uzum Visa card."
         },
         {
           "q": "Do you need my Steam password?",
@@ -769,7 +761,7 @@
         },
         {
           "h": "How to sell CS2 skins",
-          "p": "You can sell us the skins you no longer need. Sign in with Steam, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard or Humo card — whichever suits you. Spend the balance on new skins right away: upgrade your knife, build a one-colour inventory or get gloves for your favourite weapon."
+          "p": "You can sell us the skins you no longer need. Sign in with Steam, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard, Humo or Uzum Visa card — whichever suits you. Spend the balance on new skins right away: upgrade your knife, build a one-colour inventory or get gloves for your favourite weapon."
         },
         {
           "h": "The site in Russian, Uzbek and English",
@@ -792,7 +784,8 @@
       "reviews": "Reviews",
       "api": "API for developers",
       "faq": "FAQ",
-      "legal": "Not affiliated with Valve Corporation. Counter-Strike and Steam are trademarks of Valve."
+      "legal": "Not affiliated with Valve Corporation. Counter-Strike and Steam are trademarks of Valve.",
+      "weapons": "Weapons"
     }
   }
 }

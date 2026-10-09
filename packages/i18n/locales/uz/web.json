@@ -610,7 +610,7 @@
   "landing": {
     "meta": {
       "title": "CS2 skinlari Oʻzbekistonda — soʻmda sotib oling: Click, Payme, Uzum",
-      "description": "CS2 skinlari soʻmdagi narxlarda: pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlang — skin Steam’ga keladi. Skinlaringizni Uzcard va Humo kartasiga soting.",
+      "description": "CS2 skinlari soʻmdagi narxlarda: pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlang — skin Steam’ga keladi. Skinlaringizni Uzcard, Humo yoki Uzum Visa kartasiga soting.",
       "ogAlt": "csmarket — CS2 skinlari Oʻzbekistonda"
     },
     "eyebrow": "Oʻzbekistonlik oʻyinchilar uchun skinlar doʻkoni",
@@ -624,18 +624,8 @@
     "openMarket": "Marketni ochish",
     "sellSkins": "Skin sotish",
     "payWith": "Toʻlov:",
-    "balance": "balans",
-    "toastTitle": "Steam’da almashuv",
-    "toastText": "Skin takliflarda kutmoqda",
     "buy": "Sotib olish",
     "showcase": "Vitrinadagi skinlar",
-    "search": {
-      "label": "Skin qidirish",
-      "placeholder": "Skin qidiring: AK-47 Redline, Karambit, AWP Asiimov…",
-      "submit": "Qidirish",
-      "often": "Koʻp qidiriladi:",
-      "cheap": "100 000 soʻmgacha"
-    },
     "popular": {
       "kicker": "Hozir mavjud",
       "title": "Mashhur CS2 skinlari",
@@ -662,31 +652,33 @@
       "kicker": "Katalog",
       "title": "CS2 da nima sotib olish mumkin",
       "all": "Butun katalog",
-      "from": "{price}dan"
+      "from": "{price}dan",
+      "count": "{count} ta skin"
     },
     "buyPanel": {
       "kicker": "Xarid",
       "title": "Skin sotib olish — uch qadam",
       "lead": "Roʻyxatdan oʻtish va parolsiz: Steam orqali kirish, soʻmda toʻlov.",
       "s1": "Skinni tanlang",
-      "s1d": "Narx, eskirish va nodirlik boʻyicha filtrlar",
       "s2": "Soʻmda toʻlang",
-      "s2d": "Click, Payme, Uzum yoki balans",
       "s3": "Steam’da almashuvni qabul qiling",
-      "s3d": "Skin almashuv havolangizga keladi",
       "offer": "Almashuv taklifi",
       "accept": "Qabul qilish",
       "go": "Marketga oʻtish",
-      "assure": "Almashuv boʻlmasa — pul balansga qaytadi"
+      "assure": "Almashuv boʻlmasa — pul balansga qaytadi",
+      "picked": "Tanlandi",
+      "toPay": "Toʻlov",
+      "youGet": "Siz olasiz"
     },
     "sellPanel": {
       "kicker": "Sotish",
       "title": "Skinlaringizni soting — soʻm oling",
-      "lead": "Steam inventaringizdan buyumlarni tanlang. Pul — sayt balansiga yoki Uzcard va Humo kartasiga.",
+      "lead": "Steam inventaringizdan buyumlarni tanlang. Pul sayt balansiga yoki Uzcard, Humo yoki Uzum Visa kartasiga tushadi.",
       "where": "Pulni qayerga olish",
       "toBalance": "Balans",
-      "picked": "Skinlarni tanlang — summa darhol hisoblanadi",
-      "cta": "Skin sotish"
+      "picked": "Skinlarni tanlang va pulni Uzcard, Humo yoki Uzum Visa kartasiga yechib oling.",
+      "cta": "Skin sotish",
+      "chosen": "{count} ta skin tanlandi"
     },
     "why": {
       "kicker": "Nega csmarket",
@@ -729,7 +721,7 @@
         },
         {
           "q": "CS2 skinlarini soʻmga qanday sotish mumkin?",
-          "a": "«Skin sotish» sahifasini oching, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard yoxud Humo kartasiga keladi."
+          "a": "«Skin sotish» sahifasini oching, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard, Humo yoxud Uzum Visa kartasiga keladi."
         },
         {
           "q": "Steam paroli kerakmi?",
@@ -769,7 +761,7 @@
         },
         {
           "h": "CS2 skinlarini qanday sotish mumkin",
-          "p": "Keraksiz skinlarni bizga sotishingiz mumkin. Steam orqali kiring, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard yoxud Humo kartasiga keladi — qaysi biri qulay boʻlsa. Balansni darhol yangi skinlarga sarflash mumkin: pichoqni yangilash, inventarni bir rangda yigʻish yoki sevimli qurolingizga qoʻlqop olish."
+          "p": "Keraksiz skinlarni bizga sotishingiz mumkin. Steam orqali kiring, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard, Humo yoxud Uzum Visa kartasiga keladi — qaysi biri qulay boʻlsa. Balansni darhol yangi skinlarga sarflash mumkin: pichoqni yangilash, inventarni bir rangda yigʻish yoki sevimli qurolingizga qoʻlqop olish."
         },
         {
           "h": "Sayt oʻzbek, rus va ingliz tillarida",
@@ -792,7 +784,8 @@
       "reviews": "Sharhlar",
       "api": "Dasturchilar uchun API",
       "faq": "Koʻp beriladigan savollar",
-      "legal": "Valve Corporation bilan bogʻliq emas. Counter-Strike va Steam — Valve’ning savdo belgilari."
+      "legal": "Valve Corporation bilan bogʻliq emas. Counter-Strike va Steam — Valve’ning savdo belgilari.",
+      "weapons": "Qurollar"
     }
   }
 }

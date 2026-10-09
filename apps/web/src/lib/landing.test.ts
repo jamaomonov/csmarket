@@ -19,6 +19,8 @@ import {
   loadLanding,
   POPULAR_SIZE,
   POPULAR_TABS,
+  WALL_SIZE,
+  wallItems,
 } from "./landing";
 
 const item = (slug: string, category = "rifles", price = "1000") => ({
@@ -140,5 +142,28 @@ describe("landing data", () => {
     const data = await getLandingData();
     expect(data.stats.inStock).toBe(0);
     expect(data.tiles.every((t) => t.item === null)).toBe(true);
+  });
+
+  it("the hero wall leads with the showcase, interleaves the tabs, skips repeats and bare items", () => {
+    const pic = (slug: string) => ({ ...item(slug), image_url: "https://x/img" });
+    const wall = wallItems({
+      hero: [pic("h1"), pic("k1")],
+      popular: {
+        knives: [pic("k1"), pic("k2")],
+        gloves: [pic("g1"), { ...pic("g2"), price_uzs: null }],
+        popular: [pic("p1"), item("p2")],
+        cheap: [pic("c1")],
+      },
+    });
+    expect(wall.map((w) => w.slug)).toEqual(["h1", "k1", "g1", "p1", "k2"]);
+  });
+
+  it("the hero wall stops at its size", () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({ ...item(`s${i}`), image_url: "u" }));
+    const wall = wallItems({
+      hero: [],
+      popular: { knives: many, gloves: [], popular: [], cheap: [] },
+    });
+    expect(wall).toHaveLength(WALL_SIZE);
   });
 });

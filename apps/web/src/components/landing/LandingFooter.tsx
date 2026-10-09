@@ -5,9 +5,12 @@ import { PayMarks } from "./Wordmarks";
 
 import { Link } from "@/i18n/navigation";
 import { telegramUrl } from "@/lib/landing";
-import { categoryPath, REVIEWS, SELL, STEAM_TOPUP } from "@/lib/paths";
+import { categoryPath, REVIEWS, SELL, STEAM_TOPUP, weaponPath } from "@/lib/paths";
+import { weaponSlug } from "@/lib/skin-landing";
 
 const MARKET_LINKS = ["knives", "gloves", "rifles", "pistols", "cases"] as const;
+/** The most searched models, linked to their indexable `/weapon/<slug>` pages. */
+const WEAPONS = ["AK-47", "AWP", "M4A1-S", "Desert Eagle", "Karambit", "Butterfly Knife"];
 
 export async function LandingFooter({ locale }: { locale: string }) {
   const tg = telegramUrl();
@@ -29,6 +32,16 @@ export async function LandingFooter({ locale }: { locale: string }) {
               {MARKET_LINKS.map((c) => (
                 <li key={c}>
                   <Link href={categoryPath(c)}>{tCat(c)}</Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <nav aria-label={t("weapons")}>
+            <h4>{t("weapons")}</h4>
+            <ul>
+              {WEAPONS.map((w) => (
+                <li key={w}>
+                  <Link href={weaponPath(weaponSlug(w))}>{w}</Link>
                 </li>
               ))}
             </ul>

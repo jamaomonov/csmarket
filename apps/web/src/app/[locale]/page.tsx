@@ -5,6 +5,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 import "@/components/landing/landing.css";
+import "@/components/landing/wall.css";
+import "@/components/landing/flows.css";
 import { JsonLd } from "@/components/JsonLd";
 import { About } from "@/components/landing/About";
 import { BuySell } from "@/components/landing/BuySell";
@@ -15,11 +17,10 @@ import { Hero } from "@/components/landing/Hero";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { Popular } from "@/components/landing/Popular";
 import { Reveal } from "@/components/landing/Reveal";
-import { SearchBlock } from "@/components/landing/SearchBlock";
 import { Stats } from "@/components/landing/Stats";
 import { WhyUs } from "@/components/landing/WhyUs";
 import { routing } from "@/i18n/routing";
-import { getLandingData, socialUrls } from "@/lib/landing";
+import { getLandingData, socialUrls, wallItems } from "@/lib/landing";
 import { HOME, MARKET } from "@/lib/paths";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
 import { SITE } from "@/lib/site";
@@ -97,12 +98,15 @@ export default async function LandingPage({ params }: Props) {
   return (
     <div className="lp" id="lp">
       <main id="main-content">
-        <Hero items={hero} locale={locale} />
-        <SearchBlock locale={locale} />
+        <Hero items={wallItems({ hero, popular: lists })} locale={locale} />
         <Popular lists={lists} locale={locale} />
         <Stats stats={stats} locale={locale} />
         <Categories tiles={tiles} locale={locale} />
-        <BuySell samples={lists.knives.length > 0 ? lists.knives : lists.popular} locale={locale} />
+        <BuySell
+          buyItem={hero[0] ?? lists.knives[0] ?? null}
+          sellItems={lists.popular}
+          locale={locale}
+        />
         <WhyUs locale={locale} />
         <Faq locale={locale} />
         <About locale={locale} />
