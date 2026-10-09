@@ -18,7 +18,6 @@ Ruling R1: the order stores ``price_uzs = 0``, the newest rate snapshot (any age
 
 from __future__ import annotations
 
-from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
 
@@ -34,7 +33,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.money import wire_usd
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import FxSnapshot
-from csmarket.modules.lisskins.api import AvailabilityClient, live_price
+from csmarket.modules.lisskins.api import AvailabilityClient
 from csmarket.modules.orders.checkout import RateUnavailableError, float_of
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.paid import mark_paid
@@ -43,15 +42,14 @@ from csmarket.modules.public_api.api import (
     ApiOrderIn,
     PricedOffer,
     api_offers,
+    live_quote,
     open_offer_id,
-    price_units_for,
 )
 from csmarket.modules.skins.api import (
     SkinItem,
     enabled_categories,
     get_item_by_id,
     load_rules,
-    parse_offer_id,
 )
 from csmarket.modules.users.api import parse_tradelink
 from csmarket.modules.wallet.api import USD_WALLET, InsufficientBalanceError, debit_purchase_usd
@@ -151,28 +149,21 @@ async def _confirm_live(
     rules = await load_rules(db)
     db.expunge_all()
     await db.rollback()  # no connection held across LIS-SKINS
+    cap = int(Decimal(body.max_price_usd) * _UNITS_PER_USD)
     remaining = list(priced)
     for _ in range(_MAX_CHECKS):
-        verdict, units = await live_price(
-            redis, client, int(parse_offer_id(chosen.offer.offer_id)[1])
+        status, quoted = await live_quote(
+            chosen, item=item, rules=rules, profile=profile, redis=redis, client=client
         )
-        log.info("orders.api_lisskins_check", verdict=verdict)
-        if verdict == "gone":
+        if status == "gone" or quoted is None:
             remaining = [p for p in remaining if p is not chosen]
             chosen = choose(remaining, body, item.id)
             if chosen.offer.source != "lisskins":
                 return chosen
             continue
-        if verdict == "available" and units is not None and units != chosen.offer.price_units:
-            price, retail = price_units_for(
-                units, profile=profile, item=item, rules=rules, stock=item.stock_count
-            )
-            if price > int(Decimal(body.max_price_usd) * _UNITS_PER_USD):
-                raise _above_max(price)
-            return PricedOffer(
-                replace(chosen.offer, price_units=units), price, retail, chosen.public_id
-            )
-        return chosen
+        if quoted.price_units > cap:
+            raise _above_max(quoted.price_units)
+        return quoted
     return chosen
 
 

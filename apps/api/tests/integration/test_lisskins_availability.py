@@ -50,6 +50,20 @@ async def test_a_spent_budget_answers_unknown_without_a_call(
     assert len(fake.calls) == 1
 
 
+async def test_the_partner_api_spends_its_own_budget(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(availability, "API_BUDGET_PER_MINUTE", 1)
+    fake = FakeAvailability(AVAILABLE)
+    assert await live_price(get_redis(), fake, 5, scope="api") == ("available", 9_000)
+    assert await live_price(get_redis(), fake, 5, scope="api") == ("unknown", None)
+    # The site's share is untouched by the partners'.
+    assert await live_price(get_redis(), fake, 5) == ("available", 9_000)
+    assert len(fake.calls) == 2
+
+
+def test_the_two_shares_fit_the_key() -> None:
+    assert availability.BUDGET_PER_MINUTE + availability.API_BUDGET_PER_MINUTE == 100
+
+
 async def test_an_outage_opens_the_breaker_and_a_refusal_does_not() -> None:
     redis = get_redis()
     refused = FakeAvailability(LisskinsError("bad", status=422, code="invalid_ids_value"))

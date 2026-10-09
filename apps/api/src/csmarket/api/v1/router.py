@@ -28,6 +28,7 @@ from csmarket.modules.payme.routes import router as payme_router
 from csmarket.modules.payments.dev_routes import router as payments_dev_router
 from csmarket.modules.payments.routes import router as payments_router
 from csmarket.modules.payments.routes import wallet_router as topups_router
+from csmarket.modules.public_api.offer_check_route import router as public_offer_check_router
 from csmarket.modules.public_api.routes import router as public_api_router
 from csmarket.modules.public_api.site_routes import router as api_key_router
 from csmarket.modules.public_api.tradelink_route import router as public_tradelink_router
@@ -59,6 +60,7 @@ router.include_router(sales_admin_router)
 router.include_router(api_key_router)
 router.include_router(public_api_router)
 router.include_router(public_tradelink_router)
+router.include_router(public_offer_check_router)
 router.include_router(auth_router)
 router.include_router(click_router)
 router.include_router(notifications_dev_router)

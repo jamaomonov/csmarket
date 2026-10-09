@@ -19,10 +19,12 @@ id; `uq_orders_user_client_order_id`, 0028) and `pricing_profile`; they are paid
 
 ## Routes (`/api/v1/public`, `routes.py`) and the site's key routes (`site_routes.py`)
 
-`GET /me`, `POST /tradelink/check`, `GET /catalog`, `GET /catalog/{item_id}/offers`, `POST /orders`,
+`GET /me`, `POST /tradelink/check`, `GET /catalog`, `GET /catalog/{item_id}/offers`,
+`GET /catalog/{item_id}/offers/{offer_id}` (the offer check), `POST /orders`,
 `GET /orders/{order_id}`, `GET /orders`, `PUT/GET/DELETE /webhook`; and, for a signed-in user, `GET/POST/DELETE
-/me/api-key`, `PUT /me/api-key/ip-allowlist`. The contract is `docs/api/public-v1.md`. No public request calls a market: the feed
-and offers read our tables and Redis, and the order is bought by the worker.
+/me/api-key`, `PUT /me/api-key/ip-allowlist`. The contract is `docs/api/public-v1.md`. The feed and offers read our tables and Redis; only the offer check and
+`POST /orders` ask LIS-SKINS once for a LIS-SKINS lot (`offer_check.py`), and the order is bought
+by the worker.
 
 ## Files
 
@@ -32,6 +34,12 @@ and offers read our tables and Redis, and the order is bought by the worker.
 - `limits.py` — per-key buckets `read` 60 / `order` 10 / `feed` 1 / `check` 30 a minute by
   default; a key's `read_per_min` / `orders_per_min` / `feed_per_min` / `check_per_min` columns
   override them (`NULL` = default, admin-edited, carried over on reissue).
+- `offer_check.py` — `live_quote`: a LIS-SKINS lot asked `check-availability` once (the API's
+  own 40/min budget share, `lisskins:check:api:*`), re-quoted for the key's tariff; a
+  Skinslink offer answers from the mirror. Used by `POST /orders` (via `orders.api_checkout`)
+  and by `offer_check_route.py` — `GET /catalog/{item_id}/offers/{offer_id}` (bucket `check`,
+  not cached; `gone` / `unconfirmed` / `available`; 404 `offer_not_found`). A sold lot is
+  never replaced (ADR-0013). ADR-0017, 2026-10-10.
 - `tradelink_route.py` — `POST /tradelink/check`: the site's advisory check for a key (bucket
   `check`; `ok` / `bad` / `unavailable`; an unparsable link is `bad` / `invalid_link` with no
   upstream call). The checker factory lives in `users/tradelink_checkers.py`.

@@ -17,6 +17,7 @@ from csmarket.modules.public_api.limits import (
     enforce,
 )
 from csmarket.modules.public_api.models import ApiKey, ApiWebhook, ApiWebhookDelivery
+from csmarket.modules.public_api.offer_check import OfferStatus, live_quote
 from csmarket.modules.public_api.offers import (
     PricedOffer,
     api_offers,
@@ -43,6 +44,7 @@ __all__ = [
     "ApiOrderIn",
     "ApiWebhook",
     "ApiWebhookDelivery",
+    "OfferStatus",
     "PricedOffer",
     "PublicOrderItemOut",
     "PublicOrderOut",
@@ -58,6 +60,7 @@ __all__ = [
     "enforce",
     "issue",
     "live_key",
+    "live_quote",
     "open_offer_id",
     "price_units_for",
     "public_addresses",

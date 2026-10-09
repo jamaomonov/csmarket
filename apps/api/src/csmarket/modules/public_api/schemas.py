@@ -82,6 +82,23 @@ class OfferOut(BaseModel):
     delivery: Literal["instant"]
 
 
+class OfferCheckOut(BaseModel):
+    """Whether an offer is still for sale, and at what price — ask right before you charge."""
+
+    model_config = ConfigDict(frozen=True)
+
+    offer_id: str
+    status: Literal["available", "gone", "unconfirmed"] = Field(
+        description="available: for sale at price_usd. gone: sold; pick another offer. "
+        "unconfirmed: the market did not answer; price_usd is the last known price and the "
+        "order checks again."
+    )
+    #: ``null`` when ``gone``.
+    price_usd: str | None
+    #: Only on the ``cost`` tariff, and not when ``gone``.
+    retail_price_usd: str | None = None
+
+
 #: An API order's status as the partner reads it (spec §5; no new FSM states).
 PublicOrderStatus = Literal["buying", "trade_sent", "delivered", "refunded"]
 #: Why an API order's money came back (spec §5, a closed list).

@@ -59,7 +59,7 @@ curl -s https://api.csmarket.uz/api/v1/public/me \
 ```
 
 `limits` are the key's effective limits per minute: the defaults unless an admin raised them for
-this key. `check_per_min` is the limit of `POST /tradelink/check`.
+this key. `check_per_min` is the limit of `POST /tradelink/check` and the offer check together.
 
 ### `GET /catalog` — the feed
 
@@ -129,6 +129,25 @@ Cheapest first (`retail_price_usd` is added on `cost`). `offer_id` is opaque and
 item; it expires with the offer. Cached for 60 s per tariff and item. The source of an offer is
 never named. `delivery` is `instant` for every offer today; treat other values (a future `manual`) as
 slower. 404 `item_not_found`.
+
+### `GET /catalog/{item_id}/offers/{offer_id}` — check one offer
+
+Ask right before you take your buyer's money (ADR-0017, 2026-10-10). Not cached; counts against
+`check_per_min` (with `POST /tradelink/check`).
+
+```json
+{ "offer_id": "Zm9v…", "status": "available", "price_usd": "14.250" }
+```
+
+- `available` — for sale at `price_usd` for your tariff (live; it may differ from the list).
+- `gone` — sold; `price_usd` is `null`. Offer another one to your buyer.
+- `unconfirmed` — the market did not answer in time; `price_usd` is the last known price.
+- `retail_price_usd` is added on `cost` (not when `gone`).
+- 404 `item_not_found`; 404 `offer_not_found` for a forged or foreign `offer_id`.
+
+A sold offer is never replaced by another one: offers of one skin differ in float, pattern and
+stickers. `POST /orders` checks again, so a sale in the seconds between is `409 offer_gone` with
+nothing charged.
 
 ### `POST /orders` — buy
 
@@ -401,7 +420,7 @@ RFC 7807 `application/problem+json`; read `code`, not the text.
 | 401  | `unauthorized` — missing, unknown or revoked key                                                                                                                                                                       |
 | 402  | `insufficient_balance` — nothing was written                                                                                                                                                                           |
 | 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                                                                                                           |
-| 404  | `item_not_found`, `order_not_found`                                                                                                                                                                                    |
+| 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                                                                                                                 |
 | 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired`, `idempotency_mismatch` (webhook)                                                        |
 | 422  | `trade_link_invalid`, `ip_allowlist_invalid` (site route, + `index`), body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key` |
 | 429  | `rate_limited`, with `Retry-After`                                                                                                                                                                                     |
@@ -410,8 +429,8 @@ RFC 7807 `application/problem+json`; read `code`, not the text.
 ## Limits
 
 Per key, fixed one-minute windows: **60** reads, **10** `POST /orders`, **1** feed first page
-(later pages of the same snapshot count as reads), **30** `POST /tradelink/check`
-(`check_per_min`). `GET /me` shows the key's effective limits; an admin can raise them per key. Over the limit: 429 `rate_limited` with
+(later pages of the same snapshot count as reads), **30** checks — `POST /tradelink/check` and `GET /catalog/{item_id}/offers/{offer_id}`
+together (`check_per_min`). `GET /me` shows the key's effective limits; an admin can raise them per key. Over the limit: 429 `rate_limited` with
 `Retry-After`. Failed authentications are throttled per client address (30 a minute) and then
 answer 429 too. A full feed pass every five minutes is well inside the limits.
 
@@ -422,6 +441,9 @@ the API, USD → soʻm, a second key.
 
 ## Changelog
 
+- **2026-10-10 — v1.2.** Only additions: `GET /catalog/{item_id}/offers/{offer_id}` (the offer
+  check, 404 `offer_not_found`); `POST /orders` confirms the offer before writing anything, so a
+  sold one is `409 offer_gone` at once.
 - **2026-10-09 — v1.1.** Only additions: limits per key (`limits.check_per_min` in `GET /me`);
   `POST /tradelink/check`; `trade.steam_offer_id` and `trade.seller_name` on an order; the user
   sets the key's IP allow-list in the profile (`PUT /me/api-key/ip-allowlist`, 422

@@ -2,8 +2,10 @@
 
 ``POST /orders`` for an ``ls:`` offer asks ``GET /market/check-availability`` once — the
 snapshot can be minutes old. Bounded like the item page's Waxpeer read (AGENTS §11): a 4 s
-timeout (``lisskins_check_timeout_seconds``), :data:`BUDGET_PER_MINUTE` calls a minute for
-the whole API, and a :data:`BREAKER_TTL` breaker after an outage. Gone → the offer is
+timeout (``lisskins_check_timeout_seconds``), :data:`BUDGET_PER_MINUTE` calls a minute for the
+storefront and :data:`API_BUDGET_PER_MINUTE` for the partner API (its orders and its offer
+check, ADR-0017) so partners never spend the site's share, and a :data:`BREAKER_TTL` breaker
+after an outage. Gone → the offer is
 dropped (checkout answers ``offer_gone``); no answer → the snapshot price stands (the worker's
 ``max_price`` is the money guard).
 """
@@ -30,22 +32,28 @@ from csmarket.modules.skins.api import Offer, merge_offers, parse_offer_id
 
 log = get_logger("csmarket.lisskins.availability")
 
-#: The key allows 200 requests a minute; half is left to the reconcile and the buys.
-BUDGET_PER_MINUTE = 100
+#: The key allows 200 requests a minute; half is left to the reconcile and the buys, the
+#: other half split between the storefront and the partner API.
+BUDGET_PER_MINUTE = 60
+API_BUDGET_PER_MINUTE = 40
 BREAKER_KEY = "lisskins:check:breaker"
 BREAKER_TTL = 120
 _BUDGET_TTL = 120
 
 LiveCheck = Literal["available", "gone", "unknown"]
+#: Whose share of the budget a check spends.
+CheckScope = Literal["site", "api"]
 
 
-async def _budget_ok(redis: Redis) -> bool:
-    """One more call this minute; a Redis outage does not stop checkout."""
-    key = f"lisskins:check:budget:{datetime.now(UTC).strftime('%Y%m%d%H%M')}"
+async def _budget_ok(redis: Redis, scope: CheckScope) -> bool:
+    """One more call this minute in ``scope``'s share; a Redis outage does not stop checkout."""
+    minute = datetime.now(UTC).strftime("%Y%m%d%H%M")
+    key = f"lisskins:check:budget:{minute}" if scope == "site" else f"lisskins:check:api:{minute}"
+    limit = BUDGET_PER_MINUTE if scope == "site" else API_BUDGET_PER_MINUTE
     with contextlib.suppress(RedisError):
         used = await redis.incr(key)
         await redis.expire(key, _BUDGET_TTL)
-        return int(used) <= BUDGET_PER_MINUTE
+        return int(used) <= limit
     return True
 
 
@@ -56,14 +64,14 @@ async def _open_breaker(redis: Redis, error: Exception) -> None:
 
 
 async def live_price(
-    redis: Redis, client: AvailabilityClient, skin_id: int
+    redis: Redis, client: AvailabilityClient, skin_id: int, *, scope: CheckScope = "site"
 ) -> tuple[LiveCheck, int | None]:
     """``("available", units)``, ``("gone", None)`` or ``("unknown", None)`` — the last when
-    the breaker is open, the budget spent, or LIS-SKINS did not say."""
+    the breaker is open, ``scope``'s budget spent, or LIS-SKINS did not say."""
     breaker = False
     with contextlib.suppress(RedisError):
         breaker = bool(await redis.exists(BREAKER_KEY))
-    if breaker or not await _budget_ok(redis):
+    if breaker or not await _budget_ok(redis, scope):
         return "unknown", None
     try:
         answer = await client.check_availability([skin_id])
@@ -101,9 +109,11 @@ async def recheck_chosen(
 
 
 __all__ = [
+    "API_BUDGET_PER_MINUTE",
     "BREAKER_KEY",
     "BREAKER_TTL",
     "BUDGET_PER_MINUTE",
+    "CheckScope",
     "LiveCheck",
     "live_price",
     "recheck_chosen",

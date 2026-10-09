@@ -257,6 +257,26 @@ blocks a purchase. If every call answers so: the Waxpeer key is missing or rejec
 breaker key in Redis and the `users.tradelink.unavailable` warnings in the API log). Fix the key or wait;
 no restart is needed. The bucket `check` limits calls per key (`public_api:rl:check:{key_id}`).
 
+## Offers answer `gone` or `unconfirmed` (offer check, orders)
+
+`GET /public/catalog/{item_id}/offers/{offer_id}` and `POST /public/orders` ask LIS-SKINS
+`check-availability` live for a LIS-SKINS lot.
+
+- **`gone`** (and `409 offer_gone` on an order) is normal: the lot was sold after the 5-minute
+  snapshot.
+- **`unconfirmed` on every call** means the check did not run:
+  - the API's budget share (40 a minute, `lisskins:check:api:<minute>`) is spent;
+  - the breaker `lisskins:check:breaker` is open after an outage (120 s);
+  - the LIS-SKINS key is missing or rejected.
+
+  Look for `public_api.offer_check` lines (`verdict`) and `lisskins.check.breaker_open` in the
+  API log. Orders still go through at the snapshot price; the worker's `max_price` guards the
+  money.
+
+- **A partner that needs more checks:** raise its `check_per_min`. The LIS-SKINS share is one
+  pool for all partners, so raise `API_BUDGET_PER_MINUTE` in `lisskins/availability.py` only
+  together with lowering the site's share. The two must stay within 100.
+
 ## Releasing v1.1
 
 On the owner's word, in this order:
