@@ -165,9 +165,9 @@ curl -s https://api.csmarket.uz/api/v1/public/catalog/4f1c…/offers/Zm9v… \
 { "offer_id": "Zm9v…", "status": "available", "price_usd": "14.250" }
 ``
 
-| `status`      | What to do                                                                       |
-| ------------- | -------------------------------------------------------------------------------- |
-| `available`   | charge `price_usd` (it may differ from the list) and call `POST /orders`         |
+| `status`      | What to do                                                                        |
+| ------------- | --------------------------------------------------------------------------------- |
+| `available`   | charge `price_usd` (it may differ from the list) and call `POST /orders`          |
 | `gone`        | the offer was sold: tell your customer and offer another one; `price_usd` is null |
 | `unconfirmed` | the market did not answer in time; `price_usd` is the last known price            |
 
@@ -288,7 +288,7 @@ Verify the **raw body bytes** before parsing the JSON.
 | 401  | `unauthorized`                                                                                                            |
 | 402  | `insufficient_balance`                                                                                                    |
 | 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                              |
-| 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                                     |
+| 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                    |
 | 409  | `offer_gone`, `price_above_max`, `duplicate_client_order_id`, `buying_disabled`, `cursor_expired`, `idempotency_mismatch` |
 | 422  | `trade_link_invalid`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key`, invalid parameters                 |
 | 429  | `rate_limited` — wait `Retry-After` seconds                                                                               |
