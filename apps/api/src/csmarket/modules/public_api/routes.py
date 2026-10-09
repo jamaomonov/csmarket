@@ -13,6 +13,7 @@ import hashlib
 import json
 from datetime import UTC, datetime
 from typing import Annotated, Any
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import JSONResponse
@@ -22,10 +23,11 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.errors import AppError, ConflictError, NotFoundError, PaymentRequiredError
+from csmarket.core.idempotency import load_replay, require_idempotency_key, save_replay
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
 from csmarket.modules.orders.api import create_api_order, get_for_owner, list_for_owner
-from csmarket.modules.public_api import feed
+from csmarket.modules.public_api import feed, webhooks
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
 from csmarket.modules.public_api.limits import LIMITS, enforce
 from csmarket.modules.public_api.offers import PricedOffer, api_offers
@@ -39,7 +41,10 @@ from csmarket.modules.public_api.schemas import (
     PublicOrderOut,
     PublicOrdersPage,
     PublicOrderStatus,
+    WebhookIn,
+    WebhookOut,
 )
+from csmarket.modules.public_api.webhook_url import check_url, public_addresses
 from csmarket.modules.skins.api import enabled_categories, get_item_by_id
 from csmarket.modules.wallet.api import InsufficientBalanceError, user_usd_balance
 
@@ -320,3 +325,84 @@ async def me(
             feed_per_min=LIMITS["feed"],
         ),
     )
+
+
+_WEBHOOK_SAVE_SCOPE = "public_api.webhook_put"
+_WEBHOOK_DELETE_SCOPE = "public_api.webhook_delete"
+
+
+@router.get(
+    "/webhook",
+    response_model=WebhookOut | None,
+    summary="My webhook",
+    responses=_AUTH_ERRORS,
+)
+async def get_webhook(
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+) -> WebhookOut | None:
+    """The webhook URL and the state of its latest delivery, or ``null`` when none is set."""
+    await enforce(caller, "read")
+    return await webhooks.get(db, caller.user.id)
+
+
+@router.put(
+    "/webhook",
+    response_model=WebhookOut,
+    summary="Set my webhook URL",
+    responses={
+        **_AUTH_ERRORS,
+        422: {"description": "`webhook_url_invalid`, `webhook_url_private`, `idempotency_key`"},
+    },
+)
+async def put_webhook(
+    body: WebhookIn,
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> WebhookOut:
+    """Replace the webhook URL. ``https`` only; the host must resolve to public addresses.
+
+    Needs ``Idempotency-Key``. A replay changes nothing and answers the current state.
+    """
+    idem = require_idempotency_key(idempotency_key)
+    await enforce(caller, "read")
+    user_id = caller.user.id
+    scoped = f"{user_id}:{idem}"
+    if await load_replay(db, scope=_WEBHOOK_SAVE_SCOPE, idempotency_key=scoped) is None:
+        url = check_url(body.url)
+        parts = urlsplit(url)
+        await public_addresses(parts.hostname or "", parts.port or 443)
+        await webhooks.put(db, user_id, url)
+        await save_replay(
+            db, scope=_WEBHOOK_SAVE_SCOPE, idempotency_key=scoped, body=None, status_code=200
+        )
+        await db.commit()
+    out = await webhooks.get(db, user_id)
+    if out is None:  # pragma: no cover -- deleted between a replay and this read
+        raise NotFoundError("no webhook is set", code="webhook_missing")
+    return out
+
+
+@router.delete(
+    "/webhook",
+    status_code=204,
+    summary="Remove my webhook",
+    responses={**_AUTH_ERRORS, 422: {"description": "`idempotency_key`"}},
+)
+async def delete_webhook(
+    caller: Annotated[ApiCaller, Depends(api_caller)],
+    db: Annotated[AsyncSession, Depends(db_session)],
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
+) -> Response:
+    """Remove the webhook; 204 even when none was set. Needs ``Idempotency-Key``."""
+    idem = require_idempotency_key(idempotency_key)
+    await enforce(caller, "read")
+    scoped = f"{caller.user.id}:{idem}"
+    if await load_replay(db, scope=_WEBHOOK_DELETE_SCOPE, idempotency_key=scoped) is None:
+        await webhooks.remove(db, caller.user.id)
+        await save_replay(
+            db, scope=_WEBHOOK_DELETE_SCOPE, idempotency_key=scoped, body=None, status_code=204
+        )
+        await db.commit()
+    return Response(status_code=204)

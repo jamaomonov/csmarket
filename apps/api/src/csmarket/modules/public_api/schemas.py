@@ -188,6 +188,36 @@ class MeOut(BaseModel):
     limits: MeLimitsOut
 
 
+class WebhookIn(BaseModel):
+    """``PUT /public/webhook`` body."""
+
+    model_config = ConfigDict(frozen=True)
+
+    url: str = Field(max_length=500, description="`https` URL; its host must be public.")
+
+
+class WebhookDeliveryOut(BaseModel):
+    """The latest delivery attempt state of the partner's webhook."""
+
+    model_config = ConfigDict(frozen=True)
+
+    event: str
+    status: str
+    attempts: int
+    last_status_code: int | None
+    at: datetime
+
+
+class WebhookOut(BaseModel):
+    """The partner's webhook and how its last delivery went."""
+
+    model_config = ConfigDict(frozen=True)
+
+    url: str
+    created_at: datetime
+    last_delivery: WebhookDeliveryOut | None
+
+
 __all__ = [
     "ApiKeyIssuedOut",
     "ApiKeyOut",
@@ -205,4 +235,7 @@ __all__ = [
     "PublicRefundOut",
     "PublicRefundReason",
     "PublicTradeOut",
+    "WebhookDeliveryOut",
+    "WebhookIn",
+    "WebhookOut",
 ]

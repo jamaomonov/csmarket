@@ -136,11 +136,14 @@ def _exempt_self_authenticating_routes(limiter: Limiter) -> None:
     from csmarket.modules.payme.routes import payme_merchant
     from csmarket.modules.public_api.routes import (
         catalog,
+        delete_webhook,
         get_order,
+        get_webhook,
         item_offers,
         list_orders,
         me,
         place_order,
+        put_webhook,
     )
     from csmarket.modules.skinslink.routes import skinslink_webhook
     from csmarket.modules.uzum.routes import (
@@ -172,6 +175,9 @@ def _exempt_self_authenticating_routes(limiter: Limiter) -> None:
         get_order,
         list_orders,
         me,
+        get_webhook,
+        put_webhook,
+        delete_webhook,
     ):
         # slowapi ships no types for this decorator; the side effect on the exempt set is
         # the point, the returned wrapper is discarded.

@@ -205,6 +205,12 @@ class Settings(BaseSettings):
     email_from: str = Field(default="noreply@csmarket.uz")
     email_from_name: str = Field(default="CS Market")
     email_send_timeout_seconds: float = Field(default=10, gt=0)
+    webhook_timeout_seconds: float = Field(
+        default=5.0, gt=0, description="Seconds one partner webhook delivery may take."
+    )
+    webhook_max_attempts: int = Field(
+        default=10, gt=0, description="Delivery attempts per partner webhook event before failed."
+    )
     email_verify_ttl_hours: int = Field(
         default=24, gt=0, description="Hours an email confirmation link works."
     )

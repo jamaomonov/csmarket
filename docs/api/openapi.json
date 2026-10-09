@@ -8018,6 +8018,95 @@
         "title": "WeaponFacetOut",
         "type": "object"
       },
+      "WebhookDeliveryOut": {
+        "description": "The latest delivery attempt state of the partner's webhook.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "status",
+          "attempts",
+          "last_status_code",
+          "at"
+        ],
+        "title": "WebhookDeliveryOut",
+        "type": "object"
+      },
+      "WebhookIn": {
+        "description": "``PUT /public/webhook`` body.",
+        "properties": {
+          "url": {
+            "description": "`https` URL; its host must be public.",
+            "maxLength": 500,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "WebhookIn",
+        "type": "object"
+      },
+      "WebhookOut": {
+        "description": "The partner's webhook and how its last delivery went.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WebhookDeliveryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "created_at",
+          "last_delivery"
+        ],
+        "title": "WebhookOut",
+        "type": "object"
+      },
       "csmarket__modules__public_api__schemas__MeOut": {
         "description": "The caller's balance, wallet switch, key and limits.",
         "properties": {
@@ -13049,6 +13138,208 @@
           }
         },
         "summary": "One API order of this account",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/webhook": {
+      "delete": {
+        "description": "Remove the webhook; 204 even when none was set. Needs ``Idempotency-Key``.",
+        "operationId": "delete_webhook_api_v1_public_webhook_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`idempotency_key`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Remove my webhook",
+        "tags": [
+          "public-api"
+        ]
+      },
+      "get": {
+        "description": "The webhook URL and the state of its latest delivery, or ``null`` when none is set.",
+        "operationId": "get_webhook_api_v1_public_webhook_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Webhook Api V1 Public Webhook Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "My webhook",
+        "tags": [
+          "public-api"
+        ]
+      },
+      "put": {
+        "description": "Replace the webhook URL. ``https`` only; the host must resolve to public addresses.\n\nNeeds ``Idempotency-Key``. A replay changes nothing and answers the current state.",
+        "operationId": "put_webhook_api_v1_public_webhook_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`webhook_url_invalid`, `webhook_url_private`, `idempotency_key`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Set my webhook URL",
         "tags": [
           "public-api"
         ]
