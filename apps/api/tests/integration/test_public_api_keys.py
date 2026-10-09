@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Iterator
 from decimal import Decimal
 
 import pytest
+from csmarket.core import config as cfg
 from csmarket.modules.public_api.api import ApiCaller, api_caller, enforce
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.users.models import User
@@ -93,6 +94,25 @@ async def test_issue_returns_a_token_and_stores_only_its_hash(
     assert token not in str(row.scalar_one())
 
 
+async def test_anyone_signed_in_may_issue_by_default(
+    integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    """Owner, 2026-10-09: no top-up needed until ``api_key_requires_funding`` is switched on."""
+    h = await customer_headers()
+    r = await integration_client.post(KEY_URL, headers={**h, **_idem()})
+    assert r.status_code == 201
+
+
+@pytest.fixture
+def _funding_required(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setenv("CSMARKET_API_KEY_REQUIRES_FUNDING", "true")
+    cfg.get_settings.cache_clear()
+    yield
+    monkeypatch.delenv("CSMARKET_API_KEY_REQUIRES_FUNDING")
+    cfg.get_settings.cache_clear()
+
+
+@pytest.mark.usefixtures("_funding_required")
 async def test_not_allowed_without_topup_or_usd_wallet(
     integration_client: AsyncClient, customer_headers: Headers
 ) -> None:

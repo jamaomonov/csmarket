@@ -398,6 +398,16 @@ class Settings(BaseSettings):
         description="The alert WaxpeerBalanceLow fires when our Waxpeer balance is below this.",
     )
 
+    # --- public API (ADR-0017) ---
+    api_key_requires_funding: bool = Field(
+        default=False,
+        description=(
+            "An API key needs a booked top-up or the USD wallet before it is issued. Off "
+            "(owner, 2026-10-09): any signed-in user may issue one; buying still needs the "
+            "USD wallet and a balance."
+        ),
+    )
+
     # --- worker ---
     worker_poll_seconds: int = Field(
         default=5,

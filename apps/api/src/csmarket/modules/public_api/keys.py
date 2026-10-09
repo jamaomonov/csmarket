@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from csmarket.core.config import get_settings
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.modules.auth.api import hash_token
@@ -51,13 +52,16 @@ async def live_key(db: AsyncSession, user_id: str) -> ApiKey | None:
 async def issue(db: AsyncSession, *, user: User) -> tuple[ApiKey, str]:
     """Mint a key, revoking the live one; returns the row and the plain token.
 
-    Eligibility (R2): a booked top-up or the USD wallet switched on. Flushes, never commits.
+    Eligibility (R2), only while ``api_key_requires_funding`` is on: a booked top-up or the USD
+    wallet switched on. Flushes, never commits.
 
     Raises:
-        ConflictError: ``api_key_not_allowed`` -- neither condition holds;
+        ConflictError: ``api_key_not_allowed`` -- the setting is on and neither condition holds;
             ``api_key_race`` -- two issues raced for the same user.
     """
-    if not (user.usd_wallet_enabled or await has_topup(db, user.id)):
+    if get_settings().api_key_requires_funding and not (
+        user.usd_wallet_enabled or await has_topup(db, user.id)
+    ):
         raise ConflictError(
             "an API key needs a top-up or the dollar wallet", code="api_key_not_allowed"
         )

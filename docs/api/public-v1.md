@@ -12,16 +12,17 @@ Every example uses fake values: a token `csm_EXAMPLE…` and a trade link with `
 A signed-in user issues the key on the site (profile → «API-ключ»). The token (`csm_` + 43
 characters) is shown **once**; only its SHA-256 is kept, so a lost token is replaced by
 reissuing. One live key per account: reissuing revokes the old one at once; the tariff, the limits and the IP allow-list carry
-over. Issuing needs a successful top-up or the USD wallet switched on by an admin.
+over. Any signed-in user may issue a key (owner, 2026-10-09); with `CSMARKET_API_KEY_REQUIRES_FUNDING=true`
+issuing needs a successful top-up or the USD wallet switched on by an admin. Buying always needs the USD wallet.
 
 Site routes (a signed-in user, not a key; `Idempotency-Key` ≥ 16 chars on the writes):
 
-| Method   | Path                       | Does                                                                                                                                                                                                          |
-| -------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/me/api-key`              | the live key `{id, pricing_profile, created_at, last_used_at}` or `null`; never the token                                                                                                                     |
-| `POST`   | `/me/api-key`              | issue (201 `{id, token, …}`); 409 `api_key_not_allowed` without a top-up or the USD wallet, 409 `api_key_race` when two issues collide (retry); a replayed `Idempotency-Key` is 409 `key_already_issued` (R3) |
-| `DELETE` | `/me/api-key`              | revoke (204); 404 `api_key_missing` when none                                                                                                                                                                 |
-| `PUT`    | `/me/api-key/ip-allowlist` | set the key's IP allow-list `{ip_allowlist: [...]}`; up to 20 IPv4 / IPv6 addresses or CIDRs, normalised and deduplicated; empty = any address; 422 `ip_allowlist_invalid` with the `index` of the bad entry  |
+| Method   | Path                       | Does                                                                                                                                                                                                                                                        |
+| -------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/me/api-key`              | the live key `{id, pricing_profile, created_at, last_used_at}` or `null`; never the token                                                                                                                                                                   |
+| `POST`   | `/me/api-key`              | issue (201 `{id, token, …}`); 409 `api_key_not_allowed` without a top-up or the USD wallet (only while `api_key_requires_funding` is on), 409 `api_key_race` when two issues collide (retry); a replayed `Idempotency-Key` is 409 `key_already_issued` (R3) |
+| `DELETE` | `/me/api-key`              | revoke (204); 404 `api_key_missing` when none                                                                                                                                                                                                               |
+| `PUT`    | `/me/api-key/ip-allowlist` | set the key's IP allow-list `{ip_allowlist: [...]}`; up to 20 IPv4 / IPv6 addresses or CIDRs, normalised and deduplicated; empty = any address; 422 `ip_allowlist_invalid` with the `index` of the bad entry                                                |
 
 Send the token on every call: `Authorization: Bearer csm_EXAMPLEtokenNotReal`. The key may carry
 an IP allow-list (set by the user in the profile or with `PUT /me/api-key/ip-allowlist`; empty =

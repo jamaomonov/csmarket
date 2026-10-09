@@ -204,6 +204,13 @@ the scheduler to force a run: that re-arms the ~400 s delay. Check and wait (the
 `409 cursor_expired` is normal when a client holds a cursor longer than 1800 s: it restarts from
 the first page. A page 0 revalidation counts as the once-a-minute `feed` limit (429), by design.
 
+## Who may issue a key
+
+Any signed-in user (owner, 2026-10-09). To require a booked top-up or the USD wallet first, set
+`CSMARKET_API_KEY_REQUIRES_FUNDING=true` in `secrets/api.env` and redeploy; the profile then
+answers «Сначала пополните баланс» (409 `api_key_not_allowed`). Buying through a key always
+needs the USD wallet switched on and a balance.
+
 ## Raising a key's limits
 
 Per key and minute: 60 reads, 10 orders, 1 feed first page, 30 trade-link checks by default

@@ -56,7 +56,6 @@ Authorization: Bearer csm_EXAMPLEtokenNotReal
 
 - The key (`csm_` + 43 characters) is shown **once** when you issue it; we keep only its
   SHA-256 hash. If you lose it, reissue it in your profile.
-- A key can be issued after your first top-up or once your USD balance is switched on.
 - One live key per account. **Reissuing revokes the old key at once**; your orders, balance,
   pricing and webhook stay.
 - A key may be limited to a list of IP addresses. Set it in your profile (**Allowed IP
