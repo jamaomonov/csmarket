@@ -735,8 +735,8 @@ async def test_public_requests_and_orders_are_counted(
     item = await _item(db_session)
     _user, token = await _customer(db_session, customer_headers, profile="cost")
     [offer] = await _offer_ids(db_session, item, "cost")
-    req = "csmarket_api_public_requests_total"
-    ordc = "csmarket_api_public_orders_total"
+    req = "csmarket_public_api_requests_total"
+    ordc = "csmarket_public_api_orders_total"
     me2 = _sample(req, route="/public/me", status="2xx")
     me4 = _sample(req, route="/public/me", status="4xx")
     o201 = _sample(req, route="/public/orders", status="2xx")

@@ -251,8 +251,10 @@ async def place_order(
     profile = caller.key.pricing_profile
     try:
         out = await _place_order(body, caller, db)
-    except AppError as exc:
-        record_public_order(profile, _order_outcome(exc))
+    except Exception as exc:
+        record_public_order(
+            profile, _order_outcome(exc) if isinstance(exc, AppError) else "rejected"
+        )
         raise
     record_public_order(profile, "created")
     return out

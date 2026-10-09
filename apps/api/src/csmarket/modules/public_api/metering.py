@@ -40,7 +40,7 @@ class MeteredRoute(APIRoute):
             path = str(getattr(route, "path", "other"))
             try:
                 response = await original(request)
-            except BaseException as exc:
+            except Exception as exc:
                 record_public_request(path, _status_of(exc))
                 raise
             record_public_request(path, response.status_code)

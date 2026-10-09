@@ -459,13 +459,13 @@ _API_ORDER_OUTCOMES = frozenset(
 _API_PROFILES = frozenset(("retail", "cost", "other"))
 
 PUBLIC_API_REQUESTS = Counter(
-    "csmarket_api_public_requests_total",
+    "csmarket_public_api_requests_total",
     "Partner API requests by matched route template and status class.",
     ("route", "status"),
 )
 _precreate(PUBLIC_API_REQUESTS, route=_PUBLIC_ROUTES, status=_STATUS_CLASSES)
 PUBLIC_API_ORDERS = Counter(
-    "csmarket_api_public_orders_total",
+    "csmarket_public_api_orders_total",
     "Partner API order attempts by key profile and outcome.",
     ("profile", "outcome"),
 )
@@ -481,7 +481,7 @@ def record_public_request(route: str, status: int) -> None:
         cls = f"{status // 100}xx"
         _inc(
             PUBLIC_API_REQUESTS,
-            "csmarket_api_public_requests_total",
+            "csmarket_public_api_requests_total",
             {
                 "route": route if route in _PUBLIC_ROUTES else "other",
                 "status": cls if cls in _STATUS_CLASSES else "5xx",
@@ -490,7 +490,7 @@ def record_public_request(route: str, status: int) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.increment_failed",
-            metric="csmarket_api_public_requests_total",
+            metric="csmarket_public_api_requests_total",
             error=type(exc).__name__,
         )
 
@@ -502,7 +502,7 @@ def record_public_order(profile: str, outcome: str) -> None:
     """
     _inc(
         PUBLIC_API_ORDERS,
-        "csmarket_api_public_orders_total",
+        "csmarket_public_api_orders_total",
         {
             "profile": profile if profile in _API_PROFILES else "other",
             "outcome": outcome if outcome in _API_ORDER_OUTCOMES else "rejected",
