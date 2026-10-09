@@ -706,6 +706,18 @@
             ],
             "title": "Trade Link Masked"
           },
+          "trade_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Sent At"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -748,6 +760,7 @@
           "updated_at",
           "expires_at",
           "paid_at",
+          "trade_sent_at",
           "delivered_at",
           "cancelled_at",
           "failed_at",

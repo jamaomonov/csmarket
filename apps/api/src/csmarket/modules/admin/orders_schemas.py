@@ -148,6 +148,8 @@ class AdminOrderFull(BaseModel):
     updated_at: datetime
     expires_at: datetime
     paid_at: datetime | None
+    #: When the Steam offer went out (the public API's hold clock); ``None`` before.
+    trade_sent_at: datetime | None
     delivered_at: datetime | None
     cancelled_at: datetime | None
     failed_at: datetime | None
