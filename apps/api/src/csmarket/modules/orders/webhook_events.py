@@ -3,7 +3,7 @@
 The row and its ``NOTIFY api_webhooks`` ride the event's transaction: both land on commit,
 or neither does. A delivery is unique per ``(order, event)``, so a replayed report or a
 second pass of a sweep enqueues nothing new. The payload is the public order view, so it
-never names the supplier or carries the trade link. Only ``channel == "api"`` orders of a
+never names the market it was bought on or carries the trade link. Only ``channel == "api"`` orders of a
 user with a webhook produce a row; every other order costs no query.
 """
 
