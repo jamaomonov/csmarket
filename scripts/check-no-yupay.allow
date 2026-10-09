@@ -5,3 +5,6 @@ merchant_trans_id
 # The public API's refund reason for a market's refusal (spec 2026-10-09 §5, a closed
 # contract list partners code against).
 supplier_refused
+# The admin refund's 409 when Skinslink / LIS-SKINS cannot be asked (plan C Task 5, ADR-0018;
+# the code plan C names, shown by the admin SPA).
+supplier_unavailable

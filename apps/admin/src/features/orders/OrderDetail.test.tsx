@@ -248,6 +248,32 @@ describe("OrderDetail", () => {
       expect(screen.getByTestId("order-status")).toHaveTextContent("не получилось");
     });
 
+    it("says a Skinslink / LIS-SKINS refund asks the market first, in dollars for an API order", async () => {
+      api.getOrder.mockResolvedValue({
+        ...RESOLVED,
+        order: {
+          ...RESOLVED.order,
+          source: "skinslink",
+          offer_id: "sl:100",
+          listing_id: null,
+          paid_with: "usd_wallet",
+          price_uzs: "0",
+        },
+        trade: null,
+      });
+      renderDetail();
+      fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
+      const confirm = screen.getByTestId("order-confirm");
+      expect(confirm).toHaveTextContent("Вернуть $13.580000 на баланс покупателя?");
+      expect(confirm).toHaveTextContent("Сначала спросим поставщика");
+    });
+
+    it("does not mention the market for a Waxpeer order", async () => {
+      renderDetail();
+      fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
+      expect(screen.getByTestId("order-confirm")).not.toHaveTextContent("поставщика");
+    });
+
     it("a double click on «Вернуть» sends one request", async () => {
       let finish: (d: AdminOrderDetail) => void = () => undefined;
       api.refundOrder.mockReturnValue(
@@ -312,6 +338,7 @@ describe("OrderDetail", () => {
       ["order_busy", "Покупка ещё идёт — попробуйте через минуту."],
       ["order_needs_attention", "Сначала разберите обмен."],
       ["waxpeer_unavailable", "Не удалось проверить покупку — попробуйте позже."],
+      ["supplier_unavailable", "Поставщик не ответил — попробуйте позже."],
       [
         "idempotency_mismatch",
         "Эта операция уже была выполнена с другими данными. Обновите страницу.",

@@ -39,7 +39,7 @@ module's snapshot and roll-up). `orders.source` accepts `lisskins` (owned by `or
 
 ## Interface (`api.py`)
 
-The client (`LisskinsClient`, `client_for`, `availability_client`, the protocols
+The client (`LisskinsClient`, `client_for`, `availability_client`, `request_info_client` — the admin refund's 4 s `market/info`, ADR-0018 —, the protocols
 `LisskinsBuyClient`, `AvailabilityClient`, `BalanceClient`, the errors `LisskinsError`,
 `LisskinsForbiddenError`, `LisskinsRateLimitedError`, `LisskinsUnavailableError`, the answer
 types, `BUY_LINK_ERRORS`, `TRADE_LINK_ERRORS`, `INFO_MAX_IDS`), the export (`read_export`,

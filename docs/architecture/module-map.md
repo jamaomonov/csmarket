@@ -119,7 +119,8 @@ Flow: [`sequence-diagrams/topup.mmd`](./sequence-diagrams/topup.mmd),
   search, the order page (trade link masked), the trades page with its attention queue, and
   three audited, idempotent actions — resolve, refund to the balance, retry the buy. The
   writes are `orders`' own (`orders.admin_actions`, exported by `orders.api`: lock order →
-  trade, refused while a buy attempt holds the lease); `admin` reads `orders.api`,
+  trade, refused while a buy attempt holds the lease; a Skinslink / LIS-SKINS refund asks the
+  supplier first, `orders.admin_refund_sources`, ADR-0018); `admin` reads `orders.api`,
   `payments.api` and `fx.api`, and `orders` never imports `admin`. The admin user card lists
   the user's latest 20 orders.
 - **Processes** — the worker's `orders` queue buys paid orders; the scheduler runs the trade

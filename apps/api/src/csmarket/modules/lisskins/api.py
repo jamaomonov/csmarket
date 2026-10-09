@@ -33,6 +33,7 @@ from csmarket.modules.lisskins.client import (
     PurchasedSkin,
     availability_client,
     client_for,
+    request_info_client,
 )
 from csmarket.modules.lisskins.export import (
     INSTANT,
@@ -109,6 +110,7 @@ __all__ = [
     "read_export",
     "recheck_chosen",
     "refresh_balance",
+    "request_info_client",
     "rollup",
     "snapshot_fresh",
     "to_units",

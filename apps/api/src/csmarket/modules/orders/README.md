@@ -245,6 +245,21 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
   (`in_flight`, an unresolved or "something may be bought" attention, a purchase on record
   or at Waxpeer); `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`;
   `waxpeer_unavailable`.
+- **A Skinslink / LIS-SKINS order** (`admin_refund_sources`, ADR-0018): `admin_refund`
+  dispatches by `orders.source` to `admin_refund_purchase(db, *, number, admin_id, skinslink,
+lisskins)` (the route injects `skinslink.request_status_client` and
+  `lisskins.request_info_client`). `purchase_refund_refusal(order, purchase, at)` — also the
+  detail's `can_refund`, no source call — refuses `already_refunded`;
+  `order_not_refundable` unless `buying` / `trade_sent`; `order_needs_attention` (an
+  unresolved attention in `BLOCKS_REFUND`); `order_busy` (`buy_pending` and a live lease);
+  `order_in_flight` for a row younger than 10 minutes with no market purchase id. Then the
+  unlocked read commits and the source is asked once (4 s, nothing locked): Skinslink
+  `failed` / `canceled`, a LIS-SKINS `return` that is not a `rollback_…`, or not found with no
+  purchase id on record → refundable; anything else → `order_in_flight`; an error or timeout
+  → `supplier_unavailable`. Lock order → purchase, re-check (a purchase id recorded meanwhile
+  → `order_in_flight`), `buy_pending` off, `refund_to_balance` (reason `admin`; `buying` →
+  `failed`, `trade_sent` → `returned`; an API order back to its USD wallet). The 409 texts
+  live in `admin_conflicts`.
 - `retry_buy(db, *, number, admin_id) -> str` — a `buying`, unrefunded order whose trade
   carries a **resolved** attention in `RETRYABLE` (the same three), no purchase on record
   (`waxpeer_id` unset — `sweeps` also flags a bought trade that stopped being reported

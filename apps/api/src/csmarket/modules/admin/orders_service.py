@@ -337,7 +337,7 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
             )
             for p in payments
         ],
-        can_refund=can_refund(order, trade),
+        can_refund=can_refund(order, trade, purchase=purchase),
         can_retry=can_retry(order, trade),
     )
 

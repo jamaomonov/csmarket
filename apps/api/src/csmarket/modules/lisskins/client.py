@@ -388,6 +388,13 @@ def availability_client() -> AvailabilityClient:
     return client_for(settings, timeout_seconds=settings.lisskins_check_timeout_seconds)
 
 
+def request_info_client() -> LisskinsClient:
+    """The admin refund's LIS-SKINS client for one ``market/info`` lookup (ADR-0018; the 4 s
+    check timeout; a FastAPI dependency, tests override it)."""
+    settings = get_settings()
+    return client_for(settings, timeout_seconds=settings.lisskins_check_timeout_seconds)
+
+
 __all__ = [
     "BUY_LINK_ERRORS",
     "INFO_MAX_IDS",
@@ -405,4 +412,5 @@ __all__ = [
     "PurchasedSkin",
     "availability_client",
     "client_for",
+    "request_info_client",
 ]

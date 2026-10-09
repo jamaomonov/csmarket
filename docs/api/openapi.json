@@ -9325,7 +9325,7 @@
     },
     "/api/v1/admin/orders/{number}/refund": {
       "post": {
-        "description": "Only a ``buying`` order whose resolved attention says nothing was bought\n(``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade\nunder (asked first, 4 s, nothing locked); the order becomes ``failed`` (reason\n``admin``).",
+        "description": "A Waxpeer order: only a ``buying`` order whose resolved attention says nothing was\nbought (``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade\nunder. A Skinslink / LIS-SKINS order (``buying`` / ``trade_sent``): only when the source\nreports the purchase failed, cancelled or returned \u2014 or has none, for a purchase older\nthan 10 minutes with no buy running. The source is asked first (4 s, nothing locked);\nthe order becomes ``failed`` \u2014 a ``trade_sent`` one ``returned`` (reason ``admin``).",
         "operationId": "refund_api_v1_admin_orders__number__refund_post",
         "parameters": [
           {
@@ -9378,7 +9378,7 @@
             "description": "No such order"
           },
           "409": {
-            "description": "Conflict; `code` is one of:\n\n- `already_refunded` \u2014 the money is already on the balance.\n- `order_in_flight` \u2014 the skin may still reach the buyer (or the attention is unresolved, or not a \u00abnothing was bought\u00bb case).\n- `order_not_refundable` \u2014 settled with nothing to give back (unpaid, cancelled, delivered).\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `waxpeer_unavailable` \u2014 Waxpeer could not be asked whether a purchase exists; nothing was refunded, try again later.\n- `idempotency_mismatch` \u2014 the key answered another request."
+            "description": "Conflict; `code` is one of:\n\n- `already_refunded` \u2014 the money is already on the balance.\n- `order_in_flight` \u2014 the skin may still reach the buyer (or the attention is unresolved, or not a \u00abnothing was bought\u00bb case).\n- `order_not_refundable` \u2014 settled with nothing to give back (unpaid, cancelled, delivered).\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `order_needs_attention` \u2014 a Skinslink / LIS-SKINS purchase's attention is unresolved.\n- `waxpeer_unavailable` \u2014 Waxpeer could not be asked whether a purchase exists; nothing was refunded, try again later.\n- `supplier_unavailable` \u2014 Skinslink / LIS-SKINS could not be asked; nothing was refunded, try again later.\n- `idempotency_mismatch` \u2014 the key answered another request."
           },
           "422": {
             "content": {

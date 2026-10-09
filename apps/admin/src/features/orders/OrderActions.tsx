@@ -193,7 +193,16 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
       )}
       {panel === "refund" && detail.can_refund && (
         <ConfirmBox>
-          <p>Вернуть {formatSum(order.price_uzs)} на баланс покупателя?</p>
+          <p>
+            Вернуть{" "}
+            {order.paid_with === "usd_wallet" ? `$${order.price_usd}` : formatSum(order.price_uzs)}{" "}
+            на баланс покупателя?
+          </p>
+          {order.source !== "waxpeer" && (
+            <p className="text-fg-muted text-xs">
+              Сначала спросим поставщика: деньги вернутся, только если покупка не состоялась.
+            </p>
+          )}
           <div className="flex gap-2">
             <Button
               variant="danger"

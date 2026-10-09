@@ -38,7 +38,7 @@ this module's roll-up). `orders` gains `source` and `offer_id` (owned by `orders
 
 ## Interface (`api.py`)
 
-The client (`SkinslinkClient`, `SkinslinkPurchaseClient`, `client_for`, the errors
+The client (`SkinslinkClient`, `SkinslinkPurchaseClient`, `client_for`, `request_status_client` — the admin refund's 4 s `purchase/status`, ADR-0018 —, the errors
 `SkinslinkError`, `SkinslinkForbiddenError`, `SkinslinkRateLimitedError`,
 `SkinslinkUnavailableError`, the answer types, `LINK_ERROR_CODES`, `PURCHASE_FAIL_REASONS`),
 the mirror (`sync_mirror`, `mirror_fresh`, `to_units`, `MirrorResult`), `offers_for`,
