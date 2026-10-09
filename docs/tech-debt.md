@@ -83,3 +83,7 @@ None of these touches money or order state.
 ## Public API (ADR-0017, plan B, 2026-10-09)
 
 1. **The tariff is set by SQL** until plan C's admin page (`docs/runbooks/public-api.md`).
+2. **API orders count 0 soʻm in the soʻm dashboards.** An API order is paid in USD: its
+   `price_uzs` is `0`, so the admin dashboard's soʻm revenue and counters leave its money out.
+   The refund log and the admin audit row carry `amount_usd` for such orders. _Fix:_ a dollar
+   line on the dashboard (plan C).

@@ -40,12 +40,10 @@
   Selling skins to us through Skinslink deposits (spec `2026-10-08-skin-sales-design.md`, ADR-0016)
   is built on branch `skin-sales` — off behind `CSMARKET_SALES_ENABLED` and the admin's «Выкуп
   включён» (`docs/runbooks/sales.md`).
-- **Public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017): plan A (the USD
-  wallet) is built on branch `public-api` — not merged; plans B (keys, buying) and C (webhooks,
-  ops) are to come.
-- **The public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017; keys, feed, offers,
-  buying from the USD wallet) is built on branch `public-api` — not merged, not deployed
-  (`docs/api/public-v1.md`, `docs/runbooks/public-api.md`).
+- **The public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017; plan A the USD
+  wallet, plan B keys, feed, offers, buying) is built on branch `public-api` — not merged, not
+  deployed (`docs/api/public-v1.md`, `docs/runbooks/public-api.md`). Plan C (webhooks, ops, an
+  admin refund for Skinslink / LIS-SKINS orders) is next.
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in
@@ -271,7 +269,7 @@ csmarket/
 
 - **TDD** when building a module or fixing a reproducible bug: the failing test first.
 - **Coverage gates:** Python ≥ 80 % (enforced: `fail_under = 80` in `pyproject.toml`, CI
-  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales` ≥ 95 % each (enforced:
+  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales`, `public_api` ≥ 95 % each (enforced:
   `scripts/check-module-coverage.py` reads `coverage.json` after `make test-py` and CI
   `test-py`, and fails naming the module under the line). TS ≥ 70 % is a target; no
   threshold is configured yet.

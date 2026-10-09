@@ -96,8 +96,8 @@ WHERE user_id = (SELECT id FROM users WHERE steam_id = :'sid') AND revoked_at IS
 ```
 
 Never `DELETE` a key: `orders.api_key_id` is RESTRICT and old orders must stay readable. The
-customer can issue a new key afterwards (it carries the tariff over only from a live key, so a
-revoked `cost` key's replacement starts as `retail`: set the tariff again). To cut an account off
+customer can issue a new key afterwards (the tariff carries over from the user's newest key, revoked or
+not, so a `cost` client stays `cost`). To cut an account off
 entirely, ban the user in the admin («Пользователи»): the key answers 403 `account_suspended`.
 An IP allow-list is set the same way, with CIDRs: `UPDATE api_keys SET ip_allowlist =
 ARRAY['203.0.113.0/24']::varchar[] WHERE id = '<key_id>';` (empty array = any address).
@@ -119,9 +119,15 @@ WHERE channel = 'api' AND client_order_id = 'shop-1042';
   `failed` / `returned` without a refund is **held for support** and still reads `buying` to the
   client until a person settles it in the admin («Заказы» → the order).
 - A refund books to the **USD wallet** (`refund:order:usd:{order_id}`), once, with the reason the
-  client reads (`sold_out`, `invalid_trade_link`, `trade_hold`, `price_moved`,
-  `supplier_refused`, `cancelled_by_support`). Never refund by hand-editing the ledger: use the
-  order's admin refund.
+  client reads (`sold_out`, `invalid_trade_link`, `trade_hold`, `supplier_refused`,
+  `cancelled_by_support`; `price_moved` is reserved and not produced yet). Never refund by
+  hand-editing the ledger.
+- **There is no admin refund today for a Skinslink / LIS-SKINS order, site or API:** the admin
+  refund (`admin_actions.refund_refusal`) refuses every order without a Waxpeer `SkinTrade` with
+  `order_not_refundable`. A held API order therefore cannot be settled from the admin yet. What
+  to do: check the purchase in the source's cabinet (was it made, is the offer out); wait for the
+  reconcile to settle it; if it stays held, escalate to the owner. An admin refund for these
+  sources is planned (plan C).
 - A delivered skin is never refunded automatically. A dispute over a delivered order is a
   decision for the owner.
 - «внимание» on the order in the admin: handle it as for a site order (`orders.md`).
@@ -131,14 +137,17 @@ WHERE channel = 'api' AND client_order_id = 'shop-1042';
 
 ## The feed answers 503 `feed_unavailable`
 
-The feed is a Redis snapshot rebuilt by the scheduler job `public_api.feed` every 60 s. After a
-scheduler restart (or a Redis flush) the first build runs **~400 s later**, and until then the
-first page answers 503 with `Retry-After: 60`; this is expected, not an incident. Clients retry.
+The feed is a Redis snapshot rebuilt by the scheduler job `public_api.feed` every 60 s;
+`public_api:feed:current` lives 1500 s. A scheduler restart alone keeps serving the old snapshot.
+The 503 (`Retry-After: 60`) appears only on a cold Redis (a flush) or after the scheduler was
+down for more than ~25 minutes: the first build then runs **~400 s** after the scheduler starts.
+This is expected, not an incident. Clients retry.
 
-If it lasts longer than ~10 minutes: check the scheduler is up and its log for
+If it lasts longer than ~10 minutes after the scheduler is up: check its log for
 `public_api.feed.built` / `public_api.feed` errors; check Redis (`GET public_api:feed:current`
-should exist, TTL ≤ 1500 s) and that some items have Skinslink or LIS-SKINS stock. Run the job
-by restarting the scheduler (it only times work; the logic is `public_api.feed.build_snapshot`).
+should exist, TTL ≤ 1500 s) and that some items have Skinslink or LIS-SKINS stock. Do not restart
+the scheduler to force a run: that re-arms the ~400 s delay. Check and wait (the logic is
+`public_api.feed.build_snapshot`).
 `409 cursor_expired` is normal when a client holds a cursor longer than 1800 s: it restarts from
 the first page. A page 0 revalidation counts as the once-a-minute `feed` limit (429), by design.
 

@@ -72,7 +72,7 @@ over unchanged and a transaction can still be atomic across both currencies.
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).
-- A feed refresh lags by up to 60 s, and after a scheduler restart the feed is 503 for ~400 s.
+- A feed refresh lags by up to 60 s, and the feed is 503 for ~400 s only on a cold Redis or after the scheduler was down for more than ~25 minutes (a scheduler restart alone keeps serving the old snapshot for up to 1500 s).
 - We carry the FX gap between the converted rate and the day we buy; the uplift covers it.
 
 ## Validation

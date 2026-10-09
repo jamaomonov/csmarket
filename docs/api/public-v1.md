@@ -16,11 +16,11 @@ over. Issuing needs a successful top-up or the USD wallet switched on by an admi
 
 Site routes (a signed-in user, not a key; `Idempotency-Key` ≥ 16 chars on the writes):
 
-| Method   | Path          | Does                                                                                                                                                      |
-| -------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/me/api-key` | the live key `{id, pricing_profile, created_at, last_used_at}` or `null`; never the token                                                                 |
-| `POST`   | `/me/api-key` | issue (201 `{id, token, …}`); 409 `api_key_not_allowed` without a top-up or the USD wallet; a replayed `Idempotency-Key` is 409 `key_already_issued` (R3) |
-| `DELETE` | `/me/api-key` | revoke (204); 404 `api_key_missing` when none                                                                                                             |
+| Method   | Path          | Does                                                                                                                                                                                                          |
+| -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/me/api-key` | the live key `{id, pricing_profile, created_at, last_used_at}` or `null`; never the token                                                                                                                     |
+| `POST`   | `/me/api-key` | issue (201 `{id, token, …}`); 409 `api_key_not_allowed` without a top-up or the USD wallet, 409 `api_key_race` when two issues collide (retry); a replayed `Idempotency-Key` is 409 `key_already_issued` (R3) |
+| `DELETE` | `/me/api-key` | revoke (204); 404 `api_key_missing` when none                                                                                                                                                                 |
 
 Send the token on every call: `Authorization: Bearer csm_EXAMPLEtokenNotReal`. The key may carry
 an IP allow-list (CIDR list, set by an admin; empty = any address): a call from outside is 403
@@ -58,7 +58,7 @@ curl -s https://api.csmarket.uz/api/v1/public/me \
 
 ### `GET /catalog` — the feed
 
-Items with Skinslink or LIS-SKINS stock, priced by the key's tariff. Pages are fixed at 1000
+Items in stock, priced by the key's tariff. Pages are fixed at 1000
 items (no `limit`); follow `next_cursor` until it is `null`.
 
 ```bash
@@ -86,9 +86,9 @@ curl -s --compressed -D - 'https://api.csmarket.uz/api/v1/public/catalog' \
 On a `cost` key each item also has `retail_price_usd`. `item_id` is our item id; `stock` is the
 count of offers; `updated_at` is `null` when the item has no price time.
 
-- **Snapshot.** The scheduler rebuilds the feed every 60 s. A scheduler restart delays the first
-  build by ~400 s: until then the first page answers **503 `feed_unavailable`** with
-  `Retry-After: 60` (never an empty catalogue). Retry.
+- **Snapshot.** The feed is refreshed every 60 s. On rare occasions the catalogue is briefly
+  unavailable: the first page then answers **503 `feed_unavailable`** with `Retry-After: 60`
+  (never an empty catalogue). Retry after the `Retry-After` delay.
 - **Cursor** `"{snapshot}.{page}"`. A page lives 1800 s, the current pointer 1500 s. A cursor of
   a snapshot that has lapsed is **409 `cursor_expired`**: restart from the first page.
 - **ETag.** Every page carries a strong `ETag` and `Cache-Control: private, no-cache`. Send it
@@ -121,8 +121,8 @@ curl -s https://api.csmarket.uz/api/v1/public/catalog/4f1c…/offers \
 ```
 
 Cheapest first (`retail_price_usd` is added on `cost`). `offer_id` is opaque and bound to its
-item; it expires with the offer. Cached for 60 s per tariff and item. The supplier is never
-named. `delivery` is `instant` for every offer today; treat other values (a future `manual`) as
+item; it expires with the offer. Cached for 60 s per tariff and item. The source of an offer is
+never named. `delivery` is `instant` for every offer today; treat other values (a future `manual`) as
 slower. 404 `item_not_found`.
 
 ### `POST /orders` — buy
@@ -148,7 +148,7 @@ curl -s https://api.csmarket.uz/api/v1/public/orders \
 One transaction: the USD wallet is debited and the order is created **already paid**.
 **201** returns the order (below) with `status: "buying"`. Repeating the call with the same
 `client_order_id` never makes a second order: it writes nothing and answers **409
-`duplicate_client_order_id`** with the existing order in `order`. No call goes out to a supplier
+`duplicate_client_order_id`** with the existing order in `order`. Nothing is sent to the seller
 while you wait; the purchase happens in the background.
 
 ### `GET /orders/{order_id}` and `GET /orders`
@@ -186,14 +186,14 @@ status is `trade_sent` or `delivered`; `release_at` is when Steam's trade protec
 
 A delivered skin is never refunded automatically.
 
-| Refund `reason`        | Cause                                                       |
-| ---------------------- | ----------------------------------------------------------- |
-| `sold_out`             | the offer was gone                                          |
-| `invalid_trade_link`   | the supplier rejected the link                              |
-| `trade_hold`           | the buyer's Steam account has a trade hold                  |
-| `price_moved`          | the supplier's price rose above what we hold                |
-| `supplier_refused`     | the supplier could not complete or the buyer did not accept |
-| `cancelled_by_support` | a person cancelled the order                                |
+| Refund `reason`        | Cause                                                         |
+| ---------------------- | ------------------------------------------------------------- |
+| `sold_out`             | the offer was gone                                            |
+| `invalid_trade_link`   | the trade link was rejected                                   |
+| `trade_hold`           | the buyer's Steam account has a trade hold                    |
+| `price_moved`          | reserved, not produced yet: the price rose above what we hold |
+| `supplier_refused`     | the seller could not complete or the buyer did not accept     |
+| `cancelled_by_support` | a person cancelled the order                                  |
 
 Refunds go to the USD wallet only, once. No letters are sent for API orders.
 
@@ -208,7 +208,7 @@ RFC 7807 `application/problem+json`; read `code`, not the text.
 | 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                  |
 | 404  | `item_not_found`, `order_not_found`                                                                                           |
 | 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired` |
-| 422  | `trade_link_invalid`, body errors                                                                                             |
+| 422  | `trade_link_invalid`, body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`                         |
 | 429  | `rate_limited`, with `Retry-After`                                                                                            |
 | 503  | `feed_unavailable` (feed not built yet), `rate_unavailable` (no FX snapshot ever recorded)                                    |
 
