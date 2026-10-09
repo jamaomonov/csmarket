@@ -42,17 +42,16 @@ None of these touches money or order state.
    (`orders.schemas` validator, `skins.offers.parse_offer_id`'s digit branch). _Fix:_ after
    the next deploy, accept only `wx:` / `sl:` strings, drop the branch and its tests, and
    regenerate the API client.
-2. **The admin attention queue and refund / retry are Waxpeer-only.** The trades list, its
+2. **The admin attention queue and retry are Waxpeer-only** (refund is not: ADR-0018). The trades list, its
    `attention` view and counts read `skin_trades` (the dashboard's attention count reads
    every source since ADR-0012), so a
    Skinslink attention (`source_forbidden`, `ambiguous_trade`, `rolled_back` on
    `skinslink_purchases`) is not listed there — yet `csmarket_trades_attention` counts it, so
    `TradesNeedAttention` can fire for an order the queue does not show. The operator finds it
    by number in the admin order search («Покупка Skinslink» block) and can mark it
-   «Разобрано» (that works). Admin refund and retry refuse a Skinslink order (409). _Fix:_
-   read attentions from both tables in `admin.orders_service` and teach refund / retry the
-   purchase row (refund: ask Skinslink by `merchant_tx_id` first, as ADR-0007 Y asks
-   Waxpeer).
+   «Разобрано» (that works). Admin retry refuses a Skinslink order (409); the admin refund
+   asks Skinslink first and books (ADR-0018). _Fix:_ read attentions from both tables in
+   `admin.orders_service` and teach retry the purchase row.
 
 ## LIS-SKINS buy source (ADR-0012, 2026-10-07)
 
@@ -60,9 +59,9 @@ None of these touches money or order state.
    LIS-SKINS attention (`source_forbidden`, `ambiguous_trade`, `rolled_back` on its purchase
    row) shows on the order page («Покупка Skinslink» / «Покупка LIS-SKINS»), in the
    dashboard's attention count and in the `TradesNeedAttention` alert, but not in the queue.
-   Admin refund and retry refuse a LIS-SKINS order (409). _Fix:_ as Skinslink's item above —
-   read every purchase table in `admin.orders_service`; teach refund / retry the purchase row
-   (refund: ask LIS-SKINS `market/info` by `custom_id` first).
+   Admin retry refuses a LIS-SKINS order (409); the admin refund asks LIS-SKINS
+   `market/info` first and books (ADR-0018). _Fix:_ as Skinslink's item above — read every
+   purchase table in `admin.orders_service`; teach retry the purchase row.
 2. **The export is fetched with a browser-like `User-Agent`.** Its CDN refused httpx's own
    agent on 2026-10-07 (`lisskins/export.py`, `USER_AGENT`). If the CDN changes its rules, the
    snapshot fails and `LisskinsSnapshotStale` fires. _Fix:_ revisit if LIS-SKINS publishes an
@@ -80,10 +79,15 @@ None of these touches money or order state.
    `rolled_back` on its own (`flag` keeps the open one), and the protection poll stops once
    the status is `return`. _Fix:_ let `rolled_back` replace a milder open attention.
 
-## Public API (ADR-0017, plan B, 2026-10-09)
+## Public API (ADR-0017, plans B and C, 2026-10-09)
 
-1. **The tariff is set by SQL** until plan C's admin page (`docs/runbooks/public-api.md`).
-2. **API orders count 0 soʻm in the soʻm dashboards.** An API order is paid in USD: its
+1. **API orders count 0 soʻm in the soʻm dashboards.** An API order is paid in USD: its
    `price_uzs` is `0`, so the admin dashboard's soʻm revenue and counters leave its money out.
    The refund log and the admin audit row carry `amount_usd` for such orders. _Fix:_ a dollar
-   line on the dashboard (plan C).
+   line on the dashboard.
+2. **A failed webhook delivery cannot be re-sent.** After 10 attempts a delivery is `failed` and
+   stays so; the partner reads the order with `GET /public/orders/{id}`. There is no resend in
+   the admin. _Fix:_ an admin «resend» that sets the row `pending` again.
+3. **No `channel = api` filter on the admin orders page.** API orders are read through the API
+   keys page (the card lists the latest 20) or by `client_order_id` in SQL. _Fix:_ a channel
+   filter in `admin.orders_service` if the volume asks for it.

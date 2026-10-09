@@ -157,8 +157,8 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   `attention_reason`, `resolved_at`) instead of a trade; its margin uses what Skinslink
   charged when known. Resolve («Разобрано») works on a Skinslink purchase's attention. The
   trades page, the attention queue, refund and retry read `skin_trades` only: they do not
-  list a Skinslink attention and refund / retry refuse a Skinslink order (409)
-  (`docs/tech-debt.md`).
+  list a Skinslink attention and retry refuses a Skinslink order (409); refund asks the
+  source first (ADR-0018) (`docs/tech-debt.md`).
 - **`can_refund` / `can_retry`** are `orders.api.can_refund` / `can_retry` — the same
   functions (`refund_refusal`, `retry_refusal`) the actions run under the locks, so the
   button and the action agree (`test_the_flags_say_what_the_action_does`).

@@ -41,9 +41,10 @@
   is built on branch `skin-sales` — off behind `CSMARKET_SALES_ENABLED` and the admin's «Выкуп
   включён» (`docs/runbooks/sales.md`).
 - **The public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017; plan A the USD
-  wallet, plan B keys, feed, offers, buying) is built on branch `public-api` — not merged, not
-  deployed (`docs/api/public-v1.md`, `docs/runbooks/public-api.md`). Plan C (webhooks, ops, an
-  admin refund for Skinslink / LIS-SKINS orders) is next.
+  wallet, plan B keys, feed, offers, buying, plan C signed webhooks, the admin API keys page,
+  metrics and the supplier-checked admin refund of Skinslink / LIS-SKINS orders, ADR-0018) is
+  built on branch `public-api` — not merged, not deployed (`docs/api/public-v1.md`,
+  `docs/runbooks/public-api.md`).
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in

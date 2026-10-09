@@ -2,8 +2,8 @@
 
 Base: `https://api.csmarket.uz/api/v1/public`. JSON; money is a USD string with three decimals
 (`"12.345"`); time is ISO 8601 UTC. Design: `docs/superpowers/specs/2026-10-09-public-api-design.md`,
-ADR-0017. Operations: `docs/runbooks/public-api.md`. Webhooks («скоро») arrive with plan C: poll
-`GET /orders/{order_id}` until then.
+ADR-0017. Operations: `docs/runbooks/public-api.md`. Order changes can also be pushed to your server:
+see [Webhooks](#webhooks); polling `GET /orders/{order_id}` always works.
 
 Every example uses fake values: a token `csm_EXAMPLE…` and a trade link with `partner=1&token=FAKEFAKE`.
 
@@ -197,20 +197,163 @@ A delivered skin is never refunded automatically.
 
 Refunds go to the USD wallet only, once. No letters are sent for API orders.
 
+## Webhooks
+
+We tell your server when an order changes, so you need not poll. One URL per account (it stays
+when you reissue the key).
+
+| Method   | Path       | Does                                                                                                                  |
+| -------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
+| `PUT`    | `/webhook` | set or replace the URL `{"url": "https://…"}`; needs `Idempotency-Key` (≥ 16 chars); answers the webhook object below |
+| `GET`    | `/webhook` | the URL and the latest delivery, or `null` when none is set                                                           |
+| `DELETE` | `/webhook` | remove it (204, also when none was set); needs `Idempotency-Key`                                                      |
+
+```json
+{
+  "url": "https://partner.example/hooks/csmarket",
+  "created_at": "2026-10-09T08:00:00Z",
+  "last_delivery": {
+    "event": "order.paid",
+    "status": "sent",
+    "attempts": 1,
+    "last_status_code": 200,
+    "at": "2026-10-09T08:20:01Z"
+  }
+}
+```
+
+`last_delivery.status` is `pending`, `sent` or `failed`. The same `Idempotency-Key` with the same
+URL replays the answer; with another URL it is **409 `idempotency_mismatch`**.
+
+### The URL
+
+- `https` only; at most 500 characters; no user name or password in it, no `#fragment`, no
+  spaces or control characters. The host is lowercased (IDNA) and the URL stored in that form.
+- **Every address the host resolves to must be public.** Private, loopback, link-local,
+  multicast, reserved and unspecified addresses, the carrier-grade range `100.64.0.0/10`,
+  `198.18.0.0/15`, and addresses that embed an IPv4 (NAT64, 6to4, Teredo; an IPv4-mapped IPv6
+  address is read as its IPv4) are refused: **422 `webhook_url_private`**. A malformed URL is
+  **422 `webhook_url_invalid`**. DNS gets 3 seconds.
+- The check runs when you save **and before every delivery** (DNS may change). We connect to the
+  address we checked, with TLS verified against your hostname; redirects are not followed and
+  no proxy is used, so answer `2xx` at the URL itself. Your certificate must be valid.
+
+### Events
+
+| Event              | When the order reads…                      |
+| ------------------ | ------------------------------------------ |
+| `order.paid`       | `buying` (paid, the purchase is under way) |
+| `order.trade_sent` | `trade_sent`                               |
+| `order.delivered`  | `delivered`                                |
+| `order.refunded`   | `refunded`                                 |
+
+An event is sent whenever the order's public status changes, **once per (order, event)**. An
+intermediate event can be skipped: an order may go `buying` → `delivered` when the first report
+already shows the buyer accepted.
+
+```json
+{
+  "event": "order.trade_sent",
+  "event_id": "0b6f3a52-5f0e-4d7b-9c1e-2f4a8d1c7e90",
+  "created_at": "2026-10-09T08:21:30+00:00",
+  "order": {
+    "order_id": "A1B2C3D4",
+    "client_order_id": "shop-1042",
+    "status": "trade_sent",
+    "item": {
+      "item_id": "4f1c…",
+      "slug": "ak-47-redline-field-tested",
+      "market_hash_name": "AK-47 | Redline (Field-Tested)"
+    },
+    "price_usd": "14.250",
+    "created_at": "2026-10-09T08:20:00Z",
+    "trade": { "offer_sent_at": "2026-10-09T08:21:29Z", "accepted_at": null, "release_at": null },
+    "refund": null
+  }
+}
+```
+
+`order` is what `GET /orders/{order_id}` returned at the moment of the event; fetch the order again for the current state.
+
+**Delivery is at least once and not ordered.** An event can arrive twice (a retry after a slow
+answer) and a later event can arrive before an earlier one. Deduplicate on `event_id` (or on
+`(order.order_id, event)`), and trust `order.status` in the payload or `GET /orders/{order_id}`
+over the order of arrival.
+
+### Request and signature
+
+`POST` with `Content-Type: application/json`; the body is compact JSON with sorted keys. Headers:
+
+| Header            | Value                                     |
+| ----------------- | ----------------------------------------- |
+| `X-Csm-Event`     | the event name                            |
+| `X-Csm-Timestamp` | unix seconds when the attempt was made    |
+| `X-Csm-Signature` | hex HMAC-SHA256 of `"{timestamp}.{body}"` |
+
+The HMAC key is the **UTF-8 bytes of the lowercase hex SHA-256 of your token** (compute it from
+the token you hold; we keep only that hash). **Reissuing the key changes the signing key at
+once**: update your verifier the moment you reissue. Verify against the **raw body bytes** before
+parsing, compare in constant time and reject an old timestamp (we recommend 5 minutes).
+
+```python
+import hashlib
+import hmac
+import time
+
+TOKEN = "csm_EXAMPLEtokenNotReal"  # fake
+KEY = hashlib.sha256(TOKEN.encode()).hexdigest().encode()  # hex text, as UTF-8 bytes
+
+
+def verify(headers: dict[str, str], body: bytes, tolerance: int = 300) -> bool:
+    stamp = headers["X-Csm-Timestamp"]
+    if abs(time.time() - int(stamp)) > tolerance:
+        return False
+    expected = hmac.new(KEY, stamp.encode() + b"." + body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(expected, headers["X-Csm-Signature"])
+```
+
+```js
+const crypto = require("node:crypto");
+
+const TOKEN = "csm_EXAMPLEtokenNotReal"; // fake
+const KEY = crypto.createHash("sha256").update(TOKEN).digest("hex"); // hex text, used as a UTF-8 key
+
+function verify(headers, rawBody, toleranceSeconds = 300) {
+  const stamp = headers["x-csm-timestamp"];
+  if (Math.abs(Date.now() / 1000 - Number(stamp)) > toleranceSeconds) return false;
+  const expected = crypto
+    .createHmac("sha256", KEY)
+    .update(`${stamp}.`)
+    .update(rawBody)
+    .digest("hex");
+  const given = Buffer.from(headers["x-csm-signature"] ?? "", "utf8");
+  const wanted = Buffer.from(expected, "utf8");
+  return given.length === wanted.length && crypto.timingSafeEqual(given, wanted);
+}
+```
+
+### Retries
+
+A `2xx` answer within **5 seconds** is success. Anything else (another status, a timeout, a
+connection error) is retried after 1 minute, 5 minutes, 30 minutes, 2 hours, then every 2 hours,
+**10 attempts** in all, then the delivery is `failed` and is not sent again; read the order with
+`GET /orders/{order_id}`. `GET /webhook` shows the latest delivery. If the key is revoked or the
+webhook removed, pending deliveries end `failed`.
+
 ## Errors
 
 RFC 7807 `application/problem+json`; read `code`, not the text.
 
-| HTTP | `code`                                                                                                                        |
-| ---- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 401  | `unauthorized` — missing, unknown or revoked key                                                                              |
-| 402  | `insufficient_balance` — nothing was written                                                                                  |
-| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                  |
-| 404  | `item_not_found`, `order_not_found`                                                                                           |
-| 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired` |
-| 422  | `trade_link_invalid`, body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`                         |
-| 429  | `rate_limited`, with `Retry-After`                                                                                            |
-| 503  | `feed_unavailable` (feed not built yet), `rate_unavailable` (no FX snapshot ever recorded)                                    |
+| HTTP | `code`                                                                                                                                                                 |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 401  | `unauthorized` — missing, unknown or revoked key                                                                                                                       |
+| 402  | `insufficient_balance` — nothing was written                                                                                                                           |
+| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                                                           |
+| 404  | `item_not_found`, `order_not_found`                                                                                                                                    |
+| 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired`, `idempotency_mismatch` (webhook)        |
+| 422  | `trade_link_invalid`, body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key` |
+| 429  | `rate_limited`, with `Retry-After`                                                                                                                                     |
+| 503  | `feed_unavailable` (feed not built yet), `rate_unavailable` (no FX snapshot ever recorded)                                                                             |
 
 ## Limits
 
@@ -221,5 +364,5 @@ answer 429 too. A full feed pass every five minutes is well inside the limits.
 
 ## Not in v1
 
-Webhooks («скоро», plan C), selling skins, free-text search, topping up the USD wallet through
+Selling skins, free-text search, topping up the USD wallet through
 the API, USD → soʻm, a second key.

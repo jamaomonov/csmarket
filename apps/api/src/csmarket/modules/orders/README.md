@@ -109,6 +109,12 @@ ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
   key they had, newest first, 50 a page, a `status` filter that mirrors the mapping in SQL; on
   `ix_orders_user_created`). `api_key_id` stays on the order as the key that placed it.
 
+- `webhook_events.emit_order_event(db, order=, trade=, purchase=)` — called by every move that
+  changes an API order's public status; inserts one `api_webhook_deliveries` row per
+  `(order, event)` (`ON CONFLICT DO NOTHING`) with `NOTIFY api_webhooks`, in the move's
+  transaction. A site order or a user without a webhook costs nothing. The payload is the
+  public order view (no market, no trade link). An intermediate status can be skipped.
+
 ## Paying (`paying.py`, ruling R8)
 
 `pay_order(db, *, user_id, number, provider, locale, idempotency_key) -> OrderPayOut` serves

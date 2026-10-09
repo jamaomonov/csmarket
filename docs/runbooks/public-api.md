@@ -1,7 +1,7 @@
 # Runbook — public API
 
-Spec: `docs/superpowers/specs/2026-10-09-public-api-design.md`; ADR-0017. This file grows with
-plan C; today it covers the USD wallet and plan B (keys, the feed and buying). The contract is
+Spec: `docs/superpowers/specs/2026-10-09-public-api-design.md`; ADR-0017. It covers the
+USD wallet, keys, the feed, buying, webhooks and the admin pages. The contract is
 [`docs/api/public-v1.md`](../api/public-v1.md).
 
 ## USD-кошелёк
@@ -67,27 +67,24 @@ WHERE u.steam_id = :'sid';
 
 `key_id` (a uuid) is what logs and alerts carry; it names no person.
 
-## Set a tariff (until plan C's admin page)
+## Set a tariff
 
-The tariff is not shown to the customer on the site. `retail` is the storefront price, `cost` is
-the supplier cost (csmarket earns nothing on it: only for YuPay). It applies to the live key at
-once (the next call), and a reissue carries it over.
+Admin → «API-ключи» → the key → the tariff switch (`retail` or `cost`) with a reason (audited
+`api_keys.tariff` `{from, to, reason}`). The tariff is not shown to the customer on the site.
+`retail` is the storefront price, `cost` is the supplier cost (csmarket earns nothing on it: only
+for YuPay). It applies from the next order; placed orders keep their price. A reissue carries it
+over. The same tariff is refused (409 `tariff_unchanged`), and so is a revoked key (409
+`api_key_revoked`: find the owner's live key in the list). **Do not change it in SQL.**
 
-```sql
-\set sid '7656119XXXXXXXXXX'
-UPDATE api_keys SET pricing_profile = 'cost'
-WHERE user_id = (SELECT id FROM users WHERE steam_id = :'sid') AND revoked_at IS NULL;
--- back to the default: SET pricing_profile = 'retail'
-```
-
-It must report `UPDATE 1`; `UPDATE 0` means the user has no live key yet (they issue one first).
-The value is checked by the table (`retail` | `cost`).
+The list shows each key's orders, revenue and cost (refunded orders left out); the card shows
+the latest 20 orders and the webhook host with its last delivery.
 
 ## Revoke a key
 
 The customer revokes or reissues it on the site (profile → «API-ключ»). For a leaked key or an
-abuse, an operator does the same in SQL; the key stops working on the next call (auth reads the
-database each time):
+abuse, an operator uses admin → «API-ключи» → the key → «Отозвать» with a reason (audited
+`api_keys.revoke`); the key stops working on the next call (auth reads the database each time).
+SQL is only the fallback if the admin is down:
 
 ```sql
 \set sid '7656119XXXXXXXXXX'
@@ -122,18 +119,64 @@ WHERE channel = 'api' AND client_order_id = 'shop-1042';
   client reads (`sold_out`, `invalid_trade_link`, `trade_hold`, `supplier_refused`,
   `cancelled_by_support`; `price_moved` is reserved and not produced yet). Never refund by
   hand-editing the ledger.
-- **There is no admin refund today for a Skinslink / LIS-SKINS order, site or API:** the admin
-  refund (`admin_actions.refund_refusal`) refuses every order without a Waxpeer `SkinTrade` with
-  `order_not_refundable`. A held API order therefore cannot be settled from the admin yet. What
-  to do: check the purchase in the source's cabinet (was it made, is the offer out); wait for the
-  reconcile to settle it; if it stays held, escalate to the owner. An admin refund for these
-  sources is planned (plan C).
+- **A held order of any source** is settled from the admin («Заказы» → the order → «Вернуть
+  деньги на баланс»); for Skinslink / LIS-SKINS see the next section.
 - A delivered skin is never refunded automatically. A dispute over a delivered order is a
   decision for the owner.
 - «внимание» on the order in the admin: handle it as for a site order (`orders.md`).
 - Duplicate complaints: a repeated `client_order_id` answered 409 `duplicate_client_order_id`
   and charged nothing; check there is exactly one `orders` row for it.
 - `402 insufficient_balance` from the client is the dollar balance; credit it by hand as above.
+
+## Refund of a Skinslink / LIS-SKINS order
+
+Site or API order, ADR-0018. Press «Вернуть деньги на баланс» in the admin (the button is hidden
+while the stored status shows the purchase plainly alive). The API asks the supplier **once**
+(4 s, no lock held) and books only when it confirms the purchase did not happen:
+
+- Skinslink `failed` / `canceled` for our `merchant_tx_id` and purchase id;
+- LIS-SKINS `return` that is not a rollback, for every skin of ours in the answer, every entry
+  readable and the ids matching;
+- an empty answer, for a row older than 10 minutes with no market purchase id and no lost buy
+  answer.
+
+Anything else is **409 `order_in_flight`** («Скин ещё в пути»): the skin may still reach the
+buyer, do not force it; wait or look in the supplier cabinet. A failed or slow lookup is **409
+`source_unavailable`**: nothing was booked, try again in a minute. A `trade_sent` order becomes
+`returned`, a `buying` one `failed`; an API client reads `refunded` with
+`cancelled_by_support`, and the money goes to the USD wallet, once. A `reverted` Skinslink order
+or a LIS-SKINS rollback return means the skin was taken back after it was accepted: it stays with
+the attention path, not this button. Retry still refuses these sources.
+
+## A webhook does not arrive
+
+A client says it gets no events (or too many). Look at the delivery rows by **order number** and
+never print the URL (`api_webhooks.url` is the partner's address; admin shows the host only):
+
+```sql
+SELECT d.event, d.status, d.attempts, d.last_status_code, d.last_error,
+       d.next_attempt_at, d.sent_at
+FROM api_webhook_deliveries d JOIN orders o ON o.id = d.order_id
+WHERE o.number = 'A1B2C3D4'
+ORDER BY d.created_at;
+```
+
+- `pending` with a future `next_attempt_at`: the retry schedule is 1 m, 5 m, 30 m, 2 h, then
+  every 2 h, 10 attempts in all. `last_status_code` is the partner's answer; `last_error` is
+  `http_<code>`, `timeout`, `connect` or `private`.
+- `private`: the URL's host now resolves to a non-public address. The partner fixes DNS or sets
+  a new URL; the row retries on its own.
+- `failed` with `no_key` or `no_webhook`: the key was revoked or the webhook removed. After 10
+  attempts a delivery stays `failed`; there is no resend (`docs/tech-debt.md`). The client reads
+  the order with `GET /public/orders/{id}`.
+- No row for an event: no webhook was set when the order moved, the order is a site order, or
+  that status event was skipped (an order may go `buying` → `delivered`). One row per
+  (order, event) at most.
+- A signature mismatch on the client side: after a **reissue** the signing key changed at once.
+  The client must hash the new token; also the body must be checked as raw bytes.
+- The worker is not draining: check `api_webhooks` in the worker's log and queue; the outcome
+  counter `csmarket_api_webhooks_total{event,outcome}`. Log lines carry the delivery id, event,
+  outcome and host, never the URL.
 
 ## The feed answers 503 `feed_unavailable`
 

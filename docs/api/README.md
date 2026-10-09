@@ -339,8 +339,8 @@ skinslink: AdminSkinslinkPurchaseOut | null, lisskins: AdminLisskinsPurchaseOut 
   Skinslink order has `skinslink` (its purchase) and no `trade`, a LIS-SKINS order has
   `lisskins` `{custom_id, skin_id, purchase_id, status, return_reason, error, offer_id,
 offer_url, offer_expiry_at, amount_usd, buy_pending, buy_unconfirmed_at, attention_reason,
-resolved_at}` and no `trade`. `resolve` works on either purchase's attention; refund and
-  retry refuse them (409) for now, and the trades list does not show them.
+resolved_at}` and no `trade`. `resolve` works on either purchase's attention; refund asks the supplier first (ADR-0018,
+  below), retry still refuses them (409), and the trades list does not show them.
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,
@@ -348,7 +348,14 @@ resolved_at}` and no `trade`. `resolve` works on either purchase's attention; re
   once-accepted trade under the order), `order_not_refundable`, `order_busy`,
   `waxpeer_unavailable`. Asks Waxpeer before it books (one lookup, 4 s; ADR-0007 Y), so it
   can take up to ~4 s; a `waxpeer_unavailable` booked nothing and the same key may be sent
-  again.
+  again. **A Skinslink or LIS-SKINS order** (site or API; ADR-0018) is refunded the same way
+  after one supplier status call (4 s, no lock): Skinslink `failed` / `canceled`, a LIS-SKINS
+  non-rollback `return`, or an empty answer for a row older than 10 minutes with no purchase
+  id and no lost buy answer; anything else, or an answer about another purchase, is 409
+  `order_in_flight`; also `order_needs_attention` while an attention blocks it. A lookup that
+  fails or times out is 409 **`source_unavailable`** and books nothing (the same key may be
+  sent again). A `trade_sent` order becomes `returned`, a `buying` one `failed`; an API order's
+  money goes to its USD wallet and the partner reads `refunded` + `cancelled_by_support`.
 - `POST /admin/orders/{number}/retry` (no body) → detail. 409 `not_retryable` (also when a
   purchase is on record), `order_busy`.
 - Every write **requires** `Idempotency-Key` (16..160 chars; 422 otherwise); a replay returns
@@ -504,6 +511,23 @@ attention, by_day [{day, sales_count, revenue_uzs, margin_usd}], waxpeer {balanc
 read_at}, skinslink {available_usd, hold_usd, read_at}, lisskins {available_usd, locked_usd,
 read_at}}` (a balance is `null` when unknown; `attention` counts every source); days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.
 
+### Admin API keys (ADR-0017, plan C)
+
+Admin only; the writes require `Idempotency-Key` (16..160 chars) and replay like the other admin
+writes. The token is never readable.
+
+- `GET /admin/api-keys?q=&cursor=&limit=` → `{items: [{id, user, pricing_profile, created_at,
+last_used_at, revoked_at, orders, revenue_usd, cost_usd}], next_cursor}`: live keys first, newest
+  first; `q` is part of the owner's display name; `orders`, `revenue_usd` and `cost_usd` leave
+  refunded orders out.
+- `GET /admin/api-keys/{key_id}` → `{key, orders (latest 20), webhook: {host, last_delivery} | null}`:
+  the webhook shows its **host only**.
+- `PUT /admin/api-keys/{key_id}/tariff` `{pricing_profile: retail | cost, reason}` → the card.
+  409 `tariff_unchanged` (same tariff), 409 `api_key_revoked`. Audited `api_keys.tariff`
+  `{from, to, reason}`; applies to the next order, placed orders keep their price.
+- `POST /admin/api-keys/{key_id}/revoke` `{reason}` → the card. 409 `api_key_revoked` when already
+  revoked. Audited `api_keys.revoke`; the key's next public request is 401.
+
 ## Public API v1 (ADR-0017, plan B)
 
 `/api/v1/public/*`, authenticated by `Authorization: Bearer csm_…` (not the Steam session): a
@@ -521,5 +545,10 @@ errors, limits and curl examples: [`public-v1.md`](./public-v1.md). Notes:
 - **Caching.** The feed answers a strong `ETag` and 304 on `If-None-Match`; pages are
   1000 items with a cursor `{snapshot}.{page}` (stale: 409 `cursor_expired`; no snapshot yet:
   503 `feed_unavailable`).
+- **Webhooks.** `PUT / GET / DELETE /public/webhook` (a key, not a session; `Idempotency-Key`
+  ≥ 16 chars on `PUT` and `DELETE`, the same key with another URL is 409 `idempotency_mismatch`;
+  422 `webhook_url_invalid` / `webhook_url_private`). Events, payload, signature and retries:
+  `public-v1.md`, Webhooks. The URL is personal data of the partner's infrastructure: stored, never
+  logged (`docs/security/pii-handling.md`).
 - **No external call** on any public request: the feed and the offers read our own tables and
   Redis (AGENTS.md §11).

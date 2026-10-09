@@ -69,10 +69,40 @@ over unchanged and a transaction can still be atomic across both currencies.
 - **No external call on the public path.** The feed and offers read our own tables and Redis;
   the trade link is checked for form only; the buy happens in the worker.
 
+### Plan C consequences (rulings R6–R10)
+
+- **R6 — webhooks are an outbox.** `api_webhooks` (one URL per user, it follows reissues) and
+  `api_webhook_deliveries` (unique per `(order, event)`). The row and `NOTIFY api_webhooks`
+  are written in the transaction of the order's move (`orders.webhook_events`), so an event is
+  neither lost nor sent for a rolled-back move. The worker drains it (`webhook_sender`):
+  5 s timeout, 10 attempts (1 m, 5 m, 30 m, 2 h, then every 2 h), then `failed`. Delivery is
+  at least once and unordered; the payload carries `event_id` and the public order.
+- **R7 — the URL is a request we make for someone else, so it is checked hard** (SSRF): `https`
+  only, no userinfo / fragment, normalised host, every resolved address public (private,
+  loopback, link-local, CGNAT, 198.18/15 and the IPv4-embedding forms are refused), DNS bounded
+  at 3 s, checked at save **and before every send**. The connection is pinned to the checked
+  address with TLS verified against the hostname; no redirects, no env proxies.
+- **R8 — signing.** `HMAC-SHA256` over `{timestamp}.{body}`, key = the UTF-8 bytes of the
+  hex SHA-256 of the token. We hold that hash anyway, so no second secret exists; the price is
+  that **a reissue changes the signing key at once**, documented for partners.
+- **R9 — admin.** The API keys page (list with orders / revenue / cost, card, tariff change,
+  revoke; audited `api_keys.tariff` / `api_keys.revoke`) replaces SQL for the tariff. The
+  webhook is shown by host only.
+- **R10 — refund of Skinslink / LIS-SKINS orders** by an admin, after one supplier call
+  ([ADR-0018](./0018-admin-refund-skinslink-lisskins.md)); a partner then reads `refunded` +
+  `cancelled_by_support`.
+- **Metrics.** `csmarket_public_api_requests_total{route,status}`,
+  `csmarket_public_api_orders_total{profile,outcome}`, `csmarket_api_webhooks_total{event,outcome}`
+  (`docs/architecture/metrics.md`); labels are bounded and never name a key or a person.
+- **PII.** A webhook URL is stored and never logged (host only in logs and admin).
+
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).
 - A feed refresh lags by up to 60 s, and the feed is 503 for ~400 s only on a cold Redis or after the scheduler was down for more than ~25 minutes (a scheduler restart alone keeps serving the old snapshot for up to 1500 s).
+- A webhook that fails all 10 attempts stays failed; the partner falls back to polling.
+- Our own server makes outbound requests to partner-chosen hosts; the address checks, the
+  pinning and the lack of redirects are the whole defence and must not be loosened.
 - We carry the FX gap between the converted rate and the day we buy; the uplift covers it.
 
 ## Validation
