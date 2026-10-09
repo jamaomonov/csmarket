@@ -15,16 +15,30 @@ from csmarket.modules.users.service import (
     set_roles,
     upsert_user_by_steam,
 )
-from csmarket.modules.users.tradelink import TradeLink, mask_trade_link, parse_tradelink
+from csmarket.modules.users.tradelink import (
+    CheckResult,
+    HoldChecker,
+    TradeLink,
+    TradelinkChecker,
+    check_trade_link,
+    mask_trade_link,
+    parse_tradelink,
+)
+from csmarket.modules.users.tradelink_checkers import tradelink_checkers
 
 __all__ = [
     "STEAM64_BASE",
+    "CheckResult",
+    "HoldChecker",
     "TradeLink",
+    "TradelinkChecker",
     "User",
+    "check_trade_link",
     "get_user_by_id",
     "get_user_by_steam_id",
     "mask_trade_link",
     "parse_tradelink",
     "set_roles",
+    "tradelink_checkers",
     "upsert_user_by_steam",
 ]

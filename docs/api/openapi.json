@@ -139,9 +139,23 @@
             "title": "Created At",
             "type": "string"
           },
+          "custom_limits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Custom Limits",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "ip_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ip Allowlist",
+            "type": "array"
           },
           "last_used_at": {
             "anyOf": [
@@ -154,6 +168,9 @@
               }
             ],
             "title": "Last Used At"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/AdminKeyLimits"
           },
           "orders": {
             "title": "Orders",
@@ -196,7 +213,10 @@
           "revoked_at",
           "orders",
           "revenue_usd",
-          "cost_usd"
+          "cost_usd",
+          "limits",
+          "custom_limits",
+          "ip_allowlist"
         ],
         "title": "AdminApiKeyRow",
         "type": "object"
@@ -350,6 +370,108 @@
           "reason"
         ],
         "title": "AdminEntryOut",
+        "type": "object"
+      },
+      "AdminKeyLimits": {
+        "description": "The limits per minute as the key enforces them (own value or the default).",
+        "properties": {
+          "check_per_min": {
+            "title": "Check Per Min",
+            "type": "integer"
+          },
+          "feed_per_min": {
+            "title": "Feed Per Min",
+            "type": "integer"
+          },
+          "orders_per_min": {
+            "title": "Orders Per Min",
+            "type": "integer"
+          },
+          "read_per_min": {
+            "title": "Read Per Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min",
+          "check_per_min"
+        ],
+        "title": "AdminKeyLimits",
+        "type": "object"
+      },
+      "AdminLimitsIn": {
+        "additionalProperties": false,
+        "description": "Set the key's limits per minute (``null`` = the default), with a reason.",
+        "properties": {
+          "check_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Per Min"
+          },
+          "feed_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feed Per Min"
+          },
+          "orders_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orders Per Min"
+          },
+          "read_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Per Min"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min",
+          "check_per_min",
+          "reason"
+        ],
+        "title": "AdminLimitsIn",
         "type": "object"
       },
       "AdminLisskinsPurchaseOut": {
@@ -3325,6 +3447,13 @@
             "title": "Id",
             "type": "string"
           },
+          "ip_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ip Allowlist",
+            "type": "array"
+          },
           "last_used_at": {
             "anyOf": [
               {
@@ -3346,7 +3475,8 @@
           "id",
           "pricing_profile",
           "created_at",
-          "last_used_at"
+          "last_used_at",
+          "ip_allowlist"
         ],
         "title": "ApiKeyOut",
         "type": "object"
@@ -4341,6 +4471,25 @@
         "title": "InventoryOut",
         "type": "object"
       },
+      "IpAllowlistIn": {
+        "additionalProperties": false,
+        "description": "The key's new IP allow-list; ``[]`` lets any address in.",
+        "properties": {
+          "ip_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 21,
+            "title": "Ip Allowlist",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ip_allowlist"
+        ],
+        "title": "IpAllowlistIn",
+        "type": "object"
+      },
       "ItemPricingIn": {
         "additionalProperties": false,
         "description": "One item's pricing overrides; ``null`` clears one.",
@@ -4654,6 +4803,11 @@
       "MeLimitsOut": {
         "description": "Requests allowed per minute and key.",
         "properties": {
+          "check_per_min": {
+            "description": "Trade-link checks (POST /tradelink/check) allowed per minute.",
+            "title": "Check Per Min",
+            "type": "integer"
+          },
           "feed_per_min": {
             "title": "Feed Per Min",
             "type": "integer"
@@ -4670,7 +4824,8 @@
         "required": [
           "read_per_min",
           "orders_per_min",
-          "feed_per_min"
+          "feed_per_min",
+          "check_per_min"
         ],
         "title": "MeLimitsOut",
         "type": "object"
@@ -6123,6 +6278,30 @@
               }
             ],
             "title": "Release At"
+          },
+          "seller_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sender's Steam name when the market gives it; usually null.",
+            "title": "Seller Name"
+          },
+          "steam_offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Steam's trade offer id; the buyer accepts it at https://steamcommunity.com/tradeoffer/{id}/",
+            "title": "Steam Offer Id"
           }
         },
         "required": [
@@ -8008,6 +8187,63 @@
         "title": "TopupOut",
         "type": "object"
       },
+      "TradeLinkCheckIn": {
+        "additionalProperties": false,
+        "description": "A buyer's Steam trade link to check.",
+        "properties": {
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_link"
+        ],
+        "title": "TradeLinkCheckIn",
+        "type": "object"
+      },
+      "TradeLinkCheckOut": {
+        "description": "``unavailable`` means the check could not run: do not block a purchase on it.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_link",
+                  "private_inventory",
+                  "trade_ban",
+                  "hold",
+                  "not_found"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the link is bad; null for ok and unavailable.",
+            "title": "Reason"
+          },
+          "verdict": {
+            "description": "ok: the link can receive a trade. bad: it cannot, see reason. unavailable: the check could not run; do not block a purchase on it.",
+            "enum": [
+              "ok",
+              "bad",
+              "unavailable"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason"
+        ],
+        "title": "TradeLinkCheckOut",
+        "type": "object"
+      },
       "TradeLinkIn": {
         "additionalProperties": false,
         "description": "A pasted trade link.",
@@ -8699,6 +8935,84 @@
           }
         },
         "summary": "An API key's card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}/limits": {
+      "put": {
+        "description": "Per-minute limits (1..10000, ``null`` = the default); 409 ``api_key_revoked`` /\n``limits_unchanged``.",
+        "operationId": "put_limits_api_v1_admin_api_keys__key_id__limits_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLimitsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the key's limits",
         "tags": [
           "admin"
         ]
@@ -12396,6 +12710,82 @@
         ]
       }
     },
+    "/api/v1/me/api-key/ip-allowlist": {
+      "put": {
+        "description": "Replace the live key's allow-list; ``[]`` lets any address in.\n\nIt governs the public API only, never this route, so a user can always fix a wrong list.\nA replay answers the key as it stands. 404 ``api_key_missing`` without a live key; 422\n``ip_allowlist_invalid`` with the ``index`` of the bad entry.",
+        "operationId": "set_ip_allowlist_api_v1_me_api_key_ip_allowlist_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IpAllowlistIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set my API key's IP allow-list",
+        "tags": [
+          "api-key"
+        ]
+      }
+    },
     "/api/v1/me/email/verification": {
       "post": {
         "description": "Queue a new confirmation letter for the current, unconfirmed email.\n\n409 ``email_missing`` / ``email_already_verified``; 429 ``email_verify_cooldown`` within\n60 s of the last letter; 429 past the ``email-verify`` bucket. A repeated\n``Idempotency-Key`` replays the first answer and sends nothing.",
@@ -13699,6 +14089,75 @@
           }
         },
         "summary": "One API order of this account",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/tradelink/check": {
+      "post": {
+        "description": "Whether a Steam trade can be sent to ``trade_link`` now (advisory).\n\nNo ``Idempotency-Key``: it writes nothing and a repeat is the intended use (the verdict is\ncached 10 minutes). ``POST`` keeps the link's token out of URLs and access logs.\n``unavailable`` means the check could not run: do not block a purchase on it.",
+        "operationId": "check_trade_link_route_api_v1_public_tradelink_check_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeLinkCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeLinkCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Check a trade link before buying",
         "tags": [
           "public-api"
         ]

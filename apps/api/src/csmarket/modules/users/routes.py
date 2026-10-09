@@ -8,7 +8,6 @@ from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
-from csmarket.core.config import get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.idempotency import (
     IDEMPOTENCY_HEADER,
@@ -17,8 +16,7 @@ from csmarket.core.idempotency import (
     save_replay,
 )
 from csmarket.core.redis import get_redis
-from csmarket.modules.auth.api import current_user, guard_ip, trade_hold_days
-from csmarket.modules.skins.api import FakeTradeClient, WaxpeerClient, fake_active
+from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.users.email_flow import verification_sent_at
 from csmarket.modules.users.models import User
 from csmarket.modules.users.schemas import MeOut, MePatchIn, TradeLinkIn, TradeLinkOut
@@ -34,34 +32,11 @@ from csmarket.modules.users.tradelink import (
     check_trade_link,
     parse_tradelink,
 )
+from csmarket.modules.users.tradelink_checkers import tradelink_checkers
+
+__all__ = ["router", "tradelink_checkers"]
 
 router = APIRouter(prefix="/me", tags=["me"])
-_ADVISORY_TIMEOUT = 4.0
-
-
-class _SteamHold:
-    """Steam's hold check with our key; no key → no number (ruling P10)."""
-
-    async def trade_hold_days(self, steam_id: str, token: str) -> int | None:
-        """Days Steam would hold a trade to this link, or ``None`` without a key."""
-        key = get_settings().steam_api_key
-        if not key:
-            return None
-        return await trade_hold_days(int(steam_id), token, api_key=key)
-
-
-def tradelink_checkers() -> tuple[TradelinkChecker, HoldChecker]:
-    """Upstream checkers; overridden in tests via ``app.dependency_overrides``.
-
-    Under the dev Waxpeer fake every link passes Waxpeer's half of the check.
-    """
-    s = get_settings()
-    if fake_active(s):
-        return FakeTradeClient(get_redis()), _SteamHold()
-    waxpeer = WaxpeerClient(
-        api_key=s.waxpeer_api_key, base_url=s.waxpeer_base_url, timeout_seconds=_ADVISORY_TIMEOUT
-    )
-    return waxpeer, _SteamHold()
 
 
 async def _replayed(
@@ -155,5 +130,7 @@ async def check_my_trade_link(
     await db.commit()
     waxpeer, hold = checkers
     result = await check_trade_link(link, waxpeer=waxpeer, hold=hold, redis=get_redis())
-    await record_trade_link_check(db, user, verdict=result.verdict, reason=result.reason)
+    # ``not_found`` exists for the public API; the site's reason set stays as it was.
+    reason = "invalid" if result.reason == "not_found" else result.reason
+    await record_trade_link_check(db, user, verdict=result.verdict, reason=reason)
     return TradeLinkOut.of(user)

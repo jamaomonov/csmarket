@@ -38,7 +38,7 @@ _CACHE_PREFIX = "users:tradelink:"
 BREAKER_KEY = "users:tradelink:breaker"
 
 Verdict = Literal["ok", "warn", "bad"]
-Reason = Literal["invalid", "private", "trade_ban", "hold", "unavailable"]
+Reason = Literal["invalid", "private", "trade_ban", "hold", "not_found", "unavailable"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +134,8 @@ def _reason_for(info: str) -> Reason:
         return "private"
     if "ban" in text:
         return "trade_ban"
+    if "not found" in text or "does not exist" in text:
+        return "not_found"
     return "invalid"
 
 

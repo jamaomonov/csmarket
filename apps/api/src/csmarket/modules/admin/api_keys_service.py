@@ -22,6 +22,7 @@ from csmarket.modules.admin.api_keys_schemas import (
     AdminApiKeyDelivery,
     AdminApiKeyRow,
     AdminApiKeyWebhook,
+    AdminKeyLimits,
     Tariff,
 )
 from csmarket.modules.admin.audit import record
@@ -30,9 +31,11 @@ from csmarket.modules.admin.orders_service import recent_key_orders
 from csmarket.modules.admin.users_service import remember, replayed
 from csmarket.modules.orders.api import Order
 from csmarket.modules.public_api.api import (
+    LIMIT_COLUMNS,
     ApiKey,
     ApiWebhook,
     ApiWebhookDelivery,
+    effective_limits,
     revoke_key,
     set_pricing_profile,
 )
@@ -82,6 +85,7 @@ def _row(
     key: ApiKey, name: str | None, sales: tuple[int, Decimal, Decimal] | None
 ) -> AdminApiKeyRow:
     orders, revenue, cost = sales or (0, Decimal(0), Decimal(0))
+    limits = effective_limits(key)
     return AdminApiKeyRow(
         id=key.id,
         user=AdminOrderUser(id=key.user_id, display_name=name),
@@ -92,6 +96,14 @@ def _row(
         orders=orders,
         revenue_usd=_usd(revenue),
         cost_usd=_usd(cost),
+        limits=AdminKeyLimits(
+            read_per_min=limits["read"],
+            orders_per_min=limits["order"],
+            feed_per_min=limits["feed"],
+            check_per_min=limits["check"],
+        ),
+        custom_limits=[c for c in LIMIT_COLUMNS.values() if getattr(key, c) is not None],
+        ip_allowlist=list(key.ip_allowlist),
     )
 
 
@@ -194,6 +206,35 @@ async def set_tariff(
         target_type="api_key",
         target_id=key.id,
         payload={"from": before, "to": profile, "reason": reason},
+    )
+
+
+async def set_limits(
+    db: AsyncSession, *, admin: User, key: ApiKey, values: dict[str, int | None], reason: str
+) -> None:
+    """Set the key's four limits (``None`` = the default); audited ``api_keys.limits``.
+
+    ``values`` is keyed by column name (``read_per_min`` ...).
+
+    Raises:
+        ConflictError: ``api_key_revoked``; ``limits_unchanged`` -- nothing differs.
+    """
+    if key.revoked_at is not None:
+        raise ConflictError("the API key is revoked", code="api_key_revoked")
+    columns = list(LIMIT_COLUMNS.values())
+    before = {c: getattr(key, c) for c in columns}
+    after = {c: values[c] for c in columns}
+    if before == after:
+        raise ConflictError("the limits are already set so", code="limits_unchanged")
+    for column, value in after.items():
+        setattr(key, column, value)
+    await record(
+        db,
+        actor_id=admin.id,
+        action="api_keys.limits",
+        target_type="api_key",
+        target_id=key.id,
+        payload={"from": before, "to": after, "reason": reason},
     )
 
 

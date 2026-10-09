@@ -12,9 +12,11 @@ import {
   API_KEY_KEY,
   ApiKeyNotAllowedError,
   getApiKey,
+  IpAllowlistInvalidError,
   issueApiKey,
   mintApiKeyKey,
   revokeApiKey,
+  setIpAllowlist,
   type ApiKeyOut,
 } from "@/lib/api-key";
 
@@ -246,6 +248,7 @@ function LiveKey({ apiKey, when, confirm, busy, onConfirm, onReissue, onRevoke }
             : t("neverUsed")}
         </li>
       </ul>
+      <IpAllowlist apiKey={apiKey} busy={busy} />
       {confirm === null ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
@@ -295,5 +298,124 @@ function LiveKey({ apiKey, when, confirm, busy, onConfirm, onReissue, onRevoke }
         </Notice>
       )}
     </>
+  );
+}
+
+interface IpAllowlistProps {
+  apiKey: ApiKeyOut;
+  busy: boolean;
+}
+
+/** «Разрешённые IP-адреса»: the list (or «Любой адрес») and a one-per-line editor. */
+function IpAllowlist({ apiKey, busy }: IpAllowlistProps) {
+  const t = useTranslations("web.apiKey.ipAllowlist");
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState("");
+  const [badLine, setBadLine] = useState<number | null>(null);
+  const save = useMutation({
+    mutationFn: (entries: string[]) => setIpAllowlist(entries, mintApiKeyKey()),
+    onSuccess: async () => {
+      setEditing(false);
+      setBadLine(null);
+      await qc.invalidateQueries({ queryKey: API_KEY_KEY });
+    },
+  });
+  const invalid = save.error instanceof IpAllowlistInvalidError ? save.error : null;
+  const [tooMany, setTooMany] = useState(false);
+  const failed = save.isError && invalid === null;
+
+  function open() {
+    setText(apiKey.ip_allowlist.join("\n"));
+    setBadLine(null);
+    setTooMany(false);
+    save.reset();
+    setEditing(true);
+  }
+
+  function submit() {
+    // Blank lines are skipped, so the server's index points at the n-th non-blank line.
+    const lines = text.split("\n").map((line, at) => ({ line: line.trim(), at }));
+    const kept = lines.filter((l) => l.line !== "");
+    setBadLine(null);
+    if (kept.length > 20) {
+      // The server's cap; say so without a round trip.
+      setTooMany(true);
+      return;
+    }
+    setTooMany(false);
+    save.mutate(
+      kept.map((l) => l.line),
+      {
+        onError: (err) => {
+          if (err instanceof IpAllowlistInvalidError && err.index !== null) {
+            setBadLine(kept[err.index]?.at ?? err.index);
+          }
+        },
+      },
+    );
+  }
+
+  return (
+    <section className="mt-4" aria-label={t("title")}>
+      <h3 className="text-sm font-semibold">{t("title")}</h3>
+      {editing ? (
+        <>
+          <textarea
+            value={text}
+            rows={4}
+            spellCheck={false}
+            aria-label={t("title")}
+            aria-describedby="ip-allowlist-hint"
+            className="num bg-bg/40 border-border mt-2 w-full rounded-lg border px-3 py-2 text-[13px]"
+            onChange={(e) => {
+              setText(e.target.value);
+            }}
+          />
+          <p id="ip-allowlist-hint" className="text-fg-muted mt-1 text-xs">
+            {t("hint")}
+          </p>
+          {invalid !== null || tooMany ? (
+            <Notice tone="bad" role="alert">
+              {badLine !== null && !tooMany ? t("badLine", { n: badLine + 1 }) : t("badTooMany")}
+            </Notice>
+          ) : null}
+          {failed ? (
+            <Notice tone="bad" role="alert">
+              {t("failed")}
+            </Notice>
+          ) : null}
+          <div className="mt-2 flex gap-2">
+            <Button size="sm" disabled={busy || save.isPending} onClick={submit}>
+              {t("save")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setEditing(false);
+              }}
+            >
+              {t("cancel")}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <>
+          {apiKey.ip_allowlist.length === 0 ? (
+            <p className="text-fg-muted mt-1 text-sm">{t("any")}</p>
+          ) : (
+            <ul className="num text-fg-muted mt-1 flex flex-col gap-0.5 text-sm">
+              {apiKey.ip_allowlist.map((entry) => (
+                <li key={entry}>{entry}</li>
+              ))}
+            </ul>
+          )}
+          <Button variant="secondary" size="sm" className="mt-2" disabled={busy} onClick={open}>
+            {t("edit")}
+          </Button>
+        </>
+      )}
+    </section>
   );
 }

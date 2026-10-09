@@ -594,6 +594,17 @@
     "revokeYes": "Yes, revoke",
     "cancel": "Cancel",
     "docs": "API documentation",
-    "copyManually": "Copy the key by hand"
+    "copyManually": "Copy the key by hand",
+    "ipAllowlist": {
+      "title": "Allowed IP addresses",
+      "any": "Any address",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "hint": "The outgoing IP of the server your requests come from. Empty means any address. One address or network per line.",
+      "badLine": "Line {n}: not an IP address",
+      "badTooMany": "Too many addresses. 20 at most.",
+      "failed": "Something went wrong. Try again."
+    }
   }
 }

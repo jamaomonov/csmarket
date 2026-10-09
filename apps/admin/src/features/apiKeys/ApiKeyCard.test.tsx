@@ -12,6 +12,7 @@ const api = vi.hoisted(() => ({
   listApiKeys: vi.fn(),
   getApiKeyCard: vi.fn(),
   setApiKeyTariff: vi.fn(),
+  setApiKeyLimits: vi.fn(),
   revokeApiKey: vi.fn(),
 }));
 vi.mock("./api", () => api);
@@ -26,6 +27,9 @@ const KEY = {
   orders: 1,
   revenue_usd: "10.000",
   cost_usd: "9.000",
+  limits: { read_per_min: 600, orders_per_min: 10, feed_per_min: 1, check_per_min: 30 },
+  custom_limits: ["read_per_min"],
+  ip_allowlist: ["203.0.113.0/24", "2001:db8::1/128"],
 };
 const CARD = {
   key: KEY,
@@ -70,6 +74,23 @@ describe("ApiKeyCard", () => {
       "href",
       `/orders/${ORDER_ROW.number}`,
     );
+  });
+
+  it("shows the effective limits, marking defaults, and the allow-list", async () => {
+    renderCard();
+    const limits = await screen.findByTestId("key-limits");
+    expect(limits).toHaveTextContent("Чтение600");
+    expect(limits).not.toHaveTextContent("600 · по умолчанию");
+    expect(limits).toHaveTextContent("Заказы10 · по умолчанию");
+    expect(screen.getByTestId("key-allowlist")).toHaveTextContent(
+      "203.0.113.0/24, 2001:db8::1/128",
+    );
+  });
+
+  it("says any address for an empty allow-list", async () => {
+    api.getApiKeyCard.mockResolvedValue({ ...CARD, key: { ...KEY, ip_allowlist: [] } });
+    renderCard();
+    expect(await screen.findByTestId("key-allowlist")).toHaveTextContent("любой адрес");
   });
 
   it("switches the tariff only with a reason, then shows the new tariff", async () => {

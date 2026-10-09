@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     SmallInteger,
     String,
     Text,
@@ -52,6 +53,11 @@ class ApiKey(Base):
     ip_allowlist: Mapped[list[str]] = mapped_column(
         ARRAY(String(43)), nullable=False, server_default=text("'{}'"), default=list
     )
+    #: Requests a minute for this key; ``None`` = the default of ``limits.LIMITS``.
+    read_per_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    orders_per_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    feed_per_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    check_per_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
     )
@@ -63,6 +69,10 @@ class ApiKey(Base):
         CheckConstraint(
             "pricing_profile IN (" + ", ".join(f"'{p}'" for p in PRICING_PROFILES) + ")",
             name="pricing_profile",
+        ),
+        *(
+            CheckConstraint(f"{c} IS NULL OR {c} > 0", name=f"{c}_positive")
+            for c in ("read_per_min", "orders_per_min", "feed_per_min", "check_per_min")
         ),
         Index(
             "uq_api_keys_live_user",

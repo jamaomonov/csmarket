@@ -96,6 +96,31 @@ over unchanged and a transaction can still be atomic across both currencies.
   (`docs/architecture/metrics.md`); labels are bounded and never name a key or a person.
 - **PII.** A webhook URL is stored and never logged (host only in logs and admin).
 
+### v1.1 consequences
+
+Spec `2026-10-09-public-api-v1-1-design.md`. Only fields and routes are added.
+
+1. **Limits per key.** Nullable columns on `api_keys` (`NULL` = the default of `limits.py`: read 60,
+   order 10, feed 1, check 30); the admin edits them on the key's card, audited `api_keys.limits`.
+2. **No hold flag outside.** No new status or field; the outcome comes from the supplier's fact
+   only, and the internal review stays in the admin.
+3. **The trade-link check is an advisory `POST`** without `Idempotency-Key`, with its own per-key
+   `check` limit.
+4. **`trade.steam_offer_id` and `trade.seller_name`**, both nullable.
+5. **Limits and the IP allow-list carry over on reissue,** like the tariff; four limits, including
+   `check_per_min`.
+6. **A LIS-SKINS repeat refused while `market/info` shows nothing stays as it is:** the
+   `buy_unconfirmed` attention, the order stays `buying`, an admin decides (refunding could pay
+   twice). The 30-minute alert tells ops.
+7. **Alerts go live:** Alertmanager starts with this release in its own compose profile
+   `alerts`; the backup stays in `ops`.
+8. **The user edits the IP allow-list in the profile;** the admin sees it read-only.
+9. **`ambiguous_trade` is not "several trades of one order"** and changes nothing for the partner.
+10. **A link that is not a Steam trade link** answers `200` `bad` / `invalid_link` with no upstream
+    call, not 422.
+11. **`seller_name` stays in the contract** though it is `null` for API orders today; documented
+    as "usually `null`".
+
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).

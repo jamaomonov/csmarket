@@ -143,9 +143,10 @@ build: ## Build all Docker images locally
 	$(COMPOSE_DEV) build
 
 .PHONY: gen-api
-gen-api: ## Regenerate docs/api/openapi.json + packages/api-client
+gen-api: ## Regenerate docs/api/openapi.json, packages/api-client and the docs.csmarket.uz schema
 	@if [ -d apps/api/src/csmarket ]; then \
-		cd apps/api && uv run python -m csmarket.scripts.export_openapi ../../docs/api/openapi.json && cd ../..; \
+		cd apps/api && uv run python -m csmarket.scripts.export_openapi ../../docs/api/openapi.json && \
+		uv run python -m csmarket.scripts.export_public_docs ../../docs/api/partner-guide.md ../../infra/docs-site && cd ../..; \
 		pnpm --filter @csmarket/api-client gen:api; \
 	else \
 		echo "apps/api not scaffolded yet"; \

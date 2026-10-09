@@ -128,10 +128,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: |
           cd apps/api && uv run python -m csmarket.scripts.export_openapi ../../docs/api/openapi.json
+          uv run python -m csmarket.scripts.export_public_docs ../../docs/api/partner-guide.md ../../infra/docs-site
           cd ../.. && pnpm --filter @csmarket/api-client gen:api
       - name: Fail if generated files drifted
         run: |
-          if [[ -n "$(git status --porcelain docs/api)" ]]; then
+          if [[ -n "$(git status --porcelain docs/api infra/docs-site)" ]]; then
             echo '::error::OpenAPI schema is out of date. Run make gen-api and commit.'
             git --no-pager diff
             exit 1

@@ -11,7 +11,8 @@ import {
   setApiKeyTariff,
   type Tariff,
 } from "./api";
-import { deliveryLabel, errorText, tariffLabel } from "./labels";
+import { deliveryLabel, errorText, LIMIT_LABELS, LIMIT_NAMES, tariffLabel } from "./labels";
+import { LimitsForm } from "./LimitsForm";
 import { ReasonDialog } from "./ReasonDialog";
 import { type AdminOrderRow } from "../orders/api";
 import { AttentionBadge, OrderStatusChip } from "../orders/StatusChip";
@@ -70,13 +71,14 @@ function Orders({ orders }: { orders: AdminOrderRow[] }) {
   );
 }
 
-type Panel = "none" | "tariff" | "revoke";
+type Panel = "none" | "tariff" | "revoke" | "limits";
 
 function CardBody({ card }: { card: AdminApiKeyCard }) {
   const qc = useQueryClient();
   const [panel, setPanel] = useState<Panel>("none");
   const tariffKey = useIdempotencyKey("admin-key-tariff");
   const revokeKey = useIdempotencyKey("admin-key-revoke");
+  const limitsKey = useIdempotencyKey("admin-key-limits");
   const k = card.key;
   const revoked = k.revoked_at !== null;
   const target: Tariff = k.pricing_profile === "cost" ? "retail" : "cost";
@@ -149,7 +151,50 @@ function CardBody({ card }: { card: AdminApiKeyCard }) {
             )}
           </dd>
         </div>
+        <div className="flex gap-3">
+          <dt className="text-fg-muted w-36 shrink-0">IP-allowlist</dt>
+          <dd data-testid="key-allowlist">
+            {k.ip_allowlist.length === 0 ? "любой адрес" : k.ip_allowlist.join(", ")}
+          </dd>
+        </div>
       </dl>
+      <section aria-labelledby="key-limits" className="space-y-2">
+        <h2 id="key-limits" className="text-lg font-semibold">
+          Лимиты в минуту
+        </h2>
+        <dl className="space-y-1 text-sm" data-testid="key-limits">
+          {LIMIT_NAMES.map((name) => (
+            <div key={name} className="flex gap-3">
+              <dt className="text-fg-muted w-36 shrink-0">{LIMIT_LABELS[name]}</dt>
+              <dd className="tabular-nums">
+                {k.limits[name]}
+                {!k.custom_limits.includes(name) && (
+                  <span className="text-fg-muted"> · по умолчанию</span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        {!revoked && panel !== "limits" && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setPanel("limits");
+            }}
+          >
+            Изменить
+          </Button>
+        )}
+        {!revoked && panel === "limits" && (
+          <LimitsForm
+            keyId={k.id}
+            current={Object.fromEntries(k.custom_limits.map((n) => [n, k.limits[n]]))}
+            idem={limitsKey}
+            onDone={done}
+            onClose={close}
+          />
+        )}
+      </section>
       {!revoked && (
         <div className="flex flex-wrap gap-2">
           <Button

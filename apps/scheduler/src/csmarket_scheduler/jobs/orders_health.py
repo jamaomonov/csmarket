@@ -18,6 +18,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.metrics import (
     mark_orders_health_success,
     set_orders_stuck,
+    set_public_api_buying_oldest,
     set_trades_attention,
     set_waxpeer_balance,
     set_waxpeer_balance_threshold,
@@ -58,6 +59,7 @@ async def run() -> Health | None:
         set_orders_stuck("buying", health.buying_stuck)
         set_orders_stuck("trade_sent_unpolled", health.trade_sent_unpolled)
         set_trades_attention(health.attention)
+        set_public_api_buying_oldest(health.api_buying_oldest_seconds)
         threshold = float(settings.waxpeer_balance_alert_usd)
         if health.waxpeer_balance_usd is not None:
             set_waxpeer_balance(float(health.waxpeer_balance_usd), threshold)
@@ -76,6 +78,7 @@ async def run() -> Health | None:
         buying_stuck=health.buying_stuck,
         trade_sent_unpolled=health.trade_sent_unpolled,
         attention=health.attention,
+        api_buying_oldest_seconds=round(health.api_buying_oldest_seconds),
     )
     return health
 

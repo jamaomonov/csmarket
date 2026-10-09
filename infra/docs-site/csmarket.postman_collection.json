@@ -1,0 +1,324 @@
+{
+  "info": {
+    "name": "csmarket API",
+    "description": "Set `token` to your API key. Guide: https://docs.csmarket.uz",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.csmarket.uz/api/v1/public"
+    },
+    {
+      "key": "token",
+      "value": "csm_EXAMPLEtokenNotReal"
+    }
+  ],
+  "item": [
+    {
+      "name": "Account",
+      "description": "Your balance, key and limits.",
+      "item": [
+        {
+          "name": "Balance, key and limits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "The USD balance, whether the USD wallet is on, the calling key and its limits."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalogue",
+      "description": "Items in stock and their offers.",
+      "item": [
+        {
+          "name": "Catalogue feed, one page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "updated_since",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "Page `n` of the current snapshot (1000 items), priced by the key's tariff.\n\nThe first page counts against the 1 per minute `feed` limit, later pages against\n`read`. A cursor of an expired snapshot answers 409 `cursor_expired`. `ETag` /\n`If-None-Match` give a 304."
+          }
+        },
+        {
+          "name": "Offers of one item",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/:item_id/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                ":item_id",
+                "offers"
+              ],
+              "variable": [
+                {
+                  "key": "item_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Offers of the item, cheapest first, priced by the key's tariff.\n\nCached 60 s per tariff and item. Offer ids are opaque and bound to the item."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Buying skins and following the orders.",
+      "item": [
+        {
+          "name": "Buy one skin from the USD wallet",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ]
+            },
+            "description": "Buy the offer `offer_id` of `item_id` (else its cheapest within `max_price_usd`).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n`buying`). A `client_order_id` already used by this account (with this key or an earlier\none) writes nothing and answers 409\n`duplicate_client_order_id` with that order in `order`. Counts against the\n10 per minute `order` limit.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"item_id\": \"4f1c2a9e\",\n  \"offer_id\": \"Zm9vYmFy\",\n  \"max_price_usd\": \"14.500\",\n  \"trade_link\": \"https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE\",\n  \"client_order_id\": \"shop-1042\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "API orders of this account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "cursor",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "disabled": true,
+                  "description": ""
+                }
+              ]
+            },
+            "description": "The owner's API orders (every key they had), newest first, 50 a page; `status` keeps\none status."
+          }
+        },
+        {
+          "name": "One API order of this account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/orders/:order_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "orders",
+                ":order_id"
+              ],
+              "variable": [
+                {
+                  "key": "order_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "The API order `order_id` of this key's owner (any of their keys); another user's or\nan unknown one is 404."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trade links",
+      "description": "Check a buyer's trade link before buying.",
+      "item": [
+        {
+          "name": "Check a trade link before buying",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tradelink/check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tradelink",
+                "check"
+              ]
+            },
+            "description": "Whether a Steam trade can be sent to `trade_link` now (advisory).\n\nNo `Idempotency-Key`: it writes nothing and a repeat is the intended use (the verdict is\ncached 10 minutes). `POST` keeps the link's token out of URLs and access logs.\n`unavailable` means the check could not run: do not block a purchase on it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "description": "Where we send order events.",
+      "item": [
+        {
+          "name": "My webhook",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook"
+              ]
+            },
+            "description": "The webhook URL and the state of its latest delivery, or `null` when none is set."
+          }
+        },
+        {
+          "name": "Set my webhook URL",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook"
+              ]
+            },
+            "description": "Replace the webhook URL. `https` only; the host must resolve to public addresses.\n\nNeeds `Idempotency-Key`. A replay changes nothing and answers the current state.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"url\": \"https://partner.example/hooks/csmarket\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remove my webhook",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/webhook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "webhook"
+              ]
+            },
+            "description": "Remove the webhook; 204 even when none was set. Needs `Idempotency-Key`."
+          }
+        }
+      ]
+    }
+  ]
+}

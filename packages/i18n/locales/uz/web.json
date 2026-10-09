@@ -594,6 +594,17 @@
     "revokeYes": "Ha, bekor qilish",
     "cancel": "Bekor",
     "docs": "API hujjatlari",
-    "copyManually": "Kalitni qoʻlda nusxalang"
+    "copyManually": "Kalitni qoʻlda nusxalang",
+    "ipAllowlist": {
+      "title": "Ruxsat etilgan IP-manzillar",
+      "any": "Istalgan manzil",
+      "edit": "Oʻzgartirish",
+      "save": "Saqlash",
+      "cancel": "Bekor",
+      "hint": "Soʻrovlar yuboriladigan serverning tashqi IP-manzili. Boʻsh qoldirsangiz — istalgan manzil. Har qatorda bitta manzil yoki tarmoq.",
+      "badLine": "{n}-qator: IP-manzil emas",
+      "badTooMany": "Manzillar juda koʻp. 20 tadan oshmasin.",
+      "failed": "Muvaffaqiyatsiz. Qayta urinib koʻring."
+    }
   }
 }

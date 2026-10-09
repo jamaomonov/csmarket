@@ -1,7 +1,9 @@
 # API
 
 `openapi.json` is generated — never hand-edit. Regenerate with `make gen-api`; CI's
-`openapi-drift` job fails when the committed file differs from the app.
+`openapi-drift` job fails when the committed file differs from the app. The same target writes
+the partners' cut, `infra/docs-site/{openapi.json,llms.txt,csmarket.postman_collection.json}` for docs.csmarket.uz, from the
+public routes and [`partner-guide.md`](./partner-guide.md) (`docs/runbooks/public-api.md`).
 
 - Base path: `https://api.csmarket.uz/api/v1`. Probes: `/healthz` (liveness), `/readyz`
   (readiness: Postgres + Redis, 503 when either fails). `/metrics` is scraped on the
@@ -538,7 +540,8 @@ errors, limits and curl examples: [`public-v1.md`](./public-v1.md). Notes:
   `Idempotency-Key` on the writes); the token is shown once, only its SHA-256 is stored. Every
   `/public/*` route is exempt from the coarse per-IP limiter
   (`bootstrap._exempt_self_authenticating_routes`) and under its own per-key limits (60 reads,
-  10 orders, 1 feed first page a minute) plus a per-IP throttle on failed authentications.
+  10 orders, 1 feed first page, 30 trade-link checks a minute by default; an admin can set them per
+  key, `limits` in `GET /public/me` shows the effective ones) plus a per-IP throttle on failed authentications.
 - **Idempotency** is the client's `client_order_id` on `POST /public/orders`, unique per account
   (the key's owner): a repeat is 409 `duplicate_client_order_id` with the order, never a second
   one. The route takes no `Idempotency-Key` header.
@@ -550,5 +553,11 @@ errors, limits and curl examples: [`public-v1.md`](./public-v1.md). Notes:
   422 `webhook_url_invalid` / `webhook_url_private`). Events, payload, signature and retries:
   `public-v1.md`, Webhooks. The URL is personal data of the partner's infrastructure: stored, never
   logged (`docs/security/pii-handling.md`).
-- **No external call** on any public request: the feed and the offers read our own tables and
-  Redis (AGENTS.md §11).
+- **v1.1 (2026-10-09).** `POST /public/tradelink/check` `{trade_link}` → `{verdict, reason}`
+  (advisory, no `Idempotency-Key`, bucket `check`); `trade.steam_offer_id` / `seller_name` on an
+  order; `PUT /me/api-key/ip-allowlist` `{ip_allowlist}` (signed-in user, `Idempotency-Key`; 422
+  `ip_allowlist_invalid` with the `index`); `PUT /admin/api-keys/{key_id}/limits` (audited
+  `api_keys.limits`). Limits and the allow-list carry over on reissue.
+- **No external call** on any public request except the advisory `POST /public/tradelink/check`
+  (the AGENTS.md §11 trade-link carve-out): the feed and the offers read our own tables and
+  Redis.

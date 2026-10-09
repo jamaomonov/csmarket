@@ -16,6 +16,7 @@ export interface ApiKeyOut {
   pricing_profile: PricingProfile;
   created_at: string;
   last_used_at: string | null;
+  ip_allowlist: string[];
 }
 
 /** `ApiKeyIssuedOut`: a new key with its token, the only time it is told. */
@@ -64,6 +65,36 @@ export async function issueApiKey(key: string): Promise<ApiKeyIssuedOut> {
 /** `DELETE /me/api-key` (204): the key stops working at once. */
 export function revokeApiKey(key: string): Promise<undefined> {
   return session.api<undefined>("/api/v1/me/api-key", { method: "DELETE", idempotencyKey: key });
+}
+
+/** A bad allow-list entry: `index` is its zero-based position in what was sent. */
+export class IpAllowlistInvalidError extends Error {
+  constructor(public readonly index: number | null) {
+    super("ip allow-list invalid");
+    this.name = "IpAllowlistInvalidError";
+  }
+}
+
+/** `PUT /me/api-key/ip-allowlist`: replace the list (`[]` = any address). */
+export async function setIpAllowlist(entries: string[], key: string): Promise<ApiKeyOut> {
+  try {
+    return await session.apiPut<ApiKeyOut>(
+      "/api/v1/me/api-key/ip-allowlist",
+      { ip_allowlist: entries },
+      { idempotencyKey: key },
+    );
+  } catch (err) {
+    if (
+      err instanceof SessionApiError &&
+      err.status === 422 &&
+      err.code === "ip_allowlist_invalid"
+    ) {
+      // Narrowing an unknown problem+json body to the `index` field we read.
+      const raw = (err.body as { index?: unknown } | null)?.index;
+      throw new IpAllowlistInvalidError(typeof raw === "number" ? raw : null);
+    }
+    throw err;
+  }
 }
 
 /** A fresh `POST` / `DELETE /me/api-key` key. */

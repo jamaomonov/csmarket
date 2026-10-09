@@ -7,6 +7,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from csmarket.modules.public_api.ip_allowlist import MAX_ENTRIES
+
 
 class ApiKeyOut(BaseModel):
     """The live key's public facts (never the token)."""
@@ -17,6 +19,15 @@ class ApiKeyOut(BaseModel):
     pricing_profile: str
     created_at: datetime
     last_used_at: datetime | None
+    ip_allowlist: list[str]
+
+
+class IpAllowlistIn(BaseModel):
+    """The key's new IP allow-list; ``[]`` lets any address in."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ip_allowlist: list[str] = Field(max_length=MAX_ENTRIES + 1)
 
 
 class ApiKeyIssuedOut(BaseModel):
@@ -102,6 +113,28 @@ class ApiOrderIn(BaseModel):
     ]
 
 
+class TradeLinkCheckIn(BaseModel):
+    """A buyer's Steam trade link to check."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    trade_link: Annotated[str, Field(min_length=1, max_length=512)]
+
+
+class TradeLinkCheckOut(BaseModel):
+    """``unavailable`` means the check could not run: do not block a purchase on it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    verdict: Literal["ok", "bad", "unavailable"] = Field(
+        description="ok: the link can receive a trade. bad: it cannot, see reason. "
+        "unavailable: the check could not run; do not block a purchase on it."
+    )
+    reason: (
+        Literal["invalid_link", "private_inventory", "trade_ban", "hold", "not_found"] | None
+    ) = Field(description="Why the link is bad; null for ok and unavailable.")
+
+
 class PublicOrderItemOut(BaseModel):
     """The catalogue item an order bought."""
 
@@ -121,6 +154,17 @@ class PublicTradeOut(BaseModel):
     accepted_at: datetime | None
     #: When Steam's trade protection ends.
     release_at: datetime | None
+    #: Steam's trade offer id: ``https://steamcommunity.com/tradeoffer/{id}/``.
+    steam_offer_id: str | None = Field(
+        default=None,
+        description="Steam's trade offer id; the buyer accepts it at "
+        "https://steamcommunity.com/tradeoffer/{id}/",
+    )
+    #: The sender's Steam name when the market gives it; usually ``null``.
+    seller_name: str | None = Field(
+        default=None,
+        description="The sender's Steam name when the market gives it; usually null.",
+    )
 
 
 class PublicRefundOut(BaseModel):
@@ -175,6 +219,9 @@ class MeLimitsOut(BaseModel):
     read_per_min: int
     orders_per_min: int
     feed_per_min: int
+    check_per_min: int = Field(
+        description="Trade-link checks (POST /tradelink/check) allowed per minute."
+    )
 
 
 class MeOut(BaseModel):

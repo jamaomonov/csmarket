@@ -268,6 +268,11 @@ ORDERS_STUCK = Gauge(
     "Orders waiting longer than they should, by state (alerts: OrdersPaidStuck and friends).",
     ("state",),
 )
+PUBLIC_API_BUYING_OLDEST = Gauge(
+    "csmarket_public_api_orders_buying_oldest_seconds",
+    "Age of the oldest API order its partner reads as buying, open attentions included; 0 when"
+    " none (alert: PublicApiOrderBuyingLong; set by the scheduler's orders.health job only).",
+)
 SALE_PAYOUTS_OVERDUE = Gauge(
     "csmarket_sale_payouts_overdue",
     "Card payouts payable for over 48 h (alert: SalePayoutsOverdue; set by sales.poll).",
@@ -528,6 +533,18 @@ def set_orders_stuck(state: OrderStuckState, count: int) -> None:
         ORDERS_STUCK.labels(state=state).set(count)
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning("metrics.set_failed", metric="csmarket_orders_stuck", error=type(exc).__name__)
+
+
+def set_public_api_buying_oldest(seconds: float) -> None:
+    """Set the age of the oldest API order in ``buying`` (``orders.health`` only). Never raises."""
+    try:
+        PUBLIC_API_BUYING_OLDEST.set(seconds)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed",
+            metric="csmarket_public_api_orders_buying_oldest_seconds",
+            error=type(exc).__name__,
+        )
 
 
 def set_sale_payouts_overdue(count: int) -> None:
@@ -814,6 +831,7 @@ __all__ = [
     "ORDERS_STUCK",
     "ORDER_BUYS",
     "ORDER_REFUNDS",
+    "PUBLIC_API_BUYING_OLDEST",
     "PUBLIC_API_ORDERS",
     "PUBLIC_API_REQUESTS",
     "SKINSLINK_BALANCE_AVAILABLE_USD",
@@ -869,6 +887,7 @@ __all__ = [
     "set_lisskins_enabled",
     "set_lisskins_snapshot",
     "set_orders_stuck",
+    "set_public_api_buying_oldest",
     "set_sale_payouts_overdue",
     "set_skinslink_balance",
     "set_skinslink_enabled",

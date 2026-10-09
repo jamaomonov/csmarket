@@ -7,6 +7,7 @@ import pytest
 from csmarket.core.errors import ValidationError
 from csmarket.modules.users.tradelink import (
     CheckResult,
+    _reason_for,
     assert_owned,
     check_trade_link,
     mask_trade_link,
@@ -102,6 +103,8 @@ def test_ownership() -> None:
         ("Inventory is private", 0, CheckResult(verdict="bad", reason="private")),
         ("User has trade ban", 0, CheckResult(verdict="bad", reason="trade_ban")),
         ("Invalid tradelink", 0, CheckResult(verdict="bad", reason="invalid")),
+        ("Steam user not found", 0, CheckResult(verdict="bad", reason="not_found")),
+        ("Profile does not exist", 0, CheckResult(verdict="bad", reason="not_found")),
     ],
 )
 async def test_verdict_mapping(redis, info, days, expected) -> None:
@@ -205,3 +208,16 @@ async def test_a_cached_hold_verdict_is_bad_too(redis) -> None:
     second = await check_trade_link(parse_tradelink(LINK), waxpeer=_Wax(), hold=hold, redis=redis)
     assert first == second == CheckResult(verdict="bad", reason="hold")
     assert hold.calls == 1  # the second answer came from the cache
+
+
+@pytest.mark.parametrize(
+    ("info", "expected"),
+    [
+        ("Steam user not found", "not_found"),
+        ("Profile does not exist", "not_found"),
+        ("Inventory is private", "private"),
+        ("something unexpected", "invalid"),
+    ],
+)
+def test_reason_for(info: str, expected: str) -> None:
+    assert _reason_for(info) == expected

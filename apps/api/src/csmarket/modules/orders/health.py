@@ -1,7 +1,7 @@
 """What is stuck: the numbers behind the order alerts (``infra/prometheus/alerts/orders.yml``).
 
-:func:`measure` is read-only and cheap (three counts over small in-flight sets, one Waxpeer
-balance call when asked). The scheduler's ``orders.health`` job turns the result into gauges.
+:func:`measure` is read-only and cheap (a few counts over small in-flight sets, the oldest
+API order in ``buying``, one Waxpeer balance call when asked). The scheduler's ``orders.health`` job turns the result into gauges.
 """
 
 from __future__ import annotations
@@ -49,6 +49,9 @@ class Health(BaseModel):
     attention: int
     #: ``None`` when it was not asked for or Waxpeer did not answer.
     waxpeer_balance_usd: Decimal | None
+    #: Age, from ``created_at``, of the oldest API order its partner reads as ``buying``
+    #: (open attentions included: the partner waits on them too); 0 when there is none.
+    api_buying_oldest_seconds: float = 0.0
 
 
 #: An order's trade fields, whichever market it is bought at (an order has one of the two).
@@ -105,6 +108,25 @@ async def _waxpeer_balance(client: TradeClient | None) -> Decimal | None:
         return None
 
 
+async def _api_buying_oldest(db: AsyncSession, at: datetime) -> float:
+    """Seconds since the oldest API order that reads ``buying`` to its partner was created.
+
+    Mirrors ``public_view.public_status``'s ``buying``: ``paid`` / ``buying``, and ``failed`` /
+    ``returned`` held for support (no refund yet). 0 when there is none.
+    """
+    oldest = await db.scalar(
+        select(func.min(Order.created_at)).where(
+            Order.channel == "api",
+            Order.refunded_at.is_(None),
+            or_(
+                Order.status.in_(("paid", "buying")),
+                Order.status.in_(("failed", "returned")),
+            ),
+        )
+    )
+    return 0.0 if oldest is None else max(0.0, (at - oldest).total_seconds())
+
+
 async def measure(db: AsyncSession, client: TradeClient | None, *, settings: Settings) -> Health:
     """Count what is stuck and, with a ``client``, read the Waxpeer balance.
 
@@ -114,7 +136,8 @@ async def measure(db: AsyncSession, client: TradeClient | None, *, settings: Set
         settings: Reserved for thresholds that become settings.
 
     Returns:
-        The counts, and the balance in USD (``None`` when skipped or unreadable).
+        The counts, the oldest API order in ``buying``, and the balance in USD (``None``
+        when skipped or unreadable).
     """
     del settings  # the windows are fixed (spec §12); kept so a threshold can become a setting
     at = now()
@@ -138,6 +161,7 @@ async def measure(db: AsyncSession, client: TradeClient | None, *, settings: Set
         trade_sent_unpolled=unpolled,
         attention=attention,
         waxpeer_balance_usd=await _waxpeer_balance(client),
+        api_buying_oldest_seconds=await _api_buying_oldest(db, at),
     )
 
 

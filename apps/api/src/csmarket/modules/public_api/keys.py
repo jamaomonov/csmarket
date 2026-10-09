@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.modules.auth.api import hash_token
+from csmarket.modules.public_api.ip_allowlist import normalise
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import has_topup
@@ -25,6 +26,15 @@ from csmarket.modules.wallet.api import has_topup
 log = get_logger("csmarket.public_api.keys")
 
 TOKEN_PREFIX = "csm_"  # noqa: S105 -- a public prefix, not a secret
+#: What a new key inherits from the user's newest key (the tariff follows the user).
+CARRIED_FIELDS: tuple[str, ...] = (
+    "pricing_profile",
+    "ip_allowlist",
+    "read_per_min",
+    "orders_per_min",
+    "feed_per_min",
+    "check_per_min",
+)
 
 
 def new_token() -> str:
@@ -52,22 +62,24 @@ async def issue(db: AsyncSession, *, user: User) -> tuple[ApiKey, str]:
             "an API key needs a top-up or the dollar wallet", code="api_key_not_allowed"
         )
     old = await live_key(db, user.id)
-    # The tariff follows the user, not the live key: revoke-then-issue must not drop a ``cost``
-    # client back to ``retail``.
+    # The tariff, limits and allow-list follow the user, not the live key: revoke-then-issue must
+    # not drop a ``cost`` client back to ``retail``.
     newest = (
         await db.execute(
-            select(ApiKey.pricing_profile)
+            select(ApiKey)
             .where(ApiKey.user_id == user.id)
             .order_by(ApiKey.created_at.desc())
             .limit(1)
         )
     ).scalar_one_or_none()
-    profile = newest if newest is not None else "retail"
+    carried = {f: getattr(newest, f) for f in CARRIED_FIELDS} if newest is not None else {}
+    if "ip_allowlist" in carried:
+        carried["ip_allowlist"] = list(carried["ip_allowlist"])
     if old is not None:
         old.revoked_at = datetime.now(UTC)
         await db.flush()
     token = new_token()
-    key = ApiKey(user_id=user.id, token_hash=hash_token(token), pricing_profile=profile)
+    key = ApiKey(user_id=user.id, token_hash=hash_token(token), **carried)
     try:
         async with db.begin_nested():
             db.add(key)
@@ -111,6 +123,24 @@ async def set_pricing_profile(
     log.info("api_key.tariff", key_id=key.id, profile=profile)
 
 
+async def set_ip_allowlist(db: AsyncSession, *, user: User, entries: list[str]) -> ApiKey:
+    """Replace the user's live key's IP allow-list. Flushes, never commits.
+
+    The addresses are the partner's infrastructure: only their count is logged.
+
+    Raises:
+        NotFoundError: ``api_key_missing`` -- no live key.
+        ValidationError: ``ip_allowlist_invalid`` -- a bad entry, with its ``index``.
+    """
+    key = await live_key(db, user.id)
+    if key is None:
+        raise NotFoundError("no API key", code="api_key_missing")
+    key.ip_allowlist = normalise(entries)
+    await db.flush()
+    log.info("api_key.ip_allowlist", key_id=key.id, count=len(key.ip_allowlist))
+    return key
+
+
 async def revoke_key(db: AsyncSession, *, key: ApiKey) -> None:
     """Revoke one key (the admin's path). Flushes, never commits.
 
@@ -125,6 +155,7 @@ async def revoke_key(db: AsyncSession, *, key: ApiKey) -> None:
 
 
 __all__ = [
+    "CARRIED_FIELDS",
     "TOKEN_PREFIX",
     "issue",
     "live_key",

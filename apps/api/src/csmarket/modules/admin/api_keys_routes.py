@@ -16,6 +16,7 @@ from csmarket.modules.admin import api_keys_service as svc
 from csmarket.modules.admin.api_keys_schemas import (
     AdminApiKeyCard,
     AdminApiKeysOut,
+    AdminLimitsIn,
     AdminRevokeKeyIn,
     AdminTariffIn,
 )
@@ -71,6 +72,23 @@ async def put_tariff(
     if (hit := await svc.replayed(db, scope=scope, key=idem, request=request)) is not None:
         return AdminApiKeyCard.model_validate(hit)
     await svc.set_tariff(db, admin=admin, key=key, profile=body.pricing_profile, reason=body.reason)
+    return await _finish(db, key, scope=scope, idem=idem, request=request)
+
+
+@router.put("/{key_id}/limits", response_model=AdminApiKeyCard, summary="Set the key's limits")
+async def put_limits(
+    key_id: str, body: AdminLimitsIn, admin: Admin, db: Db, idem: Key
+) -> AdminApiKeyCard:
+    """Per-minute limits (1..10000, ``null`` = the default); 409 ``api_key_revoked`` /
+    ``limits_unchanged``.
+    """
+    key = await svc.get_key(db, key_id, lock=True)
+    values = body.model_dump(exclude={"reason"})
+    request = {"key_id": key.id, **values, "reason": body.reason}
+    scope = "admin.api_keys.limits"
+    if (hit := await svc.replayed(db, scope=scope, key=idem, request=request)) is not None:
+        return AdminApiKeyCard.model_validate(hit)
+    await svc.set_limits(db, admin=admin, key=key, values=values, reason=body.reason)
     return await _finish(db, key, scope=scope, idem=idem, request=request)
 
 

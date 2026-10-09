@@ -11,20 +11,21 @@ Every example uses fake values: a token `csm_EXAMPLE…` and a trade link with `
 
 A signed-in user issues the key on the site (profile → «API-ключ»). The token (`csm_` + 43
 characters) is shown **once**; only its SHA-256 is kept, so a lost token is replaced by
-reissuing. One live key per account: reissuing revokes the old one at once, the tariff carries
+reissuing. One live key per account: reissuing revokes the old one at once; the tariff, the limits and the IP allow-list carry
 over. Issuing needs a successful top-up or the USD wallet switched on by an admin.
 
 Site routes (a signed-in user, not a key; `Idempotency-Key` ≥ 16 chars on the writes):
 
-| Method   | Path          | Does                                                                                                                                                                                                          |
-| -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET`    | `/me/api-key` | the live key `{id, pricing_profile, created_at, last_used_at}` or `null`; never the token                                                                                                                     |
-| `POST`   | `/me/api-key` | issue (201 `{id, token, …}`); 409 `api_key_not_allowed` without a top-up or the USD wallet, 409 `api_key_race` when two issues collide (retry); a replayed `Idempotency-Key` is 409 `key_already_issued` (R3) |
-| `DELETE` | `/me/api-key` | revoke (204); 404 `api_key_missing` when none                                                                                                                                                                 |
+| Method   | Path                       | Does                                                                                                                                                                                                          |
+| -------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`    | `/me/api-key`              | the live key `{id, pricing_profile, created_at, last_used_at}` or `null`; never the token                                                                                                                     |
+| `POST`   | `/me/api-key`              | issue (201 `{id, token, …}`); 409 `api_key_not_allowed` without a top-up or the USD wallet, 409 `api_key_race` when two issues collide (retry); a replayed `Idempotency-Key` is 409 `key_already_issued` (R3) |
+| `DELETE` | `/me/api-key`              | revoke (204); 404 `api_key_missing` when none                                                                                                                                                                 |
+| `PUT`    | `/me/api-key/ip-allowlist` | set the key's IP allow-list `{ip_allowlist: [...]}`; up to 20 IPv4 / IPv6 addresses or CIDRs, normalised and deduplicated; empty = any address; 422 `ip_allowlist_invalid` with the `index` of the bad entry  |
 
 Send the token on every call: `Authorization: Bearer csm_EXAMPLEtokenNotReal`. The key may carry
-an IP allow-list (CIDR list, set by an admin; empty = any address): a call from outside is 403
-`ip_not_allowed`. A suspended account is 403 `account_suspended`.
+an IP allow-list (set by the user in the profile or with `PUT /me/api-key/ip-allowlist`; empty =
+any address): a call from outside is 403 `ip_not_allowed`. A suspended account is 403 `account_suspended`.
 
 ## Tariffs
 
@@ -52,9 +53,12 @@ curl -s https://api.csmarket.uz/api/v1/public/me \
   "balance_usd": "250.000",
   "usd_wallet_enabled": true,
   "key": { "id": "…", "pricing_profile": "retail", "created_at": "2026-10-09T08:00:00Z" },
-  "limits": { "read_per_min": 60, "orders_per_min": 10, "feed_per_min": 1 }
+  "limits": { "read_per_min": 60, "orders_per_min": 10, "feed_per_min": 1, "check_per_min": 30 }
 }
 ```
+
+`limits` are the key's effective limits per minute: the defaults unless an admin raised them for
+this key. `check_per_min` is the limit of `POST /tradelink/check`.
 
 ### `GET /catalog` — the feed
 
@@ -173,8 +177,11 @@ newest first, 50 a page; `status` is one of `buying`, `trade_sent`, `delivered`,
 }
 ```
 
-`trade` (`{offer_sent_at, accepted_at, release_at}`, each may be `null`) is present while the
-status is `trade_sent` or `delivered`; `release_at` is when Steam's trade protection ends.
+`trade` (`{offer_sent_at, accepted_at, release_at, steam_offer_id, seller_name}`, each may be
+`null`) is present while the status is `trade_sent` or `delivered`; `release_at` is when Steam's
+trade protection ends. `steam_offer_id` is Steam's trade offer id: the buyer accepts the offer at
+`https://steamcommunity.com/tradeoffer/{id}/`. `seller_name` is the sender's Steam name when the
+market gives it; usually `null`.
 `refund` is present only when `refunded`.
 
 | Status       | Meaning                                                                                    |
@@ -196,6 +203,44 @@ A delivered skin is never refunded automatically.
 | `cancelled_by_support` | a person cancelled the order                                  |
 
 Refunds go to the USD wallet only, once. No letters are sent for API orders.
+
+### How long `buying` lasts
+
+`buying` lasts as long as the market takes to answer: minutes usually, longer when the market is
+slow. The order is not lost; keep polling or wait for the webhook. It ends in `trade_sent` when
+the offer goes out, or in `refunded` when the market refuses or cancels the purchase, or when our
+support cancels the order. A trade that is rolled back after the skin was delivered is not
+refunded.
+
+### `POST /tradelink/check`
+
+An advisory check of a buyer's trade link, the one the site runs before checkout. Call it before
+`POST /orders` to warn the buyer early. It never blocks a purchase and needs no `Idempotency-Key`.
+
+```bash
+curl -s https://api.csmarket.uz/api/v1/public/tradelink/check \
+  -H 'Authorization: Bearer csm_EXAMPLEtokenNotReal' \
+  -H 'Content-Type: application/json' \
+  -d '{"trade_link": "https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE"}'
+```
+
+```json
+{ "verdict": "bad", "reason": "trade_ban" }
+```
+
+`verdict` is `ok`, `bad` or `unavailable`. `unavailable` means the check could not run: do not
+block a purchase on it. A link that does not parse is `bad` / `invalid_link` at once.
+
+| `reason`            | Meaning                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| `invalid_link`      | not a Steam trade link                                       |
+| `private_inventory` | the buyer's inventory is private                             |
+| `trade_ban`         | the buyer's Steam account cannot trade                       |
+| `hold`              | the buyer's Steam account has a trade hold                   |
+| `not_found`         | no such Steam account, or the token does not match the owner |
+
+`reason` is `null` for `ok` and `unavailable`. The route has its own limit, `check_per_min`
+(30 a minute by default).
 
 ## Webhooks
 
@@ -344,21 +389,22 @@ webhook removed, pending deliveries end `failed`.
 
 RFC 7807 `application/problem+json`; read `code`, not the text.
 
-| HTTP | `code`                                                                                                                                                                 |
-| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 401  | `unauthorized` — missing, unknown or revoked key                                                                                                                       |
-| 402  | `insufficient_balance` — nothing was written                                                                                                                           |
-| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                                                           |
-| 404  | `item_not_found`, `order_not_found`                                                                                                                                    |
-| 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired`, `idempotency_mismatch` (webhook)        |
-| 422  | `trade_link_invalid`, body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key` |
-| 429  | `rate_limited`, with `Retry-After`                                                                                                                                     |
-| 503  | `feed_unavailable` (feed not built yet), `rate_unavailable` (no FX snapshot ever recorded)                                                                             |
+| HTTP | `code`                                                                                                                                                                                                                 |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 401  | `unauthorized` — missing, unknown or revoked key                                                                                                                                                                       |
+| 402  | `insufficient_balance` — nothing was written                                                                                                                                                                           |
+| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                                                                                                           |
+| 404  | `item_not_found`, `order_not_found`                                                                                                                                                                                    |
+| 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired`, `idempotency_mismatch` (webhook)                                                        |
+| 422  | `trade_link_invalid`, `ip_allowlist_invalid` (site route, + `index`), body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key` |
+| 429  | `rate_limited`, with `Retry-After`                                                                                                                                                                                     |
+| 503  | `feed_unavailable` (feed not built yet), `rate_unavailable` (no FX snapshot ever recorded)                                                                                                                             |
 
 ## Limits
 
 Per key, fixed one-minute windows: **60** reads, **10** `POST /orders`, **1** feed first page
-(later pages of the same snapshot count as reads). Over the limit: 429 `rate_limited` with
+(later pages of the same snapshot count as reads), **30** `POST /tradelink/check`
+(`check_per_min`). `GET /me` shows the key's effective limits; an admin can raise them per key. Over the limit: 429 `rate_limited` with
 `Retry-After`. Failed authentications are throttled per client address (30 a minute) and then
 answer 429 too. A full feed pass every five minutes is well inside the limits.
 
@@ -366,3 +412,11 @@ answer 429 too. A full feed pass every five minutes is well inside the limits.
 
 Selling skins, free-text search, topping up the USD wallet through
 the API, USD → soʻm, a second key.
+
+## Changelog
+
+- **2026-10-09 — v1.1.** Only additions: limits per key (`limits.check_per_min` in `GET /me`);
+  `POST /tradelink/check`; `trade.steam_offer_id` and `trade.seller_name` on an order; the user
+  sets the key's IP allow-list in the profile (`PUT /me/api-key/ip-allowlist`, 422
+  `ip_allowlist_invalid`); limits and the allow-list carry over on reissue.
+- **2026-10-09 — v1.** Keys, feed, offers, buying, orders, webhooks.
