@@ -10,7 +10,7 @@ import { SkinCategoryIcon } from "./SkinCategoryIcon";
 import type { SkinCategory, SkinQuery } from "@csmarket/utils/skins";
 
 import { AppLink } from "@/components/header/AccountMenu";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 
 interface OtherCategoriesMenuProps {
   /** The non-weapon categories in stock (agents, cases, keys…), in display order. */
@@ -31,7 +31,7 @@ export function OtherCategoriesMenu({ categories, query, active }: OtherCategori
         {t(`category.${c}`)}
       </span>
     ),
-    href: HOME + skinQueryString(query, { category: c, weapon: undefined }),
+    href: MARKET + skinQueryString(query, { category: c, weapon: undefined }),
     current: c === active,
   }));
   return (

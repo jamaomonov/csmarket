@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SkinItem, SkinQuery } from "@csmarket/utils/skins";
 
 import { Link, useRouter } from "@/i18n/navigation";
-import { HOME, itemPath } from "@/lib/paths";
+import { MARKET, itemPath } from "@/lib/paths";
 import { displayPrice, fetchSuggest } from "@/lib/skins";
 
 const DEBOUNCE_MS = 250;
@@ -66,7 +66,7 @@ export function SkinSearch({
         e.preventDefault();
         setOpen(false);
         const q = text.trim();
-        router.push(HOME + skinQueryString(query, { q: q || undefined }));
+        router.push(MARKET + skinQueryString(query, { q: q || undefined }));
       }}
     >
       <Search className="text-fg-dim pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />

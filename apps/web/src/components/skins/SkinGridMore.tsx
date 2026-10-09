@@ -9,7 +9,7 @@ import type { SkinItem, SkinQuery } from "@csmarket/utils/skins";
 
 import { SkinCard } from "@/components/skins/SkinCard";
 import { Link } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 import { fetchSkinsPage } from "@/lib/skins";
 
 type Phase = "idle" | "loading" | "error";
@@ -110,7 +110,7 @@ export function SkinGridMore({ query, cursor: first, locale, shown }: SkinGridMo
         )}
         <noscript>
           <Link
-            href={HOME + skinQueryString(query, { cursor: first })}
+            href={MARKET + skinQueryString(query, { cursor: first })}
             className="border-border mx-auto mt-3 block w-fit rounded-xl border px-6 py-3 font-semibold"
           >
             {t("loadMore")}

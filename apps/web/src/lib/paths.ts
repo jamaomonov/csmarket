@@ -1,6 +1,10 @@
 /** Locale-less paths for next-intl's `Link` / `redirect`; the locale prefix is added there. */
 
+/** The SEO landing (the logo, «На главную»). */
 export const HOME = "/";
+
+/** The catalogue: filters, search, the grid. */
+export const MARKET = "/market";
 
 export function itemPath(slug: string): string {
   return `/item/${slug}`;

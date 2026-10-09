@@ -10,7 +10,7 @@ import { WeaponMenu } from "./WeaponMenu";
 import type { SkinCategory, SkinFacets, SkinQuery, SkinQueryPatch } from "@csmarket/utils/skins";
 
 import { Link } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 
 const ORDER: SkinCategory[] = [
   "knives",
@@ -59,7 +59,7 @@ export function SkinCategoryBar({ query, facets }: { query: SkinQuery; facets: S
   const weapons = inStock.filter((c) => WITH_MODELS.has(c));
   const others = inStock.filter((c) => !WITH_MODELS.has(c));
   const activeOther = others.find((c) => c === query.category);
-  const href = (patch: SkinQueryPatch) => HOME + skinQueryString(query, patch);
+  const href = (patch: SkinQueryPatch) => MARKET + skinQueryString(query, patch);
   const picked = weaponsOf(query);
   /** The page's facets know a category's models when they are unscoped or scoped to it. */
   const models = (c: SkinCategory) => {

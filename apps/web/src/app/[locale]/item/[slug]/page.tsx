@@ -17,7 +17,7 @@ import { SkinPriceBlock } from "@/components/skins/SkinPriceBlock";
 import { SkinWearPicker } from "@/components/skins/SkinWearPicker";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { categoryPath, HOME, itemPath, weaponPath } from "@/lib/paths";
+import { categoryPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
@@ -99,7 +99,7 @@ export default async function SkinPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: t("market"), item: localeUrl(locale, HOME) },
+      { "@type": "ListItem", position: 1, name: t("market"), item: localeUrl(locale, MARKET) },
       {
         "@type": "ListItem",
         position: 2,
@@ -144,7 +144,7 @@ export default async function SkinPage({ params }: Props) {
         aria-label="breadcrumb"
         className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
       >
-        <Link href={HOME} className="hover:text-fg">
+        <Link href={MARKET} className="hover:text-fg">
           {t("market")}
         </Link>
         <ChevronRight className="h-3.5 w-3.5" aria-hidden />

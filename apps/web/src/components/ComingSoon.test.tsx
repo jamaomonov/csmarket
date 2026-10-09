@@ -24,5 +24,5 @@ it("names the section, says it is coming and leads to the market", () => {
   );
   expect(screen.getByRole("heading", { level: 1, name: "Отзывы" })).toBeInTheDocument();
   expect(screen.getByText("Скоро")).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Открыть маркет" })).toHaveAttribute("href", "/");
+  expect(screen.getByRole("link", { name: "Открыть маркет" })).toHaveAttribute("href", "/market");
 });

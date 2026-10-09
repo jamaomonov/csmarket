@@ -1,4 +1,4 @@
-import { HOME, itemPath } from "@/lib/paths";
+import { HOME, itemPath, MARKET } from "@/lib/paths";
 import { landingPaths } from "@/lib/skin-landing";
 import { fetchSkinSlugs, getSkinFacets } from "@/lib/skins";
 import { SKINS_PER_SITEMAP, today, urlsetXml, xmlResponse } from "@/lib/skins-sitemap";
@@ -21,7 +21,7 @@ export async function GET(
   if (file === "landings.xml") {
     const facets = await getSkinFacets();
     if (!facets) return notFound();
-    return xmlResponse(urlsetXml([HOME, ...landingPaths(facets)], today()));
+    return xmlResponse(urlsetXml([HOME, MARKET, ...landingPaths(facets)], today()));
   }
   const match = /^(\d{1,3})\.xml$/.exec(file);
   if (!match) return notFound();

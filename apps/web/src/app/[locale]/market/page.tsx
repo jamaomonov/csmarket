@@ -22,7 +22,7 @@ import { SkinSearch } from "@/components/skins/SkinSearch";
 import { SkinSort } from "@/components/skins/SkinSort";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 import { alternates, GEO_META, NOINDEX_FOLLOW, ogLocale, ROBOTS } from "@/lib/seo";
 import { getSkinFacets, getSkinsPage } from "@/lib/skins";
 
@@ -47,7 +47,7 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
   return {
     title: t("meta.title"),
     description: t("meta.description"),
-    alternates: alternates(locale, HOME),
+    alternates: alternates(locale, MARKET),
     robots: filtered ? NOINDEX_FOLLOW : ROBOTS,
     openGraph: { type: "website", siteName: "csmarket", ...ogLocale(locale) },
     other: GEO_META,
@@ -102,7 +102,7 @@ export default async function HomePage({ params, searchParams }: Props) {
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <SearchX className="text-fg-dim h-10 w-10" aria-hidden />
               <p className="text-fg-muted max-w-sm">{t("empty")}</p>
-              <Link href={HOME} className={buttonVariants({ variant: "secondary" })}>
+              <Link href={MARKET} className={buttonVariants({ variant: "secondary" })}>
                 {t("resetFilters")}
               </Link>
             </div>

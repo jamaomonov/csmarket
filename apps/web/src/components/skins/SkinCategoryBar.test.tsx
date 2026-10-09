@@ -68,14 +68,14 @@ it("the chosen category's chip clears it", () => {
   bar({ sort: "-price", category: "rifles" });
   const chip = screen.getByRole("link", { name: "Винтовки" });
   expect(chip).toHaveAttribute("aria-current", "page");
-  expect(chip).toHaveAttribute("href", "/");
+  expect(chip).toHaveAttribute("href", "/market");
 });
 
 it("a chosen weapon shows on its chip; the chip clears the models", () => {
   bar({ sort: "-price", category: "rifles", weapon: "AK-47" });
   const chip = screen.getByRole("link", { name: /Винтовки · AK-47/ });
   expect(chip).toHaveAttribute("aria-current", "page");
-  expect(chip).toHaveAttribute("href", "/");
+  expect(chip).toHaveAttribute("href", "/market");
 });
 
 it("several models across categories light each chip with its own", () => {
@@ -87,7 +87,7 @@ it("several models across categories light each chip with its own", () => {
   // Clearing the rifles keeps the other category's model.
   expect(screen.getByRole("link", { name: /Винтовки · 2/ })).toHaveAttribute(
     "href",
-    "/?weapon=MP9",
+    "/market?weapon=MP9",
   );
   expect(screen.getByRole("link", { name: /П-пулемёты · MP9/ })).toHaveAttribute(
     "aria-current",
