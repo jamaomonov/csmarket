@@ -201,7 +201,9 @@ export function OrderDetail() {
             main={
               <>
                 <OrderFields detail={detail} />
-                <Bought detail={detail} />
+                <div className="border-border bg-surface rounded-lg border p-4">
+                  <Bought detail={detail} />
+                </div>
                 <Payments detail={detail} />
               </>
             }
