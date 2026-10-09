@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.7
-FROM node:22-alpine AS base
+# syntax=mirror.gcr.io/docker/dockerfile:1.7
+FROM mirror.gcr.io/library/node:22-alpine AS base
 RUN npm i -g corepack@latest && corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 
@@ -29,7 +29,7 @@ COPY . .
 RUN pnpm --filter @csmarket/admin build \
  && find apps/admin/dist -name '*.map' -delete
 
-FROM nginx:alpine AS runner
+FROM mirror.gcr.io/library/nginx:alpine AS runner
 COPY --from=builder /app/apps/admin/dist /usr/share/nginx/html
 COPY infra/docker/admin-nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80

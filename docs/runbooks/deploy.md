@@ -96,3 +96,21 @@ docker compose -f docker-compose.prod.yml ps
 ```
 
 Then glance at Grafana and the ops chat for the next few minutes.
+
+## Base images come from `mirror.gcr.io`
+
+On 2026-10-10, Docker Hub answered GitHub's runners `429 Too Many Requests` (the anonymous pull
+limit) for `node`, `python` and `postgres`. Builds and the Python tests failed for hours.
+
+Since then, these images are pulled from Google's Docker Hub mirror, which has no such limit:
+
+- every `FROM` in `infra/docker/*.Dockerfile`;
+- the `# syntax=` frontend;
+- the test containers (`apps/api/tests/integration/conftest.py`).
+
+These are the same official images, under `mirror.gcr.io/library/<name>:<tag>` (and
+`mirror.gcr.io/docker/dockerfile:1.7`). A new base image follows the same form.
+
+If the mirror ever lags a tag, the fallback is a Docker Hub login in CI: a
+`DOCKERHUB_USERNAME` / `DOCKERHUB_TOKEN` secret and `docker/login-action`. That needs the
+owner's account.
