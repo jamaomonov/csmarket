@@ -1,232 +1,327 @@
 /**
- * App shell: a left sidebar of icon links in groups, a topbar and the outlet.
- *
- * - lg+: the sidebar is a fixed-width column, always visible.
- * - <lg: it slides in over the content as a drawer from the ☰ in the topbar and closes on
- *   navigation. The split is at lg: the admin's tables are wide, and a 240 px column on a
- *   tablet is not worth the room it takes.
+ * App shell: a top bar (admin UX review §2) — direct links, two menus (Выкуп, Настройки) and
+ * red counters of what waits for an operator; on phones ☰ opens a sheet with every page.
+ * API keys live on the user card, not here.
  */
 import { Button, Logo } from "@csmarket/ui";
-import {
-  Activity,
-  ArrowLeftRight,
-  CreditCard,
-  Gauge,
-  HandCoins,
-  KeyRound,
-  LogOut,
-  Menu,
-  Package,
-  Percent,
-  Settings2,
-  Users,
-  Wallet,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, LogOut, Menu, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/authStore";
+import { getDashboard } from "@/features/dashboard/api";
+import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 
-interface NavItem {
+type Counter = "attention" | "toPay";
+
+interface NavLinkItem {
   to: string;
   label: string;
-  icon: LucideIcon;
   end?: boolean;
   /** Other path prefixes the item stands for (an order page belongs to «Обмены»). */
   also?: string[];
+  counter?: Counter;
 }
-interface NavGroup {
-  /** The section heading; `null` for the pinned group at the top. */
-  label: string | null;
-  items: NavItem[];
+interface NavMenu {
+  label: string;
+  items: NavLinkItem[];
 }
+type NavEntry = NavLinkItem | NavMenu;
 
-const NAV_GROUPS: NavGroup[] = [
-  { label: null, items: [{ to: "/", label: "Дашборд", icon: Gauge, end: true }] },
-  {
-    label: "Каталог",
-    items: [
-      { to: "/catalogue", label: "Каталог", icon: Package },
-      { to: "/pricing", label: "Цены", icon: Percent },
-    ],
-  },
-  {
-    label: "Операции",
-    items: [
-      { to: "/trades", label: "Обмены", icon: ArrowLeftRight, also: ["/orders/"] },
-      { to: "/payments", label: "Платежи", icon: CreditCard },
-      { to: "/api-keys", label: "API-ключи", icon: KeyRound },
-    ],
-  },
+const NAV: NavEntry[] = [
+  { to: "/", label: "Дашборд", end: true },
+  { to: "/trades", label: "Обмены", also: ["/orders/"], counter: "attention" },
   {
     label: "Выкуп",
     items: [
-      { to: "/payouts", label: "Заявки на выплату", icon: Wallet },
-      { to: "/sales", label: "Продажи", icon: HandCoins },
-      { to: "/sale-settings", label: "Настройки выкупа", icon: Settings2 },
+      { to: "/payouts", label: "Заявки на выплату", counter: "toPay" },
+      { to: "/sales", label: "Продажи" },
     ],
   },
-  { label: "Поддержка", items: [{ to: "/users", label: "Пользователи", icon: Users }] },
-  { label: "Аудит", items: [{ to: "/audit", label: "Журнал", icon: Activity }] },
+  { to: "/users", label: "Пользователи", also: ["/api-keys"] },
+  { to: "/payments", label: "Платежи" },
+  {
+    label: "Настройки",
+    items: [
+      { to: "/pricing", label: "Цены" },
+      { to: "/catalogue", label: "Каталог" },
+      { to: "/sale-settings", label: "Выкуп" },
+      { to: "/audit", label: "Журнал" },
+    ],
+  },
 ];
 
-const linkClass = ({ isActive }: { isActive: boolean }): string =>
+const COUNTER_LABEL: Record<Counter, string> = {
+  attention: "ждут внимания",
+  toPay: "к выплате",
+};
+
+const isMenu = (e: NavEntry): e is NavMenu => "items" in e;
+
+function isCurrent(item: NavLinkItem, pathname: string): boolean {
+  if ((item.also ?? []).some((p) => pathname.startsWith(p))) return true;
+  return item.end === true ? pathname === item.to : pathname.startsWith(item.to);
+}
+
+/** Counters from the dashboard (one request a minute, shared with the dashboard page). */
+function useCounters(): Record<Counter, number> {
+  const query = useQuery({
+    queryKey: [...DASHBOARD_KEY, 1],
+    queryFn: () => getDashboard(1),
+    refetchInterval: 60_000,
+  });
+  return {
+    attention: query.data?.attention ?? 0,
+    toPay: query.data?.payouts.to_pay_count ?? 0,
+  };
+}
+
+function CounterBadge({ kind, value }: { kind: Counter; value: number }) {
+  if (value <= 0) return null;
+  return (
+    <span
+      aria-label={`${COUNTER_LABEL[kind]}: ${String(value)}`}
+      className="bg-danger text-danger-fg rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+    >
+      {value}
+    </span>
+  );
+}
+
+const topLinkClass = (active: boolean): string =>
   [
-    "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
-    isActive
-      ? "bg-accent-subtle text-accent font-medium"
-      : "text-fg-muted hover:bg-surface-2 hover:text-fg",
+    "flex h-full items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
+    active ? "border-accent text-fg font-medium" : "text-fg-muted hover:text-fg border-transparent",
   ].join(" ");
 
-/** A sidebar link; also marked current on its `also` prefixes. */
-function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  const content = (
-    <>
-      <item.icon className="size-4" aria-hidden />
-      {item.label}
-    </>
-  );
-  if ((item.also ?? []).some((prefix) => pathname.startsWith(prefix))) {
-    return (
-      <Link to={item.to} aria-current="page" className={linkClass({ isActive: true })}>
-        {content}
-      </Link>
-    );
-  }
+function TopMenu({
+  menu,
+  pathname,
+  counters,
+}: {
+  menu: NavMenu;
+  pathname: string;
+  counters: Record<Counter, number>;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const active = menu.items.some((i) => isCurrent(i, pathname));
+  const counted = menu.items.find((i) => i.counter !== undefined)?.counter;
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      // A click target is always a DOM node (DOM narrowing).
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+    };
+  }, [open]);
+
   return (
-    <NavLink to={item.to} end={item.end ?? false} className={linkClass}>
-      {content}
+    <div
+      ref={box}
+      className="relative h-full"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(false);
+      }}
+    >
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((v) => !v);
+        }}
+        className={topLinkClass(active)}
+      >
+        {menu.label}
+        {counted !== undefined && <CounterBadge kind={counted} value={counters[counted]} />}
+        <ChevronDown className="size-3.5" aria-hidden />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label={menu.label}
+          className="border-border bg-surface absolute left-0 top-full z-30 mt-1 min-w-52 rounded-lg border p-1 shadow-[var(--shadow-menu)]"
+        >
+          {menu.items.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              role="menuitem"
+              aria-current={isCurrent(item, pathname) ? "page" : undefined}
+              className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm ${
+                isCurrent(item, pathname) ? "text-accent" : "hover:bg-surface-2"
+              }`}
+            >
+              {item.label}
+              {item.counter && <CounterBadge kind={item.counter} value={counters[item.counter]} />}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MobileSheet({
+  pathname,
+  counters,
+  onClose,
+}: {
+  pathname: string;
+  counters: Record<Counter, number>;
+  onClose: () => void;
+}) {
+  const link = (item: NavLinkItem) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={item.end ?? false}
+      aria-current={isCurrent(item, pathname) ? "page" : undefined}
+      className={`flex items-center justify-between rounded-md px-3 py-2.5 text-[15px] ${
+        isCurrent(item, pathname) ? "bg-accent-subtle text-accent" : "hover:bg-surface-2"
+      }`}
+    >
+      {item.label}
+      {item.counter && <CounterBadge kind={item.counter} value={counters[item.counter]} />}
     </NavLink>
+  );
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Меню" className="fixed inset-0 z-50 lg:hidden">
+      <button
+        type="button"
+        aria-label="Закрыть меню"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60"
+      />
+      <nav className="border-border bg-surface absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto border-r p-3">
+        <div className="mb-3 flex items-center justify-between px-1">
+          <Logo className="text-lg" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="text-fg-muted hover:bg-surface-2 rounded-md p-1"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        {NAV.map((entry) =>
+          isMenu(entry) ? (
+            <div key={entry.label} className="border-border mt-2 border-t pt-2">
+              <p className="text-fg-dim px-3 pb-1 text-[11px] font-medium uppercase tracking-wider">
+                {entry.label}
+              </p>
+              {entry.items.map(link)}
+            </div>
+          ) : (
+            link(entry)
+          ),
+        )}
+      </nav>
+    </div>
   );
 }
 
 export function Layout() {
   const me = useAuthStore((s) => s.me);
   const signOut = useAuthStore((s) => s.signOut);
-  const location = useLocation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { pathname } = useLocation();
+  const counters = useCounters();
+  const [sheetOpen, setSheetOpen] = useState(false);
 
-  // Close the drawer whenever the route changes.
   useEffect(() => {
-    setDrawerOpen(false);
-  }, [location.pathname]);
-
-  // Past lg the drawer is a static column: an open drawer would leave the body scroll-locked.
+    setSheetOpen(false);
+  }, [pathname]);
   useEffect(() => {
-    const wide = window.matchMedia("(min-width: 1024px)");
-    const sync = () => {
-      if (wide.matches) setDrawerOpen(false);
-    };
-    sync();
-    wide.addEventListener("change", sync);
-    return () => {
-      wide.removeEventListener("change", sync);
-    };
-  }, []);
-
-  // Keep the page from scrolling under the open drawer.
-  useEffect(() => {
-    document.body.style.overflow = drawerOpen ? "hidden" : "";
+    document.body.style.overflow = sheetOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [drawerOpen]);
+  }, [sheetOpen]);
 
+  const waiting = counters.attention + counters.toPay;
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col">
       <a
         href="#main-content"
         className="focus:bg-accent focus:text-accent-fg sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-md focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
       >
         Перейти к содержимому
       </a>
-
-      <aside
-        aria-label="Боковая панель"
-        className={[
-          "border-border bg-surface w-(--sidebar-width) fixed inset-y-0 left-0 z-40 flex h-screen flex-col border-r",
-          "transition-transform duration-200 ease-out lg:sticky lg:top-0",
-          drawerOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
-        ].join(" ")}
-      >
-        <div className="border-border h-(--topbar-height) flex items-center justify-between gap-2 border-b px-4">
-          <div className="flex items-center gap-2">
-            <Logo className="text-lg" />
-            <span className="text-fg-dim text-xs font-medium uppercase tracking-wider">admin</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setDrawerOpen(false);
-            }}
-            className="text-fg-muted hover:bg-surface-2 rounded-md p-1 lg:hidden"
-            aria-label="Закрыть меню"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <nav aria-label="Основная навигация" className="flex-1 overflow-y-auto p-3">
-          {NAV_GROUPS.map((group, idx) => (
-            <div
-              key={group.label ?? "pinned"}
-              className={idx > 0 ? "border-border mt-3 border-t pt-3" : ""}
-            >
-              {group.label && (
-                <p className="text-fg-dim mb-1 px-3 text-[10px] font-medium uppercase tracking-wider">
-                  {group.label}
-                </p>
-              )}
-              {group.items.map((item) => (
-                <NavItemLink key={item.to} item={item} pathname={location.pathname} />
-              ))}
-            </div>
-          ))}
-        </nav>
-      </aside>
-
-      {drawerOpen && (
+      <header className="border-border bg-bg/95 h-(--topbar-height) sticky top-0 z-20 flex items-center gap-4 border-b px-4 backdrop-blur md:px-6">
         <button
           type="button"
           onClick={() => {
-            setDrawerOpen(false);
+            setSheetOpen(true);
           }}
-          aria-label="Закрыть меню"
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-        />
-      )}
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="border-border bg-bg/95 h-(--topbar-height) sticky top-0 z-20 flex items-center justify-between border-b px-4 backdrop-blur md:px-6">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setDrawerOpen(true);
-              }}
-              className="text-fg-muted hover:bg-surface-2 rounded-md p-1.5 lg:hidden"
-              aria-label="Открыть меню"
-            >
-              <Menu className="size-5" />
-            </button>
-            <span className="text-fg-muted truncate text-sm">
-              {me?.display_name ?? "Администратор"}
-            </span>
-          </div>
+          className="text-fg-muted hover:bg-surface-2 relative rounded-md p-1.5 lg:hidden"
+          aria-label="Открыть меню"
+        >
+          <Menu className="size-5" />
+          {waiting > 0 && (
+            <span aria-hidden className="bg-danger absolute right-1 top-1 size-2 rounded-full" />
+          )}
+        </button>
+        <Link to="/" className="flex shrink-0 items-center gap-2">
+          <Logo className="text-lg" />
+          <span className="text-fg-dim hidden text-xs font-medium uppercase tracking-wider sm:inline">
+            admin
+          </span>
+        </Link>
+        <nav aria-label="Основная навигация" className="hidden h-full items-stretch lg:flex">
+          {NAV.map((entry) =>
+            isMenu(entry) ? (
+              <TopMenu key={entry.label} menu={entry} pathname={pathname} counters={counters} />
+            ) : (
+              <Link
+                key={entry.to}
+                to={entry.to}
+                aria-current={isCurrent(entry, pathname) ? "page" : undefined}
+                className={topLinkClass(isCurrent(entry, pathname))}
+              >
+                {entry.label}
+                {entry.counter && (
+                  <CounterBadge kind={entry.counter} value={counters[entry.counter]} />
+                )}
+              </Link>
+            ),
+          )}
+        </nav>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <span className="text-fg-muted hidden truncate text-sm md:inline">
+            {me?.display_name ?? "Администратор"}
+          </span>
           <Button variant="ghost" size="sm" onClick={signOut} aria-label="Выйти">
             <LogOut className="size-4" aria-hidden />
             <span className="hidden sm:inline">Выйти</span>
           </Button>
-        </header>
-        <main
-          id="main-content"
-          tabIndex={-1}
-          className="flex-1 p-4 focus-visible:outline-none md:p-6"
-        >
-          <Outlet />
-        </main>
-      </div>
+        </div>
+      </header>
+      {sheetOpen && (
+        <MobileSheet
+          pathname={pathname}
+          counters={counters}
+          onClose={() => {
+            setSheetOpen(false);
+          }}
+        />
+      )}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto w-full max-w-[1600px] flex-1 p-4 focus-visible:outline-none md:p-6"
+      >
+        <Outlet />
+      </main>
     </div>
   );
 }
