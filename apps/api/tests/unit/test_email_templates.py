@@ -79,7 +79,9 @@ def test_the_deadline_is_in_tashkent_time() -> None:
 def test_without_a_deadline_the_letter_still_asks_to_accept() -> None:
     payload = {"number": NUMBER, "skin": "AK-47"}
     letter = render("trade_sent", locale="en", number=NUMBER, payload=payload, links=LINKS)
-    assert "Accept it in Steam." in letter.text
+    assert "Accept it within 15 minutes" in letter.text
+    ru = render("trade_sent", locale="ru", number=NUMBER, payload=payload, links=LINKS)
+    assert "в ближайшие 15 минут" in ru.text
 
 
 def test_a_skin_name_is_escaped_in_html() -> None:

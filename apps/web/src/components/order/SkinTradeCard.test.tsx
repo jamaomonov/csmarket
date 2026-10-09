@@ -218,4 +218,19 @@ describe("SkinTradeCard", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Открыть баланс" })).toBeInTheDocument();
   });
+
+  it("without a deadline from the market, asks to accept within 15 minutes", () => {
+    card({ state: "offer_sent", offer_url: OFFER });
+    expect(screen.getByText(/в ближайшие 15 минут/)).toBeInTheDocument();
+  });
+
+  it("with the market's deadline, shows that time instead of the 15 minutes", () => {
+    card({
+      state: "offer_sent",
+      offer_url: OFFER,
+      send_until: new Date(Date.now() + 25 * 60_000).toISOString(),
+    });
+    expect(screen.getByText(/Примите до/)).toBeInTheDocument();
+    expect(screen.queryByText(/в ближайшие 15 минут/)).toBeNull();
+  });
 });
