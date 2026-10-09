@@ -5159,6 +5159,54 @@
         "title": "NewCardIn",
         "type": "object"
       },
+      "OfferCheckOut": {
+        "description": "Whether an offer is still for sale, and at what price \u2014 ask right before you charge.",
+        "properties": {
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Usd"
+          },
+          "retail_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retail Price Usd"
+          },
+          "status": {
+            "description": "available: for sale at price_usd. gone: sold; pick another offer. unconfirmed: the market did not answer; price_usd is the last known price and the order checks again.",
+            "enum": [
+              "available",
+              "gone",
+              "unconfirmed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "offer_id",
+          "status",
+          "price_usd"
+        ],
+        "title": "OfferCheckOut",
+        "type": "object"
+      },
       "OfferOut": {
         "description": "One purchasable offer; ``offer_id`` is opaque and bound to its item.",
         "properties": {
@@ -14137,6 +14185,86 @@
           }
         },
         "summary": "Offers of one item",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/catalog/{item_id}/offers/{offer_id}": {
+      "get": {
+        "description": "Whether the offer is still for sale and its price for your tariff, asked live.\n\nCall it right before you take your buyer's money. ``gone``: the offer was sold, pick\nanother one. ``unconfirmed``: the market did not answer in time; ``price_usd`` is the last\nknown price and ``POST /orders`` checks again. A sold offer is never replaced by another.\nNot cached; counts against the key's ``check`` limit.",
+        "operationId": "check_offer_api_v1_public_catalog__item_id__offers__offer_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "offer_id",
+            "required": true,
+            "schema": {
+              "title": "Offer Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`, `offer_not_found` (a forged or foreign offer_id)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Check one offer before you charge your buyer",
         "tags": [
           "public-api"
         ]

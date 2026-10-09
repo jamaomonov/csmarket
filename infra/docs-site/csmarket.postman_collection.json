@@ -107,6 +107,36 @@
             },
             "description": "Offers of the item, cheapest first, priced by the key's tariff.\n\nCached 60 s per tariff and item. Offer ids are opaque and bound to the item."
           }
+        },
+        {
+          "name": "Check one offer before you charge your buyer",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/:item_id/offers/:offer_id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                ":item_id",
+                "offers",
+                ":offer_id"
+              ],
+              "variable": [
+                {
+                  "key": "item_id",
+                  "value": ""
+                },
+                {
+                  "key": "offer_id",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Whether the offer is still for sale and its price for your tariff, asked live.\n\nCall it right before you take your buyer's money. `gone`: the offer was sold, pick\nanother one. `unconfirmed`: the market did not answer in time; `price_usd` is the last\nknown price and `POST /orders` checks again. A sold offer is never replaced by another.\nNot cached; counts against the key's `check` limit."
+          }
         }
       ]
     },

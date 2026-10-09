@@ -140,6 +140,19 @@ breaker. The DB connection is released across the call. This is the ninth carve-
 A sold lot is never swapped for another one. The partner, like a site buyer, picks a lot for
 its float, pattern or stickers, so a substitute would be a different skin (owner, 2026-10-10).
 
+**The offer check, `GET /public/catalog/{item_id}/offers/{offer_id}` (v1.2, the same day).**
+A partner such as YuPay charges its buyer first and buys from us after. It now asks right before
+the payment whether the offer is still for sale (`available`, `gone` or `unconfirmed`), and at
+what price for its tariff.
+
+- A LIS-SKINS lot is asked live. A Skinslink offer answers from the mirror. A lot already gone
+  from our tables is `gone` with no call.
+- It is not cached, and it shares the key's `check` limit with the trade-link check.
+- Both partner paths (this check and `POST /public/orders`) spend their own share of the
+  LIS-SKINS check budget: **40** a minute (`lisskins:check:api:*`). The storefront keeps **60**,
+  so partners can never starve the site's checkout. 100 in all, as before, out of the key's 200.
+- `public_api.offer_check.live_quote` is the one implementation behind both partner paths.
+
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).

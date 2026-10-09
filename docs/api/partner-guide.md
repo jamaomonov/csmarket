@@ -93,6 +93,8 @@ curl -s https://api.csmarket.uz/api/v1/public/orders \
 ```
 
 - Without `offer_id` we buy the cheapest offer not above `max_price_usd`.
+- **Check the offer first** (`GET /catalog/{item_id}/offers/{offer_id}`, below) right before you
+  take your customer's money.
 - `trade_link` is your **customer's** Steam trade link.
 - `client_order_id` is your id for the purchase (1–64 characters of `A-Za-z0-9_.:-`), unique on
   your account. **Always send it and retry with the same value** after a timeout: a repeat never
@@ -128,6 +130,32 @@ name when we have it, usually `null`.
 | `price_moved`          | reserved for later; not sent today                          |
 
 A delivered skin is never refunded automatically. A `402 insufficient_balance` writes nothing.
+
+## Checking an offer before you charge
+
+Offers change fast: a skin you list may be sold seconds later. Right before you take your
+customer's money, ask whether the chosen offer is still for sale:
+
+```bash
+curl -s https://api.csmarket.uz/api/v1/public/catalog/4f1c…/offers/Zm9v… \
+  -H 'Authorization: Bearer csm_EXAMPLEtokenNotReal'
+```
+
+```json
+{ "offer_id": "Zm9v…", "status": "available", "price_usd": "14.250" }
+```
+
+| `status`      | What to do                                                                        |
+| ------------- | --------------------------------------------------------------------------------- |
+| `available`   | charge `price_usd` (it may differ from the list) and call `POST /orders`          |
+| `gone`        | the offer was sold: tell your customer and offer another one; `price_usd` is null |
+| `unconfirmed` | the market did not answer in time; `price_usd` is the last known price            |
+
+It is asked live, never cached, and counts against your **check** limit. `POST /orders` checks
+the offer again: if it is sold in the seconds between, the purchase answers
+`409 offer_gone` and nothing is charged. We never buy a different offer in its place — offers
+of one skin differ in float, pattern and stickers. A forged or foreign `offer_id` is
+`404 offer_not_found`.
 
 ## Checking a trade link
 
@@ -240,17 +268,21 @@ Verify the **raw body bytes** before parsing the JSON.
 | 401  | `unauthorized`                                                                                                            |
 | 402  | `insufficient_balance`                                                                                                    |
 | 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                              |
-| 404  | `item_not_found`, `order_not_found`                                                                                       |
+| 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                    |
 | 409  | `offer_gone`, `price_above_max`, `duplicate_client_order_id`, `buying_disabled`, `cursor_expired`, `idempotency_mismatch` |
 | 422  | `trade_link_invalid`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key`, invalid parameters                 |
 | 429  | `rate_limited` — wait `Retry-After` seconds                                                                               |
 | 503  | `feed_unavailable`, `rate_unavailable` — retry after `Retry-After`                                                        |
 
-Limits per key, per minute: **60** reads, **10** purchases, **1** first catalogue page, **30** trade-link checks. `GET /me` shows your limits (`limits`, including
+Limits per key, per minute: **60** reads, **10** purchases, **1** first catalogue page, **30** checks (trade links and offers together). `GET /me` shows your limits (`limits`, including
 `check_per_min`). Need more? Ask us and we raise them for your key.
 
 # Changelog
 
+- **2026-10-10 — v1.2.** Added: `GET /catalog/{item_id}/offers/{offer_id}` to check an offer
+  right before you charge. `POST /orders` now confirms the offer before writing anything: a
+  sold offer is `409 offer_gone` at once instead of a paid order refunded a moment later.
+  Nothing was removed or renamed.
 - **2026-10-09 — v1.1.** Added: limits per key in `GET /me`, `POST /tradelink/check`,
   `steam_offer_id` and `seller_name` on an order's `trade`, and the IP list you set in your
   profile. Nothing was removed or renamed.
