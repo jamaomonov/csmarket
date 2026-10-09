@@ -1,8 +1,9 @@
 /**
  * What search engines read on a CS2 item page, built from the item's own numbers: the FAQ
  * (price in soʻm and offers, Steam's price when ours is lower, the wear's float range) and
- * the Product JSON-LD with a single Offer in soʻm. No buy question: there is no buy flow in M2. Only facts the item has are
- * stated — no price, no price question; not cheaper than Steam, no Steam answer.
+ * how to pay in soʻm, Steam's trade hold) and the Product JSON-LD with a single Offer in soʻm.
+ * Only facts the item has are stated — no price, no price question; not cheaper than Steam, no
+ * Steam answer — and a price comparison carries its date.
  */
 
 import type { Exterior, SkinDetail, SkinItem } from "@csmarket/utils/skins";
@@ -50,12 +51,38 @@ type FaqKey =
   | "faq.steamA"
   | "faq.floatQ"
   | "faq.floatA"
+  | "faq.payQ"
+  | "faq.payA"
+  | "faq.holdQ"
+  | "faq.holdA"
   | `exterior.${Exterior}`;
 
 /** A `next-intl` translator scoped to `web.skins` — any that knows the FAQ's keys. */
 export type SkinsT = (key: FaqKey, values?: Record<string, string | number>) => string;
 
-export function skinFaq(item: SkinDetail, t: SkinsT, locale: string): FaqEntry[] {
+/** «10.10.2026» (ru / uz) or «10 Oct 2026» (en), in Tashkent: the date a price claim holds. */
+export function claimDate(locale: string, day: Date): string {
+  return locale === "en"
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Tashkent",
+      }).format(day)
+    : new Intl.DateTimeFormat("ru-RU", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        timeZone: "Asia/Tashkent",
+      }).format(day);
+}
+
+export function skinFaq(
+  item: SkinDetail,
+  t: SkinsT,
+  locale: string,
+  day: Date = new Date(),
+): FaqEntry[] {
   const name = skinFullName(item);
   const price = displayPrice(locale, item.price_uzs, item.price_usd);
   const out: FaqEntry[] = [];
@@ -72,6 +99,8 @@ export function skinFaq(item: SkinDetail, t: SkinsT, locale: string): FaqEntry[]
         // The API keeps Waxpeer's tenths of a cent ("43.794"); a price reads in cents.
         steam: Number(item.steam_price_usd).toFixed(2),
         percent: item.discount_percent,
+        // A price comparison always carries its date (copy rules).
+        date: claimDate(locale, day),
       }),
     });
   }
@@ -86,6 +115,10 @@ export function skinFaq(item: SkinDetail, t: SkinsT, locale: string): FaqEntry[]
       }),
     });
   }
+  out.push(
+    { question: t("faq.payQ", { name }), answer: t("faq.payA") },
+    { question: t("faq.holdQ", { name }), answer: t("faq.holdA") },
+  );
   return out;
 }
 
@@ -163,4 +196,55 @@ export function itemListLd(
       url: localeUrl(locale, itemPath(it.slug)),
     })),
   };
+}
+
+/** The `web.skins` keys the «О предмете» paragraph reads. */
+type AboutKey =
+  | "about.weapon"
+  | "about.item"
+  | "about.rarity"
+  | "about.float"
+  | "about.wears"
+  | "about.stattrak"
+  | "about.souvenir"
+  | "about.buy"
+  | `exterior.${Exterior}`;
+
+export type AboutT = (key: AboutKey, values?: Record<string, string | number>) => string;
+
+/**
+ * «О предмете»: a paragraph written from the item's own facts — what it is, its rarity, the
+ * skin's float range, the wears and variants it comes in, and the price — so every item page
+ * carries text of its own. A fact the item lacks is left out, never guessed.
+ */
+export function skinAbout(
+  item: SkinDetail,
+  t: AboutT,
+  locale: string,
+  categoryName: string,
+): string {
+  const name = skinFullName(item);
+  const out = [
+    item.weapon
+      ? t("about.weapon", { name, weapon: item.weapon })
+      : t("about.item", { name, category: categoryName }),
+  ];
+  if (item.rarity) out.push(t("about.rarity", { rarity: item.rarity }));
+  if (item.exterior && item.min_float !== null && item.max_float !== null) {
+    out.push(
+      t("about.float", {
+        min: Number(item.min_float).toFixed(2),
+        max: Number(item.max_float).toFixed(2),
+      }),
+    );
+  }
+  const wears = [...new Set(item.family.flatMap((m) => (m.exterior ? [m.exterior] : [])))];
+  if (wears.length > 1) {
+    out.push(t("about.wears", { list: wears.map((w) => t(`exterior.${w}`)).join(", ") }));
+  }
+  if (!item.stattrak && item.family.some((m) => m.stattrak)) out.push(t("about.stattrak"));
+  if (!item.souvenir && item.family.some((m) => m.souvenir)) out.push(t("about.souvenir"));
+  const price = displayPrice(locale, item.price_uzs, item.price_usd);
+  if (price !== null && item.count > 0) out.push(t("about.buy", { price }));
+  return out.join(" ");
 }

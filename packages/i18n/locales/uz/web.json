@@ -184,7 +184,7 @@
       "description": "CS2 skinlari tezkor yetkazib berish bilan: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Soʻmda toʻlov.",
       "itemTitle": "{name} — Oʻzbekistonda {price}ga sotib olish",
       "itemTitleNoPrice": "{name} — Oʻzbekistonda soʻmga sotib olish",
-      "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Soʻmda toʻlov, skin Steamʼga keladi.",
+      "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Click, Payme yoki Uzum orqali soʻmda toʻlov, skin Steamʼga keladi.",
       "itemDescriptionNoPrice": "{name} — CS2 skini, soʻmda tezkor yetkazib berish bilan sotib oling.",
       "marketDescription": "{count} ta CS2 skini mavjud: pichoqlar, qoʻlqoplar, qurollar, agentlar va keyslar. Narx, eskirish va noyoblik boʻyicha filtrlar. Click, Payme yoki Uzum orqali soʻmda toʻlov."
     },
@@ -276,9 +276,13 @@
       "priceQ": "{name} Oʻzbekistonda qancha turadi?",
       "priceA": "{name} csmarketʼda {price}dan — {count} ta taklifning eng arzoni.",
       "steamQ": "{name} Steamʼdagidan arzonmi?",
-      "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda hozir {percent}% arzonroq.",
+      "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda {percent}% arzonroq ({date} holatiga).",
       "floatQ": "{name} floati qanday?",
-      "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda."
+      "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda.",
+      "payQ": "{name}ni soʻmda qanday toʻlash mumkin?",
+      "payA": "Click, Payme yoki Uzum orqali Uzcard yoki Humo kartasi bilan yoki sayt balansidan. Xorijiy karta kerak emas.",
+      "holdQ": "Nega {name}ni darhol boshqaga berib boʻlmaydi?",
+      "holdA": "Bu Steam almashuv himoyasi: 7 kun davomida buyum inventaringizda turadi, lekin uni berish yoki sotish mumkin emas. Qoida barcha maydonchalar uchun bir xil."
     },
     "allOf": {
       "knives": "Barcha pichoqlar",
@@ -296,6 +300,23 @@
     "chipLabel": {
       "smgs": "Avtomatlar",
       "heavy": "Ogʻir"
+    },
+    "about": {
+      "title": "Buyum haqida",
+      "weapon": "{name} — CS2 dagi {weapon} uchun skin.",
+      "item": "{name} — CS2 buyumi, «{category}» boʻlimidan.",
+      "rarity": "Noyoblik — {rarity}.",
+      "float": "Bu skinning floati {min}dan {max}gacha boʻladi.",
+      "wears": "Eskirish darajalari: {list}.",
+      "stattrak": "Qotillik hisoblagichli StatTrak™ versiyasi bor.",
+      "souvenir": "Suvenir versiyasi bor.",
+      "buy": "csmarket’da — {price}dan: Click, Payme yoki Uzum orqali soʻmda toʻlov, buyum Steam’ga almashuv taklifi sifatida keladi."
+    },
+    "similar": {
+      "weapon": "Boshqa {weapon} skinlari",
+      "category": "«{category}» boʻlimida yana",
+      "all": "Barcha {weapon} skinlari",
+      "allCategory": "Butun «{category}» boʻlimi"
     }
   },
   "buy": {

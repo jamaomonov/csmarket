@@ -2,7 +2,7 @@ import ru from "@csmarket/i18n/locales/ru/web.json";
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
-import { itemListLd, skinFaq, skinProductLd, wearFloatRange } from "./skin-seo";
+import { itemListLd, skinAbout, skinFaq, skinProductLd, wearFloatRange } from "./skin-seo";
 
 import type { SkinDetail } from "@csmarket/utils/skins";
 
@@ -46,8 +46,10 @@ describe("wearFloatRange", () => {
 });
 
 describe("skinFaq", () => {
-  it("answers price, Steam and float from the item's own numbers", () => {
-    const faq = skinFaq(ITEM, t, "ru");
+  const DAY = new Date("2026-10-10T08:00:00Z");
+
+  it("answers price, Steam (dated), float, payment and the trade hold", () => {
+    const faq = skinFaq(ITEM, t, "ru", DAY);
     const text = faq.map((f) => `${f.question} ${f.answer}`).join("\n");
     expect(faq[0]?.question).toBe("Сколько стоит AK-47 | Slate (Battle-Scarred) в Узбекистане?");
     expect(faq[0]?.answer).toMatch(/40\s000 сум/);
@@ -55,13 +57,17 @@ describe("skinFaq", () => {
     expect(text).toMatch(/\$4\.10/);
     expect(text).toMatch(/17\s?%/);
     expect(text).toMatch(/от 0\.45 до 1\.00/);
-    expect(faq).toHaveLength(3);
-    expect(text).not.toMatch(/Click|Payme|Uzum/);
+    expect(text).toMatch(/на 10\.10\.2026/);
+    expect(faq).toHaveLength(5);
+    // Buying is live (M4a): the payment answer names the methods.
+    expect(faq[3]?.question).toBe("Как оплатить AK-47 | Slate (Battle-Scarred) в сумах?");
+    expect(faq[3]?.answer).toMatch(/Click, Payme или Uzum/);
+    expect(faq[4]?.answer).toMatch(/7 дней/);
   });
 
   it("writes the Steam price in dollars and cents, as the API's units can carry more", () => {
     const at = (steam: string) =>
-      skinFaq({ ...ITEM, steam_price_usd: steam }, t, "ru")
+      skinFaq({ ...ITEM, steam_price_usd: steam }, t, "ru", DAY)
         .map((f) => f.answer)
         .join("\n");
     expect(at("43.794")).toMatch(/\$43\.79[^\d]/);
@@ -74,6 +80,7 @@ describe("skinFaq", () => {
       { ...ITEM, discount_percent: 0, price_usd: null, price_uzs: null },
       t,
       "ru",
+      DAY,
     );
     const text = faq.map((f) => f.answer).join("\n");
     expect(text).not.toMatch(/дешевле/);
@@ -136,5 +143,56 @@ describe("itemListLd", () => {
 
   it("is null for an empty list (an empty ItemList is invalid)", () => {
     expect(itemListLd("ru", [])).toBeNull();
+  });
+});
+
+describe("skinAbout", () => {
+  const member = (exterior: "FN" | "FT" | "BS", stattrak = false) => ({
+    slug: `x-${exterior}-${String(stattrak)}`,
+    exterior,
+    stattrak,
+    souvenir: false,
+    price_usd: null,
+    price_uzs: null,
+    count: 0,
+  });
+
+  it("states the weapon, rarity, float range, wears, StatTrak and the price", () => {
+    const text = skinAbout(
+      { ...ITEM, family: [member("FN"), member("FT"), member("BS"), member("FT", true)] },
+      t,
+      "ru",
+      "Винтовки",
+    );
+    expect(text).toBe(
+      "AK-47 | Slate (Battle-Scarred) — скин для AK-47 в КС2 (CS2). Редкость — Restricted. " +
+        "Флоат у этого скина бывает от 0.00 до 1.00. " +
+        "Бывает в износе: Прямо с завода, После полевых испытаний, Закалённое в боях. " +
+        "Есть версия StatTrak™ со счётчиком убийств. " +
+        "На csmarket — от 40\u00a0000 сум: оплата в сумах через Click, Payme или Uzum, " +
+        "предмет приходит в Steam как предложение обмена.",
+    );
+  });
+
+  it("a case: its section, no float or wears, no price sentence without a price", () => {
+    const text = skinAbout(
+      {
+        ...ITEM,
+        name: "Recoil Case",
+        category: "cases",
+        weapon: null,
+        exterior: null,
+        rarity: null,
+        min_float: null,
+        max_float: null,
+        price_uzs: null,
+        price_usd: null,
+        family: [],
+      },
+      t,
+      "ru",
+      "Кейсы",
+    );
+    expect(text).toBe("Recoil Case — предмет КС2 (CS2) из раздела «Кейсы».");
   });
 });
