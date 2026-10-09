@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.7
-FROM node:22-alpine AS base
+# syntax=mirror.gcr.io/docker/dockerfile:1.7
+FROM mirror.gcr.io/library/node:22-alpine AS base
 RUN npm i -g corepack@latest && corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 
@@ -26,7 +26,7 @@ ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8100
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN pnpm --filter @csmarket/web build
 
-FROM node:22-alpine AS runner
+FROM mirror.gcr.io/library/node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN npm i -g corepack@latest && corepack enable && corepack prepare pnpm@9.12.0 --activate

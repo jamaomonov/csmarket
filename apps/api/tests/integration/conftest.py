@@ -33,9 +33,9 @@ from testcontainers.community.redis import RedisContainer
 
 @pytest.fixture(scope="session")
 def _pg_container() -> Iterator[PostgresContainer]:
-    container = PostgresContainer(image="postgres:16-alpine", driver=None).with_bind_ports(
-        5432, None
-    )
+    container = PostgresContainer(
+        image="mirror.gcr.io/library/postgres:16-alpine", driver=None
+    ).with_bind_ports(5432, None)
     try:
         container.start()
         yield container
@@ -46,7 +46,9 @@ def _pg_container() -> Iterator[PostgresContainer]:
 @pytest.fixture(scope="session")
 def _redis_container() -> Iterator[RedisContainer]:
     """A private Redis per session/worker, so the per-test ``flushdb`` is always safe."""
-    container = RedisContainer(image="redis:7-alpine").with_bind_ports(6379, None)
+    container = RedisContainer(image="mirror.gcr.io/library/redis:7-alpine").with_bind_ports(
+        6379, None
+    )
     try:
         container.start()
         yield container
