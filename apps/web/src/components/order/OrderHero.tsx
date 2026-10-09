@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 
 import type { OrderOut } from "@/lib/orders";
 
-
 import { SkinFloatBar } from "@/components/skins/SkinFloatBar";
 import { Link } from "@/i18n/navigation";
 import { formatUsd } from "@/lib/orders";
@@ -79,7 +78,8 @@ export function OrderHero({ order, locale }: OrderHeroProps) {
           ) : null}
         </div>
       </div>
-      <p className="num text-2xl font-bold sm:text-right">{order.channel === "api" ? formatUsd(order.price_usd) : formatUzs(locale, order.price_uzs)}
+      <p className="num text-2xl font-bold sm:text-right">
+        {order.channel === "api" ? formatUsd(order.price_usd) : formatUzs(locale, order.price_uzs)}
       </p>
     </div>
   );

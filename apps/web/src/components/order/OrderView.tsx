@@ -160,8 +160,8 @@ function OrderSubtitle({ order, locale }: { order: OrderOut; locale: string }) {
       : order.paid_with === "wallet"
         ? t("paidBalance")
         : order.paid_with && order.paid_with !== "mock"
-        ? order.paid_with.charAt(0).toUpperCase() + order.paid_with.slice(1)
-        : null;
+          ? order.paid_with.charAt(0).toUpperCase() + order.paid_with.slice(1)
+          : null;
   return <p className="text-fg-dim text-sm">{paid ? `${when} · ${paid}` : when}</p>;
 }
 
