@@ -14,6 +14,24 @@ export function categoryPath(category: string): string {
   return `/category/${category}`;
 }
 
+/** The payment methods with a landing of their own (`/pay/click` …). */
+export const PAY_METHODS = ["click", "payme", "uzum"] as const;
+export type PayMethod = (typeof PAY_METHODS)[number];
+
+/** Brand names, never translated. */
+export const PAY_NAMES: Readonly<Record<PayMethod, string>> = {
+  click: "Click",
+  payme: "Payme",
+  uzum: "Uzum",
+};
+
+export function payPath(method: PayMethod): string {
+  return `/pay/${method}`;
+}
+
+/** Cheap skins, under `CHEAP_MAX_UZS` (`lib/landing.ts`). */
+export const CHEAP = "/cheap";
+
 /** `weaponSlug` is the slugged weapon name (`ak-47`), see `skin-landing.ts`. */
 export function weaponPath(weaponSlug: string): string {
   return `/weapon/${weaponSlug}`;

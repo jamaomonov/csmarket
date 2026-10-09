@@ -12,6 +12,11 @@ import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@
 import { countUnit, isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
 
+/** Categories with a paragraph of their own (`seoPages.cat.text.<category>`). */
+const TEXT_LIST = ["knives", "gloves", "rifles", "pistols", "cases", "agents"] as const;
+type TextCategory = (typeof TEXT_LIST)[number];
+const TEXT_CATEGORIES = new Set<string>(TEXT_LIST);
+
 interface Props {
   params: Promise<{ locale: string; category: string }>;
 }
@@ -88,23 +93,37 @@ export default async function SkinCategoryPage({ params }: Props) {
   const query = { sort: "popular" as const, category: cat };
   const page = await getSkinsPage(query);
   const items = t("landing.count", { unit: countUnit(cat), count: data.facet.count });
-  // "самый дешёвый нож в кс2" is how buyers ask; the answer is live, not written.
-  const faq =
-    cat === "knives" && data.cheapest && data.from
-      ? {
-          title: t("faq.title"),
-          entries: [
-            {
-              question: t("landing.cheapestKnifeQ"),
-              answer: t("landing.cheapestKnifeA", {
-                name: data.cheapest.name.replace(/^★\s*/, ""),
-                price: data.from,
-                items,
-              }),
-            },
-          ],
-        }
-      : undefined;
+  const tSeo = await getTranslations({ locale, namespace: "web.seoPages.cat" });
+  const inline =
+    cat === "agents"
+      ? t("landing.agentsInline")
+      : t("landing.categoryInline", { name: name.toLocaleLowerCase(locale) });
+  // Questions buyers type, answered from the page's live numbers.
+  const entries = [
+    ...(data.from
+      ? [
+          {
+            question: tSeo("priceQ", { name: name.toLocaleLowerCase(locale) }),
+            answer: tSeo("priceA", { price: data.from, items }),
+          },
+        ]
+      : []),
+    // "самый дешёвый нож в кс2" is how buyers ask; the answer is live, not written.
+    ...(cat === "knives" && data.cheapest && data.from
+      ? [
+          {
+            question: t("landing.cheapestKnifeQ"),
+            answer: t("landing.cheapestKnifeA", {
+              name: data.cheapest.name.replace(/^★\s*/, ""),
+              price: data.from,
+              items,
+            }),
+          },
+        ]
+      : []),
+    { question: tSeo("howQ", { inline }), answer: tSeo("howA") },
+  ];
+  const text = TEXT_CATEGORIES.has(cat) ? tSeo(`text.${cat as TextCategory}`) : null;
   const seen = new Set<string>();
   const weapons = data.scoped.weapons.flatMap((w) => {
     const path = weaponPath(weaponSlug(w.value));
@@ -118,7 +137,10 @@ export default async function SkinCategoryPage({ params }: Props) {
       h1={t("landing.categoryH1", { name })}
       intro={data.from ? t("landing.intro", { items, price: data.from }) : null}
       items={page.items}
-      {...(faq ? { faq } : {})}
+      faq={{ title: t("faq.title"), entries }}
+      {...(text !== null && {
+        after: <p className="text-fg-muted mt-8 max-w-3xl text-[14px] leading-relaxed">{text}</p>,
+      })}
       allHref={MARKET + skinQueryString(query)}
       crumbs={[
         { name: t("market"), path: MARKET },

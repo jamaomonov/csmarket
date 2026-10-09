@@ -36,7 +36,7 @@ export const CHEAP_MAX_UZS = 100_000;
 /** «Популярное» mixes these (cases, keys and charms stay out of the showcase). */
 const POPULAR_MIX = ["rifles", "knives", "gloves", "pistols", "smgs"] as const;
 /** «До 100 000 сум» mixes weapon skins only. */
-const CHEAP_MIX = ["rifles", "pistols", "smgs"] as const;
+export const CHEAP_MIX = ["rifles", "pistols", "smgs"] as const;
 
 /** Category tiles: two large, the rest small. */
 export const BIG_TILES = ["knives", "gloves"] as const;
