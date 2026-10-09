@@ -42,6 +42,7 @@ from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.refunds import refund_or_hold
 from csmarket.modules.orders.trades import flag
+from csmarket.modules.orders.webhook_events import emit_order_event
 from csmarket.modules.realtime.api import nudge
 
 log = get_logger("csmarket.orders.lisskins_status")
@@ -147,6 +148,8 @@ async def apply_report(
         await nudge(db, user_id=order.user_id, number=order.number)
     if outcome == "trade_sent":
         await enqueue_trade_sent(db, order, send_until=purchase.offer_expiry_at)
+    if outcome in ("trade_sent", "delivered"):
+        await emit_order_event(db, order=order, trade=None, purchase=purchase)
     return outcome
 
 

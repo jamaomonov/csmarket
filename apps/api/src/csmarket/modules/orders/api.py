@@ -64,6 +64,7 @@ from csmarket.modules.orders.trade_view import (
     skin_trade_out,
     trade_state,
 )
+from csmarket.modules.orders.webhook_events import WEBHOOKS_CHANNEL, emit_order_event
 
 __all__ = [
     "ADMIN_REFUNDABLE",
@@ -77,6 +78,7 @@ __all__ = [
     "RETRYABLE",
     "TERMINAL",
     "TRANSITIONS",
+    "WEBHOOKS_CHANNEL",
     "Dashboard",
     "Days",
     "Health",
@@ -105,6 +107,7 @@ __all__ = [
     "drain_checks",
     "drain_paid",
     "effective_status",
+    "emit_order_event",
     "erase_old_trade_links",
     "erase_old_verify_addresses",
     "expire_pending",

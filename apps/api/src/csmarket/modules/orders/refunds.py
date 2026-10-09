@@ -31,6 +31,7 @@ from csmarket.modules.orders.fsm import move
 from csmarket.modules.orders.letters import enqueue_refunded
 from csmarket.modules.orders.models import FAILURE_REASONS, IN_FLIGHT, Order, SkinTrade
 from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
+from csmarket.modules.orders.webhook_events import emit_order_event
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.wallet.api import credit_order_refund, credit_order_refund_usd
 
@@ -184,6 +185,10 @@ async def refund_to_balance(
     await db.flush()
     await nudge(db, user_id=order.user_id, number=order.number)
     await enqueue_refunded(db, order)
+    if order.channel == "api":
+        await emit_order_event(
+            db, order=order, trade=None, purchase=await purchase_of(db, order, lock=False)
+        )
     refund_reason: OrderRefundReason = reason  # type: ignore[assignment] # FAILURE_REASONS
     record_order_refund(refund_reason)
     log.info(
