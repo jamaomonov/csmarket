@@ -47,9 +47,32 @@ over unchanged and a transaction can still be atomic across both currencies.
 - Dollar reports come from the ledger: `house_fx_uzs` and `house_fx_usd` say what was converted.
 - Plan B debits the USD wallet with the existing `purchase` / `refund` kinds, the account deciding.
 
+- Plan B: the partner API reuses the same ledger and the same buy worker; an API order is a paid
+  `orders` row (`channel = api`), so refunds, attention and reconciliation need no new states.
+
+### Plan B consequences (rulings R1–R5)
+
+- **R1 — no nullable site columns.** `price_uzs`, `fx_snapshot_id` and `fx_uplift_pct` stay
+  NOT NULL: an API order stores `price_uzs = 0`, the newest FX snapshot (any age; none ever
+  recorded is 503 `rate_unavailable`), `fx_uplift_pct = 0`; `price_usd` holds the charged price.
+- **R2 — who may issue a key.** A successful top-up **or** `usd_wallet_enabled` (an admin-funded
+  client such as YuPay may never top up); otherwise 409 `api_key_not_allowed`.
+- **R3 — the token is never stored,** so a replayed issue `Idempotency-Key` answers 409
+  `key_already_issued` with the `key_id`, not the token.
+- **R4 — the feed is stored as JSON text pages** of 1000 items in Redis (no per-page gzip in the
+  app); Caddy gzips the response. A strong ETag per page, 304 on `If-None-Match`.
+- **R5 — new failure reasons** `trade_hold` and `price_moved` (Skinslink `hold` /
+  `hold_and_permissions` map to `trade_hold`); the partner reads a closed list of refund reasons.
+- **Orders are scoped to the key's owner.** `client_order_id` is unique per user among API
+  orders (`uq_orders_user_client_order_id`, partial `WHERE channel = 'api'`, migration 0028), so
+  a reissued key still reads the old orders and cannot reuse an old id; another user's order is 404. Keys are revoked, never deleted (`orders.api_key_id` is RESTRICT).
+- **No external call on the public path.** The feed and offers read our own tables and Redis;
+  the trade link is checked for form only; the buy happens in the worker.
+
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).
+- A feed refresh lags by up to 60 s, and after a scheduler restart the feed is 503 for ~400 s.
 - We carry the FX gap between the converted rate and the day we buy; the uplift covers it.
 
 ## Validation

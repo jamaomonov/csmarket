@@ -503,3 +503,23 @@ revenue_usd, cost_usd, margin_usd, margin_percent}, refunds {count, amount_uzs},
 attention, by_day [{day, sales_count, revenue_uzs, margin_usd}], waxpeer {balance_usd,
 read_at}, skinslink {available_usd, hold_usd, read_at}, lisskins {available_usd, locked_usd,
 read_at}}` (a balance is `null` when unknown; `attention` counts every source); days are Tashkent days; any other `days` is 422 `dashboard_days`. Reads only.
+
+## Public API v1 (ADR-0017, plan B)
+
+`/api/v1/public/*`, authenticated by `Authorization: Bearer csm_…` (not the Steam session): a
+catalogue feed, offers, buying from the USD wallet and the account's API orders. Full contract,
+errors, limits and curl examples: [`public-v1.md`](./public-v1.md). Notes:
+
+- **Auth.** The key is issued on the site (`GET/POST/DELETE /me/api-key`, signed-in user,
+  `Idempotency-Key` on the writes); the token is shown once, only its SHA-256 is stored. Every
+  `/public/*` route is exempt from the coarse per-IP limiter
+  (`bootstrap._exempt_self_authenticating_routes`) and under its own per-key limits (60 reads,
+  10 orders, 1 feed first page a minute) plus a per-IP throttle on failed authentications.
+- **Idempotency** is the client's `client_order_id` on `POST /public/orders`, unique per account
+  (the key's owner): a repeat is 409 `duplicate_client_order_id` with the order, never a second
+  one. The route takes no `Idempotency-Key` header.
+- **Caching.** The feed answers a strong `ETag` and 304 on `If-None-Match`; pages are
+  1000 items with a cursor `{snapshot}.{page}` (stale: 409 `cursor_expired`; no snapshot yet:
+  503 `feed_unavailable`).
+- **No external call** on any public request: the feed and the offers read our own tables and
+  Redis (AGENTS.md §11).

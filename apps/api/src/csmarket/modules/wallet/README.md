@@ -73,6 +73,16 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
 | `purchase`       | D `house_payments_received` / C `user_wallet` (an order paid from the balance)                                              | `purchase:order:{order_id}`      |
 | `refund`         | balance-paid order: D `user_wallet` / C `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing` (R9) | `refund:order:{order_id}`        |
 
+USD variants of the same two kinds (an API order, ADR-0017; the account's currency decides):
+
+| Kind       | Legs                                                              | Idempotency key                 |
+| ---------- | ----------------------------------------------------------------- | ------------------------------- |
+| `purchase` | D `house_payments_received_usd` / C `user_wallet_usd` (milli-USD) | `purchase:order:usd:{order_id}` |
+| `refund`   | D `user_wallet_usd` / C `house_payments_received_usd`             | `refund:order:usd:{order_id}`   |
+
+`debit_purchase_usd` and `credit_order_refund_usd` (`purchases.py`) book them; an order's
+`paid_with = usd_wallet` routes its refund there, never to a kassa.
+
 `purchase` and `refund` are in `TX_KINDS` since M4a; `orders` books them (one each per order)
 through `purchases.py`, below.
 

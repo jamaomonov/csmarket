@@ -43,6 +43,9 @@
 - **Public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017): plan A (the USD
   wallet) is built on branch `public-api` — not merged; plans B (keys, buying) and C (webhooks,
   ops) are to come.
+- **The public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017; keys, feed, offers,
+  buying from the USD wallet) is built on branch `public-api` — not merged, not deployed
+  (`docs/api/public-v1.md`, `docs/runbooks/public-api.md`).
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in
@@ -341,7 +344,7 @@ csmarket/
   (ADR-0012) asks LIS-SKINS `GET /market/check-availability` once for a chosen `ls:` lot — 4 s
   timeout, 100 calls/min for the API, a 120 s breaker, no DB connection held across it; a
   failed call accepts the snapshot price (the worker's `max_price` guards). The route is
-  already in the latency alerts' `handler` regexes. A sixth and a seventh (ADR-0016): `GET /sell/inventory` asks Skinslink `inventory` on a cache miss — 6 s timeout, a 120 s breaker, the result kept 5 minutes per user, its own `ip_guard` bucket, no DB connection held across it; `POST /sell` commits the sale, then calls `create-deposit` once — 10 s, nothing open across it, a timeout left to the poll. Both routes are in the latency alerts' `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
+  already in the latency alerts' `handler` regexes. A sixth and a seventh (ADR-0016): `GET /sell/inventory` asks Skinslink `inventory` on a cache miss — 6 s timeout, a 120 s breaker, the result kept 5 minutes per user, its own `ip_guard` bucket, no DB connection held across it; `POST /sell` commits the sale, then calls `create-deposit` once — 10 s, nothing open across it, a timeout left to the poll. Both routes are in the latency alerts' `handler` regexes. **The public API (`/api/v1/public/*`, ADR-0017) adds none:** the feed and offers read our own tables and Redis, `POST /public/orders` checks the trade link for form only and debits the USD wallet in one transaction, and the supplier is called only by the worker. A new one needs an ADR and a line here — and its route in the `handler`
   regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.
