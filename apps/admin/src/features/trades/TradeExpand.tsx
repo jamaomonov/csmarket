@@ -102,6 +102,11 @@ export function TradeExpand({ row }: { row: AdminTradeRow }) {
                 </div>
               ))}
             </dl>
+            {row.trade_link_masked !== null && (
+              <p className="text-fg-muted mt-2 break-all text-xs">
+                Трейд-ссылка: <span className="font-mono">{row.trade_link_masked}</span>
+              </p>
+            )}
           </div>
         </div>
       )}

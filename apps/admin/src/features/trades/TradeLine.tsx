@@ -7,7 +7,7 @@ import { type AdminTradeRow } from "./api";
 import { SOURCE_LABELS, STATE_CHIP, STATE_LABELS } from "./labels";
 import { ago, clockTime, shortDate, shortDateTime, timeLeft } from "./time";
 import { TradeExpand } from "./TradeExpand";
-import { FAILURE_LABELS } from "../orders/labels";
+import { ATTENTION_LABELS, FAILURE_LABELS } from "../orders/labels";
 import { AttentionBadge } from "../orders/StatusChip";
 
 import { providerLabel } from "@/features/users/labels";
@@ -38,7 +38,7 @@ function priceTitle(row: AdminTradeRow): string {
   ].join("\n");
 }
 
-function SkinCell({ row }: { row: AdminTradeRow }) {
+export function SkinCell({ row }: { row: AdminTradeRow }) {
   const { item } = row;
   return (
     <div className="flex min-w-56 items-center gap-2">
@@ -64,7 +64,7 @@ function SkinCell({ row }: { row: AdminTradeRow }) {
   );
 }
 
-function StateCell({ row }: { row: AdminTradeRow }) {
+export function StateCell({ row }: { row: AdminTradeRow }) {
   const reason =
     row.trade_state === "refunded" && row.failure_reason !== null
       ? ` · ${FAILURE_LABELS[row.failure_reason]}`
@@ -82,6 +82,11 @@ function StateCell({ row }: { row: AdminTradeRow }) {
         </span>
         <AttentionBadge reason={row.attention_reason} />
       </div>
+      {row.attention_reason !== null && (
+        <p className="text-danger whitespace-nowrap text-xs">
+          {ATTENTION_LABELS[row.attention_reason]}
+        </p>
+      )}
       {row.trade_state === "hold" && row.protected_until !== null && (
         <p data-testid="hold-left" className="text-fg-muted whitespace-nowrap text-xs">
           {timeLeft(row.protected_until)} · {shortDate(row.protected_until)}
@@ -109,12 +114,14 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
     <>
       <tr
         onClick={openOrder}
-        className={`border-border hover:bg-surface-2 cursor-pointer border-t align-top ${
-          attention ? "bg-danger/10" : ""
-        }`}
+        className="border-border hover:bg-surface-hover cursor-pointer border-t align-top"
         {...(attention && { "data-attention": "true" })}
       >
-        <td className="py-2 pr-3">
+        <td
+          className={`py-2 pl-3 pr-3 ${
+            attention ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""
+          }`}
+        >
           <Link to={`/orders/${row.number}`} className="font-mono font-medium hover:underline">
             {row.number}
           </Link>
@@ -151,14 +158,6 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
             >
               {row.steam_offer_id}
             </a>
-          )}
-          {row.trade_link_masked !== null && (
-            <p
-              className="text-fg-muted text-xs underline decoration-dotted"
-              title={row.trade_link_masked}
-            >
-              Трейд-ссылка
-            </p>
           )}
         </td>
         <td className="py-2 pr-3">
@@ -202,5 +201,28 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
         </tr>
       )}
     </>
+  );
+}
+
+/** A trade as a card on a phone: skin, status and price first, the rest one line under. */
+export function TradeCard({ row }: { row: AdminTradeRow }) {
+  return (
+    <div className="space-y-2 text-sm">
+      <SkinCell row={row} />
+      <div className="flex items-start justify-between gap-2">
+        <StateCell row={row} />
+        <p className="whitespace-nowrap tabular-nums" title={priceTitle(row)}>
+          {charged(row)}
+        </p>
+      </div>
+      <p className="text-fg-muted flex flex-wrap gap-x-2 text-xs">
+        <Link to={`/orders/${row.number}`} className="font-mono hover:underline">
+          {row.number}
+        </Link>
+        <span>{SOURCE_LABELS[row.source]}</span>
+        <span>{row.buyer.display_name ?? "Без имени"}</span>
+        <span>{ago(row.created_at)}</span>
+      </p>
+    </div>
   );
 }

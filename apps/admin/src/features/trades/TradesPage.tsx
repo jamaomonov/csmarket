@@ -12,12 +12,17 @@ import {
 } from "./api";
 import { TRADE_VIEWS, type TradeView } from "./kinds";
 import { TRADE_VIEW_LABELS } from "./labels";
-import { TradeLine } from "./TradeLine";
+import { TradeCard, TradeLine } from "./TradeLine";
 import { TRADES_KEY } from "../orders/keys";
 
+import { EmptyState } from "@/components/EmptyState";
+import { FiltersBar, SearchBox } from "@/components/Filters";
+import { PageHeader } from "@/components/PageHeader";
+import { Tabs } from "@/components/Tabs";
 import { errorText } from "@/features/users/labels";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
+import { useNarrow } from "@/lib/useNarrow";
 import { useUrlParams } from "@/lib/useUrlParams";
 
 const DEBOUNCE_MS = 300;
@@ -25,47 +30,8 @@ const DEBOUNCE_MS = 300;
 const Q_MAX = 100;
 const HEADERS = ["#", "Скин", "Источник", "Цена", "Обмен", "Покупатель", "Статус", "Время"];
 
-interface TabsProps {
-  view: TradeView;
-  counts: AdminTradeCounts | null;
-  onPick: (v: TradeView) => void;
-}
-
-function Tabs({ view, counts, onPick }: TabsProps) {
-  return (
-    <div role="tablist" aria-label="Обмены" className="border-border flex flex-wrap gap-1 border-b">
-      {TRADE_VIEWS.map((v) => {
-        const selected = v === view;
-        return (
-          <button
-            key={v}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            onClick={() => {
-              onPick(v);
-            }}
-            className={`-mb-px border-b-2 px-3 py-2 text-sm ${
-              selected
-                ? "border-accent text-fg font-medium"
-                : "text-fg-muted hover:text-fg border-transparent"
-            }`}
-          >
-            {TRADE_VIEW_LABELS[v]}
-            {counts !== null && (
-              <>
-                {" "}
-                <span className="tabular-nums">{counts[v]}</span>
-              </>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function TradesPage() {
+  const narrow = useNarrow();
   const url = useUrlParams();
   const view: TradeView = pick(TRADE_VIEWS, url.get("view")) ?? "all";
   const urlQ = upTo(url.get("q"), Q_MAX);
@@ -115,45 +81,62 @@ export function TradesPage() {
   const counts = fresh ?? lastCounts.current;
 
   return (
-    <section className="space-y-6">
-      <h1 className="text-2xl font-bold">Обмены</h1>
-      <Tabs
-        view={view}
-        counts={counts}
-        onPick={(v) => {
-          url.set("view", v === "all" ? "" : v);
-        }}
-      />
-      <label className="flex max-w-sm flex-col gap-1 text-sm">
-        Номер заказа, название или id обмена Steam
-        <input
-          type="search"
-          value={text}
-          maxLength={Q_MAX}
-          onChange={(e) => {
-            setText(e.target.value);
+    <section className="space-y-4">
+      <PageHeader title="Обмены" />
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Tabs<TradeView>
+          label="Обмены"
+          value={view}
+          onChange={(v) => {
+            url.set("view", v === "all" ? "" : v);
           }}
-          className="border-border bg-bg h-10 rounded-md border px-3 text-base"
+          items={TRADE_VIEWS.map((v) => ({
+            key: v,
+            label: TRADE_VIEW_LABELS[v],
+            ...(counts !== null && { count: counts[v] }),
+            alert: v === "attention",
+          }))}
         />
-      </label>
+        <FiltersBar>
+          <SearchBox
+            label="Номер, название или id обмена Steam"
+            value={text}
+            maxLength={Q_MAX}
+            onChange={setText}
+          />
+        </FiltersBar>
+      </div>
       {list.isPending && <p className="text-fg-muted">Загрузка…</p>}
-      {list.isError && (
-        <p role="alert" className="text-danger">
-          {errorText(list.error)}
-        </p>
+      {list.isError && <EmptyState tone="danger">{errorText(list.error)}</EmptyState>}
+      {list.isSuccess && rows.length === 0 && <EmptyState>Здесь пусто.</EmptyState>}
+      {rows.length > 0 && narrow && (
+        <ul aria-label="Обмены" className="space-y-2">
+          {rows.map((r) => (
+            <li
+              key={r.number}
+              className={`border-border bg-surface rounded-lg border p-3 ${
+                r.attention_reason !== null ? "border-l-danger border-l-[3px]" : ""
+              }`}
+            >
+              <TradeCard row={r} />
+            </li>
+          ))}
+        </ul>
       )}
-      {list.isSuccess && rows.length === 0 && <p className="text-fg-muted">Здесь пусто.</p>}
-      {rows.length > 0 && (
+      {rows.length > 0 && !narrow && (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm" data-testid="trades-table">
-            <thead className="text-fg-muted">
-              <tr>
-                {HEADERS.map((h) => (
-                  <th key={h} className="whitespace-nowrap py-1 pr-3 font-normal">
+            <thead className="text-fg-muted text-xs">
+              <tr className="border-border border-b">
+                {HEADERS.map((h, i) => (
+                  <th
+                    key={h}
+                    className={`whitespace-nowrap py-2 pr-3 font-normal ${i === 0 ? "pl-3" : ""}`}
+                  >
                     {h}
                   </th>
                 ))}
-                <th className="py-1 font-normal">
+                <th className="py-2 font-normal">
                   <span className="sr-only">Подробнее</span>
                 </th>
               </tr>
@@ -176,6 +159,7 @@ export function TradesPage() {
       {list.hasNextPage && (
         <Button
           variant="secondary"
+          size="sm"
           disabled={list.isFetchingNextPage}
           onClick={() => {
             void list.fetchNextPage();

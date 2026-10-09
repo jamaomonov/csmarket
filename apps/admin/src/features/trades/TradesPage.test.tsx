@@ -159,7 +159,7 @@ describe("TradesPage", () => {
     const offer = within(row).getByRole("link", { name: "6912345678" });
     expect(offer).toHaveAttribute("href", "https://steamcommunity.com/tradeoffer/6912345678/");
     expect(offer).toHaveAttribute("target", "_blank");
-    expect(within(row).getByText("Трейд-ссылка")).toHaveAttribute("title", ROW.trade_link_masked);
+    expect(within(row).queryByText("Трейд-ссылка")).toBeNull(); // in the expanded row now
     expect(within(row).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
     expect(within(row).getByText("Click")).toBeInTheDocument();
     expect(within(row).getByTestId("trade-state")).toHaveTextContent("отправлен");
@@ -289,5 +289,28 @@ describe("TradesPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Показать ещё" }));
     expect(await screen.findByRole("link", { name: "O2" })).toBeInTheDocument();
     expect(api.listTrades).toHaveBeenLastCalledWith({ view: "all", cursor: "c2" });
+  });
+
+  it("on a phone shows cards with the status and price, not a wide table", async () => {
+    const before = window.matchMedia;
+    window.matchMedia = ((query: string) => ({
+      matches: true,
+      media: query,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    })) as unknown as typeof window.matchMedia; // only the members useNarrow reads
+    try {
+      api.listTrades.mockResolvedValue(page([FLAGGED]));
+      renderPage();
+      const cards = await screen.findByRole("list", { name: "Обмены" });
+      expect(screen.queryByTestId("trades-table")).toBeNull();
+      expect(within(cards).getByTestId("trade-state")).toBeInTheDocument();
+      expect(within(cards).getByRole("link", { name: FLAGGED.number })).toHaveAttribute(
+        "href",
+        `/orders/${FLAGGED.number}`,
+      );
+    } finally {
+      window.matchMedia = before;
+    }
   });
 });
