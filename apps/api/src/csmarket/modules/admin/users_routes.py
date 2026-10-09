@@ -19,7 +19,9 @@ from csmarket.modules.admin.deps import require_admin, required_key
 from csmarket.modules.admin.filters import text_filter
 from csmarket.modules.admin.users_schemas import (
     AdminAdjustIn,
+    AdminAdjustUsdIn,
     AdminReasonIn,
+    AdminUsdSwitchIn,
     AdminUserCard,
     AdminUsersOut,
 )
@@ -103,6 +105,40 @@ async def adjust_balance(
     await svc.adjust(
         db, admin=admin, user=user, amount=body.amount_uzs, reason=body.reason, key=key
     )
+    return await _finish(db, user, scope=scope, key=key, request=request)
+
+
+@router.post(
+    "/{user_id}/wallet/adjust-usd", response_model=AdminUserCard, summary="Adjust the USD balance"
+)
+async def adjust_usd_balance(
+    user_id: str, body: AdminAdjustUsdIn, admin: Admin, db: Db, key: Key
+) -> AdminUserCard:
+    """Credit (> 0) or claw back (< 0) dollars; below zero is 409 ``balance_too_low``."""
+    user = await svc.get_user(db, user_id, lock=True)
+    request = {"user_id": user.id, "amount_usd": body.amount_usd, "reason": body.reason}
+    scope = "admin.users.adjust_usd"
+    if (hit := await svc.replayed(db, scope=scope, key=key, request=request)) is not None:
+        return AdminUserCard.model_validate(hit)
+    await svc.adjust_usd(db, admin=admin, user=user, units=body.units, reason=body.reason, key=key)
+    return await _finish(db, user, scope=scope, key=key, request=request)
+
+
+@router.put("/{user_id}/usd-wallet", response_model=AdminUserCard, summary="Switch the USD wallet")
+async def switch_usd_wallet(
+    user_id: str, body: AdminUsdSwitchIn, admin: Admin, db: Db, key: Key
+) -> AdminUserCard:
+    """Turn the USD wallet on or off for a user.
+
+    Switching off with a non-zero USD balance is allowed: the money stays on the account;
+    conversion and API purchases stop until it is switched on again.
+    """
+    user = await svc.get_user(db, user_id, lock=True)
+    request = {"user_id": user.id, "enabled": body.enabled, "reason": body.reason}
+    scope = "admin.users.usd_switch"
+    if (hit := await svc.replayed(db, scope=scope, key=key, request=request)) is not None:
+        return AdminUserCard.model_validate(hit)
+    await svc.switch_usd(db, admin=admin, user=user, enabled=body.enabled, reason=body.reason)
     return await _finish(db, user, scope=scope, key=key, request=request)
 
 

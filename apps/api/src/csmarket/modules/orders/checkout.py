@@ -247,7 +247,7 @@ async def _read(
     )
 
 
-def _float_of(value: float | None) -> Decimal | None:
+def float_of(value: float | None) -> Decimal | None:
     """An offer's float as ``orders.float_value`` stores it (six places); ``None`` stays."""
     if value is None or not 0 <= value <= 1:  # NaN, inf or nonsense from a market
         return None
@@ -267,7 +267,7 @@ def _build(
         source=row.source,
         offer_id=row.offer_id,
         listing_id=row.listing_id,
-        float_value=_float_of(row.float_value),
+        float_value=float_of(row.float_value),
         paint_seed=row.paint_seed,
         cost_units=row.price_units,
         cost_usd=(Decimal(row.price_units) / _UNITS_PER_USD).quantize(_USD_PLACES),
@@ -358,4 +358,4 @@ async def create_order(
     return order, True
 
 
-__all__ = ["RateUnavailableError", "create_order"]
+__all__ = ["RateUnavailableError", "create_order", "float_of"]

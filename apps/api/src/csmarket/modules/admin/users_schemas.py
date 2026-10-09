@@ -8,14 +8,20 @@ sent whole: ``trade_link_masked`` keeps ``partner`` and the token's last 2 chara
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
-from csmarket.core.money import wire_uzs
+from csmarket.core.money import wire_usd, wire_uzs
 from csmarket.modules.admin.orders_schemas import AdminOrderRow
 from csmarket.modules.users.api import User, mask_trade_link
-from csmarket.modules.wallet.api import ADMIN_ADJUST_MAX, AdminEntry
+from csmarket.modules.wallet.api import (
+    ADMIN_ADJUST_MAX,
+    ADMIN_ADJUST_USD_MAX,
+    AdminEntry,
+    Currency,
+)
 
 #: An operator's free-text reason, trimmed.
 Reason = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=500)]
@@ -23,6 +29,7 @@ AdjustReason = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=4, max_length=500)
 ]
 _MAX = int(ADMIN_ADJUST_MAX)
+_MAX_USD_UNITS = int(ADMIN_ADJUST_USD_MAX)
 
 
 class AdminUserRow(BaseModel):
@@ -98,9 +105,14 @@ class AdminEntryOut(BaseModel):
         "refund",
         "sale_credit",
         "payout_return",
+        "fx_convert",
+        "admin_adjust_usd",
     ]
-    #: Signed whole soʻm: ``+50000`` credited, ``-10000`` debited.
+    currency: Currency = "UZS"
+    #: Signed whole soʻm: ``+50000`` credited, ``-10000`` debited; ``"0"`` on a dollar line.
     amount_uzs: str
+    #: Signed dollars (``+250.000``) on a dollar line; ``null`` on a soʻm line.
+    amount_usd: str | None = None
     created_at: datetime
     #: The top-up's number for ``topup``/``topup_reversal``, the order's number for
     #: ``purchase``/``refund``, the sale's number for ``sale_credit``/``payout_return``; else
@@ -112,13 +124,16 @@ class AdminEntryOut(BaseModel):
     reason: str | None
 
     @classmethod
-    def of(cls, entry: AdminEntry) -> AdminEntryOut:
-        """Build from a ledger :class:`AdminEntry`."""
-        digits = wire_uzs(abs(entry.amount))
+    def of(cls, entry: AdminEntry, currency: Currency = "UZS") -> AdminEntryOut:
+        """Build from a ledger :class:`AdminEntry` of the ``currency`` wallet."""
+        sign = "+" if entry.amount > 0 else "-"
+        usd = currency == "USD"
         return cls(
             id=entry.id,
             kind=entry.kind,  # type: ignore[arg-type]  # post() admits only TX_KINDS
-            amount_uzs=f"+{digits}" if entry.amount > 0 else f"-{digits}",
+            currency=currency,
+            amount_uzs="0" if usd else f"{sign}{wire_uzs(abs(entry.amount))}",
+            amount_usd=f"{sign}{wire_usd(abs(entry.amount))}" if usd else None,
             created_at=entry.created_at,
             reference_number=entry.reference_number,
             actor=entry.actor,
@@ -147,6 +162,12 @@ class AdminUserCard(BaseModel):
     topups: list[AdminTopupOut]
     #: Newest first; open one at ``/admin/orders/{number}``.
     orders: list[AdminOrderRow]
+    #: The USD wallet is switched on for this user.
+    usd_wallet_enabled: bool
+    #: Spendable dollars, three decimals (``"250.000"``).
+    balance_usd: str
+    #: The latest 20 dollar lines, newest first (``currency == "USD"``, ``amount_usd`` set).
+    usd_entries: list[AdminEntryOut]
 
 
 class AdminReasonIn(BaseModel):
@@ -175,11 +196,49 @@ class AdminAdjustIn(BaseModel):
         return value
 
 
+class AdminUsdSwitchIn(BaseModel):
+    """Switch the USD wallet on or off, and why."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool
+    reason: Reason
+
+
+class AdminAdjustUsdIn(BaseModel):
+    """Credit (``> 0``) or claw back (``< 0``) the user's dollars."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    #: Dollars as a string, at most 3 decimals, non-zero, ``|x| <= 100000``: ``"250.000"``.
+    amount_usd: Annotated[str, StringConstraints(pattern=r"^-?\d{1,7}(\.\d{1,3})?$")]
+    reason: AdjustReason
+
+    @field_validator("amount_usd")
+    @classmethod
+    def _bounds(cls, value: str) -> str:
+        units = Decimal(value) * 1000
+        if units == 0:
+            msg = "amount_usd must not be 0"
+            raise ValueError(msg)
+        if abs(units) > _MAX_USD_UNITS:
+            msg = "amount_usd is out of range"
+            raise ValueError(msg)
+        return value
+
+    @property
+    def units(self) -> int:
+        """The amount in milli-USD units (integral by the pattern)."""
+        return int(Decimal(self.amount_usd) * 1000)
+
+
 __all__ = [
     "AdminAdjustIn",
+    "AdminAdjustUsdIn",
     "AdminEntryOut",
     "AdminReasonIn",
     "AdminTopupOut",
+    "AdminUsdSwitchIn",
     "AdminUserCard",
     "AdminUserDetail",
     "AdminUserRow",

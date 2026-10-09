@@ -18,7 +18,7 @@ from typing import Any, Literal, Protocol
 
 import httpx
 
-from csmarket.core.config import Settings
+from csmarket.core.config import Settings, get_settings
 from csmarket.core.json_stream import ItemsScanner
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import SkinslinkEndpoint, record_skinslink_call
@@ -600,9 +600,19 @@ def client_for(settings: Settings, *, timeout_seconds: float | None = None) -> S
     )
 
 
+#: The admin refund's one ``purchase/status`` lookup (ADR-0018): the request path's 4 s.
+REQUEST_LOOKUP_TIMEOUT_SECONDS = 4.0
+
+
+def request_status_client() -> SkinslinkClient:
+    """The admin refund's Skinslink client (a FastAPI dependency; tests override it)."""
+    return client_for(get_settings(), timeout_seconds=REQUEST_LOOKUP_TIMEOUT_SECONDS)
+
+
 __all__ = [
     "LINK_ERROR_CODES",
     "PURCHASE_FAIL_REASONS",
+    "REQUEST_LOOKUP_TIMEOUT_SECONDS",
     "AvailablePage",
     "Balance",
     "CatalogueEvent",
@@ -616,4 +626,5 @@ __all__ = [
     "SkinslinkRateLimitedError",
     "SkinslinkUnavailableError",
     "client_for",
+    "request_status_client",
 ]

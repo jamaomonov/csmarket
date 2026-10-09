@@ -21,6 +21,7 @@ MODULES = (
     "skinslink",
     "lisskins",
     "sales",
+    "public_api",
 )
 
 

@@ -108,6 +108,7 @@ def order_out(
         paid_with=order.paid_with,
         refunded_to="balance" if order.refunded_to == "balance" else None,
         payable=status == "pending",
+        channel="api" if order.channel == "api" else "site",
         trade=skin_trade_out(order, trade, purchase=purchase),
     )
 

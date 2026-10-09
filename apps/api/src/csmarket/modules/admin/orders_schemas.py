@@ -21,7 +21,13 @@ AttentionReason = Literal[
 ]
 #: ``orders.failure_reason`` (``orders.models.FAILURE_REASONS``; a unit test pins it).
 FailureReason = Literal[
-    "sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin"
+    "sold_out",
+    "source_low_balance",
+    "invalid_trade_link",
+    "not_accepted",
+    "admin",
+    "trade_hold",
+    "price_moved",
 ]
 #: The trades page's tabs.
 TradesView = Literal["all", "active", "attention"]
@@ -130,6 +136,11 @@ class AdminOrderFull(BaseModel):
     #: The bought offer's float (trailing zeros dropped) and pattern; ``None`` on older orders.
     float_value: str | None
     paint_seed: int | None
+    #: ``site`` or ``api``; for ``api`` the key, the client's own id and the tariff.
+    channel: str
+    api_key_id: str | None
+    client_order_id: str | None
+    pricing_profile: str | None
     #: ``…?partner=<id>&token=••••<last 2>``.
     trade_link_masked: str | None
     paid_with: str | None
@@ -137,6 +148,8 @@ class AdminOrderFull(BaseModel):
     updated_at: datetime
     expires_at: datetime
     paid_at: datetime | None
+    #: When the Steam offer went out (the public API's hold clock); ``None`` before.
+    trade_sent_at: datetime | None
     delivered_at: datetime | None
     cancelled_at: datetime | None
     failed_at: datetime | None

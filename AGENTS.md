@@ -40,6 +40,11 @@
   Selling skins to us through Skinslink deposits (spec `2026-10-08-skin-sales-design.md`, ADR-0016)
   is built on branch `skin-sales` — off behind `CSMARKET_SALES_ENABLED` and the admin's «Выкуп
   включён» (`docs/runbooks/sales.md`).
+- **The public purchase API** (spec `2026-10-09-public-api-design.md`, ADR-0017; plan A the USD
+  wallet, plan B keys, feed, offers, buying, plan C signed webhooks, the admin API keys page,
+  metrics and the supplier-checked admin refund of Skinslink / LIS-SKINS orders, ADR-0018) is
+  built on branch `public-api` — not merged, not deployed (`docs/api/public-v1.md`,
+  `docs/runbooks/public-api.md`).
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in
@@ -192,8 +197,8 @@ csmarket/
   identifier shape (`sku`, `skus`, `sku_id`, `SkuId` hit; `skull`, `skunk` do not). Exit
   codes: 0 clean, 1 hits, 2 a guard failure (bad allow regex, missing perl or find).
   Exceptions go in `scripts/check-no-yupay.allow`, one regex per line, with a reason —
-  today only Click's `merchant_trans_id`. `CHECK_NO_YUPAY_ALLOW` overrides the allow-file
-  path (the tests use it). Tests, docs and infra are not scanned and may name YuPay.
+  today Click's `merchant_trans_id` and the public API's refund reason `supplier_refused` (a
+  contract value). `CHECK_NO_YUPAY_ALLOW` overrides the allow-file path (the tests use it). Tests, docs and infra are not scanned and may name YuPay.
 - **Tests and docs travel with code.** A ported module brings its YuPay tests, adapted, and a
   `README.md` describing what it owns here (not YuPay's README verbatim). (Spec §4; ADR-0002.)
 
@@ -265,7 +270,7 @@ csmarket/
 
 - **TDD** when building a module or fixing a reproducible bug: the failing test first.
 - **Coverage gates:** Python ≥ 80 % (enforced: `fail_under = 80` in `pyproject.toml`, CI
-  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales` ≥ 95 % each (enforced:
+  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales`, `public_api` ≥ 95 % each (enforced:
   `scripts/check-module-coverage.py` reads `coverage.json` after `make test-py` and CI
   `test-py`, and fails naming the module under the line). TS ≥ 70 % is a target; no
   threshold is configured yet.
@@ -338,7 +343,7 @@ csmarket/
   (ADR-0012) asks LIS-SKINS `GET /market/check-availability` once for a chosen `ls:` lot — 4 s
   timeout, 100 calls/min for the API, a 120 s breaker, no DB connection held across it; a
   failed call accepts the snapshot price (the worker's `max_price` guards). The route is
-  already in the latency alerts' `handler` regexes. A sixth and a seventh (ADR-0016): `GET /sell/inventory` asks Skinslink `inventory` on a cache miss — 6 s timeout, a 120 s breaker, the result kept 5 minutes per user, its own `ip_guard` bucket, no DB connection held across it; `POST /sell` commits the sale, then calls `create-deposit` once — 10 s, nothing open across it, a timeout left to the poll. Both routes are in the latency alerts' `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
+  already in the latency alerts' `handler` regexes. A sixth and a seventh (ADR-0016): `GET /sell/inventory` asks Skinslink `inventory` on a cache miss — 6 s timeout, a 120 s breaker, the result kept 5 minutes per user, its own `ip_guard` bucket, no DB connection held across it; `POST /sell` commits the sale, then calls `create-deposit` once — 10 s, nothing open across it, a timeout left to the poll. Both routes are in the latency alerts' `handler` regexes. **The public API (`/api/v1/public/*`, ADR-0017) adds none:** the feed and offers read our own tables and Redis, `POST /public/orders` checks the trade link for form only and debits the USD wallet in one transaction, and the supplier is called only by the worker. An eighth (ADR-0018): `POST /admin/orders/{number}/refund` of a Skinslink / LIS-SKINS order asks the supplier once before it books — Skinslink `purchase/status` or LIS-SKINS `market/info`, 4 s timeout, no lock and no open transaction across it, a failed lookup refuses the refund (`source_unavailable`); the route is already in the `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
   regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.

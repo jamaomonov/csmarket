@@ -146,8 +146,9 @@ counts in `csmarket_trades_attention`, so `TradesNeedAttention` fires for it, bu
 attention queue and the dashboard tile do not list it (`docs/tech-debt.md`). Find the order by
 number in the admin order search: its «Покупка Skinslink» block shows the attention. Check the
 purchase in the Skinslink cabinet by its `merchant_tx_id`, then press «Разобрано» — it works
-on a Skinslink purchase, and resolving it frees a refund the attention held. Admin refund and
-retry still refuse a Skinslink order.
+on a Skinslink purchase, and resolving it frees a refund the attention held. Admin retry
+still refuses a Skinslink order; the admin refund asks Skinslink first (`docs/runbooks/public-api.md`,
+«Refund of a Skinslink / LIS-SKINS order», ADR-0018).
 
 ## Disabling
 
@@ -174,5 +175,5 @@ docker compose -f docker-compose.prod.yml exec postgres psql -U <user> -d <db> -
   "select number, status from orders where source = 'skinslink' and status in ('paid','buying','trade_sent')"
 ```
 
-Removing the keys parks every open Skinslink order for an admin; the admin refund cannot
-book one yet (see the known gap above), so keep the keys until the list is empty.
+Removing the keys parks every open Skinslink order for an admin; the admin refund needs
+the Skinslink key to ask the status, so keep the keys until the list is empty.

@@ -31,6 +31,7 @@ MODULES = (
     "skinslink",
     "lisskins",
     "sales",
+    "public_api",
 )
 THRESHOLD = 95.0
 

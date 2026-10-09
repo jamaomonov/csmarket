@@ -23,7 +23,7 @@ from csmarket.modules.skins.offers import (
     parse_offer_id,
 )
 from csmarket.modules.skins.pricing import Bracket, PricingRules, bracket_margin, quote, to_uzs
-from csmarket.modules.skins.service import get_item
+from csmarket.modules.skins.service import get_item, get_item_by_id
 from csmarket.modules.skins.settings import enabled_categories, load_rules
 from csmarket.modules.skins.stickers import Kind as AppliedKind
 from csmarket.modules.skins.stickers import applied_cards
@@ -88,6 +88,7 @@ __all__ = [
     "fake_client",
     "from_listing",
     "get_item",
+    "get_item_by_id",
     "listings_budget",
     "listings_for",
     "load_rules",

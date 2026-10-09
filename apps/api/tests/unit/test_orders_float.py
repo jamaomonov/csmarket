@@ -5,7 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from csmarket.modules.orders.checkout import _float_of
+from csmarket.modules.orders.checkout import float_of
 from csmarket.modules.orders.service import _plain
 
 
@@ -23,7 +23,7 @@ from csmarket.modules.orders.service import _plain
     ],
 )
 def test_the_stored_float(raw: float | None, stored: Decimal | None) -> None:
-    assert _float_of(raw) == stored
+    assert float_of(raw) == stored
 
 
 @pytest.mark.parametrize(

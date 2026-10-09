@@ -50,7 +50,8 @@ async def test_a_new_user_has_a_zero_balance_and_no_entries(
 ) -> None:
     h = await customer_headers()
     assert (await integration_client.get("/api/v1/wallet", headers=h)).json() == {
-        "balance_uzs": "0"
+        "balance_uzs": "0",
+        "usd": None,
     }
     entries = await integration_client.get("/api/v1/wallet/entries", headers=h)
     assert entries.json() == {"items": [], "next_cursor": None}
@@ -62,12 +63,21 @@ async def test_entries_show_a_paid_topup(
     h = await customer_headers()
     number = await _dev_paid_topup(integration_client, h)
     assert (await integration_client.get("/api/v1/wallet", headers=h)).json() == {
-        "balance_uzs": "50000"
+        "balance_uzs": "50000",
+        "usd": None,
     }
     body = (await integration_client.get("/api/v1/wallet/entries", headers=h)).json()
     assert body["next_cursor"] is None
     (entry,) = body["items"]
-    assert set(entry) == {"id", "kind", "amount_uzs", "created_at", "reference_number"}
+    assert set(entry) == {
+        "id",
+        "kind",
+        "currency",
+        "amount_uzs",
+        "amount_usd",
+        "created_at",
+        "reference_number",
+    }
     assert (entry["kind"], entry["amount_uzs"], entry["reference_number"]) == (
         "topup",
         "+50000",
@@ -105,7 +115,8 @@ async def test_a_debit_is_signed_minus_and_carries_no_actor_or_metadata(
     assert "secret-admin-id" not in r.text
     assert "a private note" not in r.text
     assert (await integration_client.get("/api/v1/wallet", headers=h)).json() == {
-        "balance_uzs": "40000"
+        "balance_uzs": "40000",
+        "usd": None,
     }
 
 
@@ -162,7 +173,8 @@ async def test_another_user_sees_nothing(
     await _dev_paid_topup(integration_client, await customer_headers())
     other = await admin_headers()
     assert (await integration_client.get("/api/v1/wallet", headers=other)).json() == {
-        "balance_uzs": "0"
+        "balance_uzs": "0",
+        "usd": None,
     }
     entries = (await integration_client.get("/api/v1/wallet/entries", headers=other)).json()
     assert entries == {"items": [], "next_cursor": None}

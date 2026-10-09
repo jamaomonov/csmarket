@@ -39,6 +39,9 @@ from sqlalchemy.orm import InstrumentedAttribute
 from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.errors import ValidationError
 from csmarket.modules.wallet.models import WalletAccount, WalletPosting, WalletTransaction
+from csmarket.modules.wallet.service import Currency
+
+_WALLET_KIND: dict[Currency, str] = {"UZS": "user_wallet", "USD": "user_wallet_usd"}
 
 #: ``payments``' top-ups, as far as an entry needs them (id → public number).
 _TOPUPS = table("wallet_topups", column("id", UUID(as_uuid=False)), column("number", String))
@@ -110,12 +113,12 @@ async def _numbers(
     return numbers
 
 
-async def _user_wallet_id(db: AsyncSession, user_id: str) -> str | None:
+async def _user_wallet_id(db: AsyncSession, user_id: str, kind: str = "user_wallet") -> str | None:
     return await db.scalar(
         select(WalletAccount.id).where(
             WalletAccount.owner_type == "user",
             WalletAccount.owner_id == user_id,
-            WalletAccount.kind == "user_wallet",
+            WalletAccount.kind == kind,
         )
     )
 
@@ -169,6 +172,7 @@ async def entries_for_user(
     cursor: str | None = None,
     limit: int = DEFAULT_LIMIT,
     entry_type: EntryType | None = None,
+    currency: Currency = "UZS",
 ) -> EntriesPage:
     """The user's ledger lines, newest first, of one :data:`ENTRY_TYPES` filter when given;
     empty when they have no wallet yet.
@@ -180,7 +184,7 @@ async def entries_for_user(
         raise ValidationError("limit out of range", code="limit")
     after = decode_cursor(cursor) if cursor is not None else None
     kinds = ENTRY_TYPES[entry_type] if entry_type is not None else None
-    account_id = await _user_wallet_id(db, user_id)
+    account_id = await _user_wallet_id(db, user_id, _WALLET_KIND[currency])
     if account_id is None or kinds == ():
         return EntriesPage(items=[], next_cursor=None)
     rows, numbers = await _lines(db, account_id, after=after, limit=limit + 1, kinds=kinds)
@@ -193,7 +197,7 @@ async def entries_for_user(
 
 
 async def entries_for_admin(
-    db: AsyncSession, user_id: str, *, limit: int = DEFAULT_LIMIT
+    db: AsyncSession, user_id: str, *, limit: int = DEFAULT_LIMIT, currency: Currency = "UZS"
 ) -> list[AdminEntry]:
     """The user's latest ledger lines with who booked them and why — admin views only.
 
@@ -202,7 +206,7 @@ async def entries_for_admin(
     """
     if not 1 <= limit <= MAX_LIMIT:
         raise ValidationError("limit out of range", code="limit")
-    account_id = await _user_wallet_id(db, user_id)
+    account_id = await _user_wallet_id(db, user_id, _WALLET_KIND[currency])
     if account_id is None:
         return []
     rows, numbers = await _lines(db, account_id, after=None, limit=limit)

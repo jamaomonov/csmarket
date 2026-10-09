@@ -12,7 +12,7 @@ import type * as BalanceModule from "@/lib/balance";
 import type { EntriesPage, Entry } from "@/lib/balance";
 
 const mocks = vi.hoisted(() => ({
-  getEntries: vi.fn<(cursor?: string, type?: string) => Promise<EntriesPage>>(),
+  getEntries: vi.fn<(cursor?: string, type?: string, currency?: string) => Promise<EntriesPage>>(),
 }));
 vi.mock("@/lib/balance", async (importOriginal) => ({
   ...(await importOriginal<typeof BalanceModule>()),
@@ -26,16 +26,18 @@ function entry(over: Partial<Entry>): Entry {
     amount_uzs: "+50000",
     created_at: "2026-10-01T09:00:00Z",
     reference_number: "T1",
+    currency: "UZS",
+    amount_usd: null,
     ...over,
   };
 }
 
-function setup(type?: "topup" | "withdrawal") {
+function setup(type?: "topup" | "withdrawal", currency?: "usd") {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-        <EntriesList locale="ru" {...(type ? { type } : {})} />
+        <EntriesList locale="ru" {...(type ? { type } : {})} {...(currency ? { currency } : {})} />
       </NextIntlClientProvider>
     </QueryClientProvider>,
   );
@@ -118,5 +120,34 @@ describe("EntriesList", () => {
     setup("withdrawal");
     expect(await screen.findByText("Выводов пока нет.")).toBeInTheDocument();
     expect(mocks.getEntries).toHaveBeenCalledWith(undefined, "withdrawal");
+  });
+
+  it("the USD history asks for dollar lines and shows them in dollars", async () => {
+    mocks.getEntries.mockResolvedValue({
+      items: [
+        entry({
+          id: "u1",
+          kind: "fx_convert",
+          amount_uzs: "0",
+          currency: "USD",
+          amount_usd: "+7.826",
+          reference_number: null,
+        }),
+        entry({
+          id: "u2",
+          kind: "purchase",
+          amount_uzs: "0",
+          currency: "USD",
+          amount_usd: "-1.500",
+          reference_number: "AB12CD34",
+        }),
+      ],
+      next_cursor: null,
+    });
+    setup(undefined, "usd");
+    expect(await screen.findByText("История USD-кошелька")).toBeInTheDocument();
+    const amounts = (await screen.findAllByTestId("entry-amount")).map((n) => n.textContent);
+    expect(amounts).toEqual(["+$7.826", "−$1.500"]);
+    expect(mocks.getEntries).toHaveBeenCalledWith(undefined, undefined, "usd");
   });
 });

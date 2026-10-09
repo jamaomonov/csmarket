@@ -5,7 +5,11 @@ one probe, `GET /api/v1/admin/me`; M2 adds `admin_audit_log` with the first admi
 (hiding a catalogue item, editing search aliases — `skins/README.md`, **Admin catalogue**);
 M3 adds the users list and card, ban/unban and the audited balance adjustment; M4a the
 orders and trades API (search, the order page, the attention queue, resolve / refund /
-retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007).
+retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007); the public
+API's keys page (`/admin/api-keys`: keys with order count, revenue and cost, a card with the
+latest 20 orders and the webhook host, the `retail` / `cost` tariff switch and revoke —
+audited `api_keys.tariff` `{from, to, reason}` and `api_keys.revoke` `{reason}`; a tariff change
+applies to the next order only, placed orders keep their stamped price).
 
 ## Role model
 
@@ -73,13 +77,15 @@ Every admin write records one `admin_audit_log` row (spec §5, ruling Q5), migra
 `users_routes.py` (router), `users_service.py` (logic), `users_schemas.py` (wire shapes).
 All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as above).
 
-| Route                                  | Body                                 | Answer          |
-| -------------------------------------- | ------------------------------------ | --------------- |
-| `GET /admin/users?q=&cursor=&limit=`   | —                                    | `AdminUsersOut` |
-| `GET /admin/users/{id}`                | —                                    | `AdminUserCard` |
-| `POST /admin/users/{id}/ban`           | `{reason: 3..500}`                   | `AdminUserCard` |
-| `POST /admin/users/{id}/unban`         | `{reason: 3..500}`                   | `AdminUserCard` |
-| `POST /admin/users/{id}/wallet/adjust` | `{amount_uzs: ±int, reason: 4..500}` | `AdminUserCard` |
+| Route                                      | Body                                       | Answer          |
+| ------------------------------------------ | ------------------------------------------ | --------------- |
+| `GET /admin/users?q=&cursor=&limit=`       | —                                          | `AdminUsersOut` |
+| `GET /admin/users/{id}`                    | —                                          | `AdminUserCard` |
+| `POST /admin/users/{id}/ban`               | `{reason: 3..500}`                         | `AdminUserCard` |
+| `POST /admin/users/{id}/unban`             | `{reason: 3..500}`                         | `AdminUserCard` |
+| `POST /admin/users/{id}/wallet/adjust`     | `{amount_uzs: ±int, reason: 4..500}`       | `AdminUserCard` |
+| `POST /admin/users/{id}/wallet/adjust-usd` | `{amount_usd: "±250.000", reason: 4..500}` | `AdminUserCard` |
+| `PUT /admin/users/{id}/usd-wallet`         | `{enabled, reason: 3..500}`                | `AdminUserCard` |
 
 - **List:** newest first, keyset on `(created_at DESC, id DESC)` with an opaque cursor;
   `limit` 1..100 (20). `q` matches the display name (case-insensitive substring, `%` and `_`
@@ -151,8 +157,8 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   `attention_reason`, `resolved_at`) instead of a trade; its margin uses what Skinslink
   charged when known. Resolve («Разобрано») works on a Skinslink purchase's attention. The
   trades page, the attention queue, refund and retry read `skin_trades` only: they do not
-  list a Skinslink attention and refund / retry refuse a Skinslink order (409)
-  (`docs/tech-debt.md`).
+  list a Skinslink attention and retry refuses a Skinslink order (409); refund asks the
+  source first (ADR-0018) (`docs/tech-debt.md`).
 - **`can_refund` / `can_retry`** are `orders.api.can_refund` / `can_retry` — the same
   functions (`refund_refusal`, `retry_refusal`) the actions run under the locks, so the
   button and the action agree (`test_the_flags_say_what_the_action_does`).

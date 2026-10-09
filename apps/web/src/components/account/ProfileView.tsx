@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
+import { ApiKeyCard } from "./ApiKeyCard";
 import { CardsList } from "./CardsList";
 import { EmailForm } from "./EmailForm";
 import { ProfileHero } from "./ProfileHero";
@@ -91,6 +92,9 @@ export function ProfileView({ locale }: ProfileViewProps) {
             <div className="border-border border-t">
               <CardsList locale={locale} />
             </div>
+          </SettingsPanel>
+          <SettingsPanel title={t("profile.groupDeveloper")}>
+            <ApiKeyCard locale={locale} />
           </SettingsPanel>
         </div>
         <aside className="flex flex-col gap-6 lg:sticky lg:top-24">

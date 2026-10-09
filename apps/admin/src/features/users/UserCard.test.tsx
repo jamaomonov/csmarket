@@ -13,6 +13,8 @@ const api = vi.hoisted(() => ({
   banUser: vi.fn(),
   unbanUser: vi.fn(),
   adjustBalance: vi.fn(),
+  adjustUsdBalance: vi.fn(),
+  switchUsdWallet: vi.fn(),
 }));
 vi.mock("./api", () => api);
 
@@ -228,5 +230,126 @@ describe("UserCard", () => {
     api.getUserCard.mockRejectedValue(new ApiError(404, "Not Found", { code: "not_found" }));
     renderCard();
     expect(await screen.findByText("Пользователь не найден.")).toBeInTheDocument();
+  });
+
+  describe("USD wallet", () => {
+    const USD_CARD: AdminUserCard = {
+      ...CARD,
+      usd_wallet_enabled: true,
+      balance_usd: "250.000",
+      usd_entries: [
+        {
+          id: "x-1",
+          kind: "admin_adjust_usd",
+          currency: "USD",
+          amount_uzs: "0",
+          amount_usd: "+250.000",
+          created_at: "2026-10-09T10:00:00Z",
+          reference_number: null,
+          actor: "admin:a-1",
+          reason: "Стартовый баланс",
+        },
+      ],
+    };
+
+    it("shows the USD block with the balance and the dollar lines", async () => {
+      api.getUserCard.mockResolvedValue(USD_CARD);
+      renderCard();
+      const block = await screen.findByTestId("usd-block");
+      expect(within(block).getByText("Включён")).toBeInTheDocument();
+      expect(screen.getByTestId("user-balance-usd")).toHaveTextContent("Баланс: $250.000");
+      const history = screen.getByRole("region", { name: "История USD" });
+      expect(within(history).getByText("Корректировка USD")).toBeInTheDocument();
+      expect(within(history).getByText("+$250.000")).toBeInTheDocument();
+      expect(within(history).getByText(/Стартовый баланс/)).toBeInTheDocument();
+    });
+
+    it("switches the wallet on with a reason and a key (PUT)", async () => {
+      api.switchUsdWallet.mockResolvedValue(USD_CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Включить USD-кошелёк" }));
+      fireEvent.change(screen.getByLabelText("Причина"), { target: { value: "Пилот" } });
+      fireEvent.click(screen.getByRole("button", { name: "Включить" }));
+      await waitFor(() => {
+        expect(api.switchUsdWallet).toHaveBeenCalledTimes(1);
+      });
+      const [id, enabled, reason, key] = api.switchUsdWallet.mock.calls[0] as [
+        string,
+        boolean,
+        string,
+        string,
+      ];
+      expect([id, enabled, reason]).toEqual(["u-1", true, "Пилот"]);
+      expect(key.length).toBeGreaterThanOrEqual(16);
+      expect(await screen.findByText("Включён")).toBeInTheDocument();
+    });
+
+    it("credits dollars through the USD endpoint after a confirm step", async () => {
+      api.adjustUsdBalance.mockResolvedValue(USD_CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "250" } });
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Начислить $250.000" }));
+      await waitFor(() => {
+        expect(api.adjustUsdBalance).toHaveBeenCalledWith(
+          "u-1",
+          "250.000",
+          "Стартовый баланс",
+          expect.any(String),
+        );
+      });
+      expect(api.adjustBalance).not.toHaveBeenCalled();
+    });
+
+    it("refuses a comma and groups the confirm amount so 1000 is not read as 1", async () => {
+      api.adjustUsdBalance.mockResolvedValue(USD_CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1,000" } });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("Только точка");
+      fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1000" } });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(
+        await screen.findByRole("button", { name: "Начислить $1\u00a0000.000" }),
+      ).toBeInTheDocument();
+    });
+
+    it("clears the amount and the error when the currency is switched", async () => {
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.change(screen.getByLabelText("Сумма, сум"), { target: { value: "50 000" } });
+      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      expect(screen.getByLabelText("Сумма, USD")).toHaveValue("");
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(await screen.findByRole("alert")).toBeInTheDocument();
+      expect(screen.queryByTestId("adjust-confirm-step")).not.toBeInTheDocument();
+      expect(api.adjustUsdBalance).not.toHaveBeenCalled();
+    });
+
+    it("refuses a dollar amount with four decimals", async () => {
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1.2345" } });
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("в долларах");
+      expect(api.adjustUsdBalance).not.toHaveBeenCalled();
+    });
   });
 });

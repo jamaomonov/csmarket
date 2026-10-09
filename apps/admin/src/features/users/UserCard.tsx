@@ -16,12 +16,19 @@ import {
   topupStatusLabel,
   tradeVerdictText,
 } from "./labels";
+import { UsdSwitchDialog } from "./UsdSwitchDialog";
 import { useIdempotencyKey } from "./useIdempotencyKey";
 import { type AdminOrderRow } from "../orders/api";
 import { AttentionBadge, OrderStatusChip } from "../orders/StatusChip";
 
 import { ApiError } from "@/lib/api";
-import { formatDateTime, formatSignedSum, formatSum } from "@/lib/format";
+import {
+  formatDateTime,
+  formatSignedSum,
+  formatSignedUsd,
+  formatSum,
+  formatUsd,
+} from "@/lib/format";
 
 const cardKey = (id: string) => ["admin", "users", "card", id] as const;
 
@@ -81,11 +88,15 @@ function Profile({ card }: { card: AdminUserCard }) {
   );
 }
 
-function History({ entries }: { entries: AdminEntry[] }) {
+function entryAmount(e: AdminEntry): string {
+  return e.amount_usd !== null ? formatSignedUsd(e.amount_usd) : formatSignedSum(e.amount_uzs);
+}
+
+function History({ entries, id, title }: { entries: AdminEntry[]; id: string; title: string }) {
   return (
-    <section aria-labelledby="user-history" className="space-y-2">
-      <h2 id="user-history" className="text-lg font-semibold">
-        История баланса
+    <section aria-labelledby={id} className="space-y-2">
+      <h2 id={id} className="text-lg font-semibold">
+        {title}
       </h2>
       {entries.length === 0 && <p className="text-fg-muted text-sm">Пока пусто.</p>}
       <ul className="divide-border divide-y text-sm">
@@ -95,7 +106,7 @@ function History({ entries }: { entries: AdminEntry[] }) {
               <div>{kindLabel(e.kind)}</div>
               <div className="text-fg-muted">
                 {formatDateTime(e.created_at)}
-                {e.kind === "admin_adjust" && (
+                {(e.kind === "admin_adjust" || e.kind === "admin_adjust_usd") && (
                   <>
                     {" · "}
                     <Actor actor={e.actor} />
@@ -104,7 +115,7 @@ function History({ entries }: { entries: AdminEntry[] }) {
                 )}
               </div>
             </div>
-            <span className="whitespace-nowrap tabular-nums">{formatSignedSum(e.amount_uzs)}</span>
+            <span className="whitespace-nowrap tabular-nums">{entryAmount(e)}</span>
           </li>
         ))}
       </ul>
@@ -206,7 +217,25 @@ function Orders({ orders }: { orders: AdminOrderRow[] }) {
   );
 }
 
-type Panel = "none" | "ban" | "adjust";
+type Panel = "none" | "ban" | "adjust" | "usd";
+
+function UsdBlock({ card, onSwitch }: { card: AdminUserCard; onSwitch: () => void }) {
+  const on = card.usd_wallet_enabled;
+  return (
+    <section aria-labelledby="user-usd" className="space-y-2" data-testid="usd-block">
+      <h2 id="user-usd" className="text-lg font-semibold">
+        USD-кошелёк
+      </h2>
+      <p className="text-sm">{on ? "Включён" : "Выключен"}</p>
+      <p className="text-xl font-semibold tabular-nums" data-testid="user-balance-usd">
+        Баланс: {formatUsd(card.balance_usd)}
+      </p>
+      <Button variant={on ? "danger" : "secondary"} onClick={onSwitch}>
+        {on ? "Выключить USD-кошелёк" : "Включить USD-кошелёк"}
+      </Button>
+    </section>
+  );
+}
 
 function CardBody({ card }: { card: AdminUserCard }) {
   const qc = useQueryClient();
@@ -215,6 +244,7 @@ function CardBody({ card }: { card: AdminUserCard }) {
   // CardBody is keyed by the user id, so all of this state is per user.
   const adjustKey = useIdempotencyKey("admin-adjust");
   const banKey = useIdempotencyKey("admin-ban");
+  const usdKey = useIdempotencyKey("admin-usd-switch");
   const unbanKey = useIdempotencyKey("admin-unban");
   const [notice, setNotice] = useState<string | null>(null);
   const u = card.user;
@@ -275,6 +305,12 @@ function CardBody({ card }: { card: AdminUserCard }) {
           Изменить баланс
         </Button>
       </div>
+      <UsdBlock
+        card={card}
+        onSwitch={() => {
+          open("usd");
+        }}
+      />
       {notice !== null && (
         <p role="alert" className="text-danger text-sm">
           {notice}
@@ -282,6 +318,16 @@ function CardBody({ card }: { card: AdminUserCard }) {
       )}
       {panel === "adjust" && (
         <AdjustForm userId={u.id} idem={adjustKey} onDone={changed} onClose={close} />
+      )}
+      {panel === "usd" && (
+        <UsdSwitchDialog
+          key={String(card.usd_wallet_enabled)}
+          userId={u.id}
+          enable={!card.usd_wallet_enabled}
+          idem={usdKey}
+          onDone={changed}
+          onClose={close}
+        />
       )}
       {panel === "ban" && (
         <BanDialog
@@ -294,7 +340,10 @@ function CardBody({ card }: { card: AdminUserCard }) {
           onClose={close}
         />
       )}
-      <History entries={card.entries} />
+      <History entries={card.entries} id="user-history" title="История баланса" />
+      {(card.usd_wallet_enabled || card.usd_entries.length > 0) && (
+        <History entries={card.usd_entries} id="user-history-usd" title="История USD" />
+      )}
       <Orders orders={card.orders} />
       <Topups topups={card.topups} />
     </section>

@@ -6,6 +6,7 @@ import type { OrderOut } from "@/lib/orders";
 
 import { SkinFloatBar } from "@/components/skins/SkinFloatBar";
 import { Link } from "@/i18n/navigation";
+import { formatUsd } from "@/lib/orders";
 import { itemPath } from "@/lib/paths";
 
 /** `"MAC-10 | Bronzer (Battle-Scarred)"` → the weapon above, the skin's own name below. */
@@ -77,7 +78,9 @@ export function OrderHero({ order, locale }: OrderHeroProps) {
           ) : null}
         </div>
       </div>
-      <p className="num text-2xl font-bold sm:text-right">{formatUzs(locale, order.price_uzs)}</p>
+      <p className="num text-2xl font-bold sm:text-right">
+        {order.channel === "api" ? formatUsd(order.price_usd) : formatUzs(locale, order.price_uzs)}
+      </p>
     </div>
   );
 }

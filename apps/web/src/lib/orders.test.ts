@@ -44,6 +44,7 @@ const ORDER: OrderOut = {
   paid_with: null,
   refunded_to: null,
   payable: true,
+  channel: "site",
   trade: null,
 };
 

@@ -4,19 +4,21 @@ import { Button, cn } from "@csmarket/ui";
 import { useInfiniteQuery, type InfiniteData } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 
-import { getEntries, signedUzs, type EntriesPage, type EntryType } from "@/lib/balance";
+import { getEntries, signedUsd, signedUzs, type EntriesPage, type EntryType } from "@/lib/balance";
 
 interface EntriesListProps {
   locale: string;
   /** Only top-ups or only withdrawals; everything when absent. */
   type?: EntryType;
+  /** The USD wallet's lines instead of the soʻm balance's. */
+  currency?: "usd";
 }
 
 /** Query key of the balance history, for whoever needs to invalidate it. */
 export const ENTRIES_KEY = ["wallet", "entries"] as const;
 
 /** The balance history, newest first, one page at a time behind «Показать ещё». */
-export function EntriesList({ locale, type }: EntriesListProps) {
+export function EntriesList({ locale, type, currency }: EntriesListProps) {
   const t = useTranslations("web.balance");
   const common = useTranslations("common");
   const tx = useTranslations("web.transactions");
@@ -28,8 +30,11 @@ export function EntriesList({ locale, type }: EntriesListProps) {
     string | null
   >({
     // Under ENTRIES_KEY, so invalidating that refreshes every filter.
-    queryKey: [...ENTRIES_KEY, type ?? "all"],
-    queryFn: ({ pageParam }) => getEntries(pageParam ?? undefined, type),
+    queryKey: [...ENTRIES_KEY, currency === "usd" ? "usd" : (type ?? "all")],
+    queryFn: ({ pageParam }) =>
+      currency
+        ? getEntries(pageParam ?? undefined, type, currency)
+        : getEntries(pageParam ?? undefined, type),
     initialPageParam: null,
     getNextPageParam: (last) => last.next_cursor,
   });
@@ -75,10 +80,10 @@ export function EntriesList({ locale, type }: EntriesListProps) {
                 data-testid="entry-amount"
                 className={cn(
                   "shrink-0 font-bold tabular-nums",
-                  e.amount_uzs.startsWith("-") ? "text-fg" : "text-success",
+                  (e.amount_usd ?? e.amount_uzs).startsWith("-") ? "text-fg" : "text-success",
                 )}
               >
-                {signedUzs(locale, e.amount_uzs)}
+                {e.amount_usd !== null ? signedUsd(e.amount_usd) : signedUzs(locale, e.amount_uzs)}
               </p>
             </li>
           ))}
@@ -88,7 +93,9 @@ export function EntriesList({ locale, type }: EntriesListProps) {
 
   return (
     <section className="border-border rounded-lg border p-5">
-      <h2 className="text-lg font-bold">{t("historyTitle")}</h2>
+      <h2 className="text-lg font-bold">
+        {currency === "usd" ? t("usd.historyTitle") : t("historyTitle")}
+      </h2>
       <div className="mt-3">{body}</div>
       {entries.hasNextPage ? (
         <Button

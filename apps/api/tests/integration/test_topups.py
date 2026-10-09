@@ -333,7 +333,7 @@ async def test_dev_pay_credits_once(
     assert first.json()["intent_url"] is None
     assert second.json() == first.json()
     balance = await integration_client.get("/api/v1/wallet", headers=h)
-    assert balance.json() == {"balance_uzs": "50000"}
+    assert balance.json() == {"balance_uzs": "50000", "usd": None}
     topup = await db_session.scalar(select(WalletTopup).where(WalletTopup.number == number))
     assert topup is not None
     assert await user_balance(db_session, topup.user_id) == Decimal(50000)
@@ -417,7 +417,8 @@ async def test_a_late_settle_on_a_held_attempt_still_credits(
     shown = (await integration_client.get(f"{TOPUPS}/{number}", headers=h)).json()
     assert shown["status"] == "succeeded"
     assert (await integration_client.get("/api/v1/wallet", headers=h)).json() == {
-        "balance_uzs": "50000"
+        "balance_uzs": "50000",
+        "usd": None,
     }
 
 

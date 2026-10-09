@@ -32,6 +32,7 @@ TRANSITIONS: dict[str, frozenset[str]] = {
 #: The timestamp each target status stamps besides ``updated_at``.
 _STAMP: dict[str, str] = {
     "paid": "paid_at",
+    "trade_sent": "trade_sent_at",
     "delivered": "delivered_at",
     "cancelled": "cancelled_at",
     "failed": "failed_at",
@@ -49,8 +50,8 @@ class InvalidOrderTransitionError(ConflictError):
 def move(order: Order, to: str) -> None:
     """Move ``order`` to ``to`` and stamp the matching timestamp.
 
-    ``updated_at`` is stamped on every move; ``paid_at``, ``delivered_at``, ``cancelled_at``
-    and ``failed_at`` (also for ``returned``) by their status.
+    ``updated_at`` is stamped on every move; ``paid_at``, ``trade_sent_at``, ``delivered_at``,
+    ``cancelled_at`` and ``failed_at`` (also for ``returned``) by their status.
 
     Args:
         order: The order row (locked by the caller).

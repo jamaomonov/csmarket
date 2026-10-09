@@ -25,6 +25,236 @@
         "title": "AdminAdjustIn",
         "type": "object"
       },
+      "AdminAdjustUsdIn": {
+        "additionalProperties": false,
+        "description": "Credit (``> 0``) or claw back (``< 0``) the user's dollars.",
+        "properties": {
+          "amount_usd": {
+            "pattern": "^-?\\d{1,7}(\\.\\d{1,3})?$",
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 4,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_usd",
+          "reason"
+        ],
+        "title": "AdminAdjustUsdIn",
+        "type": "object"
+      },
+      "AdminApiKeyCard": {
+        "description": "The key page: the row, the latest 20 orders and the webhook.",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/AdminApiKeyRow"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRow"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "webhook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminApiKeyWebhook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "orders",
+          "webhook"
+        ],
+        "title": "AdminApiKeyCard",
+        "type": "object"
+      },
+      "AdminApiKeyDelivery": {
+        "description": "The newest webhook delivery of the key's owner.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "status",
+          "attempts",
+          "last_status_code",
+          "created_at"
+        ],
+        "title": "AdminApiKeyDelivery",
+        "type": "object"
+      },
+      "AdminApiKeyRow": {
+        "description": "One key with what it has sold.",
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "orders": {
+            "title": "Orders",
+            "type": "integer"
+          },
+          "pricing_profile": {
+            "enum": [
+              "retail",
+              "cost"
+            ],
+            "title": "Pricing Profile",
+            "type": "string"
+          },
+          "revenue_usd": {
+            "title": "Revenue Usd",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminOrderUser"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "pricing_profile",
+          "created_at",
+          "last_used_at",
+          "revoked_at",
+          "orders",
+          "revenue_usd",
+          "cost_usd"
+        ],
+        "title": "AdminApiKeyRow",
+        "type": "object"
+      },
+      "AdminApiKeyWebhook": {
+        "description": "The owner's webhook: host only.",
+        "properties": {
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "last_delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminApiKeyDelivery"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "host",
+          "last_delivery"
+        ],
+        "title": "AdminApiKeyWebhook",
+        "type": "object"
+      },
+      "AdminApiKeysOut": {
+        "description": "A page of keys (live first, newest first) and the next cursor.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminApiKeyRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminApiKeysOut",
+        "type": "object"
+      },
       "AdminEntryOut": {
         "description": "One balance-history line with who booked it and why.",
         "properties": {
@@ -39,6 +269,17 @@
             ],
             "title": "Actor"
           },
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
           "amount_uzs": {
             "title": "Amount Uzs",
             "type": "string"
@@ -46,6 +287,15 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "default": "UZS",
+            "enum": [
+              "UZS",
+              "USD"
+            ],
+            "title": "Currency",
             "type": "string"
           },
           "id": {
@@ -60,7 +310,9 @@
               "purchase",
               "refund",
               "sale_credit",
-              "payout_return"
+              "payout_return",
+              "fx_convert",
+              "admin_adjust_usd"
             ],
             "title": "Kind",
             "type": "string"
@@ -335,6 +587,17 @@
       "AdminOrderFull": {
         "description": "Every ``orders`` column (the trade link masked, the checkout's idempotency key left\nout) plus the money an operator weighs.",
         "properties": {
+          "api_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Id"
+          },
           "cancelled_at": {
             "anyOf": [
               {
@@ -346,6 +609,10 @@
               }
             ],
             "title": "Cancelled At"
+          },
+          "channel": {
+            "title": "Channel",
+            "type": "string"
           },
           "claimed_at": {
             "anyOf": [
@@ -369,6 +636,17 @@
               }
             ],
             "title": "Claimed By"
+          },
+          "client_order_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Order Id"
           },
           "cost_units": {
             "title": "Cost Units",
@@ -420,7 +698,9 @@
                   "source_low_balance",
                   "invalid_trade_link",
                   "not_accepted",
-                  "admin"
+                  "admin",
+                  "trade_hold",
+                  "price_moved"
                 ],
                 "type": "string"
               },
@@ -556,6 +836,17 @@
             "title": "Price Uzs",
             "type": "string"
           },
+          "pricing_profile": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pricing Profile"
+          },
           "refunded_at": {
             "anyOf": [
               {
@@ -622,6 +913,18 @@
             ],
             "title": "Trade Link Masked"
           },
+          "trade_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Sent At"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
@@ -654,12 +957,17 @@
           "margin_usd",
           "float_value",
           "paint_seed",
+          "channel",
+          "api_key_id",
+          "client_order_id",
+          "pricing_profile",
           "trade_link_masked",
           "paid_with",
           "created_at",
           "updated_at",
           "expires_at",
           "paid_at",
+          "trade_sent_at",
           "delivered_at",
           "cancelled_at",
           "failed_at",
@@ -1211,6 +1519,23 @@
           }
         },
         "title": "AdminResolveIn",
+        "type": "object"
+      },
+      "AdminRevokeKeyIn": {
+        "additionalProperties": false,
+        "description": "Revoke a key, with a reason.",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "AdminRevokeKeyIn",
         "type": "object"
       },
       "AdminSaleItemOut": {
@@ -1919,6 +2244,32 @@
         "title": "AdminSkinslinkPurchaseOut",
         "type": "object"
       },
+      "AdminTariffIn": {
+        "additionalProperties": false,
+        "description": "Switch the tariff, with a reason.",
+        "properties": {
+          "pricing_profile": {
+            "enum": [
+              "retail",
+              "cost"
+            ],
+            "title": "Pricing Profile",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pricing_profile",
+          "reason"
+        ],
+        "title": "AdminTariffIn",
+        "type": "object"
+      },
       "AdminTopupInfo": {
         "description": "The top-up the payment pays for.",
         "properties": {
@@ -2503,9 +2854,35 @@
         "title": "AdminTradesOut",
         "type": "object"
       },
+      "AdminUsdSwitchIn": {
+        "additionalProperties": false,
+        "description": "Switch the USD wallet on or off, and why.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "title": "AdminUsdSwitchIn",
+        "type": "object"
+      },
       "AdminUserCard": {
         "description": "Everything the user page shows: the account, its balance, the latest 20 of each.",
         "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
           "balance_uzs": {
             "title": "Balance Uzs",
             "type": "string"
@@ -2531,6 +2908,17 @@
             "title": "Topups",
             "type": "array"
           },
+          "usd_entries": {
+            "items": {
+              "$ref": "#/components/schemas/AdminEntryOut"
+            },
+            "title": "Usd Entries",
+            "type": "array"
+          },
+          "usd_wallet_enabled": {
+            "title": "Usd Wallet Enabled",
+            "type": "boolean"
+          },
           "user": {
             "$ref": "#/components/schemas/AdminUserDetail"
           }
@@ -2540,7 +2928,10 @@
           "balance_uzs",
           "entries",
           "topups",
-          "orders"
+          "orders",
+          "usd_wallet_enabled",
+          "balance_usd",
+          "usd_entries"
         ],
         "title": "AdminUserCard",
         "type": "object"
@@ -2892,6 +3283,124 @@
         "title": "AliasesOut",
         "type": "object"
       },
+      "ApiKeyIssuedOut": {
+        "description": "A freshly issued key: the token is shown this once.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "token",
+          "pricing_profile",
+          "created_at"
+        ],
+        "title": "ApiKeyIssuedOut",
+        "type": "object"
+      },
+      "ApiKeyOut": {
+        "description": "The live key's public facts (never the token).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pricing_profile",
+          "created_at",
+          "last_used_at"
+        ],
+        "title": "ApiKeyOut",
+        "type": "object"
+      },
+      "ApiOrderIn": {
+        "additionalProperties": false,
+        "description": "Buy one skin: an offer of the item (or its cheapest under the cap) for a trade link.",
+        "properties": {
+          "client_order_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Client Order Id",
+            "type": "string"
+          },
+          "item_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Item Id",
+            "type": "string"
+          },
+          "max_price_usd": {
+            "pattern": "^\\d{1,6}(\\.\\d{1,3})?$",
+            "title": "Max Price Usd",
+            "type": "string"
+          },
+          "offer_id": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
+          },
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "max_price_usd",
+          "trade_link",
+          "client_order_id"
+        ],
+        "title": "ApiOrderIn",
+        "type": "object"
+      },
       "AuditActor": {
         "description": "The admin who acted.",
         "properties": {
@@ -2998,6 +3507,16 @@
           "balance_uzs": {
             "title": "Balance Uzs",
             "type": "string"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UsdWalletOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -3198,6 +3717,105 @@
         "title": "CardsOut",
         "type": "object"
       },
+      "CatalogItemOut": {
+        "description": "One catalogue item priced for the caller's tariff (USD, three decimals).",
+        "properties": {
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "market_hash_name": {
+            "title": "Market Hash Name",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "retail_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retail Price Usd"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "stock": {
+            "title": "Stock",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "item_id",
+          "slug",
+          "market_hash_name",
+          "exterior",
+          "price_usd",
+          "stock",
+          "updated_at"
+        ],
+        "title": "CatalogItemOut",
+        "type": "object"
+      },
+      "CatalogPageOut": {
+        "description": "A page of the catalogue feed.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CatalogPageOut",
+        "type": "object"
+      },
       "CatalogStatusOut": {
         "description": "The admin status card: catalogue size, job outcomes, rate and switches.",
         "properties": {
@@ -3358,6 +3976,57 @@
         "title": "CheapTail",
         "type": "object"
       },
+      "ConvertIn": {
+        "additionalProperties": false,
+        "description": "So\u02bbm to move into the dollar wallet.",
+        "properties": {
+          "amount_uzs": {
+            "maximum": 100000000.0,
+            "minimum": 1000.0,
+            "title": "Amount Uzs",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_uzs"
+        ],
+        "title": "ConvertIn",
+        "type": "object"
+      },
+      "ConvertOut": {
+        "description": "A booked conversion and both balances after it.",
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "balance_uzs": {
+            "title": "Balance Uzs",
+            "type": "string"
+          },
+          "rate_uzs": {
+            "title": "Rate Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_uzs",
+          "amount_usd",
+          "rate_uzs",
+          "balance_uzs",
+          "balance_usd"
+        ],
+        "title": "ConvertOut",
+        "type": "object"
+      },
       "DashboardOut": {
         "description": "Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look.",
         "properties": {
@@ -3512,6 +4181,17 @@
       "EntryOut": {
         "description": "One line of the balance history. No actor, no metadata (customer view).",
         "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
           "amount_uzs": {
             "title": "Amount Uzs",
             "type": "string"
@@ -3519,6 +4199,15 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "default": "UZS",
+            "enum": [
+              "UZS",
+              "USD"
+            ],
+            "title": "Currency",
             "type": "string"
           },
           "id": {
@@ -3533,7 +4222,9 @@
               "purchase",
               "refund",
               "sale_credit",
-              "payout_return"
+              "payout_return",
+              "fx_convert",
+              "admin_adjust_usd"
             ],
             "title": "Kind",
             "type": "string"
@@ -3935,161 +4626,53 @@
         "title": "LisskinsOut",
         "type": "object"
       },
-      "MeOut": {
-        "description": "The signed-in account as its owner sees it (the trade link is theirs to see).",
+      "MeKeyOut": {
+        "description": "The calling key.",
         "properties": {
-          "avatar_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Url"
-          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "email_verification_sent_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email Verification Sent At"
-          },
-          "email_verified": {
-            "title": "Email Verified",
-            "type": "boolean"
-          },
           "id": {
             "title": "Id",
             "type": "string"
           },
-          "locale": {
-            "enum": [
-              "ru",
-              "uz",
-              "en"
-            ],
-            "title": "Locale",
+          "pricing_profile": {
+            "title": "Pricing Profile",
             "type": "string"
-          },
-          "roles": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Roles",
-            "type": "array"
-          },
-          "steam_id": {
-            "title": "Steam Id",
-            "type": "string"
-          },
-          "trade_link": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link"
-          },
-          "trade_link_checked_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Checked At"
-          },
-          "trade_link_reason": {
-            "anyOf": [
-              {
-                "enum": [
-                  "invalid",
-                  "private",
-                  "trade_ban",
-                  "hold",
-                  "unavailable"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Reason"
-          },
-          "trade_link_verdict": {
-            "anyOf": [
-              {
-                "enum": [
-                  "ok",
-                  "warn",
-                  "bad"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Verdict"
           }
         },
         "required": [
           "id",
-          "steam_id",
-          "display_name",
-          "avatar_url",
-          "email",
-          "email_verified",
-          "locale",
-          "trade_link",
-          "trade_link_verdict",
-          "trade_link_reason",
-          "trade_link_checked_at",
-          "roles",
+          "pricing_profile",
           "created_at"
         ],
-        "title": "MeOut",
+        "title": "MeKeyOut",
+        "type": "object"
+      },
+      "MeLimitsOut": {
+        "description": "Requests allowed per minute and key.",
+        "properties": {
+          "feed_per_min": {
+            "title": "Feed Per Min",
+            "type": "integer"
+          },
+          "orders_per_min": {
+            "title": "Orders Per Min",
+            "type": "integer"
+          },
+          "read_per_min": {
+            "title": "Read Per Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min"
+        ],
+        "title": "MeLimitsOut",
         "type": "object"
       },
       "MePatchIn": {
@@ -4154,6 +4737,75 @@
         "title": "NewCardIn",
         "type": "object"
       },
+      "OfferOut": {
+        "description": "One purchasable offer; ``offer_id`` is opaque and bound to its item.",
+        "properties": {
+          "delivery": {
+            "const": "instant",
+            "title": "Delivery",
+            "type": "string"
+          },
+          "float": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Float"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "paint_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Seed"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "retail_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retail Price Usd"
+          },
+          "stickers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Stickers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "offer_id",
+          "float",
+          "paint_seed",
+          "stickers",
+          "price_usd",
+          "delivery"
+        ],
+        "title": "OfferOut",
+        "type": "object"
+      },
       "OrderCreateIn": {
         "additionalProperties": false,
         "description": "Buy one skin: the offer the buyer chose and the price the panel showed them.",
@@ -4193,6 +4845,14 @@
       "OrderOut": {
         "description": "An order as its owner sees it.",
         "properties": {
+          "channel": {
+            "enum": [
+              "site",
+              "api"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -4385,6 +5045,7 @@
           "paid_with",
           "refunded_to",
           "payable",
+          "channel",
           "trade"
         ],
         "title": "OrderOut",
@@ -5275,6 +5936,201 @@
           "providers"
         ],
         "title": "ProvidersOut",
+        "type": "object"
+      },
+      "PublicOrderItemOut": {
+        "description": "The catalogue item an order bought.",
+        "properties": {
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "market_hash_name": {
+            "title": "Market Hash Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "slug",
+          "market_hash_name"
+        ],
+        "title": "PublicOrderItemOut",
+        "type": "object"
+      },
+      "PublicOrderOut": {
+        "description": "An API order as its owner sees it \u2014 never the source market or its ids.",
+        "properties": {
+          "client_order_id": {
+            "title": "Client Order Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/PublicOrderItemOut"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicRefundOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "buying",
+              "trade_sent",
+              "delivered",
+              "refunded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicTradeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "order_id",
+          "client_order_id",
+          "status",
+          "item",
+          "price_usd",
+          "created_at",
+          "trade",
+          "refund"
+        ],
+        "title": "PublicOrderOut",
+        "type": "object"
+      },
+      "PublicOrdersPage": {
+        "description": "A page of the account's API orders, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicOrderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "PublicOrdersPage",
+        "type": "object"
+      },
+      "PublicRefundOut": {
+        "description": "The money returned to the USD wallet.",
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "sold_out",
+              "invalid_trade_link",
+              "trade_hold",
+              "price_moved",
+              "supplier_refused",
+              "cancelled_by_support"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_usd",
+          "reason"
+        ],
+        "title": "PublicRefundOut",
+        "type": "object"
+      },
+      "PublicTradeOut": {
+        "description": "The Steam trade of an order whose offer is out; a time is ``None`` until known.",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "offer_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Sent At"
+          },
+          "release_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release At"
+          }
+        },
+        "required": [
+          "offer_sent_at",
+          "accepted_at",
+          "release_at"
+        ],
+        "title": "PublicTradeOut",
         "type": "object"
       },
       "RarityFacetOut": {
@@ -7264,6 +8120,32 @@
         "title": "UpdatedByOut",
         "type": "object"
       },
+      "UsdWalletOut": {
+        "description": "The dollar wallet; present only once an admin switched it on.",
+        "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "rate_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Uzs"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "rate_uzs"
+        ],
+        "title": "UsdWalletOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -7385,6 +8267,279 @@
         ],
         "title": "WeaponFacetOut",
         "type": "object"
+      },
+      "WebhookDeliveryOut": {
+        "description": "The latest delivery attempt state of the partner's webhook.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "status",
+          "attempts",
+          "last_status_code",
+          "at"
+        ],
+        "title": "WebhookDeliveryOut",
+        "type": "object"
+      },
+      "WebhookIn": {
+        "description": "``PUT /public/webhook`` body.",
+        "properties": {
+          "url": {
+            "description": "`https` URL; its host must be public.",
+            "maxLength": 500,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "WebhookIn",
+        "type": "object"
+      },
+      "WebhookOut": {
+        "description": "The partner's webhook and how its last delivery went.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WebhookDeliveryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "created_at",
+          "last_delivery"
+        ],
+        "title": "WebhookOut",
+        "type": "object"
+      },
+      "csmarket__modules__public_api__schemas__MeOut": {
+        "description": "The caller's balance, wallet switch, key and limits.",
+        "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "key": {
+            "$ref": "#/components/schemas/MeKeyOut"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/MeLimitsOut"
+          },
+          "usd_wallet_enabled": {
+            "title": "Usd Wallet Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "usd_wallet_enabled",
+          "key",
+          "limits"
+        ],
+        "title": "MeOut",
+        "type": "object"
+      },
+      "csmarket__modules__users__schemas__MeOut": {
+        "description": "The signed-in account as its owner sees it (the trade link is theirs to see).",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "email_verification_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Verification Sent At"
+          },
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "locale": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Locale",
+            "type": "string"
+          },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
+          "steam_id": {
+            "title": "Steam Id",
+            "type": "string"
+          },
+          "trade_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          },
+          "trade_link_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Checked At"
+          },
+          "trade_link_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid",
+                  "private",
+                  "trade_ban",
+                  "hold",
+                  "unavailable"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Reason"
+          },
+          "trade_link_verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ok",
+                  "warn",
+                  "bad"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Verdict"
+          }
+        },
+        "required": [
+          "id",
+          "steam_id",
+          "display_name",
+          "avatar_url",
+          "email",
+          "email_verified",
+          "locale",
+          "trade_link",
+          "trade_link_verdict",
+          "trade_link_reason",
+          "trade_link_checked_at",
+          "roles",
+          "created_at"
+        ],
+        "title": "MeOut",
+        "type": "object"
       }
     }
   },
@@ -7394,6 +8549,317 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/api-keys": {
+      "get": {
+        "description": "Live keys first, newest first; ``q`` = part of the owner's display name.",
+        "operationId": "list_keys_api_v1_admin_api_keys_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeysOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "API keys with their sales",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}": {
+      "get": {
+        "description": "The key, its latest 20 orders and the owner's webhook host.",
+        "operationId": "get_key_card_api_v1_admin_api_keys__key_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "An API key's card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}/revoke": {
+      "post": {
+        "description": "End the key now; its next public request is 401. 409 when already revoked.",
+        "operationId": "post_revoke_api_v1_admin_api_keys__key_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRevokeKeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke a key",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}/tariff": {
+      "put": {
+        "description": "``retail`` or ``cost`` for the next orders; 409 ``api_key_revoked`` on a dead key.",
+        "operationId": "put_tariff_api_v1_admin_api_keys__key_id__tariff_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTariffIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch the tariff",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/audit": {
       "get": {
         "description": "Newest first; each filter is an exact match and they combine with AND.",
@@ -7633,7 +9099,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "$ref": "#/components/schemas/csmarket__modules__users__schemas__MeOut"
                 }
               }
             },
@@ -7859,7 +9325,7 @@
     },
     "/api/v1/admin/orders/{number}/refund": {
       "post": {
-        "description": "Only a ``buying`` order whose resolved attention says nothing was bought\n(``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade\nunder (asked first, 4 s, nothing locked); the order becomes ``failed`` (reason\n``admin``).",
+        "description": "A Waxpeer order: only a ``buying`` order whose resolved attention says nothing was\nbought (``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade\nunder. A Skinslink / LIS-SKINS order (``buying`` / ``trade_sent``): only when the source\nreports the purchase failed, cancelled or returned \u2014 or has none, for a purchase older\nthan 10 minutes with no buy running. The source is asked first (4 s, nothing locked);\nthe order becomes ``failed`` \u2014 a ``trade_sent`` one ``returned`` (reason ``admin``).",
         "operationId": "refund_api_v1_admin_orders__number__refund_post",
         "parameters": [
           {
@@ -7912,7 +9378,7 @@
             "description": "No such order"
           },
           "409": {
-            "description": "Conflict; `code` is one of:\n\n- `already_refunded` \u2014 the money is already on the balance.\n- `order_in_flight` \u2014 the skin may still reach the buyer (or the attention is unresolved, or not a \u00abnothing was bought\u00bb case).\n- `order_not_refundable` \u2014 settled with nothing to give back (unpaid, cancelled, delivered).\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `waxpeer_unavailable` \u2014 Waxpeer could not be asked whether a purchase exists; nothing was refunded, try again later.\n- `idempotency_mismatch` \u2014 the key answered another request."
+            "description": "Conflict; `code` is one of:\n\n- `already_refunded` \u2014 the money is already on the balance.\n- `order_in_flight` \u2014 the skin may still reach the buyer (or the attention is unresolved, or not a \u00abnothing was bought\u00bb case).\n- `order_not_refundable` \u2014 settled with nothing to give back (unpaid, cancelled, delivered).\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `order_needs_attention` \u2014 a Skinslink / LIS-SKINS purchase's attention is unresolved.\n- `waxpeer_unavailable` \u2014 Waxpeer could not be asked whether a purchase exists; nothing was refunded, try again later.\n- `source_unavailable` \u2014 Skinslink / LIS-SKINS could not be asked; nothing was refunded, try again later.\n- `idempotency_mismatch` \u2014 the key answered another request."
           },
           "422": {
             "content": {
@@ -10123,6 +11589,84 @@
         ]
       }
     },
+    "/api/v1/admin/users/{user_id}/usd-wallet": {
+      "put": {
+        "description": "Turn the USD wallet on or off for a user.\n\nSwitching off with a non-zero USD balance is allowed: the money stays on the account;\nconversion and API purchases stop until it is switched on again.",
+        "operationId": "switch_usd_wallet_api_v1_admin_users__user_id__usd_wallet_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminUsdSwitchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch the USD wallet",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/users/{user_id}/wallet/adjust": {
       "post": {
         "description": "Credit (> 0) or claw back (< 0); a clawback below zero is 409 ``balance_too_low``.",
@@ -10196,6 +11740,84 @@
           }
         },
         "summary": "Adjust a balance",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/wallet/adjust-usd": {
+      "post": {
+        "description": "Credit (> 0) or claw back (< 0) dollars; below zero is 409 ``balance_too_low``.",
+        "operationId": "adjust_usd_balance_api_v1_admin_users__user_id__wallet_adjust_usd_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminAdjustUsdIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Adjust the USD balance",
         "tags": [
           "admin"
         ]
@@ -10498,7 +12120,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "$ref": "#/components/schemas/csmarket__modules__users__schemas__MeOut"
                 }
               }
             },
@@ -10572,7 +12194,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MeOut"
+                  "$ref": "#/components/schemas/csmarket__modules__users__schemas__MeOut"
                 }
               }
             },
@@ -10592,6 +12214,185 @@
         "summary": "Edit locale or email",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/me/api-key": {
+      "delete": {
+        "description": "Revoke the live key; 404 ``api_key_missing`` when there is none. A replay answers 204.",
+        "operationId": "revoke_key_api_v1_me_api_key_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke my API key",
+        "tags": [
+          "api-key"
+        ]
+      },
+      "get": {
+        "description": "The live key's facts, or ``null`` when none. The token is never returned.",
+        "operationId": "get_key_api_v1_me_api_key_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ApiKeyOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Key Api V1 Me Api Key Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My API key",
+        "tags": [
+          "api-key"
+        ]
+      },
+      "post": {
+        "description": "Issue a key, revoking the live one; the token is shown once.\n\nThe token is never stored, so a replayed ``Idempotency-Key`` answers 409\n``key_already_issued`` with the ``key_id`` instead of the token again.",
+        "operationId": "issue_key_api_v1_me_api_key_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyIssuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Issue an API key",
+        "tags": [
+          "api-key"
         ]
       }
     },
@@ -11414,6 +13215,694 @@
         "summary": "Forget a payout card",
         "tags": [
           "sales"
+        ]
+      }
+    },
+    "/api/v1/public/catalog": {
+      "get": {
+        "description": "Page ``n`` of the current snapshot (1000 items), priced by the key's tariff.\n\nThe first page counts against the 1 per minute ``feed`` limit, later pages against\n``read``. A cursor of an expired snapshot answers 409 ``cursor_expired``. ``ETag`` /\n``If-None-Match`` give a 304.",
+        "operationId": "catalog_api_v1_public_catalog_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Updated Since"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-none-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "`If-None-Match` matched the page's ETag; empty body"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "409": {
+            "description": "`cursor_expired` -- restart from the first page"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          },
+          "503": {
+            "description": "`feed_unavailable` -- no snapshot yet, with `Retry-After`"
+          }
+        },
+        "summary": "Catalogue feed, one page",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/catalog/{item_id}/offers": {
+      "get": {
+        "description": "Offers of the item, cheapest first, priced by the key's tariff.\n\nCached 60 s per tariff and item. Offer ids are opaque and bound to the item.",
+        "operationId": "item_offers_api_v1_public_catalog__item_id__offers_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OfferOut"
+                  },
+                  "title": "Response Item Offers Api V1 Public Catalog  Item Id  Offers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Offers of one item",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/me": {
+      "get": {
+        "description": "The USD balance, whether the USD wallet is on, the calling key and its limits.",
+        "operationId": "me_api_v1_public_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__public_api__schemas__MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Balance, key and limits",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/orders": {
+      "get": {
+        "description": "The owner's API orders (every key they had), newest first, 50 a page; ``status`` keeps\none status.",
+        "operationId": "list_orders_api_v1_public_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "buying",
+                    "trade_sent",
+                    "delivered",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrdersPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`cursor` or a bad `status`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "API orders of this account",
+        "tags": [
+          "public-api"
+        ]
+      },
+      "post": {
+        "description": "Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n``buying``). A ``client_order_id`` already used by this account (with this key or an earlier\none) writes nothing and answers 409\n``duplicate_client_order_id`` with that order in ``order``. Counts against the\n10 per minute ``order`` limit.",
+        "operationId": "place_order_api_v1_public_orders_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiOrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "402": {
+            "description": "`insufficient_balance` -- nothing was written"
+          },
+          "403": {
+            "description": "`usd_wallet_disabled`, `account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`"
+          },
+          "409": {
+            "description": "`offer_gone`, `price_above_max` (+ `price_usd`), `buying_disabled`, `duplicate_client_order_id` (+ `order`: the order already placed under the id)"
+          },
+          "422": {
+            "description": "`trade_link_invalid` and body errors"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          },
+          "503": {
+            "description": "`rate_unavailable` -- no rate snapshot was ever recorded"
+          }
+        },
+        "summary": "Buy one skin from the USD wallet",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/orders/{order_id}": {
+      "get": {
+        "description": "The API order ``order_id`` of this key's owner (any of their keys); another user's or\nan unknown one is 404.",
+        "operationId": "get_order_api_v1_public_orders__order_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`order_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "One API order of this account",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/webhook": {
+      "delete": {
+        "description": "Remove the webhook; 204 even when none was set. Needs ``Idempotency-Key``.",
+        "operationId": "delete_webhook_api_v1_public_webhook_delete",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`idempotency_key`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Remove my webhook",
+        "tags": [
+          "public-api"
+        ]
+      },
+      "get": {
+        "description": "The webhook URL and the state of its latest delivery, or ``null`` when none is set.",
+        "operationId": "get_webhook_api_v1_public_webhook_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Webhook Api V1 Public Webhook Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "My webhook",
+        "tags": [
+          "public-api"
+        ]
+      },
+      "put": {
+        "description": "Replace the webhook URL. ``https`` only; the host must resolve to public addresses.\n\nNeeds ``Idempotency-Key``. A replay changes nothing and answers the current state.",
+        "operationId": "put_webhook_api_v1_public_webhook_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`webhook_url_invalid`, `webhook_url_private`, `idempotency_key`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Set my webhook URL",
+        "tags": [
+          "public-api"
         ]
       }
     },
@@ -12278,7 +14767,7 @@
     },
     "/api/v1/wallet": {
       "get": {
-        "description": "Spendable so\u02bbm; ``\"0\"`` before the first top-up.",
+        "description": "Spendable so\u02bbm; ``\"0\"`` before the first top-up.\n\n``usd`` carries the dollar wallet and today's conversion rate once an admin switched it on\nfor the account; ``null`` otherwise.",
         "operationId": "get_balance_api_v1_wallet_get",
         "parameters": [
           {
@@ -12326,9 +14815,85 @@
         ]
       }
     },
+    "/api/v1/wallet/convert": {
+      "post": {
+        "description": "So\u02bbm \u2192 the dollar wallet at the site rate (CBU plus the uplift).\n\nNeeds the dollar wallet switched on. A replayed key with the same amount answers 200 with\nthe same conversion; the same key with another amount is 409.",
+        "operationId": "convert_api_v1_wallet_convert_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Convert so\u02bbm into dollars",
+        "tags": [
+          "wallet"
+        ]
+      }
+    },
     "/api/v1/wallet/entries": {
       "get": {
-        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.\n\n``type=topup`` keeps top-ups and their reversals; ``type=withdrawal`` is empty until\npayouts exist.",
+        "description": "Newest first; pass ``next_cursor`` back as ``cursor`` for the next page.\n\n``type=topup`` keeps top-ups and their reversals; ``type=withdrawal`` is empty until\npayouts exist. ``currency=usd`` lists the dollar wallet's lines (``amount_usd``).",
         "operationId": "get_entries_api_v1_wallet_entries_get",
         "parameters": [
           {
@@ -12377,6 +14942,20 @@
                 }
               ],
               "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currency",
+            "required": false,
+            "schema": {
+              "default": "uzs",
+              "enum": [
+                "uzs",
+                "usd"
+              ],
+              "title": "Currency",
+              "type": "string"
             }
           },
           {

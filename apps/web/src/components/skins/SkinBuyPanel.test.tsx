@@ -111,6 +111,7 @@ const order = (number: string, over: Partial<OrderOut> = {}): OrderOut => ({
   paid_with: null,
   refunded_to: null,
   payable: true,
+  channel: "site",
   trade: null,
   ...over,
 });

@@ -45,6 +45,8 @@ export const FAILURE_LABELS: Record<FailureReason, string> = {
   source_low_balance: "не хватило денег на площадке",
   invalid_trade_link: "неверная трейд-ссылка",
   not_accepted: "обмен не принят",
+  trade_hold: "задержка обменов Steam",
+  price_moved: "цена поставщика выросла",
   admin: "вернул администратор",
 };
 
@@ -80,6 +82,7 @@ const ORDER_CODE_MESSAGES: Record<string, string> = {
   nothing_to_resolve: "Здесь нечего разбирать.",
   order_not_refundable: "Этот заказ нельзя вернуть.",
   waxpeer_unavailable: "Не удалось проверить покупку — попробуйте позже.",
+  source_unavailable: "Поставщик не ответил — попробуйте позже.",
 };
 
 /** Codes that mean the page is stale: the caller refetches the order to show the real state. */

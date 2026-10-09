@@ -56,4 +56,10 @@ def wire_uzs(amount: Decimal) -> str:
     return f"{amount.quantize(Decimal(1)):f}"
 
 
-__all__ = ["WHOLE_UNIT_CURRENCIES", "format_amount", "wire_uzs"]
+def wire_usd(units: Decimal | int) -> str:
+    """Milli-USD units as a dollar string with three decimals: ``12345`` → ``"12.345"``."""
+    value = (Decimal(units) / 1000).quantize(Decimal("0.001"))
+    return format(value, "f")
+
+
+__all__ = ["WHOLE_UNIT_CURRENCIES", "format_amount", "wire_usd", "wire_uzs"]

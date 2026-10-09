@@ -40,8 +40,10 @@ from csmarket.modules.lisskins.api import (
 from csmarket.modules.orders.fsm import TRANSITIONS, move
 from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order
+from csmarket.modules.orders.public_view import public_status
 from csmarket.modules.orders.refunds import refund_or_hold
 from csmarket.modules.orders.trades import flag
+from csmarket.modules.orders.webhook_events import emit_if_changed
 from csmarket.modules.realtime.api import nudge
 
 log = get_logger("csmarket.orders.lisskins_status")
@@ -141,12 +143,14 @@ async def apply_report(
         ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``failed``,
         ``rolled_back``, ``ambiguous`` or ``held``.
     """
+    before = public_status(order, None, purchase)
     skin = mirror_report(purchase, report)
     outcome = await _apply(db, order=order, purchase=purchase, skin=skin)
     if outcome in _NUDGED:
         await nudge(db, user_id=order.user_id, number=order.number)
     if outcome == "trade_sent":
         await enqueue_trade_sent(db, order, send_until=purchase.offer_expiry_at)
+    await emit_if_changed(db, before=before, order=order, trade=None, purchase=purchase)
     return outcome
 
 

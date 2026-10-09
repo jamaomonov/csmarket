@@ -206,12 +206,16 @@ async def test_info_asks_by_custom_ids_and_skips_an_unreadable_entry() -> None:
     assert [(p.custom_id, p.skin.status, p.skin.return_reason) for p in found] == [
         ("order-1", "return", "trade_timeout")
     ]
+    answer = await _client().info_answer(custom_ids=["order-1", "order-2"])
+    # The admin refund sees the dropped entry: an unreadable answer is never «not found».
+    assert (len(answer.purchases), answer.entries) == (1, 2)
 
 
 async def test_info_refuses_more_than_200_ids_and_asks_nothing_for_none() -> None:
     with pytest.raises(ValueError, match="200"):
         await _client().info(custom_ids=[str(n) for n in range(201)])
     assert await _client().info(custom_ids=[]) == []
+    assert (await _client().info_answer(custom_ids=[])).entries == 0
 
 
 @respx.mock

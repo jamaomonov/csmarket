@@ -13,9 +13,14 @@ import { detailKey, ORDERS_LIST_KEY, TRADES_KEY } from "./keys";
 import { isOrderConflict, orderErrorText } from "./labels";
 
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
-import { formatSum } from "@/lib/format";
+import { formatSum, formatUsd } from "@/lib/format";
 
 const NOTE_MAX = 500;
+
+/** `"13.580000"` → `$13.580`: an API order's price is whole milli-USD, so nothing is lost. */
+function milliUsd(value: string): string {
+  return formatUsd(value.replace(/(\.\d{3})\d*$/, "$1"));
+}
 
 type Action = "resolve" | "refund" | "retry";
 type Panel = "none" | Action;
@@ -193,7 +198,18 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
       )}
       {panel === "refund" && detail.can_refund && (
         <ConfirmBox>
-          <p>Вернуть {formatSum(order.price_uzs)} на баланс покупателя?</p>
+          <p>
+            Вернуть{" "}
+            {order.paid_with === "usd_wallet"
+              ? milliUsd(order.price_usd)
+              : formatSum(order.price_uzs)}{" "}
+            на баланс покупателя?
+          </p>
+          {order.source !== "waxpeer" && (
+            <p className="text-fg-muted text-xs">
+              Сначала спросим поставщика: деньги вернутся, только если покупка не состоялась.
+            </p>
+          )}
           <div className="flex gap-2">
             <Button
               variant="danger"

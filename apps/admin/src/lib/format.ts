@@ -20,3 +20,14 @@ export function formatDateTime(iso: string): string {
   const date = `${p(d.getDate())}.${p(d.getMonth() + 1)}.${String(d.getFullYear())}`;
   return `${date} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+
+/** `"250.000"` -> `$250.000` (the API's three-decimal dollar string, as is). */
+export function formatUsd(value: string): string {
+  return `$${value}`;
+}
+
+/** `"+7.826"` -> `+$7.826`, `"-1.000"` -> `\u2212$1.000` (typographic minus). */
+export function formatSignedUsd(value: string): string {
+  const sign = value.startsWith("-") ? "\u2212" : "+";
+  return `${sign}${formatUsd(value.replace(/^[+-]/, ""))}`;
+}

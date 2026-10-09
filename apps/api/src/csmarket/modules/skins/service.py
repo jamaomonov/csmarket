@@ -13,6 +13,7 @@ from __future__ import annotations
 import base64
 import binascii
 import json
+import uuid
 from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Literal
@@ -324,6 +325,18 @@ async def get_item(db: AsyncSession, slug: str, *, categories: list[str]) -> Ski
     return row
 
 
+async def get_item_by_id(
+    db: AsyncSession, item_id: str, *, categories: list[str]
+) -> SkinItem | None:
+    """An active, visible item by id; ``None`` for anything else, a malformed id included."""
+    try:
+        uuid.UUID(item_id)
+    except ValueError:
+        return None
+    stmt = _base(categories).where(SkinItem.id == item_id)
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
 _WEAR_ORDER = case(
     (SkinItem.exterior == "FN", 0),
     (SkinItem.exterior == "MW", 1),
@@ -369,6 +382,7 @@ __all__ = [
     "facets",
     "family",
     "get_item",
+    "get_item_by_id",
     "list_items",
     "suggest",
 ]

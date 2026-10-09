@@ -24,6 +24,8 @@ def _skin(order: Order) -> str:
 
 async def enqueue_receipt(db: AsyncSession, order: Order) -> None:
     """``Заказ оплачен`` for a just-paid order."""
+    if order.channel == "api":
+        return  # an API buyer is not mailed
     await enqueue(
         db,
         kind="receipt",
@@ -42,6 +44,8 @@ async def enqueue_trade_sent(
 ) -> None:
     """``Обмен отправлен``, with the offer's deadline when the market gave one (a Waxpeer
     ``trade``'s own, else ``send_until``)."""
+    if order.channel == "api":
+        return  # an API buyer is not mailed
     payload = {"number": order.number, "skin": _skin(order)}
     until = trade.send_until if trade is not None else send_until
     if until is not None:
@@ -51,6 +55,8 @@ async def enqueue_trade_sent(
 
 async def enqueue_refunded(db: AsyncSession, order: Order) -> None:
     """``Деньги на балансе`` with the amount returned."""
+    if order.channel == "api":
+        return  # an API buyer is not mailed
     await enqueue(
         db,
         kind="refunded",

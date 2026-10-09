@@ -15,8 +15,8 @@ adds `payments.order_id → orders.id` and `ck_payments_purpose_order`).
   units, 1000 = $1, the worker's price cap — `cost_usd`), the price billed (`price_usd`,
   `price_uzs` in whole soʻm, `fx_snapshot_id`), the `trade_link` snapshot (PII, never
   logged), `idempotency_key` (unique per user), `paid_with` (`wallet` | `click` | `payme` |
-  `uzum` | `mock`), the times (`expires_at`, `paid_at`, `delivered_at`, `cancelled_at`,
-  `failed_at`, `refunded_at`), `refunded_to` (`balance` only), `failure_reason`
+  `uzum` | `mock`), the times (`expires_at`, `paid_at`, `trade_sent_at` (0028), `delivered_at`,
+  `cancelled_at`, `failed_at`, `refunded_at`), `refunded_to` (`balance` only), `failure_reason`
   (`FAILURE_REASONS`), and the queue claim (`claimed_at`, `claimed_by`, `next_check_at`).
 - `skin_trades` — one per order, keyed by `order_id` (`ON DELETE CASCADE`): `project_id`
   (= the order id; unique — a buy is looked up by it, never repeated), Waxpeer's
@@ -88,6 +88,32 @@ The order is inserted `pending`, expiring after `order_expiry_minutes` (15), wit
 snapshot. Two first requests racing on one key: the unique `(user_id, idempotency_key)`
 refuses the second, which returns the first's order. The route charges the `order-create`
 ip_guard bucket (60/min per IP, 10/min per IP + account) before any work.
+
+## Buying over the public API (`api_checkout.py`, `public_view.py`; plan B 2026-10-09)
+
+- `create_api_order` — `POST /public/orders`, one transaction: a `client_order_id` the owner
+  already used (with this key or an earlier one) returns the stored order (409 `duplicate_client_order_id` at the route); gates
+  `buying_disabled` (409), `usd_wallet_disabled` (403), `trade_link_invalid` (422); the item by
+  id (`item_not_found`); the offer from `public_api.api_offers` (Skinslink + LIS-SKINS, the key's
+  tariff) — the sealed `offer_id` or the cheapest within `max_price_usd` (`offer_gone`,
+  `price_above_max` + `price_usd`); insert the order (`channel = api`, `price_uzs = 0`, the
+  newest rate snapshot, `fx_uplift_pct = 0`, `price_usd` = the charged price — ruling R1) in a
+  savepoint; `debit_purchase_usd`; `mark_paid(provider="usd_wallet")`; commit. A short balance
+  rolls everything back (the route answers 402 `insufficient_balance`). Two requests racing on
+  one `client_order_id` meet at the partial unique index `uq_orders_user_client_order_id`
+  (`user_id`, `client_order_id` where `channel = 'api'`, 0028): the loser waits for the
+  winner's commit, rolls back its savepoint and returns the winner — one order, one debit.
+- `public_view` — the partner's status (`buying` / `trade_sent` / `delivered` / `refunded`, spec
+  §5), the refund reason map, `trade {offer_sent_at = trade_sent_at, accepted_at, release_at}`,
+  and the owner's reads (`get_for_owner`, `list_for_owner`: the user's `api` orders from every
+  key they had, newest first, 50 a page, a `status` filter that mirrors the mapping in SQL; on
+  `ix_orders_user_created`). `api_key_id` stays on the order as the key that placed it.
+
+- `webhook_events.emit_order_event(db, order=, trade=, purchase=)` — called by every move that
+  changes an API order's public status; inserts one `api_webhook_deliveries` row per
+  `(order, event)` (`ON CONFLICT DO NOTHING`) with `NOTIFY api_webhooks`, in the move's
+  transaction. A site order or a user without a webhook costs nothing. The payload is the
+  public order view (no market, no trade link). An intermediate status can be skipped.
 
 ## Paying (`paying.py`, ruling R8)
 
@@ -173,7 +199,10 @@ module's models and FSM — never `payments`.
   (the worker, the reconcile sweep, the admin). The caller holds the order `FOR UPDATE`.
   `refunded_at` already set → `False`, nothing written. Else `wallet.credit_order_refund`
   (key `refund:order:{order_id}`; balance-paid: D `user_wallet` / C
-  `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing:<kassa>`),
+  `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing:<kassa>`;
+  a `usd_wallet` order (public API) goes to `wallet.credit_order_refund_usd`, key
+  `refund:order:usd:{order_id}`, units = `price_usd * 1000`; letters are skipped for
+  `channel == "api"`),
   `move(order, to_status)` (`failed` | `returned`), `refunded_at`, `refunded_to="balance"`,
   `failure_reason = reason`, `csmarket_order_refunds_total{reason}` + 1, log
   `orders.refunded` (number, amount, reason, status — never the buyer) → `True`. Flushes,
@@ -222,6 +251,24 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
   (`in_flight`, an unresolved or "something may be bought" attention, a purchase on record
   or at Waxpeer); `order_not_refundable` (unpaid, cancelled, delivered); `order_busy`;
   `waxpeer_unavailable`.
+- **A Skinslink / LIS-SKINS order** (`admin_refund_sources`, ADR-0018): `admin_refund`
+  dispatches by `orders.source` to `admin_refund_purchase(db, *, number, admin_id, skinslink,
+lisskins)` (the route injects `skinslink.request_status_client` and
+  `lisskins.request_info_client`). `purchase_refund_refusal(order, purchase, at)` — also the
+  detail's `can_refund` (`purchase_can_refund`, which hides the button while the stored status
+  is plainly live, `STORED_LIVE`), no source call — refuses `already_refunded`;
+  `order_not_refundable` unless `buying` / `trade_sent`; `order_needs_attention` (an
+  unresolved attention in `BLOCKS_REFUND`); `order_busy` (`buy_pending` and a live lease);
+  `order_in_flight` for a row younger than 10 minutes with no market purchase id. Then the
+  unlocked read commits and the source is asked once (4 s, nothing locked): Skinslink
+  `failed` / `canceled`, a LIS-SKINS `return` that is not a `rollback_…`, or not found with no
+  purchase id on record and no lost buy answer (`buy_unconfirmed_at`) → refundable; an answer
+  about another purchase (`merchant_tx_id`, purchase id, `custom_id`) or an unreadable
+  LIS-SKINS entry (`info_answer.entries`) → `order_in_flight`; anything else →
+  `order_in_flight`; an error or timeout → `source_unavailable`. Lock order → purchase,
+  re-check (a purchase id or a lost answer recorded meanwhile → `order_in_flight`), `buy_pending` off, `refund_to_balance` (reason `admin`; `buying` →
+  `failed`, `trade_sent` → `returned`; an API order back to its USD wallet). The 409 texts
+  live in `admin_conflicts`.
 - `retry_buy(db, *, number, admin_id) -> str` — a `buying`, unrefunded order whose trade
   carries a **resolved** attention in `RETRYABLE` (the same three), no purchase on record
   (`waxpeer_id` unset — `sweeps` also flags a bought trade that stopped being reported
@@ -337,18 +384,18 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `merchant_tx_id`, so the reconcile repeats the same call after a lost answer. Outcomes
   (`csmarket_order_buys_total`, log `orders.skinslink_buy`):
 
-  | Skinslink answers                                                            | Outcome        | Writes                                                                            |
-  | ---------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-  | trade link does not parse                                                    | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
-  | taken (`new`, `pending`, `active`, `hold`, `completed`)                      | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
-  | 409 or `duplicate_purchase`                                                  | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
-  | a trade-link code (`LINK_ERROR_CODES`)                                       | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
-  | `insufficient_balance`                                                       | `low_balance`  | `failed` + refund `source_low_balance`                                            |
-  | HTTP 403                                                                     | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
-  | HTTP 429                                                                     | `rate_limited` | nothing; next try after 20 s                                                      |
-  | timeout, 408, 5xx, network                                                   | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
-  | any other `failed` reason or 4xx (sold, price moved, `provider_unavailable`) | `sold_out`     | `failed` + refund `sold_out`                                                      |
-  | a buy that went through but the rows moved during the call                   | `stale_bought` | attention `ambiguous_trade`                                                       |
+  | Skinslink answers                                                                     | Outcome        | Writes                                                                            |
+  | ------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+  | trade link does not parse                                                             | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
+  | taken (`new`, `pending`, `active`, `hold`, `completed`)                               | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
+  | 409 or `duplicate_purchase`                                                           | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
+  | a trade-link code (`LINK_ERROR_CODES`); `hold`, `hold_and_permissions` → `trade_hold` | `invalid_link` | `failed` + refund `invalid_trade_link` (`trade_hold` for a hold)                  |
+  | `insufficient_balance`                                                                | `low_balance`  | `failed` + refund `source_low_balance`                                            |
+  | HTTP 403                                                                              | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
+  | HTTP 429                                                                              | `rate_limited` | nothing; next try after 20 s                                                      |
+  | timeout, 408, 5xx, network                                                            | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
+  | any other `failed` reason or 4xx (sold, price moved, `provider_unavailable`)          | `sold_out`     | `failed` + refund `sold_out`                                                      |
+  | a buy that went through but the rows moved during the call                            | `stale_bought` | attention `ambiguous_trade`                                                       |
 
   The chosen asset is the only one bought: no substitute, no switch to another source
   (ADR-0013). An order bought before that change under `merchant_tx_id` = `<order id>:2`

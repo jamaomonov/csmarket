@@ -37,6 +37,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 from csmarket.core.db import Base
 from csmarket.core.ids import new_id
 
+# The FK ``orders.api_key_id`` -> ``api_keys`` must resolve in every process that loads orders.
+from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
+
 ORDER_STATUSES = (
     "pending",
     "paid",
@@ -62,7 +65,17 @@ ATTENTION_REASONS = (
     "audit_divergence",
 )
 #: ``orders.failure_reason`` codes.
-FAILURE_REASONS = ("sold_out", "source_low_balance", "invalid_trade_link", "not_accepted", "admin")
+FAILURE_REASONS = (
+    "sold_out",
+    "source_low_balance",
+    "invalid_trade_link",
+    "not_accepted",
+    "admin",
+    "trade_hold",
+    "price_moved",
+)
+#: Where an order was placed: the storefront or the public API.
+ORDER_CHANNELS = ("site", "api")
 #: Where a refund goes (spec §7.8: the balance only).
 REFUND_TARGETS = ("balance",)
 
@@ -138,13 +151,27 @@ class Order(Base):
     trade_link: Mapped[str] = mapped_column(Text, nullable=False)
     #: The customer's ``Idempotency-Key``; unique per user.
     idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
-    #: ``wallet``, ``click``, ``payme``, ``uzum`` or ``mock``; ``NULL`` until paid.
+    #: ``wallet``, ``usd_wallet``, ``click``, ``payme``, ``uzum`` or ``mock``; ``NULL`` until paid.
     paid_with: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    #: One of :data:`ORDER_CHANNELS`.
+    channel: Mapped[str] = mapped_column(
+        String(4), nullable=False, server_default=text("'site'"), default="site"
+    )
+    #: The key an ``api`` order was placed with; ``NULL`` on the site.
+    api_key_id: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("api_keys.id", ondelete="RESTRICT"), nullable=True
+    )
+    #: The client's own id for an ``api`` order; unique per owner (any of their keys).
+    client_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: The key's tariff when the order was placed (``retail`` / ``cost``).
+    pricing_profile: Mapped[str | None] = mapped_column(String(8), nullable=True)
     created_at: Mapped[datetime] = _ts()
     updated_at: Mapped[datetime] = _ts()
     #: A ``pending`` order is cancelled after this.
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     paid_at: Mapped[datetime | None] = _at()
+    #: When the order moved to ``trade_sent`` (the offer went out); ``NULL`` before 0028.
+    trade_sent_at: Mapped[datetime | None] = _at()
     delivered_at: Mapped[datetime | None] = _at()
     cancelled_at: Mapped[datetime | None] = _at()
     #: Stamped by both ``failed`` and ``returned``.
@@ -165,6 +192,21 @@ class Order(Base):
         # Bare suffixes: the metadata naming convention adds ``ck_orders_``.
         CheckConstraint(f"status IN {_in(ORDER_STATUSES)}", name="status"),
         CheckConstraint(f"source IN {_in(ORDER_SOURCES)}", name="source"),
+        CheckConstraint(f"channel IN {_in(ORDER_CHANNELS)}", name="channel"),
+        CheckConstraint(
+            "(channel = 'site' AND api_key_id IS NULL) OR (channel = 'api' AND api_key_id IS NOT"
+            " NULL AND client_order_id IS NOT NULL AND pricing_profile IS NOT NULL)",
+            name="channel_fields",
+        ),
+        # An API order's ``client_order_id`` is unique per owner, whichever key placed it: a
+        # reissued key must not buy twice under an old id (plan B ruling, Task 5 review).
+        Index(
+            "uq_orders_user_client_order_id",
+            "user_id",
+            "client_order_id",
+            unique=True,
+            postgresql_where=text("channel = 'api'"),
+        ),
         CheckConstraint(f"refunded_to IN {_in(REFUND_TARGETS)}", name="refunded_to"),
         Index("ix_orders_status_next_check", "status", "next_check_at"),
         Index("ix_orders_user_created", "user_id", text("created_at DESC")),
@@ -244,6 +286,7 @@ __all__ = [
     "ATTENTION_REASONS",
     "FAILURE_REASONS",
     "IN_FLIGHT",
+    "ORDER_CHANNELS",
     "ORDER_SOURCES",
     "ORDER_STATUSES",
     "REFUND_TARGETS",

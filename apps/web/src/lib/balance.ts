@@ -46,7 +46,9 @@ export type EntryKind =
   | "purchase"
   | "refund"
   | "sale_credit"
-  | "payout_return";
+  | "payout_return"
+  | "fx_convert"
+  | "admin_adjust_usd";
 
 /** `EntryOut`: one line of the balance history. */
 export interface Entry {
@@ -58,6 +60,10 @@ export interface Entry {
   /** The top-up's number for `topup` / `topup_reversal`, the sale's for `sale_credit` /
    * `payout_return`; else `null`. */
   reference_number: string | null;
+  /** Which wallet the line belongs to. */
+  currency: "UZS" | "USD";
+  /** Dollars for a USD line, else `null`. */
+  amount_usd: string | null;
 }
 
 /** `EntriesOut`: newest first; `next_cursor` is `null` on the last page. */
@@ -71,8 +77,55 @@ export interface Provider {
   slug: string;
 }
 
+/** `UsdWalletOut`: the USD wallet, present once an admin switched it on. */
+export interface UsdWallet {
+  /** Dollars, three decimals (`"7.826"`). */
+  balance_usd: string;
+  /** soʻm per dollar; `null` while the rate is unavailable. */
+  rate_uzs: string | null;
+}
+
 export interface Balance {
   balance_uzs: string;
+  /** `null` unless the USD wallet is switched on for the customer. */
+  usd: UsdWallet | null;
+}
+
+/** `ConvertOut`: the result of `POST /wallet/convert`. */
+export interface ConvertOut {
+  amount_uzs: string;
+  amount_usd: string;
+  rate_uzs: string;
+  balance_uzs: string;
+  balance_usd: string;
+}
+
+/** Smallest conversion, whole soʻm. */
+export const CONVERT_MIN = 1000;
+/** Largest conversion, whole soʻm. */
+export const CONVERT_MAX = 100_000_000;
+
+/**
+ * Display-only dollars for `amountUzs` at `rate` (`"12777.01"`): floor to three decimals.
+ * The server decides the real figure. `null` when the rate is unusable.
+ */
+export function previewUsd(amountUzs: number, rate: string): string | null {
+  const m = /^(\d+)(?:\.(\d{1,2}))?$/.exec(rate);
+  if (!m) return null;
+  const cents = BigInt(m[1] ?? "0") * 100n + BigInt((m[2] ?? "").padEnd(2, "0"));
+  if (cents === 0n) return null;
+  const milli = (BigInt(Math.trunc(amountUzs)) * 1000n * 100n) / cents;
+  const whole = milli / 1000n;
+  return `${whole.toString()}.${(milli % 1000n).toString().padStart(3, "0")}`;
+}
+
+/** `POST /wallet/convert`: move soʻm into the USD wallet. The key is the caller's, one per form. */
+export function convertToUsd(amountUzs: number, idempotencyKey: string): Promise<ConvertOut> {
+  return session.apiPost<ConvertOut>(
+    "/api/v1/wallet/convert",
+    { amount_uzs: amountUzs },
+    { idempotencyKey },
+  );
 }
 
 export interface TopupRequest {
@@ -101,10 +154,15 @@ export type EntryType = "topup" | "withdrawal";
 
 /** `GET /wallet/entries`: one page of history (of one `type` when given); pass `next_cursor`
  * back for the next. */
-export function getEntries(cursor?: string, type?: EntryType): Promise<EntriesPage> {
+export function getEntries(
+  cursor?: string,
+  type?: EntryType,
+  currency?: "usd",
+): Promise<EntriesPage> {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   if (type) params.set("type", type);
+  if (currency) params.set("currency", currency);
   const query = params.size > 0 ? `?${params.toString()}` : "";
   return session.apiGet<EntriesPage>(`/api/v1/wallet/entries${query}`);
 }
@@ -156,6 +214,12 @@ export function topupAttemptKey(store: AttemptStore, signature: string): string 
 }
 
 /** A signed wire amount (`"+50000"`, `"-10000"`) for display: `+50 000 сум`, `−10 000 сум`. */
+/** A signed dollar line, `"+7.826"` → `"+$7.826"`, `"-1.500"` → `"−$1.500"` (the wire string as is). */
+export function signedUsd(wire: string): string {
+  const negative = wire.startsWith("-");
+  return `${negative ? "−" : "+"}$${wire.replace(/^[+-]/, "")}`;
+}
+
 export function signedUzs(locale: string, wire: string): string {
   const negative = wire.startsWith("-");
   const digits = wire.replace(/^[+-]/, "");

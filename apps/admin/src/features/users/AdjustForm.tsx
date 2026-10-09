@@ -1,41 +1,67 @@
 /**
- * «Изменить баланс»: a signed whole-soʻm amount and a reason, then a confirm
+ * «Изменить баланс»: a signed amount (whole soʻm, or dollars with up to three decimals) and a reason, then a confirm
  * step that says the outcome out loud («Начислить 50 000 сум» / «Списать …»).
  */
 import { Button } from "@csmarket/ui";
 import { useMutation } from "@tanstack/react-query";
 import { type SubmitEvent, useRef, useState } from "react";
 
-import { adjustBalance, type AdminUserCard } from "./api";
+import { adjustBalance, adjustUsdBalance, type AdminUserCard } from "./api";
 import { errorText } from "./labels";
-import { parseAmount } from "./parseAmount";
+import { parseAmount, parseUsd } from "./parseAmount";
 import { type IdempotencyKey } from "./useIdempotencyKey";
 
-import { formatSum } from "@/lib/format";
+import { formatSum, formatUsd } from "@/lib/format";
 
 /** The API's per-adjustment ceiling (`wallet.ADMIN_ADJUST_MAX`). */
 const ADJUST_MAX = 100_000_000;
+/** The API's dollar ceiling (`wallet.ADMIN_ADJUST_USD_MAX`, milli-USD / 1000). */
+const ADJUST_USD_MAX = 100_000;
 const REASON_MIN = 4;
 const REASON_MAX = 500;
 
+type Currency = "UZS" | "USD";
+
 interface Draft {
-  amount: number;
+  currency: Currency;
+  /** Whole soʻm, or the API's dollar string (`"250.000"`). */
+  amount: string;
   reason: string;
 }
 
-function validate(amountText: string, reasonText: string): Draft | string {
+function validate(currency: Currency, amountText: string, reasonText: string): Draft | string {
+  const reason = reasonText.trim();
+  if (currency === "USD") {
+    if (amountText.includes(",")) return "Только точка: 1000 или 1000.5.";
+    const usd = parseUsd(amountText);
+    if (usd === null) return "Введите сумму в долларах, до трёх знаков: 250 или -30.5.";
+    if (Number(usd) === 0) return "Сумма не может быть нулём.";
+    if (Math.abs(Number(usd)) > ADJUST_USD_MAX) {
+      return `Не больше ${formatUsd(String(ADJUST_USD_MAX))} за раз.`;
+    }
+    if (reason.length < REASON_MIN) return "Напишите причину — от 4 символов.";
+    return { currency, amount: usd, reason };
+  }
   const amount = parseAmount(amountText);
   if (amount === null) return "Введите целую сумму в сумах, например 50 000 или -10 000.";
   if (amount === 0) return "Сумма не может быть нулём.";
   if (Math.abs(amount) > ADJUST_MAX) return `Не больше ${formatSum(ADJUST_MAX)} за раз.`;
-  const reason = reasonText.trim();
   if (reason.length < REASON_MIN) return "Напишите причину — от 4 символов.";
-  return { amount, reason };
+  return { currency, amount: String(amount), reason };
 }
 
-/** `Начислить 50 000 сум` / `Списать 10 000 сум`. */
-function outcome(amount: number): string {
-  return `${amount > 0 ? "Начислить" : "Списать"} ${formatSum(Math.abs(amount))}`;
+/** `"1000.000"` -> `"1\u00a0000.000"`, so a thousand dollars cannot be read as one. */
+function groupDollars(usd: string): string {
+  const [whole = "0", frac = ""] = usd.split(".");
+  return `${whole.replace(/\B(?=(\d{3})+$)/g, "\u00a0")}.${frac}`;
+}
+
+/** `Начислить 50 000 сум` / `Списать $10.000`. */
+function outcome(draft: Draft): string {
+  const credit = !draft.amount.startsWith("-");
+  const abs = draft.amount.replace(/^-/, "");
+  const sum = draft.currency === "USD" ? formatUsd(groupDollars(abs)) : formatSum(abs);
+  return `${credit ? "Начислить" : "Списать"} ${sum}`;
 }
 
 interface AdjustFormProps {
@@ -47,13 +73,17 @@ interface AdjustFormProps {
 }
 
 export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
+  const [currency, setCurrency] = useState<Currency>("UZS");
   const [amountText, setAmountText] = useState("");
   const [reasonText, setReasonText] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const inFlight = useRef(false);
   const mutation = useMutation({
-    mutationFn: (v: Draft & { key: string }) => adjustBalance(userId, v.amount, v.reason, v.key),
+    mutationFn: (v: Draft & { key: string }) =>
+      v.currency === "USD"
+        ? adjustUsdBalance(userId, v.amount, v.reason, v.key)
+        : adjustBalance(userId, Number(v.amount), v.reason, v.key),
     onSuccess: (card) => {
       idem.reset();
       onDone(card);
@@ -65,7 +95,7 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
 
   const onReview = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const result = validate(amountText, reasonText);
+    const result = validate(currency, amountText, reasonText);
     if (typeof result === "string") {
       setFormError(result);
       return;
@@ -93,12 +123,12 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
         )}
         <div className="flex gap-2">
           <Button
-            variant={draft.amount > 0 ? "primary" : "danger"}
+            variant={draft.amount.startsWith("-") ? "danger" : "primary"}
             disabled={mutation.isPending}
             onClick={onConfirm}
             data-testid="adjust-confirm"
           >
-            {outcome(draft.amount)}
+            {outcome(draft)}
           </Button>
           <Button
             variant="ghost"
@@ -117,8 +147,25 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
   const input = "border-border bg-bg rounded-md border px-3 text-base";
   return (
     <form onSubmit={onReview} className={box} data-testid="adjust-form">
+      <div role="group" aria-label="Валюта" className="flex gap-2">
+        {(["UZS", "USD"] as const).map((c) => (
+          <Button
+            key={c}
+            variant={currency === c ? "primary" : "secondary"}
+            aria-pressed={currency === c}
+            onClick={() => {
+              setCurrency(c);
+              // A typed amount means another unit after the switch: start over.
+              setAmountText("");
+              setFormError(null);
+            }}
+          >
+            {c === "UZS" ? "Сум" : "USD"}
+          </Button>
+        ))}
+      </div>
       <label className="flex max-w-xs flex-col gap-1 text-sm">
-        Сумма, сум
+        {currency === "USD" ? "Сумма, USD" : "Сумма, сум"}
         <input
           value={amountText}
           inputMode="numeric"

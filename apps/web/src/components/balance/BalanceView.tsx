@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { EntriesList } from "./EntriesList";
+import { UsdWalletCard } from "./UsdWalletCard";
 
 import { HistoryFilter } from "@/components/account/HistoryFilter";
 import { Link } from "@/i18n/navigation";
@@ -83,6 +84,12 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
           {dep("topUp")}
         </Link>
       </div>
+      {balance.data?.usd ? (
+        <>
+          <UsdWalletCard locale={locale} usd={balance.data.usd} />
+          <EntriesList locale={locale} currency="usd" />
+        </>
+      ) : null}
       <div className="flex flex-col gap-3">
         <HistoryFilter
           current={type}

@@ -119,7 +119,8 @@
         "steam": "Steam account",
         "tradeLink": "Working trade link",
         "email": "Confirmed email"
-      }
+      },
+      "groupDeveloper": "For developers"
     }
   },
   "balance": {
@@ -146,7 +147,9 @@
       "purchase": "Purchase",
       "refund": "Refund to balance",
       "sale_credit": "Skins sold",
-      "payout_return": "Payout to balance"
+      "payout_return": "Payout to balance",
+      "fx_convert": "Transfer to USD",
+      "admin_adjust_usd": "USD adjustment"
     },
     "topup": {
       "waiting": "Waiting for payment",
@@ -161,7 +164,19 @@
       "reversed": "Top-up cancelled.",
       "notFound": "Top-up not found."
     },
-    "pending": "On its way: {sum}"
+    "pending": "On its way: {sum}",
+    "usd": {
+      "title": "USD wallet",
+      "hint": "For purchases through the API",
+      "convertLabel": "Amount in soʻm",
+      "convertSubmit": "Convert",
+      "preview": "≈ ${usd} at {rate}",
+      "rateUnavailable": "The rate is unavailable right now",
+      "tooLow": "Not enough money on the balance",
+      "failed": "Could not convert. Please try again.",
+      "done": "Converted.",
+      "historyTitle": "USD wallet history"
+    }
   },
   "skins": {
     "meta": {
@@ -367,10 +382,12 @@
     "sale": "Sale",
     "moneyOn": "Money on {date}",
     "refunded": "Didn't happen · money on the balance",
+    "refundedUsdWallet": "Didn't happen · money in the USD wallet",
     "paidBalance": "from the balance",
     "toBalance": "to the balance",
     "toCard": "to the card",
     "returned": "refunded",
+    "returnedUsdWallet": "returned to the USD wallet",
     "more": "Show more",
     "back": "Back to trades",
     "pattern": "Pattern",
@@ -383,7 +400,9 @@
       "days7": "7 days",
       "balance": "Money on the balance",
       "card": "Money on the card"
-    }
+    },
+    "api": "API",
+    "paidUsdWallet": "from USD wallet"
   },
   "deposit": {
     "title": "Top up your balance",
@@ -549,5 +568,32 @@
     "deleteShort": "Delete",
     "deleteFailed": "Could not delete the card. Try again.",
     "count": "{count, plural, one {# card} other {# cards}}"
+  },
+  "apiKey": {
+    "title": "API key",
+    "hint": "Buy skins from your own code, paid from the USD wallet.",
+    "none": "No key yet.",
+    "issue": "Issue a key",
+    "issuing": "Issuing…",
+    "needTopup": "Top up your balance first",
+    "failed": "Something went wrong. Try again.",
+    "loadFailed": "Could not load the key. Refresh the page.",
+    "tokenTitle": "Your key",
+    "saveIt": "Save the key — it will not be shown again.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "done": "Done",
+    "created": "Issued {date}",
+    "lastUsed": "Last request {date}",
+    "neverUsed": "No requests yet",
+    "reissue": "Reissue",
+    "reissueSure": "The old key stops working. Reissue?",
+    "reissueYes": "Yes, reissue",
+    "revoke": "Revoke",
+    "revokeSure": "The key stops working at once. Revoke?",
+    "revokeYes": "Yes, revoke",
+    "cancel": "Cancel",
+    "docs": "API documentation",
+    "copyManually": "Copy the key by hand"
   }
 }

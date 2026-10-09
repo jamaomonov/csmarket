@@ -169,7 +169,7 @@ by that `custom_id` (the order id; an order bought before ADR-0013 may carry `<o
   through.
 
 When checked, press «Разобрано»: it works on a LIS-SKINS purchase, and resolving it frees a
-refund the attention held. Admin refund and retry still refuse a LIS-SKINS order (409).
+refund the attention held. Admin retry still refuses a LIS-SKINS order (409); the admin refund asks LIS-SKINS first (`docs/runbooks/public-api.md`, «Refund of a Skinslink / LIS-SKINS order», ADR-0018).
 
 ## Disabling
 

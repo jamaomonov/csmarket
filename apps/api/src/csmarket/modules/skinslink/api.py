@@ -21,6 +21,7 @@ from csmarket.modules.skinslink.client import (
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
     client_for,
+    request_status_client,
 )
 from csmarket.modules.skinslink.deposits import (
     PRICE_CODES,
@@ -78,6 +79,7 @@ __all__ = [
     "mirror_fresh",
     "offers_for",
     "refresh_balance",
+    "request_status_client",
     "rollup",
     "skinslink_cached_balance",
     "sync_mirror",

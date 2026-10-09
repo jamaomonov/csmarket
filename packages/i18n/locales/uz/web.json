@@ -119,7 +119,8 @@
         "steam": "Steam akkaunti",
         "tradeLink": "Ishlaydigan almashuv havolasi",
         "email": "Tasdiqlangan pochta"
-      }
+      },
+      "groupDeveloper": "Dasturchilar uchun"
     }
   },
   "balance": {
@@ -146,7 +147,9 @@
       "purchase": "Xarid",
       "refund": "Balansga qaytarish",
       "sale_credit": "Skin sotuvi",
-      "payout_return": "Balansga toʻlov"
+      "payout_return": "Balansga toʻlov",
+      "fx_convert": "USD ga oʻtkazma",
+      "admin_adjust_usd": "USD tuzatish"
     },
     "topup": {
       "waiting": "Toʻlov kutilmoqda",
@@ -161,7 +164,19 @@
       "reversed": "Toʻldirish bekor qilindi.",
       "notFound": "Toʻldirish topilmadi."
     },
-    "pending": "Tushishi kutilmoqda: {sum}"
+    "pending": "Tushishi kutilmoqda: {sum}",
+    "usd": {
+      "title": "USD hamyon",
+      "hint": "API orqali xaridlar uchun",
+      "convertLabel": "Soʻmdagi summa",
+      "convertSubmit": "Balansdan oʻtkazish",
+      "preview": "≈ ${usd}, kurs {rate}",
+      "rateUnavailable": "Kurs hozircha mavjud emas",
+      "tooLow": "Balansda mablagʻ yetarli emas",
+      "failed": "Oʻtkazib boʻlmadi. Qayta urinib koʻring.",
+      "done": "Oʻtkazildi.",
+      "historyTitle": "USD hamyon tarixi"
+    }
   },
   "skins": {
     "meta": {
@@ -367,10 +382,12 @@
     "sale": "Sotuv",
     "moneyOn": "Pul {date} tushadi",
     "refunded": "Boʻlmadi · pul balansda",
+    "refundedUsdWallet": "Almashuv boʻlmadi · pul USD hamyonda",
     "paidBalance": "balansdan",
     "toBalance": "balansga",
     "toCard": "kartaga",
     "returned": "qaytarildi",
+    "returnedUsdWallet": "USD hamyonga qaytarildi",
     "more": "Yana koʻrsatish",
     "back": "Almashuvlarga",
     "pattern": "Pattern",
@@ -383,7 +400,9 @@
       "days7": "7 kun",
       "balance": "Pul balansda",
       "card": "Pul kartada"
-    }
+    },
+    "api": "API",
+    "paidUsdWallet": "USD hamyondan"
   },
   "deposit": {
     "title": "Balansni toʻldirish",
@@ -549,5 +568,32 @@
     "deleteShort": "Oʻchirish",
     "deleteFailed": "Kartani oʻchirib boʻlmadi. Qayta urinib koʻring.",
     "count": "{count} ta karta"
+  },
+  "apiKey": {
+    "title": "API kalit",
+    "hint": "Skinlarni oʻz kodingizdan USD hamyon hisobidan sotib oling.",
+    "none": "Hozircha kalit yoʻq.",
+    "issue": "Kalit yaratish",
+    "issuing": "Yaratilmoqda…",
+    "needTopup": "Avval balansni toʻldiring",
+    "failed": "Muvaffaqiyatsiz. Qayta urinib koʻring.",
+    "loadFailed": "Kalitni yuklab boʻlmadi. Sahifani yangilang.",
+    "tokenTitle": "Sizning kalitingiz",
+    "saveIt": "Kalitni saqlang — u boshqa koʻrsatilmaydi.",
+    "copy": "Nusxalash",
+    "copied": "Nusxalandi",
+    "done": "Tayyor",
+    "created": "Yaratilgan: {date}",
+    "lastUsed": "Oxirgi soʻrov: {date}",
+    "neverUsed": "Hali soʻrov boʻlmagan",
+    "reissue": "Qayta yaratish",
+    "reissueSure": "Eski kalit ishlamay qoladi. Qayta yaratilsinmi?",
+    "reissueYes": "Ha, qayta yaratish",
+    "revoke": "Bekor qilish",
+    "revokeSure": "Kalit darhol ishlamay qoladi. Bekor qilinsinmi?",
+    "revokeYes": "Ha, bekor qilish",
+    "cancel": "Bekor",
+    "docs": "API hujjatlari",
+    "copyManually": "Kalitni qoʻlda nusxalang"
   }
 }

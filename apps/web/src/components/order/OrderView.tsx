@@ -155,11 +155,13 @@ function OrderSubtitle({ order, locale }: { order: OrderOut; locale: string }) {
     minute: "2-digit",
   }).format(new Date(order.created_at));
   const paid =
-    order.paid_with === "wallet"
-      ? t("paidBalance")
-      : order.paid_with && order.paid_with !== "mock"
-        ? order.paid_with.charAt(0).toUpperCase() + order.paid_with.slice(1)
-        : null;
+    order.paid_with === "usd_wallet"
+      ? t("paidUsdWallet")
+      : order.paid_with === "wallet"
+        ? t("paidBalance")
+        : order.paid_with && order.paid_with !== "mock"
+          ? order.paid_with.charAt(0).toUpperCase() + order.paid_with.slice(1)
+          : null;
   return <p className="text-fg-dim text-sm">{paid ? `${when} · ${paid}` : when}</p>;
 }
 

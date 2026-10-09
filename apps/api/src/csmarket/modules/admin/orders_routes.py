@@ -8,9 +8,10 @@ Admin only (``require_admin`` on the whole router). Every write requires an
 commit. A replayed key returns the stored page and writes nothing; the same key on another
 request is 409 ``idempotency_mismatch``.
 
-The refund asks Waxpeer first (ADR-0007): its replay lookup runs unlocked, then
-``admin_refund`` reads, asks Waxpeer with nothing locked, and locks; a same-key twin that
-refunded meanwhile is answered with its stored page.
+The refund asks the source first (ADR-0007 for Waxpeer, ADR-0018 for Skinslink and
+LIS-SKINS): its replay lookup runs unlocked, then ``admin_refund`` reads, asks the order's
+source with nothing locked, and locks; a same-key twin that refunded meanwhile is answered
+with its stored page.
 """
 
 from __future__ import annotations
@@ -35,14 +36,18 @@ from csmarket.modules.admin.orders_schemas import (
     TradesView,
 )
 from csmarket.modules.admin.users_service import remember, replayed
+from csmarket.modules.lisskins.api import request_info_client
 from csmarket.modules.orders.api import (
+    LisskinsInfoClient,
     OrderStatusOut,
+    SkinslinkStatusClient,
     admin_refund,
     lock_order,
     resolve_attention,
     retry_buy,
 )
 from csmarket.modules.skins.api import TradeClient, request_trade_client
+from csmarket.modules.skinslink.api import request_status_client
 from csmarket.modules.users.api import User
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -51,6 +56,8 @@ Db = Annotated[AsyncSession, Depends(db_session)]
 Admin = Annotated[User, Depends(require_admin)]
 Key = Annotated[str, Depends(required_key)]
 Waxpeer = Annotated[TradeClient, Depends(request_trade_client)]
+Skinslink = Annotated[SkinslinkStatusClient, Depends(request_status_client)]
+Lisskins = Annotated[LisskinsInfoClient, Depends(request_info_client)]
 
 _NOT_FOUND: dict[int | str, dict[str, Any]] = {404: {"description": "No such order"}}
 _IDEMPOTENCY = "`idempotency_mismatch` — the key answered another request."
@@ -163,23 +170,44 @@ async def resolve(
         "`order_not_refundable` — settled with nothing to give back (unpaid, cancelled, "
         "delivered).",
         "`order_busy` — a buy attempt is running; try again in a few minutes.",
+        "`order_needs_attention` — a Skinslink / LIS-SKINS purchase's attention is unresolved.",
         "`waxpeer_unavailable` — Waxpeer could not be asked whether a purchase exists; "
         "nothing was refunded, try again later.",
+        "`source_unavailable` — Skinslink / LIS-SKINS could not be asked; nothing was "
+        "refunded, try again later.",
         _IDEMPOTENCY,
     ),
     summary="Refund the order to the buyer's balance",
 )
-async def refund(number: str, admin: Admin, db: Db, key: Key, waxpeer: Waxpeer) -> AdminOrderDetail:
-    """Only a ``buying`` order whose resolved attention says nothing was bought
-    (``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade
-    under (asked first, 4 s, nothing locked); the order becomes ``failed`` (reason
-    ``admin``)."""
+async def refund(
+    number: str,
+    *,
+    admin: Admin,
+    db: Db,
+    key: Key,
+    waxpeer: Waxpeer,
+    skinslink: Skinslink,
+    lisskins: Lisskins,
+) -> AdminOrderDetail:
+    """A Waxpeer order: only a ``buying`` order whose resolved attention says nothing was
+    bought (``can_refund``) and whose ``project_id`` Waxpeer shows no live or accepted trade
+    under. A Skinslink / LIS-SKINS order (``buying`` / ``trade_sent``): only when the source
+    reports the purchase failed, cancelled or returned — or has none, for a purchase older
+    than 10 minutes with no buy running. The source is asked first (4 s, nothing locked);
+    the order becomes ``failed`` — a ``trade_sent`` one ``returned`` (reason ``admin``)."""
     request = {"number": number}
     scope = "admin.orders.refund"
     if (hit := await replayed(db, scope=scope, key=key, request=request)) is not None:
         return AdminOrderDetail.model_validate(hit)
     try:
-        order = await admin_refund(db, number=number, admin_id=admin.id, client=waxpeer)
+        order = await admin_refund(
+            db,
+            number=number,
+            admin_id=admin.id,
+            client=waxpeer,
+            skinslink=skinslink,
+            lisskins=lisskins,
+        )
     except ConflictError as exc:
         # A same-key twin refunded while Waxpeer answered: its stored page is the answer.
         if exc.extra.get("code") != "already_refunded":
@@ -193,7 +221,11 @@ async def refund(number: str, admin: Admin, db: Db, key: Key, waxpeer: Waxpeer) 
         action="orders.refund",
         target_type="order",
         target_id=number,
-        payload={"amount_uzs": int(order.price_uzs)},
+        payload=(
+            {"amount_usd": str(order.price_usd)}
+            if order.paid_with == "usd_wallet"
+            else {"amount_uzs": int(order.price_uzs)}
+        ),
     )
     return await _finish(db, number, scope=scope, key=key, request=request)
 
