@@ -88,7 +88,25 @@ def _body_response(body: str, if_none_match: str | None) -> Response:
     return Response(content=body, media_type="application/json", headers=headers)
 
 
-@router.get("/catalog", response_model=CatalogPageOut, summary="Catalogue feed, one page")
+_AUTH_ERRORS: dict[int | str, dict[str, Any]] = {
+    401: {"description": "`unauthorized`"},
+    403: {"description": "`account_suspended`, `ip_not_allowed`"},
+    429: {"description": "`rate_limited`, with `Retry-After`"},
+}
+_FEED_ERRORS: dict[int | str, dict[str, Any]] = {
+    **_AUTH_ERRORS,
+    304: {"description": "`If-None-Match` matched the page's ETag; empty body"},
+    409: {"description": "`cursor_expired` -- restart from the first page"},
+    503: {"description": "`feed_unavailable` -- no snapshot yet, with `Retry-After`"},
+}
+
+
+@router.get(
+    "/catalog",
+    response_model=CatalogPageOut,
+    summary="Catalogue feed, one page",
+    responses=_FEED_ERRORS,
+)
 async def catalog(
     caller: Annotated[ApiCaller, Depends(api_caller)],
     cursor: Annotated[str | None, Query(max_length=64)] = None,
@@ -161,6 +179,7 @@ def _offer_out(p: PricedOffer, profile: str) -> dict[str, Any]:
     response_model=list[OfferOut],
     response_model_by_alias=True,
     summary="Offers of one item",
+    responses={**_AUTH_ERRORS, 404: {"description": "`item_not_found`"}},
 )
 async def item_offers(
     item_id: str,
@@ -188,11 +207,6 @@ async def item_offers(
     return JSONResponse(content=out, headers=_REVALIDATE)
 
 
-_AUTH_ERRORS: dict[int | str, dict[str, Any]] = {
-    401: {"description": "`unauthorized`"},
-    403: {"description": "`account_suspended`, `ip_not_allowed`"},
-    429: {"description": "`rate_limited`, with `Retry-After`"},
-}
 _ORDER_ERRORS: dict[int | str, dict[str, Any]] = {
     **_AUTH_ERRORS,
     402: {"description": "`insufficient_balance` -- nothing was written"},
@@ -203,6 +217,7 @@ _ORDER_ERRORS: dict[int | str, dict[str, Any]] = {
         "`duplicate_client_order_id` (+ `order`: the order already placed under the id)"
     },
     422: {"description": "`trade_link_invalid` and body errors"},
+    503: {"description": "`rate_unavailable` -- no rate snapshot was ever recorded"},
 }
 
 

@@ -110,7 +110,8 @@ async def credit_order_refund(
         actor: Who books it (``orders`` for the automatic refunds, ``admin:<id>``).
 
     Raises:
-        ValueError: ``paid_with`` is ``usd_wallet`` (use :func:`credit_order_refund_usd`) or none of :data:`REFUND_SOURCES` — a caller bug, refused
+        ValueError: ``paid_with`` is ``usd_wallet`` (use :func:`credit_order_refund_usd`) or
+            none of :data:`REFUND_SOURCES` — a caller bug, refused
             before anything is written (it must not mint a stray clearing account).
         ConflictError: ``code="idempotency_mismatch"`` — the key booked another kind.
     """

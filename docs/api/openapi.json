@@ -12638,6 +12638,18 @@
             },
             "description": "Successful Response"
           },
+          "304": {
+            "description": "`If-None-Match` matched the page's ETag; empty body"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "409": {
+            "description": "`cursor_expired` -- restart from the first page"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -12647,6 +12659,12 @@
               }
             },
             "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          },
+          "503": {
+            "description": "`feed_unavailable` -- no snapshot yet, with `Retry-After`"
           }
         },
         "summary": "Catalogue feed, one page",
@@ -12701,6 +12719,15 @@
             },
             "description": "Successful Response"
           },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -12710,6 +12737,9 @@
               }
             },
             "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
           }
         },
         "summary": "Offers of one item",
@@ -12929,6 +12959,9 @@
           },
           "429": {
             "description": "`rate_limited`, with `Retry-After`"
+          },
+          "503": {
+            "description": "`rate_unavailable` -- no rate snapshot was ever recorded"
           }
         },
         "summary": "Buy one skin from the USD wallet",
