@@ -19,6 +19,8 @@ import {
 } from "./labels";
 import { StatusChip } from "./StatusChip";
 
+import { PageHeader } from "@/components/PageHeader";
+import { DetailGrid } from "@/components/Section";
 import { OrderStatusChip } from "@/features/orders/StatusChip";
 import { errorText, providerLabel, topupStatusLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
@@ -152,34 +154,45 @@ function KassaTable({ kassa }: { kassa: KassaTxn[] }) {
 function Body({ detail }: { detail: AdminPaymentDetail }) {
   const { payment, topup, order, kassa } = detail;
   return (
-    <div className="space-y-8" data-testid="payment-detail">
-      <section aria-label="Платёж" className="space-y-2">
-        <dl className="space-y-1 text-sm">
-          <Field label="Назначение">{PURPOSE_LABELS[payment.purpose]}</Field>
-          <Field label="Сумма">{formatSum(payment.amount_uzs)}</Field>
-          <Field label="Касса">{providerLabel(payment.provider)}</Field>
-          <Field label="Статус">
-            <StatusChip status={payment.status} />
-          </Field>
-          <Field label="Пользователь">
-            <Link to={`/users/${payment.user.id}`} className="hover:underline">
-              {payment.user.display_name ?? "Без имени"}
-            </Link>
-          </Field>
-          <Field label="Создан">{formatDateTime(payment.created_at)}</Field>
-          <Field label="Оплачен">{when(payment.succeeded_at)}</Field>
-          <Field label="Номер в кассе">
-            {payment.provider_ref === null ? (
-              "—"
-            ) : (
-              <span className="font-mono">{payment.provider_ref}</span>
-            )}
-          </Field>
-        </dl>
-      </section>
-      {topup !== null && <TopupBlock topup={topup} />}
-      {order !== null && <OrderBlock order={order} />}
-      <KassaTable kassa={kassa} />
+    <div className="space-y-4" data-testid="payment-detail">
+      <DetailGrid
+        main={
+          <>
+            <KassaTable kassa={kassa} />
+            {topup !== null && <TopupBlock topup={topup} />}
+            {order !== null && <OrderBlock order={order} />}
+          </>
+        }
+        side={
+          <section
+            aria-label="Платёж"
+            className="border-border bg-surface space-y-2 rounded-lg border p-4"
+          >
+            <dl className="space-y-1 text-sm">
+              <Field label="Назначение">{PURPOSE_LABELS[payment.purpose]}</Field>
+              <Field label="Сумма">{formatSum(payment.amount_uzs)}</Field>
+              <Field label="Касса">{providerLabel(payment.provider)}</Field>
+              <Field label="Статус">
+                <StatusChip status={payment.status} />
+              </Field>
+              <Field label="Пользователь">
+                <Link to={`/users/${payment.user.id}`} className="hover:underline">
+                  {payment.user.display_name ?? "Без имени"}
+                </Link>
+              </Field>
+              <Field label="Создан">{formatDateTime(payment.created_at)}</Field>
+              <Field label="Оплачен">{when(payment.succeeded_at)}</Field>
+              <Field label="Номер в кассе">
+                {payment.provider_ref === null ? (
+                  "—"
+                ) : (
+                  <span className="font-mono">{payment.provider_ref}</span>
+                )}
+              </Field>
+            </dl>
+          </section>
+        }
+      />
     </div>
   );
 }
@@ -194,13 +207,12 @@ export function PaymentDetail() {
   const notFound = query.error instanceof ApiError && query.error.status === 404;
 
   return (
-    <section className="space-y-6">
-      <Link to="/payments" className="text-fg-muted text-sm hover:underline">
-        ← Все платежи
-      </Link>
-      <h1 className="text-2xl font-bold">
-        {query.data ? `Платёж ${query.data.payment.number}` : "Платёж"}
-      </h1>
+    <section className="space-y-4">
+      <PageHeader
+        back={{ to: "/payments", label: "Все платежи" }}
+        title={query.data ? `Платёж ${query.data.payment.number}` : "Платёж"}
+        badges={query.data && <StatusChip status={query.data.payment.status} />}
+      />
       {query.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {notFound && <p className="text-fg-muted">Платёж не найден.</p>}
       {query.isError && !notFound && (
