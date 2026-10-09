@@ -145,8 +145,8 @@ export function RulesForm({
           {error}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" disabled={saving} onClick={onSave}>
+      <div className="border-border bg-bg/95 sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 border-t px-1 py-3 backdrop-blur">
+        <Button type="button" disabled={saving || !dirty} onClick={onSave}>
           Сохранить
         </Button>
         <Button type="button" variant="secondary" disabled={!dirty || saving} onClick={onReset}>

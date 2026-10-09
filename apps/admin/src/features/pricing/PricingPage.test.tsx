@@ -59,7 +59,7 @@ describe("PricingPage", () => {
     await typeExpenses("5");
     expect(screen.getByText("Есть несохранённые изменения")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
-    expect(screen.getByText("Сохранить и пересчитать цены всех скинов?")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Сохранить наценки?" })).toBeInTheDocument();
     expect(api.savePricing).not.toHaveBeenCalled();
     const yes = screen.getByRole("button", { name: "Да, сохранить" });
     fireEvent.click(yes);
