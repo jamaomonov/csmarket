@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 from csmarket.core import config as cfg
+from csmarket.modules.public_api import webhook_url
 from csmarket.modules.public_api.models import ApiWebhook
 from fastapi import FastAPI
 from httpx import AsyncClient
@@ -200,7 +201,7 @@ async def test_the_lookup_runs_with_no_transaction_open(
     # The first call stamps ``last_used_at`` and commits; the next leaves its reads open.
     await integration_client.get(URL, headers=_h(token))
     seen: list[bool] = []
-    real = routes.public_addresses
+    real = webhook_url.public_addresses
 
     async def spy(host: str, port: int) -> list[str]:
         seen.append(request_sessions[-1].in_transaction())
