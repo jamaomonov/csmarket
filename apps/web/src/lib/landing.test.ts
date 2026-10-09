@@ -79,7 +79,7 @@ describe("landing data", () => {
     const cards = await getPopular("popular");
     expect(cards).toHaveLength(POPULAR_SIZE);
     expect(cards.slice(0, 3).map((c) => c.category)).toEqual(["rifles", "knives", "gloves"]);
-    const asked = f.mock.calls.map((c) => params(String(c[0])).get("category"));
+    const asked = f.mock.calls.map((c) => params(c[0]).get("category"));
     expect(asked).not.toContain("cases");
   });
 
