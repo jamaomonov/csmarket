@@ -27,6 +27,7 @@ from csmarket.core.idempotency import load_replay, require_idempotency_key, save
 from csmarket.core.metrics import record_public_order
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
+from csmarket.modules.lisskins.api import AvailabilityClient, availability_client
 from csmarket.modules.orders.api import create_api_order, get_for_owner, list_for_owner
 from csmarket.modules.public_api import feed, webhooks
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
@@ -239,6 +240,7 @@ async def place_order(
     body: ApiOrderIn,
     caller: Annotated[ApiCaller, Depends(api_caller)],
     db: Annotated[AsyncSession, Depends(db_session)],
+    availability: Annotated[AvailabilityClient, Depends(availability_client)],
 ) -> PublicOrderOut:
     """Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).
 
@@ -246,11 +248,15 @@ async def place_order(
     ``buying``). A ``client_order_id`` already used by this account (with this key or an earlier
     one) writes nothing and answers 409
     ``duplicate_client_order_id`` with that order in ``order``. Counts against the
-    10 per minute ``order`` limit.
+    10 per minute ``order`` limit. The offer is confirmed live with its market first: one
+    sold in the meantime is ``offer_gone`` (or, without ``offer_id``, the next cheapest) and
+    a changed price is re-quoted against ``max_price_usd`` — nothing is written until then.
     """
     profile = caller.key.pricing_profile
+    # LIS-SKINS lots only (ADR-0017, 2026-10-10); the docstring above is public: no names.
+    live = availability if get_settings().lisskins_active else None
     try:
-        out = await _place_order(body, caller, db)
+        out = await _place_order(body, caller, db, live)
     except Exception as exc:
         record_public_order(
             profile, _order_outcome(exc) if isinstance(exc, AppError) else "rejected"
@@ -270,12 +276,22 @@ def _order_outcome(exc: AppError) -> str:
     }.get(exc.extra.get("code", ""), "rejected")
 
 
-async def _place_order(body: ApiOrderIn, caller: ApiCaller, db: AsyncSession) -> PublicOrderOut:
+async def _place_order(
+    body: ApiOrderIn,
+    caller: ApiCaller,
+    db: AsyncSession,
+    availability: AvailabilityClient | None,
+) -> PublicOrderOut:
     await enforce(caller, "order")
     user_id = caller.user.id
     try:
         order, created = await create_api_order(
-            db, caller=caller, body=body, settings=get_settings()
+            db,
+            caller=caller,
+            body=body,
+            settings=get_settings(),
+            redis=get_redis(),
+            availability=availability,
         )
     except InsufficientBalanceError as exc:
         raise PaymentRequiredError(

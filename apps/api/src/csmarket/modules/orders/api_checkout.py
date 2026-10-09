@@ -18,9 +18,11 @@ Ruling R1: the order stores ``price_uzs = 0``, the newest rate snapshot (any age
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
 
+from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +34,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.money import wire_usd
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import FxSnapshot
+from csmarket.modules.lisskins.api import AvailabilityClient, live_price
 from csmarket.modules.orders.checkout import RateUnavailableError, float_of
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.paid import mark_paid
@@ -41,8 +44,15 @@ from csmarket.modules.public_api.api import (
     PricedOffer,
     api_offers,
     open_offer_id,
+    price_units_for,
 )
-from csmarket.modules.skins.api import SkinItem, enabled_categories, get_item_by_id
+from csmarket.modules.skins.api import (
+    SkinItem,
+    enabled_categories,
+    get_item_by_id,
+    load_rules,
+    parse_offer_id,
+)
 from csmarket.modules.users.api import parse_tradelink
 from csmarket.modules.wallet.api import USD_WALLET, InsufficientBalanceError, debit_purchase_usd
 
@@ -105,6 +115,65 @@ def choose(priced: list[PricedOffer], body: ApiOrderIn, item_id: str) -> PricedO
     if cheapest is None:
         raise _above_max(priced[0].price_units)
     return cheapest
+
+
+#: Live checks per order at most: a «cheapest within max» order whose next lots are LIS-SKINS
+#: ones sold too stops asking after this many and lets the worker's ``max_price`` guard.
+_MAX_CHECKS = 3
+
+
+async def _confirm_live(
+    db: AsyncSession,
+    priced: list[PricedOffer],
+    body: ApiOrderIn,
+    item: SkinItem,
+    *,
+    profile: str,
+    redis: Redis | None,
+    client: AvailabilityClient | None,
+) -> PricedOffer:
+    """The offer to buy, a chosen LIS-SKINS lot confirmed live (one ``check-availability``).
+
+    The snapshot can be minutes old, so a lot may be sold already. Sold: a named
+    ``offer_id`` is ``offer_gone``; «cheapest within max» moves to the next offer (checked in
+    turn if it is LIS-SKINS too). A changed live price is re-quoted for the key's tariff and
+    held to ``max_price_usd``. No answer: the snapshot stands (the worker's ``max_price`` is
+    the money guard). Never a substitute for a named lot — the partner chose that one.
+    The connection is released before the call (AGENTS §11); ``item`` and the caller stay
+    usable detached.
+
+    Raises:
+        ConflictError: ``offer_gone`` or ``price_above_max``.
+    """
+    chosen = choose(priced, body, item.id)
+    if client is None or redis is None or chosen.offer.source != "lisskins":
+        return chosen
+    rules = await load_rules(db)
+    db.expunge_all()
+    await db.rollback()  # no connection held across LIS-SKINS
+    remaining = list(priced)
+    for _ in range(_MAX_CHECKS):
+        verdict, units = await live_price(
+            redis, client, int(parse_offer_id(chosen.offer.offer_id)[1])
+        )
+        log.info("orders.api_lisskins_check", verdict=verdict)
+        if verdict == "gone":
+            remaining = [p for p in remaining if p is not chosen]
+            chosen = choose(remaining, body, item.id)
+            if chosen.offer.source != "lisskins":
+                return chosen
+            continue
+        if verdict == "available" and units is not None and units != chosen.offer.price_units:
+            price, retail = price_units_for(
+                units, profile=profile, item=item, rules=rules, stock=item.stock_count
+            )
+            if price > int(Decimal(body.max_price_usd) * _UNITS_PER_USD):
+                raise _above_max(price)
+            return PricedOffer(
+                replace(chosen.offer, price_units=units), price, retail, chosen.public_id
+            )
+        return chosen
+    return chosen
 
 
 def _gate(caller: ApiCaller, body: ApiOrderIn, settings: Settings) -> str:
@@ -174,7 +243,13 @@ def _build(
 
 
 async def create_api_order(
-    db: AsyncSession, *, caller: ApiCaller, body: ApiOrderIn, settings: Settings
+    db: AsyncSession,
+    *,
+    caller: ApiCaller,
+    body: ApiOrderIn,
+    settings: Settings,
+    redis: Redis | None = None,
+    availability: AvailabilityClient | None = None,
 ) -> tuple[Order, bool]:
     """Buy one offer for the caller from their USD wallet; the order is ``paid`` on return.
 
@@ -183,6 +258,9 @@ async def create_api_order(
         caller: The key and its owner.
         body: The request.
         settings: Settings (the buying switch, the sources, the order expiry).
+        redis: For the live check's budget and breaker; ``None`` checks nothing.
+        availability: LIS-SKINS, to confirm a chosen ``ls:`` lot live; ``None`` checks
+            nothing.
 
     Returns:
         ``(order, created)`` — ``created`` is ``False`` when the owner already placed an
@@ -197,7 +275,7 @@ async def create_api_order(
         InsufficientBalanceError: the USD balance does not cover the price; nothing written.
         RateUnavailableError: no rate snapshot at all.
     """
-    key_id, user_id = caller.key.id, caller.user.id
+    key_id, user_id, profile = caller.key.id, caller.user.id, caller.key.pricing_profile
     existing = await _by_client_id(db, user_id, body.client_order_id)
     if existing is not None:
         return existing, False
@@ -205,10 +283,16 @@ async def create_api_order(
     item = await get_item_by_id(db, body.item_id, categories=enabled_categories(settings))
     if item is None:
         raise NotFoundError("no such item", code="item_not_found")
-    priced = await api_offers(
-        db, item, profile=caller.key.pricing_profile, settings=settings, now=now()
+    priced = await api_offers(db, item, profile=profile, settings=settings, now=now())
+    chosen = await _confirm_live(
+        db,
+        priced,
+        body,
+        item,
+        profile=profile,
+        redis=redis,
+        client=availability,
     )
-    chosen = choose(priced, body, item.id)
     snapshot_id = await _newest_snapshot_id(db)
     order = _build(
         caller, body, item, chosen, link=link, snapshot_id=snapshot_id, settings=settings
