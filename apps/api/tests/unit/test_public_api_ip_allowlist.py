@@ -24,7 +24,7 @@ def test_longest_canonical_form_fits_the_column() -> None:
     assert len(net) <= 43
 
 
-@pytest.mark.parametrize("bad", ["", "999.1.1.1", "example.com", "10.0.0.0/33"])
+@pytest.mark.parametrize("bad", ["", "999.1.1.1", "example.com", "10.0.0.0/33", "fe80::1%eth0"])
 def test_bad_entry_names_its_index(bad: str) -> None:
     with pytest.raises(ValidationError) as err:
         normalise(["203.0.113.7", bad])

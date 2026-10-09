@@ -254,4 +254,17 @@ describe("ApiKeyCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Строка 2: не IP-адрес")).toBeInTheDocument();
   });
+
+  it("refuses more than 20 lines before sending", async () => {
+    api.getApiKey.mockResolvedValue(LIVE);
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Изменить" }));
+    const lines = Array.from({ length: 21 }, (_, i) => `10.0.0.${String(i + 1)}`).join("\n");
+    fireEvent.change(screen.getByRole("textbox", { name: "Разрешённые IP-адреса" }), {
+      target: { value: lines },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByText("Слишком много адресов. Не больше 20.")).toBeInTheDocument();
+    expect(api.setIpAllowlist).not.toHaveBeenCalled();
+  });
 });

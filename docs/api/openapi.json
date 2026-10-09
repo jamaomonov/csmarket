@@ -465,6 +465,10 @@
           }
         },
         "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min",
+          "check_per_min",
           "reason"
         ],
         "title": "AdminLimitsIn",

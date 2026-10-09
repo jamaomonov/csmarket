@@ -480,6 +480,21 @@ async def test_limits_out_of_range_is_422(
     assert await _audit(db_session, "api_keys.limits") == []
 
 
+async def test_limits_missing_field_is_422(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "LimitsMissing")
+    h = await admin_headers()
+    body = {k: v for k, v in _NO_LIMITS.items() if k != "check_per_min"}
+    r = await integration_client.put(
+        f"{BASE}/{key.id}/limits",
+        json={**body, "reason": "forgot a field"},
+        headers={**h, **_idem()},
+    )
+    assert r.status_code == 422
+    assert await _audit(db_session, "api_keys.limits") == []
+
+
 async def test_limits_unchanged_is_409(
     integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
 ) -> None:

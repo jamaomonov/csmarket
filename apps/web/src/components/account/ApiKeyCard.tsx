@@ -322,11 +322,13 @@ function IpAllowlist({ apiKey, busy }: IpAllowlistProps) {
     },
   });
   const invalid = save.error instanceof IpAllowlistInvalidError ? save.error : null;
+  const [tooMany, setTooMany] = useState(false);
   const failed = save.isError && invalid === null;
 
   function open() {
     setText(apiKey.ip_allowlist.join("\n"));
     setBadLine(null);
+    setTooMany(false);
     save.reset();
     setEditing(true);
   }
@@ -336,6 +338,12 @@ function IpAllowlist({ apiKey, busy }: IpAllowlistProps) {
     const lines = text.split("\n").map((line, at) => ({ line: line.trim(), at }));
     const kept = lines.filter((l) => l.line !== "");
     setBadLine(null);
+    if (kept.length > 20) {
+      // The server's cap; say so without a round trip.
+      setTooMany(true);
+      return;
+    }
+    setTooMany(false);
     save.mutate(
       kept.map((l) => l.line),
       {
@@ -367,9 +375,9 @@ function IpAllowlist({ apiKey, busy }: IpAllowlistProps) {
           <p id="ip-allowlist-hint" className="text-fg-muted mt-1 text-xs">
             {t("hint")}
           </p>
-          {invalid !== null ? (
+          {invalid !== null || tooMany ? (
             <Notice tone="bad" role="alert">
-              {badLine !== null ? t("badLine", { n: badLine + 1 }) : t("badTooMany")}
+              {badLine !== null && !tooMany ? t("badLine", { n: badLine + 1 }) : t("badTooMany")}
             </Notice>
           ) : null}
           {failed ? (

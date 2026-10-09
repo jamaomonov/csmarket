@@ -90,7 +90,8 @@ class AdminTariffIn(BaseModel):
     reason: Reason
 
 
-_Limit = Annotated[int | None, Field(default=None, ge=1, le=10_000)]
+# Required but nullable: an omitted field is a 422, never a silent reset to the default.
+_Limit = Annotated[int | None, Field(ge=1, le=10_000)]
 
 
 class AdminLimitsIn(BaseModel):
