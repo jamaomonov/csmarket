@@ -79,15 +79,13 @@ describe("Header", () => {
     const links = within(nav).getAllByRole("link");
     expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
       ["Продать скины", "/sell"],
-      ["Маркет", "/"],
+      ["Маркет", "/market"],
       ["Пополнить Steam", "/steam"],
       ["Отзывы", "/reviews"],
     ]);
     for (const a of links) expect(a.querySelector("svg")).not.toBeNull();
-    expect(within(nav).getByRole("link", { name: "Маркет" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    // `/` is the landing now: no section is current there.
+    expect(within(nav).getByRole("link", { name: "Маркет" })).not.toHaveAttribute("aria-current");
   });
 
   it("hides the auth skeleton and the sign-in button on phones (☰ has them)", () => {

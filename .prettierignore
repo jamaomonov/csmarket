@@ -16,3 +16,4 @@ infra/docs-site/csmarket.postman_collection.json
 .superpowers/
 .agents/
 .claude/
+docs/design/*.html

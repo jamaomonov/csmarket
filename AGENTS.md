@@ -37,6 +37,8 @@
   backups and alerts (the `ops` profile). Next: M5 (launch), when the owner asks for it.
   The partner API docs live at `docs.csmarket.uz` (static Scalar page, `infra/docs-site`,
   `docs/runbooks/public-api.md`).
+  The root is an SEO landing (ru / uz / en) and the catalogue lives at `/market` (spec
+  `2026-10-09-seo-landing-design.md`; filtered root URLs 301 there).
   LIS-SKINS is a third buy source behind `CSMARKET_LISSKINS_ENABLED` (spec
   `2026-10-07-lisskins-buy-source-design.md`, ADR-0012), off until the owner switches it on.
   Selling skins to us through Skinslink deposits (spec `2026-10-08-skin-sales-design.md`, ADR-0016)

@@ -16,17 +16,17 @@ const meta = (searchParams: Record<string, string>) =>
     searchParams: Promise.resolve(searchParams),
   });
 
-describe("home indexability (ruling Q9)", () => {
-  it("clean and tracked visits are indexable with canonical /", async () => {
+describe("market indexability (ruling Q9)", () => {
+  it("clean and tracked visits are indexable with canonical /market", async () => {
     for (const sp of [{}, { utm_source: "telegram" }, { fbclid: "abc" }, { gclid: "x" }]) {
       const m = await meta(sp);
       expect(m.robots).toMatchObject({ index: true, follow: true });
-      expect(m.alternates?.canonical).toBe("https://csmarket.uz/");
+      expect(m.alternates?.canonical).toBe("https://csmarket.uz/market");
     }
   });
   it("a filtered view is noindex,follow with the same canonical", async () => {
     const m = await meta({ category: "knives" });
     expect(m.robots).toEqual({ index: false, follow: true });
-    expect(m.alternates?.canonical).toBe("https://csmarket.uz/");
+    expect(m.alternates?.canonical).toBe("https://csmarket.uz/market");
   });
 });

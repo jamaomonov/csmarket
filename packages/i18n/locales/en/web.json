@@ -606,5 +606,193 @@
       "badTooMany": "Too many addresses. 20 at most.",
       "failed": "Something went wrong. Try again."
     }
+  },
+  "landing": {
+    "meta": {
+      "title": "CS2 skins in Uzbekistan — buy in soʻm with Click, Payme, Uzum",
+      "description": "CS2 skins priced in soʻm: knives, gloves, rifles and cases. Pay with Click, Payme or Uzum — the skin arrives in Steam. Sell your skins to a Uzcard or Humo card.",
+      "ogAlt": "csmarket — CS2 skins in Uzbekistan"
+    },
+    "eyebrow": "A skins shop for players in Uzbekistan",
+    "h1": {
+      "pre": "",
+      "hl": "CS2",
+      "post": "skins in Uzbekistan",
+      "sub": "Prices in soʻm. The skin arrives in Steam."
+    },
+    "lead": "Knives, gloves, rifles and cases. Pay with Click, Payme or Uzum — no foreign card needed.",
+    "openMarket": "Open the market",
+    "sellSkins": "Sell skins",
+    "payWith": "Pay with:",
+    "balance": "balance",
+    "toastTitle": "Steam trade",
+    "toastText": "Your skin is waiting in offers",
+    "buy": "Buy",
+    "showcase": "Skins on the showcase",
+    "search": {
+      "label": "Search skins",
+      "placeholder": "Find a skin: AK-47 Redline, Karambit, AWP Asiimov…",
+      "submit": "Search",
+      "often": "Popular searches:",
+      "cheap": "Under 100,000 soʻm"
+    },
+    "popular": {
+      "kicker": "In stock now",
+      "title": "Popular CS2 skins",
+      "tabsLabel": "Collections",
+      "tabs": {
+        "popular": "Popular",
+        "knives": "Knives",
+        "gloves": "Gloves",
+        "cheap": "Under 100,000 soʻm"
+      },
+      "pieces": "{count} pcs",
+      "all": "All skins in the market",
+      "empty": "This collection is updating. Have a look at the market."
+    },
+    "stats": {
+      "label": "csmarket in numbers",
+      "skins": "skins in the catalogue",
+      "payments": "ways to pay in soʻm",
+      "from": "from {price}",
+      "perSkin": "soʻm per skin",
+      "support": "the site in three languages"
+    },
+    "cats": {
+      "kicker": "Catalogue",
+      "title": "What to buy in CS2",
+      "all": "Whole catalogue",
+      "from": "from {price}"
+    },
+    "buyPanel": {
+      "kicker": "Buying",
+      "title": "Buy a skin in three steps",
+      "lead": "No sign-up or passwords: sign in with Steam, pay in soʻm.",
+      "s1": "Pick a skin",
+      "s1d": "Filter by price, wear and rarity",
+      "s2": "Pay in soʻm",
+      "s2d": "Click, Payme, Uzum or balance",
+      "s3": "Accept the Steam trade",
+      "s3d": "The skin comes to your trade link",
+      "offer": "Trade offer",
+      "accept": "Accept",
+      "go": "Go to the market",
+      "assure": "Trade failed? The money goes back to your balance"
+    },
+    "sellPanel": {
+      "kicker": "Selling",
+      "title": "Sell skins, get soʻm",
+      "lead": "Pick items from your Steam inventory. Money goes to your site balance or a Uzcard or Humo card.",
+      "where": "Where to get the money",
+      "toBalance": "Balance",
+      "picked": "Pick skins — the sum is counted at once",
+      "cta": "Sell skins"
+    },
+    "why": {
+      "kicker": "Why csmarket",
+      "title": "Made for players in Uzbekistan",
+      "lead": "Pay the way you are used to, get the skin in Steam and use the site in your own language.",
+      "telegram": "Message us on Telegram",
+      "g1": "Pay in soʻm",
+      "g1d": "Click, Payme, Uzum or the site balance. Prices are in soʻm — no exchange rate maths.",
+      "g2": "No foreign card needed",
+      "g2d": "A Uzcard or Humo card and the app you already use are enough.",
+      "g3": "Trade failed? Money on your balance",
+      "g3d": "The refund arrives by itself, no requests. Spend it on another skin right away.",
+      "g4": "The site in Russian and Uzbek",
+      "g4d": "Catalogue, payment and hints in three languages: Russian, Uzbek and English."
+    },
+    "faq": {
+      "kicker": "Questions",
+      "title": "Frequently asked questions",
+      "lead": "Didn’t find an answer? Message us on Telegram.",
+      "items": [
+        {
+          "q": "How do I buy a CS2 skin in Uzbekistan?",
+          "a": "Sign in with Steam, add your trade link and pick a skin in the market. Pay with Click, Payme, Uzum or from your balance — the skin arrives in Steam as a trade offer."
+        },
+        {
+          "q": "How do I pay for skins in soʻm?",
+          "a": "With Click, Payme or Uzum — using a Uzcard or Humo card. You can also top up the site balance and buy from it. No foreign card needed."
+        },
+        {
+          "q": "What if the trade fails?",
+          "a": "The money goes back to your site balance by itself. You can spend it on another skin."
+        },
+        {
+          "q": "Why can’t I trade a bought skin right away?",
+          "a": "That is Steam’s trade protection: for 7 days the item sits in your inventory but cannot be traded or sold. The rule is the same on every marketplace. After a week the skin is fully yours."
+        },
+        {
+          "q": "Where do I find my Steam trade link?",
+          "a": "Steam → Inventory → Trade offers → “Who can send me trade offers?”. Copy the link and paste it in your csmarket profile."
+        },
+        {
+          "q": "How do I sell CS2 skins for soʻm?",
+          "a": "Open “Sell skins”, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard or Humo card."
+        },
+        {
+          "q": "Do you need my Steam password?",
+          "a": "No. Sign-in is only through Steam’s official page. We never ask for your password or Steam Guard codes."
+        }
+      ]
+    },
+    "about": {
+      "kicker": "About csmarket",
+      "title": "A CS2 skins shop in Uzbekistan",
+      "intro": "csmarket.uz is a Counter-Strike 2 skins market made for players in Uzbekistan: prices in soʻm, local payment methods and a site in Russian and Uzbek.",
+      "readMore": "Read more",
+      "blocks": [
+        {
+          "h": "How to buy CS2 skins in Uzbekistan",
+          "p": "The csmarket catalogue holds thousands of items: knives, gloves, rifles, pistols, SMGs, cases, agents, charms and keys. Prices are in soʻm, so there is no need to convert dollars or watch the exchange rate. Pick a skin, pay the way you like — and the item arrives in Steam as a trade offer. To buy, sign in with Steam and add your trade link: the site shows where to find it."
+        },
+        {
+          "h": "Pay in soʻm: Click, Payme, Uzum",
+          "p": "Pay with what you use every day: Click, Payme or Uzum, with a Uzcard or Humo card. You don’t need a foreign card, Visa or Mastercard. You can top up the site balance and buy from it — handy when you take several skins in a row. If a trade fails for any reason, the money returns to your balance by itself, ready for another skin."
+        },
+        {
+          "h": "How the skin arrives in Steam",
+          "p": "After payment you receive a trade offer in Steam. Open it in the Steam app or in a browser, check the item and confirm. The order status is shown in your account. We never ask for your login, password or Steam Guard codes — you sign in only through Steam’s official page, and your account stays yours."
+        },
+        {
+          "h": "Steam trade protection — 7 days",
+          "p": "Steam protects trades for 7 days. During that time the skin is already in your inventory and you can play with it, but you cannot trade or sell it. It is a Steam rule, it applies on every marketplace and protects buyers from scams. After a week the restriction lifts and the item is fully yours."
+        },
+        {
+          "h": "CS2 knives and gloves",
+          "p": "Knives and gloves are the most visible items in the game. They are marked with a star (★), drop very rarely from cases and hold their value well. The market has Karambit, Butterfly Knife, M9 Bayonet, Bayonet, Talon, Skeleton, and gloves such as Sport Gloves, Specialist Gloves, Driver Gloves, Hand Wraps and more. Doppler and Gamma Doppler knives come in phases (Phase 1–4, Ruby, Sapphire, Emerald) — the phase is shown right on the skin card."
+        },
+        {
+          "h": "Rarity, wear and StatTrak™",
+          "p": "The glow colour of a card shows its rarity: from Consumer Grade and Mil-Spec to Classified, Covert and Contraband. Wear changes the look and the price: Factory New, Minimal Wear, Field-Tested, Well-Worn and Battle-Scarred. StatTrak™ means a kill counter on the weapon, Souvenir a tournament souvenir version. Filters by price, wear, rarity and StatTrak™ find the skin you want in a couple of clicks — from cheap skins to rare knives."
+        },
+        {
+          "h": "How to sell CS2 skins",
+          "p": "You can sell us the skins you no longer need. Sign in with Steam, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard or Humo card — whichever suits you. Spend the balance on new skins right away: upgrade your knife, build a one-colour inventory or get gloves for your favourite weapon."
+        },
+        {
+          "h": "The site in Russian, Uzbek and English",
+          "p": "The site works in three languages: Russian, Uzbek and English. csmarket is for everyone who wants to buy CS2 skins in Tashkent, Samarkand, Bukhara, Namangan, Andijan, Fergana or any other city of Uzbekistan."
+        }
+      ]
+    },
+    "final": {
+      "title": "Your next skin is a couple of clicks away",
+      "text": "Prices in soʻm. Pay with Click, Payme and Uzum.",
+      "cta": "Open the market"
+    },
+    "footer": {
+      "about": "CS2 skins in Uzbekistan. Prices in soʻm, the skin arrives as a Steam trade.",
+      "market": "Market",
+      "service": "Service",
+      "help": "Help",
+      "sell": "Sell skins",
+      "steam": "Top up Steam",
+      "reviews": "Reviews",
+      "api": "API for developers",
+      "faq": "FAQ",
+      "legal": "Not affiliated with Valve Corporation. Counter-Strike and Steam are trademarks of Valve."
+    }
   }
 }

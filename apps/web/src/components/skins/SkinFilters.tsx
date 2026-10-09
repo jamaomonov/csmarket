@@ -8,7 +8,7 @@ import { SkinPriceFilter } from "./SkinPriceFilter";
 import type { SkinQueryPatch, Exterior, SkinFacets, SkinQuery } from "@csmarket/utils/skins";
 
 import { Link } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 
 const EXTERIORS: Exterior[] = ["FN", "MW", "FT", "WW", "BS"];
 
@@ -28,7 +28,7 @@ function option(active: boolean): string {
 export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinFacets }) {
   const t = useTranslations("web.skins");
   const active = activeFilterCount(query);
-  const href = (patch: SkinQueryPatch) => HOME + skinQueryString(query, patch);
+  const href = (patch: SkinQueryPatch) => MARKET + skinQueryString(query, patch);
   // Only the filters this category has: no wear on agents or cases, StatTrak only where
   // it exists, the category's own rarities (the weapon scale when none is picked).
   const show = filterSections(query.category, facets, query.rarity);

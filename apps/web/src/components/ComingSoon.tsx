@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import type { NavIcon } from "@/components/header/nav";
 
 import { Link } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 
 interface ComingSoonProps {
   /** The section's key under `web.nav`. */
@@ -27,7 +27,7 @@ export function ComingSoon({ section, icon: Icon }: ComingSoonProps) {
       <Badge>{t("badge")}</Badge>
       <h1 className="text-2xl font-bold">{nav(section)}</h1>
       <p className="text-fg-muted">{t("text")}</p>
-      <Link href={HOME} className={buttonVariants({ size: "md" })}>
+      <Link href={MARKET} className={buttonVariants({ size: "md" })}>
         {t("toMarket")}
       </Link>
     </main>

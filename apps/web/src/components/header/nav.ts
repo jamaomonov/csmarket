@@ -5,7 +5,7 @@ import type { ComponentType } from "react";
 import { SteamIcon } from "@/components/icons/SteamIcon";
 import {
   ACCOUNT,
-  HOME,
+  MARKET,
   REFERRAL,
   REVIEWS,
   SELL,
@@ -35,7 +35,7 @@ export interface NavEntry {
 /** The header's sections, in order. */
 export const MAIN_NAV: NavEntry[] = [
   { key: "sell", href: SELL, icon: HandCoins },
-  { key: "market", href: HOME, icon: Store },
+  { key: "market", href: MARKET, icon: Store },
   { key: "steamTopup", href: STEAM_TOPUP, icon: SteamIcon },
   { key: "reviews", href: REVIEWS, icon: Star },
 ];
@@ -56,8 +56,10 @@ const MARKET_PATHS = ["/category", "/weapon", "/item"];
 
 /** Whether the nav entry is the section the visitor is in. */
 export function isCurrent(entry: NavEntry, pathname: string): boolean {
-  if (entry.href === HOME) {
-    return pathname === HOME || MARKET_PATHS.some((p) => pathname.startsWith(`${p}/`));
+  if (entry.href === MARKET) {
+    return (
+      pathname === MARKET || [MARKET, ...MARKET_PATHS].some((p) => pathname.startsWith(`${p}/`))
+    );
   }
   if (entry.href === TRADES && TRADE_PATHS.some((p) => pathname.startsWith(`${p}/`))) return true;
   return pathname === entry.href || pathname.startsWith(`${entry.href}/`);

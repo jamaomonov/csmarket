@@ -10,7 +10,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { SkinCategory, SkinQuery, SkinQueryPatch, WeaponFacet } from "@csmarket/utils/skins";
 
 import { useRouter } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 import { fetchSkinFacets } from "@/lib/skins";
 
 interface WeaponMenuProps {
@@ -94,7 +94,7 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
   const go = (next: string[]) => {
     setPicked(next);
     startTransition(() => {
-      router.replace(HOME + skinQueryString(query, patchFor(next)), { scroll: false });
+      router.replace(MARKET + skinQueryString(query, patchFor(next)), { scroll: false });
     });
   };
 

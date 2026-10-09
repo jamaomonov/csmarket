@@ -34,7 +34,7 @@ describe("MobileMenu", () => {
       .map((a) => [a.textContent, a.getAttribute("href")]);
     expect(links).toEqual([
       ["Продать скины", "/sell"],
-      ["Маркет", "/"],
+      ["Маркет", "/market"],
       ["Пополнить Steam", "/steam"],
       ["Отзывы", "/reviews"],
       ["Профиль", "/account"],

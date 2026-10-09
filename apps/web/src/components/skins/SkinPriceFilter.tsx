@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SkinQuery } from "@csmarket/utils/skins";
 
 import { useRouter } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 
 /** Long enough to type a number, short enough not to feel like waiting. */
 export const PRICE_APPLY_DELAY_MS = 500;
@@ -49,7 +49,7 @@ export function SkinPriceFilter({ query }: { query: SkinQuery }) {
       const next = boundsKey(bound(min), bound(max));
       if (next === urlBounds) return;
       setPushed(next);
-      router.replace(HOME + skinQueryString(query, { minUzs: bound(min), maxUzs: bound(max) }), {
+      router.replace(MARKET + skinQueryString(query, { minUzs: bound(min), maxUzs: bound(max) }), {
         scroll: false,
       });
     }, PRICE_APPLY_DELAY_MS);

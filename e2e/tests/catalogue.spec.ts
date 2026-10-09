@@ -4,8 +4,8 @@ import { API } from "./helpers";
 
 const CARDS = 'a[href^="/item/"]';
 
-test("the home page is the catalogue, in soʻm", async ({ page }) => {
-  await page.goto("/");
+test("the market is the catalogue, in soʻm", async ({ page }) => {
+  await page.goto("/market");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Скины КС2 (CS2)");
   const cards = page.locator(CARDS);
   await expect(cards.first()).toBeVisible();
@@ -14,7 +14,7 @@ test("the home page is the catalogue, in soʻm", async ({ page }) => {
 });
 
 test("a category filter narrows the grid and is noindex", async ({ page }) => {
-  await page.goto("/?category=knives");
+  await page.goto("/market?category=knives");
   const cards = page.locator(CARDS);
   await expect(cards.first()).toBeVisible();
   const names = await cards.allInnerTexts();
@@ -29,13 +29,13 @@ test("a category filter narrows the grid and is noindex", async ({ page }) => {
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
 });
 
-test("tracking params keep the home page indexable", async ({ page }) => {
-  await page.goto("/?utm_source=telegram");
+test("tracking params keep the market indexable", async ({ page }) => {
+  await page.goto("/market?utm_source=telegram");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /^index/);
 });
 
 test("search suggests and opens an item", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/market");
   const search = page.getByRole("search");
   const suggestion = search.getByRole("link", { name: /Redline/ }).first();
   // A fill before hydration never reaches React's onChange; retry until the dropdown opens.

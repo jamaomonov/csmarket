@@ -81,26 +81,26 @@ describe("WeaponMenu", () => {
     expect(lastUrl()).toContain("weapon=AK-47");
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /AWP/ }));
     // Both ticked is the whole category.
-    expect(lastUrl()).toBe("/?category=rifles");
+    expect(lastUrl()).toBe("/market?category=rifles");
     expect(screen.getByRole("menu")).toBeInTheDocument();
   });
 
   it("a model of another category keeps the first and drops the category", () => {
     renderMenu({ sort: "-price", category: "pistols", weapon: "Glock-18" }, RIFLES);
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: /AWP/ }));
-    expect(lastUrl()).toBe("/?weapon=AWP%2CGlock-18");
+    expect(lastUrl()).toBe("/market?weapon=AWP%2CGlock-18");
   });
 
   it("«Выбрать все» takes the whole category, and unticked clears it", () => {
     renderMenu({ sort: "-price" }, RIFLES);
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Выбрать все" }));
-    expect(lastUrl()).toBe("/?category=rifles");
+    expect(lastUrl()).toBe("/market?category=rifles");
     expect(screen.getByRole("menuitemcheckbox", { name: "Выбрать все" })).toHaveAttribute(
       "aria-checked",
       "true",
     );
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Выбрать все" }));
-    expect(lastUrl()).toBe("/");
+    expect(lastUrl()).toBe("/market");
   });
 
   it("failed load still offers the category and says so", async () => {

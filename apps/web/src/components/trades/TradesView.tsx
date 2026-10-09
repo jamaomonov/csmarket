@@ -10,7 +10,7 @@ import { useTradesFeed, type TradesType } from "./useTradesFeed";
 import { HistoryFilter } from "@/components/account/HistoryFilter";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
-import { HOME, TRADES } from "@/lib/paths";
+import { MARKET, TRADES } from "@/lib/paths";
 
 export type { TradesType } from "./useTradesFeed";
 
@@ -89,7 +89,7 @@ function TradesList({ locale, type }: TradesViewProps) {
           {type === "hold" ? t("holdEmpty") : type === "sales" ? t("salesEmpty") : t("empty")}
         </p>
         {type === "all" || type === "purchases" ? (
-          <Link href={HOME} className={buttonVariants({ variant: "secondary" })}>
+          <Link href={MARKET} className={buttonVariants({ variant: "secondary" })}>
             {orders("toCatalog")}
           </Link>
         ) : null}

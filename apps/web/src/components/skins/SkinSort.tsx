@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import type { SkinQuery, SkinSort as Sort } from "@csmarket/utils/skins";
 
 import { useRouter } from "@/i18n/navigation";
-import { HOME } from "@/lib/paths";
+import { MARKET } from "@/lib/paths";
 
 const SORTS: Sort[] = ["-price", "price", "popular", "discount"];
 
@@ -22,7 +22,7 @@ export function SkinSort({ query }: { query: SkinQuery }) {
         value={query.sort}
         onChange={(e) => {
           const sort = e.target.value as Sort; // one of SORTS, rendered below
-          router.push(HOME + skinQueryString(query, { sort }));
+          router.push(MARKET + skinQueryString(query, { sort }));
         }}
         className={`${selectClass} w-full sm:w-[190px]`}
       >

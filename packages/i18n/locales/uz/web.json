@@ -606,5 +606,193 @@
       "badTooMany": "Manzillar juda koʻp. 20 tadan oshmasin.",
       "failed": "Muvaffaqiyatsiz. Qayta urinib koʻring."
     }
+  },
+  "landing": {
+    "meta": {
+      "title": "CS2 skinlari Oʻzbekistonda — soʻmda sotib oling: Click, Payme, Uzum",
+      "description": "CS2 skinlari soʻmdagi narxlarda: pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlang — skin Steam’ga keladi. Skinlaringizni Uzcard va Humo kartasiga soting.",
+      "ogAlt": "csmarket — CS2 skinlari Oʻzbekistonda"
+    },
+    "eyebrow": "Oʻzbekistonlik oʻyinchilar uchun skinlar doʻkoni",
+    "h1": {
+      "pre": "",
+      "hl": "CS2",
+      "post": "skinlari Oʻzbekistonda",
+      "sub": "Narxlar soʻmda. Skin Steam’ga keladi."
+    },
+    "lead": "Pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlang — xorijiy karta kerak emas.",
+    "openMarket": "Marketni ochish",
+    "sellSkins": "Skin sotish",
+    "payWith": "Toʻlov:",
+    "balance": "balans",
+    "toastTitle": "Steam’da almashuv",
+    "toastText": "Skin takliflarda kutmoqda",
+    "buy": "Sotib olish",
+    "showcase": "Vitrinadagi skinlar",
+    "search": {
+      "label": "Skin qidirish",
+      "placeholder": "Skin qidiring: AK-47 Redline, Karambit, AWP Asiimov…",
+      "submit": "Qidirish",
+      "often": "Koʻp qidiriladi:",
+      "cheap": "100 000 soʻmgacha"
+    },
+    "popular": {
+      "kicker": "Hozir mavjud",
+      "title": "Mashhur CS2 skinlari",
+      "tabsLabel": "Toʻplamlar",
+      "tabs": {
+        "popular": "Mashhur",
+        "knives": "Pichoqlar",
+        "gloves": "Qoʻlqoplar",
+        "cheap": "100 000 soʻmgacha"
+      },
+      "pieces": "{count} dona",
+      "all": "Marketdagi barcha skinlar",
+      "empty": "Toʻplam yangilanmoqda. Marketga kiring."
+    },
+    "stats": {
+      "label": "csmarket raqamlarda",
+      "skins": "ta skin katalogda",
+      "payments": "ta toʻlov usuli soʻmda",
+      "from": "{price}",
+      "perSkin": "soʻmdan boshlab skinlar",
+      "support": "sayt uch tilda"
+    },
+    "cats": {
+      "kicker": "Katalog",
+      "title": "CS2 da nima sotib olish mumkin",
+      "all": "Butun katalog",
+      "from": "{price}dan"
+    },
+    "buyPanel": {
+      "kicker": "Xarid",
+      "title": "Skin sotib olish — uch qadam",
+      "lead": "Roʻyxatdan oʻtish va parolsiz: Steam orqali kirish, soʻmda toʻlov.",
+      "s1": "Skinni tanlang",
+      "s1d": "Narx, eskirish va nodirlik boʻyicha filtrlar",
+      "s2": "Soʻmda toʻlang",
+      "s2d": "Click, Payme, Uzum yoki balans",
+      "s3": "Steam’da almashuvni qabul qiling",
+      "s3d": "Skin almashuv havolangizga keladi",
+      "offer": "Almashuv taklifi",
+      "accept": "Qabul qilish",
+      "go": "Marketga oʻtish",
+      "assure": "Almashuv boʻlmasa — pul balansga qaytadi"
+    },
+    "sellPanel": {
+      "kicker": "Sotish",
+      "title": "Skinlaringizni soting — soʻm oling",
+      "lead": "Steam inventaringizdan buyumlarni tanlang. Pul — sayt balansiga yoki Uzcard va Humo kartasiga.",
+      "where": "Pulni qayerga olish",
+      "toBalance": "Balans",
+      "picked": "Skinlarni tanlang — summa darhol hisoblanadi",
+      "cta": "Skin sotish"
+    },
+    "why": {
+      "kicker": "Nega csmarket",
+      "title": "Oʻzbekistonlik oʻyinchilar uchun",
+      "lead": "Odatiy usulda toʻlang, skinni Steam’da oling va saytdan ona tilingizda foydalaning.",
+      "telegram": "Telegram’da yozish",
+      "g1": "Soʻmda toʻlov",
+      "g1d": "Click, Payme, Uzum yoki sayt balansi. Narx soʻmda — kursni hisoblash shart emas.",
+      "g2": "Xorijiy karta kerak emas",
+      "g2d": "Uzcard yoki Humo kartasi va siz allaqachon ishlatadigan ilova yetarli.",
+      "g3": "Almashuv boʻlmasa — pul balansda",
+      "g3d": "Pul oʻzi qaytadi, ariza yozish shart emas. Uni darhol boshqa skinga sarflash mumkin.",
+      "g4": "Sayt oʻzbek va rus tillarida",
+      "g4d": "Katalog, toʻlov va maslahatlar — uch tilda: oʻzbek, rus va ingliz."
+    },
+    "faq": {
+      "kicker": "Savollar",
+      "title": "Koʻp beriladigan savollar",
+      "lead": "Javob topmadingizmi? Telegram’da yozing.",
+      "items": [
+        {
+          "q": "Oʻzbekistonda CS2 skinini qanday sotib olish mumkin?",
+          "a": "Steam orqali kiring, almashuv havolasini qoʻshing va marketda skinni tanlang. Click, Payme, Uzum yoki balansdan toʻlang — skin Steam’ga almashuv taklifi sifatida keladi."
+        },
+        {
+          "q": "Skinlar uchun soʻmda qanday toʻlash mumkin?",
+          "a": "Click, Payme yoki Uzum orqali — Uzcard yoki Humo kartasi bilan. Sayt balansini toʻldirib, undan ham xarid qilish mumkin. Xorijiy karta kerak emas."
+        },
+        {
+          "q": "Almashuv boʻlmasa nima boʻladi?",
+          "a": "Pul oʻzi sayt balansiga qaytadi. Uni boshqa skinga sarflash mumkin."
+        },
+        {
+          "q": "Nega sotib olingan skinni darhol berib boʻlmaydi?",
+          "a": "Bu Steam almashuv himoyasi: buyum 7 kun inventarda turadi, lekin uni berish yoki sotish mumkin emas. Qoida barcha maydonchalar uchun bir xil. Bir haftadan keyin skin toʻliq sizniki."
+        },
+        {
+          "q": "Steam’da almashuv havolasini qayerdan topaman?",
+          "a": "Steam → Inventar → Almashuv takliflari → «Kim menga almashuv taklifini yubora oladi?». Havolani nusxalang va csmarket profilingizga qoʻying."
+        },
+        {
+          "q": "CS2 skinlarini soʻmga qanday sotish mumkin?",
+          "a": "«Skin sotish» sahifasini oching, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard yoxud Humo kartasiga keladi."
+        },
+        {
+          "q": "Steam paroli kerakmi?",
+          "a": "Yoʻq. Kirish faqat Steam’ning rasmiy sahifasi orqali. Biz hech qachon parol va Steam Guard kodlarini soʻramaymiz."
+        }
+      ]
+    },
+    "about": {
+      "kicker": "csmarket haqida",
+      "title": "Oʻzbekistonda CS2 skinlari doʻkoni",
+      "intro": "csmarket.uz — Counter-Strike 2 uchun skinlar marketi, Oʻzbekistonlik oʻyinchilar uchun yaratilgan: narxlar soʻmda, mahalliy toʻlov usullari va oʻzbek hamda rus tillaridagi sayt.",
+      "readMore": "Toʻliq oʻqish",
+      "blocks": [
+        {
+          "h": "Oʻzbekistonda CS2 skinlarini qanday sotib olish mumkin",
+          "p": "csmarket katalogida minglab buyumlar bor: pichoqlar, qoʻlqoplar, avtomatlar, toʻpponchalar, pistolet-pulemyotlar, keyslar, agentlar, brelok va kalitlar. Narxlar soʻmda koʻrsatilgan, shuning uchun dollarni hisoblash va kursni kuzatish shart emas. Skinni tanlang, qulay usulda toʻlang — buyum Steam’ga almashuv taklifi sifatida keladi. Xarid uchun Steam orqali kirish va almashuv havolasini koʻrsatish kifoya: saytda uni qayerdan topish boʻyicha maslahat bor."
+        },
+        {
+          "h": "Soʻmda toʻlov: Click, Payme, Uzum",
+          "p": "Har kuni ishlatadigan usulda toʻlang: Click, Payme yoki Uzum, Uzcard yoki Humo kartasi bilan. Xorijiy karta, Visa yoki Mastercard kerak emas. Sayt balansini toʻldirib, undan xarid qilish mumkin — bir nechta skin olsangiz, bu qulayroq. Agar almashuv biror sabab bilan boʻlmasa, pul oʻzi balansga qaytadi va uni darhol boshqa skinga sarflash mumkin."
+        },
+        {
+          "h": "Skin Steam’ga qanday keladi",
+          "p": "Toʻlovdan soʻng sizga Steam’da almashuv taklifi keladi. Uni Steam ilovasida yoki brauzerda oching, buyumni tekshiring va tasdiqlang. Buyurtma holati shaxsiy kabinetda koʻrinadi. Biz login, parol yoki Steam Guard kodlarini soʻramaymiz — saytga faqat Steam’ning rasmiy sahifasi orqali kiriladi, akkauntingiz faqat sizniki boʻlib qoladi."
+        },
+        {
+          "h": "Steam almashuv himoyasi — 7 kun",
+          "p": "Steam almashuvlarni 7 kun davomida himoya qiladi. Bu muddatda sotib olingan skin inventaringizda turadi va u bilan oʻynash mumkin, lekin uni berish yoki sotish mumkin emas. Bu Steam qoidasi, barcha maydonchalarda amal qiladi va xaridorni firibgarlardan himoya qiladi. Bir haftadan soʻng cheklov olinadi va buyum toʻliq sizniki boʻladi."
+        },
+        {
+          "h": "CS2 pichoqlari va qoʻlqoplari",
+          "p": "Pichoqlar va qoʻlqoplar — oʻyindagi eng koʻzga koʻrinadigan buyumlar. Ular yulduzcha (★) bilan belgilanadi, keyslardan juda kam tushadi va narxini yaxshi saqlaydi. Marketda Karambit, Butterfly Knife, M9 Bayonet, Bayonet, Talon, Skeleton, qoʻlqoplardan esa Sport Gloves, Specialist Gloves, Driver Gloves, Hand Wraps va boshqalar bor. Doppler va Gamma Doppler pichoqlarining fazalari bor (Phase 1–4, Ruby, Sapphire, Emerald) — faza skin kartochkasida koʻrsatilgan."
+        },
+        {
+          "h": "Nodirlik, eskirish va StatTrak™",
+          "p": "Kartochka yorugʻligining rangi nodirlikni koʻrsatadi: Consumer Grade va Mil-Spec’dan Classified, Covert va Contraband’gacha. Eskirish koʻrinish va narxga taʼsir qiladi: Factory New, Minimal Wear, Field-Tested, Well-Worn va Battle-Scarred. StatTrak™ belgisi qurolda oʻldirishlar hisoblagichi borligini, Souvenir esa turnirdagi esdalik versiyasini bildiradi. Narx, eskirish, nodirlik va StatTrak™ filtrlari kerakli skinni bir necha bosishda topishga yordam beradi — arzon skinlardan noyob pichoqlargacha."
+        },
+        {
+          "h": "CS2 skinlarini qanday sotish mumkin",
+          "p": "Keraksiz skinlarni bizga sotishingiz mumkin. Steam orqali kiring, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard yoxud Humo kartasiga keladi — qaysi biri qulay boʻlsa. Balansni darhol yangi skinlarga sarflash mumkin: pichoqni yangilash, inventarni bir rangda yigʻish yoki sevimli qurolingizga qoʻlqop olish."
+        },
+        {
+          "h": "Sayt oʻzbek, rus va ingliz tillarida",
+          "p": "Sayt uch tilda ishlaydi: oʻzbek, rus va ingliz. csmarket — Toshkent, Samarqand, Buxoro, Namangan, Andijon, Fargʻona yoki Oʻzbekistonning istalgan boshqa shahrida CS2 skinlarini sotib olmoqchi boʻlganlar uchun."
+        }
+      ]
+    },
+    "final": {
+      "title": "Keyingi skiningiz — bir necha bosishda",
+      "text": "Narxlar soʻmda. Click, Payme va Uzum orqali toʻlov.",
+      "cta": "Marketni ochish"
+    },
+    "footer": {
+      "about": "CS2 skinlari Oʻzbekistonda. Narxlar soʻmda, skin Steam’ga almashuv orqali keladi.",
+      "market": "Market",
+      "service": "Xizmatlar",
+      "help": "Yordam",
+      "sell": "Skin sotish",
+      "steam": "Steam’ni toʻldirish",
+      "reviews": "Sharhlar",
+      "api": "Dasturchilar uchun API",
+      "faq": "Koʻp beriladigan savollar",
+      "legal": "Valve Corporation bilan bogʻliq emas. Counter-Strike va Steam — Valve’ning savdo belgilari."
+    }
   }
 }

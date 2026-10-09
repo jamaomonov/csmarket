@@ -7,7 +7,7 @@ import type { Metadata } from "next";
 
 import { SkinLanding } from "@/components/skins/SkinLanding";
 import { routing } from "@/i18n/routing";
-import { categoryPath, HOME, weaponPath } from "@/lib/paths";
+import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
 import { countUnit, isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
@@ -117,9 +117,9 @@ export default async function SkinCategoryPage({ params }: Props) {
       intro={data.from ? t("landing.intro", { items, price: data.from }) : null}
       items={page.items}
       {...(faq ? { faq } : {})}
-      allHref={HOME + skinQueryString(query)}
+      allHref={MARKET + skinQueryString(query)}
       crumbs={[
-        { name: t("market"), path: HOME },
+        { name: t("market"), path: MARKET },
         { name: t("landing.categoryH1", { name }), path: categoryPath(cat) },
       ]}
       links={{ title: t("landing.weapons"), items: weapons }}
