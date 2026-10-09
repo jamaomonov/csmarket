@@ -28,7 +28,7 @@ export const STATUS_CHIP: Record<OrderStatus, string> = {
 };
 
 export const ATTENTION_LABELS: Record<AttentionReason, string> = {
-  buy_unconfirmed: "ответ Waxpeer потерян",
+  buy_unconfirmed: "ответ площадки потерян",
   ambiguous_trade: "несколько обменов",
   rolled_back: "откат после получения",
   source_forbidden: "Площадка: IP не в белом списке",
