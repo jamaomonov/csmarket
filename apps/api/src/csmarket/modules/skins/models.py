@@ -63,6 +63,14 @@ class SkinItem(Base):
     def_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     #: An agent's side, ``'ct'`` or ``'t'``; ``None`` for everything else.
     team: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    #: The skin's collection («The Phoenix Collection»), from ByMykel's grouped skins.
+    collection: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    #: The cases the skin drops from, by their market names («Operation Phoenix Weapon Case»).
+    crates: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
+    #: Valve's description, in English (ByMykel has no Russian or Uzbek); plain text.
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     #: ``'bymykel'`` once the daily import has written the row, ``'stub'``
     #: while it only exists because the snapshot named it.
     source: Mapped[str] = mapped_column(String(16), nullable=False, server_default=text("'stub'"))

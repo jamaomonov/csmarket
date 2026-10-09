@@ -282,7 +282,9 @@
       "payQ": "{name}ni soʻmda qanday toʻlash mumkin?",
       "payA": "Click, Payme yoki Uzum orqali Uzcard yoki Humo kartasi bilan yoki sayt balansidan. Xorijiy karta kerak emas.",
       "holdQ": "Nega {name}ni darhol boshqaga berib boʻlmaydi?",
-      "holdA": "Bu Steam almashuv himoyasi: 7 kun davomida buyum inventaringizda turadi, lekin uni berish yoki sotish mumkin emas. Qoida barcha maydonchalar uchun bir xil."
+      "holdA": "Bu Steam almashuv himoyasi: 7 kun davomida buyum inventaringizda turadi, lekin uni berish yoki sotish mumkin emas. Qoida barcha maydonchalar uchun bir xil.",
+      "crateQ": "{name} qaysi keysdan tushadi?",
+      "crateA": "Keys: {list}. Skinni keys ochmasdan darhol csmarket’da sotib olish mumkin."
     },
     "allOf": {
       "knives": "Barcha pichoqlar",
@@ -310,14 +312,19 @@
       "wears": "Eskirish darajalari: {list}.",
       "stattrak": "Qotillik hisoblagichli StatTrak™ versiyasi bor.",
       "souvenir": "Suvenir versiyasi bor.",
-      "buy": "csmarket’da — {price}dan: Click, Payme yoki Uzum orqali soʻmda toʻlov, buyum Steam’ga almashuv taklifi sifatida keladi."
+      "buy": "csmarket’da — {price}dan: Click, Payme yoki Uzum orqali soʻmda toʻlov, buyum Steam’ga almashuv taklifi sifatida keladi.",
+      "collection": "{collection} kolleksiyasiga kiradi.",
+      "crates": "Tushadigan keys: {list}.",
+      "valve": "Valve tavsifi"
     },
     "similar": {
       "weapon": "Boshqa {weapon} skinlari",
       "category": "«{category}» boʻlimida yana",
       "all": "Barcha {weapon} skinlari",
       "allCategory": "Butun «{category}» boʻlimi"
-    }
+    },
+    "collection": "Kolleksiya",
+    "cases": "Keys"
   },
   "buy": {
     "title": "Sotib olish",

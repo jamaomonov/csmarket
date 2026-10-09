@@ -97,7 +97,8 @@ export default async function SkinPage({ params }: Props) {
       : null;
   const worn = hasWear(item.category);
   const url = localeUrl(locale, itemPath(item.slug));
-  const productLd = skinProductLd(item, url);
+  const about = skinAbout(item, t, locale, category);
+  const productLd = skinProductLd(item, url, about);
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -134,6 +135,29 @@ export default async function SkinPage({ params }: Props) {
         {worn && floatRange && <Fact label={t("float")} value={floatRange} />}
         {!worn && item.count > 0 && (
           <Fact label={t("inStock")} value={t("pieces", { count: item.count })} />
+        )}
+        {item.collection && <Fact label={t("collection")} value={item.collection} />}
+        {item.crates.length > 0 && (
+          <div>
+            <dt className="text-fg-dim text-[12px]">{t("cases")}</dt>
+            <dd className="font-semibold">
+              {item.crates.map((c, i) => (
+                <span key={c.name}>
+                  {i > 0 && ", "}
+                  {c.slug ? (
+                    <Link
+                      href={itemPath(c.slug)}
+                      className="hover:text-accent underline-offset-2 hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  ) : (
+                    c.name
+                  )}
+                </span>
+              ))}
+            </dd>
+          </div>
         )}
       </dl>
     </>
@@ -231,9 +255,16 @@ export default async function SkinPage({ params }: Props) {
         <h2 id="skin-about" className="mb-2 text-[17px] font-bold">
           {t("about.title")}
         </h2>
-        <p className="text-fg-muted text-[14px] leading-relaxed">
-          {skinAbout(item, t, locale, category)}
-        </p>
+        <p className="text-fg-muted text-[14px] leading-relaxed">{about}</p>
+        {/* Valve's text exists in English only: it shows where the page is English. */}
+        {locale === "en" && item.description && (
+          <blockquote className="border-border text-fg-muted mt-4 whitespace-pre-line border-l-2 pl-4 text-[14px] italic leading-relaxed">
+            <span className="text-fg-dim mb-1 block text-[12px] not-italic">
+              {t("about.valve")}
+            </span>
+            {item.description}
+          </blockquote>
+        )}
       </section>
 
       <SkinFaq title={t("faq.title")} entries={skinFaq(item, t, locale)} />

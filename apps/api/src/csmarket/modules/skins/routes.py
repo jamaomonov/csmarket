@@ -49,6 +49,7 @@ from csmarket.modules.skins.pricing import (
 from csmarket.modules.skins.schemas import (
     FacetOut,
     RarityFacetOut,
+    SkinCrateOut,
     SkinDetailOut,
     SkinFacetsOut,
     SkinFamilyMemberOut,
@@ -64,6 +65,7 @@ from csmarket.modules.skins.schemas import (
 from csmarket.modules.skins.service import (
     CatalogQuery,
     Sort,
+    crate_slugs,
     facets,
     family,
     get_item,
@@ -321,11 +323,15 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
         )
         for m in await family(db, item, categories=categories)
     ]
+    crate_links = await crate_slugs(db, item.crates, categories=categories)
     return SkinDetailOut(
         **base.model_dump(),
         cheapest=cheapest,
         family=members,
         buy_enabled=get_settings().skins_buy_enabled,
+        collection=item.collection,
+        crates=[SkinCrateOut(name=n, slug=crate_links.get(n)) for n in item.crates],
+        description=item.description,
     )
 
 

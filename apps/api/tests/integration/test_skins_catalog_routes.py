@@ -182,6 +182,31 @@ async def test_detail_has_phase_and_cheapest(integration_client: AsyncClient, se
     assert (await integration_client.get("/api/v1/skins/nope")).status_code == 404
 
 
+async def test_detail_carries_collection_cases_and_description(
+    integration_client: AsyncClient, seeded: None, db_session: AsyncSession
+) -> None:
+    ak = (
+        await db_session.execute(
+            select(SkinItem).where(SkinItem.slug == "ak-47-redline-field-tested")
+        )
+    ).scalar_one()
+    ak.collection = "The Phoenix Collection"
+    ak.crates = ["Operation Phoenix Weapon Case", "Gone Case"]
+    ak.description = "Powerful and reliable."
+    db_session.add(_item("Operation Phoenix Weapon Case", category="cases", units=500, count=10))
+    await db_session.commit()
+    body = (await integration_client.get("/api/v1/skins/ak-47-redline-field-tested")).json()
+    assert body["collection"] == "The Phoenix Collection"
+    # A case we sell links to its page; one we do not is named without a link.
+    assert body["crates"] == [
+        {"name": "Operation Phoenix Weapon Case", "slug": "operation-phoenix-weapon-case"},
+        {"name": "Gone Case", "slug": None},
+    ]
+    assert body["description"] == "Powerful and reliable."
+    plain = (await integration_client.get("/api/v1/skins/awp-asiimov-field-tested")).json()
+    assert (plain["collection"], plain["crates"], plain["description"]) == (None, [], None)
+
+
 # ---------- GET /skins/seo/slugs: every item page a sitemap should list ----------
 
 

@@ -55,6 +55,8 @@ type FaqKey =
   | "faq.payA"
   | "faq.holdQ"
   | "faq.holdA"
+  | "faq.crateQ"
+  | "faq.crateA"
   | `exterior.${Exterior}`;
 
 /** A `next-intl` translator scoped to `web.skins` — any that knows the FAQ's keys. */
@@ -115,6 +117,15 @@ export function skinFaq(
       }),
     });
   }
+  if (item.crates.length > 0) {
+    out.push({
+      question: t("faq.crateQ", { name }),
+      answer: t("faq.crateA", {
+        count: item.crates.length,
+        list: item.crates.map((c) => c.name).join(", "),
+      }),
+    });
+  }
   out.push(
     { question: t("faq.payQ", { name }), answer: t("faq.payA") },
     { question: t("faq.holdQ", { name }), answer: t("faq.holdA") },
@@ -126,6 +137,8 @@ export interface ProductLd {
   "@context": "https://schema.org";
   "@type": "Product";
   name: string;
+  /** The page's «О предмете» paragraph. */
+  description?: string;
   image?: string;
   category: string;
   url: string;
@@ -148,12 +161,17 @@ export interface ProductLd {
  * `highPrice` is flagged in Search Console. A priced item that has sold out keeps
  * its Offer, marked out of stock.
  */
-export function skinProductLd(item: SkinDetail, url: string): ProductLd | null {
+export function skinProductLd(
+  item: SkinDetail,
+  url: string,
+  description?: string,
+): ProductLd | null {
   if (item.price_uzs === null) return null;
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: skinFullName(item),
+    ...(description ? { description } : {}),
     ...(item.image_url ? { image: item.image_url } : {}),
     category: `CS2 ${item.weapon ?? item.category}`,
     url,
@@ -207,6 +225,8 @@ type AboutKey =
   | "about.wears"
   | "about.stattrak"
   | "about.souvenir"
+  | "about.collection"
+  | "about.crates"
   | "about.buy"
   | `exterior.${Exterior}`;
 
@@ -230,6 +250,15 @@ export function skinAbout(
       : t("about.item", { name, category: categoryName }),
   ];
   if (item.rarity) out.push(t("about.rarity", { rarity: item.rarity }));
+  if (item.collection) out.push(t("about.collection", { collection: item.collection }));
+  if (item.crates.length > 0) {
+    out.push(
+      t("about.crates", {
+        count: item.crates.length,
+        list: item.crates.map((c) => c.name).join(", "),
+      }),
+    );
+  }
   if (item.exterior && item.min_float !== null && item.max_float !== null) {
     out.push(
       t("about.float", {

@@ -31,6 +31,9 @@ const ITEM: SkinDetail = {
   cheapest: [],
   family: [],
   buy_enabled: false,
+  collection: null,
+  crates: [],
+  description: null,
 };
 
 describe("wearFloatRange", () => {
@@ -115,6 +118,11 @@ describe("skinProductLd", () => {
   it("emits no Product at all without a price", () => {
     expect(skinProductLd({ ...ITEM, price_uzs: null }, "u")).toBeNull();
   });
+
+  it("carries the page's own paragraph as its description", () => {
+    expect(skinProductLd(ITEM, "u", "About text.")?.description).toBe("About text.");
+    expect(skinProductLd(ITEM, "u")).not.toHaveProperty("description");
+  });
 });
 
 describe("itemListLd", () => {
@@ -194,5 +202,38 @@ describe("skinAbout", () => {
       "Кейсы",
     );
     expect(text).toBe("Recoil Case — предмет КС2 (CS2) из раздела «Кейсы».");
+  });
+});
+
+describe("collection and cases", () => {
+  const LORE = {
+    ...ITEM,
+    collection: "The Phoenix Collection",
+    crates: [{ name: "Operation Phoenix Weapon Case", slug: "operation-phoenix-weapon-case" }],
+  };
+
+  it("the paragraph names the collection and the case", () => {
+    const text = skinAbout(LORE, t, "ru", "Винтовки");
+    expect(text).toContain("Входит в коллекцию The Phoenix Collection.");
+    expect(text).toContain("Выпадает из кейса Operation Phoenix Weapon Case.");
+  });
+
+  it("the FAQ answers which case it drops from, in plural for several", () => {
+    const one = skinFaq(LORE, t, "ru", new Date("2026-10-10"));
+    expect(one.find((f) => f.question.startsWith("Из какого кейса"))?.answer).toMatch(
+      /^Из кейса Operation Phoenix Weapon Case\./,
+    );
+    const two = skinFaq(
+      { ...LORE, crates: [...LORE.crates, { name: "Chroma Case", slug: null }] },
+      t,
+      "ru",
+      new Date("2026-10-10"),
+    );
+    expect(two.find((f) => f.question.startsWith("Из какого кейса"))?.answer).toMatch(
+      /^Из кейсов Operation Phoenix Weapon Case, Chroma Case\./,
+    );
+    expect(skinFaq(ITEM, t, "ru").some((f) => f.question.startsWith("Из какого кейса"))).toBe(
+      false,
+    );
   });
 });

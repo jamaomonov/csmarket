@@ -14,6 +14,7 @@ flushed in batches of 1 000. Streaming JSON would need a new dependency.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, replace
 from decimal import Decimal, InvalidOperation
@@ -35,7 +36,9 @@ from csmarket.modules.skins.taxonomy import FILE_CATEGORIES, category_for_file, 
 log = get_logger("csmarket.skins.bymykel")
 
 SKINS_FILE = "skins_not_grouped"
-#: Every file the import reads, skins first.
+#: One entry per skin (not per wear): where the collection, the cases and the description live.
+GROUPED_FILE = "skins"
+#: Every file the import reads into rows, skins first (the grouped file is read before them).
 FILES: tuple[str, ...] = (SKINS_FILE, *FILE_CATEGORIES)
 _BATCH = 1000
 
@@ -64,6 +67,23 @@ class CatalogRow:
     team: str | None = None
     #: Stickers and charms only: the id an inspect link names them by.
     def_index: int | None = None
+    #: Skins only, from the grouped file: the collection, the cases it drops from, Valve's text.
+    collection: str | None = None
+    crates: tuple[str, ...] = ()
+    description: str | None = None
+
+
+@dataclass(frozen=True)
+class SkinLore:
+    """What the grouped file knows about a skin, shared by all its wears and variants."""
+
+    collection: str | None
+    crates: tuple[str, ...]
+    description: str | None
+
+
+#: ``(weapon, skin)`` as our rows name them — ``("Karambit", None)`` for a vanilla knife.
+LoreKey = tuple[str, str | None]
 
 
 @dataclass(frozen=True)
@@ -140,8 +160,50 @@ def _row(
     )
 
 
-def rows_from_skins(entries: list[dict[str, Any]]) -> list[CatalogRow]:
-    """Rows for ``skins_not_grouped.json``; the category comes from each entry."""
+_TAGS = re.compile(r"<[^>]+>")
+
+
+def _plain(text: Any) -> str | None:
+    """ByMykel's description as plain text: escaped newlines made real, HTML tags dropped."""
+    if not isinstance(text, str):
+        return None
+    out = _TAGS.sub("", text.replace("\\n", "\n")).strip()
+    return out or None
+
+
+def _names(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [v["name"] for v in value if isinstance(v, dict) and isinstance(v.get("name"), str)]
+
+
+def lore_from_grouped(entries: list[dict[str, Any]]) -> dict[LoreKey, SkinLore]:
+    """``skins.json`` (one entry per skin) by ``(weapon, skin)``; the first entry of a key wins
+    (Doppler phases share one name)."""
+    lore: dict[LoreKey, SkinLore] = {}
+    for entry in entries:
+        weapon = entry.get("weapon")
+        pattern = entry.get("pattern")
+        if not isinstance(weapon, dict) or not isinstance(weapon.get("name"), str):
+            continue
+        skin = pattern.get("name") if isinstance(pattern, dict) else None
+        key = (weapon["name"].removeprefix("★ "), skin if isinstance(skin, str) else None)
+        if key in lore:
+            continue
+        collections = _names(entry.get("collections"))
+        lore[key] = SkinLore(
+            collection=collections[0] if collections else None,
+            crates=tuple(_names(entry.get("crates"))),
+            description=_plain(entry.get("description")),
+        )
+    return lore
+
+
+def rows_from_skins(
+    entries: list[dict[str, Any]], lore: dict[LoreKey, SkinLore] | None = None
+) -> list[CatalogRow]:
+    """Rows for ``skins_not_grouped.json``; the category comes from each entry, the
+    collection, cases and description from ``lore`` (the grouped file)."""
     rows: list[CatalogRow] = []
     for entry in entries:
 
@@ -149,8 +211,17 @@ def rows_from_skins(entries: list[dict[str, Any]]) -> list[CatalogRow]:
             return category_for_skin(e, parsed)
 
         row = _row(entry, category)
-        if row is not None:
-            rows.append(row)
+        if row is None:
+            continue
+        found = (lore or {}).get((row.weapon, row.skin)) if row.weapon else None
+        if found is not None:
+            row = replace(
+                row,
+                collection=found.collection,
+                crates=found.crates,
+                description=found.description,
+            )
+        rows.append(row)
     return rows
 
 
@@ -211,6 +282,9 @@ _METADATA_COLUMNS: tuple[str, ...] = (
     "def_index",
     "search_text",
     "team",
+    "collection",
+    "crates",
+    "description",
 )
 
 
@@ -255,6 +329,7 @@ async def upsert_items(db: AsyncSession, rows: Iterable[CatalogRow]) -> int:
     for row in rows:
         values = asdict(row)
         values["slug"] = slugs[(row.market_hash_name, row.phase)]
+        values["crates"] = list(row.crates)  # JSONB holds a list
         batch.append({"id": new_id(), "source": "bymykel", **values})
         if len(batch) >= _BATCH:
             await flush()
@@ -273,10 +348,11 @@ async def import_catalog(
     client = http or httpx.AsyncClient()
     files = rows = changed = 0
     try:
+        lore = lore_from_grouped(await fetch_file(client, base_url, GROUPED_FILE))
         for file_key in FILES:
             entries = await fetch_file(client, base_url, file_key)
             parsed = (
-                rows_from_skins(entries)
+                rows_from_skins(entries, lore)
                 if file_key == SKINS_FILE
                 else rows_from_file(file_key, entries)
             )
@@ -296,11 +372,14 @@ async def import_catalog(
 
 __all__ = [
     "FILES",
+    "GROUPED_FILE",
     "CatalogRow",
     "ImportSummary",
+    "SkinLore",
     "dedupe",
     "fetch_file",
     "import_catalog",
+    "lore_from_grouped",
     "rows_from_file",
     "rows_from_skins",
     "upsert_items",

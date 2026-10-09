@@ -282,7 +282,9 @@
       "payQ": "How do I pay for {name} in soʻm?",
       "payA": "With Click, Payme or Uzum using a Uzcard or Humo card, or from the site balance. No foreign card needed.",
       "holdQ": "Why can't I trade {name} right away?",
-      "holdA": "That is Steam's trade protection: for 7 days the item sits in your inventory but cannot be traded or sold. The rule is the same on every marketplace."
+      "holdA": "That is Steam's trade protection: for 7 days the item sits in your inventory but cannot be traded or sold. The rule is the same on every marketplace.",
+      "crateQ": "Which case does {name} drop from?",
+      "crateA": "{count, plural, one {From} other {From these cases:}} {list}. On csmarket you can buy the skin right away — no case opening."
     },
     "allOf": {
       "knives": "All knives",
@@ -310,14 +312,19 @@
       "wears": "Comes in: {list}.",
       "stattrak": "There is a StatTrak™ version with a kill counter.",
       "souvenir": "There is a Souvenir version.",
-      "buy": "On csmarket it costs from {price}: pay in soʻm with Click, Payme or Uzum, and the item arrives in Steam as a trade offer."
+      "buy": "On csmarket it costs from {price}: pay in soʻm with Click, Payme or Uzum, and the item arrives in Steam as a trade offer.",
+      "collection": "It belongs to {collection}.",
+      "crates": "{count, plural, one {It drops from} other {It drops from these cases:}} {list}.",
+      "valve": "Valve's description"
     },
     "similar": {
       "weapon": "More {weapon} skins",
       "category": "More in “{category}”",
       "all": "All {weapon} skins",
       "allCategory": "The whole “{category}” section"
-    }
+    },
+    "collection": "Collection",
+    "cases": "Case"
   },
   "buy": {
     "title": "Buy",

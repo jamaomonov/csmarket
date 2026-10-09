@@ -99,13 +99,27 @@ class SkinFamilyMemberOut(BaseModel):
     count: int
 
 
+class SkinCrateOut(BaseModel):
+    """A case the skin drops from."""
+
+    name: str
+    #: The case's own item page when we list it; ``None`` names it without a link.
+    slug: str | None
+
+
 class SkinDetailOut(SkinItemOut):
-    """The item page: the card plus its cheapest listings and its family."""
+    """The item page: the card plus its cheapest listings, its family and its lore."""
 
     cheapest: list[SkinListingSummaryOut]
     family: list[SkinFamilyMemberOut]
     #: Buying is switched on (``skins_buy_enabled``): show the buy panel.
     buy_enabled: bool
+    #: The skin's collection («The Phoenix Collection»), from the daily import.
+    collection: str | None = None
+    #: The cases it drops from.
+    crates: list[SkinCrateOut] = []
+    #: Valve's description, English only (the import's source has no Russian or Uzbek).
+    description: str | None = None
 
 
 class SkinStickerOut(BaseModel):

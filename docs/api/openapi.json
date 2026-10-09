@@ -7339,8 +7339,34 @@
         "title": "SellItemOut",
         "type": "object"
       },
+      "SkinCrateOut": {
+        "description": "A case the skin drops from.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          }
+        },
+        "required": [
+          "name",
+          "slug"
+        ],
+        "title": "SkinCrateOut",
+        "type": "object"
+      },
       "SkinDetailOut": {
-        "description": "The item page: the card plus its cheapest listings and its family.",
+        "description": "The item page: the card plus its cheapest listings, its family and its lore.",
         "properties": {
           "buy_enabled": {
             "title": "Buy Enabled",
@@ -7357,9 +7383,39 @@
             "title": "Cheapest",
             "type": "array"
           },
+          "collection": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection"
+          },
           "count": {
             "title": "Count",
             "type": "integer"
+          },
+          "crates": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SkinCrateOut"
+            },
+            "title": "Crates",
+            "type": "array"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
           },
           "discount_percent": {
             "anyOf": [
