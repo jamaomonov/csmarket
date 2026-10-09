@@ -136,10 +136,7 @@
   flex-wrap: wrap;
 }
 .lp .fl-logos .pay-logo {
-  height: 34px;
-}
-.lp .fl-logos .pay-logo:not(.on) {
-  opacity: 0.8;
+  background: var(--surface);
 }
 .lp .fl-due {
   display: grid;
@@ -423,14 +420,13 @@
     flex-wrap: nowrap;
   }
   .lp .fl-logos .pay-logo {
-    height: 30px;
-    padding: 0 8px;
+    gap: 6px;
+    padding: 0 9px 0 5px;
+    font-size: 12px;
   }
   .lp .fl-logos .pay-logo img {
-    height: 14px;
-  }
-  .lp .fl-logos .pay-logo img[src*="payme"] {
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
   .lp .fl-offer-b {
     grid-template-columns: 52px minmax(0, 1fr);

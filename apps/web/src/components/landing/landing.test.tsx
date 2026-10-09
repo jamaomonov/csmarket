@@ -85,11 +85,11 @@ describe("landing", () => {
     expect(container.querySelector(".wall")).toBeNull();
   });
 
-  it("payments show the providers' logos, no balance chip", async () => {
-    render(await Hero({ items: [], locale: "ru" }));
-    for (const name of ["Click", "Payme", "Uzum"]) {
-      expect(screen.getByRole("img", { name })).toBeInTheDocument();
-    }
+  it("payments show the providers' app icons and names, no balance chip", async () => {
+    const { container } = render(await Hero({ items: [], locale: "ru" }));
+    const logos = [...container.querySelectorAll(".paywith .pay-logo")];
+    expect(logos.map((l) => l.textContent)).toEqual(["Click", "Payme", "Uzum"]);
+    expect(logos[1]?.querySelector("img")).toHaveAttribute("src", "/pay/payme.png");
     expect(screen.queryByText("баланс")).toBeNull();
   });
 
@@ -98,7 +98,7 @@ describe("landing", () => {
     expect(container.querySelector(".fl-skin")).toHaveTextContent("Fade");
     expect(container.querySelector(".fl-due")).toHaveTextContent("21 312 000");
     expect(container.querySelector(".fl-offer")).toHaveTextContent(knife.name);
-    expect(container.querySelector(".pay-logo.on img")).toHaveAttribute("alt", "Click");
+    expect(container.querySelector(".pay-logo.on")).toHaveTextContent("Click");
   });
 
   it("the sell demo sums the three picked skins", async () => {

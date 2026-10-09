@@ -3,25 +3,24 @@
 .lp .pay-logo {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 9px;
-  background: #fff;
-  box-shadow: 0 0 0 1px rgb(255 255 255/0.08);
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px 0 7px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
 }
 .lp .pay-logo img {
-  height: 20px;
-  width: auto;
-}
-.lp .pay-logo img[src*="payme"] {
-  height: 30px;
-  margin-inline: -4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
 }
 .lp .pay-logo.on {
-  box-shadow:
-    0 0 0 2px var(--bg),
-    0 0 0 4px var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(75 243 100/0.15);
 }
 .lp .paywith {
   display: flex;
@@ -33,14 +32,12 @@
   font-size: 13px;
 }
 .lp .foot-pay .pay-logo {
-  height: 30px;
-  padding: 0 10px;
+  height: 32px;
+  font-size: 13px;
 }
 .lp .foot-pay .pay-logo img {
-  height: 16px;
-}
-.lp .foot-pay .pay-logo img[src*="payme"] {
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .lp .wall {
@@ -278,14 +275,13 @@
     display: none;
   }
   .lp .pay-logo {
-    height: 32px;
-    padding: 0 10px;
+    height: 34px;
+    padding: 0 12px 0 6px;
+    font-size: 13px;
   }
   .lp .pay-logo img {
-    height: 17px;
-  }
-  .lp .pay-logo img[src*="payme"] {
-    height: 26px;
+    width: 22px;
+    height: 22px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
