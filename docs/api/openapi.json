@@ -3213,6 +3213,17 @@
       "AdminUserCard": {
         "description": "Everything the user page shows: the account, its balance, the latest 20 of each.",
         "properties": {
+          "api_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Id"
+          },
           "balance_usd": {
             "title": "Balance Usd",
             "type": "string"
@@ -3435,6 +3446,25 @@
         "title": "AdminUserDetail",
         "type": "object"
       },
+      "AdminUserKeyBrief": {
+        "description": "A user's live API key, as the users list shows it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pricing_profile"
+        ],
+        "title": "AdminUserKeyBrief",
+        "type": "object"
+      },
       "AdminUserOut": {
         "description": "A user as the admin lists name them.",
         "properties": {
@@ -3464,6 +3494,16 @@
       "AdminUserRow": {
         "description": "One line of the users list.",
         "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserKeyBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "avatar_url": {
             "anyOf": [
               {
@@ -11808,7 +11848,7 @@
     },
     "/api/v1/admin/users": {
       "get": {
-        "description": "Newest first; ``q`` = part of the display name or an exact 17-digit Steam ID.",
+        "description": "Newest first; ``q`` = part of the display name or an exact 17-digit Steam ID;\n``has_api_key`` keeps users with (``true``) or without (``false``) a live API key.",
         "operationId": "list_users_api_v1_admin_users_get",
         "parameters": [
           {
@@ -11855,6 +11895,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_api_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Api Key"
             }
           },
           {

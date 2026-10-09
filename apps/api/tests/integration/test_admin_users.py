@@ -10,6 +10,7 @@ from decimal import Decimal
 import pytest
 from csmarket.core import clock
 from csmarket.modules.admin.models import AdminAuditLog
+from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.users.api import set_roles
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import admin_adjust
@@ -120,6 +121,7 @@ async def test_list_searches_by_name_and_by_exact_steam_id(
         "banned_at",
         "created_at",
         "balance_uzs",
+        "api_key",
     }
 
 
@@ -596,3 +598,52 @@ async def test_openapi_marks_the_idempotency_key_required_on_every_write(
         params = spec["paths"][path]["post"]["parameters"]
         (header,) = [p for p in params if p["name"] == "Idempotency-Key"]
         assert (header["in"], header["required"]) == ("header", True), path
+
+
+# --- API keys on the users list and card (admin UX review §3.12) -------------------------
+
+
+async def _key_for(db: AsyncSession, user: User, *, revoked: bool = False) -> ApiKey:
+    key = ApiKey(
+        user_id=user.id,
+        token_hash=uuid.uuid4().hex + uuid.uuid4().hex,
+        pricing_profile="cost",
+        revoked_at=clock.now() if revoked else None,
+    )
+    db.add(key)
+    await db.commit()
+    return key
+
+
+async def test_list_shows_the_live_key_and_filters_by_it(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    holder = await _named(db_session, "KeyHolder")
+    key = await _key_for(db_session, holder)
+    other = await _named(db_session, "NoKey")
+    revoked = await _named(db_session, "OldKey")
+    await _key_for(db_session, revoked, revoked=True)
+    rows = (await integration_client.get("/api/v1/admin/users", headers=h)).json()["items"]
+    by_id = {r["id"]: r for r in rows}
+    assert by_id[holder.id]["api_key"] == {"id": key.id, "pricing_profile": "cost"}
+    assert by_id[other.id]["api_key"] is None
+    assert by_id[revoked.id]["api_key"] is None
+    only = (
+        await integration_client.get(
+            "/api/v1/admin/users", params={"has_api_key": "true"}, headers=h
+        )
+    ).json()["items"]
+    assert [r["id"] for r in only] == [holder.id]
+
+
+async def test_card_names_the_newest_key_even_revoked(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    user = await _named(db_session, "Revoker")
+    none = (await integration_client.get(f"/api/v1/admin/users/{user.id}", headers=h)).json()
+    assert none["api_key_id"] is None
+    key = await _key_for(db_session, user, revoked=True)
+    card = (await integration_client.get(f"/api/v1/admin/users/{user.id}", headers=h)).json()
+    assert card["api_key_id"] == key.id
