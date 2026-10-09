@@ -12,6 +12,16 @@ prerenders some pages at build time and would need a rebuild.
 `admin.`, `api.` and `grafana.` always send `X-Robots-Tag: noindex, nofollow`, whatever the
 switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
 
+## What gets indexed
+
+- `/`, `/uz`, `/en` — the SEO landing (spec `2026-10-09-seo-landing-design.md`): the geo H1,
+  FAQ (`FAQPage`), `Organization` and `WebSite` (`SearchAction` → `/market?q=`) JSON-LD.
+- `/market` (+ `/uz/market`, `/en/market`) — the catalogue; filtered views are `noindex, follow`.
+  Old filtered root URLs (`/?category=knives`) answer **301** to `/market` with the query kept.
+- `/item/…`, `/category/…`, `/weapon/…` — unchanged.
+- Before opening: add csmarket.uz to Google Search Console and Yandex Webmaster (region
+  Uzbekistan) and submit `https://csmarket.uz/sitemap.xml`.
+
 ## Open indexing (only on the owner's word)
 
 ```bash

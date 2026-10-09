@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("catalogue: chips with a model menu, cards in the new style", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/market");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Скины КС2 (CS2)");
   // The heading is server-rendered: wait for hydration before using a client menu.
   await page.waitForLoadState("networkidle");
@@ -21,16 +21,16 @@ test("catalogue: chips with a model menu, cards in the new style", async ({ page
 
 test("language switch keeps the page and the filters", async ({ page, isMobile }) => {
   test.skip(isMobile, "desktop switcher");
-  await page.goto("/?category=knives");
+  await page.goto("/market?category=knives");
   await page.waitForLoadState("networkidle");
   await page.getByRole("button", { name: /Язык/ }).click();
   await page.getByRole("menuitem", { name: "English" }).click();
-  await expect(page).toHaveURL(/\/en\/?\?category=knives/);
+  await expect(page).toHaveURL(/\/en\/market\?category=knives/);
 });
 
 test("no horizontal overflow at 390", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/market");
   const overflow = await page.evaluate(
     () => document.documentElement.scrollWidth - window.innerWidth,
   );
@@ -43,7 +43,7 @@ test("the catalogue hydrates without a mismatch", async ({ page }) => {
   page.on("console", (msg) => {
     if (msg.type() === "error") errors.push(msg.text());
   });
-  await page.goto("/");
+  await page.goto("/market");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await page.waitForLoadState("networkidle");
   expect(errors.filter((e) => /hydrat/i.test(e))).toEqual([]);
@@ -52,7 +52,7 @@ test("the catalogue hydrates without a mismatch", async ({ page }) => {
 test("categories fit one row at 1440; «Другое» lists the rest", async ({ page, isMobile }) => {
   test.skip(isMobile, "desktop row");
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto("/market");
   await page.waitForLoadState("networkidle");
   const row = page.getByRole("link", { name: "Все", exact: true }).locator("..");
   const spare = await row.evaluate((el) => el.clientWidth - el.scrollWidth);
