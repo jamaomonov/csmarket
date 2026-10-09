@@ -652,17 +652,17 @@
     },
     "stats": {
       "label": "csmarket raqamlarda",
-      "skins": "katalogdagi skinlar",
-      "payments": "soʻmda toʻlash usuli",
-      "from": "{price} dan",
-      "perSkin": "soʻm — eng arzon skin",
-      "support": "Telegram’da yordam"
+      "skins": "ta skin katalogda",
+      "payments": "ta toʻlov usuli soʻmda",
+      "from": "{price}",
+      "perSkin": "soʻmdan boshlab skinlar",
+      "support": "sayt uch tilda"
     },
     "cats": {
       "kicker": "Katalog",
       "title": "CS2 da nima sotib olish mumkin",
       "all": "Butun katalog",
-      "from": "{price} dan"
+      "from": "{price}dan"
     },
     "buyPanel": {
       "kicker": "Xarid",
@@ -691,7 +691,7 @@
     "why": {
       "kicker": "Nega csmarket",
       "title": "Oʻzbekistonlik oʻyinchilar uchun",
-      "lead": "Odatiy usulda toʻlang, skinni Steam’da oling va bizga ona tilingizda yozing.",
+      "lead": "Odatiy usulda toʻlang, skinni Steam’da oling va saytdan ona tilingizda foydalaning.",
       "telegram": "Telegram’da yozish",
       "g1": "Soʻmda toʻlov",
       "g1d": "Click, Payme, Uzum yoki sayt balansi. Narx soʻmda — kursni hisoblash shart emas.",
@@ -699,8 +699,8 @@
       "g2d": "Uzcard yoki Humo kartasi va siz allaqachon ishlatadigan ilova yetarli.",
       "g3": "Almashuv boʻlmasa — pul balansda",
       "g3d": "Pul oʻzi qaytadi, ariza yozish shart emas. Uni darhol boshqa skinga sarflash mumkin.",
-      "g4": "Rus va oʻzbek tillarida yordam",
-      "g4d": "Telegram’ga yozing — bot emas, haqiqiy inson javob beradi."
+      "g4": "Sayt oʻzbek va rus tillarida",
+      "g4d": "Katalog, toʻlov va maslahatlar — uch tilda: oʻzbek, rus va ingliz."
     },
     "faq": {
       "kicker": "Savollar",
@@ -740,7 +740,7 @@
     "about": {
       "kicker": "csmarket haqida",
       "title": "Oʻzbekistonda CS2 skinlari doʻkoni",
-      "intro": "csmarket.uz — Counter-Strike 2 uchun skinlar marketi, Oʻzbekistonlik oʻyinchilar uchun yaratilgan: narxlar soʻmda, mahalliy toʻlov usullari va rus hamda oʻzbek tillarida yordam.",
+      "intro": "csmarket.uz — Counter-Strike 2 uchun skinlar marketi, Oʻzbekistonlik oʻyinchilar uchun yaratilgan: narxlar soʻmda, mahalliy toʻlov usullari va oʻzbek hamda rus tillaridagi sayt.",
       "readMore": "Toʻliq oʻqish",
       "blocks": [
         {
@@ -772,8 +772,8 @@
           "p": "Keraksiz skinlarni bizga sotishingiz mumkin. Steam orqali kiring, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard yoxud Humo kartasiga keladi — qaysi biri qulay boʻlsa. Balansni darhol yangi skinlarga sarflash mumkin: pichoqni yangilash, inventarni bir rangda yigʻish yoki sevimli qurolingizga qoʻlqop olish."
         },
         {
-          "h": "Rus va oʻzbek tillarida yordam",
-          "p": "Agar biror narsa notoʻgʻri ketsa, Telegram’da yozing — rus va oʻzbek tillarida javob beramiz. Sayt uch tilda ishlaydi: rus, oʻzbek va ingliz. csmarket — Toshkent, Samarqand, Buxoro, Namangan, Andijon, Fargʻona yoki Oʻzbekistonning istalgan boshqa shahrida CS2 skinlarini sotib olmoqchi boʻlganlar uchun."
+          "h": "Sayt oʻzbek, rus va ingliz tillarida",
+          "p": "Sayt uch tilda ishlaydi: oʻzbek, rus va ingliz. csmarket — Toshkent, Samarqand, Buxoro, Namangan, Andijon, Fargʻona yoki Oʻzbekistonning istalgan boshqa shahrida CS2 skinlarini sotib olmoqchi boʻlganlar uchun."
         }
       ]
     },

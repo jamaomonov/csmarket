@@ -656,7 +656,7 @@
       "payments": "ways to pay in soʻm",
       "from": "from {price}",
       "perSkin": "soʻm per skin",
-      "support": "support in Telegram"
+      "support": "the site in three languages"
     },
     "cats": {
       "kicker": "Catalogue",
@@ -691,7 +691,7 @@
     "why": {
       "kicker": "Why csmarket",
       "title": "Made for players in Uzbekistan",
-      "lead": "Pay the way you are used to, get the skin in Steam and write to us in your language.",
+      "lead": "Pay the way you are used to, get the skin in Steam and use the site in your own language.",
       "telegram": "Message us on Telegram",
       "g1": "Pay in soʻm",
       "g1d": "Click, Payme, Uzum or the site balance. Prices are in soʻm — no exchange rate maths.",
@@ -699,8 +699,8 @@
       "g2d": "A Uzcard or Humo card and the app you already use are enough.",
       "g3": "Trade failed? Money on your balance",
       "g3d": "The refund arrives by itself, no requests. Spend it on another skin right away.",
-      "g4": "Support in Russian and Uzbek",
-      "g4d": "Write on Telegram — a real person answers, not a bot."
+      "g4": "The site in Russian and Uzbek",
+      "g4d": "Catalogue, payment and hints in three languages: Russian, Uzbek and English."
     },
     "faq": {
       "kicker": "Questions",
@@ -740,7 +740,7 @@
     "about": {
       "kicker": "About csmarket",
       "title": "A CS2 skins shop in Uzbekistan",
-      "intro": "csmarket.uz is a Counter-Strike 2 skins market made for players in Uzbekistan: prices in soʻm, local payment methods and support in Russian and Uzbek.",
+      "intro": "csmarket.uz is a Counter-Strike 2 skins market made for players in Uzbekistan: prices in soʻm, local payment methods and a site in Russian and Uzbek.",
       "readMore": "Read more",
       "blocks": [
         {
@@ -772,8 +772,8 @@
           "p": "You can sell us the skins you no longer need. Sign in with Steam, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard or Humo card — whichever suits you. Spend the balance on new skins right away: upgrade your knife, build a one-colour inventory or get gloves for your favourite weapon."
         },
         {
-          "h": "Support in Russian and Uzbek",
-          "p": "If something goes wrong, write to us on Telegram — we answer in Russian and Uzbek. The site works in three languages: Russian, Uzbek and English. csmarket is for everyone who wants to buy CS2 skins in Tashkent, Samarkand, Bukhara, Namangan, Andijan, Fergana or any other city of Uzbekistan."
+          "h": "The site in Russian, Uzbek and English",
+          "p": "The site works in three languages: Russian, Uzbek and English. csmarket is for everyone who wants to buy CS2 skins in Tashkent, Samarkand, Bukhara, Namangan, Andijan, Fergana or any other city of Uzbekistan."
         }
       ]
     },

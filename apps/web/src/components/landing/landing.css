@@ -387,7 +387,7 @@
   width: 72%;
   translate: -50% -50%;
   filter: drop-shadow(0 30px 40px rgb(0 0 0/0.55));
-  animation: float 7s ease-in-out infinite;
+  animation: lp-float 7s ease-in-out infinite;
   transition:
     opacity 0.35s var(--ease),
     transform 0.5s var(--ease);
@@ -396,7 +396,7 @@
   opacity: 0;
   transform: scale(0.94) rotate(-3deg);
 }
-@keyframes float {
+@keyframes lp-float {
   0%,
   100% {
     translate: -50% -50%;
@@ -491,7 +491,7 @@
   backdrop-filter: blur(10px);
   border: 1px solid var(--border-strong);
   box-shadow: 0 20px 40px -12px rgb(0 0 0/0.6);
-  animation: float2 8s ease-in-out infinite;
+  animation: lp-float2 8s ease-in-out infinite;
   z-index: 2;
 }
 .lp .toast-ic {
@@ -531,7 +531,7 @@
   height: 12px;
   stroke-width: 3;
 }
-@keyframes float2 {
+@keyframes lp-float2 {
   0%,
   100% {
     transform: translateY(0);
@@ -606,12 +606,12 @@
   background: var(--accent);
 }
 .lp .thumb.on i {
-  animation: prog 6s linear forwards;
+  animation: lp-prog 6s linear forwards;
 }
 .lp .paused .thumb.on i {
   animation-play-state: paused;
 }
-@keyframes prog {
+@keyframes lp-prog {
   to {
     width: 100%;
   }
@@ -809,9 +809,9 @@
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 0 rgb(75 243 100/0.6);
-  animation: pulse 2s infinite;
+  animation: lp-pulse 2s infinite;
 }
-@keyframes pulse {
+@keyframes lp-pulse {
   70% {
     box-shadow: 0 0 0 8px rgb(75 243 100/0);
   }
@@ -1868,25 +1868,6 @@
   }
   .lp {
     font-size: 14px;
-  }
-  .lp .hdr .wrap {
-    height: 60px;
-    gap: 12px;
-  }
-  .lp .logo {
-    font-size: 21px;
-  }
-  .lp .lang span {
-    display: none;
-  }
-  .lp .lang {
-    padding: 0 10px;
-  }
-  .lp .hdr-r .btn-sm {
-    padding: 0 12px;
-  }
-  .lp .hdr-r .btn-sm .t-long {
-    display: none;
   }
   .lp .hero {
     padding: 36px 0 32px;

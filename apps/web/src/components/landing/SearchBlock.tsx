@@ -1,12 +1,17 @@
-/** A big search that submits to the market (a GET form: works without JS) and quick chips. */
+/**
+ * A big search that submits to the market (a GET form: works without JS) and quick chips: weapons
+ * link to their indexable `/weapon/<slug>` pages, finishes to a market search.
+ */
 import { getTranslations } from "next-intl/server";
 
 import { SearchIcon } from "./Icons";
 
 import { getPathname, Link } from "@/i18n/navigation";
-import { MARKET } from "@/lib/paths";
+import { MARKET, weaponPath } from "@/lib/paths";
+import { weaponSlug } from "@/lib/skin-landing";
 
-const QUICK = ["AK-47", "AWP", "Karambit", "Butterfly", "Doppler", "Printstream"];
+const WEAPONS = ["AK-47", "AWP", "M4A1-S", "Desert Eagle", "Karambit", "Butterfly Knife"];
+const FINISHES = ["Doppler", "Printstream"];
 
 export async function SearchBlock({ locale }: { locale: string }) {
   const t = await getTranslations({ locale, namespace: "web.landing.search" });
@@ -31,7 +36,12 @@ export async function SearchBlock({ locale }: { locale: string }) {
       </form>
       <div className="quick">
         <small>{t("often")}</small>
-        {QUICK.map((q) => (
+        {WEAPONS.map((w) => (
+          <Link key={w} className="chip" href={weaponPath(weaponSlug(w))}>
+            {w}
+          </Link>
+        ))}
+        {FINISHES.map((q) => (
           <Link key={q} className="chip" href={{ pathname: MARKET, query: { q } }}>
             {q}
           </Link>

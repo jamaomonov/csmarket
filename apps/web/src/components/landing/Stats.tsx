@@ -37,7 +37,7 @@ export async function Stats({ stats, locale }: { stats: LandingStats; locale: st
             </div>
           )}
           <div className="stat">
-            <b>RU · UZ</b>
+            <b>RU · UZ · EN</b>
             <span>{t("support")}</span>
           </div>
         </div>

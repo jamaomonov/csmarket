@@ -19,15 +19,7 @@ import { SearchBlock } from "@/components/landing/SearchBlock";
 import { Stats } from "@/components/landing/Stats";
 import { WhyUs } from "@/components/landing/WhyUs";
 import { routing } from "@/i18n/routing";
-import {
-  getCategoryTiles,
-  getHero,
-  getPopular,
-  getStats,
-  type PopularTab,
-  POPULAR_TABS,
-  socialUrls,
-} from "@/lib/landing";
+import { getLandingData, socialUrls } from "@/lib/landing";
 import { HOME, MARKET } from "@/lib/paths";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
 import { SITE } from "@/lib/site";
@@ -37,8 +29,8 @@ interface Props {
 }
 
 /**
- * Rendered per request (never prerendered at build, where no API answers); the catalogue reads
- * are cached for 5 minutes in `lib/landing.ts`, so a render is cheap.
+ * Rendered per request (never prerendered at build, where no API answers); its data is one
+ * 5-minute cache entry (`getLandingData`), so a render is cheap.
  */
 export const dynamic = "force-dynamic";
 
@@ -100,16 +92,7 @@ export default async function LandingPage({ params }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "web.landing.meta" });
-  const [hero, tiles, stats, ...popular] = await Promise.all([
-    getHero(),
-    getCategoryTiles(),
-    getStats(),
-    ...POPULAR_TABS.map((tab) => getPopular(tab)),
-  ]);
-  const lists = Object.fromEntries(POPULAR_TABS.map((tab, i) => [tab, popular[i] ?? []])) as Record<
-    PopularTab,
-    (typeof popular)[number]
-  >; // one list per tab, in order
+  const { hero, tiles, stats, popular: lists } = await getLandingData();
 
   return (
     <div className="lp" id="lp">

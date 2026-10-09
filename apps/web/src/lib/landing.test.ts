@@ -1,12 +1,24 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const cached = vi.hoisted(() => [] as (() => Promise<unknown>)[]);
+vi.mock("next/cache", () => ({
+  // Pass-through that keeps the function handed to the cache: what it throws is never stored.
+  unstable_cache: (fn: () => Promise<unknown>) => {
+    cached.push(fn);
+    return fn;
+  },
+}));
+
 import {
   getCategoryTiles,
   getHero,
+  getLandingData,
   getPopular,
   getStats,
   HERO_QUERIES,
+  loadLanding,
   POPULAR_SIZE,
+  POPULAR_TABS,
 } from "./landing";
 
 const item = (slug: string, category = "rifles", price = "1000") => ({
@@ -112,5 +124,21 @@ describe("landing data", () => {
       ),
     );
     expect(await getStats()).toEqual({ inStock: 35, fromUzs: "1200" });
+  });
+
+  it("loads every block in one pass, one list per popular tab", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 503 })));
+    const data = await loadLanding();
+    expect(Object.keys(data.popular)).toEqual(POPULAR_TABS);
+    expect(data.hero).toEqual([]);
+    expect(data.stats).toEqual({ inStock: 0, fromUzs: null });
+  });
+
+  it("an outage is served but never cached", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 503 })));
+    await expect(cached[0]?.()).rejects.toThrow();
+    const data = await getLandingData();
+    expect(data.stats.inStock).toBe(0);
+    expect(data.tiles.every((t) => t.item === null)).toBe(true);
   });
 });

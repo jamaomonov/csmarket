@@ -85,6 +85,15 @@ describe("landing", () => {
     expect(within(form).getByRole("searchbox")).toHaveAttribute("name", "q");
   });
 
+  it("quick chips link weapons to their indexable pages", async () => {
+    render(await SearchBlock({ locale: "ru" }));
+    expect(screen.getByRole("link", { name: "AK-47" })).toHaveAttribute("href", "/weapon/ak-47");
+    expect(screen.getByRole("link", { name: "Butterfly Knife" })).toHaveAttribute(
+      "href",
+      "/weapon/butterfly-knife",
+    );
+  });
+
   it("the FAQ JSON-LD lists exactly the visible questions", async () => {
     const { container } = render(await Faq({ locale: "ru" }));
     const questions = [...container.querySelectorAll("summary")].map((s) => s.textContent);
@@ -96,6 +105,20 @@ describe("landing", () => {
     expect(ld["@type"]).toBe("FAQPage");
     expect(ld.mainEntity.map((q) => q.name)).toEqual(questions);
     expect(questions).toHaveLength(7);
+  });
+
+  it("the FAQ promises Telegram only once the link is set", async () => {
+    vi.stubEnv("CSMARKET_TELEGRAM_URL", "");
+    const { container, unmount } = render(await Faq({ locale: "ru" }));
+    expect(container).not.toHaveTextContent("Telegram");
+    unmount();
+    vi.stubEnv("CSMARKET_TELEGRAM_URL", "https://t.me/csmarket_uz");
+    render(await Faq({ locale: "ru" }));
+    expect(screen.getByRole("link", { name: /Telegram/ })).toHaveAttribute(
+      "href",
+      "https://t.me/csmarket_uz",
+    );
+    vi.unstubAllEnvs();
   });
 
   it("faqJsonLd maps questions and answers", () => {

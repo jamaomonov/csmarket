@@ -4,6 +4,8 @@
  * is cached like the market's and never throws: an API outage renders an empty block, not a
  * broken landing.
  */
+import { unstable_cache } from "next/cache";
+
 import type { SkinFacets, SkinItem, SkinsPage } from "@csmarket/utils/skins";
 
 import { apiGet } from "@/lib/server-api";
@@ -158,6 +160,49 @@ export async function getStats(): Promise<LandingStats> {
   const [f, cheapest] = await Promise.all([facets(), catalog({ sort: "price" }, 1)]);
   const inStock = f?.categories.reduce((sum, c) => sum + c.count, 0) ?? 0;
   return { inStock, fromUzs: cheapest[0]?.price_uzs ?? null };
+}
+
+export interface LandingData {
+  hero: SkinItem[];
+  tiles: CategoryTile[];
+  stats: LandingStats;
+  popular: Record<PopularTab, SkinItem[]>;
+}
+
+/** Every block of the landing in one pass (uncached; the page reads `getLandingData`). */
+export async function loadLanding(): Promise<LandingData> {
+  const [hero, tiles, stats, ...lists] = await Promise.all([
+    getHero(),
+    getCategoryTiles(),
+    getStats(),
+    ...POPULAR_TABS.map((tab) => getPopular(tab)),
+  ]);
+  const popular = Object.fromEntries(POPULAR_TABS.map((tab, i) => [tab, lists[i] ?? []]));
+  return { hero, tiles, stats, popular: popular as Record<PopularTab, SkinItem[]> }; // every tab set
+}
+
+/** One cache entry; throws on an outage (no facets) so an empty landing is never stored. */
+const cachedLanding = unstable_cache(
+  async () => {
+    const data = await loadLanding();
+    if (data.stats.inStock === 0) throw new Error("landing: catalogue unavailable");
+    return data;
+  },
+  ["landing-data"],
+  { revalidate: REVALIDATE, tags: ["skins"] },
+);
+
+/**
+ * The landing's data as one cache entry for {@link REVALIDATE} seconds: a warm render reads one
+ * entry instead of some thirty catalogue fetches. During an outage it renders the empty blocks
+ * uncached, so the landing fills again as soon as the API answers.
+ */
+export async function getLandingData(): Promise<LandingData> {
+  try {
+    return await cachedLanding();
+  } catch {
+    return loadLanding();
+  }
 }
 
 /**
