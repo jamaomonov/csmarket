@@ -159,3 +159,20 @@ export async function getStats(): Promise<LandingStats> {
   const inStock = f?.categories.reduce((sum, c) => sum + c.count, 0) ?? 0;
   return { inStock, fromUzs: cheapest[0]?.price_uzs ?? null };
 }
+
+/**
+ * The support channel, read on the server at request time from `CSMARKET_TELEGRAM_URL` (owner,
+ * 2026-10-09: «оставь пустым, позже дам»); empty hides its links.
+ */
+export function telegramUrl(): string {
+  const url = process.env.CSMARKET_TELEGRAM_URL ?? "";
+  return url.startsWith("https://") ? url : "";
+}
+
+/** Profiles for `Organization.sameAs`: `CSMARKET_SOCIAL_URLS`, comma-separated https URLs. */
+export function socialUrls(): string[] {
+  return (process.env.CSMARKET_SOCIAL_URLS ?? "")
+    .split(",")
+    .map((u) => u.trim())
+    .filter((u) => u.startsWith("https://"));
+}
