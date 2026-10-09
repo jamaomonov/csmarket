@@ -10,6 +10,19 @@ export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "skins.item.unhide": "Скин показан",
   "skins.alias.put": "Синоним сохранён",
   "skins.alias.delete": "Синоним удалён",
+  "skins.item.override": "Цена скина вручную",
+  "skins.pricing.save": "Наценки сохранены",
+  "wallet.adjust_usd": "Изменение USD-баланса",
+  "wallet.usd_switch": "USD-кошелёк вкл/выкл",
+  "orders.trade.resolve": "Заказ разобран",
+  "orders.refund": "Возврат по заказу",
+  "orders.buy.retry": "Повтор покупки",
+  "sales.payout.paid": "Выплата отмечена",
+  "sales.payout.reject": "Выплата отклонена",
+  "sales.settings.save": "Настройки выкупа",
+  "api_keys.tariff": "Тариф API-ключа",
+  "api_keys.limits": "Лимиты API-ключа",
+  "api_keys.revoke": "API-ключ отозван",
 };
 
 export function actionLabel(action: string): string {
@@ -20,6 +33,11 @@ export const TARGET_TYPE_LABELS: Readonly<Record<string, string>> = {
   user: "Пользователь",
   skin_item: "Скин",
   skin_alias: "Синоним",
+  order: "Заказ",
+  api_key: "API-ключ",
+  payout_request: "Выплата",
+  sale_settings: "Настройки выкупа",
+  skin_pricing_rules: "Наценки",
 };
 
 export function targetTypeLabel(type: string): string {
@@ -28,7 +46,19 @@ export function targetTypeLabel(type: string): string {
 
 /** Where a target has an admin page of its own; `null` for plain text. */
 export function targetPath(type: string, id: string): string | null {
-  return type === "user" ? `/users/${encodeURIComponent(id)}` : null;
+  const safe = encodeURIComponent(id);
+  switch (type) {
+    case "user":
+      return `/users/${safe}`;
+    case "order":
+      return `/orders/${safe}`;
+    case "api_key":
+      return `/api-keys/${safe}`;
+    case "payout_request":
+      return `/payouts/${safe}`;
+    default:
+      return null;
+  }
 }
 
 const PAYLOAD_KEYS: Readonly<Record<string, string>> = {
@@ -37,6 +67,11 @@ const PAYLOAD_KEYS: Readonly<Record<string, string>> = {
   slug: "slug",
   alias: "синоним",
   text: "значение",
+  from: "было",
+  to: "стало",
+  note: "комментарий",
+  enabled: "включён",
+  hidden: "скрыт",
 };
 
 const MAX_VALUE = 120;
