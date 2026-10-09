@@ -173,7 +173,54 @@ links LIS-SKINS delivered to that evening. One `custom_id` to quote is
 > that evening). What makes a link invalid for you: the account's settings, its trade
 > restrictions, a check of yours against Steam? How can we tell in advance?
 
-**Answer:** _pending — write it here when LIS-SKINS replies._
+**Answer (LIS-SKINS support, 2026-10-10):**
+
+- **Whose link may be used.** Buy only to the trade URL of the Steam account the LIS-SKINS
+  account was registered with; links of other accounts must not be used. This contradicts
+  their own API docs, where `POST /market/buy` is «Buy a skin(s) for a specific user … for any
+  user (you must specify the parameters from the user's Trade URL)» and the answer carries the
+  buyer's `steam_id`. It is also contrary to our deliveries to buyers' links (WPQ88AK6,
+  ESES40XP / `purchase_id` 68130816). **Business risk:** the account and its balance may be
+  restricted for third-party delivery. **Decision (owner, 2026-10-10):** support is
+  taken to be mistaken (the docs say «any user», and third-party deliveries went through);
+  LIS-SKINS stays on. Precautions: confirm with the API team in their Telegram
+  (@lis_skins_api, named in their docs) and keep the LIS-SKINS balance to a few days of buys.
+- **Their API Telegram channel (export read 2026-10-10)** says nothing against third-party
+  links. On 2024-09-05 they added changing a purchase's `partner` / `token` through
+  `/market/withdraw[-all]`, which only makes sense for deliveries to many links.
+- **A rule from that channel (2024-11-07):** an account that often does not take its skins
+  within a day has buying blocked until the end of that day. The threshold is not published.
+  For us, buyers who do not accept trades count against our account, which is one more reason
+  for the 24 h memory of refused links. If `market/buy` starts refusing everything for the rest
+  of a day, look for a run of returned or unaccepted purchases first.
+- **Their developers' chat (export read 2026-10-10)** contradicts the support answer.
+  - The chat's admin account was asked on 2026-04-18 whether the API may be used to give skins
+    to other people by their trade links. The answer: «Можно».
+  - On 2026-04-25 the same account wrote «Если хотите перепродавать скины — можете».
+- **A restriction looks like `skins_unavailable` on every lot.** One developer re-sent trades a
+  buyer never accepted. For over two days after that, every `market/buy` answered
+  `400 skins_unavailable` (2026-05-06). If every LIS-SKINS buy is «sold out» at once while the
+  lots are listed, suspect a restriction of our account, not stock.
+  - `LisskinsBuyFailures` fires on such a run.
+  - Look for unaccepted purchases first, and ask LIS-SKINS.
+- **An offer must be accepted within ~15–20 minutes and cannot be re-sent.** The same lot cannot
+  be bought again either (their answer to both: «нет»).
+- **Balance from skins sold on LIS-SKINS is frozen for buys to other accounts.** It answers
+  `insufficient_funds`; this guards against deposit → withdraw → rollback. Top LIS-SKINS up
+  with money, not with skin sales.
+- **`user_cant_trade`:** a buyer who changed their Steam nickname in the last ~2 hours gets it,
+  in line with Steam's limits below.
+- **What `invalid_trade_url` means:** they cannot say. Format, account settings, the Steam
+  token or an anti-fraud check all answer the same code, and a link cannot be checked through
+  the API before a purchase. Our answer to that is the 24 h memory of refused links.
+- **Steam's own limits a buyer may hit:**
+  - Steam Guard on for at least 15 days;
+  - the mobile authenticator on for at least 7 days;
+  - a public inventory;
+  - no profile change in the last 4 hours;
+  - temporary restrictions.
+
+  Steam shows the reason if one sends that account an ordinary trade offer.
 
 ## Attentions
 
