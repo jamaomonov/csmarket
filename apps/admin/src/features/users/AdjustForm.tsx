@@ -111,7 +111,8 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
     mutation.mutate({ ...draft, key: idem.keyFor(JSON.stringify({ userId, ...draft })) });
   };
 
-  const box = "border-border bg-surface space-y-4 rounded-lg border p-5";
+  // Rendered inside the card's dialog: no frame of its own.
+  const box = "space-y-4";
   if (draft !== null) {
     return (
       <div className={box} data-testid="adjust-confirm-step">

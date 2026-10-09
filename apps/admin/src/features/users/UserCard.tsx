@@ -23,6 +23,7 @@ import { type AdminOrderRow } from "../orders/api";
 import { OrdersTable } from "../orders/OrdersTable";
 
 import { DataTable } from "@/components/DataTable";
+import { Modal } from "@/components/Modal";
 import { Money } from "@/components/Money";
 import { MoreMenu } from "@/components/MoreMenu";
 import { PageHeader } from "@/components/PageHeader";
@@ -341,7 +342,9 @@ function CardBody({ card }: { card: AdminUserCard }) {
         />
       )}
       {panel === "adjust" && (
-        <AdjustForm userId={u.id} idem={adjustKey} onDone={changed} onClose={close} />
+        <Modal title="Изменить баланс" onClose={close} wide>
+          <AdjustForm userId={u.id} idem={adjustKey} onDone={changed} onClose={close} />
+        </Modal>
       )}
       {panel === "usd" && (
         <UsdSwitchDialog
