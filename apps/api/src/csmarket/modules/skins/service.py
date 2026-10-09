@@ -370,12 +370,28 @@ async def family(db: AsyncSession, item: SkinItem, *, categories: list[str]) -> 
     return list((await db.execute(stmt)).scalars())
 
 
+async def crate_slugs(
+    db: AsyncSession, names: list[str], *, categories: list[str]
+) -> dict[str, str]:
+    """The item-page slug of each named case we list (hidden or disabled ones left out)."""
+    if not names:
+        return {}
+    stmt = select(SkinItem.market_hash_name, SkinItem.slug).where(
+        *_visible(categories),
+        SkinItem.category == "cases",
+        SkinItem.phase == "",
+        SkinItem.market_hash_name.in_(names),
+    )
+    return {name: slug for name, slug in (await db.execute(stmt)).all()}
+
+
 __all__ = [
     "RARITY_TIER",
     "WEAPON_PRIORITY",
     "CatalogQuery",
     "Facets",
     "Sort",
+    "crate_slugs",
     "decode_cursor",
     "encode_cursor",
     "expand_aliases",

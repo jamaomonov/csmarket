@@ -10,6 +10,7 @@ import pytest
 import respx
 from csmarket.modules.skins.bymykel import (
     FILES,
+    GROUPED_FILE,
     SKINS_FILE,
     CatalogRow,
     dedupe,
@@ -76,7 +77,10 @@ async def test_changed_image_is_written_and_prices_and_hidden_survive(
 
 
 def _mock_upstream(router: respx.MockRouter) -> None:
-    """Every ByMykel file answers: the skins fixture, the agents fixture, empty lists else."""
+    """Every ByMykel file answers: the skins fixture, the agents fixture, the grouped skins
+    (collections, cases, descriptions), empty lists else."""
+    grouped = json.loads((FIXTURES / "bymykel_skins_grouped.json").read_text())
+    router.get(f"{BASE}/{GROUPED_FILE}.json").respond(200, json=grouped)
     for key in FILES:
         name = {SKINS_FILE: "bymykel_skins.json", "agents": "bymykel_agents.json"}.get(key)
         body = json.loads((FIXTURES / name).read_text()) if name else []
@@ -105,6 +109,7 @@ async def test_import_catalog_reads_every_file(db_engine) -> None:
 async def test_import_catalog_fails_on_an_upstream_error(db_engine) -> None:
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     with respx.mock() as router:
+        router.get(f"{BASE}/{GROUPED_FILE}.json").respond(200, json=[])
         router.get(f"{BASE}/{SKINS_FILE}.json").respond(503)
         async with httpx.AsyncClient() as http:
             with pytest.raises(httpx.HTTPStatusError):
@@ -122,3 +127,25 @@ async def test_reimport_keeps_hidden_and_prices(db_session: AsyncSession, db_eng
     await db_session.refresh(item)
     assert item.hidden is True
     assert item.min_auto_units == 12_345
+
+
+async def test_import_stores_collection_cases_and_description(db_engine) -> None:
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    await _import_fixture(factory)
+    async with factory() as db:
+        ak = (
+            await db.execute(select(SkinItem).where(SkinItem.slug == "ak-47-redline-field-tested"))
+        ).scalar_one()
+    assert ak.collection == "The Phoenix Collection"
+    assert ak.crates == ["Operation Phoenix Weapon Case"]
+    assert ak.description is not None
+    assert ak.description.endswith("push it to the limit")
+
+
+async def test_an_unavailable_grouped_file_stops_the_import(db_engine) -> None:
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    with respx.mock() as router:
+        router.get(f"{BASE}/{GROUPED_FILE}.json").respond(503)
+        async with httpx.AsyncClient() as http:
+            with pytest.raises(httpx.HTTPStatusError):
+                await import_catalog(factory, base_url=BASE, http=http)

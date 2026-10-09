@@ -7,7 +7,14 @@ import json
 from decimal import Decimal
 from pathlib import Path
 
-from csmarket.modules.skins.bymykel import CatalogRow, dedupe, rows_from_file, rows_from_skins
+from csmarket.modules.skins.bymykel import (
+    CatalogRow,
+    SkinLore,
+    dedupe,
+    lore_from_grouped,
+    rows_from_file,
+    rows_from_skins,
+)
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "skins"
 
@@ -78,3 +85,37 @@ def test_stickers_and_charms_keep_their_def_index_for_inspect_links() -> None:
     assert [r.def_index for r in rows_from_file("stickers", [sticker])] == [1]
     assert [r.def_index for r in rows_from_file("keychains", [charm])] == [1]
     assert [r.def_index for r in rows_from_file("agents", [agent])] == [None]
+
+
+def test_grouped_skins_give_collection_cases_and_plain_description() -> None:
+    lore = lore_from_grouped(_load("bymykel_skins_grouped.json"))
+    ak = lore[("AK-47", "Redline")]
+    assert ak.collection == "The Phoenix Collection"
+    assert ak.crates == ("Operation Phoenix Weapon Case",)
+    # ByMykel's escaped newlines become real ones; the italic tags go.
+    assert ak.description == (
+        "Powerful and reliable, the AK-47 is one of the most popular assault rifles in the "
+        "world.\n\nNever be afraid to push it to the limit"
+    )
+    knife = lore[("Karambit", "Doppler")]
+    assert (knife.collection, knife.crates) == (None, ("Chroma Case", "Chroma 2 Case"))
+    assert knife.description is not None
+    assert knife.description.startswith("With its curved")
+    # A vanilla knife: no pattern (skin ``None``), the ★ dropped from the weapon, and odd
+    # fields (no collections, a non-list of cases, an empty description) read as nothing.
+    assert lore[("Bayonet", None)] == SkinLore(collection=None, crates=(), description=None)
+    assert len(lore) == 3
+
+
+def test_skin_rows_take_their_lore_every_wear_and_variant() -> None:
+    lore = lore_from_grouped(_load("bymykel_skins_grouped.json"))
+    rows = {r.slug: r for r in rows_from_skins(_load("bymykel_skins.json"), lore)}
+    for slug in ("ak-47-redline-field-tested", "stattrak-ak-47-redline-field-tested"):
+        assert rows[slug].collection == "The Phoenix Collection"
+        assert rows[slug].crates == ("Operation Phoenix Weapon Case",)
+    assert rows["karambit-doppler-factory-new-phase-2"].crates == ("Chroma Case", "Chroma 2 Case")
+
+
+def test_without_lore_a_row_has_none() -> None:
+    row = rows_from_skins(_load("bymykel_skins.json"))[0]
+    assert (row.collection, row.crates, row.description) == (None, (), None)

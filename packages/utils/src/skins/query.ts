@@ -82,9 +82,20 @@ export interface SkinFamilyMember {
   price_uzs: string | null;
   count: number;
 }
+/** A case the skin drops from; `slug` links to its item page when we list it. */
+export interface SkinCrate {
+  name: string;
+  slug: string | null;
+}
 export interface SkinDetail extends SkinItem {
   cheapest: SkinListingSummary[];
   family: SkinFamilyMember[];
+  /** The skin's collection («The Phoenix Collection»). */
+  collection: string | null;
+  /** The cases it drops from. */
+  crates: SkinCrate[];
+  /** Valve's description, English only. */
+  description: string | null;
   /** Buying is switched on: the item page shows the buy panel. */
   buy_enabled: boolean;
 }

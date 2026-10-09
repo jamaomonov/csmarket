@@ -1,0 +1,82 @@
+[
+  {
+    "id": "skin-91a429af4a60",
+    "name": "AK-47 | Redline",
+    "description": "Powerful and reliable, the AK-47 is one of the most popular assault rifles in the world.\\n\\n<i>Never be afraid to push it to the limit</i>",
+    "weapon": {
+      "id": "weapon_ak47",
+      "name": "AK-47"
+    },
+    "pattern": {
+      "id": "cu_ak47_cobra",
+      "name": "Redline"
+    },
+    "collections": [
+      {
+        "id": "collection-set-community-2",
+        "name": "The Phoenix Collection"
+      }
+    ],
+    "crates": [
+      {
+        "id": "crate-4011",
+        "name": "Operation Phoenix Weapon Case"
+      }
+    ]
+  },
+  {
+    "id": "skin-karambit-doppler",
+    "name": "\u2605 Karambit | Doppler",
+    "description": "With its curved blade mimicking a tiger's claw, the karambit was developed as part of Indonesian martial arts.",
+    "weapon": {
+      "id": "weapon_knife_karambit",
+      "name": "Karambit"
+    },
+    "pattern": {
+      "id": "am_doppler_phase2",
+      "name": "Doppler"
+    },
+    "collections": [],
+    "crates": [
+      {
+        "id": "crate-4061",
+        "name": "Chroma Case"
+      },
+      {
+        "id": "crate-4089",
+        "name": "Chroma 2 Case"
+      }
+    ]
+  },
+  {
+    "id": "skin-karambit-doppler-2",
+    "name": "\u2605 Karambit | Doppler",
+    "description": "A second grouped entry for another phase: the first one wins.",
+    "weapon": {
+      "id": "weapon_knife_karambit",
+      "name": "Karambit"
+    },
+    "pattern": {
+      "id": "am_doppler_phase3",
+      "name": "Doppler"
+    },
+    "collections": [],
+    "crates": []
+  },
+  {
+    "id": "skin-bayonet",
+    "name": "\u2605 Bayonet",
+    "description": "<i></i>",
+    "weapon": {
+      "id": "weapon_bayonet",
+      "name": "\u2605 Bayonet"
+    },
+    "pattern": null,
+    "collections": null,
+    "crates": "broken"
+  },
+  {
+    "id": "skin-broken",
+    "name": "No weapon here"
+  }
+]

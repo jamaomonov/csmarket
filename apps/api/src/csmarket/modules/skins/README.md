@@ -167,6 +167,12 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
   `hidden` (the admin's flag) or any price column, so a re-import can run at any time. An
   unchanged catalogue reports `changed = 0`. A non-200 answer raises (`fetch_file` calls
   `raise_for_status`); nothing is written for the failed file onward.
+  Before the rows, the grouped `skins.json` (one entry per skin, ~5 MB) is read into
+  `lore_from_grouped`: by `(weapon, skin)` it gives every wear and StatTrak / Souvenir variant
+  its `collection`, `crates` (case market names, JSONB list) and `description` (Valve's text,
+  plain, **English only** — ByMykel has no Russian or Uzbek; the storefront shows it on `/en`).
+  `GET /skins/{slug}` returns them, each case with the `slug` of its own item page when we list
+  it (`service.crate_slugs`). Migration `0031_skin_lore`; empty until the next import.
 - **`job_status`** — the last outcome of the catalogue jobs (`JOB_IMPORT`, `JOB_PRICE_SYNC`)
   in Redis `skins:job:{job}` (JSON, no TTL, Redis errors swallowed). `error` is our own label
   (the exception type name), never upstream text. The scheduler's `skins.catalog_import`
