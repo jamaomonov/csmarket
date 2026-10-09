@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>csmarket API</title>
+    <meta
+      name="description"
+      content="Buy CS2 skins through the csmarket API: catalogue, offers, orders and webhooks."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="llms.txt" />
+    <style>
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      .light-mode,
+      .dark-mode {
+        --scalar-font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        --scalar-font-code: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <!-- Scalar is pinned; bumping it means a new version and a new integrity hash. -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.73.1/dist/browser/standalone.js"
+      integrity="sha384-kYDGzV91Jnn3TbHINV3nt54riK2uMJDfN5Al8dAkz4FssELTBWbD8rgw32sTKfOi"
+      crossorigin="anonymous"
+    ></script>
+    <script src="/init.js"></script>
+  </body>
+</html>

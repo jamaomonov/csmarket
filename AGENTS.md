@@ -35,6 +35,8 @@
   indexing stays closed (`CSMARKET_INDEXING=off`, `docs/runbooks/indexing.md`) until the owner
   opens it. Not yet on the server: the Waxpeer key (no prices, no buying), the kassas, Resend,
   backups and alerts (the `ops` profile). Next: M5 (launch), when the owner asks for it.
+  The partner API docs live at `docs.csmarket.uz` (static Scalar page, `infra/docs-site`,
+  `docs/runbooks/public-api.md`).
   LIS-SKINS is a third buy source behind `CSMARKET_LISSKINS_ENABLED` (spec
   `2026-10-07-lisskins-buy-source-design.md`, ADR-0012), off until the owner switches it on.
   Selling skins to us through Skinslink deposits (spec `2026-10-08-skin-sales-design.md`, ADR-0016)

@@ -1,0 +1,1218 @@
+{
+  "components": {
+    "schemas": {
+      "ApiOrderIn": {
+        "additionalProperties": false,
+        "description": "Buy one skin: an offer of the item (or its cheapest under the cap) for a trade link.",
+        "properties": {
+          "client_order_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_.:-]+$",
+            "title": "Client Order Id",
+            "type": "string"
+          },
+          "item_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Item Id",
+            "type": "string"
+          },
+          "max_price_usd": {
+            "pattern": "^\\d{1,6}(\\.\\d{1,3})?$",
+            "title": "Max Price Usd",
+            "type": "string"
+          },
+          "offer_id": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Id"
+          },
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "max_price_usd",
+          "trade_link",
+          "client_order_id"
+        ],
+        "title": "ApiOrderIn",
+        "type": "object"
+      },
+      "CatalogItemOut": {
+        "description": "One catalogue item priced for the caller's tariff (USD, three decimals).",
+        "properties": {
+          "exterior": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exterior"
+          },
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "market_hash_name": {
+            "title": "Market Hash Name",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "retail_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retail Price Usd"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "stock": {
+            "title": "Stock",
+            "type": "integer"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "item_id",
+          "slug",
+          "market_hash_name",
+          "exterior",
+          "price_usd",
+          "stock",
+          "updated_at"
+        ],
+        "title": "CatalogItemOut",
+        "type": "object"
+      },
+      "CatalogPageOut": {
+        "description": "A page of the catalogue feed.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "CatalogPageOut",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "MeKeyOut": {
+        "description": "The calling key.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pricing_profile",
+          "created_at"
+        ],
+        "title": "MeKeyOut",
+        "type": "object"
+      },
+      "MeLimitsOut": {
+        "description": "Requests allowed per minute and key.",
+        "properties": {
+          "feed_per_min": {
+            "title": "Feed Per Min",
+            "type": "integer"
+          },
+          "orders_per_min": {
+            "title": "Orders Per Min",
+            "type": "integer"
+          },
+          "read_per_min": {
+            "title": "Read Per Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min"
+        ],
+        "title": "MeLimitsOut",
+        "type": "object"
+      },
+      "OfferOut": {
+        "description": "One purchasable offer; `offer_id` is opaque and bound to its item.",
+        "properties": {
+          "delivery": {
+            "const": "instant",
+            "title": "Delivery",
+            "type": "string"
+          },
+          "float": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Float"
+          },
+          "offer_id": {
+            "title": "Offer Id",
+            "type": "string"
+          },
+          "paint_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paint Seed"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "retail_price_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retail Price Usd"
+          },
+          "stickers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Stickers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "offer_id",
+          "float",
+          "paint_seed",
+          "stickers",
+          "price_usd",
+          "delivery"
+        ],
+        "title": "OfferOut",
+        "type": "object"
+      },
+      "PublicOrderItemOut": {
+        "description": "The catalogue item an order bought.",
+        "properties": {
+          "item_id": {
+            "title": "Item Id",
+            "type": "string"
+          },
+          "market_hash_name": {
+            "title": "Market Hash Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "slug",
+          "market_hash_name"
+        ],
+        "title": "PublicOrderItemOut",
+        "type": "object"
+      },
+      "PublicOrderOut": {
+        "description": "An API order as its owner sees it \u2014 never the source market or its ids.",
+        "properties": {
+          "client_order_id": {
+            "title": "Client Order Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "item": {
+            "$ref": "#/components/schemas/PublicOrderItemOut"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicRefundOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "enum": [
+              "buying",
+              "trade_sent",
+              "delivered",
+              "refunded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicTradeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "order_id",
+          "client_order_id",
+          "status",
+          "item",
+          "price_usd",
+          "created_at",
+          "trade",
+          "refund"
+        ],
+        "title": "PublicOrderOut",
+        "type": "object"
+      },
+      "PublicOrdersPage": {
+        "description": "A page of the account's API orders, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicOrderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "PublicOrdersPage",
+        "type": "object"
+      },
+      "PublicRefundOut": {
+        "description": "The money returned to the USD wallet.",
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "reason": {
+            "enum": [
+              "sold_out",
+              "invalid_trade_link",
+              "trade_hold",
+              "price_moved",
+              "supplier_refused",
+              "cancelled_by_support"
+            ],
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_usd",
+          "reason"
+        ],
+        "title": "PublicRefundOut",
+        "type": "object"
+      },
+      "PublicTradeOut": {
+        "description": "The Steam trade of an order whose offer is out; a time is `None` until known.",
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "offer_sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Sent At"
+          },
+          "release_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release At"
+          }
+        },
+        "required": [
+          "offer_sent_at",
+          "accepted_at",
+          "release_at"
+        ],
+        "title": "PublicTradeOut",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "WebhookDeliveryOut": {
+        "description": "The latest delivery attempt state of the partner's webhook.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "status",
+          "attempts",
+          "last_status_code",
+          "at"
+        ],
+        "title": "WebhookDeliveryOut",
+        "type": "object"
+      },
+      "WebhookIn": {
+        "description": "`PUT /public/webhook` body.",
+        "properties": {
+          "url": {
+            "description": "`https` URL; its host must be public.",
+            "maxLength": 500,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "WebhookIn",
+        "type": "object"
+      },
+      "WebhookOut": {
+        "description": "The partner's webhook and how its last delivery went.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WebhookDeliveryOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "created_at",
+          "last_delivery"
+        ],
+        "title": "WebhookOut",
+        "type": "object"
+      },
+      "csmarket__modules__public_api__schemas__MeOut": {
+        "description": "The caller's balance, wallet switch, key and limits.",
+        "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "key": {
+            "$ref": "#/components/schemas/MeKeyOut"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/MeLimitsOut"
+          },
+          "usd_wallet_enabled": {
+            "title": "Usd Wallet Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "usd_wallet_enabled",
+          "key",
+          "limits"
+        ],
+        "title": "MeOut",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "description": "Your API key: `csm_` + 43 characters.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "# Introduction\n\nThe csmarket API lets your shop, bot or service buy CS2 skins from csmarket and have them\ndelivered to your customer's Steam account. You pay from a USD balance on your csmarket account;\nevery price in the API is in US dollars.\n\n- **Base URL:** `https://api.csmarket.uz/api/v1/public`\n- **Format:** JSON. Money is a string with three decimals (`\"12.345\"`); time is ISO 8601 UTC.\n- **Errors:** `application/problem+json` (RFC 7807) \u2014 read the `code` field, not the text.\n\nEvery example on this site uses fake values: the token `csm_EXAMPLEtokenNotReal` and a trade link\nwith `partner=1&token=FAKEFAKE`.\n\n## Quick start\n\n1. Sign in on [csmarket.uz](https://csmarket.uz) with Steam and ask us to switch on your USD\n   balance.\n2. Issue a key: **Profile \u2192 API key**. Copy it \u2014 it is shown once.\n3. Check the key and your balance:\n\n   ``bash\n   curl -s https://api.csmarket.uz/api/v1/public/me \\\n     -H 'Authorization: Bearer csm_EXAMPLEtokenNotReal'\n   ``\n\n4. Read the catalogue (`GET /catalog`), pick an item and its offers\n   (`GET /catalog/{item_id}/offers`), then buy (`POST /orders`).\n5. Follow the order with `GET /orders/{order_id}` or a webhook.\n\n# Authentication\n\nSend your key on every call:\n\n``http\nAuthorization: Bearer csm_EXAMPLEtokenNotReal\n``\n\n- The key (`csm_` + 43 characters) is shown **once** when you issue it; we keep only its\n  SHA-256 hash. If you lose it, reissue it in your profile.\n- A key can be issued after your first top-up or once your USD balance is switched on.\n- One live key per account. **Reissuing revokes the old key at once**; your orders, balance,\n  pricing and webhook stay.\n- A key may be limited to a list of IP addresses (ask us). A call from elsewhere is\n  `403 ip_not_allowed`. A missing, unknown or revoked key is `401 unauthorized`.\n\n# Pricing and balance\n\nPurchases are paid from your account's **USD balance**. Top it up on the site (from your so\u02bbm\nbalance) or by arrangement with us. `GET /me` shows it.\n\nYour key has a price list agreed with us. On a partner price list, every price object also\ncarries `retail_price_usd` \u2014 the price csmarket shows on its own storefront \u2014 so you can price\nyour shelf the same way.\n\nOrders and `client_order_id` belong to your **account**, not to a key: after a reissue you still\nsee every earlier order, and an id you used before is still taken.\n\n# Reading the catalogue\n\n`GET /catalog` returns every item in stock with its lowest price, 1000 items a page. Follow\n`next_cursor` until it is `null`.\n\n- The catalogue is rebuilt every 60 seconds. Read it from the first page; a cursor that has\n  lapsed answers `409 cursor_expired` \u2014 start again from the first page.\n- Every page has a strong `ETag`. Send it back as `If-None-Match` to get `304 Not Modified`\n  without a body.\n- `updated_since=<ISO time>` keeps only the items priced since then. A page may then be empty\n  while `next_cursor` is set \u2014 keep paging.\n- The first page is limited to once a minute (revalidations included). A full pass every few\n  minutes is well inside the limits.\n- If the catalogue is briefly unavailable, the first page answers `503 feed_unavailable` with\n  `Retry-After` \u2014 never an empty catalogue.\n\n`GET /catalog/{item_id}/offers` lists the concrete offers of an item, cheapest first, with float,\npattern and stickers. An `offer_id` is opaque, belongs to its item and expires with the offer.\n`delivery` is `instant` for every offer today.\n\n# Buying skins\n\n`POST /orders` buys one skin and sends it to the trade link you give:\n\n``bash\ncurl -s https://api.csmarket.uz/api/v1/public/orders \\\n  -H 'Authorization: Bearer csm_EXAMPLEtokenNotReal' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\n    \"item_id\": \"4f1c\u2026\",\n    \"offer_id\": \"Zm9v\u2026\",\n    \"max_price_usd\": \"14.500\",\n    \"trade_link\": \"https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE\",\n    \"client_order_id\": \"shop-1042\"\n  }'\n``\n\n- Without `offer_id` we buy the cheapest offer not above `max_price_usd`.\n- `trade_link` is your **customer's** Steam trade link.\n- `client_order_id` is your id for the purchase (1\u201364 characters of `A-Za-z0-9_.:-`), unique on\n  your account. **Always send it and retry with the same value** after a timeout: a repeat never\n  buys twice \u2014 it answers `409 duplicate_client_order_id` with the existing order.\n\nThe balance is debited and the order is created at once (`201`, status `buying`). The purchase\nthen completes in the background; follow it below.\n\n| Status       | Meaning                                                            |\n| ------------ | ------------------------------------------------------------------ |\n| `buying`     | paid, the purchase is under way                                    |\n| `trade_sent` | the Steam trade offer has been sent to your customer               |\n| `delivered`  | your customer accepted it (`release_at`: Steam's protection ends)  |\n| `refunded`   | the purchase did not happen; the money is back in your USD balance |\n\n| Refund `reason`        | Cause                                                       |\n| ---------------------- | ----------------------------------------------------------- |\n| `sold_out`             | the offer was gone                                          |\n| `invalid_trade_link`   | the trade link was rejected                                 |\n| `trade_hold`           | your customer's Steam account has a trade hold              |\n| `supplier_refused`     | the seller could not complete or the offer was not accepted |\n| `cancelled_by_support` | our support cancelled the order                             |\n| `price_moved`          | reserved for later; not sent today                          |\n\nA delivered skin is never refunded automatically. A `402 insufficient_balance` writes nothing.\n\n# Order events\n\nSet one URL for your account and we `POST` every change of an order to it, so you need not poll.\n\n``bash\ncurl -s -X PUT https://api.csmarket.uz/api/v1/public/webhook \\\n  -H 'Authorization: Bearer csm_EXAMPLEtokenNotReal' \\\n  -H 'Idempotency-Key: 6f0b1c2d-0000-4000-8000-000000000001' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"url\": \"https://partner.example/hooks/csmarket\"}'\n``\n\nThe URL must be `https`, have a valid certificate and resolve only to public addresses; we do\nnot follow redirects, so answer at the URL itself.\n\n| Event              | The order now reads |\n| ------------------ | ------------------- |\n| `order.paid`       | `buying`            |\n| `order.trade_sent` | `trade_sent`        |\n| `order.delivered`  | `delivered`         |\n| `order.refunded`   | `refunded`          |\n\n``json\n{\n  \"event\": \"order.trade_sent\",\n  \"event_id\": \"0b6f3a52-5f0e-4d7b-9c1e-2f4a8d1c7e90\",\n  \"created_at\": \"2026-10-09T08:21:30+00:00\",\n  \"order\": { \"order_id\": \"A1B2C3D4\", \"client_order_id\": \"shop-1042\", \"status\": \"trade_sent\" }\n}\n``\n\n`order` is the same object `GET /orders/{order_id}` returns (shortened above).\n\n- **At least once, in any order.** An event can arrive twice and a later one before an earlier\n  one; an intermediate event can be skipped. Deduplicate on `event_id` and trust `order.status`\n  (or `GET /orders/{order_id}`) over the order of arrival.\n- Answer `2xx` within 5 seconds. Otherwise we retry after 1 min, 5 min, 30 min, 2 h, then every\n  2 h \u2014 10 attempts in all. `GET /webhook` shows the latest delivery.\n\n## Verifying the signature\n\nEvery request carries `X-Csm-Event`, `X-Csm-Timestamp` (unix seconds) and `X-Csm-Signature` \u2014\nthe hex HMAC-SHA256 of `\"{timestamp}.{raw body}\"`. The HMAC key is the **lowercase hex SHA-256 of\nyour API token, as text**. Reissuing the key changes the signing key at once.\n\n``python\nimport hashlib, hmac, time\n\nTOKEN = \"csm_EXAMPLEtokenNotReal\"\nKEY = hashlib.sha256(TOKEN.encode()).hexdigest().encode()\n\ndef verify(headers: dict[str, str], body: bytes, tolerance: int = 300) -> bool:\n    stamp = headers[\"X-Csm-Timestamp\"]\n    if abs(time.time() - int(stamp)) > tolerance:\n        return False\n    expected = hmac.new(KEY, stamp.encode() + b\".\" + body, hashlib.sha256).hexdigest()\n    return hmac.compare_digest(expected, headers[\"X-Csm-Signature\"])\n``\n\n```js\nconst crypto = require(\"node:crypto\");\n\nconst TOKEN = \"csm_EXAMPLEtokenNotReal\";\nconst KEY = crypto.createHash(\"sha256\").update(TOKEN).digest(\"hex\");\n\nfunction verify(headers, rawBody, toleranceSeconds = 300) {\n  const stamp = headers[\"x-csm-timestamp\"];\n  if (Math.abs(Date.now() / 1000 - Number(stamp)) > toleranceSeconds) return false;\n  const expected = crypto\n    .createHmac(\"sha256\", KEY)\n    .update(`${stamp}.`)\n    .update(rawBody)\n    .digest(\"hex\");\n  const given = Buffer.from(headers[\"x-csm-signature\"] ?? \"\", \"utf8\");\n  const wanted = Buffer.from(expected, \"utf8\");\n  return given.length === wanted.length && crypto.timingSafeEqual(given, wanted);\n}\n```\n\nVerify the **raw body bytes** before parsing the JSON.\n\n# Errors and limits\n\n| HTTP | `code`                                                                                                                    |\n| ---- | ------------------------------------------------------------------------------------------------------------------------- |\n| 401  | `unauthorized`                                                                                                            |\n| 402  | `insufficient_balance`                                                                                                    |\n| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                              |\n| 404  | `item_not_found`, `order_not_found`                                                                                       |\n| 409  | `offer_gone`, `price_above_max`, `duplicate_client_order_id`, `buying_disabled`, `cursor_expired`, `idempotency_mismatch` |\n| 422  | `trade_link_invalid`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key`, invalid parameters                 |\n| 429  | `rate_limited` \u2014 wait `Retry-After` seconds                                                                               |\n| 503  | `feed_unavailable`, `rate_unavailable` \u2014 retry after `Retry-After`                                                        |\n\nLimits per key, per minute: **60** reads, **10** purchases, **1** first catalogue page.\n",
+    "title": "csmarket API",
+    "version": "1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/catalog": {
+      "get": {
+        "description": "Page `n` of the current snapshot (1000 items), priced by the key's tariff.\n\nThe first page counts against the 1 per minute `feed` limit, later pages against\n`read`. A cursor of an expired snapshot answers 409 `cursor_expired`. `ETag` /\n`If-None-Match` give a 304.",
+        "operationId": "catalog",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "updated_since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Updated Since"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-none-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "304": {
+            "description": "`If-None-Match` matched the page's ETag; empty body"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "409": {
+            "description": "`cursor_expired` \u2014 restart from the first page"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          },
+          "503": {
+            "description": "`feed_unavailable` \u2014 no snapshot yet, with `Retry-After`"
+          }
+        },
+        "summary": "Catalogue feed, one page",
+        "tags": [
+          "Catalogue"
+        ]
+      }
+    },
+    "/catalog/{item_id}/offers": {
+      "get": {
+        "description": "Offers of the item, cheapest first, priced by the key's tariff.\n\nCached 60 s per tariff and item. Offer ids are opaque and bound to the item.",
+        "operationId": "item_offers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OfferOut"
+                  },
+                  "title": "Response Item Offers Api V1 Public Catalog  Item Id  Offers Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Offers of one item",
+        "tags": [
+          "Catalogue"
+        ]
+      }
+    },
+    "/me": {
+      "get": {
+        "description": "The USD balance, whether the USD wallet is on, the calling key and its limits.",
+        "operationId": "me",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__public_api__schemas__MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Balance, key and limits",
+        "tags": [
+          "Account"
+        ]
+      }
+    },
+    "/orders": {
+      "get": {
+        "description": "The owner's API orders (every key they had), newest first, 50 a page; `status` keeps\none status.",
+        "operationId": "list_orders",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 256,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "buying",
+                    "trade_sent",
+                    "delivered",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrdersPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`cursor` or a bad `status`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "API orders of this account",
+        "tags": [
+          "Orders"
+        ]
+      },
+      "post": {
+        "description": "Buy the offer `offer_id` of `item_id` (else its cheapest within `max_price_usd`).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n`buying`). A `client_order_id` already used by this account (with this key or an earlier\none) writes nothing and answers 409\n`duplicate_client_order_id` with that order in `order`. Counts against the\n10 per minute `order` limit.",
+        "operationId": "place_order",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiOrderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "402": {
+            "description": "`insufficient_balance` \u2014 nothing was written"
+          },
+          "403": {
+            "description": "`usd_wallet_disabled`, `account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`item_not_found`"
+          },
+          "409": {
+            "description": "`offer_gone`, `price_above_max` (+ `price_usd`), `buying_disabled`, `duplicate_client_order_id` (+ `order`: the order already placed under the id)"
+          },
+          "422": {
+            "description": "`trade_link_invalid` and body errors"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          },
+          "503": {
+            "description": "`rate_unavailable` \u2014 no rate snapshot was ever recorded"
+          }
+        },
+        "summary": "Buy one skin from the USD wallet",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/orders/{order_id}": {
+      "get": {
+        "description": "The API order `order_id` of this key's owner (any of their keys); another user's or\nan unknown one is 404.",
+        "operationId": "get_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicOrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "404": {
+            "description": "`order_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "One API order of this account",
+        "tags": [
+          "Orders"
+        ]
+      }
+    },
+    "/webhook": {
+      "delete": {
+        "description": "Remove the webhook; 204 even when none was set. Needs `Idempotency-Key`.",
+        "operationId": "delete_webhook",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`idempotency_key`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Remove my webhook",
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "get": {
+        "description": "The webhook URL and the state of its latest delivery, or `null` when none is set.",
+        "operationId": "get_webhook",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WebhookOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Webhook Api V1 Public Webhook Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "My webhook",
+        "tags": [
+          "Webhooks"
+        ]
+      },
+      "put": {
+        "description": "Replace the webhook URL. `https` only; the host must resolve to public addresses.\n\nNeeds `Idempotency-Key`. A replay changes nothing and answers the current state.",
+        "operationId": "put_webhook",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "description": "`webhook_url_invalid`, `webhook_url_private`, `idempotency_key`"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Set my webhook URL",
+        "tags": [
+          "Webhooks"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://api.csmarket.uz/api/v1/public"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Your balance, key and limits.",
+      "name": "Account"
+    },
+    {
+      "description": "Items in stock and their offers.",
+      "name": "Catalogue"
+    },
+    {
+      "description": "Buying skins and following the orders.",
+      "name": "Orders"
+    },
+    {
+      "description": "Where we send order events.",
+      "name": "Webhooks"
+    }
+  ]
+}

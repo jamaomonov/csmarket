@@ -4,6 +4,7 @@
 #   csmarket.uz, www.csmarket.uz → web (Next.js)
 #   admin.csmarket.uz            → admin (nginx + static Vite build)
 #   api.csmarket.uz              → FastAPI (+ WebSocket from M4)
+#   docs.csmarket.uz             → partner API docs, static (infra/docs-site)
 #   grafana.csmarket.uz          → Grafana, gated by basic-auth
 #
 # Cloudflare proxies every hostname (SSL mode "Full (strict)"). ACME HTTP-01
@@ -182,6 +183,24 @@ api.csmarket.uz {
 	# build. Volumetric abuse is Cloudflare's WAF.
 	import access_log
 	import upstream api:8000
+}
+
+# ---------- partner API docs ----------
+# Static: index.html + init.js load Scalar (pinned, SRI) from jsdelivr and render
+# openapi.json, which ``make gen-api`` cuts from the app's schema. ``connect-src``
+# lets "Test Request" call the API; the API's CORS list names this origin.
+docs.csmarket.uz {
+	encode zstd gzip
+	import security_headers
+	header Content-Security-Policy "default-src 'self'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.csmarket.uz; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'"
+	# A deploy changes these files without changing their names.
+	header Cache-Control "public, max-age=300"
+	# Out of search while the storefront is (see its INDEXING GATE).
+	@indexingClosed expression `{env.CSMARKET_INDEXING} != "on"`
+	header @indexingClosed X-Robots-Tag "noindex, nofollow"
+	import access_log
+	root * /srv/docs
+	file_server
 }
 
 # ---------- grafana (operators only) ----------

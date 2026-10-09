@@ -245,6 +245,8 @@ services:
     env_file: ./secrets/caddy.env
     volumes:
       - ./infra/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      # docs.csmarket.uz: a directory mount, so a deploy's checkout shows through.
+      - ./infra/docs-site:/srv/docs:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on: [api, web, admin]
