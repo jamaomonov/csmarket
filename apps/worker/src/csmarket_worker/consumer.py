@@ -138,8 +138,8 @@ def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may 
     drainer, not every paid order. ``emails``: one drainer — letters are not urgent to the
     second, and one sender keeps the provider's rate limit far away. ``skinslink``: one
     drainer — a status check is a single cheap read. `sales`: one drainer — a sale check is a single
-    cheap read. ``api_webhooks``: one drainer — a partner that hangs costs at most its 5 s timeout
-    per delivery, and only this queue waits. Each channel constant
+    cheap read. ``api_webhooks``: one drainer — a partner that hangs costs up to ~3 s of DNS plus
+    its 5 s POST per delivery, and only this queue waits. Each channel constant
     comes from the producing module's ``api`` — a channel spelled twice is a queue nobody
     drains and no test fails.
     """

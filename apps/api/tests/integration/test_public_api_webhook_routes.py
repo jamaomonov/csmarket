@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import socket
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from csmarket.core import config as cfg
 from csmarket.modules.public_api.models import ApiWebhook
+from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -174,3 +175,41 @@ async def test_odd_hosts_are_422_not_500(
         r = await integration_client.put(URL, json={"url": bad}, headers={**_h(token), **_idem()})
         assert r.status_code == 422, r.text
         assert r.json()["code"] == "webhook_url_invalid"
+
+
+async def test_the_lookup_runs_with_no_transaction_open(
+    integration_client: AsyncClient,
+    integration_app: FastAPI,
+    customer_headers: Headers,
+    db_session: AsyncSession,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The caller's auth reads must be rolled back before the (up to 3 s) DNS lookup."""
+    from csmarket.api.v1.deps import db_session as db_dep
+    from csmarket.modules.public_api import routes
+
+    _, token = await _customer(db_session, customer_headers)
+    request_sessions: list[AsyncSession] = []
+
+    async def capture() -> AsyncIterator[AsyncSession]:
+        async for session in db_dep():
+            request_sessions.append(session)
+            yield session
+
+    integration_app.dependency_overrides[db_dep] = capture
+    # The first call stamps ``last_used_at`` and commits; the next leaves its reads open.
+    await integration_client.get(URL, headers=_h(token))
+    seen: list[bool] = []
+    real = routes.public_addresses
+
+    async def spy(host: str, port: int) -> list[str]:
+        seen.append(request_sessions[-1].in_transaction())
+        return await real(host, port)
+
+    monkeypatch.setattr(routes, "public_addresses", spy)
+    try:
+        r = await integration_client.put(URL, json={"url": GOOD}, headers={**_h(token), **_idem()})
+    finally:
+        integration_app.dependency_overrides.pop(db_dep, None)
+    assert r.status_code == 200, r.text
+    assert seen == [False]

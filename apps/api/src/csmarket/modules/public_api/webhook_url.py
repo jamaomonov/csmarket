@@ -94,6 +94,8 @@ def is_public(address: str) -> bool:
         refused = any(ip in n for n in _V6_REFUSED)
     else:
         refused = any(ip in n for n in _V4_REFUSED)
+    if isinstance(ip, ipaddress.IPv6Address) and ip.is_site_local:  # fec0::/10, deprecated
+        return False
     flagged = (
         ip.is_private
         or ip.is_loopback

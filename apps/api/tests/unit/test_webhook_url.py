@@ -82,6 +82,7 @@ def _resolver(monkeypatch: pytest.MonkeyPatch, *addrs: str) -> None:
         "2002:a00:1::1",
         "::a00:1",
         "fe80::1%eth0",
+        "fec0::1",
         "::",
         "198.18.0.1",
         "2001:0:4136:e378:8000:63bf:3fff:fdd2",

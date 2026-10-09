@@ -189,6 +189,19 @@ async def test_ipv4_is_preferred_and_a_port_is_kept(db_session: AsyncSession) ->
     assert request.headers["host"] == f"{HOST}:8443"
 
 
+async def test_the_pinned_address_rotates_per_attempt(db_session: AsyncSession) -> None:
+    user = await _partner(db_session)
+    row_id = await _delivery(db_session, user)
+    rec = Recorder(500)
+    resolve = _resolver(PUBLIC_IP, "93.184.216.40")
+    await drain_webhooks(db_session, transport=rec.transport, resolve=resolve)
+    await _make_due(db_session, row_id)
+    await drain_webhooks(db_session, transport=rec.transport, resolve=resolve)
+    first, second = rec.requests
+    assert first.url.host == PUBLIC_IP
+    assert second.url.host == "93.184.216.40"
+
+
 async def test_a_500_stays_pending_and_retries_in_a_minute(db_session: AsyncSession) -> None:
     user = await _partner(db_session)
     row_id = await _delivery(db_session, user)

@@ -184,7 +184,7 @@ async def _deliver(
     last = claim.attempts >= settings.webhook_max_attempts
     retry: ApiWebhookOutcome = "failed" if last else "retry"
     try:
-        target = await _target(send.url, resolve)
+        target = await _target(send.url, resolve, claim.attempts)
     except ValidationError as exc:
         error = "private" if exc.extra.get("code") == "webhook_url_private" else "invalid"
         await _finish(db, claim, retry, host=_host_of(send.url), last_error=error)
@@ -235,8 +235,11 @@ async def _prepare(db: AsyncSession, claim: _Claim) -> _Send | None:
     return _Send(url=hook.url, key_hash=key.token_hash, body=body)
 
 
-async def _target(url: str, resolve: Resolver) -> _Target:
-    """Re-check the stored URL, resolve its host and pin the first checked address.
+async def _target(url: str, resolve: Resolver, attempt: int) -> _Target:
+    """Re-check the stored URL, resolve its host and pin one checked address.
+
+    The address rotates with the attempt number, so a dead address of several is not the only
+    one ever tried.
 
     Raises:
         ValidationError: ``webhook_url_invalid`` / ``webhook_url_private``.
@@ -245,7 +248,8 @@ async def _target(url: str, resolve: Resolver) -> _Target:
     host = parts.hostname or ""
     addresses = await resolve(host, parts.port or 443)
     # IPv4 first: the server may have no IPv6 route.
-    address = sorted(addresses, key=lambda a: (":" in a, a))[0]
+    ordered = sorted(addresses, key=lambda a: (":" in a, a))
+    address = ordered[(attempt - 1) % len(ordered)]
     netloc = f"[{address}]" if ":" in address else address
     if parts.port is not None:
         netloc += f":{parts.port}"

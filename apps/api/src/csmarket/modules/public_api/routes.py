@@ -392,11 +392,13 @@ async def put_webhook(
     """
     idem = require_idempotency_key(idempotency_key)
     await enforce(caller, "read")
-    # Check and resolve before any DB read, so no transaction is open across the lookup.
+    user_id = caller.user.id
     url = check_url(body.url)
     parts = urlsplit(url)
+    # ``api_caller`` already read on this session; end that transaction so none is open
+    # across the (up to 3 s) lookup.
+    await db.rollback()
     await public_addresses(parts.hostname or "", parts.port or 443)
-    user_id = caller.user.id
     scoped = f"{user_id}:{idem}"
     request = {"url": url}
     hit = await load_replay(db, scope=_WEBHOOK_SAVE_SCOPE, idempotency_key=scoped)
