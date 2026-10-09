@@ -12675,7 +12675,7 @@
     },
     "/api/v1/public/catalog/{item_id}/offers": {
       "get": {
-        "description": "Skinslink + LIS-SKINS offers of the item, cheapest first, priced by the key's tariff.\n\nCached 60 s per tariff and item. Offer ids are opaque and bound to the item.",
+        "description": "Offers of the item, cheapest first, priced by the key's tariff.\n\nCached 60 s per tariff and item. Offer ids are opaque and bound to the item.",
         "operationId": "item_offers_api_v1_public_catalog__item_id__offers_get",
         "parameters": [
           {

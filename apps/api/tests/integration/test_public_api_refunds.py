@@ -18,6 +18,7 @@ from csmarket.modules.wallet.api import user_balance, user_usd_balance
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from structlog.testing import capture_logs
 
 from tests.integration.orders_factory import make_order
 from tests.integration.test_public_api_buy import (
@@ -68,6 +69,20 @@ async def test_refund_credits_the_usd_wallet_only(
     assert r.status_code == 200, r.text
     assert r.json()["status"] == "refunded"
     assert r.json()["refund"] == {"amount_usd": "9.000", "reason": "sold_out"}
+
+
+async def test_the_refund_log_names_dollars_for_an_api_order(
+    customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    order, _, _ = await _api_order(db_session, customer_headers)
+    move(order, "buying")
+    with capture_logs() as logs:
+        await refund_to_balance(
+            db_session, order=order, to_status="failed", reason="sold_out", actor="orders"
+        )
+    (line,) = [e for e in logs if e["event"] == "orders.refunded"]
+    assert line["amount_usd"] == str(order.price_usd)
+    assert "amount" not in line
 
 
 async def test_an_api_order_gets_no_letters(

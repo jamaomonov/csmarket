@@ -123,6 +123,23 @@ async def test_reissue_revokes_the_old_token_and_keeps_the_tariff(
     assert live.pricing_profile == "cost"
 
 
+async def test_revoke_then_issue_keeps_the_tariff(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await customer_headers()
+    await _eligible(db_session)
+    await _issue(integration_client, h)
+    await db_session.execute(text("UPDATE api_keys SET pricing_profile = 'cost'"))
+    await db_session.commit()
+    d = await integration_client.delete(KEY_URL, headers={**h, **_idem()})
+    assert d.status_code == 204
+    await _issue(integration_client, h)
+    live = (
+        await db_session.execute(select(ApiKey).where(ApiKey.revoked_at.is_(None)))
+    ).scalar_one()
+    assert live.pricing_profile == "cost"
+
+
 async def test_revoke_then_get_is_null(
     integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
 ) -> None:

@@ -99,6 +99,17 @@ def _milli_usd(order: Order) -> Decimal:
     return units.to_integral_value()
 
 
+def refund_amounts(order: Order) -> dict[str, str]:
+    """The money an order's refund gives back, for logs and the audit row.
+
+    An API order (paid from the USD wallet) carries ``amount_usd`` -- its ``price_uzs`` is 0;
+    every other order carries ``amount`` in soʻm.
+    """
+    if order.paid_with == "usd_wallet":
+        return {"amount_usd": str(order.price_usd)}
+    return {"amount": str(order.price_uzs)}
+
+
 async def _credit(db: AsyncSession, order: Order, actor: str) -> None:
     """Book the refund into the wallet the order was paid from (an API order: USD)."""
     if order.paid_with == "usd_wallet":
@@ -178,7 +189,7 @@ async def refund_to_balance(
     log.info(
         "orders.refunded",
         number=order.number,
-        amount=str(order.price_uzs),
+        **refund_amounts(order),
         reason=reason,
         status=to_status,
     )

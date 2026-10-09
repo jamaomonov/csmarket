@@ -193,7 +193,11 @@ async def refund(number: str, admin: Admin, db: Db, key: Key, waxpeer: Waxpeer) 
         action="orders.refund",
         target_type="order",
         target_id=number,
-        payload={"amount_uzs": int(order.price_uzs)},
+        payload=(
+            {"amount_usd": str(order.price_usd)}
+            if order.paid_with == "usd_wallet"
+            else {"amount_uzs": int(order.price_uzs)}
+        ),
     )
     return await _finish(db, number, scope=scope, key=key, request=request)
 

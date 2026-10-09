@@ -1,7 +1,8 @@
 """API keys: issue, reissue, revoke, look up (plan B, Task 2; rulings R2, R3).
 
 The token is ``csm_`` + 32 random bytes (url-safe), shown once; only its ``sha256`` is kept.
-A user has one live key: a reissue revokes it and the tariff carries over to the new one.
+A user has one live key: a reissue revokes it. The tariff carries over from the user's newest
+key, revoked or not.
 """
 
 from __future__ import annotations
@@ -50,9 +51,18 @@ async def issue(db: AsyncSession, *, user: User) -> tuple[ApiKey, str]:
             "an API key needs a top-up or the dollar wallet", code="api_key_not_allowed"
         )
     old = await live_key(db, user.id)
-    profile = "retail"
+    # The tariff follows the user, not the live key: revoke-then-issue must not drop a ``cost``
+    # client back to ``retail``.
+    newest = (
+        await db.execute(
+            select(ApiKey.pricing_profile)
+            .where(ApiKey.user_id == user.id)
+            .order_by(ApiKey.created_at.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    profile = newest if newest is not None else "retail"
     if old is not None:
-        profile = old.pricing_profile
         old.revoked_at = datetime.now(UTC)
         await db.flush()
     token = new_token()

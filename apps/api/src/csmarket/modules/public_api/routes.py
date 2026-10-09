@@ -186,7 +186,7 @@ async def item_offers(
     caller: Annotated[ApiCaller, Depends(api_caller)],
     db: Annotated[AsyncSession, Depends(db_session)],
 ) -> Response:
-    """Skinslink + LIS-SKINS offers of the item, cheapest first, priced by the key's tariff.
+    """Offers of the item, cheapest first, priced by the key's tariff.
 
     Cached 60 s per tariff and item. Offer ids are opaque and bound to the item.
     """
