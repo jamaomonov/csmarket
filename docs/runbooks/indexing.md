@@ -18,7 +18,9 @@ switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
   FAQ (`FAQPage`), `Organization` and `WebSite` (`SearchAction` → `/market?q=`) JSON-LD.
 - `/market` (+ `/uz/market`, `/en/market`) — the catalogue; filtered views are `noindex, follow`.
   Old filtered root URLs (`/?category=knives`) answer **301** to `/market` with the query kept.
-- `/item/…` — `Product` + `Offer` in UZS, breadcrumbs; `/category/…`, `/weapon/…` — breadcrumbs and
+- `/item/…` — `Product` + `Offer` in UZS, breadcrumbs, «О предмете» (a paragraph from the item's
+  facts), «Другие скины <weapon>» (internal links), FAQ with price, dated Steam comparison, float,
+  payment and the 7-day trade hold; `/category/…`, `/weapon/…` — breadcrumbs and
   an `ItemList` of the shown skins (the unfiltered `/market` carries one too).
 - Query landings: `/pay/click`, `/pay/payme`, `/pay/uzum` («скины КС2 через Click …»: steps,
   popular skins, FAQ) and `/cheap` (weapon skins under 100 000 soʻm, live answers). Category

@@ -14,13 +14,15 @@ import { SkinItemTitle } from "@/components/skins/SkinItemTitle";
 import { SkinListings } from "@/components/skins/SkinListings";
 import { SkinOffersProvider } from "@/components/skins/SkinOffers";
 import { SkinPriceBlock } from "@/components/skins/SkinPriceBlock";
+import { SkinSimilar } from "@/components/skins/SkinSimilar";
 import { SkinWearPicker } from "@/components/skins/SkinWearPicker";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { categoryPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
-import { skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
+import { skinAbout, skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
+import { similarSkins } from "@/lib/skin-similar";
 import { displayPrice, getSkinDetail } from "@/lib/skins";
 
 interface Props {
@@ -81,6 +83,7 @@ export default async function SkinPage({ params }: Props) {
   const item = await getSkinDetail(slug);
   if (!item) notFound();
   const t = await getTranslations("web.skins");
+  const neighbours = await similarSkins(item);
 
   const name = isVanilla(item) ? t("vanilla") : (item.skin ?? item.name);
   const category = isSkinCategory(item.category) ? t(`category.${item.category}`) : item.category;
@@ -207,6 +210,31 @@ export default async function SkinPage({ params }: Props) {
           </section>
         )}
       </SkinOffersProvider>
+
+      <SkinSimilar
+        title={
+          item.weapon
+            ? t("similar.weapon", { weapon: item.weapon })
+            : t("similar.category", { category })
+        }
+        items={neighbours}
+        locale={locale}
+        allHref={parent.path}
+        allLabel={
+          item.weapon
+            ? t("similar.all", { weapon: item.weapon })
+            : t("similar.allCategory", { category })
+        }
+      />
+
+      <section className="mt-10 max-w-3xl" aria-labelledby="skin-about">
+        <h2 id="skin-about" className="mb-2 text-[17px] font-bold">
+          {t("about.title")}
+        </h2>
+        <p className="text-fg-muted text-[14px] leading-relaxed">
+          {skinAbout(item, t, locale, category)}
+        </p>
+      </section>
 
       <SkinFaq title={t("faq.title")} entries={skinFaq(item, t, locale)} />
     </main>
