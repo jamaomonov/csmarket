@@ -134,6 +134,36 @@ tests:
               description: "Orders in `paid` for more than 5 minutes. Is the worker up, and is it reaching Postgres?\n"
               runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#paid-stuck"
 
+  # --- the oldest API order in buying (spec v1.1 §5): over 30 min for 5 min, scheduler only --
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_public_api_orders_buying_oldest_seconds{job="scheduler"}'
+        values: "1700x10"
+      - series: 'csmarket_public_api_orders_buying_oldest_seconds{job="api"}'
+        values: "99999x10"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PublicApiOrderBuyingLong
+        exp_alerts: []
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_public_api_orders_buying_oldest_seconds{job="scheduler"}'
+        values: "2000x10"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: PublicApiOrderBuyingLong
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: PublicApiOrderBuyingLong
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "An API order has been buying for 33m 20s"
+              description: "The oldest API order still reads `buying` to its partner. Open it in the admin (API keys → the key → orders); the outcome must come from the market's answer.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/public-api.md#an-api-order-buying-for-over-30-minutes"
+
   # --- a failed balance read keeps the last value: the timestamp says how old it is ----------
   - interval: 1m
     input_series:

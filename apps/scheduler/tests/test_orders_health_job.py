@@ -7,7 +7,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from types import TracebackType
 from typing import Self
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -56,6 +56,7 @@ def _health(balance: Decimal | None = None) -> Health:
         trade_sent_unpolled=3,
         attention=4,
         waxpeer_balance_usd=balance,
+        api_buying_oldest_seconds=2400.0,
     )
 
 
@@ -67,8 +68,17 @@ async def test_a_tick_sets_every_gauge(monkeypatch: pytest.MonkeyPatch) -> None:
     assert _gauge("csmarket_orders_stuck", state="buying") == 1
     assert _gauge("csmarket_orders_stuck", state="trade_sent_unpolled") == 3
     assert _gauge("csmarket_trades_attention") == 4
+    assert _gauge("csmarket_public_api_orders_buying_oldest_seconds") == 2400.0
     assert _gauge("csmarket_waxpeer_balance_usd") == 42.5
     assert _gauge("csmarket_waxpeer_balance_threshold_usd") == 50.0
+
+
+async def test_a_tick_calls_the_oldest_api_order_setter(monkeypatch: pytest.MonkeyPatch) -> None:
+    setter = Mock()
+    monkeypatch.setattr(orders_health, "set_public_api_buying_oldest", setter)
+    monkeypatch.setattr(orders_health, "measure", AsyncMock(return_value=_health()))
+    await orders_health.run()
+    setter.assert_called_once_with(2400.0)
 
 
 async def test_the_balance_is_asked_for_on_every_fifth_tick_only(

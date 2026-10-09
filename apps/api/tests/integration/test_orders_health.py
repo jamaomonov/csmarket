@@ -10,6 +10,7 @@ from csmarket.core import clock as core_clock
 from csmarket.core.config import get_settings
 from csmarket.modules.orders.health import Health, measure
 from csmarket.modules.orders.models import Order
+from csmarket.modules.public_api import keys
 from csmarket.modules.skins.api import WaxpeerUnavailableError
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tests.integration.fake_trade_client import FakeTradeClient
 from tests.integration.lisskins_factory import make_lisskins_order
 from tests.integration.orders_factory import make_order, make_trade
+from tests.integration.payments_factory import make_user
 from tests.integration.skinslink_factory import make_skinslink_order
 from tests.integration.trade_sweeps_kit import db_fixture  # noqa: F401 -- fixture
 
@@ -43,7 +45,12 @@ async def _order(
 
 async def test_empty_database_is_healthy(db: AsyncSession) -> None:
     assert await _measure(db) == Health(
-        paid_stuck=0, buying_stuck=0, trade_sent_unpolled=0, attention=0, waxpeer_balance_usd=None
+        paid_stuck=0,
+        buying_stuck=0,
+        trade_sent_unpolled=0,
+        attention=0,
+        waxpeer_balance_usd=None,
+        api_buying_oldest_seconds=0.0,
     )
 
 
@@ -179,3 +186,45 @@ async def test_lisskins_orders_count_like_any_other(db: AsyncSession) -> None:
     await make_lisskins_order(db, last_polled_at=core_clock.now() - timedelta(minutes=31))
     health = await _measure(db)
     assert (health.buying_stuck, health.trade_sent_unpolled, health.attention) == (1, 1, 1)
+
+
+# --- the oldest API order a partner reads as ``buying`` (spec v1.1 §5) --------------------
+
+
+async def _api_order(db: AsyncSession, status: str, *, minutes: float, **over: object) -> Order:
+    user = await make_user(db)
+    user.usd_wallet_enabled = True
+    key, _ = await keys.issue(db, user=user)
+    await db.commit()
+    return await make_order(
+        db,
+        user=user,
+        status=status,
+        paid_with="usd_wallet",
+        paid_at=_ago(minutes=minutes),
+        created_at=_ago(minutes=minutes),
+        channel="api",
+        api_key_id=key.id,
+        client_order_id=f"c-{key.id}",
+        pricing_profile="cost",
+        **over,
+    )
+
+
+async def test_api_buying_oldest(db: AsyncSession) -> None:
+    await _api_order(db, "buying", minutes=40)
+    await _api_order(db, "buying", minutes=5)
+    assert (await _measure(db)).api_buying_oldest_seconds == pytest.approx(2400, abs=30)
+
+
+async def test_gauge_counts_held_failed_and_ignores_site_orders(db: AsyncSession) -> None:
+    await make_order(db, status="buying", paid_with="payme", created_at=_ago(minutes=90))
+    await _api_order(db, "failed", minutes=50)  # held for support: no refund yet
+    await _api_order(db, "failed", minutes=70, refunded_at=_ago(minutes=60))
+    assert (await _measure(db)).api_buying_oldest_seconds == pytest.approx(3000, abs=30)
+
+
+async def test_api_buying_oldest_zero_when_none(db: AsyncSession) -> None:
+    await _api_order(db, "delivered", minutes=90)
+    await make_order(db, status="buying", paid_with="payme", created_at=_ago(minutes=90))
+    assert (await _measure(db)).api_buying_oldest_seconds == 0.0

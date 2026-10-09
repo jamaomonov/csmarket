@@ -33,6 +33,18 @@ groups:
             Look at the trade in the admin and at Waxpeer; never buy again by hand.
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/orders.md#buying-stuck"
 
+      # An API order a partner is waiting on, open attention included (spec v1.1 §5).
+      - alert: PublicApiOrderBuyingLong
+        expr: max(csmarket_public_api_orders_buying_oldest_seconds{job="scheduler"}) > 1800
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: "An API order has been buying for {{ $value | humanizeDuration }}"
+          description: >
+            The oldest API order still reads `buying` to its partner. Open it in the admin
+            (API keys → the key → orders); the outcome must come from the market's answer.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/public-api.md#an-api-order-buying-for-over-30-minutes"
+
       # Trade-status polling stopped (or never reached an order): Waxpeer's answers are not
       # being applied. Spec §12.
       - alert: TradesUnpolled
