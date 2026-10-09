@@ -41,6 +41,7 @@ from csmarket.modules.orders.webhook_events import emit_if_changed
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skinslink.api import (
     LINK_ERROR_CODES,
+    SOLD_FAIL_REASONS,
     Purchase,
     SkinslinkError,
     SkinslinkPurchase,
@@ -95,7 +96,11 @@ def _failure_reason(fail_reason: str | None) -> str:
     """Why a purchase that never reached an offer failed, as the order's refund reason."""
     if fail_reason == "insufficient_balance":
         return "source_low_balance"
-    return link_failure_reason(fail_reason) or "sold_out"
+    link = link_failure_reason(fail_reason)
+    if link is not None:
+        return link
+    # Only a gone or dearer offer is «sold out»; a seller who did not hand it over is not.
+    return "sold_out" if fail_reason in SOLD_FAIL_REASONS else "source_refused"
 
 
 async def _apply(  # noqa: PLR0911 -- one return per row of the status table

@@ -236,3 +236,30 @@ async def test_another_source_is_never_checked(
     r = await integration_client.post(ORDERS, json=_body(item, offer_id=sl), headers=_h(token))
     assert r.status_code == 201, r.text
     assert fake.calls == []
+
+
+async def test_a_link_lisskins_refused_never_buys_its_lots(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, live: Live
+) -> None:
+    from csmarket.modules.lisskins.api import remember_rejection
+    from csmarket.modules.users.api import parse_tradelink
+
+    item = await _item(db_session)
+    user, token = await _token(db_session, customer_headers)
+    fake = live(Availability(available={LOT: Decimal("4")}, unavailable=frozenset()))
+    await remember_rejection(get_redis(), parse_tradelink(FAKE_TRADE_LINK).url)
+    named = await integration_client.post(
+        ORDERS, json=_body(item, offer_id=await _lot_id(db_session, item)), headers=_h(token)
+    )
+    assert named.status_code == 409, named.text
+    assert named.json()["code"] == "trade_link_rejected"
+    assert await _orders(db_session) == 0
+    cheapest = await integration_client.post(ORDERS, json=_body(item), headers=_h(token))
+    assert cheapest.status_code == 201, cheapest.text
+    order = await db_session.scalar(
+        select(Order).where(Order.number == cheapest.json()["order_id"])
+    )
+    assert order is not None
+    assert order.source == "skinslink"
+    assert fake.calls == []
+    assert await user_usd_balance(db_session, user.id) == Decimal(FUNDS - 4_100)

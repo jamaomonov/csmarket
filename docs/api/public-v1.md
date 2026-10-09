@@ -141,7 +141,11 @@ Ask right before you take your buyer's money (ADR-0017, 2026-10-10). Not cached;
 
 - `available` — for sale at `price_usd` for your tariff (live; it may differ from the list).
 - `gone` — sold; `price_usd` is `null`. Offer another one to your buyer.
-- `unconfirmed` — the market did not answer in time; `price_usd` is the last known price.
+- `unconfirmed` — not confirmed right now: the market did not answer in time, or our copy of
+  its stock is not fresh enough; `price_usd` is the last known price (`null` when the offer is
+  not in our current copy). Internally: a LIS-SKINS lot is asked `check-availability` live; a
+  Skinslink offer is `available` only from a mirror synced within 30 s; a lot missing from a
+  stale source is `unconfirmed`, never `gone`.
 - `retail_price_usd` is added on `cost` (not when `gone`).
 - 404 `item_not_found`; 404 `offer_not_found` for a forged or foreign `offer_id`.
 
@@ -173,7 +177,9 @@ Before anything is written, the chosen offer may be confirmed live with its mark
 sold in the meantime, a named `offer_id` answers **409 `offer_gone`**, and without one the next
 cheapest offer within `max_price_usd` is taken. If its price changed, the new price is checked
 against `max_price_usd` and may answer **409 `price_above_max`**. You are never sold a different
-offer than the one you named.
+offer than the one you named. If a market refused your buyer's trade link in the last day, its
+offers answer **409 `trade_link_rejected`** (named) or are skipped (cheapest within the cap);
+`POST /tradelink/check` says `rejected_by_market` for that link.
 
 One transaction: the USD wallet is debited and the order is created **already paid**.
 **201** returns the order (below) with `status: "buying"`. Repeating the call with the same
@@ -219,16 +225,26 @@ market gives it; usually `null`.
 
 A delivered skin is never refunded automatically.
 
-| Refund `reason`        | Cause                                                         |
-| ---------------------- | ------------------------------------------------------------- |
-| `sold_out`             | the offer was gone                                            |
-| `invalid_trade_link`   | the trade link was rejected                                   |
-| `trade_hold`           | the buyer's Steam account has a trade hold                    |
-| `price_moved`          | reserved, not produced yet: the price rose above what we hold |
-| `supplier_refused`     | the seller could not complete or the buyer did not accept     |
-| `cancelled_by_support` | a person cancelled the order                                  |
+| Refund `reason`        | Cause                                                                                                                               |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `sold_out`             | the offer itself was gone or dearer than the price paid                                                                             |
+| `invalid_trade_link`   | the trade link was rejected                                                                                                         |
+| `trade_hold`           | the buyer's Steam account has a trade hold                                                                                          |
+| `price_moved`          | reserved, not produced yet: the price rose above what we hold                                                                       |
+| `supplier_refused`     | the lot was there but not handed over (the seller was too slow, the market refused for another reason), or the buyer did not accept |
+| `cancelled_by_support` | a person cancelled the order                                                                                                        |
 
 Refunds go to the USD wallet only, once. No letters are sent for API orders.
+
+How the markets' answers map onto `reason` (internal; the market is never named in a response):
+
+| Market answer                                                                                                                                                                                                                                                                                                                                         | `reason`               |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Skinslink `item_sold`, `item_not_available`, `price_changed`, `item_specified_price_not_found`; LIS-SKINS `skins_unavailable`, `skins_price_higher_than_max_price`                                                                                                                                                                                    | `sold_out`             |
+| Skinslink trade-link codes (`trade_link_revoked`, `trade_link_invalid`, `trade_banned`, `permissions`…); LIS-SKINS `invalid_trade_url`, `user_trade_ban`, `user_cant_trade`, `private_inventory`, `too_many_failed_attempts_for_user`, `invalid_partner_value`, `invalid_token_value`; a returned trade with such an `error` or `user_inventory_full` | `invalid_trade_link`   |
+| Skinslink `hold`, `hold_and_permissions`                                                                                                                                                                                                                                                                                                              | `trade_hold`           |
+| Skinslink `seller_too_slow`, `provider_unavailable`, a cancel with no reason, any other code; LIS-SKINS any other refusal code, a returned `trade_create_error` without a trade-link `error`; our market balance too low; an offer sent and not accepted                                                                                              | `supplier_refused`     |
+| A support decision                                                                                                                                                                                                                                                                                                                                    | `cancelled_by_support` |
 
 ### How long `buying` lasts
 
@@ -257,13 +273,14 @@ curl -s https://api.csmarket.uz/api/v1/public/tradelink/check \
 `verdict` is `ok`, `bad` or `unavailable`. `unavailable` means the check could not run: do not
 block a purchase on it. A link that does not parse is `bad` / `invalid_link` at once.
 
-| `reason`            | Meaning                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `invalid_link`      | not a Steam trade link                                       |
-| `private_inventory` | the buyer's inventory is private                             |
-| `trade_ban`         | the buyer's Steam account cannot trade                       |
-| `hold`              | the buyer's Steam account has a trade hold                   |
-| `not_found`         | no such Steam account, or the token does not match the owner |
+| `reason`             | Meaning                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `invalid_link`       | not a Steam trade link                                                                            |
+| `private_inventory`  | the buyer's inventory is private                                                                  |
+| `trade_ban`          | the buyer's Steam account cannot trade                                                            |
+| `hold`               | the buyer's Steam account has a trade hold                                                        |
+| `not_found`          | no such Steam account, or the token does not match the owner                                      |
+| `rejected_by_market` | a market refused this link for a purchase in the last day: ask your customer for a new trade link |
 
 `reason` is `null` for `ok` and `unavailable`. The route has its own limit, `check_per_min`
 (30 a minute by default).
@@ -421,7 +438,7 @@ RFC 7807 `application/problem+json`; read `code`, not the text.
 | 402  | `insufficient_balance` — nothing was written                                                                                                                                                                           |
 | 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                                                                                                           |
 | 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                                                                                                                 |
-| 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired`, `idempotency_mismatch` (webhook)                                                        |
+| 409  | `offer_gone`, `price_above_max` (+ `price_usd`), `trade_link_rejected`, `duplicate_client_order_id` (+ `order`), `buying_disabled`, `cursor_expired`, `idempotency_mismatch` (webhook)                                 |
 | 422  | `trade_link_invalid`, `ip_allowlist_invalid` (site route, + `index`), body errors, a bad `cursor` or `status` on `GET /orders`, a bad `updated_since`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key` |
 | 429  | `rate_limited`, with `Retry-After`                                                                                                                                                                                     |
 | 503  | `feed_unavailable` (feed not built yet), `rate_unavailable` (no FX snapshot ever recorded)                                                                                                                             |
@@ -441,6 +458,11 @@ the API, USD → soʻm, a second key.
 
 ## Changelog
 
+- **2026-10-10 — v1.3.** Only additions and a corrected `reason`: `rejected_by_market` on
+  `POST /tradelink/check`; `409 trade_link_rejected` on `POST /orders`; the offer check answers
+  `unconfirmed` (not `gone`) when our copy of a market is stale and for a Skinslink mirror older
+  than 30 s; a seller that did not hand the skin over now refunds `supplier_refused`, not
+  `sold_out` (the mapping table above).
 - **2026-10-10 — v1.2.** Only additions: `GET /catalog/{item_id}/offers/{offer_id}` (the offer
   check, 404 `offer_not_found`); `POST /orders` confirms the offer before writing anything, so a
   sold one is `409 offer_gone` at once.

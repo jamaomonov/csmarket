@@ -149,6 +149,7 @@ OrderRefundReason = Literal[
     "admin",
     "trade_hold",
     "price_moved",
+    "source_refused",
 ]
 
 _ORDER_REFUND_REASONS = frozenset(
@@ -160,6 +161,7 @@ _ORDER_REFUND_REASONS = frozenset(
         "admin",
         "trade_hold",
         "price_moved",
+        "source_refused",
     )
 )
 
@@ -202,6 +204,7 @@ OrderBuyOutcome = Literal[
     "bought",
     "adopted",
     "sold_out",
+    "refused",
     "low_balance",
     "forbidden",
     "rate_limited",
@@ -217,6 +220,7 @@ _ORDER_BUY_OUTCOMES = frozenset(
         "bought",
         "adopted",
         "sold_out",
+        "refused",
         "low_balance",
         "forbidden",
         "rate_limited",

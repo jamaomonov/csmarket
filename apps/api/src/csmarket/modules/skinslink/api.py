@@ -8,6 +8,7 @@ from csmarket.modules.skinslink.checks import claim_checks, enqueue_check
 from csmarket.modules.skinslink.client import (
     LINK_ERROR_CODES,
     PURCHASE_FAIL_REASONS,
+    SOLD_FAIL_REASONS,
     AvailablePage,
     Balance,
     CatalogueEvent,
@@ -33,7 +34,13 @@ from csmarket.modules.skinslink.deposits import (
     SkinslinkDepositClient,
     deposit_client_for,
 )
-from csmarket.modules.skinslink.mirror import MirrorResult, mirror_fresh, sync_mirror, to_units
+from csmarket.modules.skinslink.mirror import (
+    MirrorResult,
+    mirror_age,
+    mirror_fresh,
+    sync_mirror,
+    to_units,
+)
 from csmarket.modules.skinslink.models import (
     SKINSLINK_CHANNEL,
     SkinslinkCheck,
@@ -49,6 +56,7 @@ __all__ = [
     "PRICE_CODES",
     "PURCHASE_FAIL_REASONS",
     "SKINSLINK_CHANNEL",
+    "SOLD_FAIL_REASONS",
     "STEAM_ACCOUNT_CODES",
     "AvailablePage",
     "Balance",
@@ -76,6 +84,7 @@ __all__ = [
     "client_for",
     "deposit_client_for",
     "enqueue_check",
+    "mirror_age",
     "mirror_fresh",
     "offers_for",
     "refresh_balance",

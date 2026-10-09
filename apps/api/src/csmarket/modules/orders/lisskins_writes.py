@@ -25,6 +25,7 @@ _ACTOR = "orders"
 _REFUND_OUTCOMES: dict[str, str] = {
     "invalid_trade_link": "invalid_link",
     "sold_out": "sold_out",
+    "source_refused": "refused",
     "source_low_balance": "low_balance",
 }
 
@@ -168,14 +169,22 @@ async def attention(
     return outcome
 
 
-async def refund(db: AsyncSession, snap: LisskinsSnapshot, reason: str) -> str:
-    """Nothing was bought: ``failed`` and the money back to the balance (R9)."""
+async def refund(
+    db: AsyncSession, snap: LisskinsSnapshot, reason: str, *, error: str | None = None
+) -> str:
+    """Nothing was bought: ``failed`` and the money back to the balance (R9).
+
+    ``error`` is LIS-SKINS' refusal code, kept on the purchase: a container log does not
+    survive a restart (YuPay's 2026-10-09 orders had nothing to show).
+    """
     pair = await _locked(db, snap)
     if pair is None:
         return _stale(snap, _REFUND_OUTCOMES[reason])
     order, purchase = pair
     try:
         _settle(purchase)
+        if error:
+            purchase.error = error[:32]
         await refund_to_balance(db, order=order, to_status="failed", reason=reason, actor=_ACTOR)
         await db.commit()
     except Exception:

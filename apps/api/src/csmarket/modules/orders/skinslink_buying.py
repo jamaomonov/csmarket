@@ -8,8 +8,8 @@
    ``max_price`` = the agreed cost: Skinslink answers a repeat with the stored purchase, so a
    lost answer is resolved by asking again under the same id (Task 9's reconcile), never by
    a new purchase;
-4. a refusal (sold, price moved, a 4xx) → refund ``sold_out``, never another offer
-   (ADR-0013); low balance → refund; a refusal naming the trade link → refund ``invalid_trade_link``;
+4. a refusal → refund, never another offer (ADR-0013): ``sold_out`` when the offer is gone or
+   dearer (``SOLD_FAIL_REASONS``), ``source_refused`` for any other refusal; low balance → refund; a refusal naming the trade link → refund ``invalid_trade_link``;
    403 → attention, the buy kept pending; 429 → retried after a backoff; no answer →
    ``buy_unconfirmed_at``.
 
@@ -42,6 +42,7 @@ from csmarket.modules.orders.skinslink_writes import (
     unconfirmed,
 )
 from csmarket.modules.skinslink.api import (
+    SOLD_FAIL_REASONS,
     Purchase,
     SkinslinkError,
     SkinslinkForbiddenError,
@@ -71,11 +72,13 @@ _TAKEN = frozenset({"new", "pending", "active", "hold", "completed"})
 class _Run:
     """One attempt's progress: its snapshot once read, whether a request went out."""
 
-    __slots__ = ("sent", "snap")
+    __slots__ = ("refusal", "sent", "snap")
 
     def __init__(self) -> None:
         self.snap: PurchaseSnapshot | None = None
         self.sent = False
+        #: The refusal's code (Skinslink's ``fail_reason`` or error code), if it said one.
+        self.refusal: str | None = None
 
 
 async def attempt_skinslink_buy(
@@ -182,8 +185,10 @@ async def _leased(
     settled = await _purchase_once(db, client, run.snap, link, run)
     if settled is not None:
         return settled
-    log.info("orders.skinslink_buy.refused", number=run.snap.number)
-    return await refund(db, run.snap, "sold_out")  # never another offer (ADR-0013)
+    log.info("orders.skinslink_buy.refused", number=run.snap.number, code=run.refusal)
+    # Never another offer (ADR-0013); «sold out» only when the offer itself is gone.
+    reason = "sold_out" if run.refusal in SOLD_FAIL_REASONS else "source_refused"
+    return await refund(db, run.snap, reason)
 
 
 async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as the table
@@ -217,6 +222,7 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
             return await _adopt(db, client, snap)
         if err.code == "insufficient_balance":
             return await refund(db, snap, "source_low_balance")
+        run.refusal = err.code
         return None
     if report.status in _TAKEN:
         return await record_purchase(db, snap, report)
@@ -224,6 +230,7 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
         return await refund(db, snap, "source_low_balance")
     if report.fail_reason == "duplicate_purchase":
         return await _adopt(db, client, snap)
+    run.refusal = report.fail_reason
     return None
 
 

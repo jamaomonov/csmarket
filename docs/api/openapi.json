@@ -822,7 +822,8 @@
                   "not_accepted",
                   "admin",
                   "trade_hold",
-                  "price_moved"
+                  "price_moved",
+                  "source_refused"
                 ],
                 "type": "string"
               },
@@ -2993,7 +2994,8 @@
                   "not_accepted",
                   "admin",
                   "trade_hold",
-                  "price_moved"
+                  "price_moved",
+                  "source_refused"
                 ],
                 "type": "string"
               },
@@ -8586,7 +8588,8 @@
                   "private_inventory",
                   "trade_ban",
                   "hold",
-                  "not_found"
+                  "not_found",
+                  "rejected_by_market"
                 ],
                 "type": "string"
               },

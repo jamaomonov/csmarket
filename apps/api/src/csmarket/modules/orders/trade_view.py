@@ -58,6 +58,7 @@ _FAILURE_REASONS: dict[str, SkinTradeReason] = {
     "sold_out": "sold_out",
     "not_accepted": "not_accepted",
     "invalid_trade_link": "trade_link",
+    "source_refused": "other",
 }
 #: Order statuses with no trade to show.
 _NO_TRADE = frozenset({"pending", "cancelled"})

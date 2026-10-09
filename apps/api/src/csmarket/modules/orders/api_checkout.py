@@ -33,7 +33,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.money import wire_usd
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import FxSnapshot
-from csmarket.modules.lisskins.api import AvailabilityClient
+from csmarket.modules.lisskins.api import AvailabilityClient, is_rejected
 from csmarket.modules.orders.checkout import RateUnavailableError, float_of
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.paid import mark_paid
@@ -113,6 +113,24 @@ def choose(priced: list[PricedOffer], body: ApiOrderIn, item_id: str) -> PricedO
     if cheapest is None:
         raise _above_max(priced[0].price_units)
     return cheapest
+
+
+def _without_lisskins(
+    priced: list[PricedOffer], body: ApiOrderIn, item_id: str
+) -> list[PricedOffer]:
+    """The offers without LIS-SKINS lots, for a trade link LIS-SKINS refused lately.
+
+    Raises:
+        ConflictError: ``trade_link_rejected`` — the named offer is such a lot; nothing written.
+    """
+    if body.offer_id is not None:
+        internal = open_offer_id(body.offer_id, item_id)
+        if internal is not None and internal.startswith("ls:"):
+            raise ConflictError(
+                "the market refused this trade link lately; ask the buyer for a new one",
+                code="trade_link_rejected",
+            )
+    return [p for p in priced if p.offer.source != "lisskins"]
 
 
 #: Live checks per order at most: a «cheapest within max» order whose next lots are LIS-SKINS
@@ -259,7 +277,8 @@ async def create_api_order(
         nothing is written).
 
     Raises:
-        ConflictError: ``buying_disabled``, ``offer_gone``, ``price_above_max``.
+        ConflictError: ``buying_disabled``, ``offer_gone``, ``price_above_max``,
+            ``trade_link_rejected`` (a LIS-SKINS lot for a link LIS-SKINS refused lately).
         ForbiddenError: ``usd_wallet_disabled``.
         ValidationError: ``trade_link_invalid``.
         NotFoundError: ``item_not_found`` — unknown, inactive, hidden or disabled category.
@@ -275,6 +294,8 @@ async def create_api_order(
     if item is None:
         raise NotFoundError("no such item", code="item_not_found")
     priced = await api_offers(db, item, profile=profile, settings=settings, now=now())
+    if redis is not None and await is_rejected(redis, link):
+        priced = _without_lisskins(priced, body, item.id)
     chosen = await _confirm_live(
         db,
         priced,

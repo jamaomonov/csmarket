@@ -192,7 +192,7 @@ def test_every_enumerated_series_is_exposed_at_zero_from_import() -> None:
         for e in sorted(metrics._WAXPEER_ENDPOINTS)
         for o in sorted(metrics._WAXPEER_OUTCOMES)
     ]
-    assert len(expected) == 7 + 5 + 11 + 18
+    assert len(expected) == 8 + 5 + 12 + 18  # + source_refused, + refused (2026-10-10)
     assert [line for line in expected if line not in lines] == []
 
 

@@ -169,7 +169,9 @@ async def test_a_sold_offer_is_refunded_never_replaced(
         (purchase("failed", fail_reason="insufficient_balance"), "source_low_balance"),
         (SkinslinkError("banned", status=400, code="trade_banned"), "invalid_trade_link"),
         (SkinslinkError("hold", status=400, code="hold"), "trade_hold"),
-        (SkinslinkError("bad", status=400, code="validation"), "sold_out"),
+        (SkinslinkError("bad", status=400, code="validation"), "source_refused"),
+        (purchase("failed", fail_reason="item_not_available"), "sold_out"),
+        (purchase("failed", fail_reason="provider_unavailable"), "source_refused"),
         (SkinslinkError("broke", status=400, code="insufficient_balance"), "source_low_balance"),
     ],
 )

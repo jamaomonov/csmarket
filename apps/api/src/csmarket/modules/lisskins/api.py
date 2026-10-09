@@ -18,6 +18,7 @@ from csmarket.modules.lisskins.balance import (
 )
 from csmarket.modules.lisskins.client import (
     BUY_LINK_ERRORS,
+    BUY_SOLD_ERRORS,
     INFO_MAX_IDS,
     TRADE_LINK_ERRORS,
     Availability,
@@ -53,6 +54,7 @@ from csmarket.modules.lisskins.models import (
 from csmarket.modules.lisskins.offers import (
     offers_for,
 )
+from csmarket.modules.lisskins.rejected_links import is_rejected, remember_rejection
 from csmarket.modules.lisskins.rollup import (
     rollup,
 )
@@ -73,6 +75,7 @@ __all__ = [
     "BREAKER_TTL",
     "BUDGET_PER_MINUTE",
     "BUY_LINK_ERRORS",
+    "BUY_SOLD_ERRORS",
     "INFO_MAX_IDS",
     "INSTANT",
     "KEEP",
@@ -105,6 +108,7 @@ __all__ = [
     "availability_client",
     "cached_balance",
     "client_for",
+    "is_rejected",
     "live_price",
     "load_index",
     "lot_of",
@@ -112,6 +116,7 @@ __all__ = [
     "read_export",
     "recheck_chosen",
     "refresh_balance",
+    "remember_rejection",
     "request_info_client",
     "rollup",
     "snapshot_fresh",

@@ -27,6 +27,7 @@ export const FAILURE_REASONS = [
   "not_accepted",
   "trade_hold",
   "price_moved",
+  "source_refused",
   "admin",
 ] as const;
 export type FailureReason = (typeof FAILURE_REASONS)[number];
