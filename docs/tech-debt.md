@@ -82,7 +82,4 @@ None of these touches money or order state.
 
 ## Public API (ADR-0017, plan B, 2026-10-09)
 
-1. **`public_api:authfail:{ip}` holds the client address in clear** for up to 60 s (the other
-   limiter keys hash it with `hash_short`). It is a short-lived counter, but the cache-keys rule
-   says no raw IP. _Fix:_ key it by `hash_short(ip)`.
-2. **The tariff is set by SQL** until plan C's admin page (`docs/runbooks/public-api.md`).
+1. **The tariff is set by SQL** until plan C's admin page (`docs/runbooks/public-api.md`).

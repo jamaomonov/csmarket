@@ -30,9 +30,9 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - In `ip_guard` keys the address appears only as `hash_short(ip)` (12 hex characters), and a
   subject (the user id) as a SHA-256 prefix. Keys live one window (60 s). Catalogue:
   `docs/architecture/cache-keys.md`.
-- The public API's failed-authentication counter `public_api:authfail:{ip}` (60 s) is the one
-  exception: it holds the address in clear (tracked in `docs/tech-debt.md`). A key's optional IP
-  allow-list is the customer's own server addresses, set by an admin.
+- The public API's failed-authentication counter `public_api:authfail:{hash_short(ip)}` (60 s)
+  follows the same rule. A key's optional IP allow-list is the customer's own server addresses,
+  set by an admin.
 
 ### Sign-in and trade-link specifics (M1)
 

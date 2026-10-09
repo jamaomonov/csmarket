@@ -145,5 +145,5 @@ the first page. A page 0 revalidation counts as the once-a-minute `feed` limit (
 ## Limits and throttles
 
 Per key: 60 reads, 10 orders, 1 feed first page a minute (`public_api:rl:{bucket}:{key_id}`);
-failed authentications 30 a minute per address (`public_api:authfail:{ip}`). To lift a throttle
+failed authentications 30 a minute per address (`public_api:authfail:{hash_short(ip)}`). To lift a throttle
 for a client, delete its Redis counter key (counters only; nothing else is stored under them).
