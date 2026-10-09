@@ -117,6 +117,7 @@ async def test_the_whole_lifecycle(customer_headers: Headers, db_session: AsyncS
     rows = await _events(db_session)
     assert [r.event for r in rows] == ["order.paid", "order.trade_sent", "order.delivered"]
     assert rows[1].payload["order"]["trade"]["offer_sent_at"] is not None
+    assert rows[1].payload["order"]["trade"]["steam_offer_id"] == OFFER
     for row in rows:
         _clean(row)
 

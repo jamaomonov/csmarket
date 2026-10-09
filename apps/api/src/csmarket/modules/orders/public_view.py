@@ -51,6 +51,23 @@ _DEFAULT_REASON: PublicRefundReason = "cancelled_by_support"
 Purchase = SkinslinkPurchase | LisskinsPurchase
 
 
+def _offer_id(trade: SkinTrade | None, purchase: Purchase | None) -> str | None:
+    """Steam's trade offer id, whichever market sent it; ``None`` until known."""
+    if isinstance(purchase, LisskinsPurchase):
+        raw = purchase.steam_trade_offer_id
+    elif isinstance(purchase, SkinslinkPurchase):
+        raw = purchase.offer_id
+    else:
+        raw = None if trade is None else trade.trade_id
+    return str(raw) if raw else None
+
+
+def _seller_name(trade: SkinTrade | None) -> str | None:
+    """The sender's public Steam name (Waxpeer only); ``None`` otherwise."""
+    name = (trade.seller or {}).get("name") if trade is not None else None
+    return name if isinstance(name, str) and name else None
+
+
 def _accepted(order: Order, trade: SkinTrade | None, purchase: Purchase | None) -> bool:
     """Whether the buyer accepted the offer (Steam's protection may still hold the skin)."""
     if isinstance(purchase, LisskinsPurchase):
@@ -85,6 +102,8 @@ def _trade(order: Order, trade: SkinTrade | None, purchase: Purchase | None) -> 
         offer_sent_at=order.trade_sent_at,
         accepted_at=accepted_at or order.delivered_at,
         release_at=release_at,
+        steam_offer_id=_offer_id(trade, purchase),
+        seller_name=_seller_name(trade),
     )
 
 

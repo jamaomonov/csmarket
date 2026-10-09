@@ -149,6 +149,10 @@ class PublicTradeOut(BaseModel):
     accepted_at: datetime | None
     #: When Steam's trade protection ends.
     release_at: datetime | None
+    #: Steam's trade offer id: ``https://steamcommunity.com/tradeoffer/{id}/``.
+    steam_offer_id: str | None = None
+    #: The sender's Steam name when the market gives it; usually ``null``.
+    seller_name: str | None = None
 
 
 class PublicRefundOut(BaseModel):
