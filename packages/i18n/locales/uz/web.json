@@ -180,12 +180,13 @@
   },
   "skins": {
     "meta": {
-      "title": "CS2 skinlari (CS2 skins) — Oʻzbekistonda soʻmga sotib olish",
+      "title": "CS2 skinlari marketi — pichoqlar, qoʻlqoplar va qurollar soʻmda",
       "description": "CS2 skinlari tezkor yetkazib berish bilan: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Soʻmda toʻlov.",
       "itemTitle": "{name} — Oʻzbekistonda {price}ga sotib olish",
       "itemTitleNoPrice": "{name} — Oʻzbekistonda soʻmga sotib olish",
       "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Soʻmda toʻlov, skin Steamʼga keladi.",
-      "itemDescriptionNoPrice": "{name} — CS2 skini, soʻmda tezkor yetkazib berish bilan sotib oling."
+      "itemDescriptionNoPrice": "{name} — CS2 skini, soʻmda tezkor yetkazib berish bilan sotib oling.",
+      "marketDescription": "{count} ta CS2 skini mavjud: pichoqlar, qoʻlqoplar, qurollar, agentlar va keyslar. Narx, eskirish va noyoblik boʻyicha filtrlar. Click, Payme yoki Uzum orqali soʻmda toʻlov."
     },
     "title": "CS2 skinlari bozori",
     "searchPlaceholder": "Skin nomi…",

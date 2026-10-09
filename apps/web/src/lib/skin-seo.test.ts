@@ -2,7 +2,7 @@ import ru from "@csmarket/i18n/locales/ru/web.json";
 import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
-import { skinFaq, skinProductLd, wearFloatRange } from "./skin-seo";
+import { itemListLd, skinFaq, skinProductLd, wearFloatRange } from "./skin-seo";
 
 import type { SkinDetail } from "@csmarket/utils/skins";
 
@@ -107,5 +107,34 @@ describe("skinProductLd", () => {
 
   it("emits no Product at all without a price", () => {
     expect(skinProductLd({ ...ITEM, price_uzs: null }, "u")).toBeNull();
+  });
+});
+
+describe("itemListLd", () => {
+  it("lists the shown items in order with their localized URLs", () => {
+    const ld = itemListLd("uz", [ITEM, { ...ITEM, slug: "awp-x", name: "AWP | X", phase: "Ruby" }]);
+    expect(ld).toEqual({
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      numberOfItems: 2,
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "AK-47 | Slate (Battle-Scarred)",
+          url: "https://csmarket.uz/uz/item/ak-47-slate-battle-scarred",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "AWP | X Ruby",
+          url: "https://csmarket.uz/uz/item/awp-x",
+        },
+      ],
+    });
+  });
+
+  it("is null for an empty list (an empty ItemList is invalid)", () => {
+    expect(itemListLd("ru", [])).toBeNull();
   });
 });

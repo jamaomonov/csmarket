@@ -9,6 +9,7 @@ import { SkinCard } from "@/components/skins/SkinCard";
 import { SkinFaq } from "@/components/skins/SkinFaq";
 import { Link } from "@/i18n/navigation";
 import { localeUrl } from "@/lib/seo";
+import { itemListLd } from "@/lib/skin-seo";
 
 interface Crumb {
   name: string;
@@ -34,7 +35,7 @@ interface Props {
  * A CS2 landing page — a category («Ножи КС2 (CS2)») or a weapon («Скины AK-47 КС2 (CS2)»):
  * the heading, a line of real numbers (how many, from what price), the most popular 48, a
  * link into the filtered catalogue for the rest, and links to the pages beneath it.
- * Breadcrumbs as JSON-LD.
+ * Breadcrumbs and the shown skins (ItemList) as JSON-LD.
  */
 export async function SkinLanding({
   locale,
@@ -57,11 +58,13 @@ export async function SkinLanding({
       item: localeUrl(locale, c.path),
     })),
   };
+  const listLd = itemListLd(locale, items);
   const parents = crumbs.slice(0, -1);
   const current = crumbs.at(-1);
   return (
     <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-28 pt-6 sm:px-6">
       <JsonLd data={breadcrumbLd} />
+      {listLd && <JsonLd data={listLd} />}
       <nav
         aria-label="breadcrumb"
         className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"

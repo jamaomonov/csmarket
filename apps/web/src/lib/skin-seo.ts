@@ -5,8 +5,10 @@
  * stated — no price, no price question; not cheaper than Steam, no Steam answer.
  */
 
-import type { Exterior, SkinDetail } from "@csmarket/utils/skins";
+import type { Exterior, SkinDetail, SkinItem } from "@csmarket/utils/skins";
 
+import { itemPath } from "@/lib/paths";
+import { localeUrl } from "@/lib/seo";
 import { displayPrice } from "@/lib/skins";
 
 /** Steam's float bands per wear. */
@@ -131,5 +133,34 @@ export function skinProductLd(item: SkinDetail, url: string): ProductLd | null {
       // Prices follow a five-minute sync; a short, rolling window keeps the claim true.
       priceValidUntil: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
     },
+  };
+}
+
+export interface ItemListLd {
+  "@context": "https://schema.org";
+  "@type": "ItemList";
+  numberOfItems: number;
+  itemListElement: { "@type": "ListItem"; position: number; name: string; url: string }[];
+}
+
+/**
+ * The skins a listing page shows as an ItemList (a summary list: name and URL, each item's
+ * own page carries its Product). `null` for an empty page, which would be invalid.
+ */
+export function itemListLd(
+  locale: string,
+  items: Pick<SkinItem, "slug" | "name" | "phase">[],
+): ItemListLd | null {
+  if (items.length === 0) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    numberOfItems: items.length,
+    itemListElement: items.map((it, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: skinFullName(it),
+      url: localeUrl(locale, itemPath(it.slug)),
+    })),
   };
 }
