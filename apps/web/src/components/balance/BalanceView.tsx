@@ -84,7 +84,12 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
           {dep("topUp")}
         </Link>
       </div>
-      {balance.data?.usd ? <UsdWalletCard locale={locale} usd={balance.data.usd} /> : null}
+      {balance.data?.usd ? (
+        <>
+          <UsdWalletCard locale={locale} usd={balance.data.usd} />
+          <EntriesList locale={locale} currency="usd" />
+        </>
+      ) : null}
       <div className="flex flex-col gap-3">
         <HistoryFilter
           current={type}

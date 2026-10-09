@@ -122,7 +122,8 @@ Source: `docs/architecture/sequence-diagrams/topup.mmd`.
 Under the soʻm balance the page shows a second card, «USD-кошелёк», with the dollar balance and
 «Перевести с баланса»: the customer types an amount in soʻm and sees the dollars and the rate
 before confirming. Conversion goes one way, soʻm to dollars; the dollars are also credited by an
-admin by hand. History lists dollar lines apart. Design: ADR-0017; operations:
+admin by hand. Under the card, «История USD-кошелька» lists the dollar lines (conversions,
+API purchases and refunds, admin credits) apart from the soʻm history. Design: ADR-0017; operations:
 `docs/runbooks/public-api.md`.
 
 ```mermaid

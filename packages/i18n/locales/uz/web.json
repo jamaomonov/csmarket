@@ -174,7 +174,8 @@
       "rateUnavailable": "Kurs hozircha mavjud emas",
       "tooLow": "Balansda mablagʻ yetarli emas",
       "failed": "Oʻtkazib boʻlmadi. Qayta urinib koʻring.",
-      "done": "Oʻtkazildi."
+      "done": "Oʻtkazildi.",
+      "historyTitle": "USD hamyon tarixi"
     }
   },
   "skins": {

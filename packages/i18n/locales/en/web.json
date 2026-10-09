@@ -174,7 +174,8 @@
       "rateUnavailable": "The rate is unavailable right now",
       "tooLow": "Not enough money on the balance",
       "failed": "Could not convert. Please try again.",
-      "done": "Converted."
+      "done": "Converted.",
+      "historyTitle": "USD wallet history"
     }
   },
   "skins": {

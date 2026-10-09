@@ -154,10 +154,15 @@ export type EntryType = "topup" | "withdrawal";
 
 /** `GET /wallet/entries`: one page of history (of one `type` when given); pass `next_cursor`
  * back for the next. */
-export function getEntries(cursor?: string, type?: EntryType): Promise<EntriesPage> {
+export function getEntries(
+  cursor?: string,
+  type?: EntryType,
+  currency?: "usd",
+): Promise<EntriesPage> {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   if (type) params.set("type", type);
+  if (currency) params.set("currency", currency);
   const query = params.size > 0 ? `?${params.toString()}` : "";
   return session.apiGet<EntriesPage>(`/api/v1/wallet/entries${query}`);
 }
@@ -209,6 +214,12 @@ export function topupAttemptKey(store: AttemptStore, signature: string): string 
 }
 
 /** A signed wire amount (`"+50000"`, `"-10000"`) for display: `+50 000 сум`, `−10 000 сум`. */
+/** A signed dollar line, `"+7.826"` → `"+$7.826"`, `"-1.500"` → `"−$1.500"` (the wire string as is). */
+export function signedUsd(wire: string): string {
+  const negative = wire.startsWith("-");
+  return `${negative ? "−" : "+"}$${wire.replace(/^[+-]/, "")}`;
+}
+
 export function signedUzs(locale: string, wire: string): string {
   const negative = wire.startsWith("-");
   const digits = wire.replace(/^[+-]/, "");
