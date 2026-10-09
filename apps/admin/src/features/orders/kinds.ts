@@ -30,8 +30,3 @@ export const FAILURE_REASONS = [
   "admin",
 ] as const;
 export type FailureReason = (typeof FAILURE_REASONS)[number];
-
-export const TRADE_VIEWS = ["all", "active", "attention"] as const;
-export type TradeView = (typeof TRADE_VIEWS)[number];
-
-export type TradeState = "buying" | "offer_sent" | "accepted" | "released" | "failed";

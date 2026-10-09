@@ -4,10 +4,12 @@ The admin role gate, the admin audit trail and the admin users API. M1 shipped t
 one probe, `GET /api/v1/admin/me`; M2 adds `admin_audit_log` with the first admin actions
 (hiding a catalogue item, editing search aliases — `skins/README.md`, **Admin catalogue**);
 M3 adds the users list and card, ban/unban and the audited balance adjustment; M4a the
-orders and trades API (search, the order page, the attention queue, resolve / refund /
+orders and trades API (search, the «Обмены» table of every source with its attention tab, the order page, resolve / refund /
 retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007); the public
-API's keys page (`/admin/api-keys`: keys with order count, revenue and cost, a card with the
-latest 20 orders and the webhook host, the `retail` / `cost` tariff switch and revoke —
+API's keys (`/admin/api-keys` routes; the SPA shows a key as the «API-ключ» tab of its owner's
+user card, and the users list marks and filters users with a live key — `has_api_key`, the row's
+`api_key`, the card's `api_key_id`): order count, revenue and cost, the
+latest 20 orders and the webhook host, the `retail` / `cost` tariff switch, limits and revoke —
 audited `api_keys.tariff` `{from, to, reason}` and `api_keys.revoke` `{reason}`; a tariff change
 applies to the next order only, placed orders keep their stamped price).
 
@@ -122,28 +124,44 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
 
 ## Orders and trades (M4a)
 
-`orders_routes.py` (router), `orders_service.py` (reads), `orders_schemas.py` (wire shapes).
+`orders_routes.py` (router), `orders_service.py` (reads), `orders_schemas.py` (wire shapes);
+the «Обмены» table is `trades_service.py` / `trades_schemas.py`, and both lists share
+`order_query.py` (the outer joins to every source, the search, the cursor, the money).
 The writes are `orders`' own: `orders.admin_actions` (exported by `orders.api`). All under
 `/api/v1/admin`, `require_admin` on the router (401 / 403 as above).
 
-| Route                                                             | Body                    | Answer             |
-| ----------------------------------------------------------------- | ----------------------- | ------------------ |
-| `GET /admin/orders?q=&status=&user_id=&cursor=&limit=`            | —                       | `AdminOrdersOut`   |
-| `GET /admin/trades?view=all\|active\|attention&q=&cursor=&limit=` | —                       | `AdminTradesOut`   |
-| `GET /admin/orders/{number}`                                      | —                       | `AdminOrderDetail` |
-| `POST /admin/orders/{number}/resolve`                             | `{note?: 0..500\|null}` | `AdminOrderDetail` |
-| `POST /admin/orders/{number}/refund`                              | —                       | `AdminOrderDetail` |
-| `POST /admin/orders/{number}/retry`                               | —                       | `AdminOrderDetail` |
+| Route                                                            | Body                    | Answer             |
+| ---------------------------------------------------------------- | ----------------------- | ------------------ |
+| `GET /admin/orders?q=&status=&user_id=&cursor=&limit=`           | —                       | `AdminOrdersOut`   |
+| `GET /admin/trades?view=all\|active\|hold\|attention\|refunds&…` | —                       | `AdminTradesOut`   |
+| `GET /admin/orders/{number}`                                     | —                       | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/resolve`                            | `{note?: 0..500\|null}` | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/refund`                             | —                       | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/retry`                              | —                       | `AdminOrderDetail` |
 
 - **Lists:** newest first, keyset `(created_at DESC, id DESC)`, `limit` 1..100 (20); one
-  statement per page (the trade and the buyer's name are joins; the trades page adds one
-  for the counts). `q` (≤ 100 chars, no NUL) = a number prefix (upper-cased, `%`/`_`
-  literal, tried only up to 8 characters) **or** part of the item name (case-insensitive).
-  A row's `attention_reason` is the **open** attention only (set, `resolved_at` unset).
-- **Trades page:** orders that have a `skin_trades` row. `view=active` = `buying` /
-  `trade_sent`; `view=attention` = an unresolved attention; `counts {active, attention}`
-  ignore `q`. Each row adds `trade {status (Waxpeer's code), state (the buyer's reading:
-buying / offer_sent / accepted / released / failed), attention_reason, send_until}`.
+  statement per page (the trade, the Skinslink and LIS-SKINS purchases and the buyer are
+  outer joins; the trades table adds one for the counts). `q` (≤ 100 chars, no NUL) = a
+  number prefix (upper-cased, `%`/`_` literal, tried only up to 8 characters), part of the
+  item name (case-insensitive) **or** a Steam trade offer id (exact: `skin_trades.trade_id`,
+  `skinslink_purchases.offer_id`, `lisskins_purchases.steam_trade_offer_id`). A row's
+  `attention_reason` is the **open** attention (set, `resolved_at` unset) of the trade or
+  either purchase; `protected_until` is `orders.protection_end` (Skinslink `hold` of a
+  `trade_sent` order, or an accepted, unreleased Waxpeer trade).
+- **«Обмены» table (`GET /admin/trades`):** every order, whatever its source and channel.
+  Tabs: `all`; `active` (`trade_state` `buying` / `sent`); `hold` (accepted, Steam's
+  protection running); `attention` (an open attention of any source); `refunds`
+  (`refunded_at` set). `counts {all, active, hold, attention, refunds}` cover every order
+  and ignore `q`. A row (`AdminTradeRow`): number, `created_at`, order `status`, `source`,
+  `channel` and `api_owner` (the API key owner's name), `item {name, phase, image_url,
+rarity_color, float_value}`, `price_uzs`, `price_usd`, `cost_usd` (what the market
+  charged, else the checkout cost), `margin_usd`, `margin_pct` (of the price, one decimal),
+  `paid_with`, `buyer {id, display_name, avatar_url}`, `steam_offer_id` / `offer_url`,
+  `trade_link_masked`, `trade_state`, `protected_until`, `failure_reason`,
+  `attention_reason`, `source_status` (Waxpeer's code as digits, else the purchase's word).
+  `trade_state` is `orders.row_state` (`orders/trade_row.py`): `pending`, `buying`, `sent`,
+  `hold`, `delivered`, `refunded`, `cancelled`, `failed_held`; its SQL twins filter the tabs,
+  so a tab holds what its rows say (`test_admin_trades.py`).
 - **Order page:** every `orders` column except `trade_link` (`trade_link_masked` instead) and
   `idempotency_key`,
   `cost_usd` / `price_usd` (6 decimals), `fx_rate` (the snapshot's rate), `margin_usd` =
@@ -155,10 +173,9 @@ buying / offer_sent / accepted / released / failed), attention_reason, send_unti
   (`AdminSkinslinkPurchaseOut`: `merchant_tx_id`, `asset_id`, `purchase_id`, `status`,
   `offer_id` / `offer_url`, `fail_reason`, `amount_usd`, `hold_end_date`, the buy flags,
   `attention_reason`, `resolved_at`) instead of a trade; its margin uses what Skinslink
-  charged when known. Resolve («Разобрано») works on a Skinslink purchase's attention. The
-  trades page, the attention queue, refund and retry read `skin_trades` only: they do not
-  list a Skinslink attention and retry refuses a Skinslink order (409); refund asks the
-  source first (ADR-0018) (`docs/tech-debt.md`).
+  charged when known. Resolve («Разобрано») works on a Skinslink purchase's attention, and the «Обмены» table
+  lists it; retry refuses a Skinslink order (409); refund asks the source first (ADR-0018)
+  (`docs/tech-debt.md`).
 - **`can_refund` / `can_retry`** are `orders.api.can_refund` / `can_retry` — the same
   functions (`refund_refusal`, `retry_refusal`) the actions run under the locks, so the
   button and the action agree (`test_the_flags_say_what_the_action_does`).

@@ -58,14 +58,14 @@ export function UsdSwitchDialog({ userId, enable, idem, onDone, onClose }: UsdSw
       aria-modal="true"
       aria-labelledby={titleId}
       data-testid="usd-switch-dialog"
-      className="fixed inset-0 z-10 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-4"
       onKeyDown={(e) => {
         if (e.key === "Escape" && !mutation.isPending) onClose();
       }}
     >
       <form
         onSubmit={onSubmit}
-        className="border-border bg-surface w-full max-w-md space-y-4 rounded-lg border p-5"
+        className="border-border bg-surface max-h-[90vh] w-full space-y-4 overflow-y-auto rounded-t-xl border p-5 shadow-[var(--shadow-menu)] sm:max-w-md sm:rounded-xl"
       >
         <h2 id={titleId} className="text-lg font-semibold">
           {title}

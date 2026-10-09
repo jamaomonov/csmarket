@@ -116,7 +116,8 @@ Flow: [`sequence-diagrams/topup.mmd`](./sequence-diagrams/topup.mmd),
   the owner first, `SKIP LOCKED`, per row. Lock order for orders: order → kassa row →
   payment → wallet. The admin payment detail carries an `order` block.
 - **`admin` learns orders** — `admin.orders_routes` (`/admin/orders`, `/admin/trades`):
-  search, the order page (trade link masked), the trades page with its attention queue, and
+  search, the order page (trade link masked), the «Обмены» table of every source with its
+  tabs (`admin.trades_service`, states from `orders.trade_row`), and
   three audited, idempotent actions — resolve, refund to the balance, retry the buy. The
   writes are `orders`' own (`orders.admin_actions`, exported by `orders.api`: lock order →
   trade, refused while a buy attempt holds the lease; a Skinslink / LIS-SKINS refund asks the

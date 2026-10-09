@@ -67,6 +67,7 @@ const PROVIDERS: Record<string, string> = {
   uzum: "Uzum",
   mock: "тестовая",
   wallet: "баланс",
+  usd_wallet: "баланс в $",
 };
 
 export function providerLabel(provider: string | null): string {

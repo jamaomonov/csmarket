@@ -1,17 +1,20 @@
-/** «Заказ»: fields and money, payments, the Waxpeer trade and the operator's actions. */
+/** «Заказ»: actions and an open attention first, then the order, the market, money and time. */
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { type AdminOrderDetail, getOrder } from "./api";
 import { detailKey } from "./keys";
-import { FAILURE_LABELS } from "./labels";
+import { type AttentionReason } from "./kinds";
+import { ATTENTION_LABELS, FAILURE_LABELS } from "./labels";
 import { LisskinsBlock } from "./LisskinsBlock";
 import { OrderActions } from "./OrderActions";
 import { SkinslinkBlock } from "./SkinslinkBlock";
 import { AttentionBadge, OrderStatusChip } from "./StatusChip";
 import { TradeBlock } from "./TradeBlock";
 
+import { Money } from "@/components/Money";
+import { PageHeader } from "@/components/PageHeader";
+import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { StatusChip as PaymentStatusChip } from "@/features/payments/StatusChip";
 import { errorText, providerLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
@@ -34,73 +37,101 @@ function Bought({ detail }: BoughtProps) {
   return <TradeBlock trade={detail.trade} />;
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="text-fg-muted w-40 shrink-0">{label}</dt>
-      <dd className="min-w-0 break-words">{children}</dd>
-    </div>
-  );
-}
-
 function when(iso: string | null): string {
   return iso === null ? "—" : formatDateTime(iso);
 }
 
-const usd = (value: string): string => `$${value}`;
+/** The open attention of whichever market the order was bought at. */
+function openAttention(detail: AdminOrderDetail): AttentionReason | null {
+  const watched = detail.trade ?? detail.skinslink ?? detail.lisskins;
+  if (watched?.resolved_at !== null) return null;
+  return watched.attention_reason;
+}
 
 function OrderFields({ detail }: { detail: AdminOrderDetail }) {
   const { order, user } = detail;
   return (
-    <section aria-label="Заказ" className="space-y-2">
-      <dl className="space-y-1 text-sm">
-        <Field label="Скин">
+    <Section title="Заказ">
+      <dl>
+        <Row label="Скин">
           {order.market_hash_name}
           {order.phase !== null && <span className="text-fg-muted"> · {order.phase}</span>}
-        </Field>
-        <Field label="Статус">
-          <OrderStatusChip status={order.status} />
-        </Field>
-        <Field label="Пользователь">
+        </Row>
+        <Row label="Пользователь">
           <Link to={`/users/${user.id}`} className="hover:underline">
             {user.display_name ?? "Без имени"}
           </Link>
-        </Field>
-        <Field label="Источник">
+        </Row>
+        <Row label="Источник">
           {SOURCE_LABELS[order.source]}
-          {order.offer_id !== null && ` · ${order.offer_id}`}
-        </Field>
-        <Field label="Цена">{formatSum(order.price_uzs)}</Field>
-        <Field label="Цена, USD">{usd(order.price_usd)}</Field>
-        <Field label="Себестоимость, USD">{usd(order.cost_usd)}</Field>
-        <Field label="Маржа, USD">{usd(order.margin_usd)}</Field>
-        <Field label="Курс">{order.fx_rate}</Field>
-        <Field label="Оплата">{providerLabel(order.paid_with)}</Field>
-        <Field label="Трейд-ссылка">{order.trade_link_masked ?? "не указана"}</Field>
-        <Field label="Создан">{when(order.created_at)}</Field>
-        <Field label="Действует до">{when(order.expires_at)}</Field>
-        <Field label="Оплачен">{when(order.paid_at)}</Field>
-        <Field label="Получен">{when(order.delivered_at)}</Field>
-        {order.cancelled_at !== null && <Field label="Отменён">{when(order.cancelled_at)}</Field>}
-        {order.failed_at !== null && (
-          <Field label="Не получилось">
-            {when(order.failed_at)}
-            {order.failure_reason !== null && ` · ${FAILURE_LABELS[order.failure_reason]}`}
-          </Field>
-        )}
-        {order.refunded_at !== null && (
-          <Field label="Возврат">{when(order.refunded_at)} · на баланс</Field>
-        )}
+          {order.offer_id !== null && <span className="text-fg-muted"> · {order.offer_id}</span>}
+        </Row>
+        <Row label="Трейд-ссылка">
+          <span className="break-all">{order.trade_link_masked ?? "не указана"}</span>
+        </Row>
       </dl>
-    </section>
+    </Section>
   );
 }
 
-function Payments({ payments }: { payments: AdminOrderDetail["payments"] }) {
+function Timeline({ detail }: { detail: AdminOrderDetail }) {
+  const { order } = detail;
   return (
-    <section aria-label="Платежи" className="space-y-2">
-      <h2 className="text-lg font-semibold">Платежи</h2>
-      {payments.length === 0 && <p className="text-fg-muted text-sm">Оплаты не было.</p>}
+    <Section title="Ход заказа">
+      <dl>
+        <Row label="Создан">{when(order.created_at)}</Row>
+        <Row label="Действует до">{when(order.expires_at)}</Row>
+        <Row label="Оплачен">{when(order.paid_at)}</Row>
+        <Row label="Получен">{when(order.delivered_at)}</Row>
+        {order.cancelled_at !== null && <Row label="Отменён">{when(order.cancelled_at)}</Row>}
+        {order.failed_at !== null && (
+          <Row label="Не получилось">
+            {when(order.failed_at)}
+            {order.failure_reason !== null && ` · ${FAILURE_LABELS[order.failure_reason]}`}
+          </Row>
+        )}
+        {order.refunded_at !== null && (
+          <Row label="Возврат">{when(order.refunded_at)} · на баланс</Row>
+        )}
+      </dl>
+    </Section>
+  );
+}
+
+function MoneyFields({ detail }: { detail: AdminOrderDetail }) {
+  const { order } = detail;
+  return (
+    <Section title="Деньги">
+      <dl>
+        <Row label="Цена">
+          <Money uzs={order.price_uzs} />
+        </Row>
+        <Row label="Цена, USD">
+          <Money usd={order.price_usd} />
+        </Row>
+        <Row label="Себестоимость">
+          <Money usd={order.cost_usd} />
+        </Row>
+        <Row label="Маржа">
+          <Money usd={order.margin_usd} />
+        </Row>
+        <Row label="Курс">{order.fx_rate}</Row>
+        <Row label="Оплата">{providerLabel(order.paid_with)}</Row>
+      </dl>
+    </Section>
+  );
+}
+
+function Payments({ detail }: { detail: AdminOrderDetail }) {
+  const { payments, order } = detail;
+  const fromBalance = order.paid_with === "wallet";
+  return (
+    <Section title="Платежи" label="Платежи">
+      {payments.length === 0 && (
+        <p className="text-fg-muted text-sm">
+          {fromBalance ? "Оплачен с баланса — платежа через кассу нет." : "Оплаты не было."}
+        </p>
+      )}
       <ul className="divide-border divide-y text-sm">
         {payments.map((p) => (
           <li key={p.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2">
@@ -112,7 +143,7 @@ function Payments({ payments }: { payments: AdminOrderDetail["payments"] }) {
           </li>
         ))}
       </ul>
-    </section>
+    </Section>
   );
 }
 
@@ -125,20 +156,25 @@ export function OrderDetail() {
   });
   const notFound = query.error instanceof ApiError && query.error.status === 404;
   const detail = query.data;
-  const open =
-    detail?.trade?.attention_reason != null && detail.trade.resolved_at === null
-      ? detail.trade.attention_reason
-      : null;
+  const open = detail ? openAttention(detail) : null;
 
   return (
-    <section className="space-y-6">
-      <Link to="/orders" className="text-fg-muted text-sm hover:underline">
-        ← Все заказы
-      </Link>
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-bold">{detail ? `Заказ ${detail.order.number}` : "Заказ"}</h1>
-        <AttentionBadge reason={open} />
-      </div>
+    <section className="space-y-4">
+      <PageHeader
+        back={{ to: "/trades", label: "Обмены" }}
+        title={detail ? `Заказ ${detail.order.number}` : "Заказ"}
+        badges={
+          detail && (
+            <>
+              <OrderStatusChip
+                status={detail.order.status}
+                protectedUntil={detail.order.protected_until}
+              />
+              <AttentionBadge reason={open} />
+            </>
+          )
+        }
+      />
       {query.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {notFound && <p className="text-fg-muted">Заказ не найден.</p>}
       {query.isError && !notFound && (
@@ -147,16 +183,36 @@ export function OrderDetail() {
         </p>
       )}
       {detail && (
-        <div className="space-y-8" data-testid="order-detail">
-          <OrderFields detail={detail} />
-          <Payments payments={detail.payments} />
-          <Bought detail={detail} />
+        <div className="space-y-4" data-testid="order-detail">
+          {open !== null && (
+            <Banner>
+              Требует внимания: {ATTENTION_LABELS[open]}. Решите по ответу площадки, затем отметьте
+              «Разобрано».
+            </Banner>
+          )}
           <OrderActions
             key={detail.order.number}
             detail={detail}
             onStale={() => {
               void query.refetch();
             }}
+          />
+          <DetailGrid
+            main={
+              <>
+                <OrderFields detail={detail} />
+                <div className="border-border bg-surface rounded-lg border p-4">
+                  <Bought detail={detail} />
+                </div>
+                <Payments detail={detail} />
+              </>
+            }
+            side={
+              <>
+                <MoneyFields detail={detail} />
+                <Timeline detail={detail} />
+              </>
+            }
           />
         </div>
       )}

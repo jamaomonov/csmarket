@@ -1,4 +1,5 @@
 /** Admin users API: thin typed wrappers over `/api/v1/admin/users`. Mirrors the API's schemas. */
+import { type Tariff } from "../apiKeys/api";
 import { type AdminOrderRow } from "../orders/api";
 
 import { session } from "@/lib/api";
@@ -15,6 +16,8 @@ export interface AdminUserRow {
   created_at: string;
   /** Whole soʻm as a digit string. */
   balance_uzs: string;
+  /** The live API key (its tariff), or `null`. */
+  api_key: { id: string; pricing_profile: Tariff } | null;
 }
 
 export interface AdminUsersPage {
@@ -81,18 +84,23 @@ export interface AdminUserCard {
   balance_usd: string;
   /** The latest 20 dollar lines, newest first. */
   usd_entries: AdminEntry[];
+  /** The newest API key (live or revoked); `null` when the user never took one. */
+  api_key_id: string | null;
 }
 
 export interface ListUsersParams {
   q?: string;
   cursor?: string;
+  /** Only users with a live API key. */
+  hasApiKey?: boolean;
 }
 
 const PAGE_SIZE = 20;
 
-export function listUsers({ q, cursor }: ListUsersParams = {}): Promise<AdminUsersPage> {
+export function listUsers({ q, cursor, hasApiKey }: ListUsersParams = {}): Promise<AdminUsersPage> {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
+  if (hasApiKey === true) params.set("has_api_key", "true");
   if (cursor) params.set("cursor", cursor);
   params.set("limit", String(PAGE_SIZE));
   return session.apiGet<AdminUsersPage>(`${BASE}?${params.toString()}`);

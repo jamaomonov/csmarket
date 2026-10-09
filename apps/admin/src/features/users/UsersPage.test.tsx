@@ -24,6 +24,7 @@ const ROW = {
   banned_at: null,
   created_at: "2026-09-30T10:00:00Z",
   balance_uzs: "70000",
+  api_key: null,
 };
 
 function renderPage() {

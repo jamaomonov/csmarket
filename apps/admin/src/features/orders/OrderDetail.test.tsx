@@ -57,9 +57,9 @@ describe("OrderDetail", () => {
       },
     });
     renderDetail();
-    const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText(new RegExp(label))).toBeInTheDocument();
-    expect(order).not.toHaveTextContent("undefined");
+    const timeline = await screen.findByRole("region", { name: "Ход заказа" });
+    expect(within(timeline).getByText(new RegExp(label))).toBeInTheDocument();
+    expect(screen.getByTestId("order-detail")).not.toHaveTextContent("undefined");
   });
 
   it("shows the order's fields, money, payments and buyer", async () => {
@@ -68,12 +68,13 @@ describe("OrderDetail", () => {
     expect(api.getOrder).toHaveBeenCalledWith("O7K2M9QX");
     const order = screen.getByRole("region", { name: "Заказ" });
     expect(within(order).getByText("AK-47 | Redline (Field-Tested)")).toBeInTheDocument();
-    expect(within(order).getByTestId("order-status")).toHaveTextContent("покупаем");
-    expect(within(order).getByText(/171\s800 сум/)).toBeInTheDocument();
-    expect(within(order).getByText("$13.500000")).toBeInTheDocument();
-    expect(within(order).getByText("$13.580000")).toBeInTheDocument();
-    expect(within(order).getByText("$0.380000")).toBeInTheDocument();
-    expect(within(order).getByText("12650.5000")).toBeInTheDocument();
+    expect(screen.getByTestId("order-status")).toHaveTextContent("покупаем");
+    const money = screen.getByRole("region", { name: "Деньги" });
+    expect(within(money).getByText(/171\s800 сум/)).toBeInTheDocument();
+    expect(within(money).getByText("$13.50")).toBeInTheDocument();
+    expect(within(money).getByText("$13.58")).toBeInTheDocument();
+    expect(within(money).getByText("$0.38")).toBeInTheDocument();
+    expect(within(money).getByText("12650.5000")).toBeInTheDocument();
     expect(within(order).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
 
     const payments = screen.getByRole("region", { name: "Платежи" });
@@ -87,7 +88,9 @@ describe("OrderDetail", () => {
   it("names the order's source and offer", async () => {
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText("Waxpeer · wx:4242")).toBeInTheDocument();
+    expect(within(order).getByText("Waxpeer", { exact: false })).toHaveTextContent(
+      "Waxpeer · wx:4242",
+    );
   });
 
   it("names a Skinslink order's source and shows its purchase", async () => {
@@ -99,7 +102,9 @@ describe("OrderDetail", () => {
     });
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText("Skinslink · sl:380")).toBeInTheDocument();
+    expect(within(order).getByText("Skinslink", { exact: false })).toHaveTextContent(
+      "Skinslink · sl:380",
+    );
     const purchase = screen.getByRole("region", { name: "Покупка Skinslink" });
     expect(within(purchase).getByText("178")).toBeInTheDocument();
     expect(within(purchase).getByText("active")).toBeInTheDocument();
@@ -121,7 +126,9 @@ describe("OrderDetail", () => {
     });
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText("LIS-SKINS · ls:125345")).toBeInTheDocument();
+    expect(within(order).getByText("LIS-SKINS", { exact: false })).toHaveTextContent(
+      "LIS-SKINS · ls:125345",
+    );
     const purchase = screen.getByRole("region", { name: "Покупка LIS-SKINS" });
     expect(within(purchase).getByText("55")).toBeInTheDocument();
     expect(within(purchase).getByText("wait_accept")).toBeInTheDocument();
@@ -456,5 +463,30 @@ describe("OrderDetail", () => {
     api.getOrder.mockRejectedValue(new ApiError(404, "Not Found", null));
     renderDetail();
     expect(await screen.findByText("Заказ не найден.")).toBeInTheDocument();
+  });
+
+  it("puts an open attention of a Skinslink purchase in the header and a banner", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, source: "skinslink", offer_id: "sl:380", listing_id: null },
+      trade: null,
+      skinslink: { ...SKINSLINK, attention_reason: "buy_unconfirmed", resolved_at: null },
+    });
+    renderDetail();
+    expect(await screen.findByTestId("order-attention")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /Требует внимания: ответ площадки потерян/,
+    );
+  });
+
+  it("says an order paid from the balance had no kassa payment", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, paid_with: "wallet" },
+      payments: [],
+    });
+    renderDetail();
+    const payments = await screen.findByRole("region", { name: "Платежи" });
+    expect(payments).toHaveTextContent("Оплачен с баланса");
   });
 });

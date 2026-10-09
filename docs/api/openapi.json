@@ -969,6 +969,18 @@
             ],
             "title": "Pricing Profile"
           },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
+          },
           "refunded_at": {
             "anyOf": [
               {
@@ -1239,6 +1251,18 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
           },
           "status": {
             "enum": [
@@ -2502,6 +2526,44 @@
         "title": "AdminTopupOut",
         "type": "object"
       },
+      "AdminTradeBuyer": {
+        "description": "Who placed the order.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "avatar_url"
+        ],
+        "title": "AdminTradeBuyer",
+        "type": "object"
+      },
       "AdminTradeCounts": {
         "description": "The tab badges (they ignore ``q``).",
         "properties": {
@@ -2509,16 +2571,93 @@
             "title": "Active",
             "type": "integer"
           },
+          "all": {
+            "title": "All",
+            "type": "integer"
+          },
           "attention": {
             "title": "Attention",
+            "type": "integer"
+          },
+          "hold": {
+            "title": "Hold",
+            "type": "integer"
+          },
+          "refunds": {
+            "title": "Refunds",
             "type": "integer"
           }
         },
         "required": [
+          "all",
           "active",
-          "attention"
+          "hold",
+          "attention",
+          "refunds"
         ],
         "title": "AdminTradeCounts",
+        "type": "object"
+      },
+      "AdminTradeItem": {
+        "description": "The skin bought.",
+        "properties": {
+          "float_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Float Value"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
+          }
+        },
+        "required": [
+          "name",
+          "phase",
+          "image_url",
+          "rarity_color",
+          "float_value"
+        ],
+        "title": "AdminTradeItem",
         "type": "object"
       },
       "AdminTradeOut": {
@@ -2783,8 +2922,19 @@
         "type": "object"
       },
       "AdminTradeRow": {
-        "description": "One line of the trades page: the order row and its trade.",
+        "description": "One line of the \u00ab\u041e\u0431\u043c\u0435\u043d\u044b\u00bb table.",
         "properties": {
+          "api_owner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Owner"
+          },
           "attention_reason": {
             "anyOf": [
               {
@@ -2803,18 +2953,78 @@
             ],
             "title": "Attention Reason"
           },
+          "buyer": {
+            "$ref": "#/components/schemas/AdminTradeBuyer"
+          },
+          "channel": {
+            "enum": [
+              "site",
+              "api"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
             "type": "string"
           },
-          "name": {
-            "title": "Name",
+          "failure_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sold_out",
+                  "source_low_balance",
+                  "invalid_trade_link",
+                  "not_accepted",
+                  "admin",
+                  "trade_hold",
+                  "price_moved"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "item": {
+            "$ref": "#/components/schemas/AdminTradeItem"
+          },
+          "margin_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Margin Pct"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
             "type": "string"
           },
           "number": {
             "title": "Number",
             "type": "string"
+          },
+          "offer_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Url"
           },
           "paid_with": {
             "anyOf": [
@@ -2827,7 +3037,36 @@
             ],
             "title": "Paid With"
           },
-          "phase": {
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
+          },
+          "source": {
+            "enum": [
+              "waxpeer",
+              "skinslink",
+              "lisskins"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "source_status": {
             "anyOf": [
               {
                 "type": "string"
@@ -2836,11 +3075,7 @@
                 "type": "null"
               }
             ],
-            "title": "Phase"
-          },
-          "price_uzs": {
-            "title": "Price Uzs",
-            "type": "string"
+            "title": "Source Status"
           },
           "status": {
             "enum": [
@@ -2856,95 +3091,72 @@
             "title": "Status",
             "type": "string"
           },
-          "trade": {
-            "$ref": "#/components/schemas/AdminTradeSummary"
+          "steam_offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steam Offer Id"
           },
-          "user": {
-            "$ref": "#/components/schemas/AdminOrderUser"
+          "trade_link_masked": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link Masked"
+          },
+          "trade_state": {
+            "enum": [
+              "pending",
+              "buying",
+              "sent",
+              "hold",
+              "delivered",
+              "refunded",
+              "cancelled",
+              "failed_held"
+            ],
+            "title": "Trade State",
+            "type": "string"
           }
         },
         "required": [
           "number",
-          "status",
-          "name",
-          "phase",
-          "price_uzs",
-          "paid_with",
-          "user",
           "created_at",
+          "status",
+          "source",
+          "channel",
+          "api_owner",
+          "item",
+          "price_uzs",
+          "price_usd",
+          "cost_usd",
+          "margin_usd",
+          "margin_pct",
+          "paid_with",
+          "buyer",
+          "steam_offer_id",
+          "offer_url",
+          "trade_link_masked",
+          "trade_state",
+          "protected_until",
+          "failure_reason",
           "attention_reason",
-          "trade"
+          "source_status"
         ],
         "title": "AdminTradeRow",
         "type": "object"
       },
-      "AdminTradeSummary": {
-        "description": "The trade behind a row of the trades page.",
-        "properties": {
-          "attention_reason": {
-            "anyOf": [
-              {
-                "enum": [
-                  "buy_unconfirmed",
-                  "ambiguous_trade",
-                  "rolled_back",
-                  "source_forbidden",
-                  "audit_divergence"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Attention Reason"
-          },
-          "send_until": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Send Until"
-          },
-          "state": {
-            "enum": [
-              "buying",
-              "offer_sent",
-              "accepted",
-              "released",
-              "failed"
-            ],
-            "title": "State",
-            "type": "string"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
-          }
-        },
-        "required": [
-          "status",
-          "state",
-          "attention_reason",
-          "send_until"
-        ],
-        "title": "AdminTradeSummary",
-        "type": "object"
-      },
       "AdminTradesOut": {
-        "description": "A page of trades, the tab counts, and the cursor for the next page.",
+        "description": "A page of the table, the tab counts, and the cursor for the next page.",
         "properties": {
           "counts": {
             "$ref": "#/components/schemas/AdminTradeCounts"
@@ -3001,6 +3213,17 @@
       "AdminUserCard": {
         "description": "Everything the user page shows: the account, its balance, the latest 20 of each.",
         "properties": {
+          "api_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Id"
+          },
           "balance_usd": {
             "title": "Balance Usd",
             "type": "string"
@@ -3223,6 +3446,25 @@
         "title": "AdminUserDetail",
         "type": "object"
       },
+      "AdminUserKeyBrief": {
+        "description": "A user's live API key, as the users list shows it.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "pricing_profile": {
+            "title": "Pricing Profile",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "pricing_profile"
+        ],
+        "title": "AdminUserKeyBrief",
+        "type": "object"
+      },
       "AdminUserOut": {
         "description": "A user as the admin lists name them.",
         "properties": {
@@ -3252,6 +3494,16 @@
       "AdminUserRow": {
         "description": "One line of the users list.",
         "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserKeyBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "avatar_url": {
             "anyOf": [
               {
@@ -9438,7 +9690,7 @@
     },
     "/api/v1/admin/orders": {
       "get": {
-        "description": "Newest first; ``q`` = a number prefix (any case) or part of the item's name.",
+        "description": "Newest first; ``q`` = a number prefix (any case), part of the item's name, or a Steam\ntrade offer id (exact).",
         "operationId": "list_orders_api_v1_admin_orders_get",
         "parameters": [
           {
@@ -11483,7 +11735,7 @@
     },
     "/api/v1/admin/trades": {
       "get": {
-        "description": "Orders with a trade, newest first: ``all``, ``active`` or ``attention``; the tab\ncounts ignore ``q``.",
+        "description": "Every order of every source, newest first: ``all``, ``active`` (on its way), ``hold``\n(accepted, Steam's protection running), ``attention`` (an open attention of any source)\nor ``refunds``. ``q`` = a number prefix, part of the item's name, or a Steam trade offer id\n(exact); the tab counts ignore it.",
         "operationId": "list_trades_api_v1_admin_trades_get",
         "parameters": [
           {
@@ -11495,7 +11747,9 @@
               "enum": [
                 "all",
                 "active",
-                "attention"
+                "hold",
+                "attention",
+                "refunds"
               ],
               "title": "View",
               "type": "string"
@@ -11586,7 +11840,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Trades and the attention queue",
+        "summary": "Every order as a trade, by tab",
         "tags": [
           "admin"
         ]
@@ -11594,7 +11848,7 @@
     },
     "/api/v1/admin/users": {
       "get": {
-        "description": "Newest first; ``q`` = part of the display name or an exact 17-digit Steam ID.",
+        "description": "Newest first; ``q`` = part of the display name or an exact 17-digit Steam ID;\n``has_api_key`` keeps users with (``true``) or without (``false``) a live API key.",
         "operationId": "list_users_api_v1_admin_users_get",
         "parameters": [
           {
@@ -11641,6 +11895,22 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_api_key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Api Key"
             }
           },
           {

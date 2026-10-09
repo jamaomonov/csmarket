@@ -64,6 +64,7 @@ export const CARD: AdminUserCard = {
   orders: [ORDER_ROW],
   usd_wallet_enabled: false,
   balance_usd: "0.000",
+  api_key_id: null,
   usd_entries: [],
 };
 

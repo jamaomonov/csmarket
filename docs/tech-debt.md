@@ -42,26 +42,15 @@ None of these touches money or order state.
    (`orders.schemas` validator, `skins.offers.parse_offer_id`'s digit branch). _Fix:_ after
    the next deploy, accept only `wx:` / `sl:` strings, drop the branch and its tests, and
    regenerate the API client.
-2. **The admin attention queue and retry are Waxpeer-only** (refund is not: ADR-0018). The trades list, its
-   `attention` view and counts read `skin_trades` (the dashboard's attention count reads
-   every source since ADR-0012), so a
-   Skinslink attention (`source_forbidden`, `ambiguous_trade`, `rolled_back` on
-   `skinslink_purchases`) is not listed there — yet `csmarket_trades_attention` counts it, so
-   `TradesNeedAttention` can fire for an order the queue does not show. The operator finds it
-   by number in the admin order search («Покупка Skinslink» block) and can mark it
-   «Разобрано» (that works). Admin retry refuses a Skinslink order (409); the admin refund
-   asks Skinslink first and books (ADR-0018). _Fix:_ read attentions from both tables in
-   `admin.orders_service` and teach retry the purchase row.
+2. **Admin retry is Waxpeer-only** (refund is not: ADR-0018; the «Обмены» table and its
+   attention tab read every source since 2026-10-09). Admin retry refuses a Skinslink order
+   (409). _Fix:_ teach retry the purchase row.
 
 ## LIS-SKINS buy source (ADR-0012, 2026-10-07)
 
-1. **The admin trades page and its attention queue list Waxpeer trades only.** A Skinslink or
-   LIS-SKINS attention (`source_forbidden`, `ambiguous_trade`, `rolled_back` on its purchase
-   row) shows on the order page («Покупка Skinslink» / «Покупка LIS-SKINS»), in the
-   dashboard's attention count and in the `TradesNeedAttention` alert, but not in the queue.
-   Admin retry refuses a LIS-SKINS order (409); the admin refund asks LIS-SKINS
-   `market/info` first and books (ADR-0018). _Fix:_ as Skinslink's item above — read every
-   purchase table in `admin.orders_service`; teach retry the purchase row.
+1. **Admin retry refuses a LIS-SKINS order (409)** (the «Обмены» table lists its attention
+   since 2026-10-09; the admin refund asks LIS-SKINS `market/info` first, ADR-0018). _Fix:_ as
+   Skinslink's item above — teach retry the purchase row.
 2. **The export is fetched with a browser-like `User-Agent`.** Its CDN refused httpx's own
    agent on 2026-10-07 (`lisskins/export.py`, `USER_AGENT`). If the CDN changes its rules, the
    snapshot fails and `LisskinsSnapshotStale` fires. _Fix:_ revisit if LIS-SKINS publishes an

@@ -68,7 +68,7 @@ def _seller_name(trade: SkinTrade | None) -> str | None:
     return name if isinstance(name, str) and name else None
 
 
-def _accepted(order: Order, trade: SkinTrade | None, purchase: Purchase | None) -> bool:
+def is_accepted(order: Order, trade: SkinTrade | None, purchase: Purchase | None) -> bool:
     """Whether the buyer accepted the offer (Steam's protection may still hold the skin)."""
     if isinstance(purchase, LisskinsPurchase):
         return lisskins_state(order, purchase) == "accepted"
@@ -86,7 +86,7 @@ def public_status(
     if order.status == "delivered":
         return "delivered"
     if order.status == "trade_sent":
-        return "delivered" if _accepted(order, trade, purchase) else "trade_sent"
+        return "delivered" if is_accepted(order, trade, purchase) else "trade_sent"
     # ``paid`` / ``buying``, and ``failed`` / ``returned`` held for support (no refund yet).
     return "buying"
 
@@ -157,8 +157,8 @@ def _out(found: _Row) -> PublicOrderOut:
     return public_order(order, trade, sl or ls)
 
 
-#: :func:`_accepted` in SQL; ``COALESCE``: the outer joins' NULLs read "not accepted".
-_ACCEPTED: ColumnElement[bool] = func.coalesce(
+#: :func:`is_accepted` in SQL; ``COALESCE``: the outer joins' NULLs read "not accepted".
+ACCEPTED: ColumnElement[bool] = func.coalesce(
     or_(
         SkinslinkPurchase.status.in_(("hold", "completed")),
         LisskinsPurchase.status == "accepted",
@@ -179,10 +179,10 @@ def _status_filter(status: PublicOrderStatus) -> ColumnElement[bool]:
         case "delivered":
             return and_(
                 open_,
-                or_(Order.status == "delivered", and_(Order.status == "trade_sent", _ACCEPTED)),
+                or_(Order.status == "delivered", and_(Order.status == "trade_sent", ACCEPTED)),
             )
         case "trade_sent":
-            return and_(open_, Order.status == "trade_sent", not_(_ACCEPTED))
+            return and_(open_, Order.status == "trade_sent", not_(ACCEPTED))
         case "buying":
             return and_(open_, Order.status.not_in(("delivered", "trade_sent")))
 

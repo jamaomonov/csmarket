@@ -82,3 +82,27 @@ the values and these ratios.
 3. Add a line under «Components» here.
 
 The admin imports the same tokens, so it shares the palette; its layout is its own.
+
+## Admin (apps/admin)
+
+The admin composes its pages from `apps/admin/src/components` (admin UX review, 2026-10-09):
+
+- **Navigation** — a top bar: Дашборд · Обмены · Выкуп ▾ · Пользователи · Платежи · Настройки ▾,
+  red counters of what waits for an operator (`attention`, payouts to pay); ☰ opens a sheet on
+  phones. API keys have no page: a key is the «API-ключ» tab of its owner's card.
+- **PageHeader** — back link, a 22 px title, chips beside it, actions on the right, a muted meta line.
+- **DataTable** — padded cells (`px-3 py-2.5`), right-aligned `tabular-nums` money, a hover row,
+  a 3 px red left edge for rows needing an operator, skeleton / empty / error states, a footer
+  («Показать ещё»), whole-row click, and `mobileCard` — cards instead of the table on a narrow
+  screen (`useNarrow`, < 768 px).
+- **StatusChip** — tones, not filled bricks: `bg-<tone>/15 text-<tone>`; `progress` (warning),
+  `info` (a hold), `success`, `danger`, `neutral`, `muted`. The green accent is never a status.
+- **Money** — `$` before the number, two places in lists (three only for the USD wallet), digit
+  groups, a typographic minus coloured `danger`.
+- **Tabs** (underlined, with counters; red when they count work), **FiltersBar** / **SearchBox** /
+  **FilterSelect** (one compact row), **UserCell**, **EmptyState**.
+- **Detail pages** — `DetailGrid` (2 : 1 columns, one on phones) of `Section`s with `Row`s
+  (label 140 px, muted); an open attention is a `Banner` at the top, actions sit under the header,
+  rare or dangerous ones behind «⋯» (`MoreMenu`).
+- **Dialogs** — `Modal` (or the same look): a sheet from the bottom on a phone, a card on desktop,
+  Esc and a click outside close it unless a request runs.

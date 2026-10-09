@@ -48,7 +48,7 @@ describe("UserCard", () => {
     expect(screen.getByText("узбекский")).toBeInTheDocument();
     expect(screen.getByText(CARD.user.trade_link_masked ?? "")).toBeInTheDocument();
     expect(screen.getByText(/задержка обмена/)).toBeInTheDocument();
-    expect(screen.getByText(/Баланс: 30\s000 сум/)).toBeInTheDocument();
+    expect(screen.getByTestId("user-balance")).toHaveTextContent(/^30\s000 сум$/);
 
     const history = screen.getByRole("region", { name: "История баланса" });
     expect(within(history).getByText("Изменение администратором")).toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("UserCard", () => {
     api.getUserCard.mockResolvedValue({ ...CARD, orders: [] });
     renderCard();
     const orders = await screen.findByRole("region", { name: "Заказы" });
-    expect(orders).toHaveTextContent("Пока не было.");
+    expect(orders).toHaveTextContent("Заказов пока не было.");
   });
 
   it("credits after a confirm step with a signed amount, reason and key", async () => {
@@ -118,7 +118,9 @@ describe("UserCard", () => {
     ];
     expect([id, amount, reason]).toEqual(["u-1", 50000, "Компенсация за задержку"]);
     expect(key.length).toBeGreaterThanOrEqual(16);
-    expect(await screen.findByText(/Баланс: 80\s000 сум/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("user-balance")).toHaveTextContent(/^80\s000 сум$/);
+    });
   });
 
   it("names a clawback as «Списать»", async () => {
@@ -256,7 +258,7 @@ describe("UserCard", () => {
       api.getUserCard.mockResolvedValue(USD_CARD);
       renderCard();
       const block = await screen.findByTestId("usd-block");
-      expect(within(block).getByText("Включён")).toBeInTheDocument();
+      expect(within(block).getByText("включён")).toBeInTheDocument();
       expect(screen.getByTestId("user-balance-usd")).toHaveTextContent("Баланс: $250.000");
       const history = screen.getByRole("region", { name: "История USD" });
       expect(within(history).getByText("Корректировка USD")).toBeInTheDocument();
@@ -281,7 +283,7 @@ describe("UserCard", () => {
       ];
       expect([id, enabled, reason]).toEqual(["u-1", true, "Пилот"]);
       expect(key.length).toBeGreaterThanOrEqual(16);
-      expect(await screen.findByText("Включён")).toBeInTheDocument();
+      expect(await screen.findByText("включён")).toBeInTheDocument();
     });
 
     it("credits dollars through the USD endpoint after a confirm step", async () => {

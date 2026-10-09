@@ -91,6 +91,7 @@ describe("DashboardPage", () => {
     expect(tile("Возвраты")).toHaveTextContent("2");
     expect(tile("Возвраты")).toHaveTextContent("177 000 сум");
     expect(tile("В пути")).toHaveTextContent("3");
+    expect(within(tile("В пути")).getByRole("link")).toHaveAttribute("href", "/trades?view=active");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("$812.5");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("обновлено 4 мин назад");
     expect(tile("Баланс Skinslink")).toHaveTextContent("$240.5");
@@ -142,6 +143,6 @@ describe("DashboardPage", () => {
   it("days without sales are listed too", async () => {
     renderPage("/?days=7");
     const rows = await screen.findAllByRole("row");
-    expect(rows.map((r) => r.textContent)).toContain("01.100—$0");
+    expect(rows.map((r) => r.textContent)).toContain("01.100—$0.00");
   });
 });

@@ -329,11 +329,12 @@ malformed number → 404. Details: `apps/api/src/csmarket/modules/admin/README.m
 - `GET /admin/orders?q=&status=&user_id=&cursor=&limit=` → `{items: [AdminOrderRow {number,
 status, name, phase, price_uzs, paid_with, user: {id, display_name}, created_at,
 attention_reason}], next_cursor}`. `q` (≤ 100 chars) = a number prefix (any case, ≤ 8 chars)
-  or part of the item name; `attention_reason` is the **open** one (unresolved), else `null`.
-- `GET /admin/trades?view=all|active|attention&q=&cursor=&limit=` → `{items: [AdminOrderRow +
-{trade: {status, state, attention_reason, send_until}}], counts: {active, attention},
-next_cursor}` — orders with a trade; `active` = `buying`/`trade_sent`, `attention` = an
-  unresolved attention; the counts ignore `q`.
+  or part of the item name or a Steam trade offer id (exact); `attention_reason` is the
+  **open** one (unresolved) of any source, else `null`.
+- `GET /admin/trades?view=all|active|hold|attention|refunds&q=&cursor=&limit=` → `{items:
+[AdminTradeRow], counts: {all, active, hold, attention, refunds}, next_cursor}` — every order
+  of every source (the «Обмены» table); `q` also matches a Steam trade offer id exactly; the
+  counts ignore `q`. Row fields: `apps/api/src/csmarket/modules/admin/README.md`.
 - `GET /admin/orders/{number}` → `AdminOrderDetail {order: {every orders column but
 trade_link and idempotency_key, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
 skinslink: AdminSkinslinkPurchaseOut | null, lisskins: AdminLisskinsPurchaseOut | null, payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
@@ -342,7 +343,7 @@ skinslink: AdminSkinslinkPurchaseOut | null, lisskins: AdminLisskinsPurchaseOut 
   `lisskins` `{custom_id, skin_id, purchase_id, status, return_reason, error, offer_id,
 offer_url, offer_expiry_at, amount_usd, buy_pending, buy_unconfirmed_at, attention_reason,
 resolved_at}` and no `trade`. `resolve` works on either purchase's attention; refund asks the supplier first (ADR-0018,
-  below), retry still refuses them (409), and the trades list does not show them.
+  below), retry still refuses them (409); the trades table lists them.
 - `POST /admin/orders/{number}/resolve` `{note?: ≤ 500 | null}` → detail. 409
   `nothing_to_resolve`. Stamps `resolved_*` once; already resolved → unchanged, not audited.
 - `POST /admin/orders/{number}/refund` (no body) → detail. 409 `already_refunded`,

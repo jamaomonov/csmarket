@@ -11,8 +11,11 @@ import { Link, useParams } from "react-router-dom";
 import { getPayout, markPaid, type PayoutDetail as Detail, rejectPayout, revealCard } from "./api";
 import { PAYOUTS_KEY, payoutKey, saleKey } from "./keys";
 import { cardLabel, groupDigits, PAYOUT_LABELS, payoutErrorText, SALE_LABELS } from "./labels";
-import { Field, ItemList } from "./Parts";
+import { ItemList } from "./Parts";
 
+import { Money } from "@/components/Money";
+import { PageHeader } from "@/components/PageHeader";
+import { DetailGrid, Row, Section } from "@/components/Section";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -208,56 +211,91 @@ export function PayoutDetail() {
   const d = detail.data;
   const s = d.sale;
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">
-          Выплата по продаже{" "}
-          <Link to={`/sales/${s.number}`} className="font-mono hover:underline">
-            {s.number}
-          </Link>
-        </h1>
-        <p className="text-fg-muted">
-          {PAYOUT_LABELS[d.request.status]} · {d.request.user.display_name ?? "Без имени"}
-        </p>
-      </header>
-      <CardBlock key={d.request.id} detail={d} />
-      <dl className="flex flex-col gap-1 text-sm">
-        <Field label="Предметы">{formatSum(s.items_uzs)}</Field>
-        <Field label="Комиссия карты">−{formatSum(s.fee_uzs)}</Field>
-        <Field label="К выплате">{formatSum(d.request.amount_uzs)}</Field>
-        <Field label="Skinslink платит нам">${s.amount_usd ?? s.quoted_usd}</Field>
-        <Field label="Наша маржа">${s.margin_usd}</Field>
-        <Field label="К выплате с">
-          {d.request.to_pay_at ? formatDateTime(d.request.to_pay_at) : "—"}
-        </Field>
-        {d.note ? <Field label="Комментарий">{d.note}</Field> : null}
-        {d.reject_reason ? <Field label="Причина отказа">{d.reject_reason}</Field> : null}
-      </dl>
-      <Actions detail={d} onStale={() => void detail.refetch()} />
-      <ItemList items={s.items} />
-      <section>
-        <h2 className="mb-2 font-semibold">История пользователя</h2>
-        <ul className="text-sm">
-          {d.history_sales.map((h) => (
-            <li key={h.number} className="border-border flex justify-between border-t py-1.5">
-              <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
-                {h.number}
-              </Link>
-              <span>{SALE_LABELS[h.status]}</span>
-              <span className="tabular-nums">{formatSum(h.payout_uzs)}</span>
-            </li>
-          ))}
-          {d.history_payouts.map((h) => (
-            <li key={h.id} className="border-border flex justify-between border-t py-1.5">
-              <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
-                {h.sale_number}
-              </Link>
-              <span>{PAYOUT_LABELS[h.status]}</span>
-              <span className="tabular-nums">{formatSum(h.amount_uzs)}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+    <div className="space-y-4">
+      <PageHeader
+        back={{ to: "/payouts", label: "Заявки на выплату" }}
+        title={
+          <>
+            Выплата по продаже{" "}
+            <Link to={`/sales/${s.number}`} className="font-mono hover:underline">
+              {s.number}
+            </Link>
+          </>
+        }
+        meta={`${PAYOUT_LABELS[d.request.status]} · ${d.request.user.display_name ?? "Без имени"}`}
+      />
+      <DetailGrid
+        main={
+          <>
+            <Section title="Карта и действия">
+              <div className="space-y-4">
+                <CardBlock key={d.request.id} detail={d} />
+                <Actions detail={d} onStale={() => void detail.refetch()} />
+              </div>
+            </Section>
+            <ItemList items={s.items} />
+          </>
+        }
+        side={
+          <>
+            <Section title="Деньги">
+              <dl>
+                <Row label="Предметы">
+                  <Money uzs={s.items_uzs} />
+                </Row>
+                <Row label="Комиссия карты">
+                  <Money uzs={`-${s.fee_uzs}`} />
+                </Row>
+                <Row label="К выплате">
+                  <Money uzs={d.request.amount_uzs} className="font-semibold" />
+                </Row>
+                <Row label="Skinslink платит нам">
+                  <Money usd={s.amount_usd ?? s.quoted_usd} />
+                </Row>
+                <Row label="Наша маржа">
+                  <Money usd={s.margin_usd} />
+                </Row>
+                <Row label="К выплате с">
+                  {d.request.to_pay_at ? formatDateTime(d.request.to_pay_at) : "—"}
+                </Row>
+                {d.note ? <Row label="Комментарий">{d.note}</Row> : null}
+                {d.reject_reason ? <Row label="Причина отказа">{d.reject_reason}</Row> : null}
+              </dl>
+            </Section>
+            <Section title="История пользователя">
+              <ul className="text-sm">
+                {d.history_sales.map((h) => (
+                  <li
+                    key={h.number}
+                    className="border-border flex justify-between gap-2 border-t py-1.5 first:border-t-0"
+                  >
+                    <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
+                      {h.number}
+                    </Link>
+                    <span>{SALE_LABELS[h.status]}</span>
+                    <Money uzs={h.payout_uzs} />
+                  </li>
+                ))}
+                {d.history_payouts.map((h) => (
+                  <li
+                    key={h.id}
+                    className="border-border flex justify-between gap-2 border-t py-1.5 first:border-t-0"
+                  >
+                    <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
+                      {h.sale_number}
+                    </Link>
+                    <span>{PAYOUT_LABELS[h.status]}</span>
+                    <Money uzs={h.amount_uzs} />
+                  </li>
+                ))}
+                {d.history_sales.length + d.history_payouts.length === 0 && (
+                  <li className="text-fg-muted">Других продаж и выплат нет.</li>
+                )}
+              </ul>
+            </Section>
+          </>
+        }
+      />
     </div>
   );
 }

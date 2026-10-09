@@ -13,6 +13,8 @@ import { PreviewCard } from "./PreviewCard";
 import { fromRules, type RulesDraft, toRules } from "./rules-draft";
 import { RulesForm } from "./RulesForm";
 
+import { Modal } from "@/components/Modal";
+import { PageHeader } from "@/components/PageHeader";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime, formatSum } from "@/lib/format";
 
@@ -83,10 +85,7 @@ export function PricingPage() {
   };
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Цены</h1>
-        <StatusLine data={pricing.data} />
-      </header>
+      <PageHeader title="Цены" meta={<StatusLine data={pricing.data} />} />
       <RulesForm
         draft={current}
         dirty={dirty}
@@ -103,21 +102,30 @@ export function PricingPage() {
         }}
       />
       {confirming && (
-        <div className="border-warning bg-surface flex flex-wrap items-center gap-3 rounded-lg border p-4">
-          <span>Сохранить и пересчитать цены всех скинов?</span>
-          <Button type="button" disabled={save.isPending} onClick={confirm}>
-            Да, сохранить
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setConfirming(false);
-            }}
-          >
-            Отмена
-          </Button>
-        </div>
+        <Modal
+          title="Сохранить наценки?"
+          description="Цены всех скинов пересчитаются по новым правилам."
+          busy={save.isPending}
+          onClose={() => {
+            setConfirming(false);
+          }}
+        >
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={save.isPending}
+              onClick={() => {
+                setConfirming(false);
+              }}
+            >
+              Отмена
+            </Button>
+            <Button type="button" disabled={save.isPending} onClick={confirm}>
+              Да, сохранить
+            </Button>
+          </div>
+        </Modal>
       )}
       <PreviewCard rules={toRules(current)} />
       <OverrideCard />

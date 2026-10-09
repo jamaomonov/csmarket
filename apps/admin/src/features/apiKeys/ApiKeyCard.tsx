@@ -1,8 +1,12 @@
-/** One API key: owner, tariff, sales, webhook host, latest orders; switch the tariff, revoke. */
+/**
+ * A user's API key, shown as the «API-ключ» tab of the user card (owner, 2026-10-09: no
+ * separate page): tariff, sales, limits, IP allow-list, webhook, the key's orders; switch the
+ * tariff, edit limits, revoke. `/api-keys/:id` redirects to the owner's card.
+ */
 import { Button } from "@csmarket/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 
 import {
   type AdminApiKeyCard,
@@ -14,66 +18,21 @@ import {
 import { deliveryLabel, errorText, LIMIT_LABELS, LIMIT_NAMES, tariffLabel } from "./labels";
 import { LimitsForm } from "./LimitsForm";
 import { ReasonDialog } from "./ReasonDialog";
-import { type AdminOrderRow } from "../orders/api";
-import { AttentionBadge, OrderStatusChip } from "../orders/StatusChip";
+import { OrdersTable } from "../orders/OrdersTable";
 import { useIdempotencyKey } from "../users/useIdempotencyKey";
 
+import { EmptyState } from "@/components/EmptyState";
+import { Modal } from "@/components/Modal";
+import { Money } from "@/components/Money";
+import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { ApiError } from "@/lib/api";
-import { formatDateTime, formatSum, formatUsd } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 
-const cardKey = (id: string) => ["admin", "api-keys", "card", id] as const;
-
-function Orders({ orders }: { orders: AdminOrderRow[] }) {
-  return (
-    <section aria-labelledby="key-orders" className="space-y-2">
-      <h2 id="key-orders" className="text-lg font-semibold">
-        Заказы
-      </h2>
-      {orders.length === 0 && <p className="text-fg-muted text-sm">Пока не было.</p>}
-      {orders.length > 0 && (
-        <table className="w-full text-left text-sm">
-          <thead className="text-fg-muted">
-            <tr>
-              <th className="py-1 font-normal">Номер</th>
-              <th className="py-1 font-normal">Скин</th>
-              <th className="py-1 text-right font-normal">Цена</th>
-              <th className="py-1 font-normal">Статус</th>
-              <th className="py-1 font-normal">Создан</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.number} className="border-border border-t">
-                <td className="py-2">
-                  <Link to={`/orders/${o.number}`} className="font-mono hover:underline">
-                    {o.number}
-                  </Link>
-                </td>
-                <td className="py-2 pr-3">{o.name}</td>
-                <td className="whitespace-nowrap py-2 pr-3 text-right tabular-nums">
-                  {formatSum(o.price_uzs)}
-                </td>
-                <td className="py-2 pr-3">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <OrderStatusChip status={o.status} />
-                    <AttentionBadge reason={o.attention_reason} />
-                  </div>
-                </td>
-                <td className="text-fg-muted whitespace-nowrap py-2">
-                  {formatDateTime(o.created_at)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
-  );
-}
+export const apiKeyCardKey = (id: string) => ["admin", "api-keys", "card", id] as const;
 
 type Panel = "none" | "tariff" | "revoke" | "limits";
 
-function CardBody({ card }: { card: AdminApiKeyCard }) {
+function KeyBody({ card }: { card: AdminApiKeyCard }) {
   const qc = useQueryClient();
   const [panel, setPanel] = useState<Panel>("none");
   const tariffKey = useIdempotencyKey("admin-key-tariff");
@@ -84,108 +43,129 @@ function CardBody({ card }: { card: AdminApiKeyCard }) {
   const target: Tariff = k.pricing_profile === "cost" ? "retail" : "cost";
   const hook = card.webhook;
   const done = (next: AdminApiKeyCard) => {
-    qc.setQueryData(cardKey(k.id), next);
-    void qc.invalidateQueries({ queryKey: ["admin", "api-keys", "list"] });
+    qc.setQueryData(apiKeyCardKey(k.id), next);
+    void qc.invalidateQueries({ queryKey: ["admin", "users"] });
     setPanel("none");
   };
   const close = () => {
     setPanel("none");
   };
 
-  return (
-    <section className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{k.user.display_name ?? "Без имени"}</h1>
-        <p className="text-sm">
-          <Link to={`/users/${k.user.id}`} className="text-accent hover:underline">
-            Карточка пользователя
-          </Link>
-        </p>
-        {revoked && (
-          <p className="text-danger text-sm" data-testid="key-revoked">
-            Отозван {formatDateTime(k.revoked_at ?? "")}
-          </p>
-        )}
-      </div>
-      <dl className="space-y-1 text-sm">
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Тариф</dt>
-          <dd data-testid="key-tariff">{tariffLabel(k.pricing_profile)}</dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Заказы</dt>
-          <dd>{k.orders}</dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Выручка</dt>
-          <dd className="tabular-nums">{formatUsd(k.revenue_usd)}</dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Себестоимость</dt>
-          <dd className="tabular-nums">{formatUsd(k.cost_usd)}</dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Создан</dt>
-          <dd>{formatDateTime(k.created_at)}</dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Был в сети</dt>
-          <dd>{k.last_used_at ? formatDateTime(k.last_used_at) : "—"}</dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">Вебхук</dt>
-          <dd data-testid="key-webhook">
-            {hook === null ? (
-              "не задан"
-            ) : (
-              <>
-                {hook.host}
-                {hook.last_delivery && (
-                  <span className="text-fg-muted">
-                    {" · "}
-                    {deliveryLabel(hook.last_delivery.status)},{" "}
-                    {formatDateTime(hook.last_delivery.created_at)}
-                  </span>
-                )}
-              </>
-            )}
-          </dd>
-        </div>
-        <div className="flex gap-3">
-          <dt className="text-fg-muted w-36 shrink-0">IP-allowlist</dt>
-          <dd data-testid="key-allowlist">
-            {k.ip_allowlist.length === 0 ? "любой адрес" : k.ip_allowlist.join(", ")}
-          </dd>
-        </div>
-      </dl>
-      <section aria-labelledby="key-limits" className="space-y-2">
-        <h2 id="key-limits" className="text-lg font-semibold">
-          Лимиты в минуту
-        </h2>
-        <dl className="space-y-1 text-sm" data-testid="key-limits">
-          {LIMIT_NAMES.map((name) => (
-            <div key={name} className="flex gap-3">
-              <dt className="text-fg-muted w-36 shrink-0">{LIMIT_LABELS[name]}</dt>
-              <dd className="tabular-nums">
-                {k.limits[name]}
-                {!k.custom_limits.includes(name) && (
-                  <span className="text-fg-muted"> · по умолчанию</span>
-                )}
-              </dd>
+  const main = (
+    <>
+      <Section
+        title="Ключ"
+        actions={
+          !revoked && (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  setPanel("tariff");
+                }}
+              >
+                {target === "cost" ? "На себестоимость" : "На розницу"}
+              </Button>
+              <Button
+                size="sm"
+                variant="danger"
+                onClick={() => {
+                  setPanel("revoke");
+                }}
+              >
+                Отозвать
+              </Button>
             </div>
-          ))}
+          )
+        }
+      >
+        <dl>
+          <Row label="Тариф">
+            <span data-testid="key-tariff">{tariffLabel(k.pricing_profile)}</span>
+          </Row>
+          <Row label="Заказы">{k.orders}</Row>
+          <Row label="Выручка">
+            <Money usd={k.revenue_usd} />
+          </Row>
+          <Row label="Себестоимость">
+            <Money usd={k.cost_usd} />
+          </Row>
+          <Row label="Выпущен">{formatDateTime(k.created_at)}</Row>
+          <Row label="Последний запрос">
+            {k.last_used_at ? formatDateTime(k.last_used_at) : "—"}
+          </Row>
+          <Row label="Вебхук">
+            <span data-testid="key-webhook">
+              {hook === null ? (
+                "не задан"
+              ) : (
+                <>
+                  {hook.host}
+                  {hook.last_delivery && (
+                    <span className="text-fg-muted">
+                      {" · "}
+                      {deliveryLabel(hook.last_delivery.status)},{" "}
+                      {formatDateTime(hook.last_delivery.created_at)}
+                    </span>
+                  )}
+                </>
+              )}
+            </span>
+          </Row>
+          <Row label="IP-адреса">
+            <span data-testid="key-allowlist">
+              {k.ip_allowlist.length === 0 ? "любой адрес" : k.ip_allowlist.join(", ")}
+            </span>
+          </Row>
         </dl>
-        {!revoked && panel !== "limits" && (
+      </Section>
+      <Section title="Заказы через ключ">
+        <OrdersTable orders={card.orders} label="Заказы через ключ" />
+      </Section>
+    </>
+  );
+
+  const side = (
+    <Section
+      title="Лимиты в минуту"
+      actions={
+        !revoked && (
           <Button
-            variant="secondary"
+            size="sm"
+            variant="ghost"
             onClick={() => {
               setPanel("limits");
             }}
           >
             Изменить
           </Button>
-        )}
-        {!revoked && panel === "limits" && (
+        )
+      }
+    >
+      <dl data-testid="key-limits">
+        {LIMIT_NAMES.map((name) => (
+          <Row key={name} label={LIMIT_LABELS[name]}>
+            <span className="tabular-nums">{k.limits[name]}</span>
+            {!k.custom_limits.includes(name) && (
+              <span className="text-fg-muted"> · по умолчанию</span>
+            )}
+          </Row>
+        ))}
+      </dl>
+    </Section>
+  );
+
+  return (
+    <div className="space-y-4">
+      {revoked && (
+        <Banner>
+          <span data-testid="key-revoked">Ключ отозван {formatDateTime(k.revoked_at ?? "")}</span>
+        </Banner>
+      )}
+      <DetailGrid main={main} side={side} />
+      {panel === "limits" && (
+        <Modal title="Лимиты в минуту" onClose={close}>
           <LimitsForm
             keyId={k.id}
             current={Object.fromEntries(k.custom_limits.map((n) => [n, k.limits[n]]))}
@@ -193,27 +173,7 @@ function CardBody({ card }: { card: AdminApiKeyCard }) {
             onDone={done}
             onClose={close}
           />
-        )}
-      </section>
-      {!revoked && (
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setPanel("tariff");
-            }}
-          >
-            {target === "cost" ? "Тариф: по себестоимости" : "Тариф: розница"}
-          </Button>
-          <Button
-            variant="danger"
-            onClick={() => {
-              setPanel("revoke");
-            }}
-          >
-            Отозвать ключ
-          </Button>
-        </div>
+        </Modal>
       )}
       {panel === "tariff" && (
         <ReasonDialog
@@ -241,14 +201,22 @@ function CardBody({ card }: { card: AdminApiKeyCard }) {
           onClose={close}
         />
       )}
-      <Orders orders={card.orders} />
-    </section>
+    </div>
   );
 }
 
-export function ApiKeyCard() {
+/** The key's tab on its owner's card. */
+export function ApiKeyPanel({ keyId }: { keyId: string }) {
+  const card = useQuery({ queryKey: apiKeyCardKey(keyId), queryFn: () => getApiKeyCard(keyId) });
+  if (card.isPending) return <p className="text-fg-muted text-sm">Загрузка…</p>;
+  if (card.isError) return <EmptyState tone="danger">{errorText(card.error)}</EmptyState>;
+  return <KeyBody key={keyId} card={card.data} />;
+}
+
+/** `/api-keys/:id` → the owner's card, on the «API-ключ» tab. */
+export function ApiKeyRedirect() {
   const { id = "" } = useParams();
-  const card = useQuery({ queryKey: cardKey(id), queryFn: () => getApiKeyCard(id) });
+  const card = useQuery({ queryKey: apiKeyCardKey(id), queryFn: () => getApiKeyCard(id) });
   if (card.isPending) return <p className="text-fg-muted">Загрузка…</p>;
   if (card.isError) {
     const missing = card.error instanceof ApiError && card.error.status === 404;
@@ -258,5 +226,5 @@ export function ApiKeyCard() {
       </p>
     );
   }
-  return <CardBody key={id} card={card.data} />;
+  return <Navigate to={`/users/${card.data.key.user.id}?tab=api`} replace />;
 }

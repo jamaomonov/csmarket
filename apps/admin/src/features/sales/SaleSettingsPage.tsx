@@ -7,6 +7,8 @@ import { CARD_TYPES_ORDER, getSaleSettings, saveSaleSettings, type SaleSettings 
 import { SALE_SETTINGS_KEY } from "./keys";
 import { CARD_BRANDS } from "./labels";
 
+import { Modal } from "@/components/Modal";
+import { PageHeader } from "@/components/PageHeader";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
@@ -84,31 +86,48 @@ export function SaleSettingsPage() {
     setDraft({ ...doc, ...patch });
   };
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold">Настройки выкупа</h1>
-        <p className="text-fg-muted text-sm">
-          Курс ЦБ сейчас: {settings.data.rate_uzs ?? "нет"} · сохранено{" "}
-          {settings.data.updated_at ? formatDateTime(settings.data.updated_at) : "никогда"}
-          {settings.data.updated_by
-            ? `, ${settings.data.updated_by.display_name ?? "без имени"}`
-            : ""}
-          . Новые настройки действуют на новые продажи.
-        </p>
-      </header>
-      <label className="flex items-center gap-2">
+    <div className="flex max-w-4xl flex-col gap-4">
+      <PageHeader
+        title="Настройки выкупа"
+        meta={
+          <>
+            Курс ЦБ сейчас: {settings.data.rate_uzs ?? "нет"} · сохранено{" "}
+            {settings.data.updated_at ? formatDateTime(settings.data.updated_at) : "никогда"}
+            {settings.data.updated_by
+              ? `, ${settings.data.updated_by.display_name ?? "без имени"}`
+              : ""}
+            . Новые настройки действуют на новые продажи.
+          </>
+        }
+      />
+      <label
+        className={`flex cursor-pointer items-center justify-between gap-4 rounded-lg border px-4 py-3 ${
+          doc.enabled ? "border-success/40 bg-success/10" : "border-border bg-surface"
+        }`}
+      >
+        <span>
+          <span className="block font-semibold">Выкуп включён</span>
+          <span className="text-fg-muted text-sm">
+            {doc.enabled ? "Пользователи могут продавать скины." : "Продажа скинов выключена."}
+          </span>
+        </span>
         <input
           type="checkbox"
+          role="switch"
           aria-label="Выкуп включён"
           checked={doc.enabled}
           onChange={(e) => {
             set({ enabled: e.target.checked });
           }}
+          className="accent-success size-5"
         />
-        Выкуп включён
       </label>
-      <section className="flex flex-col gap-2">
+      <section className="border-border bg-surface flex flex-col gap-2 rounded-lg border p-4">
         <h2 className="font-semibold">Маржа по диапазонам цены Skinslink</h2>
+        <div aria-hidden className="text-fg-muted flex gap-2 text-xs">
+          <span className="w-40">От, $</span>
+          <span className="w-40">Маржа, %</span>
+        </div>
         {doc.margin.map((b, i) => (
           <div key={ids[i]} className="flex items-end gap-2">
             <NumberField
@@ -149,7 +168,7 @@ export function SaleSettingsPage() {
           Добавить диапазон
         </Button>
       </section>
-      <section className="flex flex-wrap gap-4">
+      <section className="border-border bg-surface flex flex-wrap gap-4 rounded-lg border p-4">
         <NumberField
           label="Скидка с курса ЦБ, %"
           value={doc.rate_cut_pct}
@@ -192,7 +211,7 @@ export function SaleSettingsPage() {
           }}
         />
       </section>
-      <div className="flex gap-2">
+      <div className="border-border bg-bg/95 sticky bottom-0 z-10 flex gap-2 border-t py-3 backdrop-blur">
         <Button
           disabled={draft === null || save.isPending}
           onClick={() => {
@@ -212,27 +231,40 @@ export function SaleSettingsPage() {
         </Button>
       </div>
       {confirming ? (
-        <div className="border-warning bg-surface flex flex-wrap items-center gap-3 rounded-lg border p-4">
-          <span>Сохранить? Действует на новые продажи.</span>
-          <Button
-            disabled={save.isPending}
-            onClick={() => {
-              submit();
-            }}
-          >
-            Да, сохранить
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setConfirming(false);
-            }}
-          >
-            Отмена
-          </Button>
-        </div>
+        <Modal
+          title="Сохранить настройки выкупа?"
+          description="Действует на новые продажи."
+          busy={save.isPending}
+          onClose={() => {
+            setConfirming(false);
+          }}
+        >
+          {invalid ? (
+            <p role="alert" className="text-danger text-sm">
+              {invalid}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setConfirming(false);
+              }}
+            >
+              Отмена
+            </Button>
+            <Button
+              disabled={save.isPending}
+              onClick={() => {
+                submit();
+              }}
+            >
+              Да, сохранить
+            </Button>
+          </div>
+        </Modal>
       ) : null}
-      {invalid ? (
+      {invalid && !confirming ? (
         <p role="alert" className="text-danger">
           {invalid}
         </p>

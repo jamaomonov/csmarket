@@ -32,10 +32,12 @@ from csmarket.modules.admin.users_schemas import (
     AdminTopupOut,
     AdminUserCard,
     AdminUserDetail,
+    AdminUserKeyBrief,
     AdminUserRow,
 )
 from csmarket.modules.auth.api import revoke_all_sessions
 from csmarket.modules.payments.api import Payment, WalletTopup
+from csmarket.modules.public_api.api import ApiKey
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import (
     admin_adjust,
@@ -80,16 +82,30 @@ def _like_escape(needle: str) -> str:
 
 
 async def list_users(
-    db: AsyncSession, *, q: str | None, cursor: str | None, limit: int
+    db: AsyncSession,
+    *,
+    q: str | None,
+    cursor: str | None,
+    limit: int,
+    has_api_key: bool | None = None,
 ) -> tuple[list[AdminUserRow], str | None]:
     """Users newest first, keyset on ``(created_at DESC, id DESC)``, with their balances.
 
     ``q`` matches the display name (case-insensitive substring, ``%``/``_`` literal) or
-    an exact 17-digit Steam ID. One statement whatever the page size: the balance is a
-    correlated subquery (``wallet.user_balance_column``).
+    an exact 17-digit Steam ID; ``has_api_key`` keeps users with (or without) a live key.
+    One statement whatever the page size: the balance is a correlated subquery
+    (``wallet.user_balance_column``), the live key an outer join (one live key per user).
     """
     balance = user_balance_column(User.id).label("balance")
-    stmt = select(User, balance).order_by(User.created_at.desc(), User.id.desc()).limit(limit + 1)
+    live = and_(ApiKey.user_id == User.id, ApiKey.revoked_at.is_(None))
+    stmt = (
+        select(User, balance, ApiKey.id, ApiKey.pricing_profile)
+        .outerjoin(ApiKey, live)
+        .order_by(User.created_at.desc(), User.id.desc())
+        .limit(limit + 1)
+    )
+    if has_api_key is not None:
+        stmt = stmt.where(ApiKey.id.is_not(None) if has_api_key else ApiKey.id.is_(None))
     needle = (q or "").strip()
     if needle:
         by_name = User.display_name.ilike(f"%{_like_escape(needle)}%", escape="\\")
@@ -113,8 +129,11 @@ async def list_users(
             banned_at=u.banned_at,
             created_at=u.created_at,
             balance_uzs=wire_uzs(Decimal(b)),
+            api_key=None
+            if key_id is None
+            else AdminUserKeyBrief(id=key_id, pricing_profile=profile),
         )
-        for u, b in page
+        for u, b, key_id, profile in page
     ]
     last = page[-1][0] if more else None
     return items, (encode_cursor(last.created_at, last.id) if last is not None else None)
@@ -162,6 +181,12 @@ async def user_card(db: AsyncSession, user: User) -> AdminUserCard:
         usd_wallet_enabled=user.usd_wallet_enabled,
         balance_usd=wire_usd(await user_usd_balance(db, user.id)),
         usd_entries=[AdminEntryOut.of(e, "USD") for e in usd_entries],
+        api_key_id=await db.scalar(
+            select(ApiKey.id)
+            .where(ApiKey.user_id == user.id)
+            .order_by(ApiKey.created_at.desc())
+            .limit(1)
+        ),
     )
 
 

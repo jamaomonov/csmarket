@@ -52,9 +52,13 @@ async def list_users(
     q: Annotated[str | None, text_filter(80)] = None,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    has_api_key: bool | None = None,
 ) -> AdminUsersOut:
-    """Newest first; ``q`` = part of the display name or an exact 17-digit Steam ID."""
-    items, next_cursor = await svc.list_users(db, q=q, cursor=cursor, limit=limit)
+    """Newest first; ``q`` = part of the display name or an exact 17-digit Steam ID;
+    ``has_api_key`` keeps users with (``true``) or without (``false``) a live API key."""
+    items, next_cursor = await svc.list_users(
+        db, q=q, cursor=cursor, limit=limit, has_api_key=has_api_key
+    )
     return AdminUsersOut(items=items, next_cursor=next_cursor)
 
 

@@ -32,6 +32,13 @@ _MAX = int(ADMIN_ADJUST_MAX)
 _MAX_USD_UNITS = int(ADMIN_ADJUST_USD_MAX)
 
 
+class AdminUserKeyBrief(BaseModel):
+    """A user's live API key, as the users list shows it."""
+
+    id: str
+    pricing_profile: str
+
+
 class AdminUserRow(BaseModel):
     """One line of the users list."""
 
@@ -44,6 +51,8 @@ class AdminUserRow(BaseModel):
     created_at: datetime
     #: Spendable soʻm, digits.
     balance_uzs: str
+    #: The live (not revoked) API key; ``null`` without one.
+    api_key: AdminUserKeyBrief | None = None
 
 
 class AdminUsersOut(BaseModel):
@@ -168,6 +177,9 @@ class AdminUserCard(BaseModel):
     balance_usd: str
     #: The latest 20 dollar lines, newest first (``currency == "USD"``, ``amount_usd`` set).
     usd_entries: list[AdminEntryOut]
+    #: The newest API key, live or revoked (its card: ``/admin/api-keys/{id}``); ``null``
+    #: when the user never took one.
+    api_key_id: str | None = None
 
 
 class AdminReasonIn(BaseModel):

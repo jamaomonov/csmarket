@@ -31,6 +31,15 @@ export function RowsTable({
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="mb-1 text-sm font-semibold">{title}</legend>
+      {rows.length > 0 && (
+        <div aria-hidden className="text-fg-muted flex gap-2 text-xs">
+          {columns.map((col) => (
+            <span key={col.field} className="w-36">
+              {col.label}
+            </span>
+          ))}
+        </div>
+      )}
       {rows.map((row, i) => (
         // Rows have no identity of their own: the position is the key while editing.
         <div key={i} className="flex items-end gap-2">
