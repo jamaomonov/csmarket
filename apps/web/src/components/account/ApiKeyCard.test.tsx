@@ -20,6 +20,7 @@ vi.mock("@/lib/api-key", async (importOriginal) => ({
   ...api,
 }));
 
+const cache = { qc: null as QueryClient | null };
 const LIVE = {
   id: "k1",
   pricing_profile: "retail",
@@ -30,6 +31,7 @@ const ISSUED = { ...LIVE, token: "csk_secret-token-123" };
 
 function view() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  cache.qc = qc;
   render(
     <QueryClientProvider client={qc}>
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }} timeZone="UTC">
@@ -120,5 +122,84 @@ describe("ApiKeyCard", () => {
     view();
     await screen.findByRole("button", { name: "Отозвать" });
     expect(screen.queryByRole("link", { name: "Документация API" })).toBeNull();
+  });
+
+  it("does not keep the token in the mutation cache after «Готово»", async () => {
+    api.getApiKey.mockResolvedValueOnce(null).mockResolvedValue(LIVE);
+    api.issueApiKey.mockResolvedValue(ISSUED);
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Выпустить ключ" }));
+    await screen.findByText(ISSUED.token);
+    fireEvent.click(screen.getByRole("button", { name: "Готово" }));
+    await waitFor(() => {
+      expect(screen.queryByText(ISSUED.token)).toBeNull();
+    });
+    const held = cache.qc?.getMutationCache().getAll() ?? [];
+    expect(JSON.stringify(held.map((m) => m.state.data ?? null))).not.toContain(ISSUED.token);
+    expect(document.body.textContent).not.toContain(ISSUED.token);
+  });
+
+  it("asks to copy by hand when there is no clipboard and copying fails", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    const exec = vi.fn().mockReturnValue(false);
+    Object.assign(document, { execCommand: exec });
+    api.getApiKey.mockResolvedValue(null);
+    api.issueApiKey.mockResolvedValue(ISSUED);
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Выпустить ключ" }));
+    await screen.findByText(ISSUED.token);
+    fireEvent.click(screen.getByRole("button", { name: "Скопировать" }));
+    expect(await screen.findByText("Скопируйте ключ вручную")).toBeInTheDocument();
+    expect(exec).toHaveBeenCalledWith("copy");
+    expect(window.getSelection()?.toString()).toBe(ISSUED.token);
+  });
+
+  it("falls back to the old copy command and announces it", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    Object.assign(document, { execCommand: vi.fn().mockReturnValue(true) });
+    api.getApiKey.mockResolvedValue(null);
+    api.issueApiKey.mockResolvedValue(ISSUED);
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Выпустить ключ" }));
+    await screen.findByText(ISSUED.token);
+    fireEvent.click(screen.getByRole("button", { name: "Скопировать" }));
+    expect(await screen.findAllByText("Скопировано")).not.toHaveLength(0);
+    expect(screen.queryByText("Скопируйте ключ вручную")).toBeNull();
+  });
+
+  it("re-reads the key when a revoke finds it already gone", async () => {
+    api.getApiKey.mockResolvedValueOnce(LIVE).mockResolvedValue(null);
+    api.revokeApiKey.mockRejectedValue(new Error("404"));
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Отозвать" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, отозвать" }));
+    expect(await screen.findByRole("button", { name: "Выпустить ключ" })).toBeInTheDocument();
+  });
+
+  it("re-reads the key when a reissue fails, and shows the top-up hint if not allowed", async () => {
+    const { ApiKeyNotAllowedError } = await vi.importActual<typeof ApiKeyModule>("@/lib/api-key");
+    api.getApiKey.mockResolvedValue(LIVE);
+    api.issueApiKey.mockRejectedValue(new ApiKeyNotAllowedError());
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Перевыпустить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, перевыпустить" }));
+    expect(await screen.findByText("Сначала пополните баланс")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(api.getApiKey.mock.calls.length).toBeGreaterThan(1);
+    });
+  });
+
+  it("does not show the tariff", async () => {
+    api.getApiKey.mockResolvedValue(LIVE);
+    view();
+    await screen.findByRole("button", { name: "Отозвать" });
+    expect(screen.queryByText(/Тариф/)).toBeNull();
+  });
+
+  it("moves focus to the confirm button", async () => {
+    api.getApiKey.mockResolvedValue(LIVE);
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Отозвать" }));
+    expect(screen.getByRole("button", { name: "Да, отозвать" })).toHaveFocus();
   });
 });

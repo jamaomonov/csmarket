@@ -583,11 +583,6 @@
     "created": "Issued {date}",
     "lastUsed": "Last request {date}",
     "neverUsed": "No requests yet",
-    "tariff": "Plan: {name}",
-    "tariffs": {
-      "retail": "retail",
-      "cost": "partner"
-    },
     "reissue": "Reissue",
     "reissueSure": "The old key stops working. Reissue?",
     "reissueYes": "Yes, reissue",
@@ -595,6 +590,7 @@
     "revokeSure": "The key stops working at once. Revoke?",
     "revokeYes": "Yes, revoke",
     "cancel": "Cancel",
-    "docs": "API documentation"
+    "docs": "API documentation",
+    "copyManually": "Copy the key by hand"
   }
 }

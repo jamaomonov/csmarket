@@ -4,7 +4,7 @@ import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, KeyRound } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Notice, SettingsCard } from "./SettingsCard";
 
@@ -38,19 +38,28 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
   const [token, setToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
+  const [copyFailed, setCopyFailed] = useState(false);
   const [notAllowed, setNotAllowed] = useState(false);
+  const tokenRef = useRef<HTMLElement>(null);
 
+  // gcTime 0 and a reset on «Готово» / unmount: the token must not outlive the screen in the
+  // mutation cache (its `data`); it is copied to local state below and read only from there.
   const issue = useMutation({
     mutationFn: () => issueApiKey(mintApiKeyKey()),
+    gcTime: 0,
+    onMutate: () => {
+      setNotAllowed(false);
+    },
     onSuccess: async (issued) => {
       setToken(issued.token);
       setConfirm(null);
       setNotAllowed(false);
       await qc.invalidateQueries({ queryKey: API_KEY_KEY });
     },
-    onError: (err) => {
+    onError: async (err) => {
       setConfirm(null);
       setNotAllowed(err instanceof ApiKeyNotAllowedError);
+      await qc.invalidateQueries({ queryKey: API_KEY_KEY });
     },
   });
   const revoke = useMutation({
@@ -59,26 +68,64 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
       setConfirm(null);
       await qc.invalidateQueries({ queryKey: API_KEY_KEY });
     },
-    onError: () => {
+    onError: async () => {
       setConfirm(null);
+      // Revoked elsewhere (404 `api_key_missing`) or any failure: show what is really there.
+      await qc.invalidateQueries({ queryKey: API_KEY_KEY });
     },
   });
+  const resetIssue = issue.reset;
+  useEffect(() => resetIssue, [resetIssue]);
+  // A different key (issued, revoked elsewhere) than the one that was refused: ask again.
+  const keyId = key.data?.id ?? null;
+  useEffect(() => {
+    setNotAllowed(false);
+  }, [keyId]);
 
   const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
   const busy = issue.isPending || revoke.isPending;
   const failed = (issue.isError && !notAllowed) || revoke.isError;
 
+  function selectToken(): boolean {
+    const node = tokenRef.current;
+    if (!node) return false;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    return true;
+  }
+
   async function copy(value: string) {
+    setCopyFailed(false);
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
+      return;
     } catch {
-      setCopied(false);
+      // No clipboard API (plain http, old browser): select the text and try the old way.
     }
+    let done = false;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- the only copy path without the Clipboard API
+      done = selectToken() && document.execCommand("copy");
+    } catch {
+      done = false;
+    }
+    setCopied(done);
+    setCopyFailed(!done);
+  }
+
+  function finish() {
+    setToken(null);
+    setCopied(false);
+    setCopyFailed(false);
+    issue.reset();
   }
 
   let body;
-  let hint: string = t("hint");
+  let hint: string = notAllowed ? t("needTopup") : t("hint");
   if (token !== null) {
     body = (
       <>
@@ -86,7 +133,11 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
           {t("saveIt")}
         </Notice>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-          <code className="num bg-bg/40 border-border min-w-0 flex-1 break-all rounded-lg border px-3 py-2 text-[13px]">
+          <code
+            ref={tokenRef}
+            aria-label={t("tokenTitle")}
+            className="num bg-bg/40 border-border min-w-0 flex-1 break-all rounded-lg border px-3 py-2 text-[13px]"
+          >
             {token}
           </code>
           <Button
@@ -104,13 +155,15 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
             {copied ? t("copied") : t("copy")}
           </Button>
         </div>
-        <Button
-          className="mt-3"
-          onClick={() => {
-            setToken(null);
-            setCopied(false);
-          }}
-        >
+        <span role="status" className="sr-only">
+          {copied ? t("copied") : ""}
+        </span>
+        {copyFailed ? (
+          <Notice tone="warn" role="alert">
+            {t("copyManually")}
+          </Notice>
+        ) : null}
+        <Button className="mt-3" onClick={finish}>
           {t("done")}
         </Button>
       </>
@@ -178,6 +231,10 @@ interface LiveKeyProps {
 
 function LiveKey({ apiKey, when, confirm, busy, onConfirm, onReissue, onRevoke }: LiveKeyProps) {
   const t = useTranslations("web.apiKey");
+  const yesRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (confirm !== null) yesRef.current?.focus();
+  }, [confirm]);
   return (
     <>
       <ul className="text-fg-muted mt-3 flex flex-col gap-1 text-sm">
@@ -187,7 +244,6 @@ function LiveKey({ apiKey, when, confirm, busy, onConfirm, onReissue, onRevoke }
             ? t("lastUsed", { date: when.format(new Date(apiKey.last_used_at)) })
             : t("neverUsed")}
         </li>
-        <li>{t("tariff", { name: t(`tariffs.${apiKey.pricing_profile}`) })}</li>
       </ul>
       {confirm === null ? (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -218,6 +274,7 @@ function LiveKey({ apiKey, when, confirm, busy, onConfirm, onReissue, onRevoke }
           <p>{confirm === "reissue" ? t("reissueSure") : t("revokeSure")}</p>
           <div className="mt-2 flex gap-2">
             <Button
+              ref={yesRef}
               size="sm"
               disabled={busy}
               onClick={confirm === "reissue" ? onReissue : onRevoke}

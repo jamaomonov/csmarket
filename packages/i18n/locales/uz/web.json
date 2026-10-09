@@ -583,11 +583,6 @@
     "created": "Yaratilgan: {date}",
     "lastUsed": "Oxirgi soʻrov: {date}",
     "neverUsed": "Hali soʻrov boʻlmagan",
-    "tariff": "Tarif: {name}",
-    "tariffs": {
-      "retail": "chakana",
-      "cost": "hamkor"
-    },
     "reissue": "Qayta yaratish",
     "reissueSure": "Eski kalit ishlamay qoladi. Qayta yaratilsinmi?",
     "reissueYes": "Ha, qayta yaratish",
@@ -595,6 +590,7 @@
     "revokeSure": "Kalit darhol ishlamay qoladi. Bekor qilinsinmi?",
     "revokeYes": "Ha, bekor qilish",
     "cancel": "Bekor",
-    "docs": "API hujjatlari"
+    "docs": "API hujjatlari",
+    "copyManually": "Kalitni qoʻlda nusxalang"
   }
 }
