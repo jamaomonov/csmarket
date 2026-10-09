@@ -9,7 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useRef, useState } from "react";
 
 import { type AdminOrderDetail, refundOrder, resolveOrder, retryOrder } from "./api";
-import { detailKey, ORDERS_LIST_KEY, TRADES_KEY } from "./keys";
+import { detailKey, TRADES_KEY } from "./keys";
 import { isOrderConflict, orderErrorText } from "./labels";
 
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -77,7 +77,6 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
     onSuccess: (next, s) => {
       keys[s.action].reset();
       qc.setQueryData(detailKey(number), next);
-      void qc.invalidateQueries({ queryKey: ORDERS_LIST_KEY });
       void qc.invalidateQueries({ queryKey: TRADES_KEY });
       setPanel("none");
       setNote("");

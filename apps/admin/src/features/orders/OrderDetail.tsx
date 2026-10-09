@@ -132,8 +132,8 @@ export function OrderDetail() {
 
   return (
     <section className="space-y-6">
-      <Link to="/orders" className="text-fg-muted text-sm hover:underline">
-        ← Все заказы
+      <Link to="/trades" className="text-fg-muted text-sm hover:underline">
+        ← Обмены
       </Link>
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">{detail ? `Заказ ${detail.order.number}` : "Заказ"}</h1>

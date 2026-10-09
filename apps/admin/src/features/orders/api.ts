@@ -65,6 +65,10 @@ export interface AdminOrderFull {
   updated_at: string;
   expires_at: string;
   paid_at: string | null;
+  /** When a worker took the order to buy. */
+  claimed_at: string | null;
+  /** When the Steam offer went out. */
+  trade_sent_at: string | null;
   delivered_at: string | null;
   cancelled_at: string | null;
   failed_at: string | null;

@@ -1,10 +1,5 @@
-/** Operator-facing Russian labels for the orders and trades pages. Unknown codes show raw. */
-import {
-  type AttentionReason,
-  type FailureReason,
-  type OrderStatus,
-  type TradeView,
-} from "./kinds";
+/** Operator-facing Russian labels for the order page and the order rows. Unknown codes show raw. */
+import { type AttentionReason, type FailureReason, type OrderStatus } from "./kinds";
 
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
@@ -48,12 +43,6 @@ export const FAILURE_LABELS: Record<FailureReason, string> = {
   trade_hold: "задержка обменов Steam",
   price_moved: "цена поставщика выросла",
   admin: "вернул администратор",
-};
-
-export const TRADE_VIEW_LABELS: Record<TradeView, string> = {
-  all: "Все",
-  active: "В пути",
-  attention: "Требуют внимания",
 };
 
 /** Waxpeer's trade status codes we know (`orders.trades`); any other shows as a bare code. */

@@ -18,7 +18,6 @@ import {
   Menu,
   Package,
   Percent,
-  Receipt,
   Settings2,
   Users,
   Wallet,
@@ -26,7 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { useAuthStore } from "@/features/auth/authStore";
 
@@ -35,6 +34,8 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   end?: boolean;
+  /** Other path prefixes the item stands for (an order page belongs to «Обмены»). */
+  also?: string[];
 }
 interface NavGroup {
   /** The section heading; `null` for the pinned group at the top. */
@@ -54,8 +55,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: "Операции",
     items: [
-      { to: "/orders", label: "Заказы", icon: Receipt },
-      { to: "/trades", label: "Обмены", icon: ArrowLeftRight },
+      { to: "/trades", label: "Обмены", icon: ArrowLeftRight, also: ["/orders/"] },
       { to: "/payments", label: "Платежи", icon: CreditCard },
       { to: "/api-keys", label: "API-ключи", icon: KeyRound },
     ],
@@ -79,6 +79,28 @@ const linkClass = ({ isActive }: { isActive: boolean }): string =>
       ? "bg-accent-subtle text-accent font-medium"
       : "text-fg-muted hover:bg-surface-2 hover:text-fg",
   ].join(" ");
+
+/** A sidebar link; also marked current on its `also` prefixes. */
+function NavItemLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const content = (
+    <>
+      <item.icon className="size-4" aria-hidden />
+      {item.label}
+    </>
+  );
+  if ((item.also ?? []).some((prefix) => pathname.startsWith(prefix))) {
+    return (
+      <Link to={item.to} aria-current="page" className={linkClass({ isActive: true })}>
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <NavLink to={item.to} end={item.end ?? false} className={linkClass}>
+      {content}
+    </NavLink>
+  );
+}
 
 export function Layout() {
   const me = useAuthStore((s) => s.me);
@@ -157,10 +179,7 @@ export function Layout() {
                 </p>
               )}
               {group.items.map((item) => (
-                <NavLink key={item.to} to={item.to} end={item.end ?? false} className={linkClass}>
-                  <item.icon className="size-4" aria-hidden />
-                  {item.label}
-                </NavLink>
+                <NavItemLink key={item.to} item={item} pathname={location.pathname} />
               ))}
             </div>
           ))}

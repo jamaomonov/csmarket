@@ -35,7 +35,6 @@ describe("Layout", () => {
       "Дашборд",
       "Каталог",
       "Цены",
-      "Заказы",
       "Обмены",
       "Платежи",
       "API-ключи",
@@ -50,10 +49,10 @@ describe("Layout", () => {
     expect(within(nav).getByRole("link", { name: "Цены" })).toHaveAttribute("href", "/pricing");
   });
 
-  it("marks the current page", () => {
+  it("marks the current page; an order page belongs to «Обмены»", () => {
     renderLayout("/orders/123");
     const nav = screen.getByRole("navigation", { name: "Основная навигация" });
-    expect(within(nav).getByRole("link", { name: "Заказы" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Обмены" })).toHaveAttribute(
       "aria-current",
       "page",
     );

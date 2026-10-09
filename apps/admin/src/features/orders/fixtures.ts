@@ -67,6 +67,8 @@ export const DETAIL: AdminOrderDetail = {
     updated_at: "2026-09-30T10:05:00Z",
     expires_at: "2026-09-30T10:30:00Z",
     paid_at: "2026-09-30T10:01:00Z",
+    claimed_at: "2026-09-30T10:01:05Z",
+    trade_sent_at: null,
     delivered_at: null,
     cancelled_at: null,
     failed_at: null,

@@ -2,7 +2,7 @@
  * Top-level route table. `/login` and the Steam callback are public; everything
  * else sits behind `AuthGuard` (signed-in admin only).
  */
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 
 import { Layout } from "./Layout";
 
@@ -15,7 +15,6 @@ import { SteamCallback } from "@/features/auth/SteamCallback";
 import { CataloguePage } from "@/features/catalogue/CataloguePage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { OrderDetail } from "@/features/orders/OrderDetail";
-import { OrdersPage } from "@/features/orders/OrdersPage";
 import { PaymentDetail } from "@/features/payments/PaymentDetail";
 import { PaymentsPage } from "@/features/payments/PaymentsPage";
 import { PricingPage } from "@/features/pricing/PricingPage";
@@ -43,7 +42,7 @@ export const router = createBrowserRouter([
           { path: "/pricing", element: <PricingPage /> },
           { path: "/users", element: <UsersPage /> },
           { path: "/users/:id", element: <UserCard /> },
-          { path: "/orders", element: <OrdersPage /> },
+          { path: "/orders", element: <Navigate to="/trades" replace /> },
           { path: "/orders/:number", element: <OrderDetail /> },
           { path: "/trades", element: <TradesPage /> },
           { path: "/payments", element: <PaymentsPage /> },
