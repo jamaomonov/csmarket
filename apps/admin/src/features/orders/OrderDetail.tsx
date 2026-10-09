@@ -44,7 +44,7 @@ function when(iso: string | null): string {
 /** The open attention of whichever market the order was bought at. */
 function openAttention(detail: AdminOrderDetail): AttentionReason | null {
   const watched = detail.trade ?? detail.skinslink ?? detail.lisskins;
-  if (watched === null || watched.resolved_at !== null) return null;
+  if (watched?.resolved_at !== null) return null;
   return watched.attention_reason;
 }
 

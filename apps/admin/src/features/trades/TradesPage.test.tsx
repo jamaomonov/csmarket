@@ -292,7 +292,7 @@ describe("TradesPage", () => {
   });
 
   it("on a phone shows cards with the status and price, not a wide table", async () => {
-    const before = window.matchMedia;
+    const before = Object.getOwnPropertyDescriptor(window, "matchMedia");
     window.matchMedia = ((query: string) => ({
       matches: true,
       media: query,
@@ -310,7 +310,8 @@ describe("TradesPage", () => {
         `/orders/${FLAGGED.number}`,
       );
     } finally {
-      window.matchMedia = before;
+      if (before) Object.defineProperty(window, "matchMedia", before);
+      else Reflect.deleteProperty(window, "matchMedia");
     }
   });
 });
