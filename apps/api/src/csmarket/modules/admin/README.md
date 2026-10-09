@@ -6,8 +6,10 @@ one probe, `GET /api/v1/admin/me`; M2 adds `admin_audit_log` with the first admi
 M3 adds the users list and card, ban/unban and the audited balance adjustment; M4a the
 orders and trades API (search, the «Обмены» table of every source with its attention tab, the order page, resolve / refund /
 retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007); the public
-API's keys page (`/admin/api-keys`: keys with order count, revenue and cost, a card with the
-latest 20 orders and the webhook host, the `retail` / `cost` tariff switch and revoke —
+API's keys (`/admin/api-keys` routes; the SPA shows a key as the «API-ключ» tab of its owner's
+user card, and the users list marks and filters users with a live key — `has_api_key`, the row's
+`api_key`, the card's `api_key_id`): order count, revenue and cost, the
+latest 20 orders and the webhook host, the `retail` / `cost` tariff switch, limits and revoke —
 audited `api_keys.tariff` `{from, to, reason}` and `api_keys.revoke` `{reason}`; a tariff change
 applies to the next order only, placed orders keep their stamped price).
 

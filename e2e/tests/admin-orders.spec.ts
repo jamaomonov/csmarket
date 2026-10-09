@@ -31,13 +31,16 @@ test("an admin finds a delivered order, its trade, and the trade under «Обм�
   await waitForOrder(request, token, number, "delivered");
 
   await devLogin(page, { steamId: uniqueSteamId("7656119808"), name: "Owner", admin: true });
+  // «Заказы» is folded into «Обмены»; an old link still lands there.
   await page.goto("/orders");
-  await expect(page.getByRole("heading", { level: 1, name: "Заказы" })).toBeVisible();
-  await page.getByLabel("Номер заказа или название").fill(number);
+  await expect(page).toHaveURL(/\/trades/);
+  await expect(page.getByRole("heading", { level: 1, name: "Обмены" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /^Все/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByLabel("Номер, название или id обмена Steam").fill(number);
   await expect(page).toHaveURL(new RegExp(`q=${number}`));
-  const table = page.getByTestId("orders-table");
+  const table = page.getByTestId("trades-table");
   await expect(table.locator("tbody tr")).toHaveCount(1);
-  await expect(table.getByTestId("order-status")).toHaveText("получен");
+  await expect(table.getByTestId("trade-state")).toContainText("получен");
   await table.getByRole("link", { name: number, exact: true }).click();
 
   await expect(page).toHaveURL(new RegExp(`/orders/${number}$`));
@@ -48,11 +51,4 @@ test("an admin finds a delivered order, its trade, and the trade under «Обм�
   const offer = trade.getByRole("link", { name: /^\d+$/ });
   await expect(offer).toHaveAttribute("href", /^https:\/\/steamcommunity\.com\/tradeoffer\/\d+\/$/);
   await expect(page.getByRole("region", { name: "Платежи", exact: true })).toBeVisible();
-
-  await page.goto("/trades");
-  await expect(page.getByRole("heading", { level: 1, name: "Обмены" })).toBeVisible();
-  await expect(page.getByRole("tab", { name: /^Все/ })).toHaveAttribute("aria-selected", "true");
-  await expect(
-    page.getByTestId("trades-table").getByRole("link", { name: number, exact: true }),
-  ).toBeVisible();
 });

@@ -69,7 +69,7 @@ WHERE u.steam_id = :'sid';
 
 ## Set a tariff
 
-Admin → «API-ключи» → the key → the tariff switch (`retail` or `cost`) with a reason (audited
+Admin → «Пользователи» (tab «С API-ключом») → the user → tab «API-ключ» → the tariff switch (`retail` or `cost`) with a reason (audited
 `api_keys.tariff` `{from, to, reason}`). The tariff is not shown to the customer on the site.
 `retail` is the storefront price, `cost` is the supplier cost (csmarket earns nothing on it: only
 for YuPay). It applies from the next order; placed orders keep their price. A reissue carries it
@@ -82,7 +82,7 @@ the latest 20 orders and the webhook host with its last delivery.
 ## Revoke a key
 
 The customer revokes or reissues it on the site (profile → «API-ключ»). For a leaked key or an
-abuse, an operator uses admin → «API-ключи» → the key → «Отозвать» with a reason (audited
+abuse, an operator uses admin → «Пользователи» (tab «С API-ключом») → the user → tab «API-ключ» → «Отозвать» with a reason (audited
 `api_keys.revoke`); the key stops working on the next call (auth reads the database each time).
 SQL is only the fallback if the admin is down:
 
@@ -215,7 +215,7 @@ needs the USD wallet switched on and a balance.
 
 Per key and minute: 60 reads, 10 orders, 1 feed first page, 30 trade-link checks by default
 (`public_api:rl:{bucket}:{key_id}`, buckets `read`, `order`, `feed`, `check`). A client who
-needs more: admin → «API-ключи» → the key → «Лимиты» → enter the number (1–10 000) or leave a
+needs more: admin → «Пользователи» (tab «С API-ключом») → the user → tab «API-ключ» → «Лимиты» → enter the number (1–10 000) or leave a
 field empty for the default; audited as `api_keys.limits` `{from, to}`. It applies on the next
 call (the key row is read each time) and a reissue carries it over. YuPay runs at 600 reads /
 30 orders / 1 feed. The card also shows the key's IP allow-list, read-only.
