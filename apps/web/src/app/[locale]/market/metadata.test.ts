@@ -11,13 +11,15 @@ vi.mock("next-intl/server", () => ({
 // The page's components import the locale-aware navigation, which loads Next's client router.
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, useRouter: () => ({}) }));
 
-const facets = vi.hoisted(() => ({ current: null as unknown }));
+const facets = vi.hoisted((): { current: SkinFacets | null } => ({ current: null }));
 vi.mock("@/lib/skins", () => ({
   getSkinFacets: () => Promise.resolve(facets.current),
   getSkinsPage: () => Promise.resolve({ items: [], next_cursor: null }),
 }));
 
 import { generateMetadata } from "./page";
+
+import type { SkinFacets } from "@csmarket/utils/skins";
 
 const meta = (searchParams: Record<string, string>) =>
   generateMetadata({

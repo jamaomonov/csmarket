@@ -12,6 +12,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import type { Metadata } from "next";
 
+import { JsonLd } from "@/components/JsonLd";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { SkinCategoryBar } from "@/components/skins/SkinCategoryBar";
 import { SkinFilterDrawer } from "@/components/skins/SkinFilterDrawer";
@@ -23,7 +24,6 @@ import { SkinSort } from "@/components/skins/SkinSort";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { MARKET } from "@/lib/paths";
-import { JsonLd } from "@/components/JsonLd";
 import { alternates, GEO_META, NOINDEX_FOLLOW, ogLocale, ROBOTS } from "@/lib/seo";
 import { itemListLd } from "@/lib/skin-seo";
 import { getSkinFacets, getSkinsPage } from "@/lib/skins";
