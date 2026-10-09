@@ -264,7 +264,7 @@ describe("OrderDetail", () => {
       renderDetail();
       fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
       const confirm = screen.getByTestId("order-confirm");
-      expect(confirm).toHaveTextContent("Вернуть $13.580000 на баланс покупателя?");
+      expect(confirm).toHaveTextContent("Вернуть $13.580 на баланс покупателя?");
       expect(confirm).toHaveTextContent("Сначала спросим поставщика");
     });
 
@@ -338,7 +338,7 @@ describe("OrderDetail", () => {
       ["order_busy", "Покупка ещё идёт — попробуйте через минуту."],
       ["order_needs_attention", "Сначала разберите обмен."],
       ["waxpeer_unavailable", "Не удалось проверить покупку — попробуйте позже."],
-      ["supplier_unavailable", "Поставщик не ответил — попробуйте позже."],
+      ["source_unavailable", "Поставщик не ответил — попробуйте позже."],
       [
         "idempotency_mismatch",
         "Эта операция уже была выполнена с другими данными. Обновите страницу.",

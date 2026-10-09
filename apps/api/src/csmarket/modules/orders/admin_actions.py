@@ -39,7 +39,7 @@ from csmarket.modules.orders.admin_refund_sources import (
     LisskinsInfoClient,
     SkinslinkStatusClient,
     admin_refund_purchase,
-    purchase_refund_refusal,
+    purchase_can_refund,
 )
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
@@ -160,7 +160,7 @@ def can_refund(
     asked only by the refund itself, may still refuse it.
     """
     if order.source in PURCHASE_SOURCES:
-        return purchase_refund_refusal(order, purchase, at or now()) is None
+        return purchase_can_refund(order, purchase, at or now())
     return refund_refusal(order, trade, at or now()) is None
 
 
@@ -280,7 +280,7 @@ async def admin_refund(
     """
     if await _source_of(db, number) in PURCHASE_SOURCES:
         if skinslink is None or lisskins is None:  # a caller bug: the route passes both
-            raise conflict("supplier_unavailable")
+            raise conflict("source_unavailable")
         return await admin_refund_purchase(
             db, number=number, admin_id=admin_id, skinslink=skinslink, lisskins=lisskins
         )

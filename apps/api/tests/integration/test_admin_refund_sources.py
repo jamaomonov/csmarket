@@ -19,6 +19,7 @@ from csmarket.core.errors import AppError
 from csmarket.core.ids import new_id
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.lisskins.api import (
+    InfoAnswer,
     LisskinsError,
     LisskinsUnavailableError,
     request_info_client,
@@ -89,20 +90,29 @@ class GuardedSkinslink:
 
 
 class GuardedLisskins:
-    """LIS-SKINS' ``info``: ``answer`` (the purchases, or an exception), guarded the same."""
+    """LIS-SKINS' ``info_answer``: ``answer`` (the readable purchases, or an exception) and
+    ``entries`` (the answer's entries, unreadable ones included; default: all readable),
+    guarded the same."""
 
-    def __init__(self, db: AsyncSession | None, answer: list[LisskinsReport] | Exception) -> None:
-        self.db, self.answer = db, answer
+    def __init__(
+        self,
+        db: AsyncSession | None,
+        answer: list[LisskinsReport] | Exception,
+        *,
+        entries: int | None = None,
+    ) -> None:
+        self.db, self.answer, self.entries = db, answer, entries
         self.calls: list[list[str]] = []
 
-    async def info(self, *, custom_ids: Sequence[str]) -> list[LisskinsReport]:
+    async def info_answer(self, *, custom_ids: Sequence[str]) -> InfoAnswer:
         """The scripted answer."""
         if self.db is not None:
             assert not self.db.in_transaction(), "a transaction is open across LIS-SKINS"
         self.calls.append(list(custom_ids))
         if isinstance(self.answer, Exception):
             raise self.answer
-        return self.answer
+        entries = len(self.answer) if self.entries is None else self.entries
+        return InfoAnswer(purchases=tuple(self.answer), entries=entries)
 
 
 class SlowSkinslink:
@@ -206,7 +216,7 @@ async def test_a_live_or_done_skinslink_purchase_is_never_refunded(
 
 async def test_a_second_click_after_a_refund_is_already_refunded(db_session: AsyncSession) -> None:
     order, _ = await make_skinslink_order(db_session, status="buying")
-    skinslink = GuardedSkinslink(db_session, sl_purchase("failed"))
+    skinslink = GuardedSkinslink(db_session, sl_purchase("failed", merchant_tx_id=order.id))
 
     def refund() -> Awaitable[Order]:
         return admin_refund_purchase(
@@ -236,7 +246,7 @@ async def test_a_failed_skinslink_lookup_refuses(
     db_session: AsyncSession, error: Exception
 ) -> None:
     order, _ = await make_skinslink_order(db_session, status="buying")
-    assert await _code(_sl_refund(db_session, order, error)) == (409, "supplier_unavailable")
+    assert await _code(_sl_refund(db_session, order, error)) == (409, "source_unavailable")
     assert await _refunds(db_session) == 0
 
 
@@ -252,7 +262,7 @@ async def test_a_slow_skinslink_lookup_times_out(
         skinslink=SlowSkinslink(),
         lisskins=_unused_lisskins(),
     )
-    assert await _code(refund) == (409, "supplier_unavailable")
+    assert await _code(refund) == (409, "source_unavailable")
     assert await _refunds(db_session) == 0
 
 
@@ -381,10 +391,81 @@ async def test_an_api_order_is_refunded_to_the_usd_wallet(
     user_id = user.id
     uzs_before = await user_balance(db_session, user_id)
     assert await user_usd_balance(db_session, user_id) == Decimal(50_000 - 9000)
-    await _sl_refund(db_session, order, sl_purchase("failed"))
+    await _sl_refund(db_session, order, sl_purchase("failed", merchant_tx_id=order.id))
     await db_session.commit()
     assert await user_usd_balance(db_session, user_id) == Decimal(50_000)
     assert await user_balance(db_session, user_id) == uzs_before
+
+
+@pytest.mark.parametrize("source", ["skinslink", "lisskins"])
+async def test_a_fresh_lost_answer_is_never_refunded_on_not_found(
+    db_session: AsyncSession, source: str
+) -> None:
+    """An old row whose latest buy answer was lost a minute ago: the source may not show the
+    purchase yet — a silence is never refunded."""
+    lost: dict[str, Any] = {
+        "status": "buying",
+        "purchase_id": None,
+        "created_at": clock.now() - OLD,
+        "buy_unconfirmed_at": clock.now() - timedelta(minutes=1),
+    }
+    if source == "skinslink":
+        order, _ = await make_skinslink_order(db_session, purchase_status=None, **lost)
+        refund = _sl_refund(db_session, order, None)
+    else:
+        order, _ = await make_lisskins_order(db_session, skin_status=None, **lost)
+        refund = _ls_refund(db_session, order, [])
+    assert await _code(refund) == (409, "order_in_flight")
+    assert await _refunds(db_session) == 0
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"merchant_tx_id": "someone-else"},
+        {"merchant_tx_id": None},
+        {"id": 999},  # our row says purchase 178
+    ],
+)
+async def test_a_skinslink_answer_about_another_purchase_is_not_ours(
+    db_session: AsyncSession, report: dict[str, Any]
+) -> None:
+    order, _ = await make_skinslink_order(db_session, status="buying")
+    answer = sl_purchase("failed", **{"merchant_tx_id": order.id, **report})
+    assert await _code(_sl_refund(db_session, order, answer)) == (409, "order_in_flight")
+    assert await _refunds(db_session) == 0
+
+
+async def test_a_lost_answer_recorded_during_the_lookup_is_rechecked(
+    db_session: AsyncSession,
+) -> None:
+    order, _ = await make_skinslink_order(
+        db_session,
+        status="buying",
+        purchase_id=None,
+        purchase_status=None,
+        created_at=clock.now() - OLD,
+    )
+    order_id = order.id
+
+    class Racing(GuardedSkinslink):
+        async def purchase_status(self, *, merchant_tx_id: str) -> Purchase | None:
+            await super().purchase_status(merchant_tx_id=merchant_tx_id)
+            row = await db_session.get(SkinslinkPurchase, order_id)
+            assert row is not None
+            row.buy_unconfirmed_at = clock.now()
+            await db_session.commit()
+            return None
+
+    refund = admin_refund_purchase(
+        db_session,
+        number=order.number,
+        admin_id=new_id(),
+        skinslink=Racing(db_session, None),
+        lisskins=_unused_lisskins(),
+    )
+    assert await _code(refund) == (409, "order_in_flight")
+    assert await _refunds(db_session) == 0
 
 
 # --- LIS-SKINS ---------------------------------------------------------------------------
@@ -439,6 +520,55 @@ async def test_another_custom_id_in_the_answer_is_not_ours(db_session: AsyncSess
     assert await _code(_ls_refund(db_session, order, report)) == (409, "order_in_flight")
 
 
+async def test_another_custom_id_is_not_ours_even_with_no_purchase_on_record(
+    db_session: AsyncSession,
+) -> None:
+    order, _ = await make_lisskins_order(
+        db_session,
+        status="buying",
+        skin_status=None,
+        purchase_id=None,
+        created_at=clock.now() - OLD,
+    )
+    report = [ls_purchase("return", custom_id="someone-else")]
+    assert await _code(_ls_refund(db_session, order, report)) == (409, "order_in_flight")
+    assert await _refunds(db_session) == 0
+
+
+@pytest.mark.parametrize("ours", [False, True])
+async def test_an_unreadable_lisskins_entry_is_never_not_found(
+    db_session: AsyncSession, ours: bool
+) -> None:
+    """LIS-SKINS sent an entry ``info`` could not read: it may be our purchase."""
+    order, _ = await make_lisskins_order(
+        db_session,
+        status="buying",
+        skin_status=None,
+        purchase_id=None,
+        created_at=clock.now() - OLD,
+    )
+    readable = [ls_purchase("return", custom_id=order.id, purchase_id=55)] if ours else []
+    lisskins = GuardedLisskins(db_session, readable, entries=len(readable) + 1)
+    refund = admin_refund_purchase(
+        db_session,
+        number=order.number,
+        admin_id=new_id(),
+        skinslink=_unused_skinslink(),
+        lisskins=lisskins,
+    )
+    assert await _code(refund) == (409, "order_in_flight")
+    assert await _refunds(db_session) == 0
+
+
+async def test_a_lisskins_answer_with_another_purchase_id_is_not_ours(
+    db_session: AsyncSession,
+) -> None:
+    order, _ = await make_lisskins_order(db_session)  # purchase 55 on record
+    report = [ls_purchase("return", custom_id=order.id, purchase_id=77)]
+    assert await _code(_ls_refund(db_session, order, report)) == (409, "order_in_flight")
+    assert await _refunds(db_session) == 0
+
+
 async def test_lisskins_not_found_and_old_is_refunded(db_session: AsyncSession) -> None:
     order, _ = await make_lisskins_order(
         db_session,
@@ -456,7 +586,7 @@ async def test_lisskins_not_found_and_old_is_refunded(db_session: AsyncSession) 
 )
 async def test_a_failed_lisskins_lookup_refuses(db_session: AsyncSession, error: Exception) -> None:
     order, _ = await make_lisskins_order(db_session)
-    assert await _code(_ls_refund(db_session, order, error)) == (409, "supplier_unavailable")
+    assert await _code(_ls_refund(db_session, order, error)) == (409, "source_unavailable")
     assert await _refunds(db_session) == 0
 
 
@@ -469,7 +599,13 @@ async def test_the_refusal_without_a_supplier_call(db_session: AsyncSession) -> 
     at = clock.now()
     assert purchase_refund_refusal(order, row, at) is None
     assert purchase_refund_refusal(order, None, at) == "order_not_refundable"
-    assert can_refund(order, None, at, purchase=row) is True
+    # Stored «active»: the action would ask Skinslink, but the button stays hidden.
+    assert can_refund(order, None, at, purchase=row) is False
+    quiet, _ = await make_skinslink_order(
+        db_session, status="trade_sent", purchase_status="failed", purchase_id=179
+    )
+    quiet_row = await purchase_of(db_session, quiet, lock=False)
+    assert can_refund(quiet, None, at, purchase=quiet_row) is True
     young, _ = await make_skinslink_order(db_session, status="buying", purchase_id=None)
     young_row = await purchase_of(db_session, young, lock=False)
     assert purchase_refund_refusal(young, young_row, at) == "order_in_flight"
@@ -512,17 +648,22 @@ async def test_the_route_refunds_audits_and_shows_can_refund(
     suppliers: dict[str, Any],
 ) -> None:
     h = await admin_headers()
-    order, _ = await make_skinslink_order(db_session, status="trade_sent")
+    live, _ = await make_skinslink_order(db_session, status="trade_sent")
+    page = await integration_client.get(f"{BASE}/{live.number}", headers=h)
+    assert page.json()["can_refund"] is False  # stored «active»: no button
+    order, _ = await make_skinslink_order(
+        db_session, status="trade_sent", purchase_status=None, purchase_id=179
+    )
     page = await integration_client.get(f"{BASE}/{order.number}", headers=h)
     assert page.json()["can_refund"] is True
-    suppliers["skinslink"].answer = sl_purchase("active")
+    suppliers["skinslink"].answer = sl_purchase("active", merchant_tx_id=order.id)
     key = {"Idempotency-Key": f"admin-refund-{uuid.uuid4()}"}
     r = await integration_client.post(f"{BASE}/{order.number}/refund", headers={**h, **key})
     assert (r.status_code, r.json()["code"]) == (409, "order_in_flight")
     suppliers["skinslink"].answer = SkinslinkUnavailableError("down")
     r = await integration_client.post(f"{BASE}/{order.number}/refund", headers={**h, **key})
-    assert (r.status_code, r.json()["code"]) == (409, "supplier_unavailable")
-    suppliers["skinslink"].answer = sl_purchase("canceled")
+    assert (r.status_code, r.json()["code"]) == (409, "source_unavailable")
+    suppliers["skinslink"].answer = sl_purchase("canceled", merchant_tx_id=order.id, id=179)
     r = await integration_client.post(f"{BASE}/{order.number}/refund", headers={**h, **key})
     assert r.status_code == 200, r.text
     assert (r.json()["order"]["status"], r.json()["can_refund"]) == ("returned", False)
@@ -554,7 +695,7 @@ async def test_a_supplier_order_without_its_client_is_refused(db_session: AsyncS
     refund = admin_refund(
         db_session, number=order.number, admin_id=new_id(), client=FakeTradeClient()
     )
-    assert await _code(refund) == (409, "supplier_unavailable")
+    assert await _code(refund) == (409, "source_unavailable")
     assert await _refunds(db_session) == 0
 
 

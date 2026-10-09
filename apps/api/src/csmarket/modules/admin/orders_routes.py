@@ -173,7 +173,7 @@ async def resolve(
         "`order_needs_attention` — a Skinslink / LIS-SKINS purchase's attention is unresolved.",
         "`waxpeer_unavailable` — Waxpeer could not be asked whether a purchase exists; "
         "nothing was refunded, try again later.",
-        "`supplier_unavailable` — Skinslink / LIS-SKINS could not be asked; nothing was "
+        "`source_unavailable` — Skinslink / LIS-SKINS could not be asked; nothing was "
         "refunded, try again later.",
         _IDEMPOTENCY,
     ),

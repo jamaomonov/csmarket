@@ -16,12 +16,21 @@ Skinslink ``failed`` /    refundable — nothing will reach the buyer
 LIS-SKINS skin ``return`` refundable — unless a ``rollback_…`` reason (the skin was
                           accepted, then undone: it may be spent)
 not found                 refundable only for a row with no market purchase id on
-                          record (older than :data:`UNSEEN_AFTER`, no buy running —
-                          the refusal checks that before asking)
+                          record and no lost buy answer (``buy_unconfirmed_at`` —
+                          a silence is never refunded), older than
+                          :data:`UNSEEN_AFTER`, no buy running (the refusal checks
+                          those before asking)
+someone else's answer     ``order_in_flight``: a Skinslink report under another
+                          ``merchant_tx_id`` or purchase id, a LIS-SKINS answer with
+                          entries but none ours, an unreadable entry, another
+                          purchase id
 anything else             ``order_in_flight`` (``active``, ``hold``, ``completed``,
                           ``reverted``, ``accepted``, ``wait_accept``, …)
-a failed lookup           ``supplier_unavailable``
+a failed lookup           ``source_unavailable``
 ========================  ==========================================================
+
+The detail's ``can_refund`` (:func:`purchase_can_refund`) also hides the button while the
+purchase status we stored is plainly live; the source's answer stays the authority.
 """
 
 from __future__ import annotations
@@ -39,8 +48,7 @@ from csmarket.core.clock import now
 from csmarket.core.errors import NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.core.numbers import is_number, is_topup_number
-from csmarket.modules.lisskins.api import LisskinsError, LisskinsUnavailableError
-from csmarket.modules.lisskins.api import Purchase as LisskinsReport
+from csmarket.modules.lisskins.api import InfoAnswer, LisskinsError, LisskinsUnavailableError
 from csmarket.modules.orders.admin_conflicts import REFUND_LOOKUP_SECONDS, conflict
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.purchase_rows import PurchaseRow, purchase_of
@@ -61,7 +69,12 @@ REFUNDABLE_STATUSES: frozenset[str] = frozenset({"buying", "trade_sent"})
 UNSEEN_AFTER = timedelta(minutes=10)
 #: Skinslink statuses that undo the purchase before it reached the buyer.
 SKINSLINK_UNDONE: frozenset[str] = frozenset({"failed", "canceled"})
-#: A failed lookup refuses the refund (``supplier_unavailable``).
+#: Stored statuses under which the skin is on its way or delivered: no refund button.
+STORED_LIVE: dict[str, frozenset[str]] = {
+    "skinslink": frozenset({"active", "hold", "completed"}),
+    "lisskins": frozenset({"accepted", "wait_accept", "wait_unlock", "wait_withdraw"}),
+}
+#: A failed lookup refuses the refund (``source_unavailable``).
 LOOKUP_ERRORS = (
     SkinslinkError,
     SkinslinkUnavailableError,
@@ -82,8 +95,9 @@ class SkinslinkStatusClient(Protocol):
 class LisskinsInfoClient(Protocol):
     """What the refund needs from LIS-SKINS."""
 
-    async def info(self, *, custom_ids: Sequence[str]) -> list[LisskinsReport]:
-        """The purchases under ``custom_ids``; an unknown id is absent."""
+    async def info_answer(self, *, custom_ids: Sequence[str]) -> InfoAnswer:
+        """The purchases under ``custom_ids`` (an unknown id is absent) and the number of
+        entries the answer held, unreadable ones included."""
         ...
 
 
@@ -95,6 +109,12 @@ class _Seen:
     source: str
     key: str
     purchase_id: int | None
+    unconfirmed_at: datetime | None
+
+    @property
+    def unseen_refundable(self) -> bool:
+        """«Not found» means «never bought»: no purchase id on record, no lost buy answer."""
+        return self.purchase_id is None and self.unconfirmed_at is None
 
 
 def purchase_buy_running(order: Order, purchase: PurchaseRow, at: datetime) -> bool:
@@ -125,6 +145,14 @@ def purchase_refund_refusal(order: Order, purchase: PurchaseRow | None, at: date
     return None
 
 
+def purchase_can_refund(order: Order, purchase: PurchaseRow | None, at: datetime) -> bool:
+    """The detail's ``can_refund``: no refusal, and the stored purchase status is not plainly
+    live (the button and the action agree; the source's answer still decides)."""
+    if purchase_refund_refusal(order, purchase, at) is not None or purchase is None:
+        return False
+    return purchase.status not in STORED_LIVE.get(order.source, frozenset())
+
+
 def _key(purchase: PurchaseRow) -> str:
     """The id the source knows our purchase by."""
     if isinstance(purchase, SkinslinkPurchase):
@@ -150,7 +178,13 @@ async def _read(db: AsyncSession, number: str) -> _Seen:
     seen = (
         None
         if order is None or purchase is None
-        else _Seen(order.id, order.source, _key(purchase), purchase.purchase_id)
+        else _Seen(
+            order.id,
+            order.source,
+            _key(purchase),
+            purchase.purchase_id,
+            purchase.buy_unconfirmed_at,
+        )
     )
     await db.commit()  # nothing written: the read transaction ends before the source is asked
     if order is None:
@@ -162,14 +196,24 @@ async def _read(db: AsyncSession, number: str) -> _Seen:
 
 def _skinslink_verdict(report: SkinslinkReport | None, seen: _Seen) -> str | None:
     if report is None:
-        return "order_in_flight" if seen.purchase_id is not None else None
+        return None if seen.unseen_refundable else "order_in_flight"
+    if report.merchant_tx_id != seen.key:
+        return "order_in_flight"  # not an answer about our purchase
+    if seen.purchase_id is not None and report.id != seen.purchase_id:
+        return "order_in_flight"
     return None if report.status in SKINSLINK_UNDONE else "order_in_flight"
 
 
-def _lisskins_verdict(reports: Sequence[LisskinsReport], seen: _Seen) -> str | None:
-    mine = [p for p in reports if p.custom_id == seen.key]
+def _lisskins_verdict(answer: InfoAnswer, seen: _Seen) -> str | None:
+    if answer.entries != len(answer.purchases):
+        return "order_in_flight"  # an unreadable entry may be ours
+    mine = [p for p in answer.purchases if p.custom_id == seen.key]
     if not mine:
-        return "order_in_flight" if seen.purchase_id is not None else None
+        if answer.entries or not seen.unseen_refundable:
+            return "order_in_flight"
+        return None
+    if seen.purchase_id is not None and any(p.purchase_id != seen.purchase_id for p in mine):
+        return "order_in_flight"
     skins = [s for p in mine for s in p.skins]
     returned = all(
         s.status == "return" and not (s.return_reason or "").startswith("rollback_") for s in skins
@@ -187,7 +231,7 @@ async def _ask(
     """Refuse the refund unless the source confirms the purchase did not happen.
 
     Raises:
-        ConflictError: ``order_in_flight``; ``supplier_unavailable`` — the lookup failed or
+        ConflictError: ``order_in_flight``; ``source_unavailable`` — the lookup failed or
             timed out.
     """
     try:
@@ -196,7 +240,7 @@ async def _ask(
                 report = await skinslink.purchase_status(merchant_tx_id=seen.key)
                 code = _skinslink_verdict(report, seen)
             else:
-                code = _lisskins_verdict(await lisskins.info(custom_ids=[seen.key]), seen)
+                code = _lisskins_verdict(await lisskins.info_answer(custom_ids=[seen.key]), seen)
     except LOOKUP_ERRORS as exc:
         log.warning(
             "orders.admin_refund.lookup_failed",
@@ -204,7 +248,7 @@ async def _ask(
             source=seen.source,
             error=type(exc).__name__,
         )
-        raise conflict("supplier_unavailable") from None
+        raise conflict("source_unavailable") from None
     if code is not None:
         log.warning("orders.admin_refund.purchase_seen", number=number, source=seen.source)
         raise conflict(code)
@@ -235,8 +279,8 @@ async def admin_refund_purchase(
     ``buying`` order becomes ``failed``, a ``trade_sent`` one ``returned``.
 
     Read unlocked and refuse early, end the transaction, ask the source once (4 s, nothing
-    locked), lock the order then its purchase, check again — a purchase id recorded meanwhile
-    means the answer no longer covers the row (``order_in_flight``) — turn ``buy_pending`` off
+    locked), lock the order then its purchase, check again — a purchase id or a lost buy answer
+    recorded meanwhile means the answer no longer covers the row (``order_in_flight``) — turn ``buy_pending`` off
     and book the refund. Flushes, never commits; returns with the locks held.
 
     Args:
@@ -252,14 +296,18 @@ async def admin_refund_purchase(
     Raises:
         NotFoundError: no such order.
         ConflictError: a :func:`purchase_refund_refusal` code; ``order_in_flight`` — the
-            source shows a purchase that may reach the buyer; ``supplier_unavailable``.
+            source shows a purchase that may reach the buyer; ``source_unavailable``.
     """
     seen = await _read(db, number)
     await _ask(seen, number=number, skinslink=skinslink, lisskins=lisskins)
     order, purchase = await _lock(db, seen.order_id)
     at = now()
     code = purchase_refund_refusal(order, purchase, at)
-    if code is None and (purchase is None or purchase.purchase_id != seen.purchase_id):
+    moved = purchase is None or (purchase.purchase_id, purchase.buy_unconfirmed_at) != (
+        seen.purchase_id,
+        seen.unconfirmed_at,
+    )
+    if code is None and moved:  # the answer no longer covers the row
         code = "order_in_flight"
     if code is not None or purchase is None:
         raise conflict(code or "order_not_refundable")
@@ -278,10 +326,12 @@ __all__ = [
     "REFUNDABLE_STATUSES",
     "REFUND_LOOKUP_SECONDS",
     "SKINSLINK_UNDONE",
+    "STORED_LIVE",
     "UNSEEN_AFTER",
     "LisskinsInfoClient",
     "SkinslinkStatusClient",
     "admin_refund_purchase",
     "purchase_buy_running",
+    "purchase_can_refund",
     "purchase_refund_refusal",
 ]

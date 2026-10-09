@@ -249,15 +249,18 @@ and flushes — never commits. Unknown, malformed or `T…` number → `NotFound
   dispatches by `orders.source` to `admin_refund_purchase(db, *, number, admin_id, skinslink,
 lisskins)` (the route injects `skinslink.request_status_client` and
   `lisskins.request_info_client`). `purchase_refund_refusal(order, purchase, at)` — also the
-  detail's `can_refund`, no source call — refuses `already_refunded`;
+  detail's `can_refund` (`purchase_can_refund`, which hides the button while the stored status
+  is plainly live, `STORED_LIVE`), no source call — refuses `already_refunded`;
   `order_not_refundable` unless `buying` / `trade_sent`; `order_needs_attention` (an
   unresolved attention in `BLOCKS_REFUND`); `order_busy` (`buy_pending` and a live lease);
   `order_in_flight` for a row younger than 10 minutes with no market purchase id. Then the
   unlocked read commits and the source is asked once (4 s, nothing locked): Skinslink
   `failed` / `canceled`, a LIS-SKINS `return` that is not a `rollback_…`, or not found with no
-  purchase id on record → refundable; anything else → `order_in_flight`; an error or timeout
-  → `supplier_unavailable`. Lock order → purchase, re-check (a purchase id recorded meanwhile
-  → `order_in_flight`), `buy_pending` off, `refund_to_balance` (reason `admin`; `buying` →
+  purchase id on record and no lost buy answer (`buy_unconfirmed_at`) → refundable; an answer
+  about another purchase (`merchant_tx_id`, purchase id, `custom_id`) or an unreadable
+  LIS-SKINS entry (`info_answer.entries`) → `order_in_flight`; anything else →
+  `order_in_flight`; an error or timeout → `source_unavailable`. Lock order → purchase,
+  re-check (a purchase id or a lost answer recorded meanwhile → `order_in_flight`), `buy_pending` off, `refund_to_balance` (reason `admin`; `buying` →
   `failed`, `trade_sent` → `returned`; an API order back to its USD wallet). The 409 texts
   live in `admin_conflicts`.
 - `retry_buy(db, *, number, admin_id) -> str` — a `buying`, unrefunded order whose trade

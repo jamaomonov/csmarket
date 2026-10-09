@@ -6,7 +6,7 @@ from __future__ import annotations
 from csmarket.core.errors import ConflictError
 
 #: How long an admin refund waits for the market's lookup before refusing
-#: (``waxpeer_unavailable`` / ``supplier_unavailable``) — the request path's 4 s (AGENTS §11).
+#: (``waxpeer_unavailable`` / ``source_unavailable``) — the request path's 4 s (AGENTS §11).
 REFUND_LOOKUP_SECONDS = 4.0
 
 #: 409 codes of the admin actions → the problem's ``detail``.
@@ -19,7 +19,7 @@ CONFLICTS: dict[str, str] = {
     "not_retryable": "this order's buy cannot be retried now",
     "nothing_to_resolve": "this order's trade has no attention to resolve",
     "waxpeer_unavailable": "the purchase could not be checked at Waxpeer; try again later",
-    "supplier_unavailable": (
+    "source_unavailable": (
         "the purchase could not be checked at Skinslink / LIS-SKINS; try again later"
     ),
 }

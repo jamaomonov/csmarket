@@ -118,6 +118,15 @@ class Purchase:
 
 
 @dataclass(frozen=True)
+class InfoAnswer:
+    """``market/info``: the readable purchases and how many entries the answer held."""
+
+    purchases: tuple[Purchase, ...]
+    #: Every entry of the answer, unreadable ones included.
+    entries: int
+
+
+@dataclass(frozen=True)
 class Balance:
     """Our LIS-SKINS balance, USD."""
 
@@ -318,10 +327,19 @@ class LisskinsClient:
         Raises:
             ValueError: More than :data:`INFO_MAX_IDS` ids (a caller bug).
         """
+        return list((await self.info_answer(custom_ids=custom_ids)).purchases)
+
+    async def info_answer(self, *, custom_ids: Sequence[str]) -> InfoAnswer:
+        """``GET /market/info`` with the number of entries LIS-SKINS sent, readable or not
+        (the admin refund must never read an unreadable answer as «not found», ADR-0018).
+
+        Raises:
+            ValueError: More than :data:`INFO_MAX_IDS` ids (a caller bug).
+        """
         if len(custom_ids) > INFO_MAX_IDS:
             raise ValueError(f"at most {INFO_MAX_IDS} custom ids per call")
         if not custom_ids:
-            return []
+            return InfoAnswer(purchases=(), entries=0)
         data = await self._request(
             "GET",
             "/market/info",
@@ -336,7 +354,7 @@ class LisskinsClient:
                 found.append(_purchase(raw))
             except LisskinsUnavailableError:
                 continue
-        return found
+        return InfoAnswer(purchases=tuple(found), entries=len(data))
 
     async def check_availability(self, ids: Sequence[int]) -> Availability:
         """``GET /market/check-availability``; ``available_skins`` may come as ``[]``."""
@@ -402,6 +420,7 @@ __all__ = [
     "Availability",
     "AvailabilityClient",
     "Balance",
+    "InfoAnswer",
     "LisskinsBuyClient",
     "LisskinsClient",
     "LisskinsError",
