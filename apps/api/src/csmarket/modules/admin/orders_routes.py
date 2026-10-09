@@ -1,5 +1,5 @@
-"""``/api/v1/admin/orders`` and ``/api/v1/admin/trades`` — find orders, the trades page and
-its attention queue, one order's page, and the three actions on it: «Разобрано» (resolve),
+"""``/api/v1/admin/orders`` and ``/api/v1/admin/trades`` — find orders, the «Обмены» table of
+every source with its tabs, one order's page, and the three actions on it: «Разобрано» (resolve),
 refund to the balance, retry the buy.
 
 Admin only (``require_admin`` on the whole router). Every write requires an
@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.core.errors import ConflictError
 from csmarket.modules.admin import orders_service as svc
+from csmarket.modules.admin import trades_service
 from csmarket.modules.admin.audit import record
 from csmarket.modules.admin.deps import require_admin, required_key
 from csmarket.modules.admin.filters import text_filter
@@ -32,9 +33,8 @@ from csmarket.modules.admin.orders_schemas import (
     AdminOrderDetail,
     AdminOrdersOut,
     AdminResolveIn,
-    AdminTradesOut,
-    TradesView,
 )
+from csmarket.modules.admin.trades_schemas import AdminTradesOut, TradesView
 from csmarket.modules.admin.users_service import remember, replayed
 from csmarket.modules.lisskins.api import request_info_client
 from csmarket.modules.orders.api import (
@@ -91,7 +91,8 @@ async def list_orders(
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AdminOrdersOut:
-    """Newest first; ``q`` = a number prefix (any case) or part of the item's name."""
+    """Newest first; ``q`` = a number prefix (any case), part of the item's name, or a Steam
+    trade offer id (exact)."""
     items, next_cursor = await svc.list_orders(
         db,
         q=q,
@@ -103,7 +104,7 @@ async def list_orders(
     return AdminOrdersOut(items=items, next_cursor=next_cursor)
 
 
-@router.get("/trades", response_model=AdminTradesOut, summary="Trades and the attention queue")
+@router.get("/trades", response_model=AdminTradesOut, summary="Every order as a trade, by tab")
 async def list_trades(
     db: Db,
     *,
@@ -112,9 +113,11 @@ async def list_trades(
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AdminTradesOut:
-    """Orders with a trade, newest first: ``all``, ``active`` or ``attention``; the tab
-    counts ignore ``q``."""
-    items, counts, next_cursor = await svc.list_trades(
+    """Every order of every source, newest first: ``all``, ``active`` (on its way), ``hold``
+    (accepted, Steam's protection running), ``attention`` (an open attention of any source)
+    or ``refunds``. ``q`` = a number prefix, part of the item's name, or a Steam trade offer id
+    (exact); the tab counts ignore it."""
+    items, counts, next_cursor = await trades_service.list_trades(
         db, view=view, q=q, cursor=cursor, limit=limit
     )
     return AdminTradesOut(items=items, counts=counts, next_cursor=next_cursor)

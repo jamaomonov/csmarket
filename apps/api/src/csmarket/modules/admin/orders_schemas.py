@@ -1,5 +1,5 @@
-"""Wire shapes for ``/api/v1/admin/orders`` and ``/api/v1/admin/trades`` (the admin SPA's
-orders and trades pages).
+"""Wire shapes for ``/api/v1/admin/orders`` (the admin SPA's order page and the user and
+API-key cards' order rows); the «Обмены» table's are ``trades_schemas``.
 
 Soʻm are whole digits (``core.money.wire_uzs``); USD are decimal strings with six places;
 Waxpeer units are integers (1000 = $1). The buyer's trade link never leaves whole:
@@ -13,7 +13,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, StringConstraints
 
-from csmarket.modules.orders.api import OrderStatusOut, SkinTradeState
+from csmarket.modules.orders.api import OrderStatusOut
 
 #: ``skin_trades.attention_reason`` (``orders.models.ATTENTION_REASONS``; a unit test pins it).
 AttentionReason = Literal[
@@ -29,8 +29,6 @@ FailureReason = Literal[
     "trade_hold",
     "price_moved",
 ]
-#: The trades page's tabs.
-TradesView = Literal["all", "active", "attention"]
 #: What the operator found, trimmed; an empty note is stored as ``null``.
 Note = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]
 
@@ -56,10 +54,12 @@ class AdminOrderRow(BaseModel):
     paid_with: str | None
     user: AdminOrderUser
     created_at: datetime
-    #: The trade's **open** attention (unresolved); ``null`` when none waits for an admin.
+    #: The **open** attention (unresolved) of the trade or purchase, any source; ``null`` when
+    #: none waits for an admin.
     attention_reason: AttentionReason | None
-    #: A ``trade_sent`` order the buyer already accepted while Steam's trade protection runs
-    #: (Skinslink ``hold``): when it ends. The order turns ``delivered`` after that.
+    #: An accepted trade under Steam's protection: when it ends (Skinslink ``hold`` of a
+    #: ``trade_sent`` order — it turns ``delivered`` after that — or an accepted, unreleased
+    #: Waxpeer trade of a ``delivered`` one); ``null`` otherwise.
     protected_until: datetime | None = None
 
 
@@ -67,42 +67,6 @@ class AdminOrdersOut(BaseModel):
     """A page of orders, newest first, and the cursor for the next (``null`` on the last)."""
 
     items: list[AdminOrderRow]
-    next_cursor: str | None
-
-
-class AdminTradeSummary(BaseModel):
-    """The trade behind a row of the trades page."""
-
-    #: Waxpeer's trade status code; ``null`` until the buy reached Waxpeer.
-    status: int | None
-    #: The state the buyer reads (``buying``, ``offer_sent``, ``accepted``, ``released``,
-    #: ``failed``).
-    state: SkinTradeState
-    #: The trade's open attention, as on the order row.
-    attention_reason: AttentionReason | None
-    send_until: datetime | None
-
-
-class AdminTradeRow(AdminOrderRow):
-    """One line of the trades page: the order row and its trade."""
-
-    trade: AdminTradeSummary
-
-
-class AdminTradeCounts(BaseModel):
-    """The tab badges (they ignore ``q``)."""
-
-    #: Orders ``buying`` or ``trade_sent``.
-    active: int
-    #: Trades with an unresolved attention.
-    attention: int
-
-
-class AdminTradesOut(BaseModel):
-    """A page of trades, the tab counts, and the cursor for the next page."""
-
-    items: list[AdminTradeRow]
-    counts: AdminTradeCounts
     next_cursor: str | None
 
 
@@ -297,12 +261,7 @@ __all__ = [
     "AdminOrdersOut",
     "AdminResolveIn",
     "AdminSkinslinkPurchaseOut",
-    "AdminTradeCounts",
     "AdminTradeOut",
-    "AdminTradeRow",
-    "AdminTradeSummary",
-    "AdminTradesOut",
     "AttentionReason",
     "FailureReason",
-    "TradesView",
 ]

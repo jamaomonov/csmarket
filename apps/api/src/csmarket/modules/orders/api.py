@@ -64,6 +64,15 @@ from csmarket.modules.orders.sweeps import (
     reconcile,
     watch_protected,
 )
+from csmarket.modules.orders.trade_row import (
+    ACTIVE_SQL,
+    OPEN_ATTENTION_SQL,
+    TradeRowState,
+    in_protection_sql,
+    open_attention,
+    protection_end,
+    row_state,
+)
 from csmarket.modules.orders.trade_view import (
     SkinTradeOut,
     SkinTradeState,
@@ -73,12 +82,14 @@ from csmarket.modules.orders.trade_view import (
 from csmarket.modules.orders.webhook_events import WEBHOOKS_CHANNEL, emit_order_event
 
 __all__ = [
+    "ACTIVE_SQL",
     "ADMIN_REFUNDABLE",
     "ATTENTION_REASONS",
     "BLOCKS_REFUND",
     "CONFLICTS",
     "FAILURE_REASONS",
     "IN_FLIGHT",
+    "OPEN_ATTENTION_SQL",
     "ORDERS_CHANNEL",
     "ORDER_STATUSES",
     "RETRYABLE",
@@ -99,6 +110,7 @@ __all__ = [
     "SkinTradeOut",
     "SkinTradeState",
     "SkinslinkStatusClient",
+    "TradeRowState",
     "admin_refund",
     "admin_refund_purchase",
     "apply_lisskins_report",
@@ -122,13 +134,16 @@ __all__ = [
     "expire_pending",
     "get_for_owner",
     "in_flight",
+    "in_protection_sql",
     "is_expired",
     "list_for_owner",
     "lock_order",
     "mark_paid",
     "measure",
     "move",
+    "open_attention",
     "order_out",
+    "protection_end",
     "public_order",
     "purchase_of",
     "purchase_refund_refusal",
@@ -138,6 +153,7 @@ __all__ = [
     "refund_to_balance",
     "resolve_attention",
     "retry_buy",
+    "row_state",
     "skin_trade_out",
     "trade_state",
     "watch_protected",

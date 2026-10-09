@@ -1,5 +1,5 @@
-"""Admin orders and trades API, the reads: the gate, search, the order page, the trades page
-with its attention queue (M4a Task 12). The actions are in ``test_admin_orders_actions.py``."""
+"""Admin orders API, the reads: the gate, search, the order page (M4a Task 12). The trades
+page is in ``test_admin_trades.py``, the actions in ``test_admin_orders_actions.py``."""
 
 from __future__ import annotations
 
@@ -262,20 +262,22 @@ async def _statements(client: AsyncClient, engine: AsyncEngine, url: str, h: dic
     return len(statements)
 
 
-@pytest.mark.parametrize("url", ["/api/v1/admin/orders", "/api/v1/admin/trades"])
 async def test_list_query_count_is_constant(
     integration_client: AsyncClient,
     admin_headers: Headers,
     db_session: AsyncSession,
     db_engine: AsyncEngine,
-    url: str,
 ) -> None:
+    url = "/api/v1/admin/orders"
     h = await admin_headers()
     for _ in range(3):
         await _order(db_session, trade={"attention_reason": "rolled_back"})
     few = await _statements(integration_client, db_engine, url, h)
     for _ in range(12):
         await _order(db_session, trade={"status": 4, "trade_id": "7700112233"})
+    for i in range(3):
+        await make_skinslink_order(db_session, purchase_status="hold", purchase_id=300 + i)
+        await make_lisskins_order(db_session)
     assert few == await _statements(integration_client, db_engine, url, h)
 
 
@@ -409,82 +411,6 @@ async def test_detail_of_a_waxpeer_order_has_no_skinslink_block(
     assert (r.json()["order"]["source"], r.json()["skinslink"]) == ("waxpeer", None)
 
 
-# --- the trades page --------------------------------------------------------------------
-
-
-async def test_trades_views_and_counts(
-    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
-) -> None:
-    h = await admin_headers()
-    buying = await _order(db_session, minutes_ago=6, trade={"status": 0})
-    sent = await _order(
-        db_session,
-        status="trade_sent",
-        minutes_ago=5,
-        trade={"status": 4, "trade_id": "7700112233", "send_until": clock.now()},
-    )
-    rolled = await _order(
-        db_session,
-        status="delivered",
-        minutes_ago=4,
-        name="M4A4 | Howl (Minimal Wear)",
-        trade={"status": 6, "attention_reason": "rolled_back", "accepted_at": clock.now()},
-    )
-    stuck = await _order(db_session, minutes_ago=3, trade={"attention_reason": "buy_unconfirmed"})
-    resolved = await _order(
-        db_session,
-        minutes_ago=2,
-        trade={"attention_reason": "ambiguous_trade", "resolved_at": clock.now()},
-    )
-    failed = await _order(db_session, status="failed", minutes_ago=1, trade={"status": 6})
-    await _order(db_session, status="paid")  # no trade yet: not on the trades page
-
-    async def page(**params: str) -> dict[str, object]:
-        r = await integration_client.get("/api/v1/admin/trades", params=params, headers=h)
-        assert r.status_code == 200, r.text
-        body: dict[str, object] = r.json()
-        return body
-
-    everything = await page()
-    numbers = [o["number"] for o in everything["items"]]  # type: ignore[attr-defined]
-    assert numbers == [o.number for o in (failed, resolved, stuck, rolled, sent, buying)]
-    assert everything["counts"] == {"active": 4, "attention": 2}
-    by_number = {o["number"]: o for o in everything["items"]}  # type: ignore[attr-defined]
-    assert by_number[sent.number]["trade"]["state"] == "offer_sent"
-    assert by_number[sent.number]["trade"]["status"] == 4
-    assert by_number[sent.number]["trade"]["send_until"] is not None
-    assert by_number[rolled.number]["trade"]["attention_reason"] == "rolled_back"
-    assert by_number[rolled.number]["attention_reason"] == "rolled_back"
-    assert by_number[resolved.number]["trade"]["attention_reason"] is None
-    assert by_number[failed.number]["trade"]["state"] == "failed"
-
-    active = await page(view="active")
-    assert {o["number"] for o in active["items"]} == {  # type: ignore[attr-defined]
-        buying.number,
-        sent.number,
-        stuck.number,
-        resolved.number,
-    }
-    attention = await page(view="attention")
-    assert [o["number"] for o in attention["items"]] == [  # type: ignore[attr-defined]
-        stuck.number,
-        rolled.number,
-    ]
-    # ``q`` narrows the items, never the counts.
-    howl = await page(view="attention", q="howl")
-    assert [o["number"] for o in howl["items"]] == [rolled.number]  # type: ignore[attr-defined]
-    assert howl["counts"] == {"active": 4, "attention": 2}
-
-
-async def test_trades_refuses_an_unknown_view(
-    integration_client: AsyncClient, admin_headers: Headers
-) -> None:
-    r = await integration_client.get(
-        "/api/v1/admin/trades", params={"view": "mine"}, headers=await admin_headers()
-    )
-    assert r.status_code == 422
-
-
 # --- vocabulary -------------------------------------------------------------------------
 
 
@@ -567,3 +493,32 @@ async def test_a_delivered_order_has_no_protected_until(
         await integration_client.get("/api/v1/admin/orders", headers=await admin_headers())
     ).json()["items"]
     assert {r["number"]: r for r in rows}[order.number]["protected_until"] is None
+
+
+async def test_order_rows_carry_an_open_attention_of_any_source(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    sl, _ = await make_skinslink_order(db_session, attention_reason="rolled_back")
+    ls, _ = await make_lisskins_order(
+        db_session, attention_reason="audit_divergence", resolved_at=clock.now()
+    )
+    rows = (
+        await integration_client.get("/api/v1/admin/orders", headers=await admin_headers())
+    ).json()["items"]
+    by_number = {r["number"]: r for r in rows}
+    assert by_number[sl.number]["attention_reason"] == "rolled_back"
+    # Resolved: nothing waits for an admin.
+    assert by_number[ls.number]["attention_reason"] is None
+
+
+async def test_a_waxpeer_trade_in_protection_shows_protected_until(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    end = clock.now() + timedelta(days=7)
+    held = await _order(db_session, status="delivered", trade={"status": 4, "release_date": end})
+    done = await _order(db_session, status="delivered", trade={"status": 5, "is_released": True})
+    h = await admin_headers()
+    rows = (await integration_client.get("/api/v1/admin/orders", headers=h)).json()["items"]
+    by_number = {r["number"]: r for r in rows}
+    assert by_number[held.number]["protected_until"] is not None
+    assert by_number[done.number]["protected_until"] is None
