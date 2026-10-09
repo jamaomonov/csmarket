@@ -19,6 +19,7 @@ import {
   loadLanding,
   POPULAR_SIZE,
   POPULAR_TABS,
+  TILE_PICKS,
   WALL_SIZE,
   wallItems,
 } from "./landing";
@@ -168,5 +169,30 @@ describe("landing data", () => {
       popular: { knives: many, gloves: [], popular: [], cheap: [] },
     });
     expect(wall).toHaveLength(WALL_SIZE);
+  });
+
+  it("a tile shows its curated green skin while in stock, else the popular one", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes(`/skins/${TILE_PICKS.gloves ?? ""}`)) {
+          return Promise.resolve(ok({ ...item("emerald-web", "gloves"), image_url: "u" }));
+        }
+        if (url.includes(`/skins/${TILE_PICKS.rifles ?? ""}`)) {
+          return Promise.resolve(ok({ ...item("lotus", "rifles"), image_url: "u", count: 0 }));
+        }
+        if (url.includes("/facets")) {
+          return Promise.resolve(ok({ categories: [], weapons: [], exteriors: [], rarities: [] }));
+        }
+        if (!url.includes("/catalog")) {
+          return Promise.resolve(new Response("", { status: 404 }));
+        }
+        return Promise.resolve(page([item(`popular-${params(url).get("category") ?? ""}`)]));
+      }),
+    );
+    const tiles = new Map((await getCategoryTiles()).map((t) => [t.category, t.item?.slug]));
+    expect(tiles.get("gloves")).toBe("emerald-web");
+    expect(tiles.get("rifles")).toBe("popular-rifles"); // the pick is sold out
+    expect(tiles.get("knives")).toBe("popular-knives"); // the pick is gone (404)
   });
 });
