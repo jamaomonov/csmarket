@@ -136,7 +136,11 @@ function OfferSent({ trade, locale }: SkinTradeCardProps) {
           <ExternalLink aria-hidden className="ml-2 h-4 w-4" />
         </a>
       ) : null}
-      {until && Date.parse(until) > Date.now() ? (
+      {until === null ? (
+        // No deadline from the market: an unaccepted offer is cancelled in ~15 minutes
+        // (LIS-SKINS' developers' chat), and many unaccepted offers can restrict our buying.
+        <p className="text-fg-dim text-sm">{t("acceptSoon")}</p>
+      ) : Date.parse(until) > Date.now() ? (
         <p className="text-fg-dim text-sm">{t("acceptBy", { time: formatTime(locale, until) })}</p>
       ) : null}
     </div>

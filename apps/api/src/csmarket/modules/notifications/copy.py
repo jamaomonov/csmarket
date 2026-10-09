@@ -16,7 +16,7 @@ COPY: Final[dict[str, dict[str, str]]] = {
         "receipt.body": "Оплата получена. Покупаем {skin} — обмен придёт в Steam, примите его.",
         "trade_sent.subject": "Обмен по заказу #{number} отправлен",
         "trade_sent.body": "Продавец отправил обмен в Steam. Примите его до {time} по Ташкенту.",
-        "trade_sent.body_open": "Продавец отправил обмен в Steam. Примите его в Steam.",
+        "trade_sent.body_open": "Продавец отправил обмен в Steam. Примите его в ближайшие 15 минут — позже он может отмениться.",
         "refunded.subject": "Деньги по заказу #{number} на балансе",
         "refunded.body": "Обмен не состоялся. {amount} вернулись на баланс csmarket.",
         "sale_hold.subject": "Продажа #{number}: скины получены",
@@ -55,7 +55,7 @@ COPY: Final[dict[str, dict[str, str]]] = {
             "Sotuvchi Steamʼda almashuv yubordi. Uni Toshkent vaqti bilan {time} gacha "
             "qabul qiling."
         ),
-        "trade_sent.body_open": "Sotuvchi Steamʼda almashuv yubordi. Uni Steamʼda qabul qiling.",
+        "trade_sent.body_open": "Sotuvchi Steamʼda almashuv yubordi. Uni 15 daqiqa ichida qabul qiling — keyin u bekor qilinishi mumkin.",
         "refunded.subject": "#{number} buyurtma puli balansda",
         "refunded.body": "Almashuv amalga oshmadi. {amount} csmarket balansiga qaytarildi.",
         "sale_hold.subject": "#{number} sotuv: skinlar qabul qilindi",
@@ -93,7 +93,7 @@ COPY: Final[dict[str, dict[str, str]]] = {
         "trade_sent.body": (
             "The seller sent you a trade offer in Steam. Accept it by {time} Tashkent time."
         ),
-        "trade_sent.body_open": "The seller sent you a trade offer in Steam. Accept it in Steam.",
+        "trade_sent.body_open": "The seller sent you a trade offer in Steam. Accept it within 15 minutes — after that it may be cancelled.",
         "refunded.subject": "Money for order #{number} is on your balance",
         "refunded.body": "The trade did not happen. {amount} went back to your csmarket balance.",
         "sale_hold.subject": "Sale #{number}: skins received",

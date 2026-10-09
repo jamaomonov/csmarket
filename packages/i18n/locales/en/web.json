@@ -375,6 +375,7 @@
       "buying": "Buying the skin — the trade will arrive in Steam in about a minute.",
       "offer_sent": "Trade sent — accept it in Steam.",
       "acceptBy": "Accept by {time}",
+      "acceptSoon": "Accept the trade within 15 minutes — after that it may be cancelled.",
       "openOffer": "Open the trade in Steam",
       "seller": "Seller",
       "accepted": "Received",
