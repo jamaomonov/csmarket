@@ -11,6 +11,7 @@ uv.lock
 # the openapi-drift check fail on every run.
 docs/api/openapi.json
 infra/docs-site/openapi.json
+infra/docs-site/csmarket.postman_collection.json
 *.min.*
 .superpowers/
 .agents/

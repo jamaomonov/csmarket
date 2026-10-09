@@ -2,7 +2,7 @@
 
 `openapi.json` is generated — never hand-edit. Regenerate with `make gen-api`; CI's
 `openapi-drift` job fails when the committed file differs from the app. The same target writes
-the partners' cut, `infra/docs-site/{openapi.json,llms.txt}` for docs.csmarket.uz, from the
+the partners' cut, `infra/docs-site/{openapi.json,llms.txt,csmarket.postman_collection.json}` for docs.csmarket.uz, from the
 public routes and [`partner-guide.md`](./partner-guide.md) (`docs/runbooks/public-api.md`).
 
 - Base path: `https://api.csmarket.uz/api/v1`. Probes: `/healthz` (liveness), `/readyz`

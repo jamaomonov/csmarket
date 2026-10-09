@@ -6,6 +6,9 @@
         "description": "Buy one skin: an offer of the item (or its cheapest under the cap) for a trade link.",
         "properties": {
           "client_order_id": {
+            "examples": [
+              "shop-1042"
+            ],
             "maxLength": 64,
             "minLength": 1,
             "pattern": "^[A-Za-z0-9_.:-]+$",
@@ -13,12 +16,18 @@
             "type": "string"
           },
           "item_id": {
+            "examples": [
+              "4f1c2a9e"
+            ],
             "maxLength": 64,
             "minLength": 1,
             "title": "Item Id",
             "type": "string"
           },
           "max_price_usd": {
+            "examples": [
+              "14.500"
+            ],
             "pattern": "^\\d{1,6}(\\.\\d{1,3})?$",
             "title": "Max Price Usd",
             "type": "string"
@@ -33,9 +42,15 @@
                 "type": "null"
               }
             ],
+            "examples": [
+              "Zm9vYmFy"
+            ],
             "title": "Offer Id"
           },
           "trade_link": {
+            "examples": [
+              "https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE"
+            ],
             "maxLength": 512,
             "minLength": 1,
             "title": "Trade Link",
@@ -210,6 +225,33 @@
           "feed_per_min"
         ],
         "title": "MeLimitsOut",
+        "type": "object"
+      },
+      "MeOut": {
+        "description": "The caller's balance, wallet switch, key and limits.",
+        "properties": {
+          "balance_usd": {
+            "title": "Balance Usd",
+            "type": "string"
+          },
+          "key": {
+            "$ref": "#/components/schemas/MeKeyOut"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/MeLimitsOut"
+          },
+          "usd_wallet_enabled": {
+            "title": "Usd Wallet Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "balance_usd",
+          "usd_wallet_enabled",
+          "key",
+          "limits"
+        ],
+        "title": "MeOut",
         "type": "object"
       },
       "OfferOut": {
@@ -563,6 +605,9 @@
         "properties": {
           "url": {
             "description": "`https` URL; its host must be public.",
+            "examples": [
+              "https://partner.example/hooks/csmarket"
+            ],
             "maxLength": 500,
             "title": "Url",
             "type": "string"
@@ -603,33 +648,6 @@
           "last_delivery"
         ],
         "title": "WebhookOut",
-        "type": "object"
-      },
-      "csmarket__modules__public_api__schemas__MeOut": {
-        "description": "The caller's balance, wallet switch, key and limits.",
-        "properties": {
-          "balance_usd": {
-            "title": "Balance Usd",
-            "type": "string"
-          },
-          "key": {
-            "$ref": "#/components/schemas/MeKeyOut"
-          },
-          "limits": {
-            "$ref": "#/components/schemas/MeLimitsOut"
-          },
-          "usd_wallet_enabled": {
-            "title": "Usd Wallet Enabled",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "balance_usd",
-          "usd_wallet_enabled",
-          "key",
-          "limits"
-        ],
-        "title": "MeOut",
         "type": "object"
       }
     },
@@ -818,7 +836,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/csmarket__modules__public_api__schemas__MeOut"
+                  "$ref": "#/components/schemas/MeOut"
                 }
               }
             },

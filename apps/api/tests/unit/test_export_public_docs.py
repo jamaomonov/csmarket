@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from csmarket.scripts.export_public_docs import main, public_schema
+from csmarket.scripts.postman import postman_collection
 
 _GUIDE = "# Introduction\n\nHello ``partner``.\n"
 
@@ -78,7 +79,49 @@ def test_main_writes_both_files(tmp_path: Path) -> None:
     assert llms.startswith("# csmarket API")
     assert "Hello `partner`." in llms
     assert "- `POST /orders` — Buy one skin from the USD wallet" in llms
+    postman = json.loads((out / "csmarket.postman_collection.json").read_text())
+    assert postman["info"]["name"] == "csmarket API"
 
 
 def test_usage_error_without_paths() -> None:
     assert main(["export_public_docs"]) == 2
+
+
+def test_request_bodies_carry_fake_examples(schema: dict[str, Any]) -> None:
+    order = schema["components"]["schemas"]["ApiOrderIn"]["properties"]
+    assert order["trade_link"]["examples"] == [
+        "https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE"
+    ]
+    assert schema["components"]["schemas"]["WebhookIn"]["properties"]["url"]["examples"]
+
+
+def test_internal_schema_names_are_shortened(schema: dict[str, Any]) -> None:
+    assert "MeOut" in schema["components"]["schemas"]
+    assert not [n for n in schema["components"]["schemas"] if "__" in n]
+    assert not [r for r in _refs(schema) if "__" in r]
+
+
+def test_postman_collection(schema: dict[str, Any]) -> None:
+    collection = postman_collection(schema)
+    assert collection["info"]["schema"].endswith("/v2.1.0/collection.json")
+    assert collection["auth"]["bearer"] == [
+        {"key": "token", "value": "{{token}}", "type": "string"}
+    ]
+    variables = {v["key"]: v["value"] for v in collection["variable"]}
+    assert variables["baseUrl"] == "https://api.csmarket.uz/api/v1/public"
+    assert variables["token"] == "csm_EXAMPLEtokenNotReal"
+    folders = {f["name"]: f["item"] for f in collection["item"]}
+    assert list(folders) == ["Account", "Catalogue", "Orders", "Webhooks"]
+    by_name = {i["name"]: i["request"] for items in folders.values() for i in items}
+    buy = by_name["Buy one skin from the USD wallet"]
+    assert buy["method"] == "POST"
+    assert buy["url"]["raw"] == "{{baseUrl}}/orders"
+    body = json.loads(buy["body"]["raw"])
+    assert body["client_order_id"] == "shop-1042"
+    offers = by_name["Offers of one item"]
+    assert offers["url"]["raw"] == "{{baseUrl}}/catalog/:item_id/offers"
+    assert offers["url"]["variable"][0]["key"] == "item_id"
+    hook = by_name["Set my webhook URL"]
+    assert {"key": "Idempotency-Key", "value": "{{$guid}}"} in hook["header"]
+    feed = by_name["Catalogue feed, one page"]
+    assert all(q["disabled"] for q in feed["url"]["query"])

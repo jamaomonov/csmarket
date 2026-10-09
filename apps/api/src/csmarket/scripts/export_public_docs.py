@@ -3,7 +3,7 @@
 Cuts ``/api/v1/public/*`` out of the app's OpenAPI schema with the components it references,
 puts the partner guide in ``info.description`` (Scalar shows its headings as the sidebar's
 guide) and writes ``openapi.json`` plus ``llms.txt`` (the guide and an endpoint list for
-AI agents). Run by ``make gen-api``; CI's openapi-drift job diffs the result.
+AI agents) and a Postman collection. Run by ``make gen-api``; CI's openapi-drift job diffs the result.
 
 Usage:
     python -m csmarket.scripts.export_public_docs <partner-guide.md> <output dir>
@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from csmarket.bootstrap import create_app
+from csmarket.scripts.postman import postman_collection
 
 _EXPECTED_ARGV = 3  # script name + guide + output dir
 _PREFIX = "/api/v1/public"
@@ -31,6 +32,17 @@ _TAGS = (
     ("/webhook", "Webhooks", "Where we send order events."),
 )
 _RST_CODE = re.compile(r"``([^`]+)``")
+# Fake values shown in "Test Request" and the Postman collection (never real ones).
+EXAMPLES: dict[str, dict[str, str]] = {
+    "ApiOrderIn": {
+        "item_id": "4f1c2a9e",
+        "offer_id": "Zm9vYmFy",
+        "max_price_usd": "14.500",
+        "trade_link": "https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE",
+        "client_order_id": "shop-1042",
+    },
+    "WebhookIn": {"url": "https://partner.example/hooks/csmarket"},
+}
 
 Json = Any  # Any: arbitrary JSON from FastAPI's schema
 
@@ -121,7 +133,29 @@ def public_schema(guide: str) -> dict[str, Json]:
         },
     }
     cleaned: dict[str, Json] = _clean(schema)
-    return cleaned
+    return _with_examples(_short_names(cleaned))
+
+
+def _short_names(schema: dict[str, Json]) -> dict[str, Json]:
+    """``csmarket__modules__…__MeOut`` → ``MeOut`` (FastAPI's name for a clashing model)."""
+    text = json.dumps(schema)
+    for name in schema["components"]["schemas"]:
+        if "__" in name:
+            text = text.replace(f'"{name}"', f'"{name.rsplit("__", 1)[1]}"')
+            text = text.replace(
+                _SCHEMA_REF + name + '"', _SCHEMA_REF + name.rsplit("__", 1)[1] + '"'
+            )
+    renamed: dict[str, Json] = json.loads(text)
+    return renamed
+
+
+def _with_examples(schema: dict[str, Json]) -> dict[str, Json]:
+    """Put :data:`EXAMPLES` on the request bodies' properties."""
+    for model, fields in EXAMPLES.items():
+        props = schema["components"]["schemas"][model]["properties"]
+        for field, value in fields.items():
+            props[field]["examples"] = [value]
+    return schema
 
 
 def llms_txt(schema: dict[str, Json]) -> str:
@@ -151,7 +185,11 @@ def main(argv: list[str]) -> int:
         json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     (out / "llms.txt").write_text(llms_txt(schema), encoding="utf-8")
-    print(f"Wrote {out}/openapi.json and llms.txt")
+    (out / "csmarket.postman_collection.json").write_text(
+        json.dumps(postman_collection(schema), indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Wrote openapi.json, llms.txt and the Postman collection to {out}")
     return 0
 
 
