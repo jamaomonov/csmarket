@@ -9,6 +9,7 @@ the tab counts; an order's page is a fixed four.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import Select, and_, func, or_, select
@@ -107,7 +108,47 @@ def _open_reason(trade: SkinTrade | None) -> str | None:
     return trade.attention_reason
 
 
-def order_row(order: Order, trade: SkinTrade | None, display_name: str | None) -> AdminOrderRow:
+def protected_until(order: Order, purchase: PurchaseRow | None) -> datetime | None:
+    """When Steam's protection of an accepted, not yet ``delivered`` trade ends (Skinslink
+    ``hold``); ``None`` otherwise."""
+    if (
+        order.status == "trade_sent"
+        and isinstance(purchase, SkinslinkPurchase)
+        and purchase.status == "hold"
+    ):
+        return purchase.hold_end_date
+    return None
+
+
+async def _protection(db: AsyncSession, orders: list[Order]) -> dict[str, datetime]:
+    """:func:`protected_until` for a page of orders, in one statement."""
+    ids = [o.id for o in orders if o.status == "trade_sent" and o.source == "skinslink"]
+    if not ids:
+        return {}
+    rows = await db.execute(
+        select(SkinslinkPurchase.order_id, SkinslinkPurchase.hold_end_date).where(
+            SkinslinkPurchase.order_id.in_(ids),
+            SkinslinkPurchase.status == "hold",
+            SkinslinkPurchase.hold_end_date.is_not(None),
+        )
+    )
+    return {order_id: end for order_id, end in rows.all() if end is not None}
+
+
+async def _row_list(
+    db: AsyncSession, page: list[tuple[Order, SkinTrade | None, str | None]]
+) -> list[AdminOrderRow]:
+    ends = await _protection(db, [o for o, _, _ in page])
+    return [order_row(o, t, n, protected=ends.get(o.id)) for o, t, n in page]
+
+
+def order_row(
+    order: Order,
+    trade: SkinTrade | None,
+    display_name: str | None,
+    *,
+    protected: datetime | None = None,
+) -> AdminOrderRow:
     """One list line."""
     return AdminOrderRow.model_validate(
         {
@@ -120,6 +161,7 @@ def order_row(order: Order, trade: SkinTrade | None, display_name: str | None) -
             "user": AdminOrderUser(id=order.user_id, display_name=display_name),
             "created_at": order.created_at,
             "attention_reason": _open_reason(trade),
+            "protected_until": protected,
         }
     )
 
@@ -153,19 +195,19 @@ async def list_orders(
     if user_id is not None:
         stmt = stmt.where(Order.user_id == user_id)
     page, next_cursor = await _page(db, stmt, limit)
-    return [order_row(o, t, n) for o, t, n in page], next_cursor
+    return await _row_list(db, page), next_cursor
 
 
 async def recent_orders(db: AsyncSession, user_id: str) -> list[AdminOrderRow]:
     """The user's latest :data:`CARD_ORDERS` orders (the admin user card)."""
     page, _ = await _page(db, _rows().where(Order.user_id == user_id), CARD_ORDERS)
-    return [order_row(o, t, n) for o, t, n in page]
+    return await _row_list(db, page)
 
 
 async def recent_key_orders(db: AsyncSession, api_key_id: str) -> list[AdminOrderRow]:
     """The latest :data:`CARD_ORDERS` orders placed through one API key."""
     page, _ = await _page(db, _rows().where(Order.api_key_id == api_key_id), CARD_ORDERS)
-    return [order_row(o, t, n) for o, t, n in page]
+    return await _row_list(db, page)
 
 
 async def _counts(db: AsyncSession) -> AdminTradeCounts:
@@ -244,6 +286,7 @@ def _order_full(
             if order.float_value is None
             else format(order.float_value.normalize(), "f"),
             "margin_usd": _usd(order.price_usd - spent),
+            "protected_until": protected_until(order, purchase),
             # An erased link is stored masked already (and would not parse again).
             "trade_link_masked": order.trade_link
             if order.trade_link_erased_at is not None

@@ -58,6 +58,9 @@ class AdminOrderRow(BaseModel):
     created_at: datetime
     #: The trade's **open** attention (unresolved); ``null`` when none waits for an admin.
     attention_reason: AttentionReason | None
+    #: A ``trade_sent`` order the buyer already accepted while Steam's trade protection runs
+    #: (Skinslink ``hold``): when it ends. The order turns ``delivered`` after that.
+    protected_until: datetime | None = None
 
 
 class AdminOrdersOut(BaseModel):
@@ -136,6 +139,8 @@ class AdminOrderFull(BaseModel):
     #: The bought offer's float (trailing zeros dropped) and pattern; ``None`` on older orders.
     float_value: str | None
     paint_seed: int | None
+    #: When Steam's protection of an accepted trade ends (Skinslink ``hold``); see the row's.
+    protected_until: datetime | None = None
     #: ``site`` or ``api``; for ``api`` the key, the client's own id and the tariff.
     channel: str
     api_key_id: str | None

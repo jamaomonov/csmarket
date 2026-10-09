@@ -55,7 +55,7 @@ function Orders({ orders }: { orders: AdminOrderRow[] }) {
                 </td>
                 <td className="py-2 pr-3">
                   <div className="flex flex-wrap items-center gap-1">
-                    <OrderStatusChip status={o.status} />
+                    <OrderStatusChip status={o.status} protectedUntil={o.protected_until} />
                     <AttentionBadge reason={o.attention_reason} />
                   </div>
                 </td>

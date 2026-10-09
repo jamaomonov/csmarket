@@ -25,6 +25,8 @@ export interface AdminOrderRow {
   created_at: string;
   /** The trade's open (unresolved) attention only. */
   attention_reason: AttentionReason | null;
+  /** Accepted, under Steam's protection until then (Skinslink `hold`); `null` otherwise. */
+  protected_until: string | null;
 }
 
 export interface AdminOrdersPage {
@@ -54,6 +56,8 @@ export interface AdminOrderFull {
   /** Percent added to the CBU rate for the soʻm price (ADR-0011). */
   fx_uplift_pct: string;
   margin_usd: string;
+  /** Accepted, under Steam's protection until then (Skinslink `hold`); `null` otherwise. */
+  protected_until: string | null;
   /** Already masked by the API: the token is never in the page. */
   trade_link_masked: string | null;
   paid_with: string | null;

@@ -151,6 +151,7 @@ async def test_list_row_shape_newest_first_and_masked_nothing(
         "user": {"id": buyer.id, "display_name": "Dana"},
         "created_at": body["items"][0]["created_at"],
         "attention_reason": "buy_unconfirmed",
+        "protected_until": None,
     }
     assert body["items"][1]["phase"] == "Phase 2"
     assert body["items"][1]["attention_reason"] is None
@@ -333,6 +334,7 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
         "trade_link_masked",
         "fx_rate",
         "margin_usd",
+        "protected_until",
     }
     assert o["trade_link_masked"] == (
         "https://steamcommunity.com/tradeoffer/new/?partner=39734281&token=••••9q"
@@ -530,3 +532,38 @@ async def test_a_lisskins_orders_page_names_its_source_and_shows_its_purchase(
     )
     assert ls["offer_url"] == f"https://steamcommunity.com/tradeoffer/{OFFER}/"
     assert ls["amount_usd"] == "12.340000"
+
+
+# --- Steam's protection on an accepted Skinslink trade ------------------------------------
+
+
+async def test_a_skinslink_hold_shows_protected_until_in_list_and_detail(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    """Skinslink ``hold``: the buyer accepted, Steam protects the trade until its end; the order
+    stays ``trade_sent`` until ``completed``, so the admin is told it is not stuck."""
+    h = await admin_headers()
+    end = clock.now() + timedelta(days=6)
+    held, _ = await make_skinslink_order(db_session, purchase_status="hold", hold_end_date=end)
+    sent, _ = await make_skinslink_order(db_session, purchase_status="active", purchase_id=179)
+    rows = (await integration_client.get("/api/v1/admin/orders", headers=h)).json()["items"]
+    by_number = {r["number"]: r for r in rows}
+    assert by_number[held.number]["protected_until"] is not None
+    assert by_number[sent.number]["protected_until"] is None
+    detail = (await integration_client.get(f"/api/v1/admin/orders/{held.number}", headers=h)).json()
+    assert detail["order"]["protected_until"] is not None
+
+
+async def test_a_delivered_order_has_no_protected_until(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    order, _ = await make_skinslink_order(
+        db_session,
+        status="delivered",
+        purchase_status="hold",
+        hold_end_date=clock.now() + timedelta(days=1),
+    )
+    rows = (
+        await integration_client.get("/api/v1/admin/orders", headers=await admin_headers())
+    ).json()["items"]
+    assert {r["number"]: r for r in rows}[order.number]["protected_until"] is None

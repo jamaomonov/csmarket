@@ -150,6 +150,14 @@ on a Skinslink purchase, and resolving it frees a refund the attention held. Adm
 still refuses a Skinslink order; the admin refund asks Skinslink first (`docs/runbooks/public-api.md`,
 «Refund of a Skinslink / LIS-SKINS order», ADR-0018).
 
+## An order «обмен отправлен» for days
+
+Skinslink's `hold` means the buyer **accepted** the offer and Steam's trade protection runs until
+`hold_end_date` (about 7 days). The order stays `trade_sent` until Skinslink says `completed`
+after it, then turns `delivered`; a rollback before then comes as `reverted`. The admin shows such
+an order as «принят, защита до DD.MM» (`protected_until` on the order row and page); the buyer
+already reads it as accepted. The reconcile asks every 10 minutes — nothing to do by hand.
+
 ## Disabling
 
 Set `CSMARKET_SKINSLINK_ENABLED=false` and

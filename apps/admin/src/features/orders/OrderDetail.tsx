@@ -59,7 +59,7 @@ function OrderFields({ detail }: { detail: AdminOrderDetail }) {
           {order.phase !== null && <span className="text-fg-muted"> · {order.phase}</span>}
         </Field>
         <Field label="Статус">
-          <OrderStatusChip status={order.status} />
+          <OrderStatusChip status={order.status} protectedUntil={order.protected_until} />
         </Field>
         <Field label="Пользователь">
           <Link to={`/users/${user.id}`} className="hover:underline">

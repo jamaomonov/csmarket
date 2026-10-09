@@ -38,7 +38,7 @@ function OrderRow({ order }: { order: AdminOrderRow }) {
       <td className="py-2 pr-3">{providerLabel(order.paid_with)}</td>
       <td className="py-2 pr-3">
         <div className="flex flex-wrap items-center gap-1">
-          <OrderStatusChip status={order.status} />
+          <OrderStatusChip status={order.status} protectedUntil={order.protected_until} />
           <AttentionBadge reason={order.attention_reason} />
         </div>
       </td>

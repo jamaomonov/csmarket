@@ -969,6 +969,18 @@
             ],
             "title": "Pricing Profile"
           },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
+          },
           "refunded_at": {
             "anyOf": [
               {
@@ -1239,6 +1251,18 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
           },
           "status": {
             "enum": [
@@ -2841,6 +2865,18 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
           },
           "status": {
             "enum": [
