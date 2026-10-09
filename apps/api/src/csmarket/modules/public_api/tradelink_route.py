@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.api.v1.deps import db_session
 from csmarket.core.errors import ValidationError
 from csmarket.core.redis import get_redis
+from csmarket.modules.lisskins.api import is_rejected
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
 from csmarket.modules.public_api.limits import enforce
 from csmarket.modules.public_api.metering import MeteredRoute
@@ -62,6 +63,8 @@ async def check_trade_link_route(
         link = parse_tradelink(body.trade_link)
     except ValidationError:
         return TradeLinkCheckOut(verdict="bad", reason="invalid_link")
+    if await is_rejected(get_redis(), link.url):  # a market refused it lately: no call needed
+        return TradeLinkCheckOut(verdict="bad", reason="rejected_by_market")
     await db.commit()  # no connection held across the upstream calls (AGENTS §11)
     waxpeer, hold = checkers
     result = await check_trade_link(link, waxpeer=waxpeer, hold=hold, redis=get_redis())

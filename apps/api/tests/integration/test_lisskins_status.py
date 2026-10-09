@@ -95,8 +95,8 @@ async def test_a_trade_not_accepted_is_returned_and_refunded(
     [
         ("private_inventory", "invalid_trade_link"),
         ("user_inventory_full", "invalid_trade_link"),
-        ("unknown_error", "sold_out"),
-        (None, "sold_out"),
+        ("unknown_error", "source_refused"),
+        (None, "source_refused"),
     ],
 )
 async def test_a_trade_that_could_not_be_created_fails_and_refunds(

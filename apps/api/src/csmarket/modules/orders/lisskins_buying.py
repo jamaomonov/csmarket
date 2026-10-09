@@ -34,14 +34,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
+from csmarket.core.redis import get_redis
 from csmarket.modules.lisskins.api import (
     BUY_LINK_ERRORS,
+    BUY_SOLD_ERRORS,
     LisskinsBuyClient,
     LisskinsError,
     LisskinsForbiddenError,
     LisskinsPurchase,
     LisskinsRateLimitedError,
     LisskinsUnavailableError,
+    remember_rejection,
 )
 from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, release_fresh, take_lease
 from csmarket.modules.orders.lisskins_writes import (
@@ -78,12 +81,14 @@ _MOVED_ON = frozenset({*BUY_LINK_ERRORS, "insufficient_funds"})
 class _Run:
     """One attempt's progress: its snapshot, whether a request went out, a 429's wait."""
 
-    __slots__ = ("retry_after", "sent", "snap")
+    __slots__ = ("refusal", "retry_after", "sent", "snap")
 
     def __init__(self) -> None:
         self.snap: LisskinsSnapshot | None = None
         self.sent = False
         self.retry_after: float | None = None
+        #: LIS-SKINS' refusal code of a lot it would not sell.
+        self.refusal: str | None = None
 
     def backoff(self, outcome: str) -> timedelta:
         """:data:`RELEASE_BACKOFF`, or LIS-SKINS' own ``Retry-After`` when longer (capped)."""
@@ -198,8 +203,10 @@ async def _leased(
     settled = await _buy_once(db, client, run.snap, link, run)
     if settled is not None:
         return settled
-    log.info("orders.lisskins_buy.refused", number=run.snap.number)
-    return await refund(db, run.snap, "sold_out")  # never another offer (ADR-0013)
+    log.info("orders.lisskins_buy.refused", number=run.snap.number, code=run.refusal)
+    # Never another lot (ADR-0013); «sold out» only when the lot is gone or dearer.
+    reason = "sold_out" if run.refusal in BUY_SOLD_ERRORS else "source_refused"
+    return await refund(db, run.snap, reason, error=run.refusal)
 
 
 async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table
@@ -230,9 +237,11 @@ async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table
         if err.code == "custom_id_already_exists" or (snap.repeat and err.code not in _MOVED_ON):
             return await _adopt(db, client, snap)  # a repeat's refusal may be our own first buy
         if err.code in BUY_LINK_ERRORS:
-            return await refund(db, snap, "invalid_trade_link")
+            await remember_rejection(get_redis(), link.url)  # the partner API hears it next
+            return await refund(db, snap, "invalid_trade_link", error=err.code)
         if err.code == "insufficient_funds":
-            return await refund(db, snap, "source_low_balance")
+            return await refund(db, snap, "source_low_balance", error=err.code)
+        run.refusal = err.code
         return None  # sold, dearer than our cap, or another refusal of this lot
     return await record_purchase(db, snap, report)
 

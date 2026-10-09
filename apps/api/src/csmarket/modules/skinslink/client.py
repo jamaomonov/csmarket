@@ -37,6 +37,12 @@ PURCHASE_FAIL_REASONS = frozenset(
         "provider_unavailable",
     }
 )
+#: ``fail_reason`` / refusal codes that mean the offer itself is gone or dearer: the order is
+#: refunded ``sold_out``. Any other refusal (``seller_too_slow``, ``provider_unavailable``,
+#: an unknown code) is ``source_refused`` — the lot was there, it was not handed over.
+SOLD_FAIL_REASONS = frozenset(
+    {"item_sold", "item_not_available", "price_changed", "item_specified_price_not_found"}
+)
 #: Validation codes that mean the buyer's trade link cannot receive the skin.
 LINK_ERROR_CODES = frozenset(
     {
@@ -613,6 +619,7 @@ __all__ = [
     "LINK_ERROR_CODES",
     "PURCHASE_FAIL_REASONS",
     "REQUEST_LOOKUP_TIMEOUT_SECONDS",
+    "SOLD_FAIL_REASONS",
     "AvailablePage",
     "Balance",
     "CatalogueEvent",

@@ -43,6 +43,7 @@ _REASONS: dict[str, PublicRefundReason] = {
     "price_moved": "price_moved",
     "source_low_balance": "supplier_refused",
     "not_accepted": "supplier_refused",
+    "source_refused": "supplier_refused",
     "admin": "cancelled_by_support",
 }
 #: A refund with no machine reason was a person's decision.

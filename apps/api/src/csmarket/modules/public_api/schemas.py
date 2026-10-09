@@ -148,7 +148,15 @@ class TradeLinkCheckOut(BaseModel):
         "unavailable: the check could not run; do not block a purchase on it."
     )
     reason: (
-        Literal["invalid_link", "private_inventory", "trade_ban", "hold", "not_found"] | None
+        Literal[
+            "invalid_link",
+            "private_inventory",
+            "trade_ban",
+            "hold",
+            "not_found",
+            "rejected_by_market",
+        ]
+        | None
     ) = Field(description="Why the link is bad; null for ok and unavailable.")
 
 

@@ -153,6 +153,31 @@ what price for its tariff.
   so partners can never starve the site's checkout. 100 in all, as before, out of the key's 200.
 - `public_api.offer_check.live_quote` is the one implementation behind both partner paths.
 
+### v1.3: honest refunds and refused links (2026-10-10, YuPay's brief)
+
+- **`sold_out` means the lot was sold or became dearer, nothing else.** Skinslink's
+  `seller_too_slow` cancelled YuPay's 1P26ZCTN, and it was refunded as `sold_out`. Every other
+  refusal from Skinslink or LIS-SKINS now gets the internal reason `source_refused`, which the
+  partner reads as `supplier_refused`. The mapping is in `docs/api/public-v1.md`.
+- **LIS-SKINS' refusal code is stored** in `lisskins_purchases.error`, so the reason is no longer
+  only in a container log.
+- **A link LIS-SKINS refused is remembered for 24 h**, by a SHA-256 of the link, never the link
+  itself (`lisskins:link_rejected:*`).
+  - `POST /public/tradelink/check` answers `bad` / `rejected_by_market` without an upstream
+    call.
+  - `POST /public/orders` answers `409 trade_link_rejected` for a named LIS-SKINS lot, and skips
+    LIS-SKINS lots when buying the cheapest within the cap.
+  - YuPay's buyer was refused four times in a row for a link that Steam, Waxpeer and Skinslink
+    accept.
+- **The offer check never guesses `gone`.**
+  - A lot missing from a stale source (the Skinslink mirror past
+    `skinslink_mirror_stale_minutes`, a LIS-SKINS snapshot past its threshold) is
+    `unconfirmed`.
+  - A Skinslink offer is `available` only from a mirror synced within 30 s, else
+    `unconfirmed`. Skinslink has no per-offer check; its change feed is the mirror's source.
+- The check limit of YuPay's key is raised to 120 a minute in the admin (an audited key edit),
+  not in code.
+
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).

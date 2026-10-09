@@ -12,7 +12,7 @@ order as the skin's status says. Callers hold the order row, then the purchase r
 ``accepted``                                ``→ delivered``
 ``return``, ``rollback_…`` / after delivery attention ``rolled_back`` (the skin may be spent)
 ``return``, ``trade_create_error``, before  ``failed`` + refund ``invalid_trade_link`` (a link
-an offer                                    error) or ``sold_out``
+an offer                                    error) or ``source_refused``
 ``return``, any other reason                ``returned`` + refund ``not_accepted``
 ``wait_unlock`` / ``wait_withdraw``         attention ``ambiguous_trade`` (we never buy
                                             locked lots)
@@ -30,11 +30,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.logging import get_logger
+from csmarket.core.redis import get_redis
 from csmarket.modules.lisskins.api import (
     TRADE_LINK_ERRORS,
     LisskinsPurchase,
     Purchase,
     PurchasedSkin,
+    remember_rejection,
     to_units,
 )
 from csmarket.modules.orders.fsm import TRANSITIONS, move
@@ -102,7 +104,9 @@ async def _returned(
     if order.status not in ("buying", "trade_sent"):
         return "unchanged"
     if reason == "trade_create_error" and order.status == "buying":
-        why = "invalid_trade_link" if skin.error in TRADE_LINK_ERRORS else "sold_out"
+        why = "invalid_trade_link" if skin.error in TRADE_LINK_ERRORS else "source_refused"
+        if why == "invalid_trade_link" and skin.error != "user_inventory_full":
+            await remember_rejection(get_redis(), order.trade_link)  # the partner API hears it
         return await refund_or_hold(db, order, "failed", why)
     return await refund_or_hold(db, order, "returned", "not_accepted")
 

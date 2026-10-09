@@ -40,6 +40,9 @@ by the worker.
   and by `offer_check_route.py` — `GET /catalog/{item_id}/offers/{offer_id}` (bucket `check`,
   not cached; `gone` / `unconfirmed` / `available`; 404 `offer_not_found`). A sold lot is
   never replaced (ADR-0013). ADR-0017, 2026-10-10.
+- A trade link LIS-SKINS refused lately (`lisskins.rejected_links`, 24 h): `/tradelink/check`
+  answers `rejected_by_market` with no call; `POST /orders` skips LIS-SKINS lots for it, or
+  answers `409 trade_link_rejected` for a named one.
 - `tradelink_route.py` — `POST /tradelink/check`: the site's advisory check for a key (bucket
   `check`; `ok` / `bad` / `unavailable`; an unparsable link is `bad` / `invalid_link` with no
   upstream call). The checker factory lives in `users/tradelink_checkers.py`.

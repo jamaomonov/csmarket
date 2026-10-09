@@ -193,6 +193,8 @@ async def test_a_sold_lot_is_refunded_never_replaced(
         ("private_inventory", "invalid_trade_link"),
         ("too_many_failed_attempts_for_user", "invalid_trade_link"),
         ("invalid_partner_value", "invalid_trade_link"),
+        ("skins_price_higher_than_max_price", "sold_out"),
+        ("something_new", "source_refused"),
     ],
 )
 async def test_refund_reasons(
@@ -206,6 +208,24 @@ async def test_refund_reasons(
     assert (row.status, row.failure_reason) == ("failed", reason)
     assert len(fake.calls) == 1  # never a substitute: every lot would be refused the same way
     assert await user_balance(db_session, order.user_id) == PRICE
+    # LIS-SKINS' answer is kept: a container log does not survive a restart.
+    stored = await db_session.scalar(
+        select(LisskinsPurchase.error).where(LisskinsPurchase.order_id == order.id)
+    )
+    assert stored == code[:32]
+
+
+async def test_a_refused_link_is_remembered_for_the_partner_api(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    from csmarket.core.redis import get_redis
+    from csmarket.modules.lisskins.api import is_rejected
+
+    order = await _buying(db_session)
+    row = await _order(db_session, order)
+    fake = FakeLisskinsClient(LisskinsError("no", status=400, code="invalid_trade_url"))
+    await attempt_lisskins_buy(db_session, fake, order_id=order.id)
+    assert await is_rejected(get_redis(), row.trade_link)
 
 
 async def test_forbidden_is_an_attention_and_keeps_the_buy_pending(

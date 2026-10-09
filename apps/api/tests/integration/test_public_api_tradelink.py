@@ -112,6 +112,20 @@ async def test_bad_reasons(
     assert r.json() == {"verdict": "bad", "reason": reason}
 
 
+async def test_a_link_a_market_refused_is_bad_before_any_call(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, fakes
+) -> None:
+    from csmarket.modules.lisskins.api import remember_rejection
+    from csmarket.modules.users.api import parse_tradelink
+
+    wax = fakes()
+    token = await _token(db_session, customer_headers)
+    await remember_rejection(get_redis(), parse_tradelink(FAKE).url)
+    r = await _post(integration_client, token)
+    assert r.json() == {"verdict": "bad", "reason": "rejected_by_market"}
+    assert wax.calls == 0
+
+
 async def test_unparsable_link_makes_no_call(
     integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, fakes
 ) -> None:

@@ -6,7 +6,7 @@ Skinslink offer answers from the mirror; a lot gone from the snapshot is ``gone`
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -26,7 +26,7 @@ from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from csmarket.modules.users.models import User
 from fastapi import FastAPI
 from httpx import AsyncClient
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.conftest import CUSTOMER_STEAM_ID
@@ -66,15 +66,15 @@ def live(integration_app: FastAPI) -> Iterator[Live]:
     integration_app.dependency_overrides.pop(availability_client, None)
 
 
-async def _item(db: AsyncSession) -> SkinItem:
+async def _item(db: AsyncSession, *, mirror_age: int = 0, snapshot_age: int = 0) -> SkinItem:
     item, _ = await make_item_and_rate(db)
     item.active = True
     at = datetime.now(UTC)
     db.add_all(
         [
-            LisskinsState(id=1, snapshot_at=at, lots=1),
+            LisskinsState(id=1, snapshot_at=at - timedelta(seconds=snapshot_age), lots=1),
             LisskinsOffer(id=LOT, skin_item_id=item.id, price_units=4_000, asset_id="9"),
-            SkinslinkState(id=1, cursor="c", mirror_synced_at=at),
+            SkinslinkState(id=1, cursor="c", mirror_synced_at=at - timedelta(seconds=mirror_age)),
             SkinslinkItem(
                 id="380",
                 market_hash_name=item.market_hash_name,
@@ -208,3 +208,48 @@ async def test_a_forged_or_foreign_offer_id_is_404(
         assert r.json()["code"] == "offer_not_found"
     r = await integration_client.get(_url(item, "x").replace(item.id, "nope"), headers=_h(token))
     assert (r.status_code, r.json()["code"]) == (404, "item_not_found")
+
+
+async def test_a_skinslink_offer_from_a_lagging_mirror_is_unconfirmed(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, live: Live
+) -> None:
+    item = await _item(db_session, mirror_age=60)
+    token = await _token(db_session, customer_headers)
+    live(Availability(available={}, unavailable=frozenset()))
+    offer = (await _ids(db_session, item))["skinslink"]
+    r = await integration_client.get(_url(item, offer), headers=_h(token))
+    assert (r.json()["status"], r.json()["price_usd"]) == ("unconfirmed", "4.100")
+
+
+async def test_a_stale_source_is_unconfirmed_never_gone(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, live: Live
+) -> None:
+    item = await _item(db_session)
+    token = await _token(db_session, customer_headers)
+    fake = live(Availability(available={LOT: Decimal("4")}, unavailable=frozenset()))
+    ids = await _ids(db_session, item)
+    # Both sources go stale after the partner read the offers: their lots drop from our lists.
+    await db_session.execute(
+        update(SkinslinkState).values(mirror_synced_at=datetime.now(UTC) - timedelta(hours=1))
+    )
+    await db_session.execute(
+        update(LisskinsState).values(snapshot_at=datetime.now(UTC) - timedelta(hours=1))
+    )
+    await db_session.commit()
+    for offer in ids.values():
+        r = await integration_client.get(_url(item, offer), headers=_h(token))
+        assert r.json() == {"offer_id": offer, "status": "unconfirmed", "price_usd": None}
+    assert fake.calls == []
+
+
+async def test_a_skinslink_offer_gone_from_a_fresh_mirror_is_gone(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, live: Live
+) -> None:
+    item = await _item(db_session)
+    token = await _token(db_session, customer_headers)
+    live(Availability(available={}, unavailable=frozenset()))
+    offer = (await _ids(db_session, item))["skinslink"]
+    await db_session.execute(delete(SkinslinkItem).where(SkinslinkItem.id == "380"))
+    await db_session.commit()
+    r = await integration_client.get(_url(item, offer), headers=_h(token))
+    assert r.json()["status"] == "gone"

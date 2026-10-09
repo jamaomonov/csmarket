@@ -37,6 +37,9 @@ BUY_LINK_ERRORS = frozenset(
         "invalid_token_value",
     }
 )
+#: ``POST /market/buy`` refusals that mean the lot is gone or dearer than our cap: refunded
+#: ``sold_out``. Any other refusal is ``source_refused`` (the code is kept on the purchase).
+BUY_SOLD_ERRORS = frozenset({"skins_unavailable", "skins_price_higher_than_max_price"})
 #: A returned skin's ``error`` that is the buyer's side (``return_reason=trade_create_error``).
 TRADE_LINK_ERRORS = frozenset(
     {
@@ -415,6 +418,7 @@ def request_info_client() -> LisskinsClient:
 
 __all__ = [
     "BUY_LINK_ERRORS",
+    "BUY_SOLD_ERRORS",
     "INFO_MAX_IDS",
     "TRADE_LINK_ERRORS",
     "Availability",

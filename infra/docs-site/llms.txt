@@ -140,14 +140,14 @@ Once the offer is out, the order has a `trade` object with `offer_sent_at`, `acc
 `https://steamcommunity.com/tradeoffer/{steam_offer_id}/`. `seller_name` is the sender's Steam
 name when we have it, usually `null`.
 
-| Refund `reason`        | Cause                                                       |
-| ---------------------- | ----------------------------------------------------------- |
-| `sold_out`             | the offer was gone                                          |
-| `invalid_trade_link`   | the trade link was rejected                                 |
-| `trade_hold`           | your customer's Steam account has a trade hold              |
-| `supplier_refused`     | the seller could not complete or the offer was not accepted |
-| `cancelled_by_support` | our support cancelled the order                             |
-| `price_moved`          | reserved for later; not sent today                          |
+| Refund `reason`        | Cause                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `sold_out`             | the offer itself was sold or became dearer                                                                |
+| `invalid_trade_link`   | the trade link was rejected                                                                               |
+| `trade_hold`           | your customer's Steam account has a trade hold                                                            |
+| `supplier_refused`     | the skin was not handed over (the seller was too slow, the market refused), or the offer was not accepted |
+| `cancelled_by_support` | our support cancelled the order                                                                           |
+| `price_moved`          | reserved for later; not sent today                                                                        |
 
 A delivered skin is never refunded automatically. A `402 insufficient_balance` writes nothing.
 
@@ -169,12 +169,14 @@ curl -s https://api.csmarket.uz/api/v1/public/catalog/4f1c…/offers/Zm9v… \
 | ------------- | --------------------------------------------------------------------------------- |
 | `available`   | charge `price_usd` (it may differ from the list) and call `POST /orders`          |
 | `gone`        | the offer was sold: tell your customer and offer another one; `price_usd` is null |
-| `unconfirmed` | the market did not answer in time; `price_usd` is the last known price            |
+| `unconfirmed` | not confirmed right now; `price_usd` is the last known price (or null)            |
 
 It is asked live, never cached, and counts against your **check** limit. `POST /orders` checks
 the offer again: if it is sold in the seconds between, the purchase answers
 `409 offer_gone` and nothing is charged. We never buy a different offer in its place — offers
-of one skin differ in float, pattern and stickers. A forged or foreign `offer_id` is
+of one skin differ in float, pattern and stickers. If a market refused your customer's trade
+link in the last day, `POST /orders` answers `409 trade_link_rejected` for that market's offers
+and `POST /tradelink/check` answers `rejected_by_market`: ask for a new trade link. A forged or foreign `offer_id` is
 `404 offer_not_found`.
 
 ## Checking a trade link
@@ -192,13 +194,14 @@ curl -s https://api.csmarket.uz/api/v1/public/tradelink/check \
 The answer is `{"verdict": "ok" | "bad" | "unavailable", "reason": ...}`. `unavailable` means
 the check could not run: do not block a purchase on it.
 
-| `reason`            | Meaning                                                      |
-| ------------------- | ------------------------------------------------------------ |
-| `invalid_link`      | not a Steam trade link                                       |
-| `private_inventory` | your customer's inventory is private                         |
-| `trade_ban`         | your customer's Steam account cannot trade                   |
-| `hold`              | your customer's Steam account has a trade hold               |
-| `not_found`         | no such Steam account, or the token does not match the owner |
+| `reason`             | Meaning                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `invalid_link`       | not a Steam trade link                                                                            |
+| `private_inventory`  | your customer's inventory is private                                                              |
+| `trade_ban`          | your customer's Steam account cannot trade                                                        |
+| `hold`               | your customer's Steam account has a trade hold                                                    |
+| `not_found`          | no such Steam account, or the token does not match the owner                                      |
+| `rejected_by_market` | a market refused this link for a purchase in the last day: ask your customer for a new trade link |
 
 # Order events
 
@@ -283,22 +286,26 @@ Verify the **raw body bytes** before parsing the JSON.
 
 # Errors and limits
 
-| HTTP | `code`                                                                                                                    |
-| ---- | ------------------------------------------------------------------------------------------------------------------------- |
-| 401  | `unauthorized`                                                                                                            |
-| 402  | `insufficient_balance`                                                                                                    |
-| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                              |
-| 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                    |
-| 409  | `offer_gone`, `price_above_max`, `duplicate_client_order_id`, `buying_disabled`, `cursor_expired`, `idempotency_mismatch` |
-| 422  | `trade_link_invalid`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key`, invalid parameters                 |
-| 429  | `rate_limited` — wait `Retry-After` seconds                                                                               |
-| 503  | `feed_unavailable`, `rate_unavailable` — retry after `Retry-After`                                                        |
+| HTTP | `code`                                                                                                                                           |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 401  | `unauthorized`                                                                                                                                   |
+| 402  | `insufficient_balance`                                                                                                                           |
+| 403  | `usd_wallet_disabled`, `ip_not_allowed`, `account_suspended`                                                                                     |
+| 404  | `item_not_found`, `order_not_found`, `offer_not_found`                                                                                           |
+| 409  | `offer_gone`, `price_above_max`, `trade_link_rejected`, `duplicate_client_order_id`, `buying_disabled`, `cursor_expired`, `idempotency_mismatch` |
+| 422  | `trade_link_invalid`, `webhook_url_invalid`, `webhook_url_private`, `idempotency_key`, invalid parameters                                        |
+| 429  | `rate_limited` — wait `Retry-After` seconds                                                                                                      |
+| 503  | `feed_unavailable`, `rate_unavailable` — retry after `Retry-After`                                                                               |
 
 Limits per key, per minute: **60** reads, **10** purchases, **1** first catalogue page, **30** checks (trade links and offers together). `GET /me` shows your limits (`limits`, including
 `check_per_min`). Need more? Ask us and we raise them for your key.
 
 # Changelog
 
+- **2026-10-10 — v1.3.** Added: `rejected_by_market` on `POST /tradelink/check` and
+  `409 trade_link_rejected` on `POST /orders`. Changed: `sold_out` now means only that the offer
+  was sold or became dearer; a skin that was not handed over refunds `supplier_refused`. The
+  offer check answers `unconfirmed` when it cannot confirm, never `gone` by guess.
 - **2026-10-10 — v1.2.** Added: `GET /catalog/{item_id}/offers/{offer_id}` to check an offer
   right before you charge. `POST /orders` now confirms the offer before writing anything: a
   sold offer is `409 offer_gone` at once instead of a paid order refunded a moment later.

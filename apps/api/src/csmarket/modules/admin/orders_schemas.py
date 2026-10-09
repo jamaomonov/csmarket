@@ -28,6 +28,7 @@ FailureReason = Literal[
     "admin",
     "trade_hold",
     "price_moved",
+    "source_refused",
 ]
 #: What the operator found, trimmed; an empty note is stored as ``null``.
 Note = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500)]

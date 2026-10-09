@@ -275,10 +275,17 @@ async def mirror_fresh(db: AsyncSession, *, settings: Settings, now: datetime) -
     )
 
 
+async def mirror_age(db: AsyncSession, *, now: datetime) -> timedelta | None:
+    """How long ago the mirror was synced; ``None`` before the first sync."""
+    synced = await db.scalar(select(SkinslinkState.mirror_synced_at).where(SkinslinkState.id == 1))
+    return None if synced is None else now - synced
+
+
 __all__ = [
     "MAX_PAGES_PER_TICK",
     "CatalogueClient",
     "MirrorResult",
+    "mirror_age",
     "mirror_fresh",
     "split_phase",
     "sync_mirror",

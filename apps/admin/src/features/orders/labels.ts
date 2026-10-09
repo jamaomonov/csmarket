@@ -42,6 +42,7 @@ export const FAILURE_LABELS: Record<FailureReason, string> = {
   not_accepted: "обмен не принят",
   trade_hold: "задержка обменов Steam",
   price_moved: "цена поставщика выросла",
+  source_refused: "продавец не отдал скин",
   admin: "вернул администратор",
 };
 

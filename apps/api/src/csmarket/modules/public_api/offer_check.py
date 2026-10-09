@@ -10,6 +10,7 @@ is never replaced by another one (ADR-0013).
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import timedelta
 from typing import Literal
 
 from redis.asyncio import Redis
@@ -20,6 +21,10 @@ from csmarket.modules.public_api.offers import PricedOffer, price_units_for
 from csmarket.modules.skins.api import PricingRules, SkinItem, parse_offer_id
 
 log = get_logger("csmarket.public_api.offer_check")
+
+#: A Skinslink offer from a mirror synced within this long counts as checked; an older one is
+#: ``unconfirmed`` (the mirror follows Skinslink's change feed every 15 s).
+MIRROR_CHECKED = timedelta(seconds=30)
 
 #: ``available``: for sale at the quoted price. ``gone``: sold. ``unconfirmed``: LIS-SKINS
 #: did not answer — the snapshot price stands and the order re-checks.
@@ -34,11 +39,18 @@ async def live_quote(
     profile: str,
     redis: Redis,
     client: AvailabilityClient | None,
+    mirror_age: timedelta | None = None,
 ) -> tuple[OfferStatus, PricedOffer | None]:
     """``(status, the offer at its live price)``; ``None`` when ``gone``.
 
+    ``mirror_age``: how old the Skinslink mirror is — a Skinslink offer is ``available`` only
+    from a mirror synced within :data:`MIRROR_CHECKED`, else ``unconfirmed``.
+
     Holds no DB connection: the caller releases it first (AGENTS §11).
     """
+    if offer.offer.source == "skinslink":
+        fresh = mirror_age is not None and mirror_age <= MIRROR_CHECKED
+        return ("available" if fresh else "unconfirmed"), offer
     if client is None or offer.offer.source != "lisskins":
         return "available", offer
     verdict, units = await live_price(
@@ -59,4 +71,4 @@ async def live_quote(
     )
 
 
-__all__ = ["OfferStatus", "live_quote"]
+__all__ = ["MIRROR_CHECKED", "OfferStatus", "live_quote"]

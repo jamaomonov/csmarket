@@ -145,6 +145,36 @@ key, the IP, the balance or LIS-SKINS itself.
      stored purchase.
 3. `rate_limited` (429) is not counted here: the order waits for `Retry-After` and tries again.
 
+### The refusal code is stored
+
+Since 2026-10-10 a refused `market/buy` keeps LIS-SKINS' code in `lisskins_purchases.error`
+(`invalid_trade_url`, `skins_unavailable`…).
+
+- **Sold or dearer** (`skins_unavailable`, `skins_price_higher_than_max_price`) refunds
+  `sold_out`.
+- **A trade-link code** refunds `invalid_trade_link`, and the link's hash is remembered for 24 h
+  (`lisskins:link_rejected:<sha256>`, `lisskins/rejected_links.py`):
+  - the partner API's `/tradelink/check` answers `rejected_by_market`;
+  - API orders skip LIS-SKINS lots for that link.
+  - To forgive a link early, delete its key. The hash is the SHA-256 of the canonical link,
+    `parse_tradelink(link).url`.
+- **Any other code** refunds `source_refused` (the partner reads `supplier_refused`).
+
+### `invalid_trade_url` for a link others accept (open question to LIS-SKINS)
+
+On 2026-10-09 LIS-SKINS refused one YuPay buyer's link with `400 invalid_trade_url` in 4 of 4
+buys: 2QJDV416, 50E0GKMD, 4H87JP3P, 4RE6008H. In the same days Steam, Waxpeer's
+`check-tradelink` and Skinslink accepted that link. It has the canonical form, the same shape as
+links LIS-SKINS delivered to that evening. One `custom_id` to quote is
+`01a12298-b33a-7c90-8241-428eddab1fe7`. The question for their support, sent by the owner:
+
+> Your `POST /market/buy` answered `400 invalid_trade_url` for a buyer's trade link that Steam
+> and other markets accept (custom_id `01a12298-b33a-7c90-8241-428eddab1fe7` and three more
+> that evening). What makes a link invalid for you: the account's settings, its trade
+> restrictions, a check of yours against Steam? How can we tell in advance?
+
+**Answer:** _pending — write it here when LIS-SKINS replies._
+
 ## Attentions
 
 A LIS-SKINS attention sits on `lisskins_purchases`. It counts in `csmarket_trades_attention`
