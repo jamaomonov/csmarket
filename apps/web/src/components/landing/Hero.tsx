@@ -1,38 +1,18 @@
-/** The first screen: the geo H1, the lead, two calls to action, payments and the showcase. */
-import { formatUzs, type SkinItem, steamImageSize } from "@csmarket/utils/skins";
+/** The first screen: the geo H1, the lead, two calls to action, payments and the wall of skins. */
 import { getTranslations } from "next-intl/server";
 
-import { HeroStage, type StageItem } from "./HeroStage";
+import { HeroWall } from "./HeroWall";
 import { ArrowIcon } from "./Icons";
 import { PayMarks } from "./Wordmarks";
 
+import type { SkinItem } from "@csmarket/utils/skins";
+
 import { Link } from "@/i18n/navigation";
-import { itemPath, MARKET, SELL } from "@/lib/paths";
-
-const STAR_CATEGORIES = new Set(["knives", "gloves"]);
-
-function toStage(item: SkinItem, locale: string): StageItem | null {
-  if (item.image_url === null) return null;
-  const title = [item.skin ?? item.name, item.phase].filter(Boolean).join(" · ");
-  return {
-    slug: item.slug,
-    href: itemPath(item.slug),
-    model: item.weapon ?? item.name,
-    title,
-    wear: item.exterior,
-    rarity: item.rarity,
-    color: item.rarity_color ?? "#eb4b4b",
-    star: STAR_CATEGORIES.has(item.category),
-    price: item.price_uzs === null ? null : formatUzs(locale, item.price_uzs),
-    image: steamImageSize(item.image_url, "512fx384f"),
-    thumb: steamImageSize(item.image_url, "128fx96f"),
-    alt: item.name,
-  };
-}
+import { MARKET, SELL } from "@/lib/paths";
 
 export async function Hero({ items, locale }: { items: SkinItem[]; locale: string }) {
   const t = await getTranslations({ locale, namespace: "web.landing" });
-  const stage = items.map((i) => toStage(i, locale)).filter((i): i is StageItem => i !== null);
+  const tSkins = await getTranslations({ locale, namespace: "web.skins" });
   return (
     <section className="hero" aria-labelledby="lp-h1">
       <div className="wrap">
@@ -62,16 +42,16 @@ export async function Hero({ items, locale }: { items: SkinItem[]; locale: strin
           </div>
           <div className="paywith">
             <span className="pw-l">{t("payWith")}</span>
-            <PayMarks balance={t("balance")} />
+            <PayMarks />
           </div>
         </div>
-        {stage.length > 0 && (
-          <HeroStage
-            items={stage}
+        {items.length > 0 && (
+          <HeroWall
+            items={items}
+            locale={locale}
+            label={t("showcase")}
+            vanilla={tSkins("vanilla")}
             buy={t("buy")}
-            showcase={t("showcase")}
-            toastTitle={t("toastTitle")}
-            toastText={t("toastText")}
           />
         )}
       </div>

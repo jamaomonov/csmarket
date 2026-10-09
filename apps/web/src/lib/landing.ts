@@ -181,6 +181,36 @@ export async function loadLanding(): Promise<LandingData> {
   return { hero, tiles, stats, popular: popular as Record<PopularTab, SkinItem[]> }; // every tab set
 }
 
+/** Cards on the hero wall: three columns of six. */
+export const WALL_SIZE = 18;
+
+/**
+ * The hero wall: the curated showcase first, then knives, gloves and popular skins in turn —
+ * one card per slug, only items with a picture and a price.
+ */
+export function wallItems(
+  data: Pick<LandingData, "hero" | "popular">,
+  size: number = WALL_SIZE,
+): SkinItem[] {
+  const { knives, gloves, popular } = data.popular;
+  const mixed: SkinItem[] = [...data.hero];
+  for (let i = 0; i < Math.max(knives.length, gloves.length, popular.length); i++) {
+    for (const list of [knives, gloves, popular]) {
+      const it = list[i];
+      if (it !== undefined) mixed.push(it);
+    }
+  }
+  const seen = new Set<string>();
+  const out: SkinItem[] = [];
+  for (const it of mixed) {
+    if (seen.has(it.slug) || it.image_url === null || it.price_uzs === null) continue;
+    seen.add(it.slug);
+    out.push(it);
+    if (out.length === size) break;
+  }
+  return out;
+}
+
 /** One cache entry; throws on an outage (no facets) so an empty landing is never stored. */
 const cachedLanding = unstable_cache(
   async () => {

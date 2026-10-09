@@ -1,0 +1,295 @@
+/* The hero wall (HeroWall.tsx) and the payment logos, scoped under .lp like landing.css. */
+
+.lp .pay-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px 0 7px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-size: 14px;
+  font-weight: 600;
+}
+.lp .pay-logo img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+.lp .pay-logo.on {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(75 243 100/0.15);
+}
+.lp .paywith {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 34px;
+  color: var(--dim);
+  font-size: 13px;
+}
+.lp .foot-pay .pay-logo {
+  height: 32px;
+  font-size: 13px;
+}
+.lp .foot-pay .pay-logo img {
+  width: 20px;
+  height: 20px;
+}
+
+.lp .wall {
+  position: relative;
+  height: 600px;
+  perspective: 1600px;
+  mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 86%, transparent);
+}
+.lp .wall-plane {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  height: 100%;
+  transform: rotateY(-8deg) rotateX(4deg) rotateZ(1.5deg) scale(0.94);
+  transform-origin: 50% 50%;
+  transition: transform 0.8s var(--ease);
+}
+.lp .wall:hover .wall-plane,
+.lp .wall:focus-within .wall-plane {
+  transform: rotateY(-3deg) rotateX(1.5deg) rotateZ(0.5deg) scale(0.96);
+}
+.lp .wall-col {
+  overflow: hidden;
+  height: 100%;
+}
+.lp .wall-col-1 {
+  margin-top: -60px;
+  height: calc(100% + 60px);
+}
+.lp .wall-track {
+  display: flex;
+  flex-direction: column;
+  animation: lp-rise 48s linear infinite;
+  will-change: transform;
+}
+.lp .wall-col-1 .wall-track {
+  animation-name: lp-fall;
+  animation-duration: 56s;
+}
+.lp .wall-col-2 .wall-track {
+  animation-duration: 42s;
+}
+.lp .wall:hover .wall-track,
+.lp .wall:focus-within .wall-track {
+  animation-play-state: paused;
+}
+.lp .wall-set {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 14px;
+}
+@keyframes lp-rise {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+@keyframes lp-fall {
+  from {
+    transform: translateY(-50%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.lp .wc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 14px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #232b3e, #1a2131);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    border-color 0.2s,
+    transform 0.3s var(--ease),
+    box-shadow 0.3s;
+}
+.lp .wc::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--r), transparent);
+  opacity: 0.9;
+}
+.lp .wc::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: 90%;
+  aspect-ratio: 1;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--r) 30%, transparent),
+    transparent
+  );
+  z-index: -1;
+}
+.lp .wc:hover,
+.lp .wc:focus-visible {
+  border-color: color-mix(in srgb, var(--r) 60%, var(--border));
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 24px 40px -20px rgb(0 0 0/0.9);
+  outline: none;
+}
+.lp .wc-top {
+  display: flex;
+  gap: 6px;
+  min-height: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.lp .wc-top span {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgb(255 255 255/0.06);
+}
+.lp .wc-top .st {
+  color: #f59a3d;
+}
+.lp .wc-img {
+  width: 100%;
+  aspect-ratio: 4/3;
+  object-fit: contain;
+  margin: 4px 0 8px;
+  filter: drop-shadow(0 12px 14px rgb(0 0 0/0.5));
+  transition: transform 0.4s var(--ease);
+}
+.lp .wc:hover .wc-img {
+  transform: rotate(-5deg) scale(1.06);
+}
+.lp .wc-m {
+  font-size: 12px;
+  color: var(--dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lp .wc-n {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lp .wc-f {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  height: 22px;
+}
+.lp .wc-p {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  transition: opacity 0.2s;
+}
+.lp .wc-buy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 0.2s,
+    transform 0.25s var(--ease);
+}
+.lp .wc:hover .wc-buy,
+.lp .wc:focus-visible .wc-buy {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-width: 1024px) {
+  .lp .paywith {
+    justify-content: center;
+  }
+  .lp .wall {
+    height: 520px;
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 720px) {
+  .lp .wall {
+    height: 420px;
+    margin-inline: calc(var(--gut) * -1);
+    width: calc(100% + var(--gut) * 2);
+  }
+  .lp .wall-plane {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding-inline: var(--gut);
+    transform: none;
+  }
+  .lp .wall:hover .wall-plane {
+    transform: none;
+  }
+  .lp .wall-col-2 {
+    display: none;
+  }
+  .lp .wall-set {
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+  .lp .wc {
+    padding: 10px 12px 12px;
+    border-radius: 14px;
+  }
+  .lp .paywith {
+    gap: 8px;
+  }
+  .lp .pw-l {
+    display: none;
+  }
+  .lp .pay-logo {
+    height: 34px;
+    padding: 0 12px 0 6px;
+    font-size: 13px;
+  }
+  .lp .pay-logo img {
+    width: 22px;
+    height: 22px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp .wall-track {
+    animation: none;
+  }
+  .lp .wall-plane,
+  .lp .wall:hover .wall-plane {
+    transform: none;
+  }
+}

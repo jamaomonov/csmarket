@@ -9,11 +9,12 @@ test("the root is the SEO landing with live skins", async ({ page }) => {
   expect(types).toEqual(expect.arrayContaining(["FAQPage", "Organization", "WebSite"]));
 });
 
-test("the landing search opens the market with the query", async ({ page }) => {
+test("a card on the hero wall opens the item", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("search").getByRole("searchbox").fill("redline");
-  await page.getByRole("search").getByRole("button").click();
-  await expect(page).toHaveURL(/\/market\?q=redline/, { timeout: 30_000 });
+  const card = page.locator(".wall .wc:not([tabindex])").first();
+  const href = await card.getAttribute("href");
+  await card.click();
+  await expect(page).toHaveURL(new RegExp(`${href ?? "/item/"}$`), { timeout: 30_000 });
 });
 
 test("an old filtered root URL lands on the market", async ({ page }) => {

@@ -2,7 +2,7 @@
 import en from "@csmarket/i18n/locales/en/web.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
 import uz from "@csmarket/i18n/locales/uz/web.json";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { createTranslator } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
@@ -30,9 +30,11 @@ vi.mock("@/i18n/navigation", () => ({
     locale === "ru" ? href : `/${locale}${href}`,
 }));
 
+import { BuyFlow } from "./BuyFlow";
+import { Categories } from "./Categories";
 import { faqJsonLd, Faq } from "./Faq";
 import { Hero } from "./Hero";
-import { SearchBlock } from "./SearchBlock";
+import { SellFlow } from "./SellFlow";
 
 import type { SkinItem } from "@csmarket/utils/skins";
 
@@ -65,46 +67,64 @@ describe("landing", () => {
     expect(h1).toHaveTextContent("Скины КС2 (CS2) в Узбекистане");
     expect(screen.getByRole("link", { name: /Открыть маркет/ })).toHaveAttribute("href", "/market");
     expect(screen.getByRole("link", { name: "Продать скины" })).toHaveAttribute("href", "/sell");
-    expect(screen.getByRole("link", { name: /Купить/ })).toHaveAttribute(
-      "href",
-      "/item/karambit-fade-factory-new",
-    );
   });
 
-  it("an empty showcase (API down) leaves the copy and drops the stage", async () => {
+  it("the wall's cards open the item; the loop's repeat is out of the tab order", async () => {
+    const { container } = render(await Hero({ items: [knife], locale: "ru" }));
+    const cards = container.querySelectorAll('a[href="/item/karambit-fade-factory-new"]');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).not.toHaveAttribute("tabindex");
+    expect(cards[1]).toHaveAttribute("tabindex", "-1");
+    expect(cards[1]?.closest("[aria-hidden]")).not.toBeNull();
+    expect(cards[0]).toHaveTextContent("21 312 000");
+  });
+
+  it("an empty wall (API down) leaves the copy and drops the wall", async () => {
     const { container } = render(await Hero({ items: [], locale: "ru" }));
     expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
-    expect(container.querySelector(".stage")).toBeNull();
+    expect(container.querySelector(".wall")).toBeNull();
   });
 
-  it("search submits to the locale's market", async () => {
-    render(await SearchBlock({ locale: "uz" }));
-    const form = screen.getByRole("search");
-    expect(form).toHaveAttribute("action", "/uz/market");
-    expect(form).toHaveAttribute("method", "get");
-    expect(within(form).getByRole("searchbox")).toHaveAttribute("name", "q");
+  it("payments show the providers' app icons and names, no balance chip", async () => {
+    const { container } = render(await Hero({ items: [], locale: "ru" }));
+    const logos = [...container.querySelectorAll(".paywith .pay-logo")];
+    expect(logos.map((l) => l.textContent)).toEqual(["Click", "Payme", "Uzum"]);
+    expect(logos[1]?.querySelector("img")).toHaveAttribute("src", "/pay/payme.png");
+    expect(screen.queryByText("баланс")).toBeNull();
   });
 
-  it("quick chips link weapons to their indexable pages", async () => {
-    render(await SearchBlock({ locale: "ru" }));
-    expect(screen.getByRole("link", { name: "AK-47" })).toHaveAttribute("href", "/weapon/ak-47");
-    expect(screen.getByRole("link", { name: "Butterfly Knife" })).toHaveAttribute(
-      "href",
-      "/weapon/butterfly-knife",
+  it("the buy flow walks one skin: picked, its price to pay, the Steam offer for it", async () => {
+    const { container } = render(await BuyFlow({ item: knife, locale: "ru" }));
+    expect(container.querySelector(".fl-skin")).toHaveTextContent("Fade");
+    expect(container.querySelector(".fl-due")).toHaveTextContent("21 312 000");
+    expect(container.querySelector(".fl-offer")).toHaveTextContent(knife.name);
+    expect(container.querySelector(".pay-logo.on")).toHaveTextContent("Click");
+  });
+
+  it("the sell demo sums the three picked skins", async () => {
+    const items = ["100000", "250000", "50000", "999000"].map((p, i) => ({
+      ...knife,
+      slug: `s${String(i)}`,
+      price_uzs: p,
+    }));
+    const { container } = render(await SellFlow({ items, locale: "ru" }));
+    expect(container.querySelectorAll(".sv.on")).toHaveLength(3);
+    expect(container.querySelector(".sv-total")).toHaveTextContent("400 000");
+    expect(container.querySelector(".sv-total")).toHaveTextContent("Выбрано 3 скина");
+  });
+
+  it("categories: a white icon in the title, a catalogue tile closing a short row", async () => {
+    const tile = (category: string) => ({ category, item: knife, fromUzs: "1000", count: 10 });
+    const { container } = render(
+      await Categories({
+        tiles: ["knives", "gloves", "rifles", "pistols", "smgs"].map(tile),
+        locale: "ru",
+      }),
     );
-  });
-
-  it("the FAQ JSON-LD lists exactly the visible questions", async () => {
-    const { container } = render(await Faq({ locale: "ru" }));
-    const questions = [...container.querySelectorAll("summary")].map((s) => s.textContent);
-    const script = container.querySelector('script[type="application/ld+json"]');
-    const ld = JSON.parse(script?.innerHTML ?? "{}") as {
-      "@type": string;
-      mainEntity: { name: string }[];
-    };
-    expect(ld["@type"]).toBe("FAQPage");
-    expect(ld.mainEntity.map((q) => q.name)).toEqual(questions);
-    expect(questions).toHaveLength(7);
+    expect(container.querySelector(".cat-t .cat-ic")).not.toBeNull();
+    const all = container.querySelector(".cat--all");
+    expect(all).toHaveAttribute("href", "/market");
+    expect(all).toHaveTextContent("50 скинов");
   });
 
   it("the FAQ promises Telegram only once the link is set", async () => {

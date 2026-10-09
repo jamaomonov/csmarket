@@ -1,4 +1,7 @@
-/** «Что купить»: two large tiles (knives, gloves) and small ones, each with a real skin and price. */
+/**
+ * «Что купить»: two large tiles (knives, gloves) and small ones, each with a real skin and price;
+ * a «whole catalogue» tile closes a short last row.
+ */
 import { formatUzs, steamImageSize } from "@csmarket/utils/skins";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
@@ -18,6 +21,8 @@ export async function Categories({ tiles, locale }: { tiles: CategoryTile[]; loc
   const t = await getTranslations({ locale, namespace: "web.landing.cats" });
   const tSkins = await getTranslations({ locale, namespace: "web.skins.category" });
   const shown = tiles.filter((tile) => tile.item !== null || tile.count > 0);
+  const small = shown.filter((tile) => !BIG.has(tile.category)).length;
+  const total = tiles.reduce((sum, tile) => sum + tile.count, 0);
   return (
     <section aria-labelledby="lp-cats">
       <div className="wrap">
@@ -45,7 +50,6 @@ export async function Categories({ tiles, locale }: { tiles: CategoryTile[]; loc
                 className={cx("cat rv", BIG.has(tile.category) && "cat--big")}
                 style={style}
               >
-                <span className="cat-ic" aria-hidden />
                 <span className="cat-go" aria-hidden>
                   <ArrowIcon />
                 </span>
@@ -60,11 +64,23 @@ export async function Categories({ tiles, locale }: { tiles: CategoryTile[]; loc
                     loading="lazy"
                   />
                 )}
-                <span className="cat-t">{tSkins(tile.category)}</span>
+                <span className="cat-t">
+                  <span className="cat-ic" aria-hidden />
+                  {tSkins(tile.category)}
+                </span>
                 {price !== null && <span className="cat-p">{t("from", { price })}</span>}
               </Link>
             );
           })}
+          {small % 4 !== 0 && (
+            <Link href={MARKET} className="cat cat--all rv">
+              <span className="cat-go" aria-hidden>
+                <ArrowIcon />
+              </span>
+              <span className="cat-t">{t("all")}</span>
+              {total > 0 && <span className="cat-p">{t("count", { count: total })}</span>}
+            </Link>
+          )}
         </div>
       </div>
     </section>

@@ -166,3 +166,21 @@
 
 One plan, one branch (`seo-landing`), merged into local `main`; push and deploy on the owner's
 word. Indexing stays closed.
+
+## Revision 2026-10-09 — the owner's review of the first build
+
+- **Hero:** the rotating single-skin stage is replaced by a wall of real, clickable skin cards —
+  three columns drifting in opposite directions on a slightly tilted plane (pure CSS; pauses on
+  hover / focus, still for reduced motion, two columns on phones). Cards come from the curated
+  showcase, then knives, gloves and popular skins in turn (`wallItems`, 18 cards).
+- **Payments:** the providers' own logos (Click, Payme, Uzum, copied from YuPay into
+  `public/pay/`) replace the text wordmarks; the hero row no longer lists the balance.
+- **Search block removed** (§3 row 3). Its weapon links move to a footer «Оружие» column, so
+  the `/weapon/<slug>` pages keep an internal link from the root.
+- **Categories:** the category icon is white, left of the name; a «Весь каталог» tile with the
+  catalogue count closes a short last row.
+- **Buy panel** walks one real skin: picked → paid with Click (the price to pay) → the Steam
+  trade offer for that skin with «Принять».
+- **Sell panel** shows six everyday skins with their market prices, three picked, the sum, and
+  the payout choice (balance, Uzcard, Humo, Uzum Visa); the copy says the sum goes to Uzcard,
+  Humo or Uzum Visa. The prices are an illustration of the sell page, not a quote.
