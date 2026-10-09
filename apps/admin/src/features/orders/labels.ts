@@ -45,6 +45,8 @@ export const FAILURE_LABELS: Record<FailureReason, string> = {
   source_low_balance: "не хватило денег на площадке",
   invalid_trade_link: "неверная трейд-ссылка",
   not_accepted: "обмен не принят",
+  trade_hold: "задержка обменов Steam",
+  price_moved: "цена поставщика выросла",
   admin: "вернул администратор",
 };
 

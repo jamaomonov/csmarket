@@ -113,6 +113,21 @@ describe("OrderView — the trade", () => {
     expect(screen.queryByRole("button", { name: /Оплатить/ })).toBeNull();
   });
 
+  it("names the USD wallet for an API order, not the raw paid_with", async () => {
+    m.get.mockResolvedValue(
+      orderOut(number, {
+        status: "delivered",
+        payable: false,
+        channel: "api",
+        paid_with: "usd_wallet",
+        trade: tradeOut({ state: "accepted" }),
+      }),
+    );
+    view();
+    expect(await screen.findByText(/с USD-кошелька/)).toBeInTheDocument();
+    expect(screen.queryByText(/Usd_wallet/)).toBeNull();
+  });
+
   it("re-reads a moving order and stops once it can no longer change", async () => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

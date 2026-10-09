@@ -43,6 +43,25 @@ describe("OrderDetail", () => {
     api.getOrder.mockResolvedValue(DETAIL);
   });
 
+  it.each([
+    ["trade_hold", "задержка обменов Steam"],
+    ["price_moved", "цена поставщика выросла"],
+  ] as const)("names the %s failure reason, never «undefined»", async (reason, label) => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: {
+        ...DETAIL.order,
+        status: "failed",
+        failed_at: "2026-09-30T10:06:00Z",
+        failure_reason: reason,
+      },
+    });
+    renderDetail();
+    const order = await screen.findByRole("region", { name: "Заказ" });
+    expect(within(order).getByText(new RegExp(label))).toBeInTheDocument();
+    expect(order).not.toHaveTextContent("undefined");
+  });
+
   it("shows the order's fields, money, payments and buyer", async () => {
     renderDetail();
     expect(await screen.findByRole("heading", { name: "Заказ O7K2M9QX" })).toBeInTheDocument();

@@ -321,3 +321,8 @@ const PROVIDERS: ReadonlySet<string> = new Set(["wallet", "click", "payme", "uzu
 export function isPayProvider(slug: string): slug is PayProvider {
   return PROVIDERS.has(slug);
 }
+
+/** A dollar amount to three decimals (display only; the wire string carries six). */
+export function formatUsd(usd: string): string {
+  return `$${Number(usd).toFixed(3)}`;
+}

@@ -25,6 +25,8 @@ export const FAILURE_REASONS = [
   "source_low_balance",
   "invalid_trade_link",
   "not_accepted",
+  "trade_hold",
+  "price_moved",
   "admin",
 ] as const;
 export type FailureReason = (typeof FAILURE_REASONS)[number];

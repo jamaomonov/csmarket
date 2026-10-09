@@ -44,6 +44,12 @@ describe("OrderHero", () => {
     expect(screen.getByText("Закалённое в боях")).toBeInTheDocument();
   });
 
+  it("shows an API order's price in dollars, not 0 soʻm", () => {
+    hero({ channel: "api", price_uzs: "0", price_usd: "12.345000" });
+    expect(screen.getByText("$12.345")).toBeInTheDocument();
+    expect(screen.queryByText(/сум/)).toBeNull();
+  });
+
   it("an older order without a float shows no bar", () => {
     hero({ float_value: null, paint_seed: null });
     expect(screen.queryByTestId("order-float")).toBeNull();

@@ -45,7 +45,12 @@ export function orderBadge(order: OrderOut): Badge {
     case "returned":
       return {
         tone: "bad",
-        key: order.refunded_to === "balance" ? "trades.refunded" : `orders.status.${order.status}`,
+        key:
+          order.refunded_to === "balance"
+            ? order.channel === "api"
+              ? "trades.refundedUsdWallet"
+              : "trades.refunded"
+            : `orders.status.${order.status}`,
       };
     default:
       return assertNever(order.status);

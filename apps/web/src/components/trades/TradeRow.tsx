@@ -10,6 +10,7 @@ import type { OrderOut } from "@/lib/orders";
 import type { SaleOut } from "@/lib/sales";
 
 import { Link } from "@/i18n/navigation";
+import { formatUsd } from "@/lib/orders";
 import { orderPath, salePath } from "@/lib/paths";
 import { orderBadge, saleBadge, type Badge } from "@/lib/trade-status";
 
@@ -45,19 +46,14 @@ export function OrderRow({ order, locale, when }: RowProps & { order: OrderOut }
   );
 }
 
-/** A dollar amount to three decimals (display only; the wire string carries six). */
-function formatUsd(usd: string): string {
-  return `$${Number(usd).toFixed(3)}`;
-}
-
 function orderNote(
   t: ReturnType<typeof useTranslations<"web.trades">>,
   order: OrderOut,
   refunded: boolean,
 ): string | null {
-  if (refunded) return t("returned");
-  if (order.paid_with !== "wallet") return null;
-  return t(order.channel === "api" ? "paidUsdWallet" : "paidBalance");
+  if (refunded) return t(order.channel === "api" ? "returnedUsdWallet" : "returned");
+  if (order.paid_with === "usd_wallet") return t("paidUsdWallet");
+  return order.paid_with === "wallet" ? t("paidBalance") : null;
 }
 
 /** One sale on «Обмены»: the first item («+N» more) and the money coming in as «+». */

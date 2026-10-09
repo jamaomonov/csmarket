@@ -122,6 +122,26 @@ describe("TradesView", () => {
     expect(api.listOrders).not.toHaveBeenCalled();
   });
 
+  it("a refunded API order says the money is back in the USD wallet", async () => {
+    api.listOrders.mockResolvedValue(
+      page([
+        orderOut("A2", {
+          status: "returned",
+          channel: "api",
+          price_uzs: "0",
+          price_usd: "5.000000",
+          paid_at: "2026-10-02T10:01:00Z",
+          paid_with: "usd_wallet",
+          refunded_to: "balance",
+        }),
+      ]),
+    );
+    view("all");
+    const card = await screen.findByTestId("order-card");
+    expect(within(card).getByText("вернули на USD-кошелёк")).toBeInTheDocument();
+    expect(within(card).getByText("Не состоялся · деньги на USD-кошельке")).toBeInTheDocument();
+  });
+
   it("shows an API order as «API», paid from the USD wallet", async () => {
     api.listOrders.mockResolvedValue(
       page([
@@ -131,7 +151,7 @@ describe("TradesView", () => {
           price_uzs: "0",
           price_usd: "12.345000",
           paid_at: "2026-10-02T10:01:00Z",
-          paid_with: "wallet",
+          paid_with: "usd_wallet",
         }),
       ]),
     );
