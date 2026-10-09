@@ -138,3 +138,39 @@ async def test_another_users_webhook_is_invisible(
 
 async def test_requires_a_key(integration_client: AsyncClient) -> None:
     assert (await integration_client.get(URL)).status_code == 401
+
+
+async def test_reused_key_with_another_url_is_a_conflict(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, token = await _customer(db_session, customer_headers)
+    h = {**_h(token), **_idem()}
+    assert (await integration_client.put(URL, json={"url": GOOD}, headers=h)).status_code == 200
+    r = await integration_client.put(URL, json={"url": GOOD + "2"}, headers=h)
+    assert r.status_code == 409
+    assert r.json()["code"] == "idempotency_mismatch"
+    got = await integration_client.get(URL, headers=_h(token))
+    assert got.json()["url"] == GOOD
+
+
+async def test_put_replay_after_delete_answers_the_original(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, token = await _customer(db_session, customer_headers)
+    h = {**_h(token), **_idem()}
+    first = await integration_client.put(URL, json={"url": GOOD}, headers=h)
+    await integration_client.delete(URL, headers={**_h(token), **_idem()})
+    again = await integration_client.put(URL, json={"url": GOOD}, headers=h)
+    assert again.status_code == 200
+    assert again.json() == first.json()
+    assert (await integration_client.get(URL, headers=_h(token))).json() is None
+
+
+async def test_odd_hosts_are_422_not_500(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, token = await _customer(db_session, customer_headers)
+    for bad in ("https://a..b/x", "https://" + "a" * 64 + ".com/x"):
+        r = await integration_client.put(URL, json={"url": bad}, headers={**_h(token), **_idem()})
+        assert r.status_code == 422, r.text
+        assert r.json()["code"] == "webhook_url_invalid"

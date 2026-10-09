@@ -71,6 +71,11 @@ def upgrade() -> None:
         sa.CheckConstraint("status IN ('pending', 'sent', 'failed')", name="status"),
     )
     op.create_index(
+        "ix_api_webhook_deliveries_user_created",
+        "api_webhook_deliveries",
+        ["user_id", sa.text("created_at DESC")],
+    )
+    op.create_index(
         "ix_api_webhook_deliveries_pending",
         "api_webhook_deliveries",
         ["status", "next_attempt_at"],
@@ -80,6 +85,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Drop the delivery queue and the webhook URLs."""
+    op.drop_index("ix_api_webhook_deliveries_user_created", table_name="api_webhook_deliveries")
     op.drop_index("ix_api_webhook_deliveries_pending", table_name="api_webhook_deliveries")
     op.drop_table("api_webhook_deliveries")
     op.drop_table("api_webhooks")

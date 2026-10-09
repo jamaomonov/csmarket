@@ -16,6 +16,7 @@ from csmarket.modules.public_api.schemas import (
     PublicRefundReason,
     PublicTradeOut,
 )
+from csmarket.modules.public_api.webhook_url import check_url, public_addresses
 
 __all__ = [
     "LIMITS",
@@ -31,9 +32,11 @@ __all__ = [
     "PublicTradeOut",
     "api_caller",
     "api_offers",
+    "check_url",
     "enforce",
     "issue",
     "live_key",
     "open_offer_id",
+    "public_addresses",
     "revoke",
 ]

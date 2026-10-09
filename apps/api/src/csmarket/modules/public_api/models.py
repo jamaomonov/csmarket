@@ -131,6 +131,7 @@ class ApiWebhookDelivery(Base):
             "status IN (" + ", ".join(f"'{s}'" for s in DELIVERY_STATUSES) + ")", name="status"
         ),
         UniqueConstraint("order_id", "event", name="uq_api_webhook_deliveries_order_id_event"),
+        Index("ix_api_webhook_deliveries_user_created", "user_id", text("created_at DESC")),
         Index(
             "ix_api_webhook_deliveries_pending",
             "status",

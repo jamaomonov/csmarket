@@ -367,20 +367,33 @@ async def put_webhook(
     """
     idem = require_idempotency_key(idempotency_key)
     await enforce(caller, "read")
+    # Check and resolve before any DB read, so no transaction is open across the lookup.
+    url = check_url(body.url)
+    parts = urlsplit(url)
+    await public_addresses(parts.hostname or "", parts.port or 443)
     user_id = caller.user.id
     scoped = f"{user_id}:{idem}"
-    if await load_replay(db, scope=_WEBHOOK_SAVE_SCOPE, idempotency_key=scoped) is None:
-        url = check_url(body.url)
-        parts = urlsplit(url)
-        await public_addresses(parts.hostname or "", parts.port or 443)
-        await webhooks.put(db, user_id, url)
-        await save_replay(
-            db, scope=_WEBHOOK_SAVE_SCOPE, idempotency_key=scoped, body=None, status_code=200
-        )
-        await db.commit()
+    request = {"url": url}
+    hit = await load_replay(db, scope=_WEBHOOK_SAVE_SCOPE, idempotency_key=scoped)
+    if hit is not None:
+        stored = hit.body or {}
+        if stored.get("request") != request:
+            raise ConflictError(
+                "this Idempotency-Key was used for another request", code="idempotency_mismatch"
+            )
+        return WebhookOut.model_validate(stored["response"])
+    await webhooks.put(db, user_id, url)
     out = await webhooks.get(db, user_id)
-    if out is None:  # pragma: no cover -- deleted between a replay and this read
+    if out is None:  # pragma: no cover -- written one statement ago
         raise NotFoundError("no webhook is set", code="webhook_missing")
+    await save_replay(
+        db,
+        scope=_WEBHOOK_SAVE_SCOPE,
+        idempotency_key=scoped,
+        body={"request": request, "response": out.model_dump(mode="json")},
+        status_code=200,
+    )
+    await db.commit()
     return out
 
 
