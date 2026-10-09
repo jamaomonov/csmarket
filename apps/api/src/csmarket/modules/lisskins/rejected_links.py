@@ -1,7 +1,7 @@
 """Trade links LIS-SKINS refused (``invalid_trade_url`` and its kin), remembered for a day.
 
 A buyer's link that LIS-SKINS refuses is refused for every lot, while Steam, Waxpeer and
-Skinslink take it (YuPay's orders of 2026-10-09). Remembering it lets the partner API say so
+Skinslink take it (a partner's orders of 2026-10-09). Remembering it lets the partner API say so
 before the next payment: ``POST /public/tradelink/check`` answers ``rejected_by_market`` and
 ``POST /public/orders`` stops buying LIS-SKINS lots for it. Keyed by a SHA-256 of the link —
 the link's token is PII and never stored. Redis errors are swallowed: this is advisory.

@@ -175,7 +175,7 @@ async def refund(
     """Nothing was bought: ``failed`` and the money back to the balance (R9).
 
     ``error`` is LIS-SKINS' refusal code, kept on the purchase: a container log does not
-    survive a restart (YuPay's 2026-10-09 orders had nothing to show).
+    survive a restart (a partner's 2026-10-09 orders had nothing to show).
     """
     pair = await _locked(db, snap)
     if pair is None:
