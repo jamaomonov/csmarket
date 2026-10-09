@@ -48,6 +48,213 @@
         "title": "AdminAdjustUsdIn",
         "type": "object"
       },
+      "AdminApiKeyCard": {
+        "description": "The key page: the row, the latest 20 orders and the webhook.",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/AdminApiKeyRow"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/AdminOrderRow"
+            },
+            "title": "Orders",
+            "type": "array"
+          },
+          "webhook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminApiKeyWebhook"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key",
+          "orders",
+          "webhook"
+        ],
+        "title": "AdminApiKeyCard",
+        "type": "object"
+      },
+      "AdminApiKeyDelivery": {
+        "description": "The newest webhook delivery of the key's owner.",
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "event": {
+            "title": "Event",
+            "type": "string"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "sent",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event",
+          "status",
+          "attempts",
+          "last_status_code",
+          "created_at"
+        ],
+        "title": "AdminApiKeyDelivery",
+        "type": "object"
+      },
+      "AdminApiKeyRow": {
+        "description": "One key with what it has sold.",
+        "properties": {
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "orders": {
+            "title": "Orders",
+            "type": "integer"
+          },
+          "pricing_profile": {
+            "enum": [
+              "retail",
+              "cost"
+            ],
+            "title": "Pricing Profile",
+            "type": "string"
+          },
+          "revenue_usd": {
+            "title": "Revenue Usd",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminOrderUser"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "pricing_profile",
+          "created_at",
+          "last_used_at",
+          "revoked_at",
+          "orders",
+          "revenue_usd",
+          "cost_usd"
+        ],
+        "title": "AdminApiKeyRow",
+        "type": "object"
+      },
+      "AdminApiKeyWebhook": {
+        "description": "The owner's webhook: host only.",
+        "properties": {
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "last_delivery": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminApiKeyDelivery"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "host",
+          "last_delivery"
+        ],
+        "title": "AdminApiKeyWebhook",
+        "type": "object"
+      },
+      "AdminApiKeysOut": {
+        "description": "A page of keys (live first, newest first) and the next cursor.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminApiKeyRow"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "AdminApiKeysOut",
+        "type": "object"
+      },
       "AdminEntryOut": {
         "description": "One balance-history line with who booked it and why.",
         "properties": {
@@ -1314,6 +1521,23 @@
         "title": "AdminResolveIn",
         "type": "object"
       },
+      "AdminRevokeKeyIn": {
+        "additionalProperties": false,
+        "description": "Revoke a key, with a reason.",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "AdminRevokeKeyIn",
+        "type": "object"
+      },
       "AdminSaleItemOut": {
         "description": "One skin of a sale with both prices.",
         "properties": {
@@ -2018,6 +2242,32 @@
           "resolved_at"
         ],
         "title": "AdminSkinslinkPurchaseOut",
+        "type": "object"
+      },
+      "AdminTariffIn": {
+        "additionalProperties": false,
+        "description": "Switch the tariff, with a reason.",
+        "properties": {
+          "pricing_profile": {
+            "enum": [
+              "retail",
+              "cost"
+            ],
+            "title": "Pricing Profile",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pricing_profile",
+          "reason"
+        ],
+        "title": "AdminTariffIn",
         "type": "object"
       },
       "AdminTopupInfo": {
@@ -8299,6 +8549,317 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/v1/admin/api-keys": {
+      "get": {
+        "description": "Live keys first, newest first; ``q`` = part of the owner's display name.",
+        "operationId": "list_keys_api_v1_admin_api_keys_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 80,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeysOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "API keys with their sales",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}": {
+      "get": {
+        "description": "The key, its latest 20 orders and the owner's webhook host.",
+        "operationId": "get_key_card_api_v1_admin_api_keys__key_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "An API key's card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}/revoke": {
+      "post": {
+        "description": "End the key now; its next public request is 401. 409 when already revoked.",
+        "operationId": "post_revoke_api_v1_admin_api_keys__key_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRevokeKeyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revoke a key",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}/tariff": {
+      "put": {
+        "description": "``retail`` or ``cost`` for the next orders; 409 ``api_key_revoked`` on a dead key.",
+        "operationId": "put_tariff_api_v1_admin_api_keys__key_id__tariff_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTariffIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch the tariff",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/audit": {
       "get": {
         "description": "Newest first; each filter is an exact match and they combine with AND.",

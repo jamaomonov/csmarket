@@ -13,6 +13,7 @@ import {
   CreditCard,
   Gauge,
   HandCoins,
+  KeyRound,
   LogOut,
   Menu,
   Package,
@@ -56,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: "/orders", label: "Заказы", icon: Receipt },
       { to: "/trades", label: "Обмены", icon: ArrowLeftRight },
       { to: "/payments", label: "Платежи", icon: CreditCard },
+      { to: "/api-keys", label: "API-ключи", icon: KeyRound },
     ],
   },
   {

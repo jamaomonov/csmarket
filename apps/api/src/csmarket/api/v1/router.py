@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from csmarket.modules.admin.api_keys_routes import router as admin_api_keys_router
 from csmarket.modules.admin.audit_routes import router as admin_audit_router
 from csmarket.modules.admin.dashboard_routes import router as admin_dashboard_router
 from csmarket.modules.admin.orders_routes import router as admin_orders_router
@@ -48,6 +49,7 @@ from csmarket.modules.wallet.routes import router as wallet_router
 router = APIRouter()
 router.include_router(admin_router)
 router.include_router(admin_users_router)
+router.include_router(admin_api_keys_router)
 router.include_router(admin_payments_router)
 router.include_router(admin_audit_router)
 router.include_router(admin_dashboard_router)

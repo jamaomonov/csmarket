@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime
+from typing import Literal
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -91,4 +92,44 @@ async def revoke(db: AsyncSession, *, user: User) -> None:
     log.info("api_key.revoked", key_id=key.id)
 
 
-__all__ = ["TOKEN_PREFIX", "issue", "live_key", "new_token", "revoke"]
+async def set_pricing_profile(
+    db: AsyncSession, *, key: ApiKey, profile: Literal["retail", "cost"]
+) -> None:
+    """Switch a live key's tariff. Flushes, never commits.
+
+    Orders already placed keep the price and profile stamped on them; only the next order
+    reads the new tariff (the key row is read at every request). The tariff follows the user
+    to a reissued key (see :func:`issue`).
+
+    Raises:
+        ConflictError: ``api_key_revoked`` -- the key is revoked.
+    """
+    if key.revoked_at is not None:
+        raise ConflictError("the API key is revoked", code="api_key_revoked")
+    key.pricing_profile = profile
+    await db.flush()
+    log.info("api_key.tariff", key_id=key.id, profile=profile)
+
+
+async def revoke_key(db: AsyncSession, *, key: ApiKey) -> None:
+    """Revoke one key (the admin's path). Flushes, never commits.
+
+    Raises:
+        ConflictError: ``api_key_revoked`` -- already revoked.
+    """
+    if key.revoked_at is not None:
+        raise ConflictError("the API key is already revoked", code="api_key_revoked")
+    key.revoked_at = datetime.now(UTC)
+    await db.flush()
+    log.info("api_key.revoked", key_id=key.id, by_admin=True)
+
+
+__all__ = [
+    "TOKEN_PREFIX",
+    "issue",
+    "live_key",
+    "new_token",
+    "revoke",
+    "revoke_key",
+    "set_pricing_profile",
+]

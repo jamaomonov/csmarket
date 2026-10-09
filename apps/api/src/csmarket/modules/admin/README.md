@@ -5,7 +5,11 @@ one probe, `GET /api/v1/admin/me`; M2 adds `admin_audit_log` with the first admi
 (hiding a catalogue item, editing search aliases — `skins/README.md`, **Admin catalogue**);
 M3 adds the users list and card, ban/unban and the audited balance adjustment; M4a the
 orders and trades API (search, the order page, the attention queue, resolve / refund /
-retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007).
+retry — operator steps in `docs/runbooks/orders.md`, design in ADR-0007); the public
+API's keys page (`/admin/api-keys`: keys with order count, revenue and cost, a card with the
+latest 20 orders and the webhook host, the `retail` / `cost` tariff switch and revoke —
+audited `api_keys.tariff` `{from, to, reason}` and `api_keys.revoke` `{reason}`; a tariff change
+applies to the next order only, placed orders keep their stamped price).
 
 ## Role model
 

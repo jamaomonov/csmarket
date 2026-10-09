@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
-from csmarket.modules.public_api.keys import issue, live_key, revoke
+from csmarket.modules.public_api.keys import (
+    issue,
+    live_key,
+    revoke,
+    revoke_key,
+    set_pricing_profile,
+)
 from csmarket.modules.public_api.limits import LIMITS, enforce
-from csmarket.modules.public_api.models import ApiKey
+from csmarket.modules.public_api.models import ApiKey, ApiWebhook, ApiWebhookDelivery
 from csmarket.modules.public_api.offers import PricedOffer, api_offers, open_offer_id
 from csmarket.modules.public_api.schemas import (
     ApiOrderIn,
@@ -24,6 +30,8 @@ __all__ = [
     "ApiCaller",
     "ApiKey",
     "ApiOrderIn",
+    "ApiWebhook",
+    "ApiWebhookDelivery",
     "PricedOffer",
     "PublicOrderItemOut",
     "PublicOrderOut",
@@ -41,4 +49,6 @@ __all__ = [
     "open_offer_id",
     "public_addresses",
     "revoke",
+    "revoke_key",
+    "set_pricing_profile",
 ]

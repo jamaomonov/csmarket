@@ -162,6 +162,12 @@ async def recent_orders(db: AsyncSession, user_id: str) -> list[AdminOrderRow]:
     return [order_row(o, t, n) for o, t, n in page]
 
 
+async def recent_key_orders(db: AsyncSession, api_key_id: str) -> list[AdminOrderRow]:
+    """The latest :data:`CARD_ORDERS` orders placed through one API key."""
+    page, _ = await _page(db, _rows().where(Order.api_key_id == api_key_id), CARD_ORDERS)
+    return [order_row(o, t, n) for o, t, n in page]
+
+
 async def _counts(db: AsyncSession) -> AdminTradeCounts:
     found = (
         await db.execute(

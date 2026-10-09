@@ -6,6 +6,8 @@ import { createBrowserRouter } from "react-router-dom";
 
 import { Layout } from "./Layout";
 
+import { ApiKeyCard } from "@/features/apiKeys/ApiKeyCard";
+import { ApiKeysPage } from "@/features/apiKeys/ApiKeysPage";
 import { AuditPage } from "@/features/audit/AuditPage";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { LoginPage } from "@/features/auth/LoginPage";
@@ -52,6 +54,8 @@ export const router = createBrowserRouter([
           { path: "/sales", element: <SalesPage /> },
           { path: "/sales/:number", element: <SaleDetail /> },
           { path: "/sale-settings", element: <SaleSettingsPage /> },
+          { path: "/api-keys", element: <ApiKeysPage /> },
+          { path: "/api-keys/:id", element: <ApiKeyCard /> },
           { path: "*", element: <NotFoundPage /> },
         ],
       },
