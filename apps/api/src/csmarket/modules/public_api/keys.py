@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.modules.auth.api import hash_token
+from csmarket.modules.public_api.ip_allowlist import normalise
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import has_topup
@@ -120,6 +121,24 @@ async def set_pricing_profile(
     key.pricing_profile = profile
     await db.flush()
     log.info("api_key.tariff", key_id=key.id, profile=profile)
+
+
+async def set_ip_allowlist(db: AsyncSession, *, user: User, entries: list[str]) -> ApiKey:
+    """Replace the user's live key's IP allow-list. Flushes, never commits.
+
+    The addresses are the partner's infrastructure: only their count is logged.
+
+    Raises:
+        NotFoundError: ``api_key_missing`` -- no live key.
+        ValidationError: ``ip_allowlist_invalid`` -- a bad entry, with its ``index``.
+    """
+    key = await live_key(db, user.id)
+    if key is None:
+        raise NotFoundError("no API key", code="api_key_missing")
+    key.ip_allowlist = normalise(entries)
+    await db.flush()
+    log.info("api_key.ip_allowlist", key_id=key.id, count=len(key.ip_allowlist))
+    return key
 
 
 async def revoke_key(db: AsyncSession, *, key: ApiKey) -> None:

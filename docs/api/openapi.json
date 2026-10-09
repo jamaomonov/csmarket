@@ -3443,6 +3443,13 @@
             "title": "Id",
             "type": "string"
           },
+          "ip_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ip Allowlist",
+            "type": "array"
+          },
           "last_used_at": {
             "anyOf": [
               {
@@ -3464,7 +3471,8 @@
           "id",
           "pricing_profile",
           "created_at",
-          "last_used_at"
+          "last_used_at",
+          "ip_allowlist"
         ],
         "title": "ApiKeyOut",
         "type": "object"
@@ -4457,6 +4465,25 @@
           "fetched_at"
         ],
         "title": "InventoryOut",
+        "type": "object"
+      },
+      "IpAllowlistIn": {
+        "additionalProperties": false,
+        "description": "The key's new IP allow-list; ``[]`` lets any address in.",
+        "properties": {
+          "ip_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 21,
+            "title": "Ip Allowlist",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ip_allowlist"
+        ],
+        "title": "IpAllowlistIn",
         "type": "object"
       },
       "ItemPricingIn": {
@@ -12592,6 +12619,82 @@
           }
         },
         "summary": "Issue an API key",
+        "tags": [
+          "api-key"
+        ]
+      }
+    },
+    "/api/v1/me/api-key/ip-allowlist": {
+      "put": {
+        "description": "Replace the live key's allow-list; ``[]`` lets any address in.\n\nIt governs the public API only, never this route, so a user can always fix a wrong list.\nA replay answers the key as it stands. 404 ``api_key_missing`` without a live key; 422\n``ip_allowlist_invalid`` with the ``index`` of the bad entry.",
+        "operationId": "set_ip_allowlist_api_v1_me_api_key_ip_allowlist_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IpAllowlistIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set my API key's IP allow-list",
         "tags": [
           "api-key"
         ]

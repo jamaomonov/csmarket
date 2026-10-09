@@ -334,3 +334,77 @@ async def test_reissue_carries_limits_and_allowlist(
     assert live.orders_per_min is None
     assert live.ip_allowlist == ["10.0.0.0/8"]
     assert live.pricing_profile == "cost"
+
+
+ALLOWLIST_URL = KEY_URL + "/ip-allowlist"
+
+
+async def test_user_sets_allowlist(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await customer_headers()
+    await _eligible(db_session)
+    token = await _issue(integration_client, h)
+    c = integration_client
+    r = await c.put(ALLOWLIST_URL, json={"ip_allowlist": ["203.0.113.7"]}, headers={**h, **_idem()})
+    assert r.status_code == 200, r.text
+    assert r.json()["ip_allowlist"] == ["203.0.113.7/32"]
+    assert (await c.get(KEY_URL, headers=h)).json()["ip_allowlist"] == ["203.0.113.7/32"]
+    ok = await c.get(PROBE, headers=_bearer(token, **{"X-Forwarded-For": "203.0.113.7"}))
+    assert ok.status_code == 200
+    other = await c.get(PROBE, headers=_bearer(token, **{"X-Forwarded-For": "198.51.100.1"}))
+    assert other.status_code == 403
+    assert other.json()["code"] == "ip_not_allowed"
+
+
+async def test_allowlist_needs_idempotency_key(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await customer_headers()
+    await _eligible(db_session)
+    await _issue(integration_client, h)
+    r = await integration_client.put(ALLOWLIST_URL, json={"ip_allowlist": []}, headers=h)
+    assert r.status_code == 422
+
+
+async def test_allowlist_without_key_is_404(
+    integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    h = await customer_headers()
+    r = await integration_client.put(
+        ALLOWLIST_URL, json={"ip_allowlist": []}, headers={**h, **_idem()}
+    )
+    assert r.status_code == 404
+    assert r.json()["code"] == "api_key_missing"
+
+
+async def test_allowlist_bad_entry_is_422(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await customer_headers()
+    await _eligible(db_session)
+    await _issue(integration_client, h)
+    r = await integration_client.put(
+        ALLOWLIST_URL, json={"ip_allowlist": ["203.0.113.7", "nope"]}, headers={**h, **_idem()}
+    )
+    assert r.status_code == 422
+    assert r.json()["code"] == "ip_allowlist_invalid"
+    assert r.json()["index"] == 1
+
+
+async def test_allowlist_does_not_gate_the_site_route(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await customer_headers()
+    await _eligible(db_session)
+    token = await _issue(integration_client, h)
+    c = integration_client
+    far = {"ip_allowlist": ["198.51.100.0/24"]}
+    assert (await c.put(ALLOWLIST_URL, json=far, headers={**h, **_idem()})).status_code == 200
+    blocked = await c.get(PROBE, headers=_bearer(token, **{"X-Forwarded-For": "203.0.113.7"}))
+    assert blocked.status_code == 403
+    clear = await c.put(ALLOWLIST_URL, json={"ip_allowlist": []}, headers={**h, **_idem()})
+    assert clear.status_code == 200
+    assert clear.json()["ip_allowlist"] == []
+    ok = await c.get(PROBE, headers=_bearer(token, **{"X-Forwarded-For": "203.0.113.7"}))
+    assert ok.status_code == 200

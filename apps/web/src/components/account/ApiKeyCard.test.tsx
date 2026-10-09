@@ -10,10 +10,13 @@ import { ApiKeyCard } from "./ApiKeyCard";
 
 import type * as ApiKeyModule from "@/lib/api-key";
 
+import { IpAllowlistInvalidError } from "@/lib/api-key";
+
 const api = vi.hoisted(() => ({
   getApiKey: vi.fn(),
   issueApiKey: vi.fn(),
   revokeApiKey: vi.fn(),
+  setIpAllowlist: vi.fn(),
 }));
 vi.mock("@/lib/api-key", async (importOriginal) => ({
   ...(await importOriginal<typeof ApiKeyModule>()),
@@ -26,6 +29,7 @@ const LIVE = {
   pricing_profile: "retail",
   created_at: "2026-10-08T10:00:00Z",
   last_used_at: null,
+  ip_allowlist: [] as string[],
 };
 const ISSUED = { ...LIVE, token: "csk_secret-token-123" };
 
@@ -214,5 +218,40 @@ describe("ApiKeyCard", () => {
     view();
     fireEvent.click(await screen.findByRole("button", { name: "Отозвать" }));
     expect(screen.getByRole("button", { name: "Да, отозвать" })).toHaveFocus();
+  });
+
+  it("shows «Любой адрес» for an empty allow-list", async () => {
+    api.getApiKey.mockResolvedValue(LIVE);
+    view();
+    expect(await screen.findByText("Любой адрес")).toBeInTheDocument();
+  });
+
+  it("saves the lines as entries", async () => {
+    api.getApiKey.mockResolvedValue(LIVE);
+    api.setIpAllowlist.mockResolvedValue({ ...LIVE, ip_allowlist: ["203.0.113.7/32"] });
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Изменить" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Разрешённые IP-адреса" }), {
+      target: { value: "203.0.113.7\n10.0.0.0/8" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(api.setIpAllowlist).toHaveBeenCalledWith(
+        ["203.0.113.7", "10.0.0.0/8"],
+        expect.stringMatching(/^web-apikey-/),
+      );
+    });
+  });
+
+  it("names the line the server refused", async () => {
+    api.getApiKey.mockResolvedValue(LIVE);
+    api.setIpAllowlist.mockRejectedValue(new IpAllowlistInvalidError(1));
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: "Изменить" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Разрешённые IP-адреса" }), {
+      target: { value: "203.0.113.7\nnope" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByText("Строка 2: не IP-адрес")).toBeInTheDocument();
   });
 });

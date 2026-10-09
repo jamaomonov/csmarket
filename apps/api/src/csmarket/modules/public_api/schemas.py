@@ -7,6 +7,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from csmarket.modules.public_api.ip_allowlist import MAX_ENTRIES
+
 
 class ApiKeyOut(BaseModel):
     """The live key's public facts (never the token)."""
@@ -17,6 +19,15 @@ class ApiKeyOut(BaseModel):
     pricing_profile: str
     created_at: datetime
     last_used_at: datetime | None
+    ip_allowlist: list[str]
+
+
+class IpAllowlistIn(BaseModel):
+    """The key's new IP allow-list; ``[]`` lets any address in."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ip_allowlist: list[str] = Field(max_length=MAX_ENTRIES + 1)
 
 
 class ApiKeyIssuedOut(BaseModel):
