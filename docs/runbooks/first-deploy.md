@@ -19,8 +19,9 @@ Target: **csmarket.uz** on one VPS (4 vCPU / 8 GB RAM / ≥ 80 GB SSD), the whol
 - [ ] GitHub repo `jamaomonov/csmarket` exists, `main` pushed.
 - [ ] Sentry project for csmarket and its DSN (optional for M0; empty disables Sentry).
 
-Not needed for M0 — they belong to M5 (launch) and switch on the `ops` compose profile
-([step 9](#9-backups-and-alerts-m5)):
+Not needed for M0 — they belong to M5 (launch) and switch on the `alerts` and `ops` compose
+profiles
+([step 9](#9-alerts-first-backups-later-m5)):
 
 - [ ] An **age keypair for backups**, made on the operator's laptop, never on the server:
       `age-keygen -o ~/csmarket-backup.key`. The public `age1…` line goes to the server; the
@@ -171,7 +172,7 @@ for f in $M0_SECRETS; do grep -Hn 'CHANGE_ME' "secrets/$f.env"; done   # must pr
 ```
 
 `backup.env` and `alertmanager.env` keep their placeholders until M5: the services that read
-them are in the `ops` profile and do not start before step 9 enables it. Compose still wants
+them are in the `ops` profile (Alertmanager also in `alerts`) and do not start before step 9 enables it. Compose still wants
 the files to exist, so copy them anyway.
 
 Keep an offline copy of `CSMARKET_APP_ENC_KEY`: the server holds the only one, and losing it
@@ -308,34 +309,28 @@ block.
 
 ---
 
-## 9. Backups and alerts (M5)
+## 9. Alerts first, backups later (M5)
 
-Not part of M0. `backup` and `alertmanager` sit in the compose profile `ops`, because on
-placeholder secrets Alertmanager crash-loops and the nightly backup fails. Until then
-Prometheus keeps evaluating the rules and just logs that it cannot reach Alertmanager.
+Not part of M0. Alertmanager is in the compose profiles `alerts` and `ops`; `backup` is in
+`ops` only. Both would fail on placeholder secrets (Alertmanager crash-loops, the nightly
+backup fails), so they start only when the profile is switched on. Until then Prometheus
+keeps evaluating the rules and just logs that it cannot reach Alertmanager. Alerts come
+first because they need only the Telegram bot; the backup needs the R2 bucket and the age key.
 
-At M5, with the age key, the R2 bucket and token, and the Telegram bot from step 0:
+### 9a. Alerts
 
-1. Fill in `secrets/backup.env` and `secrets/alertmanager.env`; `chmod 600`;
-   `grep -RIn 'CHANGE_ME' secrets/` must now print nothing at all.
-2. Turn the profile on in the same `.env` that pins the tag (deploys keep this line), and
-   start the two services:
+1. Fill in `secrets/alertmanager.env` on the server (the owner does it, never in chat);
+   `chmod 600 secrets/alertmanager.env`.
+2. Turn the `alerts` profile on in the same `.env` that pins the tag (deploys keep this line),
+   and start Alertmanager:
 
    ```bash
    cd ~/opt/csmarket
-   echo 'COMPOSE_PROFILES=ops' >> .env
-   docker compose -f docker-compose.prod.yml up -d
+   echo 'COMPOSE_PROFILES=alerts' >> .env
+   docker compose -f docker-compose.prod.yml up -d alertmanager
    ```
 
-3. The `backup` service runs `pg_backup.sh` every night at `BACKUP_HOUR_UTC` (02:00 UTC by
-   default). Run it once now and look at the result:
-
-   ```bash
-   docker compose -f docker-compose.prod.yml exec -T backup bash /scripts/pg_backup.sh
-   docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-backups
-   ```
-
-4. Prometheus targets must all be up, and a test alert must reach the ops chat with the
+3. Prometheus targets must all be up, and a test alert must reach the ops chat with the
    `[csmarket]` prefix:
 
    ```bash
@@ -346,6 +341,29 @@ At M5, with the age key, the R2 bucket and token, and the Telegram bot from step
    ```
 
    The test alert resolves by itself after a few minutes.
+
+### 9b. Backups
+
+With the age key and the R2 bucket and token from step 0:
+
+1. Fill in `secrets/backup.env`; `chmod 600`; `grep -RIn 'CHANGE_ME' secrets/` must now print
+   nothing at all.
+2. Switch the profile to `COMPOSE_PROFILES=alerts,ops` (or just `ops`, which includes
+   Alertmanager) in `.env` and start the backup:
+
+   ```bash
+   cd ~/opt/csmarket
+   sed -i 's/^COMPOSE_PROFILES=.*/COMPOSE_PROFILES=alerts,ops/' .env
+   docker compose -f docker-compose.prod.yml up -d
+   ```
+
+3. The `backup` service runs `pg_backup.sh` every night at `BACKUP_HOUR_UTC` (02:00 UTC by
+   default). Run it once now and look at the result:
+
+   ```bash
+   docker compose -f docker-compose.prod.yml exec -T backup bash /scripts/pg_backup.sh
+   docker compose -f docker-compose.prod.yml exec -T backup rclone ls r2:csmarket-backups
+   ```
 
 ---
 

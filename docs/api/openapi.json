@@ -4800,6 +4800,7 @@
         "description": "Requests allowed per minute and key.",
         "properties": {
           "check_per_min": {
+            "description": "Trade-link checks (POST /tradelink/check) allowed per minute.",
             "title": "Check Per Min",
             "type": "integer"
           },
@@ -6283,6 +6284,7 @@
                 "type": "null"
               }
             ],
+            "description": "The sender's Steam name when the market gives it; usually null.",
             "title": "Seller Name"
           },
           "steam_offer_id": {
@@ -6294,6 +6296,7 @@
                 "type": "null"
               }
             ],
+            "description": "Steam's trade offer id; the buyer accepts it at https://steamcommunity.com/tradeoffer/{id}/",
             "title": "Steam Offer Id"
           }
         },
@@ -8216,9 +8219,11 @@
                 "type": "null"
               }
             ],
+            "description": "Why the link is bad; null for ok and unavailable.",
             "title": "Reason"
           },
           "verdict": {
+            "description": "ok: the link can receive a trade. bad: it cannot, see reason. unavailable: the check could not run; do not block a purchase on it.",
             "enum": [
               "ok",
               "bad",

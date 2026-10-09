@@ -59,8 +59,9 @@ Authorization: Bearer csm_EXAMPLEtokenNotReal
 - A key can be issued after your first top-up or once your USD balance is switched on.
 - One live key per account. **Reissuing revokes the old key at once**; your orders, balance,
   pricing and webhook stay.
-- A key may be limited to a list of IP addresses (ask us). A call from elsewhere is
-  `403 ip_not_allowed`. A missing, unknown or revoked key is `401 unauthorized`.
+- A key may be limited to a list of IP addresses. Set it in your profile (**Allowed IP
+  addresses**): up to 20 IPv4 or IPv6 addresses or ranges, empty means any address. A call from
+  elsewhere is `403 ip_not_allowed`. Your IP list, limits and price list stay after a reissue. A missing, unknown or revoked key is `401 unauthorized`.
 
 # Pricing and balance
 
@@ -127,6 +128,16 @@ then completes in the background; follow it below.
 | `delivered`  | your customer accepted it (`release_at`: Steam's protection ends)  |
 | `refunded`   | the purchase did not happen; the money is back in your USD balance |
 
+`buying` lasts as long as the purchase takes: usually minutes, longer when the market is slow.
+The order is not lost; poll or wait for the webhook. It ends in `trade_sent`, or in `refunded`
+when the purchase is refused or cancelled, or when our support cancels the order. A trade that
+is rolled back after delivery is not refunded.
+
+Once the offer is out, the order has a `trade` object with `offer_sent_at`, `accepted_at`,
+`release_at`, `steam_offer_id` and `seller_name`. Your customer accepts the offer at
+`https://steamcommunity.com/tradeoffer/{steam_offer_id}/`. `seller_name` is the sender's Steam
+name when we have it, usually `null`.
+
 | Refund `reason`        | Cause                                                       |
 | ---------------------- | ----------------------------------------------------------- |
 | `sold_out`             | the offer was gone                                          |
@@ -137,6 +148,29 @@ then completes in the background; follow it below.
 | `price_moved`          | reserved for later; not sent today                          |
 
 A delivered skin is never refunded automatically. A `402 insufficient_balance` writes nothing.
+
+## Checking a trade link
+
+Before you buy, you can check your customer's trade link with `POST /tradelink/check`. It is
+advisory: it never blocks a purchase and needs no `Idempotency-Key`.
+
+``bash
+curl -s https://api.csmarket.uz/api/v1/public/tradelink/check \
+  -H 'Authorization: Bearer csm_EXAMPLEtokenNotReal' \
+  -H 'Content-Type: application/json' \
+  -d '{"trade_link": "https://steamcommunity.com/tradeoffer/new/?partner=1&token=FAKEFAKE"}'
+``
+
+The answer is `{"verdict": "ok" | "bad" | "unavailable", "reason": ...}`. `unavailable` means
+the check could not run: do not block a purchase on it.
+
+| `reason`            | Meaning                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| `invalid_link`      | not a Steam trade link                                       |
+| `private_inventory` | your customer's inventory is private                         |
+| `trade_ban`         | your customer's Steam account cannot trade                   |
+| `hold`              | your customer's Steam account has a trade hold               |
+| `not_found`         | no such Steam account, or the token does not match the owner |
 
 # Order events
 
@@ -232,4 +266,11 @@ Verify the **raw body bytes** before parsing the JSON.
 | 429  | `rate_limited` — wait `Retry-After` seconds                                                                               |
 | 503  | `feed_unavailable`, `rate_unavailable` — retry after `Retry-After`                                                        |
 
-Limits per key, per minute: **60** reads, **10** purchases, **1** first catalogue page.
+Limits per key, per minute: **60** reads, **10** purchases, **1** first catalogue page, **30** trade-link checks. `GET /me` shows your limits (`limits`, including
+`check_per_min`). Need more? Ask us and we raise them for your key.
+
+# Changelog
+
+- **2026-10-09 — v1.1.** Added: limits per key in `GET /me`, `POST /tradelink/check`,
+  `steam_offer_id` and `seller_name` on an order's `trade`, and the IP list you set in your
+  profile. Nothing was removed or renamed.

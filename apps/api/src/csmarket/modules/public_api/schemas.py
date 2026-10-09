@@ -126,8 +126,13 @@ class TradeLinkCheckOut(BaseModel):
 
     model_config = ConfigDict(frozen=True)
 
-    verdict: Literal["ok", "bad", "unavailable"]
-    reason: Literal["invalid_link", "private_inventory", "trade_ban", "hold", "not_found"] | None
+    verdict: Literal["ok", "bad", "unavailable"] = Field(
+        description="ok: the link can receive a trade. bad: it cannot, see reason. "
+        "unavailable: the check could not run; do not block a purchase on it."
+    )
+    reason: (
+        Literal["invalid_link", "private_inventory", "trade_ban", "hold", "not_found"] | None
+    ) = Field(description="Why the link is bad; null for ok and unavailable.")
 
 
 class PublicOrderItemOut(BaseModel):
@@ -150,9 +155,16 @@ class PublicTradeOut(BaseModel):
     #: When Steam's trade protection ends.
     release_at: datetime | None
     #: Steam's trade offer id: ``https://steamcommunity.com/tradeoffer/{id}/``.
-    steam_offer_id: str | None = None
+    steam_offer_id: str | None = Field(
+        default=None,
+        description="Steam's trade offer id; the buyer accepts it at "
+        "https://steamcommunity.com/tradeoffer/{id}/",
+    )
     #: The sender's Steam name when the market gives it; usually ``null``.
-    seller_name: str | None = None
+    seller_name: str | None = Field(
+        default=None,
+        description="The sender's Steam name when the market gives it; usually null.",
+    )
 
 
 class PublicRefundOut(BaseModel):
@@ -207,7 +219,9 @@ class MeLimitsOut(BaseModel):
     read_per_min: int
     orders_per_min: int
     feed_per_min: int
-    check_per_min: int
+    check_per_min: int = Field(
+        description="Trade-link checks (POST /tradelink/check) allowed per minute."
+    )
 
 
 class MeOut(BaseModel):

@@ -96,8 +96,9 @@ Never `DELETE` a key: `orders.api_key_id` is RESTRICT and old orders must stay r
 customer can issue a new key afterwards (the tariff carries over from the user's newest key, revoked or
 not, so a `cost` client stays `cost`). To cut an account off
 entirely, ban the user in the admin («Пользователи»): the key answers 403 `account_suspended`.
-An IP allow-list is set the same way, with CIDRs: `UPDATE api_keys SET ip_allowlist =
-ARRAY['203.0.113.0/24']::varchar[] WHERE id = '<key_id>';` (empty array = any address).
+The IP allow-list is the customer's to set (see «The IP allow-list» below); SQL is only a
+fallback: `UPDATE api_keys SET ip_allowlist = ARRAY['203.0.113.0/24']::varchar[] WHERE id =
+'<key_id>';` (empty array = any address).
 
 ## A stuck or disputed API order
 
@@ -203,11 +204,51 @@ the scheduler to force a run: that re-arms the ~400 s delay. Check and wait (the
 `409 cursor_expired` is normal when a client holds a cursor longer than 1800 s: it restarts from
 the first page. A page 0 revalidation counts as the once-a-minute `feed` limit (429), by design.
 
-## Limits and throttles
+## Raising a key's limits
 
-Per key: 60 reads, 10 orders, 1 feed first page a minute (`public_api:rl:{bucket}:{key_id}`);
-failed authentications 30 a minute per address (`public_api:authfail:{hash_short(ip)}`). To lift a throttle
-for a client, delete its Redis counter key (counters only; nothing else is stored under them).
+Per key and minute: 60 reads, 10 orders, 1 feed first page, 30 trade-link checks by default
+(`public_api:rl:{bucket}:{key_id}`, buckets `read`, `order`, `feed`, `check`). A client who
+needs more: admin → «API-ключи» → the key → «Лимиты» → enter the number (1–10 000) or leave a
+field empty for the default; audited as `api_keys.limits` `{from, to}`. It applies on the next
+call (the key row is read each time) and a reissue carries it over. YuPay runs at 600 reads /
+30 orders / 1 feed. The card also shows the key's IP allow-list, read-only.
+A temporary throttle is lifted by deleting the client's Redis counter key (counters only;
+nothing else is stored under them). Failed authentications are 30 a minute per address
+(`public_api:authfail:{hash_short(ip)}`).
+
+## The IP allow-list
+
+The customer sets it in the profile («API-ключ» → «Разрешённые IP-адреса»): up to 20 IPv4 /
+IPv6 addresses or CIDRs, empty = any address. A bad entry is refused with 422
+`ip_allowlist_invalid` naming its index. The admin sees the list on the key's card but does
+not edit it. A client locked out by a wrong list clears or fixes it in the profile; if the
+site is out of reach for them, use the SQL fallback in «Revoke a key». Addresses are PII-grade:
+never put one in a ticket or a log.
+
+## An API order buying for over 30 minutes
+
+Alert `PublicApiOrderBuyingLong` (warn): the gauge
+`csmarket_public_api_orders_buying_oldest_seconds` (the age of the oldest paid API order still
+`buying`) has been over 1800 s for 5 minutes. It is not an error by itself: `buying` lasts as
+long as the market takes to answer.
+
+1. Find the order (admin → «Заказы», channel API, or the SQL in «A stuck or disputed API
+   order») and read its purchase and the attention reason.
+2. **Never buy again by hand.** The worker keys the buy by our own id and resolves a lost answer
+   by lookup; a second buy would pay twice.
+3. The outcome comes from the market: a delivered skin finishes the order; a refusal or
+   cancellation books the refund. Refund by hand only through the admin and only on the
+   market's refusal (see the next sections). A rollback after delivery is not refunded.
+4. If the market is down for everyone, wait: the gauge returns to 0 when the orders settle.
+
+## The trade-link check answers only `unavailable`
+
+`POST /public/tradelink/check` returns `unavailable` when the check could not run; it never
+blocks a purchase. If every call answers so: the Waxpeer key is missing or rejected
+(`CSMARKET_WAXPEER_API_KEY` in `secrets/api.env`; the key must be whitelisted for the VPS IP,
+`waxpeer.md`) or Waxpeer is down, and the breaker is open for its cool-down (look for the
+breaker key in Redis and the `trade_link.check` warnings in the API log). Fix the key or wait;
+no restart is needed. The bucket `check` limits calls per key (`public_api:rl:check:{key_id}`).
 
 ## The partner docs at docs.csmarket.uz
 

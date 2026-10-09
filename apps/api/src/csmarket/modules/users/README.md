@@ -53,6 +53,10 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
     the link stays saved and `trade_link_checked_at` is not touched; a 60 s breaker stops
     further upstream calls.
   - 4 s timeouts on both calls (AGENTS §11 carve-out).
+- **Checkers** (`tradelink_checkers.py`): the factory that builds the Waxpeer + Steam check,
+  re-exported by `users.api`; the site's `POST /me/trade-link/check` and the public API's
+  `POST /public/tradelink/check` (which never saves a link) use the same one, with the same
+  cache and breaker.
 - **Redis keys:** `users:tradelink:{sha256(link)[:32]}` — 600 s, value is
   `{verdict, reason}` only; `users:tradelink:breaker` — 60 s. No key holds a raw link,
   token, partner or Steam ID.

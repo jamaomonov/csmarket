@@ -137,11 +137,11 @@ run before the new code starts. Do not deploy into a surge unless the deploy is 
 Alerts go to the ops Telegram chat through Alertmanager, prefixed `[csmarket]`.
 `infra/alertmanager/alertmanager.tmpl.yml` is a template; the compose entrypoint substitutes
 `ALERT_BOT_TOKEN` and `ALERT_CHAT_ID` from `secrets/alertmanager.env` at start-up.
-Alertmanager is in the `ops` compose profile and runs only once M5 sets
-`COMPOSE_PROFILES=ops` in `~/opt/csmarket/.env` ([first deploy, step 9](first-deploy.md#9-backups-and-alerts-m5));
+Alertmanager is in the `alerts` and `ops` compose profiles and runs only once M5 sets
+`COMPOSE_PROFILES=alerts` (or `ops`) in `~/opt/csmarket/.env` ([first deploy, step 9](first-deploy.md#9-alerts-first-backups-later-m5));
 before that no alert leaves the box.
 
-**If alerts stop arriving**, check in this order (step 0: `grep COMPOSE_PROFILES .env` says `ops`):
+**If alerts stop arriving**, check in this order (step 0: `grep COMPOSE_PROFILES .env` says `alerts` or `ops`):
 
 1. `docker compose -f docker-compose.prod.yml exec -T prometheus wget -qO- http://localhost:9090/api/v1/alertmanagers`
    — an empty `activeAlertmanagers` means Prometheus is not wired to it.

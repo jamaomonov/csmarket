@@ -46,7 +46,10 @@
   wallet, plan B keys, feed, offers, buying, plan C signed webhooks, the admin API keys page,
   metrics and the supplier-checked admin refund of Skinslink / LIS-SKINS orders, ADR-0018) is
   built on branch `public-api` — not merged, not deployed (`docs/api/public-v1.md`,
-  `docs/runbooks/public-api.md`).
+  `docs/runbooks/public-api.md`). **v1.1** (spec `2026-10-09-public-api-v1-1-design.md`, ADR-0017
+  «v1.1 consequences»: limits per key, `POST /public/tradelink/check`, `trade.steam_offer_id`,
+  the user's IP allow-list, the `PublicApiOrderBuyingLong` alert, Alertmanager in the `alerts`
+  compose profile) is built on branch `public-api-v1-1` — not merged, not deployed.
 - **Skinslink as a second buy source** (spec `2026-10-06-skinslink-buy-source-design.md`,
   ADR-0010) is built on branch `skinslink-buy` — not merged, not deployed. It ships off
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in
@@ -334,7 +337,9 @@ csmarket/
   `ip_guard` bucket. A
   second carve-out: `POST /me/trade-link/check` (M1; Waxpeer `check-tradelink` + Steam
   `GetTradeHoldDurations`), advisory, 4 s timeouts, 10-min Redis cache keyed by a hash of
-  the link. A third: `POST /orders` (M4a, ADR-0007 R11) re-prices the chosen offer through the
+  the link; `POST /api/v1/public/tradelink/check` (public API v1.1) is the same check for an API
+  key, the same carve-out, with its own per-key `check` limit and already matched by the
+  `/trade-?link/check` `handler` regexes. A third: `POST /orders` (M4a, ADR-0007 R11) re-prices the chosen offer through the
   same cached, budgeted, breaker-guarded read as `GET /skins/{slug}/listings` (a degraded
   answer is accepted; the worker's price cap is the money guard), with no DB connection
   held across it. A fourth, the first on an admin route: `POST /admin/orders/{number}/refund`

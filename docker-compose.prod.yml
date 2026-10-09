@@ -9,10 +9,11 @@ name: csmarket-prod
 # Without it every command here fails instead of silently resolving a stale
 # cached ``:main`` — see docs/runbooks/deploy.md.
 #
-# Profiles: ``backup`` and ``alertmanager`` are in the ``ops`` profile. They need
-# M5 inputs (R2 bucket, age key, Telegram bot) and would fail on placeholder
-# secrets, so they start only once ``COMPOSE_PROFILES=ops`` is in the same
-# ``.env`` (docs/runbooks/first-deploy.md, step 9).
+# Profiles: ``backup`` is in ``ops``; ``alertmanager`` is in ``ops`` and ``alerts``.
+# They need M5 inputs (R2 bucket, age key, Telegram bot) and would fail on
+# placeholder secrets, so they start only once ``COMPOSE_PROFILES`` is in the same
+# ``.env``: ``alerts`` runs Alertmanager alone, ``ops`` both it and the backup
+# (docs/runbooks/first-deploy.md, step 9).
 
 x-app-env: &app-env
   CSMARKET_ENVIRONMENT: prod
@@ -292,8 +293,9 @@ services:
 
   alertmanager:
     image: prom/alertmanager:v0.28.1
-    # M5: needs a real Telegram bot token; enabled by COMPOSE_PROFILES=ops.
-    profiles: [ops]
+    # M5: needs a real Telegram bot token. ``alerts`` runs it alone (the server's
+    # .env sets COMPOSE_PROFILES=alerts); ``ops`` keeps meaning it and the backup.
+    profiles: [ops, alerts]
     logging: *default-logging
     mem_limit: 128m
     restart: unless-stopped
