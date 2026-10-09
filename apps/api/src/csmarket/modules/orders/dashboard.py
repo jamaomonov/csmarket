@@ -5,7 +5,7 @@
   really cost, else what checkout agreed); margin = revenue − cost, and its percent of
   revenue;
 - **refunds** = orders refunded in the window (by ``refunded_at``), count and Σ ``price_uzs``;
-- **in flight** = ``paid | buying | trade_sent`` now; **attention** = open attentions now;
+- **in flight** = the «Обмены» «В пути» tab's set now (``ACTIVE_SQL``: paid / buying / sent and not yet accepted, not refunded); **attention** = open attentions now;
 - one row per **Tashkent day** of the window, zeros included; the Waxpeer balance is the
   ``orders.health`` job's cached read.
 
@@ -29,7 +29,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.lisskins.api import cached_balance as lisskins_cached_balance
 from csmarket.modules.orders.health import cached_balance
-from csmarket.modules.orders.models import IN_FLIGHT, Order, SkinTrade
+from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.trade_row import ACTIVE_SQL
 from csmarket.modules.skinslink.api import SkinslinkPurchase, skinslink_cached_balance
 
 Days = Literal[1, 7, 30]
@@ -138,8 +139,15 @@ async def _refunds(db: AsyncSession, since: datetime, at: datetime) -> Refunds:
 
 async def _now_counts(db: AsyncSession) -> tuple[int, int]:
     """Orders in flight and open attentions of every source, right now (one query)."""
+    # The «Обмены» table's «В пути» tab rule itself (ACTIVE_SQL reads the joined sources).
     in_flight = (
-        select(func.count()).select_from(Order).where(Order.status.in_(IN_FLIGHT)).scalar_subquery()
+        select(func.count())
+        .select_from(Order)
+        .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
+        .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
+        .outerjoin(LisskinsPurchase, LisskinsPurchase.order_id == Order.id)
+        .where(ACTIVE_SQL)
+        .scalar_subquery()
     )
     waiting = [
         select(func.count())

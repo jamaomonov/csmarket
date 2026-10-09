@@ -39,7 +39,7 @@ trade: the order keeps its status, nothing is refunded, the buyer reads «Мы �
   copy buttons, the Steam offer link, seller, attention and its resolution) and «Действия».
 - **«Обмены»** (`/trades`; `/orders` redirects here): one table of every order — Waxpeer,
   Skinslink and LIS-SKINS, site and API. Tabs «Все», «В пути» (buying or offer not yet
-  accepted), «На холде» (accepted, Steam's protection running — «6д 4ч · 15.10» under the
+  accepted; the dashboard's «В пути» tile counts the very same set and links to this tab), «На холде» (accepted, Steam's protection running — «6д 4ч · 15.10» under the
   chip), «Требуют внимания» (an open attention of any source) and «Возвраты», each with its
   count. Search by order number (prefix), skin name or the Steam trade offer id (exact).
   Columns: number and date, skin (rarity bar, float), source (and «API · <owner>»), price in

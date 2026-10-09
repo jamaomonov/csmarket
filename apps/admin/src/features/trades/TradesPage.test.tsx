@@ -174,9 +174,18 @@ describe("TradesPage", () => {
     const cell = within(row).getByTestId("trade-price").closest("td") as HTMLElement;
     const title = cell.getAttribute("title") ?? "";
     expect(title).toContain("Цена на витрине: 171");
-    expect(title).toContain("Списано: $13.58");
+    expect(title).toMatch(/Списано: 171/);
+    expect(title).not.toContain("Списано: $");
     expect(title).toContain("Заплатили площадке: $12.00");
     expect(title).toContain("Прибыль: $1.58 (11.6%)");
+  });
+
+  it("shows an API order's charge in dollars", async () => {
+    api.listTrades.mockResolvedValue(page([API_REFUND]));
+    renderPage();
+    const row = await rowOf("R1");
+    const cell = within(row).getByTestId("trade-price").closest("td") as HTMLElement;
+    expect(cell.getAttribute("title")).toContain("Списано: $13.58");
   });
 
   it("counts down a hold and shows its end date", async () => {

@@ -23,11 +23,16 @@ export function dollars(value: string): string {
   return `${negative ? "−" : ""}$${whole}.${cents.padEnd(2, "0").slice(0, 2)}`;
 }
 
+/** What the buyer was debited, in their currency: the USD wallet of an API order, else soʻm. */
+function charged(row: AdminTradeRow): string {
+  return row.channel === "api" ? dollars(row.price_usd) : formatSum(row.price_uzs);
+}
+
 function priceTitle(row: AdminTradeRow): string {
   const pct = row.margin_pct === null ? "" : ` (${row.margin_pct}%)`;
   return [
     `Цена на витрине: ${formatSum(row.price_uzs)}`,
-    `Списано: ${dollars(row.price_usd)}`,
+    `Списано: ${charged(row)}`,
     `Заплатили площадке: ${dollars(row.cost_usd)}`,
     `Прибыль: ${dollars(row.margin_usd)}${pct}`,
   ].join("\n");

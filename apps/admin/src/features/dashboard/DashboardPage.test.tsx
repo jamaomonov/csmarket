@@ -91,6 +91,7 @@ describe("DashboardPage", () => {
     expect(tile("Возвраты")).toHaveTextContent("2");
     expect(tile("Возвраты")).toHaveTextContent("177 000 сум");
     expect(tile("В пути")).toHaveTextContent("3");
+    expect(within(tile("В пути")).getByRole("link")).toHaveAttribute("href", "/trades?view=active");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("$812.5");
     expect(tile("Баланс Waxpeer")).toHaveTextContent("обновлено 4 мин назад");
     expect(tile("Баланс Skinslink")).toHaveTextContent("$240.5");

@@ -349,3 +349,17 @@ async def test_query_count_is_constant_whatever_the_sources(
         await make_skinslink_order(db_session, purchase_status="hold", purchase_id=200 + i)
         await make_lisskins_order(db_session)
     assert few == await _statements(integration_client, db_engine, h)
+
+
+async def test_the_dashboard_in_flight_is_the_active_tab_count(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    """One rule for «В пути»: the dashboard tile and the ``active`` tab count the same set."""
+    h = await admin_headers()
+    await _mixed(db_session)
+    await _order(db_session, status="paid")
+    tab = (await _page(integration_client, h, view="active"))["counts"]["active"]
+    assert tab > 0
+    r = await integration_client.get("/api/v1/admin/dashboard?days=1", headers=h)
+    assert r.status_code == 200, r.text
+    assert r.json()["in_flight"] == tab

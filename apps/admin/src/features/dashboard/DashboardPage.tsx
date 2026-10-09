@@ -49,7 +49,11 @@ function Tiles({ data }: { data: DashboardOut }) {
         <span>{refunds.count}</span>
         <span className="text-fg-muted text-sm">{formatSum(refunds.amount_uzs)}</span>
       </Tile>
-      <Tile title="В пути">{data.in_flight}</Tile>
+      <Tile title="В пути">
+        <Link to="/trades?view=active" className="underline">
+          {data.in_flight}
+        </Link>
+      </Tile>
       <Tile title="Требуют внимания">
         <Link
           to="/trades?view=attention"
