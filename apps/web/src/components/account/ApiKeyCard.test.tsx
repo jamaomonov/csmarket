@@ -4,7 +4,7 @@ import ru from "@csmarket/i18n/locales/ru/web.json";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ApiKeyCard } from "./ApiKeyCard";
 
@@ -42,6 +42,14 @@ function view() {
 }
 
 describe("ApiKeyCard", () => {
+  const realClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const realExec: unknown = Reflect.get(document, "execCommand");
+  afterEach(() => {
+    if (realClipboard) Object.defineProperty(navigator, "clipboard", realClipboard);
+    else Reflect.deleteProperty(navigator, "clipboard");
+    Reflect.set(document, "execCommand", realExec);
+  });
+
   beforeEach(() => {
     Object.values(api).forEach((f) => f.mockReset());
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
@@ -106,7 +114,12 @@ describe("ApiKeyCard", () => {
     view();
     fireEvent.click(await screen.findByRole("button", { name: "Выпустить ключ" }));
     expect(await screen.findByText("Сначала пополните баланс")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Выпустить ключ" })).toBeDisabled();
+    const again = screen.getByRole("button", { name: "Выпустить ключ" });
+    expect(again).toBeEnabled();
+    api.issueApiKey.mockResolvedValue(ISSUED);
+    fireEvent.click(again);
+    expect(await screen.findByText(ISSUED.token)).toBeInTheDocument();
+    expect(screen.queryByText("Сначала пополните баланс")).toBeNull();
   });
 
   it("says so when issuing fails", async () => {

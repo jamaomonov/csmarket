@@ -99,6 +99,7 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
 
   async function copy(value: string) {
     setCopyFailed(false);
+    setCopied(false);
     try {
       await navigator.clipboard.writeText(value);
       setCopied(true);
@@ -177,7 +178,7 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
     body = (
       <Button
         className="mt-3"
-        disabled={busy || notAllowed}
+        disabled={busy}
         onClick={() => {
           issue.mutate();
         }}
