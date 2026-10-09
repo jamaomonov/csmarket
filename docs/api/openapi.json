@@ -8158,6 +8158,61 @@
         "title": "TopupOut",
         "type": "object"
       },
+      "TradeLinkCheckIn": {
+        "additionalProperties": false,
+        "description": "A buyer's Steam trade link to check.",
+        "properties": {
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_link"
+        ],
+        "title": "TradeLinkCheckIn",
+        "type": "object"
+      },
+      "TradeLinkCheckOut": {
+        "description": "``unavailable`` means the check could not run: do not block a purchase on it.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_link",
+                  "private_inventory",
+                  "trade_ban",
+                  "hold",
+                  "not_found"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "verdict": {
+            "enum": [
+              "ok",
+              "bad",
+              "unavailable"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason"
+        ],
+        "title": "TradeLinkCheckOut",
+        "type": "object"
+      },
       "TradeLinkIn": {
         "additionalProperties": false,
         "description": "A pasted trade link.",
@@ -14003,6 +14058,75 @@
           }
         },
         "summary": "One API order of this account",
+        "tags": [
+          "public-api"
+        ]
+      }
+    },
+    "/api/v1/public/tradelink/check": {
+      "post": {
+        "description": "Whether a Steam trade can be sent to ``trade_link`` now (advisory).\n\nNo ``Idempotency-Key``: it writes nothing and a repeat is the intended use (the verdict is\ncached 10 minutes). ``POST`` keeps the link's token out of URLs and access logs.\n``unavailable`` means the check could not run: do not block a purchase on it.",
+        "operationId": "check_trade_link_route_api_v1_public_tradelink_check_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeLinkCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeLinkCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Check a trade link before buying",
         "tags": [
           "public-api"
         ]

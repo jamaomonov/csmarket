@@ -111,7 +111,7 @@ def test_postman_collection(schema: dict[str, Any]) -> None:
     assert variables["baseUrl"] == "https://api.csmarket.uz/api/v1/public"
     assert variables["token"] == "csm_EXAMPLEtokenNotReal"
     folders = {f["name"]: f["item"] for f in collection["item"]}
-    assert list(folders) == ["Account", "Catalogue", "Orders", "Webhooks"]
+    assert list(folders) == ["Account", "Catalogue", "Orders", "Trade links", "Webhooks"]
     by_name = {i["name"]: i["request"] for items in folders.values() for i in items}
     buy = by_name["Buy one skin from the USD wallet"]
     assert buy["method"] == "POST"

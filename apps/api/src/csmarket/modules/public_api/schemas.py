@@ -113,6 +113,23 @@ class ApiOrderIn(BaseModel):
     ]
 
 
+class TradeLinkCheckIn(BaseModel):
+    """A buyer's Steam trade link to check."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    trade_link: Annotated[str, Field(min_length=1, max_length=512)]
+
+
+class TradeLinkCheckOut(BaseModel):
+    """``unavailable`` means the check could not run: do not block a purchase on it."""
+
+    model_config = ConfigDict(frozen=True)
+
+    verdict: Literal["ok", "bad", "unavailable"]
+    reason: Literal["invalid_link", "private_inventory", "trade_ban", "hold", "not_found"] | None
+
+
 class PublicOrderItemOut(BaseModel):
     """The catalogue item an order bought."""
 

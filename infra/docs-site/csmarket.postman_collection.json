@@ -203,6 +203,44 @@
       ]
     },
     {
+      "name": "Trade links",
+      "description": "Check a buyer's trade link before buying.",
+      "item": [
+        {
+          "name": "Check a trade link before buying",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tradelink/check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tradelink",
+                "check"
+              ]
+            },
+            "description": "Whether a Steam trade can be sent to `trade_link` now (advisory).\n\nNo `Idempotency-Key`: it writes nothing and a repeat is the intended use (the verdict is\ncached 10 minutes). `POST` keeps the link's token out of URLs and access logs.\n`unavailable` means the check could not run: do not block a purchase on it.",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Webhooks",
       "description": "Where we send order events.",
       "item": [

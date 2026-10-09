@@ -13,6 +13,7 @@ Base URL: https://api.csmarket.uz/api/v1/public
 - `GET /webhook` — My webhook
 - `PUT /webhook` — Set my webhook URL
 - `DELETE /webhook` — Remove my webhook
+- `POST /tradelink/check` — Check a trade link before buying
 
 Full schema: https://docs.csmarket.uz/openapi.json
 

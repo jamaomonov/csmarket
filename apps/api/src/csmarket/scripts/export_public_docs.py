@@ -29,6 +29,7 @@ _TAGS = (
     ("/me", "Account", "Your balance, key and limits."),
     ("/catalog", "Catalogue", "Items in stock and their offers."),
     ("/orders", "Orders", "Buying skins and following the orders."),
+    ("/tradelink", "Trade links", "Check a buyer's trade link before buying."),
     ("/webhook", "Webhooks", "Where we send order events."),
 )
 _RST_CODE = re.compile(r"``([^`]+)``")

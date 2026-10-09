@@ -523,6 +523,61 @@
         "title": "PublicTradeOut",
         "type": "object"
       },
+      "TradeLinkCheckIn": {
+        "additionalProperties": false,
+        "description": "A buyer's Steam trade link to check.",
+        "properties": {
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_link"
+        ],
+        "title": "TradeLinkCheckIn",
+        "type": "object"
+      },
+      "TradeLinkCheckOut": {
+        "description": "`unavailable` means the check could not run: do not block a purchase on it.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "invalid_link",
+                  "private_inventory",
+                  "trade_ban",
+                  "hold",
+                  "not_found"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "verdict": {
+            "enum": [
+              "ok",
+              "bad",
+              "unavailable"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict",
+          "reason"
+        ],
+        "title": "TradeLinkCheckOut",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1057,6 +1112,57 @@
         ]
       }
     },
+    "/tradelink/check": {
+      "post": {
+        "description": "Whether a Steam trade can be sent to `trade_link` now (advisory).\n\nNo `Idempotency-Key`: it writes nothing and a repeat is the intended use (the verdict is\ncached 10 minutes). `POST` keeps the link's token out of URLs and access logs.\n`unavailable` means the check could not run: do not block a purchase on it.",
+        "operationId": "check_trade_link_route",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TradeLinkCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradeLinkCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "`unauthorized`"
+          },
+          "403": {
+            "description": "`account_suspended`, `ip_not_allowed`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "`rate_limited`, with `Retry-After`"
+          }
+        },
+        "summary": "Check a trade link before buying",
+        "tags": [
+          "Trade links"
+        ]
+      }
+    },
     "/webhook": {
       "delete": {
         "description": "Remove the webhook; 204 even when none was set. Needs `Idempotency-Key`.",
@@ -1232,6 +1338,10 @@
     {
       "description": "Buying skins and following the orders.",
       "name": "Orders"
+    },
+    {
+      "description": "Check a buyer's trade link before buying.",
+      "name": "Trade links"
     },
     {
       "description": "Where we send order events.",
