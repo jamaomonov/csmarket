@@ -20,6 +20,11 @@ switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
   Old filtered root URLs (`/?category=knives`) answer **301** to `/market` with the query kept.
 - `/item/…` — `Product` + `Offer` in UZS, breadcrumbs; `/category/…`, `/weapon/…` — breadcrumbs and
   an `ItemList` of the shown skins (the unfiltered `/market` carries one too).
+- Query landings: `/pay/click`, `/pay/payme`, `/pay/uzum` («скины КС2 через Click …»: steps,
+  popular skins, FAQ) and `/cheap` (weapon skins under 100 000 soʻm, live answers). Category
+  pages answer price and how-to-buy questions (`FAQPage`) from live numbers; knives, gloves,
+  rifles, pistols, cases and agents carry a paragraph of text. All are in `landings.xml` and in
+  the landing's footer.
 - Share previews: the landing, `/market`, categories and weapons use `public/og/<locale>.jpg`
   (1200×630, from `docs/design/og.html`); item pages use the skin's own picture.
 - `/llms.txt` — the shop for language models, with live category counts; the partner API has

@@ -5,7 +5,17 @@ import { PayMarks } from "./Wordmarks";
 
 import { Link } from "@/i18n/navigation";
 import { telegramUrl } from "@/lib/landing";
-import { categoryPath, REVIEWS, SELL, STEAM_TOPUP, weaponPath } from "@/lib/paths";
+import {
+  categoryPath,
+  CHEAP,
+  PAY_METHODS,
+  PAY_NAMES,
+  payPath,
+  REVIEWS,
+  SELL,
+  STEAM_TOPUP,
+  weaponPath,
+} from "@/lib/paths";
 import { weaponSlug } from "@/lib/skin-landing";
 
 const MARKET_LINKS = ["knives", "gloves", "rifles", "pistols", "cases"] as const;
@@ -16,6 +26,7 @@ export async function LandingFooter({ locale }: { locale: string }) {
   const tg = telegramUrl();
   const t = await getTranslations({ locale, namespace: "web.landing.footer" });
   const tCat = await getTranslations({ locale, namespace: "web.skins.category" });
+  const tBuy = await getTranslations({ locale, namespace: "web.seoPages.footer" });
   return (
     <footer className="site">
       <div className="wrap">
@@ -44,6 +55,19 @@ export async function LandingFooter({ locale }: { locale: string }) {
                   <Link href={weaponPath(weaponSlug(w))}>{w}</Link>
                 </li>
               ))}
+            </ul>
+          </nav>
+          <nav aria-label={tBuy("title")}>
+            <h4>{tBuy("title")}</h4>
+            <ul>
+              {PAY_METHODS.map((m) => (
+                <li key={m}>
+                  <Link href={payPath(m)}>{tBuy("pay", { method: PAY_NAMES[m] })}</Link>
+                </li>
+              ))}
+              <li>
+                <Link href={CHEAP}>{tBuy("cheap")}</Link>
+              </li>
             </ul>
           </nav>
           <nav aria-label={t("service")}>

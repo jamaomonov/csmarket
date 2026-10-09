@@ -51,6 +51,9 @@ describe("GET /skins-sitemap/<n>.xml", () => {
     expect(body).toContain("<loc>https://csmarket.uz/</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/category/knives</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/en/weapon/ak-47</loc>");
+    expect(body).toContain("<loc>https://csmarket.uz/pay/click</loc>");
+    expect(body).toContain("<loc>https://csmarket.uz/uz/pay/uzum</loc>");
+    expect(body).toContain("<loc>https://csmarket.uz/cheap</loc>");
   });
 
   it("404s the landings only when the API has no facets", async () => {

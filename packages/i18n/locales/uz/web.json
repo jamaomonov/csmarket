@@ -788,5 +788,71 @@
       "legal": "Valve Corporation bilan bogʻliq emas. Counter-Strike va Steam — Valve’ning savdo belgilari.",
       "weapons": "Qurollar"
     }
+  },
+  "seoPages": {
+    "pay": {
+      "title": "CS2 skinlarini {method} orqali sotib olish — Oʻzbekistonda",
+      "description": "CS2 skinlarini {method} orqali toʻlab sotib oling: pichoqlar, qoʻlqoplar, qurollar va keyslar. Narxlar soʻmda, Uzcard yoki Humo kartasi. Skin Steam’ga keladi.",
+      "h1": "CS2 skinlari {method} orqali",
+      "intro": "{method} orqali Uzcard yoki Humo kartasi bilan toʻlang — narxlar soʻmda, xorijiy karta kerak emas. Skin Steam’ga almashuv taklifi sifatida keladi.",
+      "stepsTitle": "{method} orqali skin qanday sotib olinadi",
+      "s1": "Steam orqali kiring va almashuv havolasini qoʻshing.",
+      "s2": "Skinni tanlang va «Sotib olish»ni bosing.",
+      "s3": "{method}ni tanlang va soʻmda toʻlang.",
+      "s4": "Steam’dagi almashuv taklifini qabul qiling.",
+      "crumb": "{method} orqali toʻlov",
+      "other": "Boshqa toʻlov usullari",
+      "faq": [
+        {
+          "q": "CS2 skinlarini {method} orqali qanday sotib olish mumkin?",
+          "a": "csmarket’ga Steam orqali kiring, almashuv havolasini qoʻshing, skinni tanlang va toʻlovda {method}ni tanlang. Toʻlovdan soʻng skin Steam’ga almashuv taklifi sifatida keladi."
+        },
+        {
+          "q": "{method} orqali qaysi karta bilan toʻlash mumkin?",
+          "a": "Uzcard yoki Humo kartasi bilan. Saytdagi narxlar soʻmda, kursni hisoblash shart emas."
+        },
+        {
+          "q": "Balansni {method} orqali toʻldirsa boʻladimi?",
+          "a": "Ha. Sayt balansini {method} orqali toʻldiring va skinlarni balansdan sotib oling — bir nechta skin olsangiz qulay."
+        },
+        {
+          "q": "Almashuv amalga oshmasa nima boʻladi?",
+          "a": "Pul avtomatik ravishda sayt balansiga qaytadi. Uni darhol boshqa skinga sarflash mumkin."
+        }
+      ]
+    },
+    "cheap": {
+      "title": "Arzon CS2 skinlari 100 000 soʻmgacha — Oʻzbekistonda sotib olish",
+      "description": "100 000 soʻmgacha arzon CS2 skinlari — {price}dan. Click, Payme yoki Uzum orqali toʻlov, skin Steam’ga keladi.",
+      "descriptionNoPrice": "100 000 soʻmgacha arzon CS2 skinlari. Click, Payme yoki Uzum orqali toʻlov, skin Steam’ga keladi.",
+      "h1": "Arzon CS2 skinlari 100 000 soʻmgacha",
+      "intro": "Arzon skinlar {price}dan. Soʻmda toʻlov, skin Steam’ga keladi.",
+      "crumb": "100 000 soʻmgacha",
+      "cheapestQ": "CS2 dagi eng arzon skin qaysi?",
+      "cheapestA": "Hozir bizda eng arzon skin — {name}, {price}.",
+      "popularQ": "Qaysi arzon skinlar koʻproq olinadi?",
+      "popularA": "Hozir mashhurlari: {list}.",
+      "howQ": "Arzon skinni soʻmga qanday sotib olish mumkin?",
+      "howA": "Skinni tanlang, Click, Payme, Uzum yoki sayt balansi orqali toʻlang — skin Steam’ga almashuv taklifi sifatida keladi."
+    },
+    "cat": {
+      "priceQ": "CS2 {name} qancha turadi?",
+      "priceA": "Narxlar {price}dan boshlanadi, hozir {items} mavjud.",
+      "howQ": "{inline}ni soʻmga qanday sotib olish mumkin?",
+      "howA": "Katalogdan buyumni tanlang va Click, Payme, Uzum yoki sayt balansi orqali toʻlang. Buyum Steam’ga almashuv taklifi sifatida keladi.",
+      "text": {
+        "knives": "Pichoqlar — CS2 dagi eng koʻzga tashlanadigan buyumlar: ular yulduzcha (★) bilan belgilangan va keyslardan juda kam tushadi. Katalogda Karambit, Butterfly Knife, M9 Bayonet, Bayonet, Talon, Skeleton va boshqa modellar bor. Doppler va Gamma Doppler fazalarga ega — faza skin kartasida koʻrsatilgan.",
+        "gloves": "Qoʻlqoplar ham pichoqlar kabi yulduzcha (★) bilan belgilangan va faqat keyslardan tushadi. Sport Gloves, Specialist Gloves, Driver Gloves, Hand Wraps, Moto Gloves — eskirish koʻrinish va narxni kuchli oʻzgartiradi, shuning uchun Factory New va Field-Tested’ni solishtiring.",
+        "rifles": "Miltiqlar — CS2 dagi eng mashhur qurollar: AK-47, M4A4, M4A1-S, AWP, shuningdek FAMAS, Galil AR, AUG va SG 553. AK-47 va AWP skinlari eng koʻp olinadi — arzonlaridan noyob Covert’gacha.",
+        "pistols": "Toʻpponchalar har bir oʻyinchida birinchi raunddan bor: Glock-18, USP-S, P2000, Desert Eagle, P250, Five-SeveN va boshqalar. Toʻpponcha skini — inventarni yangilashning eng arzon yoʻli.",
+        "cases": "CS2 keysi kalit bilan ochiladi, ichida tasodifiy skin, baʼzan pichoq yoki qoʻlqop boʻladi. Keys narxi kolleksiyaga va u hali oʻyinda tushishiga bogʻliq.",
+        "agents": "Agentlar maxsus kuchlar yoki terrorchilar tomonidagi personajingiz koʻrinishini oʻzgartiradi. Kerakli tomonni katalogdagi «Tomon» filtri koʻrsatadi."
+      }
+    },
+    "footer": {
+      "title": "Xarid",
+      "pay": "{method} orqali",
+      "cheap": "Arzon skinlar"
+    }
   }
 }

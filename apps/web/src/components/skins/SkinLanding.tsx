@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import type { FaqEntry } from "@/lib/skin-seo";
 import type { SkinItem } from "@csmarket/utils/skins";
+import type { ReactNode } from "react";
 
 import { JsonLd } from "@/components/JsonLd";
 import { SkinCard } from "@/components/skins/SkinCard";
@@ -29,6 +30,10 @@ interface Props {
   links?: { title: string; items: { label: string; path: string; count: number }[] };
   /** Questions answered from the page's own numbers, shown last and as FAQPage JSON-LD. */
   faq?: { title: string; entries: FaqEntry[] };
+  /** Shown above the grid (a payment page's steps). */
+  before?: ReactNode;
+  /** Shown under the grid, above the FAQ (a category's text, related links). */
+  after?: ReactNode;
 }
 
 /**
@@ -46,6 +51,8 @@ export async function SkinLanding({
   crumbs,
   links,
   faq,
+  before,
+  after,
 }: Props) {
   const t = await getTranslations("web.skins");
   const breadcrumbLd = {
@@ -105,6 +112,7 @@ export async function SkinLanding({
         </section>
       )}
 
+      {before}
       <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {items.map((item) => (
           <li key={item.slug}>
@@ -118,6 +126,7 @@ export async function SkinLanding({
       >
         {t("landing.all")}
       </Link>
+      {after}
       {faq && <SkinFaq title={faq.title} entries={faq.entries} />}
     </main>
   );

@@ -71,4 +71,28 @@ describe("category landing", () => {
       "x-default": "https://csmarket.uz/category/knives",
     });
   });
+
+  it("answers price and how-to-buy, the knife question, and shows the category's text", async () => {
+    getSkinsPage.mockImplementation((q: { sort: string }) =>
+      Promise.resolve(
+        q.sort === "price"
+          ? {
+              items: [{ name: "★ Karambit | Safari Mesh", price_uzs: "1", price_usd: "1" }],
+              next_cursor: null,
+            }
+          : PAGE,
+      ),
+    );
+    const el = await SkinCategoryPage({ params: params("knives") });
+    const props = el.props as {
+      faq: { entries: { question: string }[] };
+      after?: { props: { children: string } };
+    };
+    expect(props.faq.entries.map((e) => e.question)).toEqual([
+      "priceQ",
+      "landing.cheapestKnifeQ",
+      "howQ",
+    ]);
+    expect(props.after?.props.children).toBe("text.knives");
+  });
 });

@@ -788,5 +788,71 @@
       "legal": "Not affiliated with Valve Corporation. Counter-Strike and Steam are trademarks of Valve.",
       "weapons": "Weapons"
     }
+  },
+  "seoPages": {
+    "pay": {
+      "title": "Buy CS2 skins with {method} in Uzbekistan",
+      "description": "Buy CS2 skins paying with {method}: knives, gloves, weapons and cases. Prices in soʻm, a Uzcard or Humo card. The skin arrives in Steam.",
+      "h1": "CS2 skins with {method}",
+      "intro": "Pay with {method} using a Uzcard or Humo card — prices in soʻm, no foreign card needed. The skin arrives in Steam as a trade offer.",
+      "stepsTitle": "How to buy a skin with {method}",
+      "s1": "Sign in with Steam and add your trade link.",
+      "s2": "Pick a skin and press “Buy”.",
+      "s3": "Choose {method} and pay in soʻm.",
+      "s4": "Accept the trade offer in Steam.",
+      "crumb": "Pay with {method}",
+      "other": "Other ways to pay",
+      "faq": [
+        {
+          "q": "How do I buy CS2 skins with {method}?",
+          "a": "Sign in to csmarket with Steam, add your trade link, pick a skin and choose {method} at checkout. After payment the skin arrives in Steam as a trade offer."
+        },
+        {
+          "q": "Which card do I pay with through {method}?",
+          "a": "A Uzcard or Humo card. Prices on the site are in soʻm, so there is no exchange rate to work out."
+        },
+        {
+          "q": "Can I top up my balance with {method}?",
+          "a": "Yes. Top up the site balance with {method} and buy skins from it — handy when you take several skins in a row."
+        },
+        {
+          "q": "What if the trade fails?",
+          "a": "The money goes back to your site balance by itself. You can spend it on another skin right away."
+        }
+      ]
+    },
+    "cheap": {
+      "title": "Cheap CS2 skins under 100,000 soʻm — buy in Uzbekistan",
+      "description": "Cheap CS2 skins under 100,000 soʻm — from {price}. Pay with Click, Payme or Uzum; the skin arrives in Steam.",
+      "descriptionNoPrice": "Cheap CS2 skins under 100,000 soʻm. Pay with Click, Payme or Uzum; the skin arrives in Steam.",
+      "h1": "Cheap CS2 skins under 100,000 soʻm",
+      "intro": "Affordable skins from {price}. Pay in soʻm; the skin arrives in Steam.",
+      "crumb": "Under 100,000 soʻm",
+      "cheapestQ": "What is the cheapest skin in CS2?",
+      "cheapestA": "The cheapest skin here right now is {name} at {price}.",
+      "popularQ": "Which cheap skins do people buy most?",
+      "popularA": "Popular right now: {list}.",
+      "howQ": "How do I buy a cheap skin for soʻm?",
+      "howA": "Pick a skin and pay with Click, Payme, Uzum or the site balance — the skin arrives in Steam as a trade offer."
+    },
+    "cat": {
+      "priceQ": "How much do CS2 {name} cost?",
+      "priceA": "Prices start from {price}; {items} in stock right now.",
+      "howQ": "How do I buy {inline} for soʻm?",
+      "howA": "Pick an item in the catalogue and pay with Click, Payme, Uzum or the site balance. It arrives in Steam as a trade offer.",
+      "text": {
+        "knives": "Knives are the most visible items in CS2: they carry a star (★) and drop very rarely from cases. The catalogue has Karambit, Butterfly Knife, M9 Bayonet, Bayonet, Talon, Skeleton and other models. Doppler and Gamma Doppler come in phases — the phase is shown on the skin card.",
+        "gloves": "Gloves, like knives, carry a star (★) and drop only from cases. Sport Gloves, Specialist Gloves, Driver Gloves, Hand Wraps, Moto Gloves — wear changes the look and the price a lot, so compare Factory New with Field-Tested.",
+        "rifles": "Rifles are the most popular weapons in CS2: AK-47, M4A4, M4A1-S, AWP, plus FAMAS, Galil AR, AUG and SG 553. AK-47 and AWP skins sell the most — from affordable ones to rare Covert finishes.",
+        "pistols": "Every player has a pistol from the first round: Glock-18, USP-S, P2000, Desert Eagle, P250, Five-SeveN and more. A pistol skin is the most affordable way to refresh your inventory.",
+        "cases": "A CS2 case opens with a key and holds a random skin, sometimes a knife or gloves. A case's price depends on its collection and on whether it still drops in the game.",
+        "agents": "Agents change how your character looks on the CT or T side. The “Side” filter in the catalogue shows the side you need."
+      }
+    },
+    "footer": {
+      "title": "Buying",
+      "pay": "With {method}",
+      "cheap": "Cheap skins"
+    }
   }
 }
