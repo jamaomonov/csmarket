@@ -175,6 +175,7 @@ class MeLimitsOut(BaseModel):
     read_per_min: int
     orders_per_min: int
     feed_per_min: int
+    check_per_min: int
 
 
 class MeOut(BaseModel):

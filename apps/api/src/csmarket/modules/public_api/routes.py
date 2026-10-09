@@ -30,7 +30,7 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.orders.api import create_api_order, get_for_owner, list_for_owner
 from csmarket.modules.public_api import feed, webhooks
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
-from csmarket.modules.public_api.limits import LIMITS, enforce
+from csmarket.modules.public_api.limits import effective_limits, enforce
 from csmarket.modules.public_api.metering import MeteredRoute
 from csmarket.modules.public_api.offers import PricedOffer, api_offers
 from csmarket.modules.public_api.schemas import (
@@ -340,14 +340,16 @@ async def me(
     """The USD balance, whether the USD wallet is on, the calling key and its limits."""
     await enforce(caller, "read")
     key = caller.key
+    limits = effective_limits(key)
     return MeOut(
         balance_usd=wire_usd(await user_usd_balance(db, caller.user.id)),
         usd_wallet_enabled=caller.user.usd_wallet_enabled,
         key=MeKeyOut(id=key.id, pricing_profile=key.pricing_profile, created_at=key.created_at),
         limits=MeLimitsOut(
-            read_per_min=LIMITS["read"],
-            orders_per_min=LIMITS["order"],
-            feed_per_min=LIMITS["feed"],
+            read_per_min=limits["read"],
+            orders_per_min=limits["order"],
+            feed_per_min=limits["feed"],
+            check_per_min=limits["check"],
         ),
     )
 

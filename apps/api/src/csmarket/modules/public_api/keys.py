@@ -25,6 +25,15 @@ from csmarket.modules.wallet.api import has_topup
 log = get_logger("csmarket.public_api.keys")
 
 TOKEN_PREFIX = "csm_"  # noqa: S105 -- a public prefix, not a secret
+#: What a new key inherits from the user's newest key (the tariff follows the user).
+CARRIED_FIELDS: tuple[str, ...] = (
+    "pricing_profile",
+    "ip_allowlist",
+    "read_per_min",
+    "orders_per_min",
+    "feed_per_min",
+    "check_per_min",
+)
 
 
 def new_token() -> str:
@@ -52,22 +61,24 @@ async def issue(db: AsyncSession, *, user: User) -> tuple[ApiKey, str]:
             "an API key needs a top-up or the dollar wallet", code="api_key_not_allowed"
         )
     old = await live_key(db, user.id)
-    # The tariff follows the user, not the live key: revoke-then-issue must not drop a ``cost``
-    # client back to ``retail``.
+    # The tariff, limits and allow-list follow the user, not the live key: revoke-then-issue must
+    # not drop a ``cost`` client back to ``retail``.
     newest = (
         await db.execute(
-            select(ApiKey.pricing_profile)
+            select(ApiKey)
             .where(ApiKey.user_id == user.id)
             .order_by(ApiKey.created_at.desc())
             .limit(1)
         )
     ).scalar_one_or_none()
-    profile = newest if newest is not None else "retail"
+    carried = {f: getattr(newest, f) for f in CARRIED_FIELDS} if newest is not None else {}
+    if "ip_allowlist" in carried:
+        carried["ip_allowlist"] = list(carried["ip_allowlist"])
     if old is not None:
         old.revoked_at = datetime.now(UTC)
         await db.flush()
     token = new_token()
-    key = ApiKey(user_id=user.id, token_hash=hash_token(token), pricing_profile=profile)
+    key = ApiKey(user_id=user.id, token_hash=hash_token(token), **carried)
     try:
         async with db.begin_nested():
             db.add(key)
@@ -125,6 +136,7 @@ async def revoke_key(db: AsyncSession, *, key: ApiKey) -> None:
 
 
 __all__ = [
+    "CARRIED_FIELDS",
     "TOKEN_PREFIX",
     "issue",
     "live_key",

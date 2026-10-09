@@ -560,7 +560,17 @@ async def test_me(
     assert body["usd_wallet_enabled"] is True
     assert body["key"]["id"] == key.id
     assert body["key"]["pricing_profile"] == "retail"
-    assert body["limits"] == {"read_per_min": 60, "orders_per_min": 10, "feed_per_min": 1}
+    assert body["limits"] == {
+        "read_per_min": 60,
+        "orders_per_min": 10,
+        "feed_per_min": 1,
+        "check_per_min": 30,
+    }
+    await db_session.execute(update(ApiKey).where(ApiKey.id == key.id).values(read_per_min=600))
+    await db_session.commit()
+    again = (await integration_client.get("/api/v1/public/me", headers=_h(token))).json()
+    assert again["limits"]["read_per_min"] == 600
+    assert again["limits"]["check_per_min"] == 30
     assert "token" not in r.text
 
 
