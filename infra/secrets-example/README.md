@@ -23,9 +23,9 @@ $EDITOR secrets/postgres.env secrets/postgres-exporter.env secrets/redis.env \
 chmod 600 secrets/*.env
 ```
 
-`backup.env` and `alertmanager.env` are M5: the `backup` and `alertmanager` services are in
-the `ops` compose profile and stay off until `COMPOSE_PROFILES=ops` is added to the
-checkout's `.env` (`docs/runbooks/first-deploy.md`, step 9). Until then their placeholders
+`backup.env` and `alertmanager.env` are M5: the `alertmanager` service is in the `alerts` compose
+profile (also part of `ops`) and `backup` is in `ops` only; they stay off until
+`COMPOSE_PROFILES=alerts` (or `ops`) is added to the checkout's `.env` (`docs/runbooks/first-deploy.md`, step 9). Until then their placeholders
 are harmless.
 
 ## What lives where
@@ -39,7 +39,7 @@ are harmless.
 | `web.env`               | `web` (Next.js storefront) — bundled into the JS, public                                      |
 | `caddy.env`             | `caddy` — ACME email + Grafana basic-auth hash                                                |
 | `grafana.env`           | `grafana` admin credentials                                                                   |
-| `alertmanager.env`      | `alertmanager` (`ops` profile, M5) — Telegram bot token + chat id for alerts                  |
+| `alertmanager.env`      | `alertmanager` (`alerts` / `ops` profile, M5) — Telegram bot token + chat id for alerts       |
 | `backup.env`            | `backup` (`ops` profile, M5) — nightly `pg_dump → age → rclone` pipeline                      |
 
 ## Generating the bits inside

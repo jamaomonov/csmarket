@@ -247,8 +247,24 @@ long as the market takes to answer.
 blocks a purchase. If every call answers so: the Waxpeer key is missing or rejected
 (`CSMARKET_WAXPEER_API_KEY` in `secrets/api.env`; the key must be whitelisted for the VPS IP,
 `waxpeer.md`) or Waxpeer is down, and the breaker is open for its cool-down (look for the
-breaker key in Redis and the `trade_link.check` warnings in the API log). Fix the key or wait;
+breaker key in Redis and the `users.tradelink.unavailable` warnings in the API log). Fix the key or wait;
 no restart is needed. The bucket `check` limits calls per key (`public_api:rl:check:{key_id}`).
+
+## Releasing v1.1
+
+On the owner's word, in this order:
+
+1. Check the Waxpeer key is set, without printing it:
+   `grep -c '^CSMARKET_WAXPEER_API_KEY=.\+' secrets/api.env` (expect `1`), and that the VPS IP
+   is whitelisted at Waxpeer. Without either, every trade-link check answers `unavailable`
+   (documented behaviour; purchases are not blocked).
+2. Smoke-test one call with a fake link (`partner=1&token=FAKEFAKE`): expect `bad` /
+   `invalid_link` or `unavailable`. Then one real link the owner supplies out of band.
+3. Turn on alerts: `secrets/alertmanager.env` filled by the owner, `COMPOSE_PROFILES=alerts`
+   in the checkout's `.env`, `docker compose -f docker-compose.prod.yml up -d alertmanager`,
+   then an `amtool` test alert (`first-deploy.md`, step 9a).
+4. Set YuPay's limits in the admin: 600 reads, 30 orders, 1 feed per minute (the default
+   check limit stays).
 
 ## The partner docs at docs.csmarket.uz
 

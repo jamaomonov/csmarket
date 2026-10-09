@@ -48,6 +48,9 @@ docker compose -f docker-compose.prod.yml up -d api worker scheduler
 docker inspect csmarket-prod-api-1 --format '{{.Config.Image}}'   # the same tag
 ```
 
+Compose profiles: `alerts` = Alertmanager, `ops` = Alertmanager + backup. The server's `.env`
+`COMPOSE_PROFILES` decides what runs.
+
 Do not `export IMAGE_TAG=…` in a shell on the server: an exported value overrides `.env` and
 is exactly how a hand-run command rolls a service back. To change the running tag, deploy.
 
