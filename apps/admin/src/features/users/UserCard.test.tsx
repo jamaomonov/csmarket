@@ -48,7 +48,7 @@ describe("UserCard", () => {
     expect(screen.getByText("узбекский")).toBeInTheDocument();
     expect(screen.getByText(CARD.user.trade_link_masked ?? "")).toBeInTheDocument();
     expect(screen.getByText(/задержка обмена/)).toBeInTheDocument();
-    expect(screen.getByText(/Баланс: 30\s000 сум/)).toBeInTheDocument();
+    expect(screen.getByTestId("user-balance")).toHaveTextContent(/^30\s000 сум$/);
 
     const history = screen.getByRole("region", { name: "История баланса" });
     expect(within(history).getByText("Изменение администратором")).toBeInTheDocument();
@@ -118,7 +118,9 @@ describe("UserCard", () => {
     ];
     expect([id, amount, reason]).toEqual(["u-1", 50000, "Компенсация за задержку"]);
     expect(key.length).toBeGreaterThanOrEqual(16);
-    expect(await screen.findByText(/Баланс: 80\s000 сум/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId("user-balance")).toHaveTextContent(/^80\s000 сум$/);
+    });
   });
 
   it("names a clawback as «Списать»", async () => {

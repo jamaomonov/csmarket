@@ -11,7 +11,7 @@ export function EmptyState({ children, action, tone = "muted" }: EmptyStateProps
   return (
     <div
       role={tone === "danger" ? "alert" : undefined}
-      className="flex flex-col items-center gap-2 px-4 py-10 text-center text-sm"
+      className="flex flex-col items-center gap-2 px-4 py-6 text-center text-sm"
     >
       <p className={tone === "danger" ? "text-danger" : "text-fg-muted"}>{children}</p>
       {action}

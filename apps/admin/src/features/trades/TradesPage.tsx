@@ -3,6 +3,7 @@
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import {
   type AdminTradeCounts,
@@ -32,6 +33,7 @@ const HEADERS = ["#", "Скин", "Источник", "Цена", "Обмен", 
 
 export function TradesPage() {
   const narrow = useNarrow();
+  const navigate = useNavigate();
   const url = useUrlParams();
   const view: TradeView = pick(TRADE_VIEWS, url.get("view")) ?? "all";
   const urlQ = upTo(url.get("q"), Q_MAX);
@@ -114,7 +116,12 @@ export function TradesPage() {
           {rows.map((r) => (
             <li
               key={r.number}
-              className={`border-border bg-surface rounded-lg border p-3 ${
+              onClick={(e) => {
+                // A link inside the card does its own thing (DOM narrowing of the target).
+                if ((e.target as HTMLElement).closest("a,button") !== null) return;
+                void navigate(`/orders/${r.number}`);
+              }}
+              className={`border-border bg-surface active:bg-surface-hover cursor-pointer rounded-lg border p-3 ${
                 r.attention_reason !== null ? "border-l-danger border-l-[3px]" : ""
               }`}
             >

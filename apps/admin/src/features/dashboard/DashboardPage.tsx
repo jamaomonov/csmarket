@@ -31,17 +31,17 @@ interface TileProps {
 function Tile({ title, children, to, alert = false }: TileProps) {
   const body = (
     <>
-      <div className="text-fg-muted text-sm">{title}</div>
+      <div className="text-fg-muted text-sm font-normal">{title}</div>
       <div className="mt-1 flex flex-col gap-0.5 text-lg font-semibold tabular-nums">
         {children}
       </div>
     </>
   );
-  const cls = `border-border bg-surface block rounded-lg border p-4 ${
+  const cls = `border-border bg-surface block h-full rounded-lg border p-4 ${
     alert ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""
   }`;
   return (
-    <div data-testid={`tile-${title}`}>
+    <div data-testid={`tile-${title}`} className="h-full">
       {to === undefined ? (
         <div className={cls}>{body}</div>
       ) : (
@@ -67,7 +67,9 @@ function Now({ data }: { data: DashboardOut }) {
           <span className={data.payouts.to_pay_count > 0 ? "text-danger" : ""}>
             {data.payouts.to_pay_count}
           </span>
-          <span className="text-fg-muted text-sm">{formatSum(data.payouts.to_pay_uzs)}</span>
+          <span className="text-fg-muted text-sm font-normal">
+            {formatSum(data.payouts.to_pay_uzs)}
+          </span>
         </Tile>
         <Tile title="В пути" to="/trades?view=active">
           {data.in_flight}
@@ -84,15 +86,17 @@ function Period({ data }: { data: DashboardOut }) {
       <Tile title="Продажи">{sales.count}</Tile>
       <Tile title="Выручка">
         <span>{formatSum(sales.revenue_uzs)}</span>
-        <span className="text-fg-muted text-sm">{usd(sales.revenue_usd)}</span>
+        <span className="text-fg-muted text-sm font-normal">{usd(sales.revenue_usd)}</span>
       </Tile>
       <Tile title="Маржа">
         <span>{usd(sales.margin_usd)}</span>
-        <span className="text-fg-muted text-sm">{sales.margin_percent} % от выручки</span>
+        <span className="text-fg-muted text-sm font-normal">
+          {sales.margin_percent} % от выручки
+        </span>
       </Tile>
       <Tile title="Возвраты">
         <span>{refunds.count}</span>
-        <span className="text-fg-muted text-sm">{formatSum(refunds.amount_uzs)}</span>
+        <span className="text-fg-muted text-sm font-normal">{formatSum(refunds.amount_uzs)}</span>
       </Tile>
     </div>
   );
@@ -112,7 +116,7 @@ function Balances({ data }: { data: DashboardOut }) {
           ) : (
             <>
               <span>{usd(skinslink.available_usd)}</span>
-              <span className="text-fg-muted text-sm">
+              <span className="text-fg-muted text-sm font-normal">
                 в холде {usd(skinslink.hold_usd ?? "0")}
               </span>
               <span className="text-fg-dim text-xs">{freshness(skinslink.read_at)}</span>
@@ -125,7 +129,7 @@ function Balances({ data }: { data: DashboardOut }) {
           ) : (
             <>
               <span>{usd(lisskins.available_usd)}</span>
-              <span className="text-fg-muted text-sm">
+              <span className="text-fg-muted text-sm font-normal">
                 заблокировано {usd(lisskins.locked_usd ?? "0")}
               </span>
               <span className="text-fg-dim text-xs">{freshness(lisskins.read_at)}</span>

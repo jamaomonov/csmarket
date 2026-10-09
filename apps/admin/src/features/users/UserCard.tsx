@@ -302,7 +302,7 @@ function CardBody({ card }: { card: AdminUserCard }) {
       )}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Tile label="Баланс">
-          <span data-testid="user-balance">Баланс: {formatSum(card.balance_uzs)}</span>
+          <span data-testid="user-balance">{formatSum(card.balance_uzs)}</span>
         </Tile>
         <Tile label="USD">
           <Money usd={card.balance_usd} digits={3} />

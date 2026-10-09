@@ -2,7 +2,7 @@
 import { type ReactNode } from "react";
 
 export function FiltersBar({ children }: { children: ReactNode }) {
-  return <div className="flex flex-wrap items-center gap-2">{children}</div>;
+  return <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{children}</div>;
 }
 
 interface SearchBoxProps {
@@ -24,7 +24,7 @@ export function SearchBox({ label, value, onChange, maxLength, mono }: SearchBox
       onChange={(e) => {
         onChange(e.target.value);
       }}
-      className={`border-border bg-bg h-9 w-full rounded-md border px-3 text-sm sm:w-72 ${
+      className={`border-border bg-bg h-9 w-full rounded-md border px-3 text-sm sm:w-80 ${
         mono === true ? "font-mono" : ""
       }`}
     />
