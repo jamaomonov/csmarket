@@ -34,13 +34,21 @@ trade: the order keeps its status, nothing is refunded, the buyer reads «Мы �
 
 ## Admin screens
 
-- **«Заказы»** (`/orders`): search by number (prefix) or skin name, filter by status. A badge
-  «внимание» marks an open attention.
 - **The order page** (`/orders/<number>`): regions «Заказ» (prices, margin, the trade link
   masked), «Платежи» (attempts), «Обмен» (Waxpeer status, `project_id` and Waxpeer id with
   copy buttons, the Steam offer link, seller, attention and its resolution) and «Действия».
-- **«Обмены»** (`/trades`): tabs «Все», «В пути <n>» (`buying` / `trade_sent`) and
-  «Требуют внимания <n>».
+- **«Обмены»** (`/trades`; `/orders` redirects here): one table of every order — Waxpeer,
+  Skinslink and LIS-SKINS, site and API. Tabs «Все», «В пути» (buying or offer not yet
+  accepted), «На холде» (accepted, Steam's protection running — «6д 4ч · 15.10» under the
+  chip), «Требуют внимания» (an open attention of any source) and «Возвраты», each with its
+  count. Search by order number (prefix), skin name or the Steam trade offer id (exact).
+  Columns: number and date, skin (rarity bar, float), source (and «API · <owner>»), price in
+  soʻm and $ with the market's cost under it (hover: price, charged, paid to the market,
+  profit $ and %), the Steam offer (link) and the masked trade link on hover, the buyer and
+  how they paid, the status chip with a red «внимание» on hover-reason, the time. The chevron
+  opens a timeline (created, paid, buy started, offer sent, accepted, protection end,
+  delivered / refunded) and the source block (its status word, purchase id, fail reason),
+  read from the order page's data, with «Открыть заказ →».
 - The user card lists the user's latest 20 orders.
 
 **What to check, in this order:** «Обмены» → the order → its «Обмен» block (status, Waxpeer

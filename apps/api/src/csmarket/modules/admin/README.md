@@ -128,14 +128,14 @@ the «Обмены» table is `trades_service.py` / `trades_schemas.py`, and bot
 The writes are `orders`' own: `orders.admin_actions` (exported by `orders.api`). All under
 `/api/v1/admin`, `require_admin` on the router (401 / 403 as above).
 
-| Route                                                             | Body                    | Answer             |
-| ----------------------------------------------------------------- | ----------------------- | ------------------ |
-| `GET /admin/orders?q=&status=&user_id=&cursor=&limit=`            | —                       | `AdminOrdersOut`   |
-| `GET /admin/trades?view=all\|active\|hold\|attention\|refunds&…`  | —                       | `AdminTradesOut`   |
-| `GET /admin/orders/{number}`                                      | —                       | `AdminOrderDetail` |
-| `POST /admin/orders/{number}/resolve`                             | `{note?: 0..500\|null}` | `AdminOrderDetail` |
-| `POST /admin/orders/{number}/refund`                              | —                       | `AdminOrderDetail` |
-| `POST /admin/orders/{number}/retry`                               | —                       | `AdminOrderDetail` |
+| Route                                                            | Body                    | Answer             |
+| ---------------------------------------------------------------- | ----------------------- | ------------------ |
+| `GET /admin/orders?q=&status=&user_id=&cursor=&limit=`           | —                       | `AdminOrdersOut`   |
+| `GET /admin/trades?view=all\|active\|hold\|attention\|refunds&…` | —                       | `AdminTradesOut`   |
+| `GET /admin/orders/{number}`                                     | —                       | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/resolve`                            | `{note?: 0..500\|null}` | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/refund`                             | —                       | `AdminOrderDetail` |
+| `POST /admin/orders/{number}/retry`                              | —                       | `AdminOrderDetail` |
 
 - **Lists:** newest first, keyset `(created_at DESC, id DESC)`, `limit` 1..100 (20); one
   statement per page (the trade, the Skinslink and LIS-SKINS purchases and the buyer are
@@ -152,7 +152,7 @@ The writes are `orders`' own: `orders.admin_actions` (exported by `orders.api`).
   (`refunded_at` set). `counts {all, active, hold, attention, refunds}` cover every order
   and ignore `q`. A row (`AdminTradeRow`): number, `created_at`, order `status`, `source`,
   `channel` and `api_owner` (the API key owner's name), `item {name, phase, image_url,
-  rarity_color, float_value}`, `price_uzs`, `price_usd`, `cost_usd` (what the market
+rarity_color, float_value}`, `price_uzs`, `price_usd`, `cost_usd` (what the market
   charged, else the checkout cost), `margin_usd`, `margin_pct` (of the price, one decimal),
   `paid_with`, `buyer {id, display_name, avatar_url}`, `steam_offer_id` / `offer_url`,
   `trade_link_masked`, `trade_state`, `protected_until`, `failure_reason`,

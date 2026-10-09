@@ -115,12 +115,12 @@ WHERE channel = 'api' AND client_order_id = 'shop-1042';
   [`orders.md`](./orders.md) (attention on the trade, the lease, lookup-before-buy) and the
   source's runbook ([`skinslink.md`](./skinslink.md), [`lisskins.md`](./lisskins.md)). An order
   `failed` / `returned` without a refund is **held for support** and still reads `buying` to the
-  client until a person settles it in the admin («Заказы» → the order).
+  client until a person settles it in the admin («Обмены» → the order).
 - A refund books to the **USD wallet** (`refund:order:usd:{order_id}`), once, with the reason the
   client reads (`sold_out`, `invalid_trade_link`, `trade_hold`, `supplier_refused`,
   `cancelled_by_support`; `price_moved` is reserved and not produced yet). Never refund by
   hand-editing the ledger.
-- **A held order of any source** is settled from the admin («Заказы» → the order → «Вернуть
+- **A held order of any source** is settled from the admin («Обмены» → the order → «Вернуть
   деньги на баланс»); for Skinslink / LIS-SKINS see the next section.
 - A delivered skin is never refunded automatically. A dispute over a delivered order is a
   decision for the owner.
@@ -239,7 +239,7 @@ Alert `PublicApiOrderBuyingLong` (warn): the gauge
 `buying`) has been over 1800 s for 5 minutes. It is not an error by itself: `buying` lasts as
 long as the market takes to answer.
 
-1. Find the order (admin → «Заказы», channel API, or the SQL in «A stuck or disputed API
+1. Find the order (admin → «Обмены», an «API · …» row, or the SQL in «A stuck or disputed API
    order») and read its purchase and the attention reason.
 2. **Never buy again by hand.** The worker keys the buy by our own id and resolves a lost answer
    by lookup; a second buy would pay twice.
