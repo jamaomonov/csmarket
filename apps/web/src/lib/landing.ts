@@ -51,6 +51,33 @@ export const SMALL_TILES = [
   "keys",
 ] as const;
 
+/**
+ * The tile pictures (owner, 2026-10-10): green skins, so the «Что купить» grid reads as one
+ * palette with the site's accent. A pick that is sold out or gone falls back to the
+ * category's most popular skin.
+ */
+export const TILE_PICKS: Partial<Record<string, string>> = {
+  gloves: "specialist-gloves-emerald-web-factory-new",
+  knives: "butterfly-knife-gamma-doppler-factory-new-emerald",
+  pistols: "glock-18-gamma-doppler-factory-new-emerald",
+  rifles: "ak-47-wild-lotus-factory-new",
+  smgs: "mac-10-stalker-factory-new",
+  heavy: "nova-toy-soldier-factory-new",
+};
+
+/** One item by slug for a tile, only while it is in stock and has a picture. */
+async function pick(slug: string | undefined): Promise<SkinItem | null> {
+  if (slug === undefined) return null;
+  try {
+    const it = await apiGet<SkinItem>(`/skins/${encodeURIComponent(slug)}`, {
+      revalidate: REVALIDATE,
+    });
+    return it.count > 0 && it.image_url !== null ? it : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface CategoryTile {
   category: string;
   /** A real skin of the category for the picture. */
@@ -135,19 +162,20 @@ async function facets(): Promise<SkinFacets | null> {
   }
 }
 
-/** The category tiles: a real skin for the picture and the lowest price of each. */
+/** The category tiles: a real skin for the picture (a curated pick first) and the lowest price. */
 export async function getCategoryTiles(): Promise<CategoryTile[]> {
   const counts = new Map((await facets())?.categories.map((c) => [c.value, c.count]) ?? []);
   const all = [...BIG_TILES, ...SMALL_TILES];
   return Promise.all(
     all.map(async (category) => {
-      const [top, cheapest] = await Promise.all([
+      const [picked, top, cheapest] = await Promise.all([
+        pick(TILE_PICKS[category]),
         catalog({ category }, 1),
         catalog({ category, sort: "price" }, 1),
       ]);
       return {
         category,
-        item: top[0] ?? null,
+        item: picked ?? top[0] ?? null,
         fromUzs: cheapest[0]?.price_uzs ?? null,
         count: counts.get(category) ?? 0,
       };
