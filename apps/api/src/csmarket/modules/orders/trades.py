@@ -38,8 +38,9 @@ from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.orders.fsm import TRANSITIONS, move
 from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order, SkinTrade
+from csmarket.modules.orders.public_view import public_status
 from csmarket.modules.orders.refunds import refund_to_balance
-from csmarket.modules.orders.webhook_events import emit_order_event
+from csmarket.modules.orders.webhook_events import emit_if_changed
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skins.api import WaxpeerTrade
 from csmarket.modules.skinslink.api import SkinslinkPurchase
@@ -237,13 +238,13 @@ async def apply(db: AsyncSession, *, order: Order, trade: SkinTrade, wt: Waxpeer
         ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``rolled_back`` (also
         when the attention was already open) or ``held``.
     """
+    before = public_status(order, trade, None)
     outcome = await _apply(db, order=order, trade=trade, wt=wt)
     if outcome in _NUDGED:
         await nudge(db, user_id=order.user_id, number=order.number)
     if outcome == "trade_sent":
         await enqueue_trade_sent(db, order, trade)
-    if outcome in ("trade_sent", "delivered"):
-        await emit_order_event(db, order=order, trade=trade, purchase=None)
+    await emit_if_changed(db, before=before, order=order, trade=trade, purchase=None)
     return outcome
 
 

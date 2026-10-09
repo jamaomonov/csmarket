@@ -5,11 +5,14 @@ from __future__ import annotations
 import json
 
 from csmarket.core import config as cfg
+from csmarket.modules.lisskins.models import LisskinsPurchase
 from csmarket.modules.orders.api_checkout import create_api_order
 from csmarket.modules.orders.fsm import move
+from csmarket.modules.orders.lisskins_status import apply_report as apply_lisskins_report
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.refunds import refund_to_balance
 from csmarket.modules.orders.skinslink_status import check_purchase
+from csmarket.modules.orders.trades import apply as apply_trade
 from csmarket.modules.public_api import keys
 from csmarket.modules.public_api.auth import ApiCaller
 from csmarket.modules.public_api.models import ApiWebhook, ApiWebhookDelivery
@@ -18,8 +21,10 @@ from csmarket.modules.skinslink.models import SkinslinkPurchase
 from sqlalchemy import ScalarResult, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tests.integration.fake_lisskins_client import purchase as ls_purchase
 from tests.integration.fake_skinslink_client import FakeSkinslinkClient, purchase
-from tests.integration.orders_factory import make_order
+from tests.integration.lisskins_factory import OFFER as LS_OFFER
+from tests.integration.orders_factory import make_order, make_trade
 from tests.integration.skinslink_factory import OFFER
 from tests.integration.test_public_api_buy import (
     Headers,
@@ -28,6 +33,8 @@ from tests.integration.test_public_api_buy import (
     _env,  # noqa: F401 -- the autouse fixture: buying and Skinslink switched on
     _item,
 )
+from tests.integration.trade_sweeps_kit import RELEASE
+from tests.integration.trade_sweeps_kit import trade as wx_trade
 
 URL = "https://partner.example/hook"
 
@@ -154,3 +161,75 @@ async def test_a_site_order_of_a_webhook_user_enqueues_nothing(db_session: Async
     )
     await db_session.commit()
     assert await _events(db_session) == []
+
+
+async def test_hold_from_buying_is_delivered_at_once(
+    customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    order = await _order(db_session, customer_headers)
+    await _buying(db_session, order)
+    assert await _report(db_session, order, "hold") == "trade_sent"
+    rows = await _events(db_session)
+    assert [r.event for r in rows] == ["order.paid", "order.delivered"]
+    _clean(rows[1])
+
+
+async def test_hold_after_trade_sent_is_delivered_at_the_hold(
+    customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    order = await _order(db_session, customer_headers)
+    await _buying(db_session, order)
+    assert await _report(db_session, order, "active") == "trade_sent"
+    assert await _report(db_session, order, "hold") == "unchanged"
+    assert await _report(db_session, order, "completed") == "delivered"
+    rows = await _events(db_session)
+    assert [r.event for r in rows] == ["order.paid", "order.trade_sent", "order.delivered"]
+
+
+async def test_lisskins_offer_then_accepted(
+    customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    order = await _order(db_session, customer_headers)
+    move(order, "buying")
+    order.source = "lisskins"
+    db_session.add(
+        LisskinsPurchase(
+            order_id=order.id,
+            custom_id=order.id,
+            skin_id=100,
+            paid_units=order.cost_units,
+            buy_pending=False,
+        )
+    )
+    await db_session.commit()
+    for status, outcome in (("wait_accept", "trade_sent"), ("accepted", "delivered")):
+        p = await db_session.scalar(
+            select(LisskinsPurchase)
+            .where(LisskinsPurchase.order_id == order.id)
+            .execution_options(populate_existing=True)
+        )
+        assert p is not None
+        report = ls_purchase(status, custom_id=order.id, offer_id=LS_OFFER)
+        assert (
+            await apply_lisskins_report(db_session, order=order, purchase=p, report=report)
+            == outcome
+        )
+        await db_session.commit()
+    rows = await _events(db_session)
+    assert [r.event for r in rows] == ["order.paid", "order.trade_sent", "order.delivered"]
+    for row in rows:
+        _clean(row)
+
+
+async def test_waxpeer_accepted_trade_is_delivered(
+    customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    order = await _order(db_session, customer_headers)
+    move(order, "buying")
+    row = await make_trade(db_session, order, listing_id=1)
+    wt = wx_trade(project_id=order.id, status=4, release_date=RELEASE)
+    assert await apply_trade(db_session, order=order, trade=row, wt=wt) == "delivered"
+    await db_session.commit()
+    rows = await _events(db_session)
+    assert [r.event for r in rows] == ["order.paid", "order.delivered"]
+    _clean(rows[1])

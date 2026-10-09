@@ -34,9 +34,10 @@ from csmarket.core.logging import get_logger
 from csmarket.modules.orders.fsm import TRANSITIONS, move
 from csmarket.modules.orders.letters import enqueue_trade_sent
 from csmarket.modules.orders.models import Order
+from csmarket.modules.orders.public_view import public_status
 from csmarket.modules.orders.refunds import refund_or_hold
 from csmarket.modules.orders.trades import flag
-from csmarket.modules.orders.webhook_events import emit_order_event
+from csmarket.modules.orders.webhook_events import emit_if_changed
 from csmarket.modules.realtime.api import nudge
 from csmarket.modules.skinslink.api import (
     LINK_ERROR_CODES,
@@ -142,14 +143,14 @@ async def apply_report(
         ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``failed``,
         ``rolled_back`` or ``held``.
     """
+    before = public_status(order, None, purchase)
     mirror_report(purchase, report)
     outcome = await _apply(db, order=order, purchase=purchase, report=report)
     if outcome in _NUDGED:
         await nudge(db, user_id=order.user_id, number=order.number)
     if outcome == "trade_sent":
         await enqueue_trade_sent(db, order)
-    if outcome in ("trade_sent", "delivered"):
-        await emit_order_event(db, order=order, trade=None, purchase=purchase)
+    await emit_if_changed(db, before=before, order=order, trade=None, purchase=purchase)
     return outcome
 
 

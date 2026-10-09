@@ -185,10 +185,7 @@ async def refund_to_balance(
     await db.flush()
     await nudge(db, user_id=order.user_id, number=order.number)
     await enqueue_refunded(db, order)
-    if order.channel == "api":
-        await emit_order_event(
-            db, order=order, trade=None, purchase=await purchase_of(db, order, lock=False)
-        )
+    await emit_order_event(db, order=order, trade=None, purchase=None)  # the payload has no trade
     refund_reason: OrderRefundReason = reason  # type: ignore[assignment] # FAILURE_REASONS
     record_order_refund(refund_reason)
     log.info(

@@ -19,6 +19,7 @@ from csmarket.core.clock import now
 from csmarket.core.ids import new_id
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.public_view import Purchase, public_order, public_status
+from csmarket.modules.public_api.api import PublicOrderStatus
 from csmarket.modules.public_api.models import ApiWebhook, ApiWebhookDelivery
 
 #: The LISTEN channel of the worker's webhook queue.
@@ -52,15 +53,23 @@ async def emit_order_event(
         return
     event = _EVENTS[public_status(order, trade, purchase)]
     event_id = new_id()
+    stamp = now()
     payload = {
         "event": event,
         "event_id": event_id,
-        "created_at": now().isoformat(),
+        "created_at": stamp.isoformat(),
         "order": public_order(order, trade, purchase).model_dump(mode="json"),
     }
     stmt = (
         insert(ApiWebhookDelivery)
-        .values(id=event_id, user_id=order.user_id, order_id=order.id, event=event, payload=payload)
+        .values(
+            id=event_id,
+            user_id=order.user_id,
+            order_id=order.id,
+            event=event,
+            payload=payload,
+            created_at=stamp,
+        )
         .on_conflict_do_nothing(index_elements=["order_id", "event"])
         .returning(ApiWebhookDelivery.id)
     )
@@ -69,4 +78,19 @@ async def emit_order_event(
         await db.execute(select(func.pg_notify(WEBHOOKS_CHANNEL, str(row_id))))
 
 
-__all__ = ["WEBHOOKS_CHANNEL", "emit_order_event"]
+async def emit_if_changed(
+    db: AsyncSession,
+    *,
+    before: PublicOrderStatus,
+    order: Order,
+    trade: SkinTrade | None,
+    purchase: Purchase | None,
+) -> None:
+    """Emit when ``order``'s public status is no longer ``before`` (a refund and a plain
+    ``buying`` are reported by their own paths). Replays collapse on the unique key."""
+    after = public_status(order, trade, purchase)
+    if after != before and after not in ("buying", "refunded"):
+        await emit_order_event(db, order=order, trade=trade, purchase=purchase)
+
+
+__all__ = ["WEBHOOKS_CHANNEL", "emit_if_changed", "emit_order_event"]
