@@ -721,3 +721,39 @@ async def test_two_ids_at_once_on_a_balance_for_one(
     assert sorted(results) == ["201", "402"]
     assert await _orders(db_session) == 1
     assert await user_usd_balance(db_session, user.id) == Decimal(12_000 - 9000)
+
+
+def _sample(name: str, **labels: str) -> float:
+    from prometheus_client import REGISTRY
+
+    return REGISTRY.get_sample_value(name, labels) or 0.0
+
+
+async def test_public_requests_and_orders_are_counted(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession
+) -> None:
+    item = await _item(db_session)
+    _user, token = await _customer(db_session, customer_headers, profile="cost")
+    [offer] = await _offer_ids(db_session, item, "cost")
+    req = "csmarket_api_public_requests_total"
+    ordc = "csmarket_api_public_orders_total"
+    me2 = _sample(req, route="/public/me", status="2xx")
+    me4 = _sample(req, route="/public/me", status="4xx")
+    o201 = _sample(req, route="/public/orders", status="2xx")
+    o422 = _sample(req, route="/public/orders", status="4xx")
+    created = _sample(ordc, profile="cost", outcome="created")
+    dup = _sample(ordc, profile="cost", outcome="duplicate")
+
+    assert (await integration_client.get("/api/v1/public/me", headers=_h(token))).status_code == 200
+    assert (await integration_client.get("/api/v1/public/me")).status_code == 401
+    body = _body(item, offer_id=offer, max_price_usd="9")
+    assert (await integration_client.post(ORDERS, json=body, headers=_h(token))).status_code == 201
+    assert (await integration_client.post(ORDERS, json=body, headers=_h(token))).status_code == 409
+    assert (await integration_client.post(ORDERS, json={}, headers=_h(token))).status_code == 422
+
+    assert _sample(req, route="/public/me", status="2xx") == me2 + 1
+    assert _sample(req, route="/public/me", status="4xx") == me4 + 1
+    assert _sample(req, route="/public/orders", status="2xx") == o201 + 1
+    assert _sample(req, route="/public/orders", status="4xx") == o422 + 2
+    assert _sample(ordc, profile="cost", outcome="created") == created + 1
+    assert _sample(ordc, profile="cost", outcome="duplicate") == dup + 1

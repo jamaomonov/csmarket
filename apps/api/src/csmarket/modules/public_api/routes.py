@@ -24,12 +24,14 @@ from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.errors import AppError, ConflictError, NotFoundError, PaymentRequiredError
 from csmarket.core.idempotency import load_replay, require_idempotency_key, save_replay
+from csmarket.core.metrics import record_public_order
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
 from csmarket.modules.orders.api import create_api_order, get_for_owner, list_for_owner
 from csmarket.modules.public_api import feed, webhooks
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
 from csmarket.modules.public_api.limits import LIMITS, enforce
+from csmarket.modules.public_api.metering import MeteredRoute
 from csmarket.modules.public_api.offers import PricedOffer, api_offers
 from csmarket.modules.public_api.schemas import (
     ApiOrderIn,
@@ -48,7 +50,7 @@ from csmarket.modules.public_api.webhook_url import check_url, public_addresses
 from csmarket.modules.skins.api import enabled_categories, get_item_by_id
 from csmarket.modules.wallet.api import InsufficientBalanceError, user_usd_balance
 
-router = APIRouter(prefix="/public", tags=["public-api"])
+router = APIRouter(prefix="/public", tags=["public-api"], route_class=MeteredRoute)
 
 OFFERS_TTL_SECONDS = 60
 _REVALIDATE = {"Cache-Control": "private, no-cache"}
@@ -246,6 +248,27 @@ async def place_order(
     ``duplicate_client_order_id`` with that order in ``order``. Counts against the
     10 per minute ``order`` limit.
     """
+    profile = caller.key.pricing_profile
+    try:
+        out = await _place_order(body, caller, db)
+    except AppError as exc:
+        record_public_order(profile, _order_outcome(exc))
+        raise
+    record_public_order(profile, "created")
+    return out
+
+
+def _order_outcome(exc: AppError) -> str:
+    """The order-metric outcome of a refused ``POST /orders`` (else ``rejected``)."""
+    return {
+        "duplicate_client_order_id": "duplicate",
+        "insufficient_balance": "insufficient",
+        "offer_gone": "offer_gone",
+        "price_above_max": "price_above_max",
+    }.get(exc.extra.get("code", ""), "rejected")
+
+
+async def _place_order(body: ApiOrderIn, caller: ApiCaller, db: AsyncSession) -> PublicOrderOut:
     await enforce(caller, "order")
     user_id = caller.user.id
     try:

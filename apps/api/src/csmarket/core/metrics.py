@@ -435,6 +435,81 @@ def record_webhook(event: str, outcome: ApiWebhookOutcome) -> None:
     )
 
 
+#: The matched route templates of the partner API (``public_api.routes``, mounted under
+#: ``/api/v1``); anything else is ``other`` so a path can never mint a series.
+_PUBLIC_ROUTES = frozenset(
+    (
+        "/public/catalog",
+        "/public/catalog/{item_id}/offers",
+        "/public/orders",
+        "/public/orders/{order_id}",
+        "/public/me",
+        "/public/webhook",
+        "other",
+    )
+)
+_STATUS_CLASSES = frozenset(("2xx", "3xx", "4xx", "5xx"))
+#: How one ``POST /public/orders`` ended; everything unlisted is ``rejected``.
+ApiOrderOutcome = Literal[
+    "created", "duplicate", "insufficient", "offer_gone", "price_above_max", "rejected"
+]
+_API_ORDER_OUTCOMES = frozenset(
+    ("created", "duplicate", "insufficient", "offer_gone", "price_above_max", "rejected")
+)
+_API_PROFILES = frozenset(("retail", "cost", "other"))
+
+PUBLIC_API_REQUESTS = Counter(
+    "csmarket_api_public_requests_total",
+    "Partner API requests by matched route template and status class.",
+    ("route", "status"),
+)
+_precreate(PUBLIC_API_REQUESTS, route=_PUBLIC_ROUTES, status=_STATUS_CLASSES)
+PUBLIC_API_ORDERS = Counter(
+    "csmarket_api_public_orders_total",
+    "Partner API order attempts by key profile and outcome.",
+    ("profile", "outcome"),
+)
+_precreate(PUBLIC_API_ORDERS, profile=_API_PROFILES, outcome=_API_ORDER_OUTCOMES)
+
+
+def record_public_request(route: str, status: int) -> None:
+    """Count one partner API request. An unknown route becomes ``"other"``.
+
+    Never raises.
+    """
+    try:
+        cls = f"{status // 100}xx"
+        _inc(
+            PUBLIC_API_REQUESTS,
+            "csmarket_api_public_requests_total",
+            {
+                "route": route if route in _PUBLIC_ROUTES else "other",
+                "status": cls if cls in _STATUS_CLASSES else "5xx",
+            },
+        )
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.increment_failed",
+            metric="csmarket_api_public_requests_total",
+            error=type(exc).__name__,
+        )
+
+
+def record_public_order(profile: str, outcome: str) -> None:
+    """Count one partner API order attempt. Unknown values collapse (``other`` / ``rejected``).
+
+    Never raises.
+    """
+    _inc(
+        PUBLIC_API_ORDERS,
+        "csmarket_api_public_orders_total",
+        {
+            "profile": profile if profile in _API_PROFILES else "other",
+            "outcome": outcome if outcome in _API_ORDER_OUTCOMES else "rejected",
+        },
+    )
+
+
 def record_ws_nudges(count: int) -> None:
     """Count ``count`` nudges sent to sockets. Never raises."""
     if count <= 0:
@@ -739,6 +814,8 @@ __all__ = [
     "ORDERS_STUCK",
     "ORDER_BUYS",
     "ORDER_REFUNDS",
+    "PUBLIC_API_ORDERS",
+    "PUBLIC_API_REQUESTS",
     "SKINSLINK_BALANCE_AVAILABLE_USD",
     "SKINSLINK_BALANCE_HOLD_USD",
     "SKINSLINK_BALANCE_READ_TIMESTAMP",
@@ -779,6 +856,8 @@ __all__ = [
     "record_lisskins_call",
     "record_order_buy",
     "record_order_refund",
+    "record_public_order",
+    "record_public_request",
     "record_skinslink_call",
     "record_steam_web_api_call",
     "record_trade_attention",
