@@ -1030,7 +1030,7 @@
         ]
       },
       "post": {
-        "description": "Buy the offer `offer_id` of `item_id` (else its cheapest within `max_price_usd`).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n`buying`). A `client_order_id` already used by this account (with this key or an earlier\none) writes nothing and answers 409\n`duplicate_client_order_id` with that order in `order`. Counts against the\n10 per minute `order` limit.",
+        "description": "Buy the offer `offer_id` of `item_id` (else its cheapest within `max_price_usd`).\n\nOne transaction: the USD wallet is debited and the order is already paid on 201 (status\n`buying`). A `client_order_id` already used by this account (with this key or an earlier\none) writes nothing and answers 409\n`duplicate_client_order_id` with that order in `order`. Counts against the\n10 per minute `order` limit. The offer is confirmed live with its market first: one\nsold in the meantime is `offer_gone` (or, without `offer_id`, the next cheapest) and\na changed price is re-quoted against `max_price_usd` \u2014 nothing is written until then.",
         "operationId": "place_order",
         "requestBody": {
           "content": {

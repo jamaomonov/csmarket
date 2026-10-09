@@ -17,7 +17,12 @@ from csmarket.modules.public_api.limits import (
     enforce,
 )
 from csmarket.modules.public_api.models import ApiKey, ApiWebhook, ApiWebhookDelivery
-from csmarket.modules.public_api.offers import PricedOffer, api_offers, open_offer_id
+from csmarket.modules.public_api.offers import (
+    PricedOffer,
+    api_offers,
+    open_offer_id,
+    price_units_for,
+)
 from csmarket.modules.public_api.schemas import (
     ApiOrderIn,
     PublicOrderItemOut,
@@ -54,6 +59,7 @@ __all__ = [
     "issue",
     "live_key",
     "open_offer_id",
+    "price_units_for",
     "public_addresses",
     "revoke",
     "revoke_key",

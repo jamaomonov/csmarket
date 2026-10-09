@@ -150,6 +150,12 @@ curl -s https://api.csmarket.uz/api/v1/public/orders \
 - `trade_link` is your buyer's, sent with every purchase and checked for **form only**.
 - `client_order_id` — 1–64 characters of `A-Za-z0-9_.:-`, unique per account.
 
+Before anything is written, the chosen offer may be confirmed live with its market. If it was
+sold in the meantime, a named `offer_id` answers **409 `offer_gone`**, and without one the next
+cheapest offer within `max_price_usd` is taken. If its price changed, the new price is checked
+against `max_price_usd` and may answer **409 `price_above_max`**. You are never sold a different
+offer than the one you named.
+
 One transaction: the USD wallet is debited and the order is created **already paid**.
 **201** returns the order (below) with `status: "buying"`. Repeating the call with the same
 `client_order_id` never makes a second order: it writes nothing and answers **409

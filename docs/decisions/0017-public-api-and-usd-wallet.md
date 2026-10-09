@@ -121,6 +121,25 @@ Spec `2026-10-09-public-api-v1-1-design.md`. Only fields and routes are added.
 11. **`seller_name` stays in the contract** though it is `null` for API orders today; documented
     as "usually `null`".
 
+### A live check of LIS-SKINS lots (2026-10-10)
+
+Order K4SV9JTD was a partner's buy of a LIS-SKINS lot from the 5-minute snapshot. The lot was
+already sold: the worker's `market/buy` got `skins_unavailable`, and the order was paid and then
+refunded within 0.3 s. So `POST /public/orders` now asks LIS-SKINS
+`GET /market/check-availability` once for a chosen `ls:` lot, **before** anything is written.
+It uses the site checkout's `live_price`: a 4 s timeout, a shared 100/min budget, and a 120 s
+breaker. The DB connection is released across the call. This is the ninth carve-out in AGENTS
+§11. The outcomes:
+
+- **Sold.** A named `offer_id` gets `409 offer_gone`. "Cheapest within max" moves to the next
+  offer, which is checked in turn if it is LIS-SKINS too (at most 3 checks).
+- **A different live price.** The order is re-quoted for the key's tariff; past
+  `max_price_usd` it gets `409 price_above_max`.
+- **No answer.** The snapshot price stands, and the worker's `max_price` is the money guard.
+
+A sold lot is never swapped for another one. The partner, like a site buyer, picks a lot for
+its float, pattern or stickers, so a substitute would be a different skin (owner, 2026-10-10).
+
 ### Negative consequences
 
 - No dollars back to soʻm: a client who wants out is paid by hand (admin debit).
