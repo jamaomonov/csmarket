@@ -7,7 +7,12 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from csmarket.modules.lisskins.models import LisskinsPurchase
 from csmarket.modules.orders.models import Order, SkinTrade
-from csmarket.modules.orders.trade_row import open_attention, protection_end, row_state
+from csmarket.modules.orders.trade_row import (
+    open_attention,
+    protection_end,
+    protection_is_estimate,
+    row_state,
+)
 from csmarket.modules.skinslink.models import SkinslinkPurchase
 
 NOW = datetime(2026, 10, 9, 12, tzinfo=UTC)
@@ -49,6 +54,19 @@ def _wx(**extra: object) -> SkinTrade:
         (_order("trade_sent"), None, SkinslinkPurchase(status="active"), "sent"),
         (_order("trade_sent"), None, LisskinsPurchase(status="accepted"), "delivered"),
         (_order("trade_sent"), None, LisskinsPurchase(status="wait_accept"), "sent"),
+        # LIS-SKINS names no hold: accepted < 7 days ago is on hold by our estimate.
+        (
+            _order("delivered", delivered_at=NOW - timedelta(days=2)),
+            None,
+            LisskinsPurchase(status="accepted"),
+            "hold",
+        ),
+        (
+            _order("delivered", delivered_at=NOW - timedelta(days=8)),
+            None,
+            LisskinsPurchase(status="accepted"),
+            "delivered",
+        ),
     ],
 )
 def test_row_state(
@@ -69,6 +87,24 @@ def test_protection_end_of_each_source() -> None:
     assert protection_end(_order("delivered"), accepted, None) == LATER
     assert protection_end(_order("delivered"), _wx(status=5, release_date=LATER), None) is None
     assert protection_end(_order("trade_sent"), None, LisskinsPurchase(status="accepted")) is None
+    got = NOW - timedelta(days=1)
+    lis = LisskinsPurchase(status="accepted")
+    assert protection_end(_order("delivered", delivered_at=got), None, lis) == got + timedelta(
+        days=7
+    )
+    assert protection_end(_order("delivered", delivered_at=None), None, lis) is None
+    assert (
+        protection_end(
+            _order("delivered", delivered_at=got), None, LisskinsPurchase(status="return")
+        )
+        is None
+    )
+
+
+def test_only_the_lisskins_end_is_an_estimate() -> None:
+    assert protection_is_estimate(LisskinsPurchase(status="accepted")) is True
+    assert protection_is_estimate(SkinslinkPurchase(status="hold")) is False
+    assert protection_is_estimate(None) is False
 
 
 def test_open_attention_reads_any_source_and_skips_resolved() -> None:

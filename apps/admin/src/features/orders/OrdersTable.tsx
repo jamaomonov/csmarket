@@ -42,7 +42,11 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
           header: "Статус",
           cell: (o) => (
             <div className="flex flex-wrap items-center gap-1">
-              <OrderStatusChip status={o.status} protectedUntil={o.protected_until} />
+              <OrderStatusChip
+                status={o.status}
+                protectedUntil={o.protected_until}
+                estimated={o.protected_estimated}
+              />
               <AttentionBadge reason={o.attention_reason} />
             </div>
           ),
@@ -63,7 +67,11 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
           </div>
           <div className="truncate">{o.name}</div>
           <div className="flex flex-wrap items-center gap-1">
-            <OrderStatusChip status={o.status} protectedUntil={o.protected_until} />
+            <OrderStatusChip
+              status={o.status}
+              protectedUntil={o.protected_until}
+              estimated={o.protected_estimated}
+            />
             <AttentionBadge reason={o.attention_reason} />
             <span className="text-fg-dim ml-auto text-xs">{formatDateTime(o.created_at)}</span>
           </div>

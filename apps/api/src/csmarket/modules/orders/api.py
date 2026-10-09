@@ -71,6 +71,7 @@ from csmarket.modules.orders.trade_row import (
     in_protection_sql,
     open_attention,
     protection_end,
+    protection_is_estimate,
     row_state,
 )
 from csmarket.modules.orders.trade_view import (
@@ -144,6 +145,7 @@ __all__ = [
     "open_attention",
     "order_out",
     "protection_end",
+    "protection_is_estimate",
     "public_order",
     "purchase_of",
     "purchase_refund_refusal",

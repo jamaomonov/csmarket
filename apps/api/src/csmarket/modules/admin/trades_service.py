@@ -39,6 +39,7 @@ from csmarket.modules.orders.api import (
     in_protection_sql,
     open_attention,
     protection_end,
+    protection_is_estimate,
     row_state,
 )
 from csmarket.modules.public_api.api import ApiKey
@@ -145,6 +146,7 @@ def _row(found: Any, at: datetime, image_host: str) -> AdminTradeRow:
             "trade_link_masked": _masked(order),
             "trade_state": row_state(order, trade, bought, at),
             "protected_until": protection_end(order, trade, bought),
+            "protected_estimated": protection_is_estimate(bought),
             "failure_reason": order.failure_reason,
             "attention_reason": open_attention(trade, bought),
             "source_status": _source_status(trade, bought),

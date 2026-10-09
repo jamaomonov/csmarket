@@ -89,6 +89,7 @@ export function StateCell({ row }: { row: AdminTradeRow }) {
       )}
       {row.trade_state === "hold" && row.protected_until !== null && (
         <p data-testid="hold-left" className="text-fg-muted whitespace-nowrap text-xs">
+          {row.protected_estimated ? "≈ " : ""}
           {timeLeft(row.protected_until)} · {shortDate(row.protected_until)}
         </p>
       )}

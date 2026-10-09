@@ -18,6 +18,7 @@ export const ORDER_ROW: AdminOrderRow = {
   created_at: "2026-09-30T10:00:00Z",
   attention_reason: null,
   protected_until: null,
+  protected_estimated: false,
 };
 
 export const TRADE: AdminTradeOut = {
@@ -60,6 +61,7 @@ export const DETAIL: AdminOrderDetail = {
     fx_uplift_pct: "0.00",
     margin_usd: "0.380000",
     protected_until: null,
+    protected_estimated: false,
     // Fake, already-masked link: the token never reaches the page.
     trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY",
     paid_with: "click",

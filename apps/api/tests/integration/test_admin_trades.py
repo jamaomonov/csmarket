@@ -363,3 +363,34 @@ async def test_the_dashboard_in_flight_is_the_active_tab_count(
     r = await integration_client.get("/api/v1/admin/dashboard?days=1", headers=h)
     assert r.status_code == 200, r.text
     assert r.json()["in_flight"] == tab
+
+
+async def test_a_lisskins_trade_accepted_within_a_week_is_on_estimated_hold(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    """LIS-SKINS names no hold: accepted (delivered) less than 7 days ago reads «на холде»,
+    its end estimated as accepted + 7 days; older reads «получен»."""
+    h = await admin_headers()
+    now = clock.now()
+    fresh, _ = await make_lisskins_order(
+        db_session,
+        status="delivered",
+        skin_status="accepted",
+        order={"delivered_at": now - timedelta(days=2)},
+    )
+    old, _ = await make_lisskins_order(
+        db_session,
+        status="delivered",
+        skin_status="accepted",
+        order={"delivered_at": now - timedelta(days=9)},
+    )
+    held = await _page(integration_client, h, view="hold")
+    rows = {r["number"]: r for r in held["items"]}
+    assert fresh.number in rows
+    assert old.number not in rows
+    assert rows[fresh.number]["trade_state"] == "hold"
+    assert rows[fresh.number]["protected_estimated"] is True
+    assert rows[fresh.number]["protected_until"] is not None
+    assert held["counts"]["hold"] == 1
+    every = {r["number"]: r for r in (await _page(integration_client, h))["items"]}
+    assert every[old.number]["trade_state"] == "delivered"

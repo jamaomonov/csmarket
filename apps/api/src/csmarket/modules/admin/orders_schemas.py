@@ -61,6 +61,8 @@ class AdminOrderRow(BaseModel):
     #: ``trade_sent`` order — it turns ``delivered`` after that — or an accepted, unreleased
     #: Waxpeer trade of a ``delivered`` one); ``null`` otherwise.
     protected_until: datetime | None = None
+    #: ``protected_until`` is our estimate (LIS-SKINS gives none: accepted + 7 days).
+    protected_estimated: bool = False
 
 
 class AdminOrdersOut(BaseModel):
@@ -105,6 +107,8 @@ class AdminOrderFull(BaseModel):
     paint_seed: int | None
     #: When Steam's protection of an accepted trade ends (Skinslink ``hold``); see the row's.
     protected_until: datetime | None = None
+    #: ``protected_until`` is our estimate (LIS-SKINS gives none: accepted + 7 days).
+    protected_estimated: bool = False
     #: ``site`` or ``api``; for ``api`` the key, the client's own id and the tariff.
     channel: str
     api_key_id: str | None

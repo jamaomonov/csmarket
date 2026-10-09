@@ -47,6 +47,7 @@ from csmarket.modules.orders.api import (
     can_retry,
     open_attention,
     protection_end,
+    protection_is_estimate,
     purchase_of,
 )
 from csmarket.modules.payments.api import Payment
@@ -87,6 +88,7 @@ def order_row(
             "created_at": order.created_at,
             "attention_reason": open_attention(trade, bought),
             "protected_until": protection_end(order, trade, bought),
+            "protected_estimated": protection_is_estimate(bought),
         }
     )
 
@@ -148,6 +150,7 @@ def _order_full(
             else format(order.float_value.normalize(), "f"),
             "margin_usd": usd(order.price_usd - charged),
             "protected_until": protection_end(order, trade, purchase),
+            "protected_estimated": protection_is_estimate(purchase),
             # An erased link is stored masked already (and would not parse again).
             "trade_link_masked": order.trade_link
             if order.trade_link_erased_at is not None

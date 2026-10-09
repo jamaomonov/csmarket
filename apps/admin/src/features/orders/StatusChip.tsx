@@ -5,21 +5,29 @@ import { formatDateTime } from "@/lib/format";
 
 interface OrderStatusChipProps {
   status: OrderStatus;
-  /** When Steam's protection of an accepted trade ends (Skinslink `hold`), if it runs. */
+  /** When Steam's protection of an accepted trade ends, if it runs. */
   protectedUntil?: string | null;
+  /** The end is our estimate (LIS-SKINS). */
+  estimated?: boolean;
 }
 
-export function OrderStatusChip({ status, protectedUntil = null }: OrderStatusChipProps) {
-  // Accepted, but `delivered` only once the protection ends: not stuck.
-  if (status === "trade_sent" && protectedUntil !== null) {
-    const until = formatDateTime(protectedUntil);
+export function OrderStatusChip({
+  status,
+  protectedUntil = null,
+  estimated = false,
+}: OrderStatusChipProps) {
+  // Accepted while Steam's protection runs: not stuck, and a rollback is still possible.
+  const running = protectedUntil !== null && new Date(protectedUntil).getTime() > Date.now();
+  if (protectedUntil !== null && (status === "trade_sent" || (status === "delivered" && running))) {
+    const until = `${estimated ? "≈ " : ""}${formatDateTime(protectedUntil)}`;
     return (
       <span
         data-testid="order-status"
         title={`Покупатель принял обмен. Защита Steam до ${until}, затем «получен».`}
         className="bg-info/15 text-info whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium"
       >
-        принят, защита до {until.slice(0, 5)}
+        принят, защита до {estimated ? "≈ " : ""}
+        {formatDateTime(protectedUntil).slice(0, 5)}
       </span>
     );
   }

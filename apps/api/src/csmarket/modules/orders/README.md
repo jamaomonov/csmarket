@@ -175,7 +175,8 @@ bare failure, never a refund promise); `refunded_to` only when the order records
 `row_state(order, trade, purchase, now)` — one vocabulary for the admin «Обмены» table over
 every source, built on `public_view.is_accepted` and the purchase words: `pending`, `buying`
 (`paid` / `buying`), `sent` (`trade_sent`, not accepted), `hold` (accepted while Steam's
-protection runs: `protection_end` in the future — a Skinslink `hold` of a `trade_sent` order,
+protection runs: `protection_end` in the future — a LIS-SKINS `accepted` order delivered less
+than 7 days ago (LIS-SKINS names no hold, so the end is our estimate, `protected_estimated`), a Skinslink `hold` of a `trade_sent` order,
 or a Waxpeer 4 with `release_date`, not released, of a `trade_sent` / `delivered` one; a
 Skinslink `hold` without an end yet counts), `delivered` (or accepted with the protection
 over), `refunded` (`refunded_at`, first), `cancelled`, `failed_held` (`failed` / `returned`

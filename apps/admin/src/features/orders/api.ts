@@ -27,6 +27,8 @@ export interface AdminOrderRow {
   attention_reason: AttentionReason | null;
   /** Accepted, under Steam's protection until then (Skinslink `hold`); `null` otherwise. */
   protected_until: string | null;
+  /** The end is our estimate (LIS-SKINS names none: accepted + 7 days). */
+  protected_estimated: boolean;
 }
 
 export interface AdminOrdersPage {
@@ -58,6 +60,8 @@ export interface AdminOrderFull {
   margin_usd: string;
   /** Accepted, under Steam's protection until then (Skinslink `hold`); `null` otherwise. */
   protected_until: string | null;
+  /** The end is our estimate (LIS-SKINS names none: accepted + 7 days). */
+  protected_estimated: boolean;
   /** Already masked by the API: the token is never in the page. */
   trade_link_masked: string | null;
   paid_with: string | null;

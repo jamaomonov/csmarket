@@ -969,6 +969,11 @@
             ],
             "title": "Pricing Profile"
           },
+          "protected_estimated": {
+            "default": false,
+            "title": "Protected Estimated",
+            "type": "boolean"
+          },
           "protected_until": {
             "anyOf": [
               {
@@ -1251,6 +1256,11 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "protected_estimated": {
+            "default": false,
+            "title": "Protected Estimated",
+            "type": "boolean"
           },
           "protected_until": {
             "anyOf": [
@@ -3044,6 +3054,11 @@
           "price_uzs": {
             "title": "Price Uzs",
             "type": "string"
+          },
+          "protected_estimated": {
+            "default": false,
+            "title": "Protected Estimated",
+            "type": "boolean"
           },
           "protected_until": {
             "anyOf": [

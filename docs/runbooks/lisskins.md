@@ -190,3 +190,11 @@ docker compose -f docker-compose.prod.yml exec postgres psql -U <user> -d <db> -
 
 Remove the key only when this is 0. Delivered orders are still polled for rollbacks for 8 days;
 without the key a rollback in that window goes unseen.
+
+## «На холде» in the admin
+
+LIS-SKINS reports only `accepted` once the buyer takes the offer — no hold status and no end date —
+and the order turns `delivered` at once. Steam still protects the trade for 7 days, so the admin's
+«Обмены» shows such an order «на холде» with **≈** before the end: our estimate, accepted + 7
+days. The reconcile asks LIS-SKINS about it every 10 minutes for 8 days; a rollback comes as
+`return` and opens the `rolled_back` attention. Partners on the API keep reading `delivered`.

@@ -8,7 +8,8 @@ views (``trade_view``, ``public_view``) — no new rule:
 ``buying``      ``paid`` / ``buying``
 ``sent``        ``trade_sent``, the buyer has not accepted (``public_view.is_accepted``)
 ``hold``        accepted while Steam's protection runs (:func:`protection_end` in the future;
-                a Skinslink ``hold`` with no end date yet counts too)
+                a Skinslink ``hold`` with no end date yet counts too; LIS-SKINS names no hold,
+                so its end is our estimate: accepted (``delivered_at``) + 7 days)
 ``delivered``   ``delivered``, or accepted with the protection over
 ``refunded``    the money went back (``refunded_at``), whatever the status
 ``cancelled``   ``cancelled``
@@ -22,7 +23,7 @@ Each predicate has a SQL twin (:func:`in_protection_sql`, :data:`ACTIVE_SQL`,
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal
 
 from sqlalchemy import ColumnElement, and_, false, func, not_, or_
@@ -46,6 +47,31 @@ _SETTLED: dict[str, TradeRowState] = {
 }
 #: Waxpeer's status of a sent offer (accepted once ``release_date`` is set).
 _WX_SENT = 4
+#: Steam's trade protection after the buyer accepts; LIS-SKINS gives no end date.
+STEAM_PROTECTION = timedelta(days=7)
+
+
+def _skinslink_end(order: Order, purchase: SkinslinkPurchase) -> datetime | None:
+    if order.status == "trade_sent" and purchase.status == "hold":
+        return purchase.hold_end_date
+    return None
+
+
+def _lisskins_end(order: Order, purchase: LisskinsPurchase) -> datetime | None:
+    if order.status == "delivered" and purchase.status == "accepted" and order.delivered_at:
+        return order.delivered_at + STEAM_PROTECTION
+    return None
+
+
+def _waxpeer_end(order: Order, trade: SkinTrade | None) -> datetime | None:
+    if (
+        trade is not None
+        and order.status in ("trade_sent", "delivered")
+        and trade.status == _WX_SENT
+        and not trade.is_released
+    ):
+        return trade.release_date
+    return None
 
 
 def protection_end(
@@ -54,23 +80,21 @@ def protection_end(
     """When Steam's protection of the accepted trade ends; ``None`` when none runs.
 
     Skinslink ``hold`` keeps the order ``trade_sent`` until ``completed``; a Waxpeer trade
-    accepted (4 with ``release_date``, not released) has already moved it to ``delivered``.
+    accepted (4 with ``release_date``, not released) and a LIS-SKINS ``accepted`` one have
+    already moved it to ``delivered`` (LIS-SKINS' end is our estimate, accepted + 7 days).
     """
     if order.refunded_at is not None:
         return None
     if isinstance(purchase, SkinslinkPurchase):
-        if order.status == "trade_sent" and purchase.status == "hold":
-            return purchase.hold_end_date
-        return None
-    if (
-        trade is not None
-        and order.status in ("trade_sent", "delivered")
-        and trade.status == _WX_SENT
-        and trade.release_date is not None
-        and not trade.is_released
-    ):
-        return trade.release_date
-    return None
+        return _skinslink_end(order, purchase)
+    if isinstance(purchase, LisskinsPurchase):
+        return _lisskins_end(order, purchase)
+    return _waxpeer_end(order, trade)
+
+
+def protection_is_estimate(purchase: Purchase | None) -> bool:
+    """Whether :func:`protection_end` is our estimate (LIS-SKINS) rather than the market's."""
+    return isinstance(purchase, LisskinsPurchase)
 
 
 def _in_protection(
@@ -125,7 +149,14 @@ def in_protection_sql(now: datetime) -> ColumnElement[bool]:
         SkinTrade.release_date > now,
         SkinTrade.is_released.is_(False),
     )
-    return and_(Order.refunded_at.is_(None), func.coalesce(or_(skinslink, waxpeer), false()))
+    lisskins = and_(
+        Order.status == "delivered",
+        LisskinsPurchase.status == "accepted",
+        Order.delivered_at > now - STEAM_PROTECTION,
+    )
+    return and_(
+        Order.refunded_at.is_(None), func.coalesce(or_(skinslink, waxpeer, lisskins), false())
+    )
 
 
 #: :func:`row_state` in ``("buying", "sent")`` in SQL: on its way to the buyer.
@@ -153,9 +184,11 @@ OPEN_ATTENTION_SQL: ColumnElement[bool] = func.coalesce(
 __all__ = [
     "ACTIVE_SQL",
     "OPEN_ATTENTION_SQL",
+    "STEAM_PROTECTION",
     "TradeRowState",
     "in_protection_sql",
     "open_attention",
     "protection_end",
+    "protection_is_estimate",
     "row_state",
 ]

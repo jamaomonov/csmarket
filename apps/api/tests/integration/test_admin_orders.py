@@ -152,6 +152,7 @@ async def test_list_row_shape_newest_first_and_masked_nothing(
         "created_at": body["items"][0]["created_at"],
         "attention_reason": "buy_unconfirmed",
         "protected_until": None,
+        "protected_estimated": False,
     }
     assert body["items"][1]["phase"] == "Phase 2"
     assert body["items"][1]["attention_reason"] is None
@@ -337,6 +338,7 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
         "fx_rate",
         "margin_usd",
         "protected_until",
+        "protected_estimated",
     }
     assert o["trade_link_masked"] == (
         "https://steamcommunity.com/tradeoffer/new/?partner=39734281&token=••••9q"

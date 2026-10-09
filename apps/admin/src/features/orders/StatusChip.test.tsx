@@ -17,7 +17,13 @@ describe("OrderStatusChip", () => {
   });
 
   it("ignores protection on any other status", () => {
-    render(<OrderStatusChip status="delivered" protectedUntil="2026-10-15T11:00:00+00:00" />);
-    expect(screen.getByTestId("order-status")).toHaveTextContent("получен");
+    render(<OrderStatusChip status="cancelled" protectedUntil="2026-10-15T11:00:00+00:00" />);
+    expect(screen.getByTestId("order-status")).toHaveTextContent("отменён");
+  });
+
+  it("a delivered trade still under estimated protection says so with ≈", () => {
+    const until = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    render(<OrderStatusChip status="delivered" protectedUntil={until} estimated />);
+    expect(screen.getByTestId("order-status")).toHaveTextContent(/^принят, защита до ≈ /);
   });
 });

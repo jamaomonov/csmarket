@@ -169,6 +169,7 @@ export function OrderDetail() {
               <OrderStatusChip
                 status={detail.order.status}
                 protectedUntil={detail.order.protected_until}
+                estimated={detail.order.protected_estimated}
               />
               <AttentionBadge reason={open} />
             </>

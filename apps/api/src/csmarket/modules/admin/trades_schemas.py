@@ -76,6 +76,8 @@ class AdminTradeRow(BaseModel):
     trade_state: TradeRowState
     #: When Steam's protection of the accepted trade ends; ``null`` when none runs.
     protected_until: datetime | None
+    #: ``protected_until`` is our estimate (LIS-SKINS gives none: accepted + 7 days).
+    protected_estimated: bool = False
     #: Why the order failed or was refunded.
     failure_reason: FailureReason | None
     #: The open attention of the trade or purchase, any source.

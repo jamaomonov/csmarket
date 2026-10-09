@@ -27,7 +27,7 @@ export function timeline(detail: AdminOrderDetail): Step[] {
     ["Покупка начата", o.claimed_at],
     ["Обмен отправлен", o.trade_sent_at],
     ["Принят", detail.trade?.accepted_at ?? null],
-    ["Защита Steam до", o.protected_until],
+    [o.protected_estimated ? "Защита Steam до (≈ +7 дней)" : "Защита Steam до", o.protected_until],
     ["Получен", o.delivered_at],
     ["Отменён", o.cancelled_at],
     [`Не получилось${o.refunded_at === null ? refund : ""}`, o.failed_at],

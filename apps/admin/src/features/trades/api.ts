@@ -49,6 +49,8 @@ export interface AdminTradeRow {
   trade_state: TradeRowState;
   /** When Steam's protection of the accepted trade ends. */
   protected_until: string | null;
+  /** The end is our estimate (LIS-SKINS names none: accepted + 7 days). */
+  protected_estimated: boolean;
   failure_reason: FailureReason | null;
   /** The open (unresolved) attention of any source. */
   attention_reason: AttentionReason | null;

@@ -42,6 +42,7 @@ const ROW: AdminTradeRow = {
   trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY",
   trade_state: "sent",
   protected_until: null,
+  protected_estimated: false,
   failure_reason: null,
   attention_reason: null,
   source_status: "active",
@@ -313,5 +314,23 @@ describe("TradesPage", () => {
       if (before) Object.defineProperty(window, "matchMedia", before);
       else Reflect.deleteProperty(window, "matchMedia");
     }
+  });
+
+  it("marks an estimated hold end (LIS-SKINS) with ≈", async () => {
+    api.listTrades.mockResolvedValue(
+      page([
+        {
+          ...ROW,
+          number: "LSHOLD01",
+          source: "lisskins",
+          status: "delivered",
+          trade_state: "hold",
+          protected_until: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+          protected_estimated: true,
+        },
+      ]),
+    );
+    renderPage();
+    expect(await screen.findByTestId("hold-left")).toHaveTextContent(/^≈ /);
   });
 });
