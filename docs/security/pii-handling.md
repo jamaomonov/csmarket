@@ -32,7 +32,7 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   subject (the user id) as a SHA-256 prefix. Keys live one window (60 s). Catalogue:
   `docs/architecture/cache-keys.md`.
 - The webhook sender connects to the address it checked and sends the partner's `Host`; its
-  failures are logged as `http_<code>` / `timeout` / `connect` / `private` with the host only.
+  failures are logged as `http_<code>` / `timeout` / `connect` / `private` / `invalid` with the host only.
   Metric labels are the event name and the outcome (`csmarket_api_webhooks_total`).
 - The public API's failed-authentication counter `public_api:authfail:{hash_short(ip)}` (60 s)
   follows the same rule. A key's optional IP allow-list is the customer's own server addresses,

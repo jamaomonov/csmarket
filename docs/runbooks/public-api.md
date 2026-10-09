@@ -141,12 +141,17 @@ while the stored status shows the purchase plainly alive). The API asks the supp
   answer.
 
 Anything else is **409 `order_in_flight`** («Скин ещё в пути»): the skin may still reach the
-buyer, do not force it; wait or look in the supplier cabinet. A failed or slow lookup is **409
+buyer, do not force it; wait or look in the supplier cabinet. Other refusals: **409 `order_busy`** (another action holds the order, try again),
+**409 `order_needs_attention`** (the order is on the attention path, not this button) and
+**409 `already_refunded`** (nothing to do). A failed or slow lookup is **409
 `source_unavailable`**: nothing was booked, try again in a minute. A `trade_sent` order becomes
 `returned`, a `buying` one `failed`; an API client reads `refunded` with
 `cancelled_by_support`, and the money goes to the USD wallet, once. A `reverted` Skinslink order
 or a LIS-SKINS rollback return means the skin was taken back after it was accepted: it stays with
 the attention path, not this button. Retry still refuses these sources.
+
+If every Skinslink refund answers `order_in_flight`, check that Skinslink's status body still
+carries `merchant_tx_id`; the refund matches on it.
 
 ## A webhook does not arrive
 
@@ -163,9 +168,13 @@ ORDER BY d.created_at;
 
 - `pending` with a future `next_attempt_at`: the retry schedule is 1 m, 5 m, 30 m, 2 h, then
   every 2 h, 10 attempts in all. `last_status_code` is the partner's answer; `last_error` is
-  `http_<code>`, `timeout`, `connect` or `private`.
+  `http_<code>`, `timeout`, `connect`, `private` or `invalid`.
 - `private`: the URL's host now resolves to a non-public address. The partner fixes DNS or sets
   a new URL; the row retries on its own.
+- `invalid`: the stored URL no longer passes the URL check (retried, like `private`); the
+  partner sets a new URL.
+- `exhausted` (status `failed`): the last attempt crashed before it recorded an outcome; look at
+  the worker's log for that delivery id.
 - `failed` with `no_key` or `no_webhook`: the key was revoked or the webhook removed. After 10
   attempts a delivery stays `failed`; there is no resend (`docs/tech-debt.md`). The client reads
   the order with `GET /public/orders/{id}`.

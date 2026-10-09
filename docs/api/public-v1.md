@@ -336,7 +336,7 @@ function verify(headers, rawBody, toleranceSeconds = 300) {
 
 A `2xx` answer within **5 seconds** is success. Anything else (another status, a timeout, a
 connection error) is retried after 1 minute, 5 minutes, 30 minutes, 2 hours, then every 2 hours,
-**10 attempts** in all, then the delivery is `failed` and is not sent again; read the order with
+**10 attempts** in all (when the host has several addresses, each attempt connects to the next one in turn, IPv4 first), then the delivery is `failed` and is not sent again; read the order with
 `GET /orders/{order_id}`. `GET /webhook` shows the latest delivery. If the key is revoked or the
 webhook removed, pending deliveries end `failed`.
 

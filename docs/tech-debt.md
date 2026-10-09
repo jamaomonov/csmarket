@@ -91,3 +91,7 @@ None of these touches money or order state.
 3. **No `channel = api` filter on the admin orders page.** API orders are read through the API
    keys page (the card lists the latest 20) or by `client_order_id` in SQL. _Fix:_ a channel
    filter in `admin.orders_service` if the volume asks for it.
+4. **A black-holed partner webhook can delay other partners' deliveries.** One drainer serves
+   `api_webhooks`; a partner whose host hangs costs up to ~3 s of DNS plus the 5 s POST per
+   delivery, and a batch of them holds the rest. _Fix:_ a per-user cap per batch, or the DNS
+   lookup inside the 5 s budget.
