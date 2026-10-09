@@ -7,6 +7,18 @@ const BASE = "/api/v1/admin/api-keys";
 
 export type Tariff = "retail" | "cost";
 
+export interface AdminKeyLimits {
+  read_per_min: number;
+  orders_per_min: number;
+  feed_per_min: number;
+  check_per_min: number;
+}
+
+export type LimitName = keyof AdminKeyLimits;
+
+/** The new limits: `null` = the default. */
+export type AdminLimitsBody = Record<LimitName, number | null> & { reason: string };
+
 export interface AdminApiKeyRow {
   id: string;
   user: { id: string; display_name: string | null };
@@ -19,6 +31,12 @@ export interface AdminApiKeyRow {
   revenue_usd: string;
   /** Dollars with three decimals: likewise the orders that were not refunded. */
   cost_usd: string;
+  /** Effective limits per minute. */
+  limits: AdminKeyLimits;
+  /** Names of the limits the key sets itself; the rest are defaults. */
+  custom_limits: LimitName[];
+  /** Addresses or CIDRs; empty = any address. */
+  ip_allowlist: string[];
 }
 
 export interface AdminApiKeysPage {
@@ -81,4 +99,15 @@ export function revokeApiKey(id: string, reason: string, key: string): Promise<A
     { reason },
     { idempotencyKey: key },
   );
+}
+
+/** Set the per-minute limits (`null` = the default). `key` is one per confirmed submission. */
+export function setApiKeyLimits(
+  id: string,
+  body: AdminLimitsBody,
+  key: string,
+): Promise<AdminApiKeyCard> {
+  return session.apiPut<AdminApiKeyCard>(`${BASE}/${encodeURIComponent(id)}/limits`, body, {
+    idempotencyKey: key,
+  });
 }

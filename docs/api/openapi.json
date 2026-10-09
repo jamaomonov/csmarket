@@ -139,9 +139,23 @@
             "title": "Created At",
             "type": "string"
           },
+          "custom_limits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Custom Limits",
+            "type": "array"
+          },
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "ip_allowlist": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ip Allowlist",
+            "type": "array"
           },
           "last_used_at": {
             "anyOf": [
@@ -154,6 +168,9 @@
               }
             ],
             "title": "Last Used At"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/AdminKeyLimits"
           },
           "orders": {
             "title": "Orders",
@@ -196,7 +213,10 @@
           "revoked_at",
           "orders",
           "revenue_usd",
-          "cost_usd"
+          "cost_usd",
+          "limits",
+          "custom_limits",
+          "ip_allowlist"
         ],
         "title": "AdminApiKeyRow",
         "type": "object"
@@ -350,6 +370,104 @@
           "reason"
         ],
         "title": "AdminEntryOut",
+        "type": "object"
+      },
+      "AdminKeyLimits": {
+        "description": "The limits per minute as the key enforces them (own value or the default).",
+        "properties": {
+          "check_per_min": {
+            "title": "Check Per Min",
+            "type": "integer"
+          },
+          "feed_per_min": {
+            "title": "Feed Per Min",
+            "type": "integer"
+          },
+          "orders_per_min": {
+            "title": "Orders Per Min",
+            "type": "integer"
+          },
+          "read_per_min": {
+            "title": "Read Per Min",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_per_min",
+          "orders_per_min",
+          "feed_per_min",
+          "check_per_min"
+        ],
+        "title": "AdminKeyLimits",
+        "type": "object"
+      },
+      "AdminLimitsIn": {
+        "additionalProperties": false,
+        "description": "Set the key's limits per minute (``null`` = the default), with a reason.",
+        "properties": {
+          "check_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Check Per Min"
+          },
+          "feed_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feed Per Min"
+          },
+          "orders_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orders Per Min"
+          },
+          "read_per_min": {
+            "anyOf": [
+              {
+                "maximum": 10000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read Per Min"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "AdminLimitsIn",
         "type": "object"
       },
       "AdminLisskinsPurchaseOut": {
@@ -8704,6 +8822,84 @@
           }
         },
         "summary": "An API key's card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/api-keys/{key_id}/limits": {
+      "put": {
+        "description": "Per-minute limits (1..10000, ``null`` = the default); 409 ``api_key_revoked`` /\n``limits_unchanged``.",
+        "operationId": "put_limits_api_v1_admin_api_keys__key_id__limits_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLimitsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminApiKeyCard"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the key's limits",
         "tags": [
           "admin"
         ]

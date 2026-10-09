@@ -91,6 +91,17 @@ _ROUTES: list[tuple[str, str, dict[str, object] | None]] = [
     ("GET", "", None),
     ("GET", "/{id}", None),
     ("PUT", "/{id}/tariff", {"pricing_profile": "cost", "reason": "volume deal"}),
+    (
+        "PUT",
+        "/{id}/limits",
+        {
+            "read_per_min": 5,
+            "orders_per_min": None,
+            "feed_per_min": None,
+            "check_per_min": None,
+            "reason": "bigger quota",
+        },
+    ),
     ("POST", "/{id}/revoke", {"reason": "abuse found"}),
 ]
 
@@ -402,3 +413,111 @@ async def test_same_tariff_is_409_and_not_audited(
     assert r.status_code == 409
     assert r.json()["code"] == "tariff_unchanged"
     assert await _audit(db_session, "api_keys.tariff") == []
+
+
+# --- limits and allow-list --------------------------------------------------------------
+
+_NO_LIMITS: dict[str, int | None] = {
+    "read_per_min": None,
+    "orders_per_min": None,
+    "feed_per_min": None,
+    "check_per_min": None,
+}
+
+
+async def test_set_limits_audits_and_shows_effective(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "Limits")
+    key_id = key.id
+    body = {**_NO_LIMITS, "read_per_min": 600, "orders_per_min": 30, "reason": "YuPay storefront"}
+    r = await integration_client.put(
+        f"{BASE}/{key_id}/limits", json=body, headers={**await admin_headers(), **_idem()}
+    )
+    assert r.status_code == 200, r.text
+    row = r.json()["key"]
+    assert row["limits"] == {
+        "read_per_min": 600,
+        "orders_per_min": 30,
+        "feed_per_min": 1,
+        "check_per_min": 30,
+    }
+    assert row["custom_limits"] == ["read_per_min", "orders_per_min"]
+    [audit] = await _audit(db_session, "api_keys.limits")
+    assert audit.target_id == key_id
+    assert audit.payload == {
+        "from": _NO_LIMITS,
+        "to": {**_NO_LIMITS, "read_per_min": 600, "orders_per_min": 30},
+        "reason": "YuPay storefront",
+    }
+
+
+async def test_limits_replay_same_key(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "LimitsReplay")
+    h = {**await admin_headers(), **_idem()}
+    body = {**_NO_LIMITS, "feed_per_min": 4, "reason": "more feed"}
+    r1 = await integration_client.put(f"{BASE}/{key.id}/limits", json=body, headers=h)
+    r2 = await integration_client.put(f"{BASE}/{key.id}/limits", json=body, headers=h)
+    assert r1.status_code == r2.status_code == 200
+    assert r2.json() == r1.json()
+    assert len(await _audit(db_session, "api_keys.limits")) == 1
+
+
+async def test_limits_out_of_range_is_422(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "LimitsRange")
+    h = await admin_headers()
+    for bad in (0, 10_001):
+        r = await integration_client.put(
+            f"{BASE}/{key.id}/limits",
+            json={**_NO_LIMITS, "read_per_min": bad, "reason": "out of range"},
+            headers={**h, **_idem()},
+        )
+        assert r.status_code == 422
+    assert await _audit(db_session, "api_keys.limits") == []
+
+
+async def test_limits_unchanged_is_409(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "LimitsSame")
+    r = await integration_client.put(
+        f"{BASE}/{key.id}/limits",
+        json={**_NO_LIMITS, "reason": "no change"},
+        headers={**await admin_headers(), **_idem()},
+    )
+    assert r.status_code == 409
+    assert r.json()["code"] == "limits_unchanged"
+    assert await _audit(db_session, "api_keys.limits") == []
+
+
+async def test_limits_on_revoked_key_is_409(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "LimitsDead")
+    key.revoked_at = datetime.now(UTC)
+    await db_session.commit()
+    r = await integration_client.put(
+        f"{BASE}/{key.id}/limits",
+        json={**_NO_LIMITS, "read_per_min": 5, "reason": "too late"},
+        headers={**await admin_headers(), **_idem()},
+    )
+    assert r.status_code == 409
+    assert r.json()["code"] == "api_key_revoked"
+    assert await _audit(db_session, "api_keys.limits") == []
+
+
+async def test_card_shows_ip_allowlist(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "Allow")
+    h = await admin_headers()
+    empty = await integration_client.get(f"{BASE}/{key.id}", headers=h)
+    assert empty.json()["key"]["ip_allowlist"] == []
+    key.ip_allowlist = ["203.0.113.0/24", "2001:db8::1/128"]
+    await db_session.commit()
+    full = await integration_client.get(f"{BASE}/{key.id}", headers=h)
+    assert full.json()["key"]["ip_allowlist"] == ["203.0.113.0/24", "2001:db8::1/128"]

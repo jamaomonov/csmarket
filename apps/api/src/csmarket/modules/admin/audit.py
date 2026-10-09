@@ -12,8 +12,9 @@ from csmarket.core.clock import now
 from csmarket.core.ids import new_id
 from csmarket.modules.admin.models import AdminAuditLog
 
-#: What an audit payload may hold: flat scalars, JSON-ready.
-AuditPayload = dict[str, str | int | bool | None]
+#: What an audit payload may hold: scalars and one level of ``{name: int | None}`` (a before /
+#: after pair of settings), JSON-ready.
+AuditPayload = dict[str, str | int | bool | dict[str, int | None] | None]
 
 
 async def record(
