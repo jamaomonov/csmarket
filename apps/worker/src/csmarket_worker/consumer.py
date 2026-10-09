@@ -51,10 +51,16 @@ from csmarket.modules.click import models as _click_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.lisskins import models as _lisskins_models  # noqa: F401
 from csmarket.modules.notifications.api import EMAILS_CHANNEL, drain_emails
-from csmarket.modules.orders.api import ORDERS_CHANNEL, drain_checks, drain_paid
+from csmarket.modules.orders.api import (
+    ORDERS_CHANNEL,
+    WEBHOOKS_CHANNEL,
+    drain_checks,
+    drain_paid,
+)
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
+from csmarket.modules.public_api.api import drain_webhooks
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
 from csmarket.modules.sales.api import SALES_CHANNEL, drain_sale_checks
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
@@ -120,6 +126,11 @@ async def _drain_sale_checks(db: AsyncSession) -> int:
     return await drain_sale_checks(db)
 
 
+async def _drain_webhooks(db: AsyncSession) -> int:
+    """POST due partner webhooks (``public_api.webhook_sender.drain_webhooks``)."""
+    return await drain_webhooks(db)
+
+
 def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may read settings
     """The queues this process drains, in the order a wake drains them.
 
@@ -127,7 +138,8 @@ def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may 
     drainer, not every paid order. ``emails``: one drainer — letters are not urgent to the
     second, and one sender keeps the provider's rate limit far away. ``skinslink``: one
     drainer — a status check is a single cheap read. `sales`: one drainer — a sale check is a single
-    cheap read. Each channel constant
+    cheap read. ``api_webhooks``: one drainer — a partner that hangs costs at most its 5 s timeout
+    per delivery, and only this queue waits. Each channel constant
     comes from the producing module's ``api`` — a channel spelled twice is a queue nobody
     drains and no test fails.
     """
@@ -141,6 +153,7 @@ def _queues(cfg: Settings) -> tuple[Queue, ...]:  # noqa: ARG001 -- a queue may 
             concurrency=1,
         ),
         Queue(name="sales", channel=SALES_CHANNEL, drain=_drain_sale_checks, concurrency=1),
+        Queue(name="api_webhooks", channel=WEBHOOKS_CHANNEL, drain=_drain_webhooks, concurrency=1),
     )
 
 

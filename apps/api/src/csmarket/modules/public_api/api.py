@@ -16,6 +16,7 @@ from csmarket.modules.public_api.schemas import (
     PublicRefundReason,
     PublicTradeOut,
 )
+from csmarket.modules.public_api.webhook_sender import drain_webhooks
 from csmarket.modules.public_api.webhook_url import check_url, public_addresses
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "api_caller",
     "api_offers",
     "check_url",
+    "drain_webhooks",
     "enforce",
     "issue",
     "live_key",

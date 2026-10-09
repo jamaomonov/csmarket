@@ -407,6 +407,34 @@ def record_email(kind: str, outcome: EmailOutcome) -> None:
     )
 
 
+#: How one partner webhook delivery attempt ended (``public_api.webhook_sender``): ``sent``
+#: (a 2xx); ``retry`` (rescheduled); ``failed`` (no key or webhook, or out of attempts).
+ApiWebhookOutcome = Literal["sent", "retry", "failed"]
+_API_WEBHOOK_EVENTS = frozenset(
+    ("order.paid", "order.trade_sent", "order.delivered", "order.refunded", "other")
+)
+_API_WEBHOOK_OUTCOMES = frozenset(("sent", "retry", "failed"))
+
+API_WEBHOOKS = Counter(
+    "csmarket_api_webhooks_total",
+    "Partner webhook delivery attempts by event and outcome.",
+    ("event", "outcome"),
+)
+_precreate(API_WEBHOOKS, event=_API_WEBHOOK_EVENTS, outcome=_API_WEBHOOK_OUTCOMES)
+
+
+def record_webhook(event: str, outcome: ApiWebhookOutcome) -> None:
+    """Count one partner webhook delivery attempt. An unknown event becomes ``"other"``.
+
+    Never raises.
+    """
+    _inc(
+        API_WEBHOOKS,
+        "csmarket_api_webhooks_total",
+        {"event": event if event in _API_WEBHOOK_EVENTS else "other", "outcome": outcome},
+    )
+
+
 def record_ws_nudges(count: int) -> None:
     """Count ``count`` nudges sent to sockets. Never raises."""
     if count <= 0:
@@ -703,6 +731,7 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 
 
 __all__ = [
+    "API_WEBHOOKS",
     "EMAILS",
     "KASSA_REJECTIONS",
     "LISSKINS_SNAPSHOT_TIMESTAMP",
@@ -726,6 +755,7 @@ __all__ = [
     "WAXPEER_CALLS",
     "WS_CONNECTIONS",
     "WS_NUDGES",
+    "ApiWebhookOutcome",
     "EmailKind",
     "EmailOutcome",
     "KassaProvider",
@@ -753,6 +783,7 @@ __all__ = [
     "record_steam_web_api_call",
     "record_trade_attention",
     "record_waxpeer_call",
+    "record_webhook",
     "record_ws_nudges",
     "serve_metrics",
     "set_lisskins_balance",
