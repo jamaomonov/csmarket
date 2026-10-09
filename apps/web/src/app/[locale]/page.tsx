@@ -22,7 +22,7 @@ import { WhyUs } from "@/components/landing/WhyUs";
 import { routing } from "@/i18n/routing";
 import { getLandingData, socialUrls, wallItems } from "@/lib/landing";
 import { HOME, MARKET } from "@/lib/paths";
-import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
+import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 
 interface Props {
@@ -51,7 +51,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: t("description"),
       url: localeUrl(locale, HOME),
       ...ogLocale(locale),
+      images: shareImage(locale, t("ogAlt")).openGraph,
     },
+    twitter: shareImage(locale, t("ogAlt")).twitter,
     other: GEO_META,
   };
 }

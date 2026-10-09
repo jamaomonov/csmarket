@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 import { SkinLanding } from "@/components/skins/SkinLanding";
 import { routing } from "@/i18n/routing";
 import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
-import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
+import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@/lib/seo";
 import { countUnit, isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
 
@@ -70,7 +70,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: localeUrl(locale, path),
       ...ogLocale(locale),
+      images: shareImage(locale, title).openGraph,
     },
+    twitter: shareImage(locale, title).twitter,
   };
 }
 

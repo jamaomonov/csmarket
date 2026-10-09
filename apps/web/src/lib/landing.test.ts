@@ -159,7 +159,10 @@ describe("landing data", () => {
   });
 
   it("the hero wall stops at its size", () => {
-    const many = Array.from({ length: 40 }, (_, i) => ({ ...item(`s${i}`), image_url: "u" }));
+    const many = Array.from({ length: 40 }, (_, i) => ({
+      ...item(`s${String(i)}`),
+      image_url: "u",
+    }));
     const wall = wallItems({
       hero: [],
       popular: { knives: many, gloves: [], popular: [], cheap: [] },

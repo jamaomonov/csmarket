@@ -38,4 +38,12 @@ describe("landing metadata", () => {
   it("is indexable (the indexing gate lives at the edge)", async () => {
     expect((await meta("en")).robots).toMatchObject({ index: true, follow: true });
   });
+
+  it("shares the locale's branded preview", async () => {
+    const u = await meta("uz");
+    expect(u.openGraph?.images).toEqual([
+      expect.objectContaining({ url: "https://csmarket.uz/og/uz.jpg", width: 1200 }),
+    ]);
+    expect(u.twitter).toMatchObject({ card: "summary_large_image" });
+  });
 });

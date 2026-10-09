@@ -1,0 +1,84 @@
+<!doctype html>
+<!--
+  The share preview (Open Graph / Telegram) of the landing, /market and the listings:
+  1200×630, one per locale. Regenerate apps/web/public/og/<locale>.png by opening
+  og.html?l=<ru|uz|en> at a 1200×630 viewport and taking a screenshot.
+-->
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * { box-sizing: border-box; margin: 0; }
+      html, body { width: 1200px; height: 630px; overflow: hidden; }
+      body {
+        position: relative;
+        background: #0d111b;
+        color: #fff;
+        font-family: "IBM Plex Sans", sans-serif;
+        padding: 64px 72px;
+      }
+      body::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(38% 60% at 82% 46%, rgb(235 75 75 / 0.3), transparent 70%),
+          radial-gradient(30% 50% at 6% 10%, rgb(75 243 100 / 0.16), transparent 70%),
+          radial-gradient(40% 50% at 50% 110%, rgb(136 71 255 / 0.16), transparent 70%);
+      }
+      .grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+        background-size: 56px 56px;
+        mask-image: radial-gradient(70% 80% at 70% 50%, #000 20%, transparent 75%);
+      }
+      .brand { position: relative; display: flex; align-items: center; gap: 14px; font-size: 34px; font-weight: 700; font-style: italic; letter-spacing: -0.02em; }
+      .brand img { width: 52px; height: 52px; }
+      h1 { position: relative; margin-top: 70px; width: 640px; font-size: 76px; line-height: 1.02; letter-spacing: -0.035em; font-weight: 700; }
+      .hl { position: relative; display: inline-block; color: #0d111b; padding: 0 0.16em 0 0.12em; z-index: 0; }
+      .hl::before { content: ""; position: absolute; inset: 0.08em 0 0.02em; background: #4bf364; transform: skewX(-14deg); border-radius: 8px; z-index: -1; }
+      .sub { position: relative; margin-top: 26px; font-size: 30px; font-weight: 500; color: #aab2c5; }
+      .pay { position: absolute; left: 72px; bottom: 60px; display: flex; gap: 12px; }
+      .pay span { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px 0 10px; border-radius: 13px; background: #1d2434; border: 1px solid #2c3449; font-size: 24px; font-weight: 600; }
+      .pay img { width: 36px; height: 36px; border-radius: 9px; }
+      .skins { position: absolute; right: 40px; top: 70px; width: 500px; height: 500px; }
+      .skins img { position: absolute; filter: drop-shadow(0 26px 30px rgb(0 0 0 / 0.6)); }
+      .s1 { width: 430px; right: 20px; top: 0; transform: rotate(-8deg); }
+      .s2 { width: 470px; right: 0; top: 170px; transform: rotate(6deg); }
+      .s3 { width: 420px; right: 50px; top: 290px; transform: rotate(-4deg); }
+    </style>
+  </head>
+  <body>
+    <div class="grid"></div>
+    <div class="brand"><img src="../../apps/web/public/favicon.svg" alt="" />csmarket.uz</div>
+    <h1 id="h1"></h1>
+    <p class="sub" id="sub"></p>
+    <div class="pay">
+      <span><img src="../../apps/web/public/pay/click.png" alt="" />Click</span>
+      <span><img src="../../apps/web/public/pay/payme.png" alt="" />Payme</span>
+      <span><img src="../../apps/web/public/pay/uzum.png" alt="" />Uzum</span>
+    </div>
+    <div class="skins">
+      <img class="s1" alt="" src="https://community.fastly.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwiYbf_jdk7uW-V6V-Kf2cGFidxOp_pewnF3nhxEt0sGnSzN76dH3GOg9xC8FyEORftRe-x9PuYurq71bW3d8UnjK-0H0YSTpMGQ/512fx384f" />
+      <img class="s2" alt="" src="https://community.fastly.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Tk5UvzWCL2kpn2-DFk_OKherB0H_KfG2Kv0ed4u95kSi26gBBp6jvcyY34J3jGZw51CJt1R-Beuxfqk4fhPu7n5VTY2tpHn3343y5P6DErvbh5izSzPA/512fx384f" />
+      <img class="s3" alt="" src="https://community.fastly.steamstatic.com/economy/image/i0CoZ81Ui0m-9KwlBY1L_18myuGuq1wfhWSaZgMttyVfPaERSR0Wqmu7LAocGIGz3UqlXOLrxM-vMGmW8VNxu5Dx60noTyLwlcK3wiFO0PSneqF-JeKDC2mE_u995LZWTTuygxIYvjiBk5r0bymVZwIoWZJ1QLEDs0O6ktayZr6ztFeIjYxAyyX-jH8b5y5vt-wDB_Y7uvqAHvjgL6w/512fx384f" />
+    </div>
+    <script>
+      const T = {
+        ru: ['Скины <span class="hl">КС2 (CS2)</span> в Узбекистане', "Цены в сумах. Скин приходит в Steam."],
+        uz: ['<span class="hl">CS2</span> skinlari O‘zbekistonda', "Narxlar so‘mda. Skin Steam’ga keladi."],
+        en: ['<span class="hl">CS2</span> skins in Uzbekistan', "Prices in so‘m. The skin arrives in Steam."],
+      };
+      const l = new URLSearchParams(location.search).get("l") || "ru";
+      document.getElementById("h1").innerHTML = T[l][0];
+      document.getElementById("sub").textContent = T[l][1];
+    </script>
+  </body>
+</html>

@@ -65,3 +65,21 @@ export const GEO_META: Record<string, string> = {
   "geo.position": "41.311081;69.240562",
   ICBM: "41.311081, 69.240562",
 };
+
+export interface ShareImage {
+  openGraph: { url: string; width: number; height: number; alt: string }[];
+  twitter: { card: "summary_large_image"; images: string[] };
+}
+
+/**
+ * The branded share preview (`public/og/<locale>.jpg`, 1200×630, made from
+ * `docs/design/og.html`) for pages without a picture of their own: the landing, /market and
+ * the category and weapon pages. Spread `openGraph` into `openGraph.images`, `twitter` as is.
+ */
+export function shareImage(locale: string, alt: string): ShareImage {
+  const url = `${SITE}/og/${OG_LOCALE[locale] ? locale : "ru"}.jpg`;
+  return {
+    openGraph: [{ url, width: 1200, height: 630, alt }],
+    twitter: { card: "summary_large_image", images: [url] },
+  };
+}

@@ -24,7 +24,15 @@ import { SkinSort } from "@/components/skins/SkinSort";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { MARKET } from "@/lib/paths";
-import { alternates, GEO_META, NOINDEX_FOLLOW, ogLocale, ROBOTS } from "@/lib/seo";
+import {
+  alternates,
+  GEO_META,
+  localeUrl,
+  NOINDEX_FOLLOW,
+  ogLocale,
+  ROBOTS,
+  shareImage,
+} from "@/lib/seo";
 import { itemListLd } from "@/lib/skin-seo";
 import { getSkinFacets, getSkinsPage } from "@/lib/skins";
 
@@ -52,7 +60,14 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
     description: count > 0 ? t("meta.marketDescription", { count }) : t("meta.description"),
     alternates: alternates(locale, MARKET),
     robots: filtered ? NOINDEX_FOLLOW : ROBOTS,
-    openGraph: { type: "website", siteName: "csmarket", ...ogLocale(locale) },
+    openGraph: {
+      type: "website",
+      siteName: "csmarket",
+      url: localeUrl(locale, MARKET),
+      ...ogLocale(locale),
+      images: shareImage(locale, t("meta.title")).openGraph,
+    },
+    twitter: shareImage(locale, t("meta.title")).twitter,
     other: GEO_META,
   };
 }
