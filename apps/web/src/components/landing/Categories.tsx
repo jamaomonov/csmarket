@@ -40,9 +40,7 @@ export async function Categories({ tiles, locale }: { tiles: CategoryTile[]; loc
           {shown.map((tile) => {
             const price = tile.fromUzs === null ? null : formatUzs(locale, tile.fromUzs);
             const style = {
-              // The site's green behind every picture: the tiles show green skins (owner,
-              // 2026-10-10), and one glow keeps the grid a single palette.
-              "--r": "#4bf364",
+              "--r": tile.item?.rarity_color ?? "#4b69ff",
               "--m": `url(/skins/categories/${tile.category}.png)`,
             } as CSSProperties; // CSS custom properties
             return (
