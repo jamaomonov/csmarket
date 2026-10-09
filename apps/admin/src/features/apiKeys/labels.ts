@@ -6,6 +6,7 @@ import { ApiError, formatApiError } from "@/lib/api";
 const CODE_MESSAGES: Record<string, string> = {
   idempotency_mismatch: "Эта операция уже была выполнена с другими данными. Обновите страницу.",
   api_key_revoked: "Ключ уже отозван.",
+  tariff_unchanged: "Этот тариф уже выбран.",
 };
 
 const UNPROCESSABLE = "Запрос не принят: проверьте введённые значения.";

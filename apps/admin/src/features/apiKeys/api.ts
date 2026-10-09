@@ -17,6 +17,7 @@ export interface AdminApiKeyRow {
   orders: number;
   /** Dollars with three decimals: the key's orders that were not refunded. */
   revenue_usd: string;
+  /** Dollars with three decimals: likewise the orders that were not refunded. */
   cost_usd: string;
 }
 

@@ -8,14 +8,15 @@ tariff, never the token or the owner's identity) and leave the replay + commit t
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from decimal import Decimal
 from urllib.parse import urlsplit
 
-from sqlalchemy import Select, Subquery, and_, case, func, or_, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.cursor import decode_cursor, encode_cursor
-from csmarket.core.errors import NotFoundError, ValidationError
+from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
 from csmarket.modules.admin.api_keys_schemas import (
     AdminApiKeyCard,
     AdminApiKeyDelivery,
@@ -51,26 +52,36 @@ def _like_escape(needle: str) -> str:
     return needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _stats() -> Subquery:
-    """Per-key order count and sums, one grouped subquery."""
-    return (
+async def _sales(
+    db: AsyncSession, key_ids: Sequence[str]
+) -> dict[str, tuple[int, Decimal, Decimal]]:
+    """``(orders, revenue, cost)`` per key id, for these keys only.
+
+    Revenue and cost both skip refunded orders; ``orders`` counts every order of the key.
+    """
+    if not key_ids:
+        return {}
+    unrefunded = Order.refunded_at.is_(None)
+    stmt = (
         select(
-            Order.api_key_id.label("key_id"),
-            func.count().label("orders"),
-            func.coalesce(
-                func.sum(case((Order.refunded_at.is_(None), Order.price_usd), else_=0)), 0
-            ).label("revenue"),
-            func.coalesce(func.sum(Order.cost_usd), 0).label("cost"),
+            Order.api_key_id,
+            func.count(),
+            func.coalesce(func.sum(case((unrefunded, Order.price_usd), else_=0)), 0),
+            func.coalesce(func.sum(case((unrefunded, Order.cost_usd), else_=0)), 0),
         )
-        .where(Order.channel == "api", Order.api_key_id.is_not(None))
+        .where(Order.channel == "api", Order.api_key_id.in_(key_ids))
         .group_by(Order.api_key_id)
-        .subquery()
     )
+    return {
+        str(kid): (int(n), Decimal(rev), Decimal(cost))
+        for kid, n, rev, cost in (await db.execute(stmt)).all()
+    }
 
 
 def _row(
-    key: ApiKey, name: str | None, orders: int | None, revenue: Decimal | None, cost: Decimal | None
+    key: ApiKey, name: str | None, sales: tuple[int, Decimal, Decimal] | None
 ) -> AdminApiKeyRow:
+    orders, revenue, cost = sales or (0, Decimal(0), Decimal(0))
     return AdminApiKeyRow(
         id=key.id,
         user=AdminOrderUser(id=key.user_id, display_name=name),
@@ -78,19 +89,9 @@ def _row(
         created_at=key.created_at,
         last_used_at=key.last_used_at,
         revoked_at=key.revoked_at,
-        orders=int(orders or 0),
+        orders=orders,
         revenue_usd=_usd(revenue),
         cost_usd=_usd(cost),
-    )
-
-
-def _select_rows() -> Select[ApiKey, str | None, int | None, Decimal | None, Decimal | None]:
-    """Keys with the owner's name and sales (a key without orders has ``NULL`` sums)."""
-    stats = _stats()
-    return (
-        select(ApiKey, User.display_name, stats.c.orders, stats.c.revenue, stats.c.cost)
-        .join(User, User.id == ApiKey.user_id)
-        .outerjoin(stats, stats.c.key_id == ApiKey.id)
     )
 
 
@@ -101,7 +102,7 @@ async def list_keys(
 
     ``q`` = part of the owner's display name.
     """
-    stmt = _select_rows()
+    stmt = select(ApiKey, User.display_name).join(User, User.id == ApiKey.user_id)
     revoked = (ApiKey.revoked_at.is_not(None)).label("rev")
     stmt = stmt.order_by(revoked, ApiKey.created_at.desc(), ApiKey.id.desc()).limit(limit + 1)
     needle = (q or "").strip()
@@ -120,7 +121,8 @@ async def list_keys(
         stmt = stmt.where(or_(same, ApiKey.revoked_at.is_not(None)) if not last_rev else same)
     rows = list((await db.execute(stmt)).all())
     page, more = rows[:limit], len(rows) > limit
-    items = [_row(k, n, o, r, c) for k, n, o, r, c in page]
+    sales = await _sales(db, [k.id for k, _ in page])
+    items = [_row(k, n, sales.get(k.id)) for k, n in page]
     tail = page[-1][0] if more else None
     return items, (encode_cursor(tail.created_at, tail.id) if tail is not None else None)
 
@@ -164,10 +166,10 @@ async def _webhook(db: AsyncSession, user_id: str) -> AdminApiKeyWebhook | None:
 
 async def key_card(db: AsyncSession, key: ApiKey) -> AdminApiKeyCard:
     """The row, the latest 20 orders and the owner's webhook (host only)."""
-    stmt = _select_rows()
-    k, name, orders, revenue, cost = (await db.execute(stmt.where(ApiKey.id == key.id))).one()
+    name = await db.scalar(select(User.display_name).where(User.id == key.user_id))
+    sales = await _sales(db, [key.id])
     return AdminApiKeyCard(
-        key=_row(k, name, orders, revenue, cost),
+        key=_row(key, name, sales.get(key.id)),
         orders=await recent_key_orders(db, key.id),
         webhook=await _webhook(db, key.user_id),
     )
@@ -179,9 +181,11 @@ async def set_tariff(
     """Switch the tariff of a live key; audited ``api_keys.tariff``.
 
     Raises:
-        ConflictError: ``api_key_revoked``.
+        ConflictError: ``api_key_revoked``; ``tariff_unchanged`` -- already on that tariff.
     """
     before = key.pricing_profile
+    if key.revoked_at is None and before == profile:
+        raise ConflictError("the key is already on this tariff", code="tariff_unchanged")
     await set_pricing_profile(db, key=key, profile=profile)
     await record(
         db,

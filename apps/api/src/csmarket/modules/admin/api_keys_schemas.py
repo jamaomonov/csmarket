@@ -30,7 +30,7 @@ class AdminApiKeyRow(BaseModel):
     orders: int
     #: Sum of ``price_usd`` of the key's orders that were not refunded.
     revenue_usd: str
-    #: Sum of ``cost_usd`` of the key's orders.
+    #: Sum of ``cost_usd`` of the key's orders that were not refunded.
     cost_usd: str
 
 

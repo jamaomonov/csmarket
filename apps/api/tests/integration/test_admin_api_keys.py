@@ -137,7 +137,7 @@ async def test_list_shows_orders_and_sums(
     assert row["pricing_profile"] == "retail"
     assert row["orders"] == 3
     assert row["revenue_usd"] == "30.500"
-    assert row["cost_usd"] == "31.250"
+    assert row["cost_usd"] == "27.250"  # the refunded order's cost is not counted
     assert row["revoked_at"] is None
     assert token not in r.text
     assert "token" not in r.text
@@ -207,6 +207,7 @@ async def test_card_has_orders_and_webhook_host_only(
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["key"]["orders"] == 1
+    assert body["key"]["cost_usd"] == "9.000"
     assert [o["number"] for o in body["orders"]] == [order.number]
     assert body["webhook"]["host"] == "hooks.partner.example"
     assert body["webhook"]["last_delivery"]["status"] == "failed"
@@ -387,3 +388,17 @@ async def test_set_pricing_profile_unit(db_session: AsyncSession) -> None:
     assert user is not None
     new_key, _ = await keys.issue(db_session, user=user)
     assert new_key.pricing_profile == "cost"
+
+
+async def test_same_tariff_is_409_and_not_audited(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    _, key, _ = await _partner(db_session, "Same")
+    r = await integration_client.put(
+        f"{BASE}/{key.id}/tariff",
+        json={"pricing_profile": "retail", "reason": "no change"},
+        headers={**await admin_headers(), **_idem()},
+    )
+    assert r.status_code == 409
+    assert r.json()["code"] == "tariff_unchanged"
+    assert await _audit(db_session, "api_keys.tariff") == []
