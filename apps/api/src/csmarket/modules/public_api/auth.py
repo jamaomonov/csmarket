@@ -19,6 +19,7 @@ from csmarket.core.errors import (
     RateLimitedError,
     UnauthorizedError,
 )
+from csmarket.core.logging import hash_short
 from csmarket.modules.auth.api import hash_token, hit_counter
 from csmarket.modules.public_api.keys import TOKEN_PREFIX
 from csmarket.modules.public_api.models import ApiKey
@@ -87,7 +88,7 @@ async def api_caller(
         return await _resolve(request, db, authorization)
     except UnauthorizedError:
         over = await hit_counter(
-            f"public_api:authfail:{client_ip(request)}",
+            f"public_api:authfail:{hash_short(client_ip(request))}",
             limit=AUTH_FAIL_LIMIT,
             window=AUTH_FAIL_WINDOW,
         )

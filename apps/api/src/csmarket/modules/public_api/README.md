@@ -40,7 +40,7 @@ and offers read our tables and Redis, and the order is bought by the worker.
 | `public_api:feed:{snap}:{n}`            | 1800 s      | one JSON text page of 1000 items                     |
 | `public_api:offers:{profile}:{item_id}` | 60 s        | priced offers per tariff                             |
 | `public_api:rl:{bucket}:{key_id}`       | 60 s window | per-key counters                                     |
-| `public_api:authfail:{ip}`              | 60 s window | failed authentications, 30 a minute                  |
+| `public_api:authfail:{hash_short(ip)}`  | 60 s window | failed authentications, 30 a minute                  |
 
 Catalogued in `docs/architecture/cache-keys.md`.
 

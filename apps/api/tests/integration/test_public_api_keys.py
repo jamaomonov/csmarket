@@ -242,3 +242,18 @@ async def test_the_eleventh_order_hit_is_429_with_retry_after(
     assert r.status_code == 429
     assert r.headers["Retry-After"] == "60"
     assert r.json()["code"] == "rate_limited"
+
+
+async def test_failed_auth_counter_key_holds_a_hash_not_the_ip(
+    integration_client: AsyncClient,
+) -> None:
+    from csmarket.core.redis import get_redis
+
+    r = await integration_client.get(PROBE, headers=_bearer("csm_nope"))
+    assert r.status_code == 401
+    keys = [k async for k in get_redis().scan_iter("public_api:authfail:*")]
+    assert keys, "the failed attempt was not counted"
+    for k in keys:
+        name = k.decode() if isinstance(k, bytes) else k
+        assert "." not in name.removeprefix("public_api:authfail:")
+        assert ":" not in name.removeprefix("public_api:authfail:")
