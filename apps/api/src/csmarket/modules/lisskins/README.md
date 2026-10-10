@@ -66,6 +66,14 @@ types, `BUY_LINK_ERRORS`, `TRADE_LINK_ERRORS`, `INFO_MAX_IDS`), the export (`rea
   a name and a price. A body that is cut short, not the export or not `"status": "success"` is
   `LisskinsUnavailableError` — never an empty market. Returns `last_update`. The request uses a
   browser-like `User-Agent`: the export's CDN refused httpx's on 2026-10-07.
+- **One skin on two markets counts once (2026-10-10).** About half of the LIS-SKINS lots we keep
+  are the same Steam asset Skinslink lists, usually ~2 % dearer there. Offers already merge by
+  asset (`skins.merge_offers`): shown once, bought from the cheaper source. The stock count now
+  merges too. `Collector(also_listed=…)` gets Skinslink's asset ids from
+  `source_prices._skinslink_assets`; it is empty while Skinslink is off or its mirror is
+  stale. A lot Skinslink also lists is kept and priced, but left out of `lisskins_count`, and an
+  item with lots keeps at least 1. So `stock_count` — the card's «N шт.» and the liquidity
+  markup — no longer counts a skin twice.
 - **`snapshot.py`** — `load_index` maps a lot's name to our catalogue as Skinslink's mirror
   does (`skins.canonical_name`); a Doppler-family name without a phase is placed by
   `item_paint_index` against `skin_items.paint_index` (each phase is its own paint).
