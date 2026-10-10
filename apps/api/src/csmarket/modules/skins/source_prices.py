@@ -33,9 +33,23 @@ from csmarket.modules.skins.cachekeys import bump_catalog_version
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.repricing import lock_pricing, reprice_rows
 from csmarket.modules.skins.settings import load_rules
+from csmarket.modules.skinslink.api import SkinslinkItem, mirror_fresh
 from csmarket.modules.skinslink.api import rollup as skinslink_rollup
 
 log = get_logger("csmarket.skins.source_prices")
+
+
+async def _skinslink_assets(
+    db: AsyncSession, *, settings: Settings, now: datetime
+) -> frozenset[str]:
+    """The Steam asset ids Skinslink lists now: the same skin on both markets counts once.
+
+    Empty while Skinslink is off or its mirror is stale (its count is cleared then, so every
+    LIS-SKINS lot must count).
+    """
+    if not settings.skinslink_active or not await mirror_fresh(db, settings=settings, now=now):
+        return frozenset()
+    return frozenset(await db.scalars(select(SkinslinkItem.id)))
 
 
 async def sync_lisskins(
@@ -53,8 +67,9 @@ async def sync_lisskins(
     """
     async with session_factory() as db:
         index = await load_index(db)
+        shared = await _skinslink_assets(db, settings=settings, now=now())
         await db.commit()
-    collected = Collector(index)
+    collected = Collector(index, also_listed=shared)
     last_update = await reader(
         settings.lisskins_export_url,
         collected.add,

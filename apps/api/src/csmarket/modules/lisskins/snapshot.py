@@ -98,9 +98,19 @@ class _Kept:
 class Collector:
     """Fed every sellable lot of one export; keeps what the snapshot writes."""
 
-    def __init__(self, index: CatalogueIndex, *, keep: int = KEEP) -> None:
+    def __init__(
+        self,
+        index: CatalogueIndex,
+        *,
+        keep: int = KEEP,
+        also_listed: frozenset[str] = frozenset(),
+    ) -> None:
+        """``also_listed``: Steam asset ids another market (Skinslink) lists too. Such a lot is
+        one skin on two markets: kept and priced as usual, but not counted twice in the stock
+        count the liquidity markup reads (an item with lots keeps a count of at least 1)."""
         self._index = index
         self._keep = keep
+        self._also_listed = also_listed
         self.lots = 0
         self.unmapped = 0
         self.items: dict[str, _Kept] = {}
@@ -113,7 +123,8 @@ class Collector:
             self.unmapped += 1
             return
         kept = self.items.setdefault(item_id, _Kept())
-        kept.count += 1
+        if lot.asset_id is None or lot.asset_id not in self._also_listed:
+            kept.count += 1
         entry = (-lot.price_units, -lot.id, -self.lots, lot)
         if len(kept.heap) < self._keep:
             heapq.heappush(kept.heap, entry)
@@ -127,7 +138,7 @@ class Collector:
     def summary(self) -> dict[str, tuple[int, int]]:
         """``(cheapest units, lot count)`` per item."""
         return {
-            item_id: (-max(e[0] for e in kept.heap), kept.count)
+            item_id: (-max(e[0] for e in kept.heap), max(kept.count, 1))
             for item_id, kept in self.items.items()
         }
 

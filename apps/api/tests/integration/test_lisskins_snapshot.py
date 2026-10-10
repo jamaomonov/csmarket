@@ -23,6 +23,7 @@ from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.pricing import quote
 from csmarket.modules.skins.settings import load_rules
 from csmarket.modules.skins.source_prices import sync_lisskins
+from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
@@ -202,3 +203,71 @@ async def test_the_cheaper_source_prices_the_card(
         steam_price_units=row.steam_price_units,
     ).price_usd
     assert row.sell_price_usd == expected
+
+
+async def _mirror(db: AsyncSession, item: SkinItem, *asset_ids: str, age: timedelta) -> None:
+    """Skinslink lists ``asset_ids`` of ``item``; its mirror was synced ``age`` ago."""
+    db.add(SkinslinkState(id=1, cursor="c", mirror_synced_at=NOW - age))
+    for asset in asset_ids:
+        db.add(
+            SkinslinkItem(
+                id=asset,
+                market_hash_name=item.market_hash_name,
+                phase="",
+                price_units=20_000,
+                skin_item_id=item.id,
+            )
+        )
+    await db.commit()
+
+
+SL_SETTINGS = SETTINGS.model_copy(
+    update={"skinslink_enabled": True, "skinslink_api_key": "k", "skinslink_secret": "s"}
+)
+
+
+async def _sync_with_skinslink(engine: AsyncEngine, *lots: Lot) -> SnapshotResult:
+    return await sync_lisskins(
+        async_sessionmaker(bind=engine, expire_on_commit=False),
+        get_redis(),
+        settings=SL_SETTINGS,
+        reader=_reader(*lots),
+        now=lambda: NOW,
+    )
+
+
+async def test_a_lot_skinslink_also_lists_counts_once(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """The same Steam asset on both markets is one skin: the stock count (and the liquidity
+    markup it drives) counts it once; the cheapest LIS-SKINS price still counts every lot."""
+    item, _ = await make_item_and_rate(db_session)
+    lots = [_lot(n, item.market_hash_name, 10_000 + n) for n in (1, 2, 3)]
+    await _mirror(
+        db_session, item, lots[0].asset_id or "", lots[1].asset_id or "", age=timedelta(0)
+    )
+    await _sync_with_skinslink(db_engine, *lots)
+    row = await _item(db_session, item.id)
+    assert (row.lisskins_min_units, row.lisskins_count) == (10_001, 1)
+
+
+async def test_lots_all_shared_still_count_as_stock(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    item, _ = await make_item_and_rate(db_session)
+    lot = _lot(1, item.market_hash_name, 10_000)
+    await _mirror(db_session, item, lot.asset_id or "", age=timedelta(0))
+    await _sync_with_skinslink(db_engine, lot)
+    row = await _item(db_session, item.id)
+    assert (row.lisskins_min_units, row.lisskins_count) == (10_000, 1)
+
+
+async def test_a_stale_mirror_counts_every_lot(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    item, _ = await make_item_and_rate(db_session)
+    lots = [_lot(n, item.market_hash_name, 10_000 + n) for n in (1, 2, 3)]
+    await _mirror(db_session, item, lots[0].asset_id or "", age=timedelta(hours=1))
+    await _sync_with_skinslink(db_engine, *lots)
+    row = await _item(db_session, item.id)
+    assert row.lisskins_count == 3

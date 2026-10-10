@@ -159,3 +159,27 @@ Trade-locked lots need a withdraw/return flow of their own, and none were on the
 - Runbook [`lisskins.md`](../runbooks/lisskins.md); flow
   [`lisskins-buy.mmd`](../architecture/sequence-diagrams/lisskins-buy.mmd).
 - LIS-SKINS API reference: <https://lis-skins.stoplight.io/docs/lis-skins> (read 2026-10-07).
+
+## Amendment 2026-10-10: one Steam asset on both markets
+
+The production data show it:
+
+- 87 374 of the 174 445 LIS-SKINS lots we keep (50 %) are the same Steam asset that Skinslink
+  lists;
+- 16 447 catalogue items are sold by both markets;
+- Skinslink's price for the same asset is a median ~2 % higher below $100 and ~1 % lower above
+  it.
+
+The offers were already merged by asset: shown once and bought from the cheaper source. The
+stock count was not. `count_auto + skinslink_count + lisskins_count` counted such a skin twice,
+so the liquidity markup was lower than the rules mean:
+
+- 433 items lost the scarce-stock +3 pp;
+- about 1 800 items lost 0.5 pp at the 20 and 50 thresholds.
+
+The card's «N шт.» was inflated too. The owner asked for one skin to be one offer everywhere, so
+the LIS-SKINS snapshot now leaves Skinslink-listed assets out of `lisskins_count`.
+
+- An item with lots keeps at least 1.
+- Nothing is left out while Skinslink is off or its mirror is stale.
+- Purchase prices do not change; only our markup on those items does.
