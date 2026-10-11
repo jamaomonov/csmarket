@@ -139,7 +139,9 @@ while the stored status shows the purchase plainly alive). The API asks the supp
 - LIS-SKINS `return` that is not a rollback, for every skin of ours in the answer, every entry
   readable and the ids matching;
 - an empty answer, for a row older than 10 minutes with no market purchase id and no lost buy
-  answer.
+  answer. A LIS-SKINS lost answer older than 10 minutes, or one whose `buy_unconfirmed`
+  attention an admin resolved after it, counts as settled: the empty answer refunds it
+  (ADR-0018, amendment 2026-10-11).
 
 Anything else is **409 `order_in_flight`** («Скин ещё в пути»): the skin may still reach the
 buyer, do not force it; wait or look in the supplier cabinet. Other refusals: **409 `order_busy`** (another action holds the order, try again),

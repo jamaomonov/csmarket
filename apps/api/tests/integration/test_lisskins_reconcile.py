@@ -3,16 +3,20 @@ rule, Steam's trade protection, a failed call, a pending buy."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import timedelta
 from decimal import Decimal
 
 import pytest
 from csmarket.core import clock
 from csmarket.core.config import get_settings
-from csmarket.modules.lisskins.api import LisskinsError, LisskinsUnavailableError
+from csmarket.core.ids import new_id
+from csmarket.modules.lisskins.api import InfoAnswer, LisskinsError, LisskinsUnavailableError
 from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsPurchase, LisskinsState
 from csmarket.modules.orders import lisskins_reconcile
 from csmarket.modules.orders.lisskins_reconcile import reconcile_lisskins
+from csmarket.modules.orders.admin_actions import resolve_attention
+from csmarket.modules.orders.admin_refund_sources import admin_refund_purchase
 from csmarket.modules.orders.models import Order
 from csmarket.modules.wallet.api import user_balance
 from sqlalchemy import select
@@ -230,6 +234,54 @@ async def test_a_repeat_refused_for_its_lot_is_never_refunded_nor_substituted(
     assert (row.status, row.refunded_at) == ("buying", None)
     assert (p.custom_id, p.buy_pending, p.attention_reason) == (order.id, False, "buy_unconfirmed")
     assert await user_balance(db_session, order.user_id) == before
+
+
+class _Empty:
+    """``market/info`` for the admin refund: nothing under any ``custom_id``."""
+
+    async def info_answer(self, *, custom_ids: Sequence[str]) -> InfoAnswer:
+        """An empty answer."""
+        return InfoAnswer(purchases=(), entries=0)
+
+
+class _NoSkinslink:
+    async def purchase_status(self, *, merchant_tx_id: str) -> None:
+        raise AssertionError("Skinslink must not be asked")
+
+
+async def test_a_held_purchase_is_refunded_once_an_admin_checked_it(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """LS-1, end to end: held (``buy_unconfirmed``) → «Разобрано» → the admin refund asks
+    ``market/info``, which shows nothing → refunded, never stuck in ``buying``."""
+    lost = clock.now() - timedelta(minutes=get_settings().order_unconfirmed_minutes + 1)
+    order, _ = await make_lisskins_order(
+        db_session,
+        status="buying",
+        skin_status=None,
+        purchase_id=None,
+        buy_unconfirmed_at=lost,
+        created_at=clock.now() - timedelta(hours=1),
+    )
+    fake = FakeLisskinsClient(LisskinsError("gone", status=400, code="skins_unavailable"))
+    for _ in range(2):  # re-arm, then the refused repeat
+        await _tick(db_engine, fake)
+    number, user_id = order.number, order.user_id
+    _, p = await _state(db_session, order)
+    assert p.attention_reason == "buy_unconfirmed"
+    await db_session.commit()
+    await resolve_attention(db_session, number=number, admin_id=new_id(), note=None)
+    await db_session.commit()
+    done = await admin_refund_purchase(
+        db_session,
+        number=number,
+        admin_id=new_id(),
+        skinslink=_NoSkinslink(),
+        lisskins=_Empty(),
+    )
+    await db_session.commit()
+    assert (done.status, done.refunded_at is not None) == ("failed", True)
+    assert await user_balance(db_session, user_id) == PRICE
 
 
 async def test_a_rolled_back_open_order_is_not_polled_forever(

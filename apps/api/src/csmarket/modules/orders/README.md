@@ -276,7 +276,9 @@ lisskins)` (the route injects `skinslink.request_status_client` and
   `order_in_flight` for a row younger than 10 minutes with no market purchase id. Then the
   unlocked read commits and the source is asked once (4 s, nothing locked): Skinslink
   `failed` / `canceled`, a LIS-SKINS `return` that is not a `rollback_…`, or not found with no
-  purchase id on record and no lost buy answer (`buy_unconfirmed_at`) → refundable; an answer
+  purchase id on record and no lost buy answer (`buy_unconfirmed_at`; a LIS-SKINS one older
+  than 10 minutes or followed by a resolved `buy_unconfirmed` is settled,
+  `lost_answer_settled`) → refundable; an answer
   about another purchase (`merchant_tx_id`, purchase id, `custom_id`) or an unreadable
   LIS-SKINS entry (`info_answer.entries`) → `order_in_flight`; anything else →
   `order_in_flight`; an error or timeout → `source_unavailable`. Lock order → purchase,

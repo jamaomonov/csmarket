@@ -102,3 +102,25 @@ it does not settle (a silence, an attention); forcing it changes nothing for the
 - [ADR-0007](./0007-orders-buying-trades.md) (the Waxpeer admin refund, ruling Y)
 - [ADR-0010](./0010-skinslink-buy-source.md), [ADR-0012](./0012-lisskins-buy-source.md),
   [ADR-0017](./0017-public-api-and-usd-wallet.md)
+
+## Amendment 2026-10-11: a LIS-SKINS lost answer that is settled (review LS-1)
+
+A LIS-SKINS purchase held with `buy_unconfirmed` (a repeat refused for the lot, `market/info`
+empty) kept `buy_unconfirmed_at` forever, so step 3 always answered `order_in_flight` and the
+money stayed in a `buying` order; admin retry refuses LIS-SKINS and «Разобрано» only re-armed a
+repeat that was held again.
+
+Step 3's «not found» now also refunds a LIS-SKINS row whose lost answer is **settled**
+(`admin_refund_sources.lost_answer_settled`):
+
+- the mark is older than 10 minutes (`UNSEEN_AFTER`) — LIS-SKINS would long show a purchase
+  made under our `custom_id`, and the reconcile itself sends the buy again at that point; or
+- an admin resolved the `buy_unconfirmed` attention after the mark — that mark is a repeat
+  LIS-SKINS answered with a refusal, not a silence, and the admin checked the cabinet.
+
+Unchanged: the refund still needs the one `market/info` lookup to show **nothing** of ours
+(every entry readable); a failed lookup is `source_unavailable`; a younger, unresolved mark is
+`order_in_flight`; a mark moved during the lookup (a new send) is `order_in_flight`; the open
+attention still refuses (`order_needs_attention`). Skinslink clears its mark when it re-arms, so
+its rule is unchanged. Tests: `test_admin_refund_sources.py` (held, past the wait, no proof, a
+newer send) and `test_lisskins_reconcile.py` (held → «Разобрано» → refunded).

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import replace
 from collections.abc import Awaitable, Callable, Iterator, Sequence
 from datetime import timedelta
 from decimal import Decimal
@@ -578,6 +579,78 @@ async def test_lisskins_not_found_and_old_is_refunded(db_session: AsyncSession) 
         created_at=clock.now() - OLD,
     )
     assert (await _ls_refund(db_session, order, [])).status == "failed"
+
+
+def _lost(minutes_ago: float, **over: Any) -> dict[str, Any]:
+    """An old LIS-SKINS row with no purchase id whose buy answer was lost ``minutes_ago``."""
+    return {
+        "status": "buying",
+        "skin_status": None,
+        "purchase_id": None,
+        "created_at": clock.now() - timedelta(hours=1),
+        "buy_unconfirmed_at": clock.now() - timedelta(minutes=minutes_ago),
+        **over,
+    }
+
+
+async def test_a_held_lisskins_purchase_is_refunded_once_checked(db_session: AsyncSession) -> None:
+    """LS-1: a repeat LIS-SKINS refused for the lot, ``market/info`` empty (attention
+    ``buy_unconfirmed``). Once an admin resolved it, «not found» refunds — the latest send was
+    answered, so the mark no longer stands for a silence."""
+    order, _ = await make_lisskins_order(
+        db_session,
+        **_lost(1, attention_reason="buy_unconfirmed", resolved_at=clock.now(), resolved_by="a"),
+    )
+    assert (await _ls_refund(db_session, order, [])).status == "failed"
+    assert await _refunds(db_session) == 1
+
+
+async def test_a_lost_lisskins_answer_past_the_wait_is_refunded_on_not_found(
+    db_session: AsyncSession,
+) -> None:
+    """A lost answer older than the wait (the reconcile would send again under the same id):
+    ``market/info`` showing nothing proves there is no purchase."""
+    order, _ = await make_lisskins_order(db_session, **_lost(11, buy_pending=True))
+    assert (await _ls_refund(db_session, order, [])).status == "failed"
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        LisskinsUnavailableError("http 502"),
+        [ls_purchase("wait_accept", custom_id="__ours__")],
+        [ls_purchase("processing", custom_id="someone-else")],
+    ],
+)
+async def test_a_held_lisskins_purchase_is_never_refunded_without_proof(
+    db_session: AsyncSession, answer: list[LisskinsReport] | Exception
+) -> None:
+    order, _ = await make_lisskins_order(
+        db_session,
+        **_lost(30, attention_reason="buy_unconfirmed", resolved_at=clock.now()),
+    )
+    if isinstance(answer, list):
+        answer = [
+            replace(p, custom_id=order.id) if p.custom_id == "__ours__" else p for p in answer
+        ]
+    code = await _code(_ls_refund(db_session, order, answer))
+    assert code[0] == 409
+    assert code[1] in {"order_in_flight", "source_unavailable"}
+    assert await _refunds(db_session) == 0
+
+
+async def test_a_held_purchase_sent_again_after_the_check_is_in_flight(
+    db_session: AsyncSession,
+) -> None:
+    """Resolved, then the reconcile sent the buy again (a newer mark): that send's answer may
+    be lost, so «not found» proves nothing for ten minutes."""
+    order, _ = await make_lisskins_order(
+        db_session,
+        **_lost(
+            1, attention_reason="buy_unconfirmed", resolved_at=clock.now() - timedelta(minutes=5)
+        ),
+    )
+    assert await _code(_ls_refund(db_session, order, [])) == (409, "order_in_flight")
 
 
 @pytest.mark.parametrize(
