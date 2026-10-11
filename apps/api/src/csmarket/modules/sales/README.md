@@ -21,7 +21,8 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
 
 - `rules.py`, `pricing.py`, `settings_store.py` — the document and the pure pricing.
 - `gate.py`, `clients.py`, `inventory.py` — the switches, the Skinslink client per route, the
-  kept inventory snapshot and its breaker.
+  kept inventory snapshot and its breaker (opened by an outage or a 403; a 429 is only that
+  caller's 503, so one busy seller cannot close selling for everyone).
 - `service.py` — `POST /sell`; `status.py` — every transition (`apply_deposit`, `check_sale`);
   `payouts.py` — a card sale's request; `checks.py` — the webhook's queue; `reconcile.py` —
   the poll and the overdue count; `letters.py` — the three letters.

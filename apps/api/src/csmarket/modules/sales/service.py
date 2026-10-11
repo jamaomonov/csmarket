@@ -230,10 +230,22 @@ async def _store(db: AsyncSession, draft: _Draft, key: str) -> tuple[Sale, bool]
     return sale, True
 
 
+def _answer_is_stale(sale: Sale) -> bool:
+    """A check moved the sale on from ``creating`` while ``create-deposit`` was out: its
+    answer is older than what is applied. Only a sale our poll closed as ``not_created`` still
+    takes it — a deposit after all is a ``late_deposit`` for an admin."""
+    return sale.status != "creating" and sale.fail_reason != "not_created"
+
+
 async def _apply(db: AsyncSession, sale_id: str, report: Deposit) -> Sale:
     locked = await lock_sale(db, sale_id)
     if locked is None:  # the row was committed above; only a bug gets here
         raise unavailable()
+    if _answer_is_stale(locked):
+        # A webhook check applied a newer Skinslink status while the call was out (SL-4).
+        log.info("sales.deposit_answer_stale", number=locked.number, status=locked.status)
+        await db.commit()
+        return locked
     await apply_deposit(db, locked, report, at=now())
     if report.amount_usd is not None and report.amount_usd < locked.quoted_usd:
         log.info(

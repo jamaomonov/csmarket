@@ -7,9 +7,10 @@ from this copy, never from the browser. Soʻm prices are computed on every read 
 and the rate may move); an item that prices to 0 soʻm is left out.
 
 The call is the ADR-0016 carve-out (AGENTS §11): advisory, a 6 s timeout, no database
-connection held across it, a :data:`BREAKER_TTL` breaker after an outage or a 403, and the
-route's own ``ip_guard`` bucket. ``inventory_reload`` is asked once more; a Steam account
-refusal is 409 ``steam_refused`` with Skinslink's code as ``reason``.
+connection held across it, a :data:`BREAKER_TTL` breaker after an outage or a 403 (a 429 is
+only the caller's 503), and the route's own ``ip_guard`` bucket. ``inventory_reload`` is
+asked once more; a Steam account refusal is 409 ``steam_refused`` with Skinslink's code as
+``reason``.
 """
 
 from __future__ import annotations
@@ -46,6 +47,7 @@ from csmarket.modules.skinslink.api import (
     InventoryItem,
     SkinslinkError,
     SkinslinkForbiddenError,
+    SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
 )
 from csmarket.modules.users.api import TradeLink, User
@@ -199,6 +201,10 @@ async def fetch_snapshot(
                 "Steam does not let this account trade", code="steam_refused", reason=exc.code
             ) from None
         log.warning("sales.inventory.refused", code=exc.code)
+        raise unavailable() from None
+    except SkinslinkRateLimitedError:
+        # A 429 is this caller's 503: the breaker would close selling for everyone (SL-6).
+        log.warning("sales.inventory.rate_limited")
         raise unavailable() from None
     except SkinslinkUnavailableError as exc:
         await _open_breaker(redis, exc)
