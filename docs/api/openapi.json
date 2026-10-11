@@ -10224,7 +10224,7 @@
             "description": "No such order"
           },
           "409": {
-            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` attention and no purchase on record.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
+            "description": "Conflict; `code` is one of:\n\n- `not_retryable` \u2014 not a `buying`, unrefunded order with a resolved `buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` attention and no purchase on record.\n- `waxpeer_buy_off` \u2014 a Waxpeer order while Waxpeer buying is switched off.\n- `order_busy` \u2014 a buy attempt is running; try again in a few minutes.\n- `idempotency_mismatch` \u2014 the key answered another request."
           },
           "422": {
             "content": {
@@ -13583,7 +13583,7 @@
     },
     "/api/v1/orders/{number}/pay": {
       "post": {
-        "description": "Pay from the balance (the order is ``paid`` at once) or get a kassa's payment page.\n\n``Idempotency-Key`` (16..160 chars) is required; the same key and body replay the first\nanswer, another body is 409 ``idempotency_mismatch``. 409 ``code``s:\n``order_not_payable`` (+ ``reason``: ``paid`` | ``expired``), ``balance_too_low``.\n422 ``order_provider`` for a kassa not available here. Another user's order is a 404.",
+        "description": "Pay from the balance (the order is ``paid`` at once) or get a kassa's payment page.\n\n``Idempotency-Key`` (16..160 chars) is required; the same key and body replay the first\nanswer, another body is 409 ``idempotency_mismatch``. 409 ``code``s:\n``order_not_payable`` (+ ``reason``: ``paid`` | ``expired``), ``balance_too_low``,\n``buying_disabled`` (a Waxpeer order while Waxpeer buying is off).\n422 ``order_provider`` for a kassa not available here. Another user's order is a 404.",
         "operationId": "post_order_pay_api_v1_orders__number__pay_post",
         "parameters": [
           {

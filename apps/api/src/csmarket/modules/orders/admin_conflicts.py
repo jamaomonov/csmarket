@@ -17,6 +17,7 @@ CONFLICTS: dict[str, str] = {
     "order_needs_attention": "this order waits for an admin's check",
     "order_busy": "a buy attempt is running for this order; try again in a few minutes",
     "not_retryable": "this order's buy cannot be retried now",
+    "waxpeer_buy_off": "Waxpeer buying is switched off; refund the order or switch it on",
     "nothing_to_resolve": "this order's trade has no attention to resolve",
     "waxpeer_unavailable": "the purchase could not be checked at Waxpeer; try again later",
     "source_unavailable": (

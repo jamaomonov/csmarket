@@ -31,6 +31,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
+from csmarket.core.config import get_settings
 from csmarket.core.errors import NotFoundError
 from csmarket.core.logging import get_logger
 from csmarket.core.numbers import is_number, is_topup_number
@@ -136,12 +137,15 @@ def retry_refusal(order: Order, trade: SkinTrade | None, at: datetime) -> str | 
     Only a ``buying``, unrefunded order whose trade carries a **resolved** attention in
     :data:`RETRYABLE`, has no purchase on record (``waxpeer_id`` unset — a bought trade that
     stopped being reported is ``ambiguous_trade`` too, and a retry would buy it twice), with
-    no buy attempt running.
+    no buy attempt running. A Waxpeer order is not retried while Waxpeer buying is off
+    (``waxpeer_buy_off``, WAX-02): the retry's attempt would only refund it.
     """
     if order.status != "buying" or order.refunded_at is not None:
         return "not_retryable"
     if not _resolved_in(trade, RETRYABLE) or (trade is not None and trade.waxpeer_id is not None):
         return "not_retryable"
+    if order.source == "waxpeer" and not get_settings().waxpeer_buy_enabled:
+        return "waxpeer_buy_off"
     if buy_running(order, trade, at):
         return "order_busy"
     return None
@@ -318,7 +322,8 @@ async def retry_buy(db: AsyncSession, *, number: str, admin_id: str) -> str:
 
     Raises:
         NotFoundError: no such order.
-        ConflictError: ``not_retryable``, or ``order_busy`` — a buy attempt holds the order.
+        ConflictError: ``not_retryable``, ``waxpeer_buy_off`` (Waxpeer buying is off), or
+            ``order_busy`` — a buy attempt holds the order.
     """
     del admin_id  # the audit row names the admin
     order, trade = await lock_order(db, number)

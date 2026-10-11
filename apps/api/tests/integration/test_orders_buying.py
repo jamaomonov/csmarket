@@ -368,11 +368,39 @@ async def test_a_moved_price_is_never_accepted_blindly(
 async def test_a_4xx_on_the_buy_means_nothing_was_bought(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:
-    fake.buy_raises(WaxpeerError("bad request", status=400))
+    """Waxpeer's own 4xx answer (a JSON body) is a refusal."""
+    body = '{"success": false, "msg": "bad request"}'
+    fake.buy_raises(WaxpeerError("bad request", status=400, body=body))
     assert await _attempt(db_session, fake, buying_order, settings) == "sold_out"
     order, _ = await load(db_session, buying_order)
     assert order.status == "failed"
     assert order.refunded_at is not None
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        WaxpeerError("timeout", status=408, body='{"success": false}'),
+        WaxpeerError("<html>Bad Request</html>", status=400, body="<html>Bad Request</html>"),
+        WaxpeerError("", status=404, body=""),
+    ],
+    ids=["408", "html_400", "empty_404"],
+)
+async def test_a_4xx_that_is_not_waxpeers_answer_is_unconfirmed(
+    db_session: AsyncSession,
+    buying_order: Order,
+    fake: FakeTradeClient,
+    settings: Settings,
+    error: WaxpeerError,
+) -> None:
+    """ORD-3: a 408 or a 4xx without Waxpeer's JSON (a proxy's page) does not prove the buy
+    never landed: resolved by lookup, never refunded on the spot, never bought again."""
+    fake.buy_raises(error)
+    assert await _attempt(db_session, fake, buying_order, settings) == "unconfirmed"
+    order, trade = await load(db_session, buying_order)
+    assert (order.status, order.refunded_at) == ("buying", None)
+    assert trade.buy_unconfirmed_at is not None
+    assert fake.balance_calls == 0
 
 
 async def test_low_balance_by_message_is_refunded_at_once(

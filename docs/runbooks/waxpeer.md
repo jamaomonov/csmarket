@@ -64,6 +64,28 @@ A 403 on a trade already bought (`trade_sent`) is a lookup failure: nothing is w
 order waits, and `TradesUnpolled` fires after 30 minutes ([`orders.md#trades-unpolled`](./orders.md#trades-unpolled)).
 The price sync logs `skins.prices.failed` at the same time.
 
+## Switching Waxpeer buying off
+
+`CSMARKET_WAXPEER_BUY_ENABLED=false` (in `secrets/api.env`; restart the api, worker and
+scheduler with the pinned `IMAGE_TAG`) stops **every new Waxpeer buy** (ADR-0007, amendment
+2026-10-11):
+
+- the catalogue, the item page and checkout offer no Waxpeer listing (Skinslink / LIS-SKINS
+  only);
+- `POST /orders/{n}/pay` of a Waxpeer order still `pending` answers 409 `buying_disabled`
+  (balance and kassa alike);
+- the worker and the reconcile sweep still **look up** each paid Waxpeer order's `project_id`
+  (a lookup is not a buy): a buy that did happen is adopted and followed as usual, a lost
+  answer is resolved by lookup as usual; when Waxpeer has no buy, nothing is sent and the
+  order is refunded to the balance as `sold_out` (log `orders.buy.waxpeer_off`). A failed
+  lookup waits and asks again — it never refunds;
+- an admin «Повторить покупку» of a Waxpeer order answers 409 `waxpeer_buy_off` («Покупка на
+  Waxpeer выключена — …»): refund it, or switch buying back on first.
+
+A kassa payment page opened before the switch can still settle; that order is then refunded
+to the balance by the rule above. Waxpeer still brings the Steam price, checks trade links
+and settles orders already bought there.
+
 ## Balance low
 
 While Waxpeer is off as a buy source (`CSMARKET_WAXPEER_BUY_ENABLED=false`, since commit

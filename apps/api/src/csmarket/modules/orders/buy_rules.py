@@ -1,7 +1,9 @@
-"""The buy's judgement calls (``orders.buying``, rulings R4, R6): does a refusal name the
-buyer's trade link, is it low balance, and which listing may replace a refused one."""
+"""The buy's judgement calls (``orders.buying``, rulings R4, R6): was the answer lost, does a
+refusal name the buyer's trade link, is it low balance."""
 
 from __future__ import annotations
+
+import json
 
 from csmarket.modules.skins.api import (
     TradeClient,
@@ -25,6 +27,23 @@ _ACCOUNT_HINTS = (
     "can not trade",
 )
 _BUYER_WORDS = ("buyer", "your", "partner", "receiver", "recipient")
+
+
+def answer_lost(err: WaxpeerError) -> bool:
+    """The buy's answer does not prove nothing was bought: a 5xx, a 408, or any other HTTP
+    error whose body is not Waxpeer's JSON (a proxy's or Cloudflare's page). Resolved by
+    lookup, never refunded on the spot (ORD-3). A 200 ``success: false`` and Waxpeer's
+    own JSON 4xx are refusals.
+    """
+    if err.status >= 500 or err.status == 408:
+        return True
+    if err.status == 200:
+        return False
+    try:
+        json.loads(err.body)
+    except ValueError:
+        return True
+    return False
 
 
 def link_refused(err: WaxpeerError) -> bool:
@@ -55,4 +74,4 @@ async def low_balance(client: TradeClient, err: WaxpeerError, units: int) -> boo
         return False
 
 
-__all__ = ["link_refused", "low_balance"]
+__all__ = ["answer_lost", "link_refused", "low_balance"]

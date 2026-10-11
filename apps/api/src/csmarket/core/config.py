@@ -389,8 +389,10 @@ class Settings(BaseSettings):
         default=True,
         description=(
             "Waxpeer is a buy source. Off: the catalogue, offers and checkout use Skinslink "
-            "only (it resells Waxpeer's listings, often cheaper); Waxpeer still brings the "
-            "Steam price, checks trade links and settles orders already bought there."
+            "only (it resells Waxpeer's listings, often cheaper); no new Waxpeer buy is sent "
+            "(a paid Waxpeer order the lookup finds unbought is refunded, a pending one "
+            "cannot be paid, an admin retry is refused). Waxpeer still brings the Steam "
+            "price, checks trade links and settles orders already bought there."
         ),
     )
     order_expiry_minutes: int = Field(

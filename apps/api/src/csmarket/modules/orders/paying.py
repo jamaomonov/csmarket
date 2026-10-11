@@ -27,6 +27,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from csmarket.core.config import get_settings
 from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
 from csmarket.core.idempotency import load_replay, save_replay
 from csmarket.core.ids import new_id
@@ -72,11 +73,16 @@ async def _locked_own(db: AsyncSession, *, user_id: str, number: str) -> tuple[P
 
 
 def _refuse_unless_payable(payable: Payable) -> None:
-    """409 ``order_not_payable`` with ``reason`` ``paid`` or ``expired`` (also cancelled)."""
+    """409 ``order_not_payable`` with ``reason`` ``paid`` or ``expired`` (also cancelled);
+    409 ``buying_disabled`` for a Waxpeer order while Waxpeer buying is off (WAX-02: the
+    money would only come back to the balance)."""
     if not payable.payable:
         raise ConflictError(
             "this order cannot be paid", code="order_not_payable", reason=payable.reason
         )
+    order = payable.order
+    if order is not None and order.source == "waxpeer" and not get_settings().waxpeer_buy_enabled:
+        raise ConflictError("buying is switched off", code="buying_disabled")
 
 
 async def _replayed(
@@ -164,6 +170,7 @@ async def pay_order(
     Raises:
         NotFoundError: not the buyer's order (or not an order number).
         ConflictError: ``order_not_payable`` (+ ``reason`` ``paid`` | ``expired``),
+            ``buying_disabled`` (a Waxpeer order while Waxpeer buying is off),
             ``idempotency_mismatch``.
         InsufficientBalanceError: ``code="balance_too_low"``; nothing is written.
         ValidationError: ``code="order_provider"`` — the kassa is not available here.

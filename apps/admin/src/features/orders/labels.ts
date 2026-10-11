@@ -67,6 +67,7 @@ const ORDER_CODE_MESSAGES: Record<string, string> = {
   order_in_flight: "Скин ещё в пути — вернуть деньги нельзя.",
   already_refunded: "Деньги уже на балансе.",
   not_retryable: "Повтор сейчас невозможен.",
+  waxpeer_buy_off: "Покупка на Waxpeer выключена — верните деньги или включите её.",
   order_needs_attention: "Сначала разберите обмен.",
   order_busy: "Покупка ещё идёт — попробуйте через минуту.",
   nothing_to_resolve: "Здесь нечего разбирать.",

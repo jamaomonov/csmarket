@@ -254,3 +254,15 @@ async def test_a_redis_outage_never_spends_waxpeer_calls() -> None:
     )
     assert (client.calls, degraded) == (0, True)
     assert [x.listing_id for x in listings] == [53857957789]
+
+
+async def test_a_budget_that_cannot_be_counted_is_spent(
+    redis: fakeredis.aioredis.FakeRedis, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def fail(*args: object, **kwargs: object) -> int:
+        raise RedisError("down")
+
+    monkeypatch.setattr(redis, "incr", fail)
+    client = _Client()
+    _, degraded = await listings_for(_item(), client=client, redis=redis, budget_per_minute=18)
+    assert (client.calls, degraded) == (0, True)

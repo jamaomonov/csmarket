@@ -124,7 +124,8 @@ replay store (scope `orders.pay:{number}`, the row keeps `{request: {provider, l
 response}`): the same body replays the stored answer, another body is 409
 `idempotency_mismatch`. Looked up under the order lock, so a double-click's second request
 waits for the first and replays it. Then an order that is not payable is 409
-`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), and:
+`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), a Waxpeer
+order while `waxpeer_buy_enabled` is off is 409 `buying_disabled` (WAX-02), and:
 
 - **`wallet`** — one transaction: `wallet.debit_purchase` (locks the wallet; 409
   `balance_too_low` writes nothing), a `payments` row `purpose="order"`,
@@ -292,7 +293,8 @@ lisskins)` (the route injects `skinslink.request_status_client` and
   clears `attention_reason`, `buy_unconfirmed_at` and `resolved_*`, sets `buy_pending`,
   `next_check_at = now`. The reconcile sweep's next `attempt_buy` looks the `project_id` up
   first, so a purchase Waxpeer did make is adopted, never repeated. Returns the cleared
-  reason (audited). 409 `not_retryable`, `order_busy`.
+  reason (audited). 409 `not_retryable`, `waxpeer_buy_off` (a Waxpeer order while
+  `waxpeer_buy_enabled` is off: its attempt would only refund it), `order_busy`.
 - `resolve_attention(db, *, number, admin_id, note) -> str | None` — stamps `resolved_at`,
   `resolved_by` (admin id), `resolved_note` once; returns the reason, or `None` when it was
   already resolved (nothing written). 409 `nothing_to_resolve` without a trade or an
@@ -343,12 +345,13 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   | a lost answer on record (`buy_unconfirmed_at`), any lookup  | `nothing_to_do` | `buy_pending = false`; reconcile's unconfirmed rule decides (R3); belt  |
   | … one of them accepted, released or with penalties          | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false`; nothing bought      |
   | lookup finds several live trades                            | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false` (no refund)          |
+  | lookup finds nothing, `waxpeer_buy_enabled` off             | `sold_out`      | `failed` + refund `sold_out`; nothing is sent to Waxpeer (WAX-02)       |
   | buy accepted                                                | `bought`        | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0`  |
   | buy: 429                                                    | `rate_limited`  | nothing (`buy_pending` kept, next tick)                                 |
-  | buy: unavailable / unreadable / 5xx                         | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
+  | buy: unavailable / unreadable / 5xx / 408 / non-JSON 4xx    | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
   | buy refused, the message names the trade link               | `invalid_link`  | `failed` + refund `invalid_trade_link`                                  |
   | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `source_low_balance`                                  |
-  | buy refused (sold, price moved, a 4xx)                      | `sold_out`      | `failed` + refund `sold_out`                                            |
+  | buy refused (sold, price moved, Waxpeer's JSON 4xx)         | `sold_out`      | `failed` + refund `sold_out`                                            |
   | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (the purchase on record: `adopted`)         |
 
   A refusal that names neither the trade link nor low balance refunds `sold_out`: no other

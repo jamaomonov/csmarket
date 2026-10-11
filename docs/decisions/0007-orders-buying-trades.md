@@ -199,6 +199,19 @@ next_check_at = now + 5 min WHERE buying AND buy_pending AND due` — then reads
 **Dependencies added in M4a:** none. `prometheus_client` was already a dependency of
 `csmarket`; the worker and scheduler get it through it.
 
+### Amendment 2026-10-11 — the Waxpeer switch and lost answers (review WAX-02, ORD-3)
+
+- **`waxpeer_buy_enabled=false` stops every new Waxpeer buy.** It used to gate only the
+  catalogue and checkout; the worker, the reconcile sweep and an admin retry bought any
+  `source="waxpeer"` order regardless. Now `attempt_buy` reads the switch: the lookup still
+  runs (a buy that happened is adopted, a lost answer is parked for R3), and when the lookup
+  finds nothing the order is refunded `sold_out` instead of bought — an existing reason, so no
+  migration, no new customer copy. A failed lookup decides nothing and retries. `retry_buy`
+  refuses with 409 `waxpeer_buy_off`; paying a pending Waxpeer order is 409 `buying_disabled`.
+- **A 408 or a non-JSON 4xx on `buy-one-p2p` is a lost answer, not a refusal.** It may come
+  from a proxy after the request reached Waxpeer; it is recorded `unconfirmed` and resolved by
+  lookup (R3). Only a 200 `success: false` or Waxpeer's own JSON 4xx is a refusal.
+
 ### Positive consequences
 
 - **One purchase per order by lookup-first:** `project_id` = the order id, every buy is
