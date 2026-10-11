@@ -471,7 +471,9 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `check_purchase`. The fallback for a lost webhook.
 - **Reads:** the owner's order reads join `skinslink_purchases` in the same query (no N+1);
   `trade_view.purchase_state` maps `new`/`pending` → `buying`, `active` → `offer_sent`,
-  `hold` / `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed`. A `hold`
+  `hold` / `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed` — but a
+  `delivered` order always reads `accepted` (a `reverted` after acceptance keeps the order
+  delivered and reads `support` while its `rolled_back` attention is open, as on LIS-SKINS). A `hold`
   reads `accepted` with `release_date = hold_end_date` (Steam protects the skin until then;
   the order stays `trade_sent` until `completed`). No seller or deadline. An open attention on the purchase reads `support` and
   blocks `refund_to_balance` as on a trade.
