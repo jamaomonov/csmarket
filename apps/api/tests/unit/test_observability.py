@@ -134,3 +134,34 @@ def test_before_send_drops_an_incoming_query_string() -> None:
     out = _before_send(event, {})
     assert out is not None
     assert "query_string" not in out["request"]
+
+
+def test_before_send_drops_request_headers_and_cookies() -> None:
+    """Headers carry the storefront secret, the visitor's IP and ``Cf-Connecting-Ip``."""
+    from csmarket.core.observability import _before_send
+
+    event: Any = {
+        "request": {
+            "url": "/x",
+            "headers": {"X-Storefront-Secret": "s3cret", "X-Storefront-Client-Ip": "203.0.113.9"},
+            "cookies": {"refresh": "r"},
+            "env": {"REMOTE_ADDR": "203.0.113.9"},
+        }
+    }
+    out = _before_send(event, {})
+    assert out is not None
+    assert {"headers", "cookies", "env"}.isdisjoint(out["request"])
+
+
+def test_before_send_strips_urls_from_exception_values() -> None:
+    """``httpx.HTTPStatusError`` puts the full URL, query and all, in its message."""
+    from csmarket.core.observability import _before_send
+
+    msg = "Client error '403' for url 'https://api.example.invalid/x?key=FAKEKEY123&t=FAKETOKEN9'"
+    event: Any = {"exception": {"values": [{"type": "HTTPStatusError", "value": msg}]}}
+    out = _before_send(event, {})
+    assert out is not None
+    value = out["exception"]["values"][0]["value"]
+    assert "FAKEKEY123" not in value
+    assert "FAKETOKEN9" not in value
+    assert "https://api.example.invalid/x" in value

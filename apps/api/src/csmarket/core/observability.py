@@ -8,6 +8,7 @@ route stack in.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover -- type hints only
@@ -44,6 +45,11 @@ def _is_shutdown_cancellation(event: Event) -> bool:
 #: Keys under which the SDK files a URL's query string or a full URL that may carry one.
 _QUERY_KEYS = ("http.query", "query_string")
 _URL_KEYS = ("url", "http.url")
+#: Request parts that never reach Sentry: headers carry the storefront secret, the visitor's IP
+#: (``X-Storefront-Client-Ip``, ``Cf-Connecting-Ip``, ``X-Forwarded-For``) and the bearer token.
+_REQUEST_DROPPED = ("data", "query_string", "headers", "cookies", "env")
+#: A URL's query in free text, e.g. ``httpx.HTTPStatusError``'s message.
+_URL_QUERY = re.compile(r"(https?://[^\s'\"?]+)\?[^\s'\"]*")
 
 
 def _scrub_http(data: Any) -> None:  # Any: breadcrumb/span data is an untyped SDK dict
@@ -75,11 +81,16 @@ def _before_send(event: Event, _hint: Hint) -> Event | None:
         return None
     request = event.get("request")
     if isinstance(request, dict):
-        # Defence in depth: ``max_request_body_size="never"`` already keeps bodies out, but a
-        # card number must not depend on one setting (``POST /sell``).
-        request.pop("data", None)
-        # The Steam sign-in callback carries the Steam ID in its query (``openid.claimed_id``).
-        request.pop("query_string", None)
+        # Bodies: ``max_request_body_size="never"`` already keeps them out, but a card number
+        # must not depend on one setting (``POST /sell``). Query: the Steam callback carries the
+        # Steam ID (``openid.claimed_id``). Headers: see ``_REQUEST_DROPPED``.
+        for part in _REQUEST_DROPPED:
+            request.pop(part, None)
+    exceptions = event.get("exception")
+    values_ = exceptions.get("values") if isinstance(exceptions, dict) else None
+    for exc in values_ if isinstance(values_, list) else []:
+        if isinstance(exc, dict) and isinstance(exc.get("value"), str):
+            exc["value"] = _URL_QUERY.sub(r"\1", exc["value"])
     crumbs = event.get("breadcrumbs")
     values = crumbs.get("values") if isinstance(crumbs, dict) else crumbs
     for crumb in values if isinstance(values, list) else []:
