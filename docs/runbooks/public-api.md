@@ -255,7 +255,9 @@ long as the market takes to answer.
 `POST /public/tradelink/check` returns `unavailable` when the check could not run; it never
 blocks a purchase. If every call answers so: the Waxpeer key is missing or rejected
 (`CSMARKET_WAXPEER_API_KEY` in `secrets/api.env`; the key must be whitelisted for the VPS IP,
-`waxpeer.md`) or Waxpeer is down, and the breaker is open for its cool-down (look for the
+`waxpeer.md`) or Waxpeer is down — a refusal that does not name the link (a key or service
+error) answers `unavailable`, never `bad` — and the breaker (opened by an outage, not by one
+link's 4xx) is open for its cool-down (look for the
 breaker key in Redis and the `users.tradelink.unavailable` warnings in the API log). Fix the key or wait;
 no restart is needed. The bucket `check` limits calls per key (`public_api:rl:check:{key_id}`).
 

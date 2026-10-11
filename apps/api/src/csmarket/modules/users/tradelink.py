@@ -5,7 +5,10 @@ never logged and never part of a Redis key (keys use a SHA-256 digest of the lin
 The check asks Waxpeer whether the link works (private inventory, trade ban) and Steam
 whether a trade would be held (no mobile authenticator → escrow). A hold is refused:
 verdict ``bad``, reason ``hold`` (owner decision 2026-10-01; the DB check and the schema
-still allow ``warn``, which nothing produces any more). It is advisory: any upstream failure answers ``unavailable`` and opens a 60-second breaker (AGENTS §11).
+still allow ``warn``, which nothing produces any more). It is advisory: any upstream failure
+answers ``unavailable``; an outage (transport, 5xx, 429) also opens a 60-second breaker
+(AGENTS §11). Only Waxpeer text that names the link is a ``bad`` verdict: a refusal about the
+key or the service is ``unavailable``, so it never blocks a buyer's checkout.
 """
 
 from __future__ import annotations
@@ -17,11 +20,13 @@ import re
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
+import httpx
 from redis.asyncio import Redis
 from redis.exceptions import RedisError
 
 from csmarket.core.errors import ValidationError
 from csmarket.core.logging import get_logger
+from csmarket.modules.skins.api import WaxpeerError, WaxpeerUnavailableError
 from csmarket.modules.users.service import STEAM64_BASE
 
 log = get_logger("csmarket.users.tradelink")
@@ -128,15 +133,48 @@ def assert_owned(link: TradeLink, steam_id: str) -> None:
         )
 
 
-def _reason_for(info: str) -> Reason:
+#: Words of a refusal about our side (the key, Waxpeer's service), not the buyer's link.
+_SERVICE_HINTS = ("api", "key", "server", "internal", "maintenance", "too many")
+#: Words that name the link itself (Waxpeer's «Invalid tradelink»).
+_LINK_HINTS = ("link", "trade url", "token", "partner")
+
+
+def _reason_for(info: str) -> Reason | None:
+    """Waxpeer's text as a verdict on the link, or ``None`` when it does not name the link.
+
+    Only text about the link (its inventory, a ban, the account, the link itself) may
+    store a link as ``bad`` and block checkout; anything else — a wrong key, an outage,
+    a phrase we do not know — is no verdict at all (WAX-04).
+    """
     text = info.lower()
+    if any(hint in text for hint in _SERVICE_HINTS):
+        return None
     if "private" in text:
         return "private"
     if "ban" in text:
         return "trade_ban"
     if "not found" in text or "does not exist" in text:
         return "not_found"
-    return "invalid"
+    if any(hint in text for hint in _LINK_HINTS):
+        return "invalid"
+    return None
+
+
+class _NoVerdictError(Exception):
+    """Waxpeer refused with text that does not name the link."""
+
+
+def _is_outage(exc: Exception) -> bool:
+    """An upstream outage (transport, 5xx, 429) — the breaker's business; a 4xx about one
+    link or a refusal we cannot read is that link's alone (WAX-06)."""
+    if isinstance(exc, WaxpeerUnavailableError | httpx.TransportError):
+        return True
+    if isinstance(exc, WaxpeerError):
+        return exc.status >= 500
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        return code >= 500 or code == 429
+    return False
 
 
 def _cache_key(link: TradeLink) -> str:
@@ -146,7 +184,10 @@ def _cache_key(link: TradeLink) -> str:
 async def _run(link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker) -> CheckResult:
     info = await waxpeer.check_tradelink(link.url)
     if info:
-        return CheckResult(verdict="bad", reason=_reason_for(info))
+        reason = _reason_for(info)
+        if reason is None:
+            raise _NoVerdictError
+        return CheckResult(verdict="bad", reason=reason)
     days = await hold.trade_hold_days(link.steam_id, link.token)
     if days:
         return CheckResult(verdict="bad", reason="hold")
@@ -156,7 +197,11 @@ async def _run(link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker)
 async def check_trade_link(
     link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker, redis: Redis
 ) -> CheckResult:
-    """The advisory check: 10-minute cache per link, 60-second breaker on any failure."""
+    """The advisory check: 10-minute cache per link, 60-second breaker on an outage.
+
+    Any failure answers ``unavailable`` (never cached, never a verdict); only an upstream
+    outage (transport, 5xx, 429) opens the breaker for everyone.
+    """
     unavailable = CheckResult(verdict=None, reason="unavailable")
     key = _cache_key(link)
     with contextlib.suppress(RedisError, ValueError, KeyError, TypeError):
@@ -172,8 +217,9 @@ async def check_trade_link(
     except Exception as exc:  # noqa: BLE001 -- advisory: every upstream failure is "unavailable"
         # The type name only: an httpx message carries the URL, key and token included.
         log.warning("users.tradelink.unavailable", error=type(exc).__name__)
-        with contextlib.suppress(RedisError):
-            await redis.set(BREAKER_KEY, "1", ex=BREAKER_TTL_SECONDS)
+        if _is_outage(exc):
+            with contextlib.suppress(RedisError):
+                await redis.set(BREAKER_KEY, "1", ex=BREAKER_TTL_SECONDS)
         return unavailable
     with contextlib.suppress(RedisError):
         await redis.set(
