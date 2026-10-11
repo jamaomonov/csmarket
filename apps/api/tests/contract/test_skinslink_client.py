@@ -467,3 +467,44 @@ async def test_a_page_that_stays_unavailable_fails_the_load() -> None:
     )
     with pytest.raises(SkinslinkUnavailableError):
         await _batches(_client())
+
+
+@respx.mock
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"offer_id": "6912345678"},  # Skinslink's sale-list offer, not a Steam trade offer
+        {"trade_offer_id": "ab" * 40},  # a hex stock-offer id: not Steam's
+        {"trade_offer_id": "1" * 33},  # longer than any Steam offer id (and our column)
+    ],
+)
+async def test_status_takes_only_a_steam_trade_offer_id(fields: dict[str, str]) -> None:
+    """SL-7: only ``trade_offer_id``, all digits, at most 32 characters, is Steam's offer id."""
+    respx.get(f"{BASE}/merchant/purchase/status").mock(
+        return_value=httpx.Response(
+            200, json=_ok({"id": 178, "merchant_tx_id": "order-1", "status": "active", **fields})
+        )
+    )
+    p = await _client().purchase_status(merchant_tx_id="order-1")
+    assert p is not None
+    assert p.offer_id is None
+
+
+@respx.mock
+async def test_status_reads_a_numeric_trade_offer_id() -> None:
+    respx.get(f"{BASE}/merchant/purchase/status").mock(
+        return_value=httpx.Response(
+            200,
+            json=_ok(
+                {
+                    "id": 178,
+                    "merchant_tx_id": "order-1",
+                    "status": "active",
+                    "trade_offer_id": 6912345678,
+                }
+            ),
+        )
+    )
+    p = await _client().purchase_status(merchant_tx_id="order-1")
+    assert p is not None
+    assert p.offer_id == "6912345678"

@@ -56,6 +56,8 @@ async def test_disabled_is_404(integration_client: AsyncClient) -> None:
         {"purchase_id": str(PURCHASE_ID), "sign": _sign(PURCHASE_ID)},
         {"purchase_id": True, "sign": _sign(1)},
         {"sign": _sign(PURCHASE_ID)},
+        # SL-1: a non-ASCII sign is a 403, not a 500 out of ``hmac.compare_digest``.
+        {"purchase_id": PURCHASE_ID, "sign": "\u00e9"},
     ],
 )
 async def test_a_bad_signature_is_403_and_queues_nothing(

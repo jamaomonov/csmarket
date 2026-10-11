@@ -54,7 +54,8 @@ worker and the scheduler import only this.
   (by `merchant_tx_id`; `None` = no such purchase), `balance`. 403 →
   `SkinslinkForbiddenError`; 429 → `SkinslinkRateLimitedError`; 408 / 5xx / network / an
   unreadable body / no key → `SkinslinkUnavailableError`; any other refusal → `SkinslinkError`
-  with `status` and `code`. Error bodies are never logged. Each call counts in
+  with `status` and `code`. A purchase's Steam offer id is read from `trade_offer_id` only, and
+  only when it is all digits and ≤ 32 long. Error bodies are never logged. Each call counts in
   `csmarket_skinslink_calls_total{endpoint, outcome}`.
 - **The full-list scanner** — `core.json_stream.ItemsScanner` (it lived here as `stream.py`
   until ADR-0012 moved it to `core` for LIS-SKINS' export too): the full list is ~490k items
@@ -94,7 +95,7 @@ worker and the scheduler import only this.
 - **`webhook.py`, `routes.py`** — `POST /api/v1/skinslink/webhook` (not in the OpenAPI schema;
   on `bootstrap._exempt_self_authenticating_routes`; no `Idempotency-Key`). Body ≤ 4 KiB;
   `sign == base64(sha256(str(id) + secret))` checked in constant time (403 `bad_signature`
-  otherwise). The signature covers only the id, so the body is not trusted: a purchase
+  otherwise, a non-ASCII `sign` included). The signature covers only the id, so the body is not trusted: a purchase
   webhook queues a check, a deposit webhook (`trade_id`, ADR-0016) queues a check of the sale
   its `merchant_tx_id` names (`sales.api.enqueue_sale_check`). 404 while Skinslink buying
   **and** selling are both off.

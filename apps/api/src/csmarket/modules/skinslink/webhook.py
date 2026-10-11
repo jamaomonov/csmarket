@@ -24,7 +24,7 @@ def verify(body: Mapping[str, Any], *, secret: str) -> int | None:  # Any: the w
     sign = body.get("sign")
     if isinstance(raw, bool) or not isinstance(raw, int) or not isinstance(sign, str):
         return None
-    if not secret:
+    if not secret or not sign.isascii():  # ``compare_digest`` raises on non-ASCII text
         return None
     return raw if hmac.compare_digest(expected_sign(raw, secret), sign) else None
 
