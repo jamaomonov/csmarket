@@ -16,5 +16,9 @@ admin.localhost {
 
 api.localhost {
 	tls internal
-	reverse_proxy api:8000
+	reverse_proxy api:8000 {
+		# As in prod: only the storefront's direct calls may name a visitor (ADR-0003).
+		header_up -X-Storefront-Secret
+		header_up -X-Storefront-Client-Ip
+	}
 }

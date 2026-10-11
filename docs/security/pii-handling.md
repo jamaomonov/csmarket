@@ -24,6 +24,10 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 
 - The coarse limiter (slowapi, M0) keeps per-IP, per-route counters **in the API process's
   memory** for its window (one minute by default). Nothing is written to disk.
+- The storefront's request-time renders pass the visitor's IP to the API in
+  `X-Storefront-Client-Ip` over the internal compose network only (ADR-0003, SEC-01); it is
+  used as the rate-limit key like any client IP and never logged or stored. Caddy strips the
+  header from outside traffic.
 - `ip_guard` (M1) keeps per-IP counters in **Redis** under keys that expire with their window
   (60 s by default). Never in Postgres, never in a column.
 - The trade-link verdict cache (M1) is keyed by a **hash** of the link, never the link; its

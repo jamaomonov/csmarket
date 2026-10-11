@@ -67,6 +67,10 @@
 	# deploys are stop-then-start and the gap is 5–15 s.
 	reverse_proxy {args[0]} {
 		header_up X-Forwarded-For {client_ip}
+		# Only the storefront's own server-side calls (web -> api:8000, never through here)
+		# may name a visitor (ADR-0003, core/client_ip.py); strip the pair from the internet.
+		header_up -X-Storefront-Secret
+		header_up -X-Storefront-Client-Ip
 		lb_try_duration 15s
 		lb_try_interval 250ms
 	}

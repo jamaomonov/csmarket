@@ -22,7 +22,7 @@ export async function generateMetadata({ params }: Props) {
 /** The switches as the API reports them now; `null` when it cannot say (then «Скоро»). */
 async function sellConfig(): Promise<SellConfig | null> {
   try {
-    return await apiGet<SellConfig>("/sell/config", { noStore: true });
+    return await apiGet<SellConfig>("/sell/config", { noStore: true, perVisitor: true });
   } catch {
     return null;
   }

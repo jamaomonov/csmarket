@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+// getSkinDetail is charged to the visitor, so it reads the request headers.
+vi.mock("next/headers", () => ({ headers: () => Promise.resolve(new Headers()) }));
+
 import { displayPrice, getSkinDetail, getSkinFacets, getSkinsPage } from "./skins";
 
 const res = (status: number, body: unknown = {}) =>
