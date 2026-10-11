@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from prometheus_fastapi_instrumentator import Instrumentator, metrics
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -281,6 +281,12 @@ def create_app() -> FastAPI:
     async def healthz() -> dict[str, str]:
         """Return ``{"status": "ok"}`` if the process is alive."""
         return {"status": "ok"}
+
+    @app.head("/healthz", include_in_schema=False)
+    @limiter.exempt  # type: ignore[untyped-decorator]
+    async def healthz_head() -> Response:
+        """HEAD twin of ``/healthz``: uptime monitors (UptimeRobot) probe with HEAD."""
+        return Response(status_code=200)
 
     @app.get(
         "/readyz",

@@ -15,6 +15,12 @@ async def test_healthz(client: AsyncClient) -> None:
     assert r.json() == {"status": "ok"}
 
 
+async def test_healthz_answers_head(client: AsyncClient) -> None:
+    # Uptime monitors (UptimeRobot) probe with HEAD; a 405 reads as an outage.
+    r = await client.head("/healthz")
+    assert r.status_code == 200
+
+
 async def test_readyz_is_200_when_dependencies_answer(
     client: AsyncClient, monkeypatch: pytest.MonkeyPatch
 ) -> None:
