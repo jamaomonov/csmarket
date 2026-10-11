@@ -45,7 +45,10 @@ After changing the key: `docker compose -f docker-compose.prod.yml up -d api wor
 
 ## Forbidden
 
-`WaxpeerForbidden` (page): an order's lookup or buy got **HTTP 403** in the last 10 minutes.
+`WaxpeerForbidden` (page): an order's lookup or buy got **HTTP 403** in the last 10 minutes,
+or a buy refusal whose message names our key or Waxpeer's service («Wrong api key»,
+«Internal server error»; the same words the trade-link check treats as no verdict, WAX-04 —
+log `orders.buy.refused` is absent, the outcome is `forbidden`).
 It is a configuration error, never "sold out", so **nothing is refunded**: the order stays
 `buying` with its buy pending, the trade gets the attention `source_forbidden` («Waxpeer:
 IP не в белом списке»), and the reconcile sweep retries it every 60 s.
@@ -169,5 +172,7 @@ Before buying is switched on for customers (`CSMARKET_SKINS_BUY_ENABLED=true`):
   audit reads trades back by our own `project_id`. Detecting them needs Waxpeer's
   `my-history`, whose answer shape was never captured. M4b probes it once with the owner's
   locally whitelisted key, then extends the audit.
-- **A refused buy** refunds the order (`sold_out`); no other listing is bought under the same
+- **A refused buy** refunds the order (`sold_out`) unless it names the trade link
+  (`invalid_trade_link`), low balance (`source_low_balance`) or our key / Waxpeer's service
+  (the `source_forbidden` attention, [Forbidden](#forbidden)); no other listing is bought under the same
   `project_id` (ADR-0013). The code picks our trade by the Waxpeer id the buy returned.

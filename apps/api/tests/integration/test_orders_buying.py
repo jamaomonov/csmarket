@@ -285,6 +285,33 @@ async def test_forbidden_buy_keeps_order_buying_and_alerts(
     assert await _attempt(db_session, fake, buying_order, settings) == "nothing_to_do"
 
 
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        WaxpeerBuyRefusedError("Wrong api key", new_price_units=None),
+        WaxpeerBuyRefusedError("Internal server error", new_price_units=None),
+        WaxpeerError("Invalid key", status=400, body="{}"),
+    ],
+    ids=["api_key", "server", "json_4xx"],
+)
+async def test_a_refusal_naming_our_key_is_attention_not_sold_out(
+    db_session: AsyncSession,
+    buying_order: Order,
+    fake: FakeTradeClient,
+    settings: Settings,
+    refusal: WaxpeerError,
+) -> None:
+    """Final review M-6: a refusal about the key or Waxpeer's service would refund every
+    order «sold out»; it opens the ``source_forbidden`` attention, the buy kept pending."""
+    fake.lookup_returns([])
+    fake.buy_raises(refusal)
+    assert await _attempt(db_session, fake, buying_order, settings) == "forbidden"
+    order, trade = await load(db_session, buying_order)
+    assert (order.status, order.refunded_at) == ("buying", None)
+    assert trade.attention_reason == "source_forbidden"
+    assert trade.buy_pending
+
+
 async def test_a_forbidden_lookup_buys_nothing_and_alerts(
     db_session: AsyncSession, buying_order: Order, fake: FakeTradeClient, settings: Settings
 ) -> None:

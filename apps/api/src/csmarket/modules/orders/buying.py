@@ -57,7 +57,12 @@ from csmarket.modules.orders.buy_lease import (
     secure,
     take_lease,
 )
-from csmarket.modules.orders.buy_rules import answer_lost, link_refused, low_balance
+from csmarket.modules.orders.buy_rules import (
+    answer_lost,
+    link_refused,
+    low_balance,
+    service_refused,
+)
 from csmarket.modules.orders.buy_writes import (
     BuySnapshot,
     adopt,
@@ -403,6 +408,8 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
     except WaxpeerError as err:  # a refusal (incl. WaxpeerBuyRefusedError) or HTTP error
         if answer_lost(err):
             return await unconfirmed(db, snap)  # a 5xx, a 408, a proxy's page: may have bought
+        if service_refused(err):  # the key or Waxpeer's service, not the listing (M-6)
+            return await attention(db, snap, "source_forbidden", outcome="forbidden")
         if link_refused(err):  # the buyer's link: every listing would refuse it
             return await refund(db, snap, "invalid_trade_link")
         if await low_balance(client, err, snap.paid_units):

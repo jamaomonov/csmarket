@@ -16,6 +16,7 @@ from csmarket.modules.users.service import (
     upsert_user_by_steam,
 )
 from csmarket.modules.users.tradelink import (
+    SERVICE_HINTS,
     CheckResult,
     HoldChecker,
     TradeLink,
@@ -27,6 +28,7 @@ from csmarket.modules.users.tradelink import (
 from csmarket.modules.users.tradelink_checkers import tradelink_checkers
 
 __all__ = [
+    "SERVICE_HINTS",
     "STEAM64_BASE",
     "CheckResult",
     "HoldChecker",

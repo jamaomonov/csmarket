@@ -133,8 +133,9 @@ def assert_owned(link: TradeLink, steam_id: str) -> None:
         )
 
 
-#: Words of a refusal about our side (the key, Waxpeer's service), not the buyer's link.
-_SERVICE_HINTS = ("api", "key", "server", "internal", "maintenance", "too many")
+#: Words of a refusal about our side (the key, Waxpeer's service), not the buyer's link —
+#: also what makes a Waxpeer buy refusal an attention, not a refund (``orders.buy_rules``).
+SERVICE_HINTS = ("api", "key", "server", "internal", "maintenance", "too many")
 #: Words that name the link itself (Waxpeer's «Invalid tradelink»).
 _LINK_HINTS = ("link", "trade url", "token", "partner")
 
@@ -147,7 +148,7 @@ def _reason_for(info: str) -> Reason | None:
     a phrase we do not know — is no verdict at all (WAX-04).
     """
     text = info.lower()
-    if any(hint in text for hint in _SERVICE_HINTS):
+    if any(hint in text for hint in SERVICE_HINTS):
         return None
     if "private" in text:
         return "private"
@@ -235,6 +236,7 @@ __all__ = [
     "BREAKER_KEY",
     "BREAKER_TTL_SECONDS",
     "CACHE_TTL_SECONDS",
+    "SERVICE_HINTS",
     "CheckResult",
     "HoldChecker",
     "Reason",

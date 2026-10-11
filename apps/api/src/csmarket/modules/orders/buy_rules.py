@@ -1,5 +1,5 @@
 """The buy's judgement calls (``orders.buying``, rulings R4, R6): was the answer lost, does a
-refusal name the buyer's trade link, is it low balance."""
+refusal name our key or Waxpeer's service, the buyer's trade link, is it low balance."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from csmarket.modules.skins.api import (
     WaxpeerError,
     WaxpeerUnavailableError,
 )
+from csmarket.modules.users.api import SERVICE_HINTS
 
 _LOW_BALANCE_HINTS = ("not enough balance", "insufficient balance", "insufficient funds")
 #: Waxpeer's words for a refusal caused by the buyer's trade link (as its ``check-tradelink``
@@ -46,6 +47,15 @@ def answer_lost(err: WaxpeerError) -> bool:
     return False
 
 
+def service_refused(err: WaxpeerError) -> bool:
+    """The refusal names our key or Waxpeer's service («Wrong api key», «Internal server
+    error»), the trade-link check's words (WAX-04): not the listing — refunding it «sold
+    out» would fail every order until someone notices (final review M-6). Matched on the
+    message only: a body may echo an item name."""
+    text = str(err).lower()
+    return any(hint in text for hint in SERVICE_HINTS)
+
+
 def link_refused(err: WaxpeerError) -> bool:
     """Waxpeer refused the buy because of the buyer's trade link: another listing would be
     refused the same way, so the order is refunded (``invalid_trade_link``), not sold out.
@@ -74,4 +84,4 @@ async def low_balance(client: TradeClient, err: WaxpeerError, units: int) -> boo
         return False
 
 
-__all__ = ["answer_lost", "link_refused", "low_balance"]
+__all__ = ["answer_lost", "link_refused", "low_balance", "service_refused"]

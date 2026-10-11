@@ -349,12 +349,14 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   | buy accepted                                                | `bought`        | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0`  |
   | buy: 429                                                    | `rate_limited`  | nothing (`buy_pending` kept, next tick)                                 |
   | buy: unavailable / unreadable / 5xx / 408 / non-JSON 4xx    | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
+  | buy refused, the message names our key or Waxpeer's service | `forbidden`     | attention `source_forbidden`, `buy_pending` kept (`SERVICE_HINTS`, M-6) |
   | buy refused, the message names the trade link               | `invalid_link`  | `failed` + refund `invalid_trade_link`                                  |
   | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `source_low_balance`                                  |
   | buy refused (sold, price moved, Waxpeer's JSON 4xx)         | `sold_out`      | `failed` + refund `sold_out`                                            |
   | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (the purchase on record: `adopted`)         |
 
-  A refusal that names neither the trade link nor low balance refunds `sold_out`: no other
+  A refusal that names neither our key / Waxpeer's service, the trade link nor low balance
+  refunds `sold_out`: no other
   listing is bought in its place (ADR-0013); Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy
   or adoption ends a `source_forbidden` attention (cleared with its resolution: the access
   question is moot, and an admin refund must not see a "nothing bought" order that bought).
