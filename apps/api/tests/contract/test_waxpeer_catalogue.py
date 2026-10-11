@@ -282,6 +282,41 @@ async def test_search_listings_unreadable_200_is_unavailable(response: httpx.Res
         await _client().search_listings(["x"])
 
 
+@pytest.mark.parametrize("path", ["/v1/prices", "/v2/search-items-by-name"])
+@respx.mock
+async def test_a_200_refusal_is_a_waxpeer_error_not_an_empty_answer(path: str) -> None:
+    """Waxpeer refuses with HTTP 200 ``success: false``: never read as "nothing listed"
+    (an empty search would be cached over the stale copy; empty prices would blank the
+    Steam prices and create stub rows without metadata)."""
+    respx.get(f"{HOST}{path}").mock(
+        return_value=httpx.Response(200, json={"success": False, "msg": "Wrong api key"})
+    )
+    client = _client()
+    call = client.prices() if path == "/v1/prices" else client.search_listings([REDLINE])
+    with pytest.raises(WaxpeerError) as exc:
+        await call
+    assert exc.value.status == 200
+    assert str(exc.value) == "Wrong api key"
+
+
+@respx.mock
+async def test_search_without_an_items_map_is_unavailable() -> None:
+    respx.get(f"{HOST}/v2/search-items-by-name").mock(
+        return_value=httpx.Response(200, json={"success": True})
+    )
+    with pytest.raises(WaxpeerUnavailableError):
+        await _client().search_listings([REDLINE])
+
+
+@respx.mock
+async def test_prices_without_an_items_list_is_unavailable() -> None:
+    respx.get(f"{HOST}/v1/prices").mock(
+        return_value=httpx.Response(200, json={"success": True, "items": {}})
+    )
+    with pytest.raises(WaxpeerUnavailableError):
+        await _client().prices()
+
+
 @respx.mock
 async def test_no_key_means_no_traffic() -> None:
     route = respx.get(url__startswith="https://api.waxpeer.test/")

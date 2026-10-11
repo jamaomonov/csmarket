@@ -80,6 +80,22 @@ async def test_second_identical_tick_changes_nothing(db_session: AsyncSession) -
     assert (result.changed, result.stubs, result.deactivated) == (0, 0, 0)
 
 
+async def test_a_steam_price_change_alone_is_written(db_session: AsyncSession) -> None:
+    """WAX-05: listings unchanged, Steam moved → the new Steam price lands (the cap reads it)."""
+    await _seed(db_session)
+    await apply_prices(db_session, aggregate(_snapshot()), meta=_meta(), at=now())
+    await db_session.commit()
+    moved = _meta()
+    for m in moved:
+        if m.get("name") == "AK-47 | Redline (Field-Tested)":
+            m["steam_price"] = 50000
+    result = await apply_prices(db_session, aggregate(_snapshot()), meta=moved, at=now())
+    await db_session.commit()
+    assert result.changed == 1
+    ak = await _by_slug(db_session, "ak-47-redline-field-tested")
+    assert ak.steam_price_units == 50000
+
+
 async def test_name_gone_from_snapshot_goes_inactive(db_session: AsyncSession) -> None:
     await _seed(db_session)
     await apply_prices(db_session, aggregate(_snapshot()), meta=_meta(), at=now())

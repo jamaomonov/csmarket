@@ -219,6 +219,12 @@ class WaxpeerClient:
         """``GET {host}{path}``; the key is added here and never logged.
 
         ``path`` is relative to the host (``/v1/prices``), so one helper serves v1 and v2.
+
+        Raises:
+            WaxpeerUnavailableError: No API key, the network failed, or an unreadable 200.
+            WaxpeerRateLimitedError: Waxpeer answered 429.
+            WaxpeerError: Any other HTTP error status, or a 200 with ``success: false``
+                (``status=200``).
         """
         self._require_key()
         try:
@@ -242,6 +248,10 @@ class WaxpeerClient:
         if not isinstance(body, dict):
             log.warning("waxpeer.unexpected_body", method="GET", path=path)
             raise WaxpeerUnavailableError("unexpected body")
+        if "success" in body and not body["success"]:
+            # Waxpeer's refusal shape: never an empty answer (an empty search would be
+            # cached over the stale copy, empty prices would blank the Steam prices).
+            raise WaxpeerError(str(body.get("msg") or "refused"), body=resp.text)
         return body
 
     async def iter_snapshot_rows(self, *, game: str = "csgo") -> AsyncIterator[SnapshotRow]:
@@ -311,13 +321,17 @@ class WaxpeerClient:
         Raises:
             WaxpeerUnavailableError: No API key, the network failed, or an unreadable 200.
             WaxpeerRateLimitedError: Waxpeer answered 429.
-            WaxpeerError: An HTTP error status.
+            WaxpeerError: An HTTP error status, or a 200 with ``success: false``.
         """
         body = await self._get_json(
             "/v1/prices", [("game", game), ("minified", "0")], timeout=_PRICES_TIMEOUT
         )
         items = body.get("items")
-        return items if isinstance(items, list) else []
+        if not isinstance(items, list):
+            # No list is no answer: an empty catalogue would blank every Steam price.
+            log.warning("waxpeer.unexpected_body", method="GET", path="/v1/prices")
+            raise WaxpeerUnavailableError("unexpected body")
+        return items
 
     async def search_listings(
         self, names: Sequence[str], *, game: str = "csgo"
@@ -330,9 +344,10 @@ class WaxpeerClient:
 
         Raises:
             WaxpeerUnavailableError: No API key, the network failed, or an unreadable 200
-                (an HTML challenge page, a body that is not a JSON object).
+                (an HTML challenge page, a body that is not a JSON object, no ``items`` map).
             WaxpeerRateLimitedError: Waxpeer answered 429.
-            WaxpeerError: An HTTP error status.
+            WaxpeerError: An HTTP error status, or a 200 with ``success: false`` (a refusal:
+                the caller keeps its stale copy).
         """
         body = await self._get_json(
             "/v2/search-items-by-name",
@@ -344,7 +359,11 @@ class WaxpeerClient:
             ],
         )
         items = body.get("items")
-        return items if isinstance(items, dict) else {}
+        if not isinstance(items, dict):
+            # No map is no answer: it must never be cached as "nothing listed".
+            log.warning("waxpeer.unexpected_body", method="GET", path="/v2/search-items-by-name")
+            raise WaxpeerUnavailableError("unexpected body")
+        return items
 
     async def check_tradelink(self, url: str) -> str | None:
         """``POST /v1/check-tradelink``: ``None`` when the link works, else Steam's reason.

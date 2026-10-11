@@ -12,7 +12,12 @@ import pytest
 from csmarket.core.ids import new_id
 from csmarket.modules.skins.listings import listings_for, steam_inspect_url, waxpeer_name_of
 from csmarket.modules.skins.models import SkinItem
-from csmarket.modules.skins.waxpeer import WaxpeerRateLimitedError, WaxpeerUnavailableError
+from csmarket.modules.skins.waxpeer import (
+    WaxpeerError,
+    WaxpeerRateLimitedError,
+    WaxpeerUnavailableError,
+)
+from redis.exceptions import RedisError
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "skins"
 NAME = "AK-47 | Redline (Field-Tested)"
@@ -88,6 +93,22 @@ async def test_429_serves_stale_then_opens_the_breaker(redis: fakeredis.aioredis
     assert await redis.exists("skins:wax:breaker")
     _, degraded = await listings_for(_item(), client=limited, redis=redis, budget_per_minute=18)
     assert limited.calls == 1  # breaker open: not even tried
+
+
+async def test_a_refused_search_keeps_the_stale_copy(redis: fakeredis.aioredis.FakeRedis) -> None:
+    """A 200 ``success: false`` (WAX-03) is a refusal: the stale copy is served and never
+    overwritten with "nothing listed"."""
+    await listings_for(_item(), client=_Client(), redis=redis, budget_per_minute=18)
+    key = "skins:listings:ak-47-redline-field-tested"
+    await redis.delete(key)
+    stale_before = await redis.get(f"{key}:stale")
+    refused = _Client(fail=WaxpeerError("Wrong api key"))
+    listings, degraded = await listings_for(
+        _item(), client=refused, redis=redis, budget_per_minute=18
+    )
+    assert (degraded, len(listings), refused.calls) == (True, 2, 1)
+    assert await redis.get(key) is None
+    assert await redis.get(f"{key}:stale") == stale_before
 
 
 async def test_outage_without_stale_is_snapshot_fallback(
@@ -208,4 +229,28 @@ async def test_a_malformed_cached_entry_is_a_miss_not_a_500(
     down = _Client(fail=WaxpeerUnavailableError("ReadTimeout"))
     listings, degraded = await listings_for(_item(), client=down, redis=redis, budget_per_minute=18)
     assert degraded is True
+    assert [x.listing_id for x in listings] == [53857957789]
+
+
+class _BrokenRedis:
+    """Every command fails as a Redis outage would."""
+
+    def __getattr__(self, name: str) -> Any:  # Any: stands in for every Redis command
+        async def fail(*args: object, **kwargs: object) -> None:
+            raise RedisError("down")
+
+        return fail
+
+
+async def test_a_redis_outage_never_spends_waxpeer_calls() -> None:
+    """WAX-07: without Redis there is no budget and no breaker — fail closed: the snapshot
+    answers, Waxpeer is not called (every page view would otherwise hit its 20/min)."""
+    client = _Client()
+    listings, degraded = await listings_for(
+        _item(),
+        client=client,
+        redis=_BrokenRedis(),  # type: ignore[arg-type]
+        budget_per_minute=18,
+    )
+    assert (client.calls, degraded) == (0, True)
     assert [x.listing_id for x in listings] == [53857957789]
