@@ -38,23 +38,30 @@ function catalogParams(q: SkinQuery): string {
   return p.toString();
 }
 
-/** One catalogue page. Throws on any failure (ruling Q10). */
-export function getSkinsPage(query: SkinQuery): Promise<SkinsPage> {
-  return apiGet<SkinsPage>(`/skins/catalog?${catalogParams(query)}`);
+/**
+ * One catalogue page. Throws on any failure (ruling Q10). `perVisitor` from a request-time
+ * page only (`/market`, whose query is the visitor's): see `ApiGetOptions.perVisitor`.
+ */
+export function getSkinsPage(query: SkinQuery, perVisitor = false): Promise<SkinsPage> {
+  return apiGet<SkinsPage>(`/skins/catalog?${catalogParams(query)}`, { perVisitor });
 }
 
 /** Facet counts, inside a category when one is given. `null` only when the API says 404. */
-export function getSkinFacets(category?: string): Promise<SkinFacets | null> {
+export function getSkinFacets(category?: string, perVisitor = false): Promise<SkinFacets | null> {
   const qs = category ? `?${new URLSearchParams({ category }).toString()}` : "";
-  return apiGetOrNull<SkinFacets>(`/skins/facets${qs}`);
+  return apiGetOrNull<SkinFacets>(`/skins/facets${qs}`, { perVisitor });
 }
 
 /**
  * One item with its family and cheapest stored offers. `null` only when the API says 404.
  * Not data-cached: an item page is cheap, and hiding an item (admin) must 404 it at once.
+ * Charged to the visitor (the page is request-time anyway).
  */
 export function getSkinDetail(slug: string): Promise<SkinDetail | null> {
-  return apiGetOrNull<SkinDetail>(`/skins/${encodeURIComponent(slug)}`, { noStore: true });
+  return apiGetOrNull<SkinDetail>(`/skins/${encodeURIComponent(slug)}`, {
+    noStore: true,
+    perVisitor: true,
+  });
 }
 
 /** A page of item slugs for the sitemap. */

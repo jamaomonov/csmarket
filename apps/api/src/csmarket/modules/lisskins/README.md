@@ -111,7 +111,7 @@ LIS-SKINS»): they move orders and refund, which only `orders` may do.
 | --------- | -------------------- | ------- | ------------------------------------------------------------------------- |
 | scheduler | `lisskins.snapshot`  | 5 min   | `skins.source_prices.sync_lisskins` (export → snapshot → roll-up → price) |
 | scheduler | `sources.prices`     | 2 min   | `skins.source_prices.sync_source_prices` (Skinslink + LIS-SKINS roll-up)  |
-| scheduler | `lisskins.reconcile` | 30 s    | `orders.reconcile_lisskins` (pending buys, one `market/info` poll)        |
+| scheduler | `lisskins.reconcile` | 30 s    | `orders.reconcile_lisskins` (pending buys, `market/info` in 50-id calls)  |
 | scheduler | `lisskins.balance`   | 5 min   | `refresh_balance`; sets `csmarket_lisskins_enabled`                       |
 | worker    | queue `orders`       | on wake | `orders.drain_paid` → `attempt_lisskins_buy` for a `lisskins` order       |
 

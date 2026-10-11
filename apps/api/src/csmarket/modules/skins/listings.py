@@ -2,6 +2,8 @@
 
 Order of attempts for one item: fresh Redis → (breaker closed and budget
 left) live search v2 → stale Redis → the snapshot's ``cheapest_auto``.
+A Redis error closes the live path (no budget or breaker can be read): the
+snapshot answers rather than every view calling Waxpeer.
 ``degraded`` tells the page it is looking at something less than a live
 answer, so the page can show a calmer state rather than pretend.
 
@@ -162,14 +164,25 @@ def _decode(cached: str | bytes) -> list[Listing] | None:
 
 
 async def _budget_ok(redis: Redis, limit: int) -> bool:
+    """A call left in this minute's budget. Without Redis there is no budget to count:
+    fail closed (the snapshot answers), never spend Waxpeer's 20/min blind."""
     if limit <= 0:
         return False
     key = f"skins:wax:budget:{datetime.now(UTC).strftime('%Y%m%d%H%M')}"
-    with contextlib.suppress(RedisError):
+    try:
         used = await redis.incr(key)
         await redis.expire(key, _BUDGET_TTL)
-        return int(used) <= limit
-    return True
+    except RedisError:
+        return False
+    return int(used) <= limit
+
+
+async def _breaker_open(redis: Redis) -> bool:
+    """The breaker is open — or unknowable (a Redis error), which counts as open."""
+    try:
+        return bool(await redis.exists("skins:wax:breaker"))
+    except RedisError:
+        return True
 
 
 async def listings_for(
@@ -184,11 +197,7 @@ async def listings_for(
     if fresh is not None:
         return fresh, False
 
-    breaker_open = False
-    with contextlib.suppress(RedisError):
-        breaker_open = bool(await redis.exists("skins:wax:breaker"))
-
-    if not breaker_open and await _budget_ok(redis, budget_per_minute):
+    if not await _breaker_open(redis) and await _budget_ok(redis, budget_per_minute):
         name = waxpeer_name_of(item)
         try:
             found = await client.search_listings([name])

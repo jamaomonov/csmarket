@@ -12,13 +12,13 @@ design: [ADR-0012](../decisions/0012-lisskins-buy-source.md); flow:
 
 ## What we call
 
-| Call                                                      | Who                                           | How often                                                  |
-| --------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
-| `GET lis-skins.com/market_export_json/api_csgo_full.json` | scheduler `lisskins.snapshot`                 | every 5 min (~855 MB, streamed; no key)                    |
-| `GET /market/check-availability?ids[]=…`                  | API, `POST /orders` for a chosen `ls:` lot    | once per checkout; ≤ 100/min for the API; 120 s breaker    |
-| `POST /market/buy`                                        | worker (`orders` queue), `lisskins.reconcile` | once per order                                             |
-| `GET /market/info?custom_ids[]=…`                         | scheduler `lisskins.reconcile`, the buy       | one call every 30 s for up to 200 purchases; on a known id |
-| `GET /user/balance`                                       | scheduler `lisskins.balance`                  | every 5 min                                                |
+| Call                                                      | Who                                           | How often                                                      |
+| --------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
+| `GET lis-skins.com/market_export_json/api_csgo_full.json` | scheduler `lisskins.snapshot`                 | every 5 min (~855 MB, streamed; no key)                        |
+| `GET /market/check-availability?ids[]=…`                  | API, `POST /orders` for a chosen `ls:` lot    | once per checkout; ≤ 100/min for the API; 120 s breaker        |
+| `POST /market/buy`                                        | worker (`orders` queue), `lisskins.reconcile` | once per order                                                 |
+| `GET /market/info?custom_ids[]=…`                         | scheduler `lisskins.reconcile`, the buy       | every 30 s for up to 200 purchases, 50 per call; on a known id |
+| `GET /user/balance`                                       | scheduler `lisskins.balance`                  | every 5 min                                                    |
 
 LIS-SKINS allows 200 requests a minute per key (`market/buy` 500); a 429 carries
 `Retry-After`. Every call is counted in `csmarket_lisskins_calls_total{endpoint, outcome}`
@@ -145,6 +145,12 @@ key, the IP, the balance or LIS-SKINS itself.
      stored purchase.
 3. `rate_limited` (429) is not counted here: the order waits for `Retry-After` and tries again.
 
+Since 2026-10-11 the worker writes `buy_unconfirmed_at` **before** it sends `market/buy`, so a
+worker killed mid-buy leaves the mark. The next attempt then asks `market/info` before it
+refunds anything: our purchase is adopted, a failed lookup waits for the reconcile, and only a
+positively empty answer refunds a balance or trade-link refusal. A pending order showing
+`buy_unconfirmed_at` in the admin is a buy in flight, not a stuck one.
+
 ### The refusal code is stored
 
 Since 2026-10-10 a refused `market/buy` keeps LIS-SKINS' code in `lisskins_purchases.error`
@@ -241,12 +247,16 @@ by that `custom_id` (the order id; an order bought before ADR-0013 may carry `<o
   `market/info` showed nothing under the `custom_id` (see [Buy failures](#buy-failures)).
   Look the `custom_id` up in the cabinet or ask LIS-SKINS support. While it is open the
   reconcile still asks `market/info` and adopts a purchase that shows up, but sends nothing;
-  «Разобрано» lets it send once more under the same `custom_id` after the wait.
+  «Разобрано» lets it send once more under the same `custom_id` after the wait. No purchase
+  in the cabinet → press «Разобрано», then «Вернуть деньги» right away: the refund asks
+  `market/info` once and books only when it shows nothing under the `custom_id` (a failed
+  lookup is `source_unavailable`, try again). If the reconcile sent the buy again meanwhile,
+  the refund answers `order_in_flight` or the attention reopens: check again and repeat.
 - `source_forbidden` — see [Buy failures](#buy-failures); it clears itself once a buy goes
   through.
 
 When checked, press «Разобрано»: it works on a LIS-SKINS purchase, and resolving it frees a
-refund the attention held. Admin retry still refuses a LIS-SKINS order (409); the admin refund asks LIS-SKINS first (`docs/runbooks/public-api.md`, «Refund of a Skinslink / LIS-SKINS order», ADR-0018).
+refund the attention held (for `buy_unconfirmed` too, since 2026-10-11: ADR-0018 amendment). Admin retry still refuses a LIS-SKINS order (409); the admin refund asks LIS-SKINS first (`docs/runbooks/public-api.md`, «Refund of a Skinslink / LIS-SKINS order», ADR-0018).
 
 ## Disabling
 

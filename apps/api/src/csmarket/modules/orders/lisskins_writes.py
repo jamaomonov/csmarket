@@ -43,7 +43,8 @@ class LisskinsSnapshot(BaseModel):
     paid_units: int
     #: The order's agreed cost.
     cost_units: int
-    #: A repeat of a buy whose answer was lost: the first send may own the lot.
+    #: A repeat of a buy whose answer was lost (``buy_unconfirmed_at`` was on record before
+    #: this attempt): the first send may own the lot.
     repeat: bool = False
 
 
@@ -92,6 +93,13 @@ async def _stale_purchase(db: AsyncSession, snap: LisskinsSnapshot) -> str:
     return "stale_bought"
 
 
+def _unmark(purchase: LisskinsPurchase, snap: LisskinsSnapshot) -> None:
+    """LIS-SKINS answered this first send without buying: drop :func:`mark_sent`'s mark, so
+    the next attempt is not taken for a repeat (a repeat keeps its mark)."""
+    if not snap.repeat:
+        purchase.buy_unconfirmed_at = None
+
+
 def _settle(purchase: LisskinsPurchase) -> None:
     """The buy is no longer pending; a ``source_forbidden`` attention is moot now."""
     purchase.buy_pending = False
@@ -114,6 +122,32 @@ async def record_purchase(
     await apply_report(db, order=order, purchase=purchase, report=report)
     await db.commit()
     return outcome
+
+
+async def mark_sent(db: AsyncSession, snap: LisskinsSnapshot) -> bool:
+    """Commit ``buy_unconfirmed_at`` before ``market/buy`` goes out (review ORD-2): a worker
+    killed after the send leaves the mark, so the next attempt is a repeat and settles a
+    refusal by ``market/info``, never by a refund. The buy stays pending.
+
+    Returns:
+        ``False`` when the rows left ``buying`` / ``buy_pending`` (nothing may be sent).
+    """
+    pair = await _locked(db, snap)
+    if pair is None:
+        return False
+    purchase = pair[1]
+    purchase.buy_unconfirmed_at = purchase.updated_at = now()
+    await db.commit()
+    return True
+
+
+async def unsent(db: AsyncSession, snap: LisskinsSnapshot) -> None:
+    """A 429: LIS-SKINS did not look at the buy — drop a first send's mark."""
+    pair = await _locked(db, snap)
+    if pair is None:
+        return
+    _unmark(pair[1], snap)
+    await db.commit()
 
 
 async def unconfirmed(db: AsyncSession, snap: LisskinsSnapshot) -> str:
@@ -165,6 +199,7 @@ async def attention(
     if pair is None:
         return _stale(snap, outcome)
     flag(pair[1], reason, reopen=True)
+    _unmark(pair[1], snap)  # a 401 / 403 is answered before the buy is looked at
     await db.commit()
     return outcome
 
@@ -183,6 +218,7 @@ async def refund(
     order, purchase = pair
     try:
         _settle(purchase)
+        _unmark(purchase, snap)
         if error:
             purchase.error = error[:32]
         await refund_to_balance(db, order=order, to_status="failed", reason=reason, actor=_ACTOR)
@@ -196,8 +232,11 @@ async def refund(
 __all__ = [
     "LisskinsSnapshot",
     "attention",
+    "held",
+    "mark_sent",
     "record_purchase",
     "refund",
     "secure_sent",
     "unconfirmed",
+    "unsent",
 ]

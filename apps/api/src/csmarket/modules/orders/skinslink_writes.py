@@ -142,13 +142,23 @@ async def secure_sent(db: AsyncSession, snap: PurchaseSnapshot) -> bool:
 
 
 async def attention(
-    db: AsyncSession, snap: PurchaseSnapshot, reason: TradeAttentionReason, *, outcome: str
+    db: AsyncSession,
+    snap: PurchaseSnapshot,
+    reason: TradeAttentionReason,
+    *,
+    outcome: str,
+    stop: bool = False,
 ) -> str:
-    """Flag the purchase for an admin; the buy stays pending."""
+    """Flag the purchase for an admin; the buy stays pending unless ``stop`` (no retry: the
+    admin decides, and a refund is never ``order_busy`` behind a backoff)."""
     pair = await _locked(db, snap)
     if pair is None:
         return _stale(snap, outcome)
-    flag(pair[1], reason, reopen=True)
+    purchase = pair[1]
+    flag(purchase, reason, reopen=True)
+    if stop:
+        purchase.buy_pending = False
+        purchase.updated_at = now()
     await db.commit()
     return outcome
 

@@ -382,3 +382,158 @@ async def test_a_refusal_on_moved_rows_writes_nothing(
     outcome = await attempt_lisskins_buy(db_session, fake, order_id=order.id)
     assert outcome == "nothing_to_do"
     assert (await _order(db_session, order)).refunded_at is None
+
+
+# --- ORD-2: a send is on record before it goes out ---------------------------------------
+
+
+class _Killed(FakeLisskinsClient):
+    """Reads the rows from another connection while the buy is out, then the process dies
+    (nothing after the send runs: a hard kill, an OOM)."""
+
+    def __init__(self, engine: AsyncEngine) -> None:
+        super().__init__()
+        self.engine = engine
+        self.seen: tuple[bool, bool] | None = None
+
+    async def buy(self, **kw: object) -> Purchase:  # type: ignore[override]
+        self.calls.append(dict(kw))
+        async with AsyncSession(bind=self.engine) as other:
+            p = await other.scalar(
+                select(LisskinsPurchase).where(LisskinsPurchase.order_id == kw["custom_id"])
+            )
+            assert p is not None
+            self.seen = (p.buy_pending, p.buy_unconfirmed_at is not None)
+        raise asyncio.CancelledError  # the attempt never records the answer
+
+
+async def _killed_then_due(db: AsyncSession, engine: AsyncEngine) -> Order:
+    """An order whose first buy went out and whose worker died before recording it; the
+    lease has lapsed."""
+    order = await _buying(db)
+    killed = _Killed(engine)
+    with pytest.raises(asyncio.CancelledError):
+        await attempt_lisskins_buy(db, killed, order_id=order.id)
+    assert killed.seen == (True, True)  # committed before the request went out
+    await db.rollback()
+    # The kill came before any exit path: as the dead worker left the rows.
+    p = await _purchase(db, order)
+    p.buy_pending = True
+    row = await _order(db, order)
+    row.next_check_at = clock.now() - timedelta(seconds=1)
+    await db.commit()
+    return order
+
+
+@pytest.mark.parametrize("code", ["skins_unavailable", "insufficient_funds"])
+async def test_a_resend_after_a_hard_kill_adopts_our_first_purchase(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings, code: str
+) -> None:
+    """The first send bought the lot; the resend is refused (the lot, or the balance it
+    spent): ``market/info`` finds our purchase — never a refund."""
+    order = await _killed_then_due(db_session, db_engine)
+    fake = FakeLisskinsClient(
+        LisskinsError("no", status=400, code=code),
+        infos={order.id: purchase("wait_accept", custom_id=order.id, offer_id=OFFER)},
+    )
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "adopted"
+    row = await _order(db_session, order)
+    assert (row.status, row.refunded_at) == ("trade_sent", None)
+    assert await user_balance(db_session, order.user_id) == Decimal(0)
+
+
+async def test_a_resend_after_a_hard_kill_refused_for_the_lot_is_held(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    order = await _killed_then_due(db_session, db_engine)
+    fake = FakeLisskinsClient(LisskinsError("gone", status=400, code="skins_unavailable"))
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "unconfirmed"
+    assert fake.info_calls == [[order.id]]
+    assert (await _order(db_session, order)).refunded_at is None
+    assert (await _purchase(db_session, order)).attention_reason == "buy_unconfirmed"
+
+
+async def test_a_resend_refused_for_our_balance_and_shown_nowhere_is_refunded(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    """``market/info`` proves there is no purchase: the refusal is about our balance."""
+    order = await _killed_then_due(db_session, db_engine)
+    fake = FakeLisskinsClient(LisskinsError("broke", status=400, code="insufficient_funds"))
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "low_balance"
+    assert fake.info_calls == [[order.id]]
+
+
+async def test_a_repeat_whose_lookup_fails_is_never_refunded(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    order = await _killed_then_due(db_session, db_engine)
+    fake = FakeLisskinsClient(
+        LisskinsError("broke", status=400, code="insufficient_funds"),
+        info_error=LisskinsUnavailableError("http 502"),
+    )
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "unconfirmed"
+    assert (await _order(db_session, order)).refunded_at is None
+    p = await _purchase(db_session, order)
+    assert (p.buy_pending, p.buy_unconfirmed_at is not None) == (False, True)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        LisskinsRateLimitedError("slow", retry_after=1),
+        LisskinsForbiddenError("forbidden", status=403),
+    ],
+)
+async def test_a_first_buy_refused_unread_is_not_a_repeat(
+    db_session: AsyncSession, settings: Settings, answer: Exception
+) -> None:
+    """A 429 or a 403 is answered before LIS-SKINS looks at the buy: the send mark goes, so
+    a later «sold» is refunded as a first buy's."""
+    order = await _buying(db_session)
+    await attempt_lisskins_buy(db_session, FakeLisskinsClient(answer), order_id=order.id)
+    p = await _purchase(db_session, order)
+    assert (p.buy_pending, p.buy_unconfirmed_at) == (True, None)
+
+
+async def test_nothing_is_sent_when_the_rows_moved_before_the_send(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    from csmarket.modules.orders.lisskins_writes import LisskinsSnapshot, mark_sent
+
+    order = await _buying(db_session)
+    snap = LisskinsSnapshot(
+        order_id=order.id,
+        number=order.number,
+        skin_item_id=order.skin_item_id,
+        custom_id=order.id,
+        skin_id=5,
+        paid_units=COST,
+        cost_units=COST,
+    )
+    row = await _order(db_session, order)
+    row.status = "failed"
+    await db_session.commit()
+    assert await mark_sent(db_session, snap) is False
+    assert (await _purchase(db_session, order)).buy_unconfirmed_at is None
+
+
+async def test_an_attempt_whose_mark_finds_moved_rows_sends_nothing(
+    db_session: AsyncSession, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def moved(*_: object, **__: object) -> bool:
+        return False
+
+    monkeypatch.setattr(lisskins_buying, "mark_sent", moved)
+    order = await _buying(db_session)
+    fake = FakeLisskinsClient()
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "nothing_to_do"
+    assert fake.calls == []
+
+
+async def test_a_429_on_moved_rows_writes_nothing(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    fake = _Moves(db_engine, LisskinsRateLimitedError("slow", retry_after=1))
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "rate_limited"
+    assert (await _purchase(db_session, order)).buy_unconfirmed_at is not None

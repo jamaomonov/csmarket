@@ -56,7 +56,10 @@ waiting for its 7 days cannot be decided (409 `payout_not_payable`).
   owner's word («Пользователи» → balance adjustment, audited).
 - **`late_deposit`**: a sale we closed (`not_created`, a refusal) that Skinslink reports alive.
   The seller may have handed over skins: check the cabinet; if the deposit completed, pay the
-  seller by hand (an admin balance adjustment with the sale number in the note).
+  seller by hand (an admin balance adjustment with the sale number in the note). The
+  `create-deposit` answer itself raises it only for a sale our poll closed as `not_created`: a
+  sale a webhook check already moved on (closed by Skinslink's own failure, offered, …) keeps
+  that newer status and the older answer is dropped (log `sales.deposit_answer_stale`).
 - **`credit_blocked`**: Skinslink reports `completed` for a balance sale, but the seller's wallet
   is frozen, so the credit was refused. The sale stays in `hold`; each poll (30 min) retries
   and the flag clears when the credit lands. Unfreeze the wallet (or decide with the owner)

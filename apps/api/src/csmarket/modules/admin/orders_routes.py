@@ -240,6 +240,7 @@ async def refund(
         "`not_retryable` — not a `buying`, unrefunded order with a resolved "
         "`buy_unconfirmed`, `ambiguous_trade` or `source_forbidden` attention and no "
         "purchase on record.",
+        "`waxpeer_buy_off` — a Waxpeer order while Waxpeer buying is switched off.",
         "`order_busy` — a buy attempt is running; try again in a few minutes.",
         _IDEMPOTENCY,
     ),

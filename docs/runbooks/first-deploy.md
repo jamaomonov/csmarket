@@ -187,6 +187,10 @@ for f in $M0_SECRETS; do grep -Hn 'CHANGE_ME' "secrets/$f.env"; done   # must pr
 them are in the `ops` profile (Alertmanager also in `alerts`) and do not start before step 9 enables it. Compose still wants
 the files to exist, so copy them anyway.
 
+`CSMARKET_STOREFRONT_SECRET` goes into **both** `secrets/api.env` and `secrets/web.env` with
+the same value (`./scripts/gen-secret.sh generic`): the storefront's server renders name the
+visitor to the API's rate limits with it (ADR-0003, [`deploy.md`](./deploy.md)).
+
 Keep an offline copy of `CSMARKET_APP_ENC_KEY`: the server holds the only one, and losing it
 makes every encrypted row unreadable (and every email confirmation link in flight).
 

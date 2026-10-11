@@ -17,7 +17,10 @@ LIS-SKINS skin ``return`` refundable — unless a ``rollback_…`` reason (the s
                           accepted, then undone: it may be spent)
 not found                 refundable only for a row with no market purchase id on
                           record and no lost buy answer (``buy_unconfirmed_at`` —
-                          a silence is never refunded), older than
+                          a silence is never refunded; a LIS-SKINS one older than
+                          :data:`UNSEEN_AFTER`, or one an admin resolved the
+                          ``buy_unconfirmed`` attention after, is settled:
+                          :func:`lost_answer_settled`), older than
                           :data:`UNSEEN_AFTER`, no buy running (the refusal checks
                           those before asking)
 someone else's answer     ``order_in_flight``: a Skinslink report under another
@@ -110,11 +113,36 @@ class _Seen:
     key: str
     purchase_id: int | None
     unconfirmed_at: datetime | None
+    #: The lost buy answer no longer stands for a silence (:func:`lost_answer_settled`).
+    lost_settled: bool = False
 
     @property
     def unseen_refundable(self) -> bool:
-        """«Not found» means «never bought»: no purchase id on record, no lost buy answer."""
-        return self.purchase_id is None and self.unconfirmed_at is None
+        """«Not found» means «never bought»: no purchase id on record, and no lost buy answer
+        — or a LIS-SKINS one :func:`lost_answer_settled` lets go."""
+        return self.purchase_id is None and (self.unconfirmed_at is None or self.lost_settled)
+
+
+def lost_answer_settled(order: Order, purchase: PurchaseRow, at: datetime) -> bool:
+    """Whether a LIS-SKINS purchase's lost buy answer (``buy_unconfirmed_at``) may be settled
+    by a ``market/info`` that shows nothing (LS-1).
+
+    True when the mark is older than :data:`UNSEEN_AFTER` (``market/info`` would long show
+    a purchase made under our ``custom_id``; the reconcile itself sends the buy again then),
+    or when an admin resolved the ``buy_unconfirmed`` attention after it — that mark is a
+    repeat LIS-SKINS answered with a refusal, not a silence. Skinslink re-arms by clearing
+    its mark, so its rule is unchanged.
+    """
+    unseen = purchase.buy_unconfirmed_at
+    if order.source != "lisskins" or unseen is None:
+        return False
+    if at - unseen >= UNSEEN_AFTER:
+        return True
+    return (
+        purchase.attention_reason == "buy_unconfirmed"
+        and purchase.resolved_at is not None
+        and purchase.resolved_at >= unseen
+    )
 
 
 def purchase_buy_running(order: Order, purchase: PurchaseRow, at: datetime) -> bool:
@@ -174,7 +202,8 @@ async def _read(db: AsyncSession, number: str) -> _Seen:
         select(Order).where(Order.number == number).execution_options(populate_existing=True)
     )
     purchase = None if order is None else await purchase_of(db, order, lock=False)
-    code = None if order is None else purchase_refund_refusal(order, purchase, now())
+    at = now()
+    code = None if order is None else purchase_refund_refusal(order, purchase, at)
     seen = (
         None
         if order is None or purchase is None
@@ -184,6 +213,7 @@ async def _read(db: AsyncSession, number: str) -> _Seen:
             _key(purchase),
             purchase.purchase_id,
             purchase.buy_unconfirmed_at,
+            lost_answer_settled(order, purchase, at),
         )
     )
     await db.commit()  # nothing written: the read transaction ends before the source is asked
@@ -331,6 +361,7 @@ __all__ = [
     "LisskinsInfoClient",
     "SkinslinkStatusClient",
     "admin_refund_purchase",
+    "lost_answer_settled",
     "purchase_buy_running",
     "purchase_can_refund",
     "purchase_refund_refusal",

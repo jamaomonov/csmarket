@@ -174,3 +174,26 @@ source. The `skinslink.prices` job is now `sources.prices`
 (`skins.source_prices.sync_source_prices`), and the full-list scanner moved to
 `core/json_stream.py`. A Skinslink buy's substitute may come from LIS-SKINS
 (`orders/substitutes.py`). Superseded by ADR-0013: no substitutes.
+
+## Update 2026-10-11: a reversed trade goes to the admin
+
+Owner's decision: a Skinslink purchase reported `reverted` is never refunded by the app. The
+code refunded `reverted` on an order still `trade_sent` (Skinslink's `hold`: the buyer had
+accepted and Steam's protection window was running) as `not_accepted` — the "accept, reverse,
+be paid back" loop ADR-0007 J/P rules out. Skinslink reports `reverted` only out of `hold`, so
+every `reverted` is an accepted trade: the order moves to `delivered` (from `buying` or
+`trade_sent`) and the purchase gets the attention `rolled_back`, as for Waxpeer and the spec's
+status table (§6) always said. No new column: whether a poll saw the `hold` does not matter.
+The admin resolves it with «Разобрано»; goodwill goes through the audited balance adjustment;
+the admin refund refuses a `delivered` order. A declined or expired offer (`failed` /
+`canceled`) is refunded `not_accepted` as before.
+
+The same review tightened the buy: only `failed` / `canceled` (or a coded refusal) refunds — an
+answer with any other status is recorded; a refusal, also of a stored purchase adopted after a
+409, is refunded by the status path's reason mapping (`source_low_balance`, `trade_hold`,
+`invalid_trade_link`, `sold_out`, else `source_refused`); a 401 or an un-coded 4xx opens the
+`source_forbidden` attention instead of refunding every order (a 401 keeps the buy pending; an
+un-coded 4xx, a 404 included, stops it so the admin can refund at once — final review M-5); a
+refusal is refunded only after `purchase/status` shows no live purchase under our id (a
+re-send after a hard kill may be refused for the item we already bought — M-4); a webhook `sign` that is not
+ASCII is a 403; Steam's offer id is read from `trade_offer_id` only (digits, ≤ 32).

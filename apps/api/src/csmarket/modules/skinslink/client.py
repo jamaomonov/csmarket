@@ -229,7 +229,7 @@ def _purchase(raw: object) -> Purchase:
         id=pid,
         merchant_tx_id=_str(raw.get("merchant_tx_id")),
         status=status,
-        offer_id=_str(raw.get("trade_offer_id")) or _str(raw.get("offer_id")),
+        offer_id=_steam_offer_id(raw.get("trade_offer_id")),
         fail_reason=_str(raw.get("fail_reason")),
         amount_usd=_decimal(raw.get("amount")),
         asset_id=str(asset)
@@ -237,6 +237,21 @@ def _purchase(raw: object) -> Purchase:
         else None,
         hold_end_date=_str(raw.get("hold_end_date")),
     )
+
+
+#: The longest Steam trade offer id we store (``skinslink_purchases.offer_id``).
+_OFFER_ID_MAX = 32
+
+
+def _steam_offer_id(value: object) -> str | None:
+    """Steam's trade offer id: digits, at most 32 of them; anything else is not one (a
+    sale-list offer id is no Steam offer, and would not fit the column)."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        value = str(value)
+    text = _str(value)
+    if text is None or not (text.isascii() and text.isdigit()) or len(text) > _OFFER_ID_MAX:
+        return None
+    return text
 
 
 #: Refusals Skinslink names only in ``message`` (no ``data``), as stable codes.
@@ -367,7 +382,8 @@ class SkinslinkClient:
             raise SkinslinkUnavailableError(f"http {status}")
         if status == 404:
             record_skinslink_call(endpoint, "not_found")
-            raise SkinslinkError("not found", status=404)
+            code = _code(body) if isinstance(body, Mapping) else None
+            raise SkinslinkError("not found", status=404, code=code)
         if not isinstance(body, Mapping):
             record_skinslink_call(endpoint, "unavailable")
             raise SkinslinkUnavailableError("unexpected body")

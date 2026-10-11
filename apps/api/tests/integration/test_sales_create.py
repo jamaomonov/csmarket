@@ -496,6 +496,45 @@ async def test_the_sale_is_committed_before_the_one_skinslink_call(
 
 
 @pytest.mark.parametrize(
+    ("closed_by", "attention"),
+    [
+        ("bot_error", None),  # a Skinslink failure a webhook check applied first: stale answer
+        ("not_created", "late_deposit"),  # our poll saw no deposit; the answer proves one
+    ],
+)
+async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
+    *,
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    fake: FakeDepositClient,
+    closed_by: str,
+    attention: str | None,
+) -> None:
+    """SL-4: a webhook check closed the sale while ``create-deposit`` was in flight."""
+    original = fake.create_deposit
+    fake.created = deposit("new", amount_usd=Decimal("12.95"))
+
+    async def racing(**kwargs: object) -> object:
+        sale = await db_session.scalar(select(Sale).execution_options(populate_existing=True))
+        assert sale is not None
+        sale.status, sale.fail_reason = "closed", closed_by
+        await db_session.commit()
+        return await original(**kwargs)  # type: ignore[arg-type]
+
+    fake.create_deposit = racing  # type: ignore[method-assign,assignment]
+    headers = await _seller(db_session, integration_client, customer_headers)
+    r = await integration_client.post(URL, json=BALANCE, headers={**headers, **_key()})
+    sale = await _sale(db_session, r.json()["number"])
+    assert (sale.status, sale.fail_reason, sale.attention_reason) == (
+        "closed",
+        closed_by,
+        attention,
+    )
+
+
+@pytest.mark.parametrize(
     "payout",
     [
         {"to": "card", "new_card": {"type": "humo", "number": HUMO}, "card_id": None},

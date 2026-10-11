@@ -15,9 +15,11 @@
   3. **lookup first** (``check_project_ids``): a failure buys nothing and retries later; a
      403 sets the attention ``source_forbidden``; a found trade is adopted — never rebought;
      several live ones set ``ambiguous_trade``;
-  4. buy the chosen listing at the units agreed at checkout; a refusal (sold, price moved,
-     a 4xx) → refund ``sold_out``, no other listing is bought; a refusal that names the trade link → refund ``invalid_trade_link``; low balance (by Waxpeer's words or ``GET /v1/user``) → refund at once; 403 →
-     attention, ``buy_pending`` kept; 429 → retried next tick; a lost answer or a 5xx →
+  4. with ``waxpeer_buy_enabled`` off nothing is bought: refund ``sold_out`` (WAX-02);
+     else buy the chosen listing at the units agreed at checkout; a refusal (sold, price
+     moved, Waxpeer's own 4xx) → refund ``sold_out``, no other listing is bought; a refusal that names the trade link → refund ``invalid_trade_link``; low balance (by Waxpeer's words or ``GET /v1/user``) → refund at once; 403 →
+     attention, ``buy_pending`` kept; 429 → retried next tick; a lost answer, a 5xx, a 408
+     or a 4xx that is not Waxpeer's JSON →
      ``buy_unconfirmed_at``, resolved by lookup (R3), never by buying again.
 
 No lock is held across a Waxpeer call: every write (``orders.buy_writes``) locks the order,
@@ -55,7 +57,12 @@ from csmarket.modules.orders.buy_lease import (
     secure,
     take_lease,
 )
-from csmarket.modules.orders.buy_rules import link_refused, low_balance
+from csmarket.modules.orders.buy_rules import (
+    answer_lost,
+    link_refused,
+    low_balance,
+    service_refused,
+)
 from csmarket.modules.orders.buy_writes import (
     BuySnapshot,
     adopt,
@@ -179,7 +186,7 @@ async def drain_paid(
                 )
                 await attempt_lisskins_buy(db, lisskins_client, order_id=order_id)
             else:
-                await attempt_buy(db, client, order_id=order_id)
+                await attempt_buy(db, client, order_id=order_id, settings=settings)
         except Exception as exc:  # noqa: BLE001 -- one poisoned order must not stop the batch
             await db.rollback()
             # The type only, no traceback: an error's text can carry bound SQL parameters.
@@ -191,12 +198,14 @@ class _Run:
     """One attempt's progress: its snapshot once read, whether a buy request went out, and
     the wait a 429 asked for."""
 
-    __slots__ = ("retry_after", "sent", "snap")
+    __slots__ = ("buy_enabled", "retry_after", "sent", "snap")
 
-    def __init__(self) -> None:
+    def __init__(self, *, buy_enabled: bool = True) -> None:
         self.snap: BuySnapshot | None = None
         self.sent = False
         self.retry_after: float | None = None
+        #: ``waxpeer_buy_enabled``: off, a buy that never went out is refunded, not sent.
+        self.buy_enabled = buy_enabled
 
     def backoff(self, outcome: str) -> timedelta:
         """How long the order waits after ``outcome``: :data:`RELEASE_BACKOFF`, or Waxpeer's
@@ -207,7 +216,9 @@ class _Run:
         return wait
 
 
-async def attempt_buy(db: AsyncSession, client: TradeClient, *, order_id: str) -> str:
+async def attempt_buy(
+    db: AsyncSession, client: TradeClient, *, order_id: str, settings: Settings | None = None
+) -> str:
     """Buy order ``order_id`` at Waxpeer, unless it was bought or is being bought.
 
     The lease comes first (one atomic UPDATE that also requires ``buy_pending``), the
@@ -221,6 +232,9 @@ async def attempt_buy(db: AsyncSession, client: TradeClient, *, order_id: str) -
         db: Session; each step commits its own short transaction.
         client: Waxpeer.
         order_id: The order.
+        settings: ``waxpeer_buy_enabled`` — off, the lookup still runs (a buy that did happen
+            is adopted) but nothing is bought: the order is refunded ``sold_out`` (WAX-02).
+            The process settings when omitted.
 
     Returns:
         The outcome: ``bought``, ``adopted``, ``sold_out``, ``low_balance``,
@@ -233,7 +247,7 @@ async def attempt_buy(db: AsyncSession, client: TradeClient, *, order_id: str) -
     lease = await take_lease(db, order_id)
     if lease is None:
         return "nothing_to_do"
-    run = _Run()
+    run = _Run(buy_enabled=(settings or get_settings()).waxpeer_buy_enabled)
     try:
         async with asyncio.timeout_at(deadline):
             outcome = await _leased(db, client, order_id=order_id, run=run)
@@ -359,6 +373,10 @@ async def _after_lookup(
         return await attention(db, snap, "ambiguous_trade", outcome="ambiguous", settle=True)
     if snap.unconfirmed:
         return await park(db, snap)  # a lost answer: the reconcile rule decides (R3)
+    if not run.buy_enabled:
+        # Waxpeer buying is off (WAX-02): the lookup found no buy, so none is sent.
+        log.info("orders.buy.waxpeer_off", number=snap.number)
+        return await refund(db, snap, "sold_out")
     return await _buy(db, client, snap=snap, link=link, run=run)
 
 
@@ -388,8 +406,10 @@ async def _buy(  # noqa: PLR0911 -- one return per R6 outcome reads as the rulin
     except WaxpeerUnavailableError:
         return await unconfirmed(db, snap)  # the buy may have happened: resolve by lookup
     except WaxpeerError as err:  # a refusal (incl. WaxpeerBuyRefusedError) or HTTP error
-        if err.status >= 500:
-            return await unconfirmed(db, snap)  # a 5xx may have bought it
+        if answer_lost(err):
+            return await unconfirmed(db, snap)  # a 5xx, a 408, a proxy's page: may have bought
+        if service_refused(err):  # the key or Waxpeer's service, not the listing (M-6)
+            return await attention(db, snap, "source_forbidden", outcome="forbidden")
         if link_refused(err):  # the buyer's link: every listing would refuse it
             return await refund(db, snap, "invalid_trade_link")
         if await low_balance(client, err, snap.paid_units):

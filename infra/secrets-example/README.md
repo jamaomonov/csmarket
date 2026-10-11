@@ -30,17 +30,17 @@ are harmless.
 
 ## What lives where
 
-| File                    | Consumed by                                                                                   |
-| ----------------------- | --------------------------------------------------------------------------------------------- |
-| `postgres.env`          | `postgres` container — initial role/db creation                                               |
-| `postgres-exporter.env` | `postgres-exporter` container (Prometheus scrape)                                             |
-| `redis.env`             | `redis` (requirepass) + `redis-exporter`; password also goes into the Redis URLs in `api.env` |
-| `api.env`               | `api`, `worker`, `scheduler` (all share the same runtime env)                                 |
-| `web.env`               | `web` (Next.js storefront) — bundled into the JS, public                                      |
-| `caddy.env`             | `caddy` — ACME email + Grafana basic-auth hash                                                |
-| `grafana.env`           | `grafana` admin credentials                                                                   |
-| `alertmanager.env`      | `alertmanager` (`alerts` / `ops` profile, M5) — Telegram bot token + chat id for alerts       |
-| `backup.env`            | `backup` (`ops` profile, M5) — nightly `pg_dump → age → rclone` pipeline                      |
+| File                    | Consumed by                                                                                                |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `postgres.env`          | `postgres` container — initial role/db creation                                                            |
+| `postgres-exporter.env` | `postgres-exporter` container (Prometheus scrape)                                                          |
+| `redis.env`             | `redis` (requirepass) + `redis-exporter`; password also goes into the Redis URLs in `api.env`              |
+| `api.env`               | `api`, `worker`, `scheduler` (all share the same runtime env)                                              |
+| `web.env`               | `web` (Next.js storefront) — `NEXT_PUBLIC_*` public; `CSMARKET_STOREFRONT_SECRET` server-only, = `api.env` |
+| `caddy.env`             | `caddy` — ACME email + Grafana basic-auth hash                                                             |
+| `grafana.env`           | `grafana` admin credentials                                                                                |
+| `alertmanager.env`      | `alertmanager` (`alerts` / `ops` profile, M5) — Telegram bot token + chat id for alerts                    |
+| `backup.env`            | `backup` (`ops` profile, M5) — nightly `pg_dump → age → rclone` pipeline                                   |
 
 ## Generating the bits inside
 

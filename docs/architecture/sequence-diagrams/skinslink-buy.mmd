@@ -26,17 +26,17 @@ sequenceDiagram
     W->>DB: drain_paid: claim → buying; skinslink_purchases (merchant_tx_id = order id, buy_pending)
     W->>DB: take the lease (take_lease source = skinslink), read the snapshot
     W->>SL: POST /merchant/purchase {asset_id, partner, token, merchant_tx_id, max_price} (no lock held)
-    alt taken (new / pending / active)
+    alt taken (any status but failed / canceled)
         W->>DB: lock order → purchase, record purchase_id + status, buy_pending = false
     else 409 / duplicate_purchase
         W->>SL: GET /merchant/purchase/status?merchant_tx_id → adopt the stored purchase
-    else sold / price moved / other 4xx
-        W->>DB: failed + refund to balance (sold_out), no other offer bought
+    else sold / price moved / other coded refusal
+        W->>DB: failed + refund to balance (sold_out / source_refused), no other offer bought
     else trade-link code
         W->>DB: failed + refund to balance (invalid_trade_link)
     else insufficient_balance
         W->>DB: failed + refund to balance (source_low_balance)
-    else 403
+    else 403 / 401 / a 4xx naming no code
         W->>DB: attention source_forbidden, buy_pending kept
     else timeout / 5xx / network
         W->>DB: buy_unconfirmed_at (the reconcile asks again under the same merchant_tx_id)
@@ -58,7 +58,7 @@ sequenceDiagram
     else failed / canceled
         W->>DB: returned (after an offer) or failed + refund to balance
     else reverted
-        W->>DB: delivered: attention rolled_back; before: returned + refund
+        W->>DB: → delivered + attention rolled_back (accepted, then reversed): no refund
     end
 
     loop every 30 s (the lost-webhook fallback)

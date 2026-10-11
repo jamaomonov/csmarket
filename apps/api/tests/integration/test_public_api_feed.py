@@ -12,7 +12,7 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.redis import get_redis
 from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsState
 from csmarket.modules.public_api import keys, routes
-from csmarket.modules.public_api.feed import CURRENT_KEY, build_snapshot
+from csmarket.modules.public_api.feed import CURRENT_KEY, build_snapshot, decode_page
 from csmarket.modules.public_api.offers import api_offers, open_offer_id
 from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skinslink.models import SkinslinkItem, SkinslinkState
@@ -70,10 +70,44 @@ async def test_snapshot_writes_pages_and_flips_current(db_session: AsyncSession)
     assert await build_snapshot(db_session, get_redis(), at=NOW) == 2
     meta = json.loads(str(await get_redis().get(CURRENT_KEY)))
     assert meta["pages"] == 1
-    page = json.loads(str(await get_redis().get(f"public_api:feed:{meta['snap']}:0")))
+    page = decode_page(str(await get_redis().get(f"public_api:feed:{meta['snap']}:0")))
     assert [r["item_id"] for r in page] == sorted(r["item_id"] for r in page)
     assert {r["cost_units"] for r in page} == {9000, 8000}
     assert all(r["retail_units"] >= r["cost_units"] for r in page)
+
+
+async def test_pages_are_stored_compressed(db_session: AsyncSession) -> None:
+    """Redis is capped at 256 MB with ``noeviction``; plain JSON pages filled half of it."""
+    await _seed3(db_session)
+    await build_snapshot(db_session, get_redis(), at=NOW)
+    meta = json.loads(str(await get_redis().get(CURRENT_KEY)))
+    raw = str(await get_redis().get(f"public_api:feed:{meta['snap']}:0"))
+    assert not raw.startswith("[")
+    assert len(decode_page(raw)) == 2
+
+
+async def test_an_unchanged_catalogue_reuses_the_snapshot(db_session: AsyncSession) -> None:
+    """A minute with no change must not write a second copy of every page."""
+    await _seed3(db_session)
+    redis = get_redis()
+    await build_snapshot(db_session, redis, at=NOW)
+    first = json.loads(str(await redis.get(CURRENT_KEY)))["snap"]
+    await build_snapshot(db_session, redis, at=NOW + timedelta(minutes=1))
+    assert json.loads(str(await redis.get(CURRENT_KEY)))["snap"] == first
+    assert [k async for k in redis.scan_iter("public_api:feed:2*")] == [
+        f"public_api:feed:{first}:0"
+    ]
+    items = await db_session.scalars(select(SkinItem).where(SkinItem.skinslink_count > 0))
+    for item in items:
+        item.skinslink_min_units = 9500
+    await db_session.commit()
+    await build_snapshot(db_session, redis, at=NOW + timedelta(minutes=2))
+    assert json.loads(str(await redis.get(CURRENT_KEY)))["snap"] != first
+
+
+def test_a_legacy_plain_json_page_still_reads() -> None:
+    """Pages written before the deploy stay readable until their TTL."""
+    assert decode_page('[{"item_id": 1}]') == [{"item_id": 1}]
 
 
 async def test_catalog_page_retail_has_no_retail_key(

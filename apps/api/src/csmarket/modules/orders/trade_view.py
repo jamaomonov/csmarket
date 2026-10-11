@@ -112,6 +112,10 @@ def purchase_state(order: Order, purchase: SkinslinkPurchase | None) -> SkinTrad
     """A Skinslink order's trade state as the buyer reads it."""
     if order.status in ("failed", "returned"):
         return "failed"
+    if order.status == "delivered":
+        # A later ``reverted`` keeps the order delivered (money spent): it reads ``support``
+        # while the admin's attention is open, never as a failure (as on LIS-SKINS).
+        return "accepted"
     status = None if purchase is None else purchase.status
     return _PURCHASE_STATES.get(status or "", "buying")
 

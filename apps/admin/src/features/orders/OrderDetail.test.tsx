@@ -410,6 +410,16 @@ describe("OrderDetail", () => {
       fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
       expect(await screen.findByRole("alert")).toHaveTextContent("Повтор сейчас невозможен.");
     });
+
+    it("answers waxpeer_buy_off in Russian", async () => {
+      api.retryOrder.mockRejectedValue(conflict("waxpeer_buy_off"));
+      renderDetail();
+      fireEvent.click(await screen.findByRole("button", { name: "Повторить покупку" }));
+      fireEvent.click(screen.getByRole("button", { name: "Повторить" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Покупка на Waxpeer выключена — верните деньги или включите её.",
+      );
+    });
   });
 
   describe("resolve", () => {

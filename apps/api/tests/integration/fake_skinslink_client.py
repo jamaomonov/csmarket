@@ -26,9 +26,11 @@ def purchase(status: str = "pending", **over: object) -> Purchase:
 
 class FakeSkinslinkClient:
     """``script``: answers (a :class:`Purchase`) or exceptions, popped per ``purchase`` call;
-    ``statuses``: ``purchase_status`` answers by ``merchant_tx_id``."""
+    ``statuses``: ``purchase_status`` answers by ``merchant_tx_id`` (an exception is raised)."""
 
-    def __init__(self, *script: object, statuses: dict[str, Purchase | None] | None = None) -> None:
+    def __init__(
+        self, *script: object, statuses: dict[str, Purchase | BaseException | None] | None = None
+    ) -> None:
         self.script = deque(script)
         self.statuses = statuses or {}
         self.calls: list[dict[str, object]] = []
@@ -56,4 +58,7 @@ class FakeSkinslinkClient:
     async def purchase_status(self, *, merchant_tx_id: str) -> Purchase | None:
         """The configured report under ``merchant_tx_id``."""
         self.status_calls.append(merchant_tx_id)
-        return self.statuses.get(merchant_tx_id)
+        answer = self.statuses.get(merchant_tx_id)
+        if isinstance(answer, BaseException):
+            raise answer
+        return answer

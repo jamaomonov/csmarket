@@ -8,7 +8,8 @@ from decimal import Decimal
 import pytest
 from csmarket.core.ids import new_id
 from csmarket.modules.orders.models import Order, SkinTrade
-from csmarket.modules.orders.trade_view import skin_trade_out
+from csmarket.modules.orders.trade_view import purchase_state, skin_trade_out
+from csmarket.modules.skinslink.models import SkinslinkPurchase
 
 SEND_UNTIL = datetime(2026, 9, 29, 12, 30, tzinfo=UTC)
 RELEASE = datetime(2026, 10, 5, 16, 0, tzinfo=UTC)
@@ -182,3 +183,39 @@ def test_a_refund_is_reported_where_it_went() -> None:
     )
     assert out is not None
     assert (out.reason_code, out.refunded_to) == ("not_accepted", "balance")
+
+
+def _skinslink(**over: object) -> SkinslinkPurchase:
+    purchase = SkinslinkPurchase(
+        order_id=new_id(),
+        merchant_tx_id="m",
+        asset_id="100",
+        paid_units=1,
+        status=None,
+        offer_id=None,
+        hold_end_date=None,
+        attention_reason=None,
+        resolved_at=None,
+    )
+    for k, v in over.items():
+        setattr(purchase, k, v)
+    return purchase
+
+
+@pytest.mark.parametrize("resolved_at", [None, RELEASE])
+def test_a_reverted_skinslink_purchase_of_a_delivered_order_reads_accepted(
+    resolved_at: datetime | None,
+) -> None:
+    """Final review M-10: a ``reverted`` purchase leaves the order ``delivered`` (money spent,
+    ORD-1); its trade reads ``accepted`` as on LIS-SKINS — ``support`` while the admin's
+    attention is open — never ``failed`` beside a delivered order (the partner's
+    ``order.delivered`` agrees)."""
+    purchase = _skinslink(
+        status="reverted", offer_id="7", attention_reason="rolled_back", resolved_at=resolved_at
+    )
+    order = _order("delivered")
+    out = skin_trade_out(order, None, purchase=purchase)
+    assert out is not None
+    support = "support" if resolved_at is None else None
+    assert (out.state, out.reason_code, out.refunded_to) == ("accepted", support, None)
+    assert purchase_state(order, purchase) == "accepted"

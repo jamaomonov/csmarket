@@ -82,6 +82,27 @@ docker compose -f docker-compose.prod.yml exec -T api printenv CSMARKET_BASE_URL
 `secrets/api.env` is read by `api`, `worker` and `scheduler`. Details and rotation:
 `infra/secrets-example/README.md`.
 
+### The storefront secret (SEC-01, ADR-0003)
+
+`CSMARKET_STOREFRONT_SECRET` must hold **the same value** in `secrets/api.env` and
+`secrets/web.env`; with it the API rate-limits the storefront's server renders per visitor
+instead of all visitors together. **Generate it with `scripts/gen-secret.sh` before adding
+the line** (44 characters): a value under 32 characters — the example file's
+`CHANGE_ME_gen_secret_generic` placeholder copied as is (28) — makes `api`, `worker` and
+`scheduler` refuse to start (`storefront_secret must be at least 32 characters`). Empty
+turns the feature off.
+
+```bash
+cd ~/opt/csmarket
+./scripts/gen-secret.sh generic    # paste the line into both files as CSMARKET_STOREFRONT_SECRET=
+docker compose -f docker-compose.prod.yml up -d api worker scheduler web
+docker compose -f docker-compose.prod.yml up -d --force-recreate caddy   # if the Caddyfile changed
+```
+
+A mismatch, or the variable missing on either side, is harmless but undoes the fix: every
+render shares the web container's bucket again. Rotate by changing both files and recreating
+`api` and `web` together.
+
 ## Changing the Caddyfile by hand
 
 It is a single-file bind mount; after editing, `up -d --force-recreate caddy` (a reload keeps

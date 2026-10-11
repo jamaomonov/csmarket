@@ -211,11 +211,11 @@ services:
     environment:
       # Server Components and ISR revalidation talk to the API directly over
       # the compose network instead of leaving the box through Cloudflare and
-      # Caddy. These calls carry no X-Forwarded-For, so the API keys them on the
-      # web container's own address: ALL server rendering shares one per-IP
-      # rate-limit bucket (the public hostname would collapse them into the
-      # VPS's address just the same). M2 must forward the visitor IP from Next
-      # or exempt the internal network (ADR-0003).
+      # Caddy. These calls carry no X-Forwarded-For; request-time renders name
+      # the visitor in X-Storefront-Client-Ip beside CSMARKET_STOREFRONT_SECRET
+      # (the same value in secrets/api.env and secrets/web.env), so the API's
+      # limiters key them per visitor (ADR-0003). Without the secret, all server
+      # rendering shares the web container's one per-IP bucket.
       # Not a secret: it is an internal hostname, so it belongs here rather than
       # in secrets/web.env (public-only, since NEXT_PUBLIC_* is inlined into the
       # browser bundle).

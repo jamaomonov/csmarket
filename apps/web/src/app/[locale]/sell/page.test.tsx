@@ -32,7 +32,7 @@ describe("sell page", () => {
     const config = { enabled: true, balance_bonus_pct: "2" };
     server.apiGet.mockResolvedValue(config);
     const out = await page();
-    expect(server.apiGet).toHaveBeenCalledWith("/sell/config", { noStore: true });
+    expect(server.apiGet).toHaveBeenCalledWith("/sell/config", { noStore: true, perVisitor: true });
     // The page returns a JSX element; its props are untyped, so the child is narrowed by shape.
     const view = (out.props as { children: unknown }).children as {
       type: unknown;

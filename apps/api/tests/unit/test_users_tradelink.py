@@ -31,11 +31,13 @@ class _Wax:
 
 
 class _Hold:
-    def __init__(self, days: int | None = 0) -> None:
-        self.days, self.calls = days, 0
+    def __init__(self, days: int | None = 0, exc: Exception | None = None) -> None:
+        self.days, self.exc, self.calls = days, exc, 0
 
     async def trade_hold_days(self, steam_id: str, token: str) -> int | None:
         self.calls += 1
+        if self.exc:
+            raise self.exc
         return self.days
 
 
@@ -216,8 +218,79 @@ async def test_a_cached_hold_verdict_is_bad_too(redis) -> None:
         ("Steam user not found", "not_found"),
         ("Profile does not exist", "not_found"),
         ("Inventory is private", "private"),
-        ("something unexpected", "invalid"),
+        ("Invalid tradelink", "invalid"),
+        ("Bad trade url", "invalid"),
+        # WAX-04: text that does not name the link is not a verdict on it.
+        ("something unexpected", None),
+        ("Wrong api key", None),
+        ("Api key not found", None),
+        ("Internal server error", None),
     ],
 )
-def test_reason_for(info: str, expected: str) -> None:
+def test_reason_for(info: str, expected: str | None) -> None:
     assert _reason_for(info) == expected
+
+
+@pytest.mark.parametrize("info", ["Wrong api key", "Internal error, try later", "???"])
+async def test_a_refusal_not_about_the_link_is_unavailable_not_bad(redis, info: str) -> None:
+    """WAX-04: a key or service refusal must never store a buyer's link as bad (it would
+    block their checkout): unavailable, not cached, the breaker left alone."""
+    result = await check_trade_link(
+        parse_tradelink(LINK), waxpeer=_Wax(info), hold=_Hold(0), redis=redis
+    )
+    assert result == CheckResult(verdict=None, reason="unavailable")
+    assert [k async for k in redis.scan_iter("users:tradelink:*")] == []
+
+
+def _steam_error(status: int) -> Exception:
+    import httpx
+
+    request = httpx.Request("GET", "https://api.steampowered.test/x")
+    return httpx.HTTPStatusError(
+        "x", request=request, response=httpx.Response(status, request=request)
+    )
+
+
+def _outages() -> list[Exception]:
+    import httpx
+    from csmarket.modules.skins.waxpeer import (
+        WaxpeerError,
+        WaxpeerRateLimitedError,
+        WaxpeerUnavailableError,
+    )
+
+    return [
+        WaxpeerUnavailableError("ReadTimeout"),
+        WaxpeerRateLimitedError("slow", retry_after_seconds=1),
+        WaxpeerError("bad gateway", status=502),
+        httpx.ConnectTimeout("t"),
+        _steam_error(503),
+        _steam_error(429),
+    ]
+
+
+def _one_link_failures() -> list[Exception]:
+    from csmarket.modules.skins.waxpeer import WaxpeerError
+
+    return [WaxpeerError("bad request", status=400), _steam_error(403), _steam_error(400)]
+
+
+@pytest.mark.parametrize("exc", _outages(), ids=lambda e: type(e).__name__)
+async def test_an_upstream_outage_opens_the_breaker(redis, exc: Exception) -> None:
+    wax, hold = (_Wax(exc=exc), _Hold()) if _is_waxpeer(exc) else (_Wax(), _Hold(exc=exc))
+    result = await check_trade_link(parse_tradelink(LINK), waxpeer=wax, hold=hold, redis=redis)
+    assert result == CheckResult(verdict=None, reason="unavailable")
+    assert await redis.exists("users:tradelink:breaker")
+
+
+@pytest.mark.parametrize("exc", _one_link_failures(), ids=lambda e: type(e).__name__)
+async def test_one_links_failure_never_opens_the_breaker(redis, exc: Exception) -> None:
+    """WAX-06: a 4xx about one link answers unavailable for that link only."""
+    wax, hold = (_Wax(exc=exc), _Hold()) if _is_waxpeer(exc) else (_Wax(), _Hold(exc=exc))
+    result = await check_trade_link(parse_tradelink(LINK), waxpeer=wax, hold=hold, redis=redis)
+    assert result == CheckResult(verdict=None, reason="unavailable")
+    assert not await redis.exists("users:tradelink:breaker")
+
+
+def _is_waxpeer(exc: Exception) -> bool:
+    return type(exc).__module__.startswith("csmarket")

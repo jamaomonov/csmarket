@@ -70,16 +70,46 @@ and the volumetric tier is Cloudflare's WAF.
   edge address (fails safe — shared bucket, never a spoofable one).
 - A first certificate may need the record set to DNS only for a moment if the Cloudflare zone
   redirects HTTP to HTTPS before the origin has a certificate (`docs/runbooks/first-deploy.md`).
-- All server-side rendering shares one rate-limit bucket: the `web` container's address
-  (above). **M2 must forward the visitor IP from Next or exempt the internal network** before
-  SSR traffic can trip the limiter.
+- ~~All server-side rendering shares one rate-limit bucket: the `web` container's address
+  (above). M2 must forward the visitor IP from Next or exempt the internal network.~~ Done
+  2026-10-11 (SEC-01): see "Storefront visitor IP" below. Without the secret set, SSR still
+  shares the web container's bucket.
 - Editing the single-file Caddyfile bind mount needs `up -d --force-recreate caddy`; the
   deploy workflow does it when the file's hash changes.
+
+### Storefront visitor IP (amendment, 2026-10-11, SEC-01)
+
+The storefront's Server Components call `http://api:8000` directly, so every render counted
+against the web container's one address: about 11 uncached page views a second from anyone
+made the API answer 429 to the storefront, and every visitor saw the error page.
+
+- **Web**: a request-time render (`/item/{slug}`, `/market`, `/sell`) sends
+  `X-Storefront-Client-Ip` (the first `X-Forwarded-For` entry Caddy gave Next) and
+  `X-Storefront-Secret` (`CSMARKET_STOREFRONT_SECRET`, server-only env, never `NEXT_PUBLIC_`)
+  — `apps/web/src/lib/server-api.ts`, option `perVisitor`. Static and ISR renders send
+  neither: reading request headers would make them dynamic, and their API calls are bounded
+  by the cache anyway. A cached call keeps one cache entry for every visitor
+  (`unstable_cache` keyed by the path, since the fetch cache keys on headers); a miss is
+  charged to the visitor who caused it.
+- **API**: `core/client_ip.py` takes that header only when a secret is configured, the
+  request's secret matches it (`hmac.compare_digest`), the request carries **no**
+  `X-Forwarded-For` (our Caddy sets one on every request from the internet; the storefront's
+  direct calls never do) and the value parses as an IP. Otherwise nothing changes. A secret
+  under 32 characters refuses to start.
+- **Caddy** strips both headers on the way in (`(upstream)`), so they never come from outside
+  even before the checks above.
+- The same `client_ip` feeds `ip_guard` and the public API's per-key IP allow-list; only the
+  web container holds the secret and it never calls the public API.
+- Rejected: exempting the compose network from the limiter (leaves SSR to Cloudflare alone)
+  and sending `X-Forwarded-For` from Next (indistinguishable from a forged header without the
+  secret).
 
 ## Validation
 
 - `caddy validate` on `Caddyfile.prod` (M0 infra task).
-- `apps/api/tests/unit/test_client_ip.py` pins the "first entry only" contract.
+- `apps/api/tests/unit/test_client_ip.py` pins the "first entry only" contract and the
+  storefront header's conditions; `apps/web/src/lib/server-api.test.ts` pins what the web
+  sends.
 - The first-deploy runbook's client-IP check: a spoofed `X-Forwarded-For` never reaches the
   API.
 

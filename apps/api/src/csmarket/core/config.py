@@ -86,6 +86,14 @@ class Settings(BaseSettings):
             "Default per-IP, per-route limit (slowapi syntax). A flood-stopper, not a policy."
         ),
     )
+    storefront_secret: str = Field(
+        default="",
+        description=(
+            "Shared with the web container (same env name in secrets/web.env): its server-side "
+            "calls send it with the visitor's IP, so the limiters key SSR on the visitor "
+            "(core/client_ip.py, ADR-0003). Empty: off, SSR shares the web container's bucket."
+        ),
+    )
 
     # --- CORS ---
     cors_allow_origins: list[str] = Field(
@@ -250,6 +258,15 @@ class Settings(BaseSettings):
         """Accept base64-encoded PEM blobs (single-line, .env-friendly)."""
         return _maybe_decode_pem(v)
 
+    @field_validator("storefront_secret", mode="after")
+    @classmethod
+    def _strong_storefront_secret(cls, v: str) -> str:
+        """Refuse a guessable secret: it lets a caller pick its own rate-limit key."""
+        v = v.strip()
+        if v and len(v) < 32:
+            raise ValueError("storefront_secret must be at least 32 characters (gen-secret.sh)")
+        return v
+
     # --- skins (M2) ---
     skins_sync_enabled: bool = Field(
         default=False,
@@ -372,8 +389,10 @@ class Settings(BaseSettings):
         default=True,
         description=(
             "Waxpeer is a buy source. Off: the catalogue, offers and checkout use Skinslink "
-            "only (it resells Waxpeer's listings, often cheaper); Waxpeer still brings the "
-            "Steam price, checks trade links and settles orders already bought there."
+            "only (it resells Waxpeer's listings, often cheaper); no new Waxpeer buy is sent "
+            "(a paid Waxpeer order the lookup finds unbought is refunded, a pending one "
+            "cannot be paid, an admin retry is refused). Waxpeer still brings the Steam "
+            "price, checks trade links and settles orders already bought there."
         ),
     )
     order_expiry_minutes: int = Field(

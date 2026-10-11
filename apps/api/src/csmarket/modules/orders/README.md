@@ -124,7 +124,8 @@ replay store (scope `orders.pay:{number}`, the row keeps `{request: {provider, l
 response}`): the same body replays the stored answer, another body is 409
 `idempotency_mismatch`. Looked up under the order lock, so a double-click's second request
 waits for the first and replays it. Then an order that is not payable is 409
-`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), and:
+`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), a Waxpeer
+order while `waxpeer_buy_enabled` is off is 409 `buying_disabled` (WAX-02), and:
 
 - **`wallet`** — one transaction: `wallet.debit_purchase` (locks the wallet; 409
   `balance_too_low` writes nothing), a `payments` row `purpose="order"`,
@@ -276,7 +277,9 @@ lisskins)` (the route injects `skinslink.request_status_client` and
   `order_in_flight` for a row younger than 10 minutes with no market purchase id. Then the
   unlocked read commits and the source is asked once (4 s, nothing locked): Skinslink
   `failed` / `canceled`, a LIS-SKINS `return` that is not a `rollback_…`, or not found with no
-  purchase id on record and no lost buy answer (`buy_unconfirmed_at`) → refundable; an answer
+  purchase id on record and no lost buy answer (`buy_unconfirmed_at`; a LIS-SKINS one older
+  than 10 minutes or followed by a resolved `buy_unconfirmed` is settled,
+  `lost_answer_settled`) → refundable; an answer
   about another purchase (`merchant_tx_id`, purchase id, `custom_id`) or an unreadable
   LIS-SKINS entry (`info_answer.entries`) → `order_in_flight`; anything else →
   `order_in_flight`; an error or timeout → `source_unavailable`. Lock order → purchase,
@@ -290,7 +293,8 @@ lisskins)` (the route injects `skinslink.request_status_client` and
   clears `attention_reason`, `buy_unconfirmed_at` and `resolved_*`, sets `buy_pending`,
   `next_check_at = now`. The reconcile sweep's next `attempt_buy` looks the `project_id` up
   first, so a purchase Waxpeer did make is adopted, never repeated. Returns the cleared
-  reason (audited). 409 `not_retryable`, `order_busy`.
+  reason (audited). 409 `not_retryable`, `waxpeer_buy_off` (a Waxpeer order while
+  `waxpeer_buy_enabled` is off: its attempt would only refund it), `order_busy`.
 - `resolve_attention(db, *, number, admin_id, note) -> str | None` — stamps `resolved_at`,
   `resolved_by` (admin id), `resolved_note` once; returns the reason, or `None` when it was
   already resolved (nothing written). 409 `nothing_to_resolve` without a trade or an
@@ -341,15 +345,18 @@ buy_pending> AND next_check_at <= now RETURNING next_check_at` — and only then
   | a lost answer on record (`buy_unconfirmed_at`), any lookup  | `nothing_to_do` | `buy_pending = false`; reconcile's unconfirmed rule decides (R3); belt  |
   | … one of them accepted, released or with penalties          | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false`; nothing bought      |
   | lookup finds several live trades                            | `ambiguous`     | attention `ambiguous_trade`, `buy_pending = false` (no refund)          |
+  | lookup finds nothing, `waxpeer_buy_enabled` off             | `sold_out`      | `failed` + refund `sold_out`; nothing is sent to Waxpeer (WAX-02)       |
   | buy accepted                                                | `bought`        | `listing_id`, `paid_units`, `waxpeer_id`, `bought_units`, `status = 0`  |
   | buy: 429                                                    | `rate_limited`  | nothing (`buy_pending` kept, next tick)                                 |
-  | buy: unavailable / unreadable / 5xx                         | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
+  | buy: unavailable / unreadable / 5xx / 408 / non-JSON 4xx    | `unconfirmed`   | `buy_unconfirmed_at`, `buy_pending = false` (R3 after 10 min)           |
+  | buy refused, the message names our key or Waxpeer's service | `forbidden`     | attention `source_forbidden`, `buy_pending` kept (`SERVICE_HINTS`, M-6) |
   | buy refused, the message names the trade link               | `invalid_link`  | `failed` + refund `invalid_trade_link`                                  |
   | buy refused, low balance (words, or `GET /v1/user` < units) | `low_balance`   | `failed` + refund `source_low_balance`                                  |
-  | buy refused (sold, price moved, a 4xx)                      | `sold_out`      | `failed` + refund `sold_out`                                            |
+  | buy refused (sold, price moved, Waxpeer's JSON 4xx)         | `sold_out`      | `failed` + refund `sold_out`                                            |
   | a buy accepted or lost, but the rows moved during the call  | `stale_bought`  | attention `ambiguous_trade` (the purchase on record: `adopted`)         |
 
-  A refusal that names neither the trade link nor low balance refunds `sold_out`: no other
+  A refusal that names neither our key / Waxpeer's service, the trade link nor low balance
+  refunds `sold_out`: no other
   listing is bought in its place (ADR-0013); Waxpeer's `new_price` is never accepted. A failing balance call reads as "not low". A buy
   or adoption ends a `source_forbidden` attention (cleared with its resolution: the access
   question is moot, and an admin refund must not see a "nothing bought" order that bought).
@@ -398,19 +405,25 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `merchant_tx_id`, so the reconcile repeats the same call after a lost answer. Outcomes
   (`csmarket_order_buys_total`, log `orders.skinslink_buy`):
 
-  | Skinslink answers                                                                                                         | Outcome        | Writes                                                                            |
-  | ------------------------------------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-  | trade link does not parse                                                                                                 | `invalid_link` | `failed` + refund `invalid_trade_link`                                            |
-  | taken (`new`, `pending`, `active`, `hold`, `completed`)                                                                   | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once        |
-  | 409 or `duplicate_purchase`                                                                                               | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one counts as refused      |
-  | a trade-link code (`LINK_ERROR_CODES`); `hold`, `hold_and_permissions` → `trade_hold`                                     | `invalid_link` | `failed` + refund `invalid_trade_link` (`trade_hold` for a hold)                  |
-  | `insufficient_balance`                                                                                                    | `low_balance`  | `failed` + refund `source_low_balance`                                            |
-  | HTTP 403                                                                                                                  | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s             |
-  | HTTP 429                                                                                                                  | `rate_limited` | nothing; next try after 20 s                                                      |
-  | timeout, 408, 5xx, network                                                                                                | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id |
-  | sold or moved (`SOLD_FAIL_REASONS`: `item_sold`, `item_not_available`, `price_changed`, `item_specified_price_not_found`) | `sold_out`     | `failed` + refund `sold_out`                                                      |
-  | any other `failed` reason or 4xx (`provider_unavailable`, `seller_too_slow`, none)                                        | `refused`      | `failed` + refund `source_refused` (partners read `supplier_refused`)             |
-  | a buy that went through but the rows moved during the call                                                                | `stale_bought` | attention `ambiguous_trade`                                                       |
+  | Skinslink answers                                                                                                         | Outcome        | Writes                                                                              |
+  | ------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------------------------------- |
+  | trade link does not parse                                                                                                 | `invalid_link` | `failed` + refund `invalid_trade_link`                                              |
+  | taken: any status but `failed` / `canceled` (`new` … `completed`, `reverted`, a word Skinslink adds later)                | `bought`       | `purchase_id`, `status`, `buy_pending = false`; the status applied at once          |
+  | 409 or `duplicate_purchase`                                                                                               | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one is refused by its reason |
+  | a trade-link code (`LINK_ERROR_CODES`); `hold`, `hold_and_permissions` → `trade_hold`                                     | `invalid_link` | `failed` + refund `invalid_trade_link` (`trade_hold` for a hold)                    |
+  | `insufficient_balance`                                                                                                    | `low_balance`  | `failed` + refund `source_low_balance`                                              |
+  | HTTP 403 or HTTP 401 (the key or the IP whitelist — not the offer)                                                        | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s               |
+  | another 4xx naming no code (404 included; a moved endpoint, an unknown answer)                                            | `forbidden`    | attention `source_forbidden`, `buy_pending = false`: no retry, the admin refunds    |
+  | HTTP 429                                                                                                                  | `rate_limited` | nothing; next try after 20 s                                                        |
+  | timeout, 408, 5xx, network                                                                                                | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id   |
+  | sold or moved (`SOLD_FAIL_REASONS`: `item_sold`, `item_not_available`, `price_changed`, `item_specified_price_not_found`) | `sold_out`     | `failed` + refund `sold_out`                                                        |
+  | any other `failed` / `canceled` reason or coded 4xx (`provider_unavailable`, `seller_too_slow`, none)                     | `refused`      | `failed` + refund `source_refused` (partners read `supplier_refused`)               |
+  | a buy that went through but the rows moved during the call                                                                | `stale_bought` | attention `ambiguous_trade`                                                         |
+
+  Before any refusal is refunded, `purchase/status` is asked under `merchant_tx_id` (review
+  M-4): a worker killed after the send re-sends as a first buy, and the item it already
+  bought reads as sold. A live purchase there is `adopted`; a failed one or none lets the
+  refund go; no answer → `unconfirmed`. A 404's body is read for a code like any 4xx.
 
   The chosen asset is the only one bought: no substitute, no switch to another source
   (ADR-0013). An order bought before that change under `merchant_tx_id` = `<order id>:2`
@@ -431,7 +444,13 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   | `active` / `hold` with an offer | `buying → trade_sent` (+ the `trade_sent` letter, a nudge)                              |
   | `completed`                     | `→ delivered`                                                                           |
   | `failed`, `canceled`            | after an offer: `returned` + refund `not_accepted`; before: `failed` + refund by reason |
-  | `reverted`                      | delivered: attention `rolled_back`; before: `returned` + refund `not_accepted`          |
+  | `reverted`                      | `→ delivered` (from `buying` / `trade_sent`) + attention `rolled_back`; never a refund  |
+
+  Skinslink reports `reverted` only out of `hold`: the buyer accepted, then the trade was
+  reversed in Steam's protection window. The money is spent whether or not a poll saw the
+  `hold` (owner, 2026-10-11; ADR-0010 update, ADR-0007 J/P): the admin decides («Разобрано»,
+  goodwill through «Изменить баланс»); the admin refund refuses a `delivered` order
+  (`order_not_refundable`). A declined or expired offer is `failed` / `canceled`.
 
   `check_purchase(db, client, *, purchase_id=None, order_id=None)` asks
   `GET /merchant/purchase/status` by the stored `merchant_tx_id` (no lock held) and applies
@@ -452,7 +471,9 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   `check_purchase`. The fallback for a lost webhook.
 - **Reads:** the owner's order reads join `skinslink_purchases` in the same query (no N+1);
   `trade_view.purchase_state` maps `new`/`pending` → `buying`, `active` → `offer_sent`,
-  `hold` / `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed`. A `hold`
+  `hold` / `completed` → `accepted`, `failed`/`canceled`/`reverted` → `failed` — but a
+  `delivered` order always reads `accepted` (a `reverted` after acceptance keeps the order
+  delivered and reads `support` while its `rolled_back` attention is open, as on LIS-SKINS). A `hold`
   reads `accepted` with `release_date = hold_end_date` (Steam protects the skin until then;
   the order stays `trade_sent` until `completed`). No seller or deadline. An open attention on the purchase reads `support` and
   blocks `refund_to_balance` as on a trade.
@@ -501,6 +522,14 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
   lookups read the stored key. A buy or adoption clears a `source_forbidden` attention. A sent request whose exit failed
   to record it is secured as unconfirmed in a fresh session.
 
+  **The send mark (ORD-2, 2026-10-11):** `buy_unconfirmed_at` is committed
+  (`lisskins_writes.mark_sent`) before `market/buy` goes out, with `buy_pending` still true; a
+  worker killed after the send leaves it, so the next attempt is a **repeat**. A first send's
+  mark is dropped on a 429, a 401 / 403 and a refund. On a repeat every refusal asks
+  `market/info` first: our purchase → `adopted`; a failed lookup → `unconfirmed` (never a
+  refund); nothing shown → a buyer or balance refusal (`BUY_LINK_ERRORS`,
+  `insufficient_funds`) is refunded as above, a lot refusal is `held`.
+
 - **Writes** (`lisskins_writes.py`): lock the order, then the purchase (ruling K), re-check
   `buying` and `buy_pending`, write, commit; nothing when a sweep moved the rows (except
   `stale_bought`).
@@ -522,7 +551,7 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
 
 - **Reconcile** (`lisskins_reconcile.py`, scheduler `lisskins.reconcile`, every 30 s; runs
   while the key is set, switch or not): up to 20 orders whose buy is pending go through
-  `attempt_lisskins_buy` (its lease decides who acts); then **one** `GET /market/info` call
+  `attempt_lisskins_buy` (its lease decides who acts); then `GET /market/info` (50 ids a call)
   for up to 200 purchases — every open one (`buying` / `trade_sent`, not pending) first, then
   delivered ones in **trade protection** (status `accepted`, delivered within 8 days, last
   polled ≥ 10 min ago), longest-unpolled first. Each answer is applied in its own session.
@@ -532,8 +561,8 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
   as the mark of a repeat. A repeat's refusal of the lot may be our own first buy: no
   refund — `market/info` once more, else the `buy_unconfirmed` attention
   (`lisskins_writes.held`), and no further repeat until it is resolved. A purchase we hold an id for
-  is never settled by its absence, and a silence is never refunded. A failed `info` call skips
-  the tick (`orders.lisskins.info_failed`).
+  is never settled by its absence, and a silence is never refunded. The ids go in calls of
+  `INFO_CHUNK` (50); a failed call skips only its chunk (`orders.lisskins.info_failed ids=…`).
 - **Reads:** the owner's order reads join `lisskins_purchases` in the same query (no N+1);
   `trade_view.lisskins_state` maps `wait_accept` → `offer_sent`, `accepted` → `accepted`,
   `return` → `failed`, anything else → `buying`; a `delivered` order reads `accepted` (a later

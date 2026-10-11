@@ -126,14 +126,19 @@ async def aggregate_stream(
     return _finish(out)
 
 
-def price_hash(agg: PriceAggregate) -> str:
-    """Stable digest of the price columns, so an unchanged row costs no UPDATE."""
+def price_hash(agg: PriceAggregate, steam_units: int | None = None) -> str:
+    """Stable digest of the price columns, so an unchanged row costs no UPDATE.
+
+    The Steam price is one of them: a move of Steam's alone must land too (the Steam cap
+    reads it), even while Waxpeer's listings stand still.
+    """
     parts = [
         str(agg.min_auto),
         str(agg.count_auto),
         ",".join(f"{i}:{p}" for i, p in agg.cheapest),
         str(agg.min_all),
         str(agg.count_all),
+        str(steam_units),
     ]
     # Change detection, not security: a collision costs one skipped UPDATE.
     return hashlib.sha1("|".join(parts).encode()).hexdigest()  # noqa: S324
@@ -188,8 +193,11 @@ async def apply_prices(
     updates: list[dict[str, Any]] = []
     stubs: list[dict[str, Any]] = []  # Any: as ``updates``
     for key, agg in aggregates.items():
-        digest = price_hash(agg)
-        steam = meta_by_key.get(key, {}).get("steam_price")
+        steam_raw = meta_by_key.get(key, {}).get("steam_price")
+        # 0 is Waxpeer's "unknown", not a free item: stored as NULL so no discount is
+        # ever computed against it.
+        steam = int(steam_raw) if isinstance(steam_raw, int | float) and steam_raw > 0 else None
+        digest = price_hash(agg, steam)
         values = {
             "min_auto_units": agg.min_auto,
             "count_auto": agg.count_auto,
@@ -198,11 +206,7 @@ async def apply_prices(
             ],
             "min_all_units": agg.min_all,
             "count_all": agg.count_all,
-            # 0 is Waxpeer's "unknown", not a free item: stored as NULL so no
-            # discount is ever computed against it.
-            "steam_price_units": int(steam)
-            if isinstance(steam, int | float) and steam > 0
-            else None,
+            "steam_price_units": steam,
             "price_hash": digest,
             "prices_updated_at": at,
             "active": agg.count_auto > 0 and not _phase_unknown(key),

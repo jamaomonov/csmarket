@@ -8,10 +8,11 @@ route stack in.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+import re
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover -- type hints only
-    from sentry_sdk.types import Event, Hint
+    from sentry_sdk.types import Breadcrumb, BreadcrumbHint, Event, Hint
 
     from csmarket.core.config import Settings
 
@@ -41,16 +42,73 @@ def _is_shutdown_cancellation(event: Event) -> bool:
     return any(v.get("type") == "CancelledError" for v in values)
 
 
+#: Keys under which the SDK files a URL's query string or a full URL that may carry one.
+_QUERY_KEYS = ("http.query", "query_string")
+_URL_KEYS = ("url", "http.url")
+#: Request parts that never reach Sentry: headers carry the storefront secret, the visitor's IP
+#: (``X-Storefront-Client-Ip``, ``Cf-Connecting-Ip``, ``X-Forwarded-For``) and the bearer token.
+_REQUEST_DROPPED = ("data", "query_string", "headers", "cookies", "env")
+#: A URL's query in free text, e.g. ``httpx.HTTPStatusError``'s message.
+_URL_QUERY = re.compile(r"(https?://[^\s'\"?]+)\?[^\s'\"]*")
+
+
+def _scrub_http(data: Any) -> None:  # Any: breadcrumb/span data is an untyped SDK dict
+    """Drop query strings from one breadcrumb's or span's ``data`` in place.
+
+    Waxpeer takes its API key and the buyer's trade-link ``partner``/``token`` in the query, and
+    the httpx integration records the raw query of every outgoing call. The path stays: it is
+    what makes a breadcrumb useful.
+    """
+    if not isinstance(data, dict):
+        return
+    for key in _QUERY_KEYS:
+        data.pop(key, None)
+    for key in _URL_KEYS:
+        url = data.get(key)
+        if isinstance(url, str) and "?" in url:
+            data[key] = url.split("?", 1)[0]
+
+
+def _before_breadcrumb(crumb: Breadcrumb, _hint: BreadcrumbHint) -> Breadcrumb | None:
+    """Strip query strings from a breadcrumb before the SDK keeps it."""
+    _scrub_http(crumb.get("data"))
+    return crumb
+
+
 def _before_send(event: Event, _hint: Hint) -> Event | None:
-    """Drop the one class of non-error APScheduler reports on every deploy."""
+    """Drop deploy-time APScheduler noise; strip bodies and query strings from the rest."""
     if _is_shutdown_cancellation(event):
         return None
     request = event.get("request")
     if isinstance(request, dict):
-        # Defence in depth: ``max_request_body_size="never"`` already keeps bodies out, but a
-        # card number must not depend on one setting (``POST /sell``).
-        request.pop("data", None)
+        # Bodies: ``max_request_body_size="never"`` already keeps them out, but a card number
+        # must not depend on one setting (``POST /sell``). Query: the Steam callback carries the
+        # Steam ID (``openid.claimed_id``). Headers: see ``_REQUEST_DROPPED``.
+        for part in _REQUEST_DROPPED:
+            request.pop(part, None)
+    exceptions = event.get("exception")
+    values_ = exceptions.get("values") if isinstance(exceptions, dict) else None
+    for exc in values_ if isinstance(values_, list) else []:
+        if isinstance(exc, dict) and isinstance(exc.get("value"), str):
+            exc["value"] = _URL_QUERY.sub(r"\1", exc["value"])
+    crumbs = event.get("breadcrumbs")
+    values = crumbs.get("values") if isinstance(crumbs, dict) else crumbs
+    for crumb in values if isinstance(values, list) else []:
+        if isinstance(crumb, dict):
+            _scrub_http(crumb.get("data"))
     return event
+
+
+def _before_send_transaction(event: Event, hint: Hint) -> Event | None:
+    """Strip query strings from a sampled transaction's spans and request."""
+    spans = event.get("spans")
+    for span in spans if isinstance(spans, list) else []:
+        if isinstance(span, dict):
+            _scrub_http(span.get("data"))
+    trace = (event.get("contexts") or {}).get("trace")
+    if isinstance(trace, dict):
+        _scrub_http(trace.get("data"))
+    return _before_send(event, hint)
 
 
 def init_sentry(settings: Settings, *, integrations: str = "asgi") -> None:
@@ -108,6 +166,8 @@ def init_sentry(settings: Settings, *, integrations: str = "asgi") -> None:
         # and the default scrubber does not know ``number`` (a payout card, ``POST /sell``).
         max_request_body_size="never",
         before_send=_before_send,
+        before_breadcrumb=_before_breadcrumb,
+        before_send_transaction=_before_send_transaction,
         integrations=extras,
     )
 

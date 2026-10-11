@@ -13,9 +13,14 @@ worker's ``skinslink`` queue (:func:`drain_checks`, fed by the webhook) and the 
 ``failed``, ``canceled``               after an offer: ``returned`` + refund
                                        ``not_accepted``; before: ``failed`` + refund by
                                        the reason (low balance, trade link, sold out)
-``reverted``                           delivered: attention ``rolled_back`` (the money is
-                                       spent); before: ``returned`` + refund
+``reverted``                           ``→ delivered`` + attention ``rolled_back``, never
+                                       a refund (the money is spent)
 =====================================  ==============================================
+
+Skinslink reports ``reverted`` only out of ``hold`` — the buyer accepted the offer, then the
+trade was reversed in Steam's protection window — so it is spent whether or not we polled the
+``hold`` (owner, 2026-10-11; ADR-0007 J/P, ADR-0010). A declined or expired offer comes as
+``failed`` / ``canceled`` and is refunded ``not_accepted``.
 
 A refund an open attention blocks (R3) leaves the order as it is (``held``).
 """
@@ -92,7 +97,7 @@ def link_failure_reason(code: str | None) -> str | None:
     return "invalid_trade_link" if code in LINK_ERROR_CODES else None
 
 
-def _failure_reason(fail_reason: str | None) -> str:
+def failure_reason(fail_reason: str | None) -> str:
     """Why a purchase that never reached an offer failed, as the order's refund reason."""
     if fail_reason == "insufficient_balance":
         return "source_low_balance"
@@ -117,15 +122,25 @@ async def _apply(  # noqa: PLR0911 -- one return per row of the status table
             return "unchanged"
         move(order, "delivered")
         return "delivered"
-    if status == "reverted" and order.status == "delivered":
-        if flag(purchase, "rolled_back"):
-            log.error("orders.skinslink.rolled_back", number=order.number)
-        return "rolled_back"
-    if status in ("failed", "canceled", "reverted") and order.status in ("buying", "trade_sent"):
-        if order.status == "trade_sent" or purchase.offer_id or status == "reverted":
+    if status == "reverted":
+        return _rolled_back(order, purchase)
+    if status in ("failed", "canceled") and order.status in ("buying", "trade_sent"):
+        if order.status == "trade_sent" or purchase.offer_id:
             return await refund_or_hold(db, order, "returned", "not_accepted")
-        return await refund_or_hold(db, order, "failed", _failure_reason(report.fail_reason))
+        return await refund_or_hold(db, order, "failed", failure_reason(report.fail_reason))
     return "unchanged"
+
+
+def _rolled_back(order: Order, purchase: SkinslinkPurchase) -> str:
+    """An accepted trade reversed: the order is ``delivered`` (the skin reached the buyer and
+    the money is spent) and waits for an admin as ``rolled_back`` — never refunded here."""
+    if order.status in ("buying", "trade_sent"):
+        move(order, "delivered")
+    if order.status != "delivered":
+        return "unchanged"  # refunded or closed before: nothing left to decide
+    if flag(purchase, "rolled_back"):
+        log.error("orders.skinslink.rolled_back", number=order.number)
+    return "rolled_back"
 
 
 #: Outcomes that change what the buyer sees; a refund is nudged by the refund itself.
@@ -275,4 +290,12 @@ async def drain_checks(
     return len(ids)
 
 
-__all__ = ["apply_report", "check_purchase", "drain_checks", "mirror_report", "to_units"]
+__all__ = [
+    "apply_report",
+    "check_purchase",
+    "drain_checks",
+    "failure_reason",
+    "link_failure_reason",
+    "mirror_report",
+    "to_units",
+]

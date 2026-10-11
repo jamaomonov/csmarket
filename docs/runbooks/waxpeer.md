@@ -45,7 +45,10 @@ After changing the key: `docker compose -f docker-compose.prod.yml up -d api wor
 
 ## Forbidden
 
-`WaxpeerForbidden` (page): an order's lookup or buy got **HTTP 403** in the last 10 minutes.
+`WaxpeerForbidden` (page): an order's lookup or buy got **HTTP 403** in the last 10 minutes,
+or a buy refusal whose message names our key or Waxpeer's service («Wrong api key»,
+«Internal server error»; the same words the trade-link check treats as no verdict, WAX-04 —
+log `orders.buy.refused` is absent, the outcome is `forbidden`).
 It is a configuration error, never "sold out", so **nothing is refunded**: the order stays
 `buying` with its buy pending, the trade gets the attention `source_forbidden` («Waxpeer:
 IP не в белом списке»), and the reconcile sweep retries it every 60 s.
@@ -63,6 +66,28 @@ IP не в белом списке»), and the reconcile sweep retries it every 
 A 403 on a trade already bought (`trade_sent`) is a lookup failure: nothing is written, the
 order waits, and `TradesUnpolled` fires after 30 minutes ([`orders.md#trades-unpolled`](./orders.md#trades-unpolled)).
 The price sync logs `skins.prices.failed` at the same time.
+
+## Switching Waxpeer buying off
+
+`CSMARKET_WAXPEER_BUY_ENABLED=false` (in `secrets/api.env`; restart the api, worker and
+scheduler with the pinned `IMAGE_TAG`) stops **every new Waxpeer buy** (ADR-0007, amendment
+2026-10-11):
+
+- the catalogue, the item page and checkout offer no Waxpeer listing (Skinslink / LIS-SKINS
+  only);
+- `POST /orders/{n}/pay` of a Waxpeer order still `pending` answers 409 `buying_disabled`
+  (balance and kassa alike);
+- the worker and the reconcile sweep still **look up** each paid Waxpeer order's `project_id`
+  (a lookup is not a buy): a buy that did happen is adopted and followed as usual, a lost
+  answer is resolved by lookup as usual; when Waxpeer has no buy, nothing is sent and the
+  order is refunded to the balance as `sold_out` (log `orders.buy.waxpeer_off`). A failed
+  lookup waits and asks again — it never refunds;
+- an admin «Повторить покупку» of a Waxpeer order answers 409 `waxpeer_buy_off` («Покупка на
+  Waxpeer выключена — …»): refund it, or switch buying back on first.
+
+A kassa payment page opened before the switch can still settle; that order is then refunded
+to the balance by the rule above. Waxpeer still brings the Steam price, checks trade links
+and settles orders already bought there.
 
 ## Balance low
 
@@ -141,11 +166,20 @@ Before buying is switched on for customers (`CSMARKET_SKINS_BUY_ENABLED=true`):
    «Обмен» block shows the Waxpeer id, the seller and the protection date.
 5. Take the test balance back with a clawback adjustment naming both order numbers.
 
+## The first price tick after the `price_hash` change (WAX-05)
+
+The row digest now includes the Steam price, so the first `skins.price_sync` tick after the
+deploy that brings it rewrites every row once (~35k UPDATEs, a new `prices_updated_at` on
+each): the public feed's `updated_at` moves for every item and partners using
+`updated_since` re-read the catalogue once. Expected, no action; later ticks are normal.
+
 ## Still owed
 
 - **Orphan buys** (a Waxpeer purchase with no order of ours) are not detected: the nightly
   audit reads trades back by our own `project_id`. Detecting them needs Waxpeer's
   `my-history`, whose answer shape was never captured. M4b probes it once with the owner's
   locally whitelisted key, then extends the audit.
-- **A refused buy** refunds the order (`sold_out`); no other listing is bought under the same
+- **A refused buy** refunds the order (`sold_out`) unless it names the trade link
+  (`invalid_trade_link`), low balance (`source_low_balance`) or our key / Waxpeer's service
+  (the `source_forbidden` attention, [Forbidden](#forbidden)); no other listing is bought under the same
   `project_id` (ADR-0013). The code picks our trade by the Waxpeer id the buy returned.

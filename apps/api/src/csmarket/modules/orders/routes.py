@@ -101,7 +101,8 @@ async def post_order_pay(
 
     ``Idempotency-Key`` (16..160 chars) is required; the same key and body replay the first
     answer, another body is 409 ``idempotency_mismatch``. 409 ``code``s:
-    ``order_not_payable`` (+ ``reason``: ``paid`` | ``expired``), ``balance_too_low``.
+    ``order_not_payable`` (+ ``reason``: ``paid`` | ``expired``), ``balance_too_low``,
+    ``buying_disabled`` (a Waxpeer order while Waxpeer buying is off).
     422 ``order_provider`` for a kassa not available here. Another user's order is a 404.
     """
     key = require_idempotency_key(idempotency_key)

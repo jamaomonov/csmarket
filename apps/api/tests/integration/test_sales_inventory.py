@@ -8,7 +8,12 @@ from collections.abc import Iterator
 import pytest
 from csmarket.core.ids import new_id
 from csmarket.modules.skins.models import SkinItem
-from csmarket.modules.skinslink.api import Inventory, SkinslinkError, SkinslinkUnavailableError
+from csmarket.modules.skinslink.api import (
+    Inventory,
+    SkinslinkError,
+    SkinslinkRateLimitedError,
+    SkinslinkUnavailableError,
+)
 from fastapi import FastAPI
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -189,6 +194,23 @@ async def test_an_outage_opens_the_breaker(
         r = await integration_client.get(f"{URL}?refresh=1", headers=headers)
         assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
     assert fake.inventory_calls == 1  # the second read never reached Skinslink
+
+
+async def test_a_rate_limit_answers_503_without_closing_selling_for_everyone(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,  # noqa: F811 -- the imported fixture
+    fake: FakeDepositClient,
+) -> None:
+    """SL-6: one 429 is this caller's 503; the shared breaker stays shut."""
+    headers = await ready_seller(db_session, customer_headers)
+    fake.inventories.clear()
+    fake.inventories.extend([SkinslinkRateLimitedError("slow down"), INVENTORY])
+    r = await integration_client.get(f"{URL}?refresh=1", headers=headers)
+    assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
+    assert (await integration_client.get(f"{URL}?refresh=1", headers=headers)).status_code == 200
+    assert fake.inventory_calls == 2
 
 
 async def test_a_stale_snapshot_is_asked_once_more(
