@@ -35,6 +35,9 @@ sync. `phase` is `''` when an item has none, never NULL.
   `msg` on `success: false`). An HTTP error status raises `WaxpeerError`; no API key, a
   network failure or a 200 whose body is not a JSON object raises `WaxpeerUnavailableError`
   (no traffic without a key) — an unreadable answer is an outage, never a reason.
+  `prices()` and `search_listings()` raise `WaxpeerError(status=200)` on `success: false`
+  and `WaxpeerUnavailableError` when the `items` list / map is missing — a refusal is never
+  an empty catalogue or an empty search.
 - **`iter_snapshot_rows()`** — `GET /v1/prices/snapshot?format=csv`, streamed line by line
   (read timeout 300 s) into `SnapshotRow(item_id, name, price_units, auto)`; units 1000 = $1.
   A header without `item_id,name,price,auto` raises `WaxpeerError` once; rows with an
@@ -189,7 +192,8 @@ avatar_url, level, joined_at)`. The buyer's `for_steamid64` is dropped here (bot
 - **`prices`** — folds Waxpeer's CSV snapshot onto `skin_items` every
   `CSMARKET_SKINS_SNAPSHOT_INTERVAL_MINUTES` (5). `aggregate_stream` reduces the ~1.2 M rows to one
   `PriceAggregate` per canonical `(name, phase)` in one pass; `apply_prices` then, in the caller's
-  transaction, updates only rows whose `price_hash` changed, deactivates rows absent from the
+  transaction, updates only rows whose `price_hash` (the price columns and the Steam price)
+  changed, deactivates rows absent from the
   snapshot (price columns cleared) and inserts a `source='stub'` row for a name the catalogue has
   never seen. **Only `auto` listings set a price** (`min_auto_units`, `count_auto`, the ten cheapest
   in `cheapest_auto`); manual listings count in `count_all` / `min_all_units` only. A name is
@@ -301,7 +305,8 @@ that calls Waxpeer from a request (AGENTS §11); `listings.listings_for` decides
    key) has room: one `search_listings([waxpeer_name_of(item)])` with a 4 s timeout
    (`CSMARKET_SKINS_LISTINGS_TIMEOUT_SECONDS`). Only `auto` listings are kept, sorted by
    `(price, id)`, cached 90 s fresh and 1 h stale. A 429 or outage opens the breaker for 2 min; any
-   other error just falls through;
+   other error (a 200 `success: false` included) just falls through, never cached as empty. A
+   Redis error closes this step (budget uncountable, breaker unknown = open);
 3. stale Redis `skins:listings:{slug}:stale` -> `degraded: true`. A cached entry that no longer
    decodes into `Listing` (shape drift) counts as a miss, never a 500;
 4. the snapshot's `cheapest_auto` (no float, stickers or inspect link) -> `degraded: true`.
