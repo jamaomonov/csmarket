@@ -173,6 +173,9 @@ async def test_a_sold_offer_is_refunded_never_replaced(
         (purchase("failed", fail_reason="item_not_available"), "sold_out"),
         (purchase("failed", fail_reason="provider_unavailable"), "source_refused"),
         (SkinslinkError("broke", status=400, code="insufficient_balance"), "source_low_balance"),
+        # SL-2: a 200 + ``failed`` naming the link is the link's fault, as on the status path.
+        (purchase("failed", fail_reason="trade_link_invalid"), "invalid_trade_link"),
+        (purchase("canceled", fail_reason="hold"), "trade_hold"),
     ],
 )
 async def test_refund_reasons(
@@ -240,3 +243,72 @@ async def test_a_duplicate_adopts_the_stored_purchase(
     assert outcome == "adopted"
     assert (await _purchase(db_session, order)).purchase_id == 180
     assert (await _order(db_session, order)).status == "trade_sent"
+
+
+@pytest.mark.parametrize(
+    ("fail_reason", "reason", "outcome"),
+    [
+        ("insufficient_balance", "source_low_balance", "low_balance"),
+        ("item_sold", "sold_out", "sold_out"),
+        ("trade_banned", "invalid_trade_link", "invalid_link"),
+        (None, "source_refused", "refused"),
+    ],
+)
+async def test_an_adopted_failed_purchase_is_refunded_by_its_reason(
+    db_session: AsyncSession,
+    settings: Settings,
+    fail_reason: str | None,
+    reason: str,
+    outcome: str,
+) -> None:
+    """SL-2: a repeat answered 409 adopts the stored purchase; a failed one keeps its reason."""
+    order = await _buying(db_session)
+    stored = purchase("failed", fail_reason=fail_reason, id=180)
+    fake = FakeSkinslinkClient(SkinslinkError("dup", status=409), statuses={order.id: stored})
+    assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == outcome
+    row = await _order(db_session, order)
+    assert (row.status, row.failure_reason) == ("failed", reason)
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        SkinslinkError("unauthorized", status=401, code="unauthorized"),
+        SkinslinkError("not found", status=404),
+        SkinslinkError("refused", status=400),
+    ],
+)
+async def test_a_key_or_endpoint_failure_is_attention_not_a_refund(
+    db_session: AsyncSession, settings: Settings, answer: SkinslinkError
+) -> None:
+    """SL-3: a 401 or a 4xx naming no reason is our side's fault (key, endpoint), not the
+    offer's: flagged like a 403, the buy kept pending, nothing refunded."""
+    order = await _buying(db_session)
+    fake = FakeSkinslinkClient(answer)
+    assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == "forbidden"
+    p = await _purchase(db_session, order)
+    assert (p.attention_reason, p.buy_pending) == ("source_forbidden", True)
+    row = await _order(db_session, order)
+    assert (row.status, row.refunded_at) == ("buying", None)
+    assert await user_balance(db_session, order.user_id) == 0
+
+
+@pytest.mark.parametrize("via_adopt", [False, True])
+async def test_an_unknown_status_is_recorded_not_refunded(
+    db_session: AsyncSession, settings: Settings, via_adopt: bool
+) -> None:
+    """ORD-4: an answer with an id proves a purchase; only ``failed`` / ``canceled`` prove it
+    will not deliver. Any other word is recorded and the status checks settle it."""
+    order = await _buying(db_session)
+    unknown = purchase("processing", id=180)
+    fake = (
+        FakeSkinslinkClient(SkinslinkError("dup", status=409), statuses={order.id: unknown})
+        if via_adopt
+        else FakeSkinslinkClient(unknown)
+    )
+    outcome = await attempt_skinslink_buy(db_session, fake, order_id=order.id)
+    assert outcome == ("adopted" if via_adopt else "bought")
+    p = await _purchase(db_session, order)
+    assert (p.purchase_id, p.status, p.buy_pending) == (180, "processing", False)
+    row = await _order(db_session, order)
+    assert (row.status, row.refunded_at) == ("buying", None)

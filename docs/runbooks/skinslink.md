@@ -123,7 +123,8 @@ the key, the IP whitelist or Skinslink itself.
 
 1. The worker log: `orders.skinslink_buy number=… outcome=…`.
 2. `csmarket_skinslink_calls_total{endpoint="purchase"}` by outcome:
-   - `forbidden` (403): the order stays `buying` with the buy pending and the attention
+   - `forbidden` (403; also a 401 and any 4xx naming no reason — a rotated key, a moved
+     endpoint): the order stays `buying` with the buy pending and the attention
      `source_forbidden`; nothing is refunded. Fix the whitelist or the key; the reconcile
      buys again (same `merchant_tx_id`, never a second purchase) and clears the attention.
    - `unavailable` (timeout, 5xx, network): the buy may have gone through. The order keeps
@@ -132,8 +133,10 @@ the key, the IP whitelist or Skinslink itself.
      (10), the buy is sent again under the **same** `merchant_tx_id` (log
      `orders.skinslink.repeat_unseen`): Skinslink is idempotent on it, so this can never buy
      twice. A silence is never refunded.
-   - `refused`: sold or price moved. The order is refunded `sold_out`; no other
-     offer is bought in its place (ADR-0013). Many at once can mean a stale mirror (see
+   - `refused`: sold or price moved. The order is refunded `sold_out` (another named
+     reason: `source_refused`); no other offer is bought in its place (ADR-0013). Only a
+     `failed` / `canceled` purchase or a coded refusal is refunded: an answer with any other
+     status is recorded and the status checks settle it. Many at once can mean a stale mirror (see
      [Mirror stale](#mirror-stale)).
 3. A refusal naming the trade link (`trade_link_*`, `trade_banned`, `profile_private`,
    `hold`, `permissions`, …) refunds `invalid_trade_link`: the buyer fixes the link.
@@ -157,6 +160,24 @@ Skinslink's `hold` means the buyer **accepted** the offer and Steam's trade prot
 after it, then turns `delivered`; a rollback before then comes as `reverted`. The admin shows such
 an order as «принят, защита до DD.MM» (`protected_until` on the order row and page); the buyer
 already reads it as accepted. The reconcile asks every 10 minutes — nothing to do by hand.
+
+## Rolled back after acceptance (`reverted`)
+
+Skinslink reports `reverted` only out of `hold`: the buyer accepted the offer, then the trade was
+reversed in Steam's protection window. Owner's decision (2026-10-11): this is **never refunded
+automatically**, as for Waxpeer (ADR-0007 J/P) — otherwise a buyer could accept, reverse and be
+paid back. The order turns `delivered` (from `trade_sent`, or `buying` if no poll saw the
+`hold`) and the purchase gets the attention `rolled_back` (log
+`orders.skinslink.rolled_back`; `TradesNeedAttention` fires). A declined or expired offer is
+`failed` / `canceled`, not `reverted`, and is still refunded `not_accepted` at once.
+
+1. Find the order by number in the admin search; the «Покупка Skinslink» block shows
+   `reverted` and the attention.
+2. Check the purchase in the Skinslink cabinet by its `merchant_tx_id` and talk to the buyer.
+3. If anything is owed (support's call with the owner), «Пользователи» → «Изменить баланс»
+   with the order number in the reason (audited). «Вернуть деньги на баланс» is refused for a
+   delivered order (`order_not_refundable`) on purpose.
+4. Press «Разобрано» with what you found.
 
 ## Disabling
 

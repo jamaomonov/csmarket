@@ -124,10 +124,33 @@ async def test_reverted_after_delivery_is_attention_not_a_refund(db_session: Asy
     assert await _check(db_session, order, reverted) == "rolled_back"  # once, not every tick
 
 
-async def test_reverted_before_delivery_returns_the_money(db_session: AsyncSession) -> None:
+async def test_reverted_during_the_hold_is_attention_not_a_refund(db_session: AsyncSession) -> None:
+    """ORD-1 (owner, 2026-10-11): the buyer accepted (``hold``), then reversed the trade —
+    the money is spent; an admin decides, the app never refunds (ADR-0007 J/P)."""
     order, _ = await make_skinslink_order(db_session)
-    assert await _check(db_session, order, purchase("reverted")) == "returned"
-    assert await user_balance(db_session, order.user_id) == PRICE
+    held = purchase("hold", offer_id=OFFER, hold_end_date="2026-10-13T00:00:00Z")
+    assert await _check(db_session, order, held) == "unchanged"
+    reverted = purchase("reverted", fail_reason="user_reverted")
+    assert await _check(db_session, order, reverted) == "rolled_back"
+    row, p = await _fresh(db_session, order)
+    assert (row.status, row.refunded_at, row.failure_reason) == ("delivered", None, None)
+    assert (p.status, p.attention_reason, p.resolved_at) == ("reverted", "rolled_back", None)
+    assert await user_balance(db_session, order.user_id) == Decimal(0)
+    assert await _check(db_session, order, reverted) == "rolled_back"  # once, not every tick
+    assert await user_balance(db_session, order.user_id) == Decimal(0)
+
+
+@pytest.mark.parametrize("status", ["buying", "trade_sent"])
+async def test_reverted_without_a_seen_hold_is_still_spent(
+    db_session: AsyncSession, status: str
+) -> None:
+    """Skinslink reports ``reverted`` only out of ``hold``: a hold we never polled is still
+    an accepted trade, never refunded."""
+    order, _ = await make_skinslink_order(db_session, status=status)
+    assert await _check(db_session, order, purchase("reverted")) == "rolled_back"
+    row, p = await _fresh(db_session, order)
+    assert (row.status, p.attention_reason) == ("delivered", "rolled_back")
+    assert await user_balance(db_session, order.user_id) == Decimal(0)
 
 
 async def test_an_open_attention_holds_the_refund(db_session: AsyncSession) -> None:

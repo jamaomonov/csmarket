@@ -8,10 +8,15 @@
    ``max_price`` = the agreed cost: Skinslink answers a repeat with the stored purchase, so a
    lost answer is resolved by asking again under the same id (Task 9's reconcile), never by
    a new purchase;
-4. a refusal → refund, never another offer (ADR-0013): ``sold_out`` when the offer is gone or
-   dearer (``SOLD_FAIL_REASONS``), ``source_refused`` for any other refusal; low balance → refund; a refusal naming the trade link → refund ``invalid_trade_link``;
-   403 → attention, the buy kept pending; 429 → retried after a backoff; no answer →
-   ``buy_unconfirmed_at``.
+4. a refusal → refund, never another offer (ADR-0013), by the reason the status path maps too
+   (``skinslink_status.failure_reason``): ``sold_out`` when the offer is gone or dearer
+   (``SOLD_FAIL_REASONS``), ``source_low_balance``, ``invalid_trade_link`` / ``trade_hold``
+   for a refusal naming the trade link, ``source_refused`` for any other — also for a stored
+   purchase a 409 repeat adopts. Only ``failed`` / ``canceled`` (or an error naming a code)
+   are refusals: an answer with any other status proves a purchase and is recorded;
+   403, 401 or a 4xx naming no code → attention ``source_forbidden`` (the key, the IP
+   whitelist or the endpoint — not the offer), the buy kept pending; 429 → retried after a
+   backoff; no answer → ``buy_unconfirmed_at``.
 
 No lock is held across a Skinslink call (``orders.skinslink_writes``). Log lines carry the
 order number and the outcome, never the trade link.
@@ -32,7 +37,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.metrics import OrderBuyOutcome, record_order_buy
 from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, release_fresh, take_lease
 from csmarket.modules.orders.models import Order
-from csmarket.modules.orders.skinslink_status import link_failure_reason
+from csmarket.modules.orders.skinslink_status import failure_reason
 from csmarket.modules.orders.skinslink_writes import (
     PurchaseSnapshot,
     attention,
@@ -42,7 +47,6 @@ from csmarket.modules.orders.skinslink_writes import (
     unconfirmed,
 )
 from csmarket.modules.skinslink.api import (
-    SOLD_FAIL_REASONS,
     Purchase,
     SkinslinkError,
     SkinslinkForbiddenError,
@@ -65,8 +69,9 @@ RELEASE_BACKOFF: dict[str, timedelta] = {
 _UNCOUNTED = frozenset({"nothing_to_do", "lookup_later"})
 _SECURE_SECONDS = 10.0
 _UNITS_PER_USD = Decimal(1000)
-#: Purchase statuses that mean Skinslink took the purchase.
-_TAKEN = frozenset({"new", "pending", "active", "hold", "completed"})
+#: Purchase statuses that prove Skinslink will not deliver; any other status (``new`` …
+#: ``completed``, ``reverted``, a word Skinslink adds later) means it took the purchase.
+_REFUSED = frozenset({"failed", "canceled"})
 
 
 class _Run:
@@ -187,8 +192,7 @@ async def _leased(
         return settled
     log.info("orders.skinslink_buy.refused", number=run.snap.number, code=run.refusal)
     # Never another offer (ADR-0013); «sold out» only when the offer itself is gone.
-    reason = "sold_out" if run.refusal in SOLD_FAIL_REASONS else "source_refused"
-    return await refund(db, run.snap, reason)
+    return await refund(db, run.snap, failure_reason(run.refusal))
 
 
 async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as the table
@@ -215,36 +219,39 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
     except SkinslinkUnavailableError:
         return await unconfirmed(db, snap)  # it may have gone through: ask again later
     except SkinslinkError as err:
-        link_reason = link_failure_reason(err.code)
-        if link_reason is not None:
-            return await refund(db, snap, link_reason)
         if err.status == 409 or err.code == "duplicate_purchase":
-            return await _adopt(db, client, snap)
-        if err.code == "insufficient_balance":
-            return await refund(db, snap, "source_low_balance")
+            return await _adopt(db, client, snap, run)
+        if _not_about_the_offer(err):
+            return await attention(db, snap, "source_forbidden", outcome="forbidden")
         run.refusal = err.code
         return None
-    if report.status in _TAKEN:
+    if report.status not in _REFUSED:
         return await record_purchase(db, snap, report)
-    if report.fail_reason == "insufficient_balance":
-        return await refund(db, snap, "source_low_balance")
     if report.fail_reason == "duplicate_purchase":
-        return await _adopt(db, client, snap)
+        return await _adopt(db, client, snap, run)
     run.refusal = report.fail_reason
     return None
 
 
+def _not_about_the_offer(err: SkinslinkError) -> bool:
+    """A 401, or a 4xx naming no reason: our key or the endpoint, not the offer (SL-3) —
+    refunding it would fail every order until someone notices."""
+    return err.status == 401 or (err.code is None and err.status >= 400)
+
+
 async def _adopt(
-    db: AsyncSession, client: SkinslinkPurchaseClient, snap: PurchaseSnapshot
+    db: AsyncSession, client: SkinslinkPurchaseClient, snap: PurchaseSnapshot, run: _Run
 ) -> str | None:
-    """A repeat of ``merchant_tx_id``: take the stored purchase; a failed one was refused."""
+    """A repeat of ``merchant_tx_id``: take the stored purchase; a failed one was refused
+    (its ``fail_reason`` decides the refund, as on the status path)."""
     try:
         report: Purchase | None = await client.purchase_status(merchant_tx_id=snap.merchant_tx_id)
     except (SkinslinkError, SkinslinkUnavailableError):
         report = None
     if report is None:
         return await unconfirmed(db, snap)  # the reconcile asks again
-    if report.status not in _TAKEN:
+    if report.status in _REFUSED:
+        run.refusal = report.fail_reason
         return None
     return await record_purchase(db, snap, report, outcome="adopted")
 

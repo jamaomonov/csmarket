@@ -25,6 +25,7 @@ from csmarket.modules.skins.api import (
     WaxpeerUnavailableError,
     request_trade_client,
 )
+from csmarket.modules.skinslink.api import request_status_client
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import user_balance
 from csmarket.modules.wallet.models import WalletTransaction
@@ -773,6 +774,38 @@ async def test_resolve_works_on_a_skinslink_purchase_and_frees_its_refund(
     fake = FakeSkinslinkClient(statuses={order.id: purchase("canceled")})
     assert await check_purchase(db_session, fake, order_id=order.id) == "returned"
     assert await user_balance(db_session, order.user_id) == PRICE
+
+
+async def test_a_skinslink_rollback_is_resolved_by_an_admin_never_refunded(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_session: AsyncSession,
+    integration_app: FastAPI,
+) -> None:
+    """ORD-1: a trade accepted (``hold``) then ``reverted`` waits for an admin as
+    ``rolled_back`` on a ``delivered`` order: «Разобрано» closes it; the refund button stays
+    refused (goodwill is an audited balance adjustment, ADR-0007 J/P)."""
+    h = await admin_headers()
+    order, _ = await make_skinslink_order(db_session)
+    fake = FakeSkinslinkClient(
+        statuses={order.id: purchase("reverted", offer_id="6912345678", id=178)}
+    )
+    assert await check_purchase(db_session, fake, order_id=order.id) == "rolled_back"
+    integration_app.dependency_overrides[request_status_client] = lambda: fake
+    try:
+        status, body = await _post(integration_client, h, order, "refund")
+        assert (status, body["code"]) == (409, "order_not_refundable")
+    finally:
+        integration_app.dependency_overrides.pop(request_status_client, None)
+    status, body = await _post(integration_client, h, order, "resolve", body={"note": "checked"})
+    assert status == 200, body
+    assert body["order"]["status"] == "delivered"
+    assert (body["skinslink"]["attention_reason"], body["can_refund"]) == ("rolled_back", False)
+    assert body["skinslink"]["resolved_at"] is not None
+    (row,) = await _audit(db_session, "orders.trade.resolve")
+    assert row.payload == {"reason": "rolled_back"}
+    assert await _refunds(db_session, order) == 0
+    assert await user_balance(db_session, order.user_id) == 0
 
 
 async def test_resolve_works_on_a_lisskins_purchase(
