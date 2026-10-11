@@ -86,7 +86,11 @@ docker compose -f docker-compose.prod.yml exec -T api printenv CSMARKET_BASE_URL
 
 `CSMARKET_STOREFRONT_SECRET` must hold **the same value** in `secrets/api.env` and
 `secrets/web.env`; with it the API rate-limits the storefront's server renders per visitor
-instead of all visitors together. Generate one (44 characters; the API refuses under 32):
+instead of all visitors together. **Generate it with `scripts/gen-secret.sh` before adding
+the line** (44 characters): a value under 32 characters — the example file's
+`CHANGE_ME_gen_secret_generic` placeholder copied as is (28) — makes `api`, `worker` and
+`scheduler` refuse to start (`storefront_secret must be at least 32 characters`). Empty
+turns the feature off.
 
 ```bash
 cd ~/opt/csmarket

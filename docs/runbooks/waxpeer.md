@@ -166,6 +166,13 @@ Before buying is switched on for customers (`CSMARKET_SKINS_BUY_ENABLED=true`):
    «Обмен» block shows the Waxpeer id, the seller and the protection date.
 5. Take the test balance back with a clawback adjustment naming both order numbers.
 
+## The first price tick after the `price_hash` change (WAX-05)
+
+The row digest now includes the Steam price, so the first `skins.price_sync` tick after the
+deploy that brings it rewrites every row once (~35k UPDATEs, a new `prices_updated_at` on
+each): the public feed's `updated_at` moves for every item and partners using
+`updated_since` re-read the catalogue once. Expected, no action; later ticks are normal.
+
 ## Still owed
 
 - **Orphan buys** (a Waxpeer purchase with no order of ours) are not detected: the nightly
