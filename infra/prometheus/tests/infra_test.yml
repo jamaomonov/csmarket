@@ -1,0 +1,32 @@
+rule_files:
+  - ../alerts/infra.yml
+
+evaluation_interval: 1m
+
+tests:
+  # A backup 27 h old fires BackupStale.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_backup_last_success_timestamp_seconds{job="node"}'
+        values: "0x1700"
+    alert_rule_test:
+      - eval_time: 27h
+        alertname: BackupStale
+        exp_alerts:
+          - exp_labels: { severity: page, job: node }
+            exp_annotations:
+              summary: "No successful database backup to R2 for over 26 hours"
+              runbook: "docs/runbooks/backups.md"
+      - eval_time: 25h
+        alertname: BackupStale
+        exp_alerts: []
+
+  # A fresh nightly backup keeps it quiet.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_backup_last_success_timestamp_seconds{job="node"}'
+        values: "0+60x1700"
+    alert_rule_test:
+      - eval_time: 28h
+        alertname: BackupStale
+        exp_alerts: []

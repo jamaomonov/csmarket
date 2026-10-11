@@ -33,8 +33,9 @@
   password and root SSH off), image tag `sha-3aa03e4`: all five hosts answer through Cloudflare
   with Let's Encrypt certificates, the client IP check passed — M0 is done for good. Search
   indexing stays closed (`CSMARKET_INDEXING=off`, `docs/runbooks/indexing.md`) until the owner
-  opens it. Not yet on the server: the Waxpeer key (no prices, no buying), the kassas, Resend,
-  backups and alerts (the `ops` profile). Next: M5 (launch), when the owner asks for it.
+  opens it. M5 started 2026-10-11 (without the kassas): nightly backups to R2 are live (`ops` profile,
+  `docs/runbooks/backups.md`, alerts `BackupStale` / `BackupNeverRan`); Alertmanager runs in the
+  `alerts` profile. Still to come: Sentry, Resend, the kassas, test buys, opening indexing.
   The partner API docs live at `docs.csmarket.uz` (static Scalar page, `infra/docs-site`,
   `docs/runbooks/public-api.md`).
   The root is an SEO landing (ru / uz / en) and the catalogue lives at `/market` (spec

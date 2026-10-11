@@ -33,3 +33,23 @@ groups:
         labels: { severity: page }
         annotations:
           summary: "Redis exporter not scrapeable"
+
+      - alert: BackupStale
+        # The nightly pg_dump → age → R2 run writes this timestamp only after a successful
+        # upload (infra/backup/pg_backup.sh); 26 h = one missed night plus slack.
+        expr: time() - csmarket_backup_last_success_timestamp_seconds > 26 * 3600
+        for: 15m
+        labels: { severity: page }
+        annotations:
+          summary: "No successful database backup to R2 for over 26 hours"
+          runbook: "docs/runbooks/backups.md"
+
+      - alert: BackupNeverRan
+        # No timestamp at all: the backup service is off (COMPOSE_PROFILES lacks ops), its
+        # metrics volume is not mounted, or it has never succeeded since the deploy.
+        expr: absent(csmarket_backup_last_success_timestamp_seconds)
+        for: 27h
+        labels: { severity: page }
+        annotations:
+          summary: "No database backup has been recorded for 27 hours"
+          runbook: "docs/runbooks/backups.md"

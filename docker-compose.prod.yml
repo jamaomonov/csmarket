@@ -275,10 +275,12 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/rootfs:ro
+      - backup-metrics:/textfile:ro
     command:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
       - "--path.rootfs=/rootfs"
+      - "--collector.textfile.directory=/textfile"
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.55.1
@@ -373,6 +375,8 @@ services:
     volumes:
       - ./infra/backup:/scripts:ro
       - backup-tmp:/tmp/backup
+      # The last success's timestamp for node-exporter's textfile collector (BackupStale).
+      - backup-metrics:/metrics
     depends_on: [postgres]
     entrypoint:
       [
@@ -393,3 +397,4 @@ volumes:
   alertmanager-data:
   loki-data:
   backup-tmp:
+  backup-metrics:
