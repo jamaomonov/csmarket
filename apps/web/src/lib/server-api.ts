@@ -11,7 +11,6 @@
  */
 
 import { unstable_cache } from "next/cache";
-import { headers } from "next/headers";
 
 const ORIGIN = (
   process.env.API_INTERNAL_URL ??
@@ -74,6 +73,15 @@ export function storefrontHeaders(
   return { [STOREFRONT_SECRET_HEADER]: secret, [STOREFRONT_CLIENT_IP_HEADER]: ip };
 }
 
+/**
+ * The current request's headers. Imported lazily: a client component reaches this module
+ * through `@/lib/skins` (`displayPrice`), and a static `next/headers` import fails the build.
+ */
+async function requestHeaders(): Promise<Headers> {
+  const { headers } = await import("next/headers");
+  return headers();
+}
+
 async function fetchJson<T>(path: string, init: RequestInit): Promise<T> {
   const res = await fetch(`${ORIGIN}/api/v1${path}`, init);
   if (!res.ok) throw new ApiError(res.status, path);
@@ -83,7 +91,7 @@ async function fetchJson<T>(path: string, init: RequestInit): Promise<T> {
 /** GET `/api/v1${path}` and parse the JSON. Throws {@link ApiError} on a non-2xx answer. */
 export async function apiGet<T>(path: string, opts: ApiGetOptions = {}): Promise<T> {
   const accept = { Accept: "application/json" };
-  const visitor = opts.perVisitor ? storefrontHeaders(visitorIp(await headers())) : {};
+  const visitor = opts.perVisitor ? storefrontHeaders(visitorIp(await requestHeaders())) : {};
   const cache = { revalidate: opts.revalidate ?? 60, tags: opts.tags ?? ["skins"] };
   if (opts.noStore) {
     return fetchJson<T>(path, { headers: { ...accept, ...visitor }, cache: "no-store" });
