@@ -66,6 +66,11 @@ The price sync logs `skins.prices.failed` at the same time.
 
 ## Balance low
 
+While Waxpeer is off as a buy source (`CSMARKET_WAXPEER_BUY_ENABLED=false`, since commit
+`60bee49`), prod sets `CSMARKET_WAXPEER_BALANCE_ALERT_USD=0`. The balance is not spent then, so
+the alert would only page about an idle account. Set the threshold back (default 50) when
+Waxpeer buying is switched on again.
+
 Two alerts point here:
 
 - `WaxpeerBalanceLow` (page): `csmarket_waxpeer_balance_usd` has been below
