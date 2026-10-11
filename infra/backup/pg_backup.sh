@@ -35,6 +35,17 @@ rclone copyto "$enc" "${RCLONE_REMOTE}/${date_dir}/$(basename "$enc")"
 size="$(stat -c %s "$enc" 2>/dev/null || wc -c <"$enc")"
 rm -f "$enc"
 
+# The server's env files, encrypted to the same key, beside the dump: a lost server must not
+# take the provider keys with it. Streamed — the plaintext tar never touches the disk. The
+# bucket's 30-day lifecycle rule would delete a one-off copy, hence every night.
+secrets_dir="${BACKUP_SECRETS_DIR:-/secrets}"
+if [ -d "$secrets_dir" ]; then
+  echo "[backup] uploading the encrypted secrets ..."
+  tar -C "$secrets_dir" -cf - . |
+    age --encrypt --recipient "$BACKUP_AGE_RECIPIENT" |
+    rclone rcat "${RCLONE_REMOTE}/${date_dir}/secrets-${file_ts}.tar.age"
+fi
+
 # For Prometheus (node-exporter's textfile collector): the alert BackupStale fires when this
 # timestamp is older than 26 h. Written atomically, and only after a successful upload.
 metrics_dir="${BACKUP_METRICS_DIR:-/metrics}"

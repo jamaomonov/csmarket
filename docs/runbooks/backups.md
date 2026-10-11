@@ -13,7 +13,10 @@ The database is dumped every night, encrypted, and stored off the server. Live s
   2. `age --encrypt` to `BACKUP_AGE_RECIPIENT`;
   3. `rclone copyto r2:csmarket-backup/<YYYY-MM-DD>/csmarket-<timestamp>.dump.age`.
 
-  The plaintext dump never stays on disk.
+  4. `tar` of `secrets/` (all the server's env files) → `age` →
+     `rclone rcat …/<YYYY-MM-DD>/secrets-<timestamp>.tar.age`, streamed.
+
+  The plaintext dump never stays on disk, and the plaintext tar never touches it.
 
 - **Proof of success:** after the upload, the script writes
   `csmarket_backup_last_success_timestamp_seconds` (and `csmarket_backup_last_size_bytes`)
@@ -73,6 +76,19 @@ This is how the first backup was proven on 2026-10-11: 36 tables, and `users` / 
 4. **Clean up:** stop the container, then delete `b.dump` and `b.dump.age`.
 
 Repeat it after a schema-heavy release and at least once a quarter.
+
+## Getting the secrets back (a lost server)
+
+Fetch the newest `secrets-*.tar.age` the same way as a dump (step 1 above), then on the
+laptop:
+
+```bash
+age --decrypt -i ~/csmarket-backup.key secrets.tar.age | tar -xf - -C ./secrets
+```
+
+Copy them to the new server's `~/opt/csmarket/secrets/` with `chmod 600`, and delete the laptop
+copy. The VPS IP changes with a new server, so update it in the supplier whitelists (Waxpeer,
+Skinslink, LIS-SKINS).
 
 ## Restoring production (a real incident)
 

@@ -377,6 +377,8 @@ services:
       - backup-tmp:/tmp/backup
       # The last success's timestamp for node-exporter's textfile collector (BackupStale).
       - backup-metrics:/metrics
+      # The env files, tarred and age-encrypted into R2 with each nightly dump.
+      - ./secrets:/secrets:ro
     depends_on: [postgres]
     entrypoint:
       [
