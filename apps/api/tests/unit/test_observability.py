@@ -69,3 +69,68 @@ def test_before_send_drops_a_request_body() -> None:
     out = _before_send(event, {})
     assert out is not None
     assert "data" not in out["request"]
+
+
+def test_outgoing_query_strings_never_reach_sentry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Waxpeer takes its key and the buyer's trade-link token in the query string.
+
+    sentry-sdk's httpx integration records the raw query of every outgoing call in breadcrumbs,
+    and the next error event of that process ships them. Real SDK, real httpx, a capturing
+    transport: neither the fake key nor the fake token may appear in what would be sent.
+    """
+    import httpx
+    import respx
+    import sentry_sdk
+    from sentry_sdk.envelope import Envelope
+    from sentry_sdk.transport import Transport
+
+    sent: list[bytes] = []
+
+    class _Capture(Transport):
+        def capture_envelope(self, envelope: Envelope) -> None:
+            sent.append(envelope.serialize())
+
+    real_init = sentry_sdk.init
+
+    def _init(**kwargs: Any) -> Any:
+        return real_init(transport=_Capture, **kwargs)
+
+    monkeypatch.setattr(sentry_sdk, "init", _init)
+    init_sentry(
+        Settings(sentry_dsn="https://public@example.invalid/1", sentry_traces_sample_rate=1.0),
+        integrations="none",
+    )
+    try:
+
+        async def _call() -> None:
+            with respx.mock:
+                respx.get("https://api.example.invalid/v1/buy").respond(200, json={})
+                async with httpx.AsyncClient() as client:
+                    with sentry_sdk.start_transaction(name="t"):
+                        await client.get(
+                            "https://api.example.invalid/v1/buy",
+                            params={"api": "FAKEKEY123", "token": "FAKETOKEN9"},
+                        )
+
+        import asyncio
+
+        asyncio.run(_call())
+        sentry_sdk.capture_message("boom")
+        sentry_sdk.flush()
+    finally:
+        real_init()  # back to the no-op client for the rest of the session
+
+    blob = b"".join(sent)
+    assert blob, "the capturing transport saw nothing; the test proves nothing"
+    assert b"FAKEKEY123" not in blob
+    assert b"FAKETOKEN9" not in blob
+
+
+def test_before_send_drops_an_incoming_query_string() -> None:
+    """The Steam sign-in callback carries the Steam ID in its query (``openid.claimed_id``)."""
+    from csmarket.core.observability import _before_send
+
+    event: Any = {"request": {"url": "/x", "query_string": "openid.claimed_id=7656119"}}
+    out = _before_send(event, {})
+    assert out is not None
+    assert "query_string" not in out["request"]
