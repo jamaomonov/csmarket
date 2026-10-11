@@ -515,3 +515,25 @@ async def test_nothing_is_sent_when_the_rows_moved_before_the_send(
     await db_session.commit()
     assert await mark_sent(db_session, snap) is False
     assert (await _purchase(db_session, order)).buy_unconfirmed_at is None
+
+
+async def test_an_attempt_whose_mark_finds_moved_rows_sends_nothing(
+    db_session: AsyncSession, settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    async def moved(*_: object, **__: object) -> bool:
+        return False
+
+    monkeypatch.setattr(lisskins_buying, "mark_sent", moved)
+    order = await _buying(db_session)
+    fake = FakeLisskinsClient()
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "nothing_to_do"
+    assert fake.calls == []
+
+
+async def test_a_429_on_moved_rows_writes_nothing(
+    db_session: AsyncSession, db_engine: AsyncEngine, settings: Settings
+) -> None:
+    order = await _buying(db_session)
+    fake = _Moves(db_engine, LisskinsRateLimitedError("slow", retry_after=1))
+    assert await attempt_lisskins_buy(db_session, fake, order_id=order.id) == "rate_limited"
+    assert (await _purchase(db_session, order)).buy_unconfirmed_at is not None
