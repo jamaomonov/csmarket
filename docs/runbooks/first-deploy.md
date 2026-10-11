@@ -91,7 +91,19 @@ ufw allow 22/tcp
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
+
+# Ban an IP for 1 h after 5 failed SSH logins (added on prod 2026-10-11).
+apt-get install -y fail2ban
+printf "[sshd]\nenabled = true\nbantime = 1h\nmaxretry = 5\n" > /etc/fail2ban/jail.local
+systemctl enable --now fail2ban
 ```
+
+ufw does not cover published Docker ports: Docker writes its own iptables rules, so a
+`ports:` entry is reachable from the internet whatever ufw says. In csmarket only Caddy
+publishes ports (80, 443). Any other project on the same host must bind its ports to
+`127.0.0.1` unless they really are public. The kernel updates install unattended. A pending
+`/var/run/reboot-required` needs `sudo reboot` from the `ubuntu` user (`deploy` has no sudo). The
+containers come back by themselves (`unless-stopped`, `IMAGE_TAG` pinned in `.env`).
 
 ### 2b. Second terminal: confirm `deploy` works
 
