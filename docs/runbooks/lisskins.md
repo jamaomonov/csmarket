@@ -12,13 +12,13 @@ design: [ADR-0012](../decisions/0012-lisskins-buy-source.md); flow:
 
 ## What we call
 
-| Call                                                      | Who                                           | How often                                                  |
-| --------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
-| `GET lis-skins.com/market_export_json/api_csgo_full.json` | scheduler `lisskins.snapshot`                 | every 5 min (~855 MB, streamed; no key)                    |
-| `GET /market/check-availability?ids[]=…`                  | API, `POST /orders` for a chosen `ls:` lot    | once per checkout; ≤ 100/min for the API; 120 s breaker    |
-| `POST /market/buy`                                        | worker (`orders` queue), `lisskins.reconcile` | once per order                                             |
-| `GET /market/info?custom_ids[]=…`                         | scheduler `lisskins.reconcile`, the buy       | one call every 30 s for up to 200 purchases; on a known id |
-| `GET /user/balance`                                       | scheduler `lisskins.balance`                  | every 5 min                                                |
+| Call                                                      | Who                                           | How often                                                      |
+| --------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
+| `GET lis-skins.com/market_export_json/api_csgo_full.json` | scheduler `lisskins.snapshot`                 | every 5 min (~855 MB, streamed; no key)                        |
+| `GET /market/check-availability?ids[]=…`                  | API, `POST /orders` for a chosen `ls:` lot    | once per checkout; ≤ 100/min for the API; 120 s breaker        |
+| `POST /market/buy`                                        | worker (`orders` queue), `lisskins.reconcile` | once per order                                                 |
+| `GET /market/info?custom_ids[]=…`                         | scheduler `lisskins.reconcile`, the buy       | every 30 s for up to 200 purchases, 50 per call; on a known id |
+| `GET /user/balance`                                       | scheduler `lisskins.balance`                  | every 5 min                                                    |
 
 LIS-SKINS allows 200 requests a minute per key (`market/buy` 500); a 429 carries
 `Retry-After`. Every call is counted in `csmarket_lisskins_calls_total{endpoint, outcome}`

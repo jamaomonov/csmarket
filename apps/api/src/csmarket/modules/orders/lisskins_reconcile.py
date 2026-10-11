@@ -3,8 +3,8 @@
 Every 30 s (``lisskins.reconcile``): a LIS-SKINS order whose buy is pending is bought
 (``lisskins_buying``; its lease decides whether anyone else is on it); every other open one —
 and a delivered one inside Steam's trade protection, where a rollback can still come — is
-asked about in **one** ``GET /market/info`` call by our ``custom_id`` (≤ 200, open ones
-first). A purchase LIS-SKINS does not show, whose buy's answer was lost, is bought again
+asked about by our ``custom_id`` in ``GET /market/info`` calls of :data:`INFO_CHUNK` ids
+(≤ 200 a tick, open ones first; a failed call skips only its chunk). A purchase LIS-SKINS does not show, whose buy's answer was lost, is bought again
 under the same ``custom_id`` once ``order_unconfirmed_minutes`` passed: a second purchase is
 impossible, LIS-SKINS refuses a known ``custom_id``. A purchase we hold an id for is never
 settled by its absence. Each order gets its own session; one failure never stops the tick.
@@ -41,6 +41,10 @@ PROTECTION = timedelta(days=8)
 PROTECTION_POLL_EVERY = timedelta(minutes=10)
 #: Pending buys per tick.
 BUY_BATCH = 20
+#: Ids per ``market/info`` call: 50 UUIDs keep the query string near 2.7 KB, well under any
+#: front end's request-line limit, and a refused call (a 414, one id it rejects) costs only
+#: its own chunk (review LS-3).
+INFO_CHUNK = 50
 
 SessionFactory = Callable[[], AsyncSession]
 
@@ -151,10 +155,24 @@ async def _poll(
     *,
     settings: Settings,
 ) -> None:
+    """Ask about ``due`` in :data:`INFO_CHUNK`-sized calls; a failed call skips its chunk."""
+    ids = list(due)
+    for start in range(0, len(ids), INFO_CHUNK):
+        chunk = {c: due[c] for c in ids[start : start + INFO_CHUNK]}
+        await _poll_chunk(db_factory, client, chunk, settings=settings)
+
+
+async def _poll_chunk(
+    db_factory: SessionFactory,
+    client: LisskinsBuyClient,
+    due: dict[str, str],
+    *,
+    settings: Settings,
+) -> None:
     try:
         reports = await client.info(custom_ids=list(due))
     except (LisskinsError, LisskinsUnavailableError) as exc:
-        log.warning("orders.lisskins.info_failed", error=type(exc).__name__)
+        log.warning("orders.lisskins.info_failed", error=type(exc).__name__, ids=len(due))
         return
     found = {p.custom_id: p for p in reports if p.custom_id is not None}
     for custom_id, order_id in due.items():
@@ -177,7 +195,7 @@ async def reconcile_lisskins(
     *,
     settings: Settings,
 ) -> int:
-    """One tick: buy the due buys, then poll everything else in one call.
+    """One tick: buy the due buys, then poll everything else (:data:`INFO_CHUNK` per call).
 
     Returns:
         How many orders the tick looked at.
@@ -199,6 +217,7 @@ async def reconcile_lisskins(
 
 __all__ = [
     "BUY_BATCH",
+    "INFO_CHUNK",
     "PROTECTION",
     "PROTECTION_POLL_EVERY",
     "apply_polled",

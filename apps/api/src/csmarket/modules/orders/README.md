@@ -532,7 +532,7 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
 
 - **Reconcile** (`lisskins_reconcile.py`, scheduler `lisskins.reconcile`, every 30 s; runs
   while the key is set, switch or not): up to 20 orders whose buy is pending go through
-  `attempt_lisskins_buy` (its lease decides who acts); then **one** `GET /market/info` call
+  `attempt_lisskins_buy` (its lease decides who acts); then `GET /market/info` (50 ids a call)
   for up to 200 purchases — every open one (`buying` / `trade_sent`, not pending) first, then
   delivered ones in **trade protection** (status `accepted`, delivered within 8 days, last
   polled ≥ 10 min ago), longest-unpolled first. Each answer is applied in its own session.
@@ -542,8 +542,8 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
   as the mark of a repeat. A repeat's refusal of the lot may be our own first buy: no
   refund — `market/info` once more, else the `buy_unconfirmed` attention
   (`lisskins_writes.held`), and no further repeat until it is resolved. A purchase we hold an id for
-  is never settled by its absence, and a silence is never refunded. A failed `info` call skips
-  the tick (`orders.lisskins.info_failed`).
+  is never settled by its absence, and a silence is never refunded. The ids go in calls of
+  `INFO_CHUNK` (50); a failed call skips only its chunk (`orders.lisskins.info_failed ids=…`).
 - **Reads:** the owner's order reads join `lisskins_purchases` in the same query (no N+1);
   `trade_view.lisskins_state` maps `wait_accept` → `offer_sent`, `accepted` → `accepted`,
   `return` → `failed`, anything else → `buying`; a `delivered` order reads `accepted` (a later

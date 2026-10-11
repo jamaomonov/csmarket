@@ -61,7 +61,7 @@ sequenceDiagram
     loop every 30 s (lisskins.reconcile)
         S->>DB: pending buys (≤ 20) → the buy path above
         S->>DB: open purchases + delivered ones in trade protection (≤ 200)
-        S->>LS: GET /market/info?custom_ids[]=…&custom_ids[]=… (one call)
+        S->>LS: GET /market/info?custom_ids[]=…&custom_ids[]=… (50 ids a call; a failed call skips its chunk)
         S->>DB: lock order → purchase, apply each status
         alt wait_accept with an offer
             S->>DB: buying → trade_sent (offer URL, letter, nudge)

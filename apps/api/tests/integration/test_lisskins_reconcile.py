@@ -11,7 +11,12 @@ import pytest
 from csmarket.core import clock
 from csmarket.core.config import get_settings
 from csmarket.core.ids import new_id
-from csmarket.modules.lisskins.api import InfoAnswer, LisskinsError, LisskinsUnavailableError
+from csmarket.modules.lisskins.api import (
+    InfoAnswer,
+    LisskinsError,
+    LisskinsUnavailableError,
+    Purchase,
+)
 from csmarket.modules.lisskins.models import LisskinsOffer, LisskinsPurchase, LisskinsState
 from csmarket.modules.orders import lisskins_reconcile
 from csmarket.modules.orders.admin_actions import resolve_attention
@@ -69,6 +74,32 @@ async def test_one_info_call_for_every_open_purchase(
         "returned",
     ]
     assert await user_balance(db_session, c.user_id) == PRICE
+
+
+class _FirstCallFails(FakeLisskinsClient):
+    """``market/info`` refuses its first call only (a 414, one bad id in the batch)."""
+
+    async def info(self, *, custom_ids: Sequence[str]) -> list[Purchase]:
+        """Fails once, then answers."""
+        if not self.info_calls:
+            self.info_calls.append(list(custom_ids))
+            raise LisskinsError("uri too long", status=414, code=None)
+        return await super().info(custom_ids=custom_ids)
+
+
+async def test_a_failing_info_chunk_never_stops_the_others(
+    monkeypatch: pytest.MonkeyPatch, db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """LS-3: the poll asks in chunks; one refused chunk leaves the rest settled."""
+    monkeypatch.setattr(lisskins_reconcile, "INFO_CHUNK", 1)
+    orders = [(await make_lisskins_order(db_session))[0] for _ in range(3)]
+    fake = _FirstCallFails(
+        infos={o.id: purchase("accepted", custom_id=o.id) for o in orders},
+    )
+    await _tick(db_engine, fake)
+    assert len(fake.info_calls) == 3
+    statuses = sorted([(await _state(db_session, o))[0].status for o in orders])
+    assert statuses == ["delivered", "delivered", "trade_sent"]
 
 
 async def test_open_orders_are_asked_before_protected_ones(
