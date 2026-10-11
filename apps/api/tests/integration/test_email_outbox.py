@@ -235,3 +235,29 @@ async def test_dev_route_lists_only_the_signed_in_users_letters(
     assert (
         await integration_client.get("/api/v1/dev/emails?kind=receipt", headers=headers)
     ).json() == []
+
+
+async def test_event_letters_off_enqueue_only_the_email_confirmation(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The owner's switch (2026-10-11): no letter per purchase or sale for now; the address
+    confirmation still goes out."""
+    from csmarket.core import config as cfg
+
+    monkeypatch.setenv("CSMARKET_EMAIL_EVENT_LETTERS_ENABLED", "false")
+    cfg.get_settings.cache_clear()
+    try:
+        user = await _user(db_session)
+        order = await make_order(db_session)
+        receipt = await enqueue(
+            db_session, kind="receipt", user_id=user.id, order_id=order.id, payload={"number": "N"}
+        )
+        verify = await enqueue(
+            db_session, kind="verify", user_id=user.id, address=ADDRESS, payload={"token": "t"}
+        )
+        assert receipt is None
+        assert verify is not None
+        kinds = (await db_session.scalars(select(EmailOutbox.kind))).all()
+        assert kinds == ["verify"]
+    finally:
+        cfg.get_settings.cache_clear()

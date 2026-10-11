@@ -201,6 +201,13 @@ class Settings(BaseSettings):
         description="resend sends real mail; dev keeps the last letters in Redis (prod: resend).",
     )
     resend_api_key: str = Field(default="")
+    email_event_letters_enabled: bool = Field(
+        default=True,
+        description=(
+            "Letters about events — an order paid, a trade sent, a refund, a sale's steps. "
+            "Off: only the email confirmation is sent (owner, 2026-10-11)."
+        ),
+    )
     resend_base_url: str = Field(default="https://api.resend.com")
     email_from: str = Field(default="noreply@csmarket.uz")
     email_from_name: str = Field(default="CS Market")

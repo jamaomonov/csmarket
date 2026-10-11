@@ -13,10 +13,15 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from csmarket.core.config import get_settings
 from csmarket.modules.notifications.models import KINDS, EmailOutbox
 
 #: The LISTEN channel of the worker's ``emails`` queue.
 EMAILS_CHANNEL = "emails"
+
+
+#: Kinds sent whatever ``email_event_letters_enabled`` says: confirming an address.
+ALWAYS_SENT = frozenset({"verify"})
 
 
 async def enqueue(
@@ -41,13 +46,16 @@ async def enqueue(
         payload: Strings the template needs.
 
     Returns:
-        The new row's id, or ``None`` when this order or sale already has a letter of this kind.
+        The new row's id, or ``None`` when this order or sale already has a letter of this kind,
+        or when event letters are switched off (``email_event_letters_enabled``).
 
     Raises:
         ValueError: An unknown ``kind``.
     """
     if kind not in KINDS:
         raise ValueError(f"unknown email kind {kind!r}")
+    if kind not in ALWAYS_SENT and not get_settings().email_event_letters_enabled:
+        return None  # event letters are switched off; the address confirmation still goes
     stmt = insert(EmailOutbox).values(
         kind=kind,
         user_id=user_id,
