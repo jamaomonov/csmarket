@@ -35,9 +35,11 @@ sync. `phase` is `''` when an item has none, never NULL.
   `msg` on `success: false`). An HTTP error status raises `WaxpeerError`; no API key, a
   network failure or a 200 whose body is not a JSON object raises `WaxpeerUnavailableError`
   (no traffic without a key) — an unreadable answer is an outage, never a reason.
-  `prices()` and `search_listings()` raise `WaxpeerError(status=200)` on `success: false`
-  and `WaxpeerUnavailableError` when the `items` list / map is missing — a refusal is never
-  an empty catalogue or an empty search.
+  `prices()` and `search_listings()` raise `WaxpeerError(status=200)` on `success: false`.
+  A missing `items` list is `WaxpeerUnavailableError` for `prices()`; a missing `items` map
+  is `WaxpeerError(status=200)` for `search_listings()` (a refusal: the item page keeps its
+  stale copy and the global breaker stays shut — final review M-7). A refusal is never an
+  empty catalogue or an empty search.
 - **`iter_snapshot_rows()`** — `GET /v1/prices/snapshot?format=csv`, streamed line by line
   (read timeout 300 s) into `SnapshotRow(item_id, name, price_units, auto)`; units 1000 = $1.
   A header without `item_id,name,price,auto` raises `WaxpeerError` once; rows with an

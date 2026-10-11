@@ -344,10 +344,10 @@ class WaxpeerClient:
 
         Raises:
             WaxpeerUnavailableError: No API key, the network failed, or an unreadable 200
-                (an HTML challenge page, a body that is not a JSON object, no ``items`` map).
+                (an HTML challenge page, a body that is not a JSON object).
             WaxpeerRateLimitedError: Waxpeer answered 429.
-            WaxpeerError: An HTTP error status, or a 200 with ``success: false`` (a refusal:
-                the caller keeps its stale copy).
+            WaxpeerError: An HTTP error status, a 200 with ``success: false``, or a JSON
+                answer without an ``items`` map (a refusal: the caller keeps its stale copy).
         """
         body = await self._get_json(
             "/v2/search-items-by-name",
@@ -360,9 +360,10 @@ class WaxpeerClient:
         )
         items = body.get("items")
         if not isinstance(items, dict):
-            # No map is no answer: it must never be cached as "nothing listed".
+            # No map is no answer: never cached as "nothing listed". Waxpeer did answer, so
+            # it is a refusal (the stale copy stays), not an outage (no global breaker, M-7).
             log.warning("waxpeer.unexpected_body", method="GET", path="/v2/search-items-by-name")
-            raise WaxpeerUnavailableError("unexpected body")
+            raise WaxpeerError("no items map", status=200)
         return items
 
     async def check_tradelink(self, url: str) -> str | None:

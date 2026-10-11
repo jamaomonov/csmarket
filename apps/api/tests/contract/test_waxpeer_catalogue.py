@@ -300,12 +300,16 @@ async def test_a_200_refusal_is_a_waxpeer_error_not_an_empty_answer(path: str) -
 
 
 @respx.mock
-async def test_search_without_an_items_map_is_unavailable() -> None:
+async def test_search_without_an_items_map_is_a_refusal_not_an_outage() -> None:
+    """Final review M-7: never cached as «nothing listed», and never the global breaker —
+    the refusal branch keeps the stale copy."""
     respx.get(f"{HOST}/v2/search-items-by-name").mock(
         return_value=httpx.Response(200, json={"success": True})
     )
-    with pytest.raises(WaxpeerUnavailableError):
+    with pytest.raises(WaxpeerError) as exc:
         await _client().search_listings([REDLINE])
+    assert exc.value.status == 200
+    assert not isinstance(exc.value, WaxpeerUnavailableError)
 
 
 @respx.mock
