@@ -123,17 +123,23 @@ the key, the IP whitelist or Skinslink itself.
 
 1. The worker log: `orders.skinslink_buy number=… outcome=…`.
 2. `csmarket_skinslink_calls_total{endpoint="purchase"}` by outcome:
-   - `forbidden` (403; also a 401 and any 4xx naming no reason — a rotated key, a moved
-     endpoint): the order stays `buying` with the buy pending and the attention
-     `source_forbidden`; nothing is refunded. Fix the whitelist or the key; the reconcile
-     buys again (same `merchant_tx_id`, never a second purchase) and clears the attention.
+   - `forbidden` (403 or 401 — the IP whitelist, a rotated key): the order stays `buying`
+     with the buy pending and the attention `source_forbidden`; nothing is refunded. Fix the
+     whitelist or the key; the reconcile buys again (same `merchant_tx_id`, never a second
+     purchase) and clears the attention.
+   - `forbidden` from any other 4xx naming no reason (a 404, a moved endpoint, an answer we
+     do not know): the same attention, but the buy is **stopped** (`buy_pending` off) — no
+     retry every minute. Check the order in the Skinslink cabinet, then refund it from the
+     admin (it asks Skinslink first). A run of these means the API changed: read the log.
    - `unavailable` (timeout, 5xx, network): the buy may have gone through. The order keeps
      `buy_unconfirmed_at`; the reconcile asks Skinslink under the same id and adopts what is
      there. If Skinslink still has no purchase under it after `order_unconfirmed_minutes`
      (10), the buy is sent again under the **same** `merchant_tx_id` (log
      `orders.skinslink.repeat_unseen`): Skinslink is idempotent on it, so this can never buy
      twice. A silence is never refunded.
-   - `refused`: sold or price moved. The order is refunded `sold_out` (another named
+   - `refused`: sold or price moved. The worker first asks `purchase/status` under our
+     `merchant_tx_id`: a purchase there (a re-send after a killed worker) is adopted, no
+     answer leaves it unconfirmed. Otherwise the order is refunded `sold_out` (another named
      reason: `source_refused`); no other offer is bought in its place (ADR-0013). Only a
      `failed` / `canceled` purchase or a coded refusal is refunded: an answer with any other
      status is recorded and the status checks settle it. Many at once can mean a stale mirror (see

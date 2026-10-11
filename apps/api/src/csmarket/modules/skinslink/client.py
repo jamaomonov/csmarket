@@ -382,7 +382,8 @@ class SkinslinkClient:
             raise SkinslinkUnavailableError(f"http {status}")
         if status == 404:
             record_skinslink_call(endpoint, "not_found")
-            raise SkinslinkError("not found", status=404)
+            code = _code(body) if isinstance(body, Mapping) else None
+            raise SkinslinkError("not found", status=404, code=code)
         if not isinstance(body, Mapping):
             record_skinslink_call(endpoint, "unavailable")
             raise SkinslinkUnavailableError("unexpected body")

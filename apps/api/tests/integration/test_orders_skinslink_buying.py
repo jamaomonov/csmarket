@@ -271,26 +271,69 @@ async def test_an_adopted_failed_purchase_is_refunded_by_its_reason(
 
 
 @pytest.mark.parametrize(
-    "answer",
+    ("answer", "pending"),
     [
-        SkinslinkError("unauthorized", status=401, code="unauthorized"),
-        SkinslinkError("not found", status=404),
-        SkinslinkError("refused", status=400),
+        (SkinslinkError("unauthorized", status=401, code="unauthorized"), True),
+        (SkinslinkError("not found", status=404), False),
+        (SkinslinkError("refused", status=400), False),
     ],
 )
 async def test_a_key_or_endpoint_failure_is_attention_not_a_refund(
-    db_session: AsyncSession, settings: Settings, answer: SkinslinkError
+    db_session: AsyncSession, settings: Settings, answer: SkinslinkError, pending: bool
 ) -> None:
     """SL-3: a 401 or a 4xx naming no reason is our side's fault (key, endpoint), not the
-    offer's: flagged like a 403, the buy kept pending, nothing refunded."""
+    offer's: flagged like a 403, nothing refunded. A 401 keeps the buy pending (a fixed key
+    buys it); a codeless 4xx stops retrying (M-5), so the admin's refund is never busy."""
     order = await _buying(db_session)
     fake = FakeSkinslinkClient(answer)
     assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == "forbidden"
     p = await _purchase(db_session, order)
-    assert (p.attention_reason, p.buy_pending) == ("source_forbidden", True)
+    assert (p.attention_reason, p.buy_pending) == ("source_forbidden", pending)
     row = await _order(db_session, order)
     assert (row.status, row.refunded_at) == ("buying", None)
     assert await user_balance(db_session, order.user_id) == 0
+    if not pending:
+        assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == "nothing_to_do"
+        assert len(fake.calls) == 1
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        purchase("failed", fail_reason="item_sold"),
+        SkinslinkError("sold", status=400, code="item_sold"),
+    ],
+)
+async def test_a_refused_resend_of_a_purchase_that_went_through_is_adopted(
+    db_session: AsyncSession, settings: Settings, answer: object
+) -> None:
+    """M-4: a worker killed after the send re-sends as a first buy; Skinslink may refuse the
+    item it already sold us. The stored purchase under our id is adopted, never refunded."""
+    order = await _buying(db_session)
+    fake = FakeSkinslinkClient(
+        answer, statuses={order.id: purchase("active", offer_id="1", id=181)}
+    )
+    assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == "adopted"
+    assert fake.status_calls == [order.id]
+    assert (await _purchase(db_session, order)).purchase_id == 181
+    row = await _order(db_session, order)
+    assert (row.status, row.refunded_at) == ("trade_sent", None)
+
+
+async def test_a_refusal_whose_lookup_fails_is_unconfirmed_not_refunded(
+    db_session: AsyncSession, settings: Settings
+) -> None:
+    """M-4: without Skinslink's word that nothing is stored under our id, no refund."""
+    order = await _buying(db_session)
+    fake = FakeSkinslinkClient(
+        purchase("failed", fail_reason="item_sold"),
+        statuses={order.id: SkinslinkUnavailableError("timeout")},
+    )
+    assert await attempt_skinslink_buy(db_session, fake, order_id=order.id) == "unconfirmed"
+    p = await _purchase(db_session, order)
+    assert p.buy_unconfirmed_at is not None
+    row = await _order(db_session, order)
+    assert (row.status, row.refunded_at) == ("buying", None)
 
 
 @pytest.mark.parametrize("via_adopt", [False, True])

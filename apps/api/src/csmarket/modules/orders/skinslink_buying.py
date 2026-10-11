@@ -13,10 +13,14 @@
    (``SOLD_FAIL_REASONS``), ``source_low_balance``, ``invalid_trade_link`` / ``trade_hold``
    for a refusal naming the trade link, ``source_refused`` for any other — also for a stored
    purchase a 409 repeat adopts. Only ``failed`` / ``canceled`` (or an error naming a code)
-   are refusals: an answer with any other status proves a purchase and is recorded;
-   403, 401 or a 4xx naming no code → attention ``source_forbidden`` (the key, the IP
-   whitelist or the endpoint — not the offer), the buy kept pending; 429 → retried after a
-   backoff; no answer → ``buy_unconfirmed_at``.
+   are refusals: an answer with any other status proves a purchase and is recorded. A
+   refusal is refunded only after ``purchase/status`` shows nothing live under our id (a
+   worker killed after the send re-sends as a first buy, and the item it already bought
+   reads as sold): a stored purchase is adopted, no answer → ``buy_unconfirmed_at``;
+   403 or 401 → attention ``source_forbidden`` (the key or the IP whitelist — not the
+   offer), the buy kept pending; a 4xx naming no code (a moved endpoint, an unknown answer)
+   → the same attention with the buy stopped, so the admin refunds at once; 429 → retried
+   after a backoff; no answer → ``buy_unconfirmed_at``.
 
 No lock is held across a Skinslink call (``orders.skinslink_writes``). Log lines carry the
 order number and the outcome, never the trade link.
@@ -77,11 +81,13 @@ _REFUSED = frozenset({"failed", "canceled"})
 class _Run:
     """One attempt's progress: its snapshot once read, whether a request went out."""
 
-    __slots__ = ("refusal", "sent", "snap")
+    __slots__ = ("looked_up", "refusal", "sent", "snap")
 
     def __init__(self) -> None:
         self.snap: PurchaseSnapshot | None = None
         self.sent = False
+        #: Whether ``purchase_status`` already answered for this attempt.
+        self.looked_up = False
         #: The refusal's code (Skinslink's ``fail_reason`` or error code), if it said one.
         self.refusal: str | None = None
 
@@ -188,6 +194,8 @@ async def _leased(
     except ValidationError:
         return await refund(db, run.snap, "invalid_trade_link")
     settled = await _purchase_once(db, client, run.snap, link, run)
+    if settled is None and not run.looked_up:
+        settled = await _stored_under_our_id(db, client, run.snap)
     if settled is not None:
         return settled
     log.info("orders.skinslink_buy.refused", number=run.snap.number, code=run.refusal)
@@ -221,8 +229,10 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
     except SkinslinkError as err:
         if err.status == 409 or err.code == "duplicate_purchase":
             return await _adopt(db, client, snap, run)
-        if _not_about_the_offer(err):
+        if err.status == 401:  # the key: a fixed key buys it on the next attempt
             return await attention(db, snap, "source_forbidden", outcome="forbidden")
+        if err.code is None and err.status >= 400:  # M-5: no retry loop; the admin decides
+            return await attention(db, snap, "source_forbidden", outcome="forbidden", stop=True)
         run.refusal = err.code
         return None
     if report.status not in _REFUSED:
@@ -231,12 +241,6 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
         return await _adopt(db, client, snap, run)
     run.refusal = report.fail_reason
     return None
-
-
-def _not_about_the_offer(err: SkinslinkError) -> bool:
-    """A 401, or a 4xx naming no reason: our key or the endpoint, not the offer (SL-3) —
-    refunding it would fail every order until someone notices."""
-    return err.status == 401 or (err.code is None and err.status >= 400)
 
 
 async def _adopt(
@@ -250,8 +254,25 @@ async def _adopt(
         report = None
     if report is None:
         return await unconfirmed(db, snap)  # the reconcile asks again
+    run.looked_up = True
     if report.status in _REFUSED:
         run.refusal = report.fail_reason
+        return None
+    return await record_purchase(db, snap, report, outcome="adopted")
+
+
+async def _stored_under_our_id(
+    db: AsyncSession, client: SkinslinkPurchaseClient, snap: PurchaseSnapshot
+) -> str | None:
+    """Before a refusal is refunded, ask what Skinslink holds under ``merchant_tx_id`` (M-4):
+    a worker killed after the send re-sends as a first buy, and Skinslink may refuse the item
+    it already sold us. A purchase there is adopted; a failed one or none lets the refund go
+    (``None``); no answer → unconfirmed, the reconcile asks again — never a blind refund."""
+    try:
+        report = await client.purchase_status(merchant_tx_id=snap.merchant_tx_id)
+    except (SkinslinkError, SkinslinkUnavailableError):
+        return await unconfirmed(db, snap)
+    if report is None or report.status in _REFUSED:
         return None
     return await record_purchase(db, snap, report, outcome="adopted")
 

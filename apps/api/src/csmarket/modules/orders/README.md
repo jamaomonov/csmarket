@@ -410,12 +410,18 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   | 409 or `duplicate_purchase`                                                                                               | `adopted`      | the stored purchase read by `merchant_tx_id`; a failed one is refused by its reason |
   | a trade-link code (`LINK_ERROR_CODES`); `hold`, `hold_and_permissions` → `trade_hold`                                     | `invalid_link` | `failed` + refund `invalid_trade_link` (`trade_hold` for a hold)                    |
   | `insufficient_balance`                                                                                                    | `low_balance`  | `failed` + refund `source_low_balance`                                              |
-  | HTTP 403, HTTP 401, or a 4xx naming no code (the key, the IP whitelist or the endpoint — not the offer)                   | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s               |
+  | HTTP 403 or HTTP 401 (the key or the IP whitelist — not the offer)                                                        | `forbidden`    | attention `source_forbidden`, `buy_pending` kept; next try after 60 s               |
+  | another 4xx naming no code (404 included; a moved endpoint, an unknown answer)                                            | `forbidden`    | attention `source_forbidden`, `buy_pending = false`: no retry, the admin refunds    |
   | HTTP 429                                                                                                                  | `rate_limited` | nothing; next try after 20 s                                                        |
   | timeout, 408, 5xx, network                                                                                                | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id   |
   | sold or moved (`SOLD_FAIL_REASONS`: `item_sold`, `item_not_available`, `price_changed`, `item_specified_price_not_found`) | `sold_out`     | `failed` + refund `sold_out`                                                        |
   | any other `failed` / `canceled` reason or coded 4xx (`provider_unavailable`, `seller_too_slow`, none)                     | `refused`      | `failed` + refund `source_refused` (partners read `supplier_refused`)               |
   | a buy that went through but the rows moved during the call                                                                | `stale_bought` | attention `ambiguous_trade`                                                         |
+
+  Before any refusal is refunded, `purchase/status` is asked under `merchant_tx_id` (review
+  M-4): a worker killed after the send re-sends as a first buy, and the item it already
+  bought reads as sold. A live purchase there is `adopted`; a failed one or none lets the
+  refund go; no answer → `unconfirmed`. A 404's body is read for a code like any 4xx.
 
   The chosen asset is the only one bought: no substitute, no switch to another source
   (ADR-0013). An order bought before that change under `merchant_tx_id` = `<order id>:2`

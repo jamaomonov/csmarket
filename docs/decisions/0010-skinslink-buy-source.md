@@ -192,5 +192,8 @@ The same review tightened the buy: only `failed` / `canceled` (or a coded refusa
 answer with any other status is recorded; a refusal, also of a stored purchase adopted after a
 409, is refunded by the status path's reason mapping (`source_low_balance`, `trade_hold`,
 `invalid_trade_link`, `sold_out`, else `source_refused`); a 401 or an un-coded 4xx opens the
-`source_forbidden` attention instead of refunding every order; a webhook `sign` that is not
+`source_forbidden` attention instead of refunding every order (a 401 keeps the buy pending; an
+un-coded 4xx, a 404 included, stops it so the admin can refund at once — final review M-5); a
+refusal is refunded only after `purchase/status` shows no live purchase under our id (a
+re-send after a hard kill may be refused for the item we already bought — M-4); a webhook `sign` that is not
 ASCII is a 403; Steam's offer id is read from `trade_offer_id` only (digits, ≤ 32).

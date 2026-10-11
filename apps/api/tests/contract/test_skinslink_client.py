@@ -280,6 +280,20 @@ async def test_validation_error_exposes_the_domain_code() -> None:
 
 
 @respx.mock
+async def test_a_404_body_naming_a_reason_keeps_its_code() -> None:
+    """M-5: a 404 is a refusal like any 4xx; its body's code, if any, is read."""
+    respx.post(f"{BASE}/merchant/purchase").mock(
+        return_value=httpx.Response(
+            404,
+            json={"success": False, "message": "x", "data": {"fail_reason": "item_not_found"}},
+        )
+    )
+    with pytest.raises(SkinslinkError) as exc:
+        await _buy()
+    assert (exc.value.status, exc.value.code) == (404, "item_not_found")
+
+
+@respx.mock
 async def test_duplicate_is_409() -> None:
     respx.post(f"{BASE}/merchant/purchase").mock(
         return_value=httpx.Response(409, json={"success": False, "message": "duplicate"})
