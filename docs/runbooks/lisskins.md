@@ -145,6 +145,12 @@ key, the IP, the balance or LIS-SKINS itself.
      stored purchase.
 3. `rate_limited` (429) is not counted here: the order waits for `Retry-After` and tries again.
 
+Since 2026-10-11 the worker writes `buy_unconfirmed_at` **before** it sends `market/buy`, so a
+worker killed mid-buy leaves the mark. The next attempt then asks `market/info` before it
+refunds anything: our purchase is adopted, a failed lookup waits for the reconcile, and only a
+positively empty answer refunds a balance or trade-link refusal. A pending order showing
+`buy_unconfirmed_at` in the admin is a buy in flight, not a stuck one.
+
 ### The refusal code is stored
 
 Since 2026-10-10 a refused `market/buy` keeps LIS-SKINS' code in `lisskins_purchases.error`

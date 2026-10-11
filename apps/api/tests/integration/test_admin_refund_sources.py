@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from dataclasses import replace
 from collections.abc import Awaitable, Callable, Iterator, Sequence
+from dataclasses import replace
 from datetime import timedelta
 from decimal import Decimal
 from typing import Any

@@ -503,6 +503,14 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
   lookups read the stored key. A buy or adoption clears a `source_forbidden` attention. A sent request whose exit failed
   to record it is secured as unconfirmed in a fresh session.
 
+  **The send mark (ORD-2, 2026-10-11):** `buy_unconfirmed_at` is committed
+  (`lisskins_writes.mark_sent`) before `market/buy` goes out, with `buy_pending` still true; a
+  worker killed after the send leaves it, so the next attempt is a **repeat**. A first send's
+  mark is dropped on a 429, a 401 / 403 and a refund. On a repeat every refusal asks
+  `market/info` first: our purchase → `adopted`; a failed lookup → `unconfirmed` (never a
+  refund); nothing shown → a buyer or balance refusal (`BUY_LINK_ERRORS`,
+  `insufficient_funds`) is refunded as above, a lot refusal is `held`.
+
 - **Writes** (`lisskins_writes.py`): lock the order, then the purchase (ruling K), re-check
   `buying` and `buy_pending`, write, commit; nothing when a sweep moved the rows (except
   `stale_bought`).

@@ -183,3 +183,22 @@ the LIS-SKINS snapshot now leaves Skinslink-listed assets out of `lisskins_count
 - An item with lots keeps at least 1.
 - Nothing is left out while Skinslink is off or its mirror is stale.
 - Purchase prices do not change; only our markup on those items does.
+
+## Amendment 2026-10-11: the send is on record before it goes out (review ORD-2)
+
+A repeat was recognised only by `buy_unconfirmed_at`, written after the send. A worker killed
+between sending `market/buy` and recording it (OOM, SIGKILL, a host crash) left
+`buy_pending = true` and no mark; after the lease lapsed the resend went out as a first buy, and a
+`skins_unavailable` (the lot our first send took) or `insufficient_funds` (the balance it spent)
+refunded an order whose skin was still delivered.
+
+- `lisskins_writes.mark_sent` commits `buy_unconfirmed_at` under the locks before the send; rows
+  that left `buying` / `buy_pending` send nothing. `repeat` is read before the mark is written.
+- A first send's mark is dropped where LIS-SKINS did not look at the buy (429, 401 / 403) and on
+  a refund, so a later «sold» of a first buy is still refunded at once.
+- On a repeat **every** refusal asks `market/info` by our `custom_id` first (the Waxpeer
+  lookup-first rule, ADR-0007): our purchase is adopted; a failed lookup is `unconfirmed` (the
+  reconcile asks again), never a refund; nothing shown refunds a buyer or balance refusal as a
+  first buy's, and a lot refusal is `held` (`buy_unconfirmed`).
+- The buy's `custom_id` is the order id (`client.buy(custom_id=…)`), the same key `market/info`
+  is asked by, so the lookup finds a purchase our first send made.

@@ -4,14 +4,17 @@
 
 1. take the order's lease (``take_lease(..., source="lisskins")``), then read the snapshot;
 2. a trade link that does not parse → refund ``invalid_trade_link``;
-3. ``POST /market/buy`` for the one lot, keyed by our ``custom_id`` (the order id), with
+3. commit ``buy_unconfirmed_at`` (``lisskins_writes.mark_sent``), then ``POST /market/buy``
+   for the one lot, keyed by our ``custom_id`` (the order id), with
    ``max_price`` = the agreed cost. LIS-SKINS refuses a ``custom_id`` it knows, so a repeat
    never buys twice: ``custom_id_already_exists`` is answered from ``market/info`` and the
    stored purchase adopted;
 4. sold or dearer than our cap → refund ``sold_out``, never another lot (ADR-0013) — except
    on a repeat of a lost buy, whose refusal of the lot may be our own first purchase:
    ``market/info`` decides, else the ``buy_unconfirmed`` attention
-   (``lisskins_writes.held``); ``insufficient_funds`` → refund
+   (``lisskins_writes.held``). A repeat is an attempt that found the mark on record — a
+   worker killed after the send leaves it (ORD-2) — and every refusal of a repeat is looked
+   up first. ``insufficient_funds`` → refund
    ``source_low_balance``; a refusal naming the trade link → refund ``invalid_trade_link``;
    401/403 → attention ``source_forbidden``, the buy kept pending; 429 → retried after its
    ``Retry-After``; no answer, a timeout or a 5xx → ``buy_unconfirmed_at``, settled by the
@@ -51,10 +54,12 @@ from csmarket.modules.orders.lisskins_writes import (
     LisskinsSnapshot,
     attention,
     held,
+    mark_sent,
     record_purchase,
     refund,
     secure_sent,
     unconfirmed,
+    unsent,
 )
 from csmarket.modules.orders.models import Order
 from csmarket.modules.users.api import TradeLink, parse_tradelink
@@ -73,8 +78,8 @@ MAX_RETRY_AFTER = BUY_LEASE
 _UNCOUNTED = frozenset({"nothing_to_do", "lookup_later"})
 _SECURE_SECONDS = 10.0
 _UNITS_PER_USD = Decimal(1000)
-#: Refusals about the buyer or our balance, never about the lot: a repeat settles them as a
-#: first buy would.
+#: Refusals about the buyer or our balance, never about the lot: a repeat that ``market/info``
+#: shows nothing for settles them as a first buy would.
 _MOVED_ON = frozenset({*BUY_LINK_ERRORS, "insufficient_funds"})
 
 
@@ -217,6 +222,8 @@ async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table
     run: _Run,
 ) -> str | None:
     """One buy request: the attempt's outcome, or ``None`` for a lot that cannot be had."""
+    if not await mark_sent(db, snap):  # committed before the send: a kill leaves a repeat
+        return "nothing_to_do"
     try:
         run.sent = True  # from here on an unrecorded exit must not free the order
         report = await client.buy(
@@ -230,12 +237,15 @@ async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table
         return await attention(db, snap, "source_forbidden", outcome="forbidden")
     except LisskinsRateLimitedError as exc:
         run.retry_after = exc.retry_after
+        await unsent(db, snap)
         return "rate_limited"
     except LisskinsUnavailableError:
         return await unconfirmed(db, snap)  # it may have gone through: market/info settles it
     except LisskinsError as err:
-        if err.code == "custom_id_already_exists" or (snap.repeat and err.code not in _MOVED_ON):
-            return await _adopt(db, client, snap)  # a repeat's refusal may be our own first buy
+        if err.code == "custom_id_already_exists" or snap.repeat:
+            settled = await _adopt(db, client, snap, err.code)  # may be our own first buy
+            if settled is not None:
+                return settled
         if err.code in BUY_LINK_ERRORS:
             await remember_rejection(get_redis(), link.url)  # the partner API hears it next
             return await refund(db, snap, "invalid_trade_link", error=err.code)
@@ -246,17 +256,27 @@ async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table
     return await record_purchase(db, snap, report)
 
 
-async def _adopt(db: AsyncSession, client: LisskinsBuyClient, snap: LisskinsSnapshot) -> str:
-    """LIS-SKINS knows our ``custom_id``: take its stored purchase, or leave it to the
-    reconcile when ``market/info`` cannot show it now."""
+async def _adopt(
+    db: AsyncSession, client: LisskinsBuyClient, snap: LisskinsSnapshot, code: str | None
+) -> str | None:
+    """LIS-SKINS knows our ``custom_id``, or refused a repeat (``code``): ``market/info``
+    decides before anything is refunded (ORD-2).
+
+    Its stored purchase is adopted. A failed lookup proves nothing: the reconcile asks again
+    (``unconfirmed``). Nothing shown: a refusal about the buyer or our balance is settled as
+    a first buy's (``None``); a lot refused on a repeat, or a known ``custom_id``, is
+    ``held`` (repeat) or ``unconfirmed``.
+    """
     try:
         found = await client.info(custom_ids=[snap.custom_id])
     except (LisskinsError, LisskinsUnavailableError):
-        found = []
+        return await unconfirmed(db, snap)
     report = next((p for p in found if p.custom_id == snap.custom_id), None)
-    if report is None:
-        return await (held(db, snap) if snap.repeat else unconfirmed(db, snap))
-    return await record_purchase(db, snap, report, outcome="adopted")
+    if report is not None:
+        return await record_purchase(db, snap, report, outcome="adopted")
+    if code in _MOVED_ON:
+        return None
+    return await (held(db, snap) if snap.repeat else unconfirmed(db, snap))
 
 
 __all__ = ["ATTEMPT_BUDGET", "MAX_RETRY_AFTER", "RELEASE_BACKOFF", "attempt_lisskins_buy"]

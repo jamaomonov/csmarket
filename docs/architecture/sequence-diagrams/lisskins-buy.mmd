@@ -39,6 +39,7 @@ sequenceDiagram
     DB-->>W: NOTIFY orders
     W->>DB: drain_paid: claim → buying; lisskins_purchases (custom_id = order id, buy_pending)
     W->>DB: take the lease (source = lisskins), read the snapshot
+    W->>DB: commit buy_unconfirmed_at (the send mark: a kill after the send leaves a repeat)
     W->>LS: POST /market/buy {ids: [id], partner, token, max_price, custom_id} (no lock held)
     alt processing / wait_accept
         W->>DB: lock order → purchase, record purchase_id + status, buy_pending = false
