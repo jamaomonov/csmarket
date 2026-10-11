@@ -19,6 +19,11 @@ everything.
 
 A key pasted into a chat is never stored anywhere — rotate it in Resend.
 
+**Which letters go out.** `CSMARKET_EMAIL_EVENT_LETTERS_ENABLED=false` (prod since 2026-10-11)
+sends only the email confirmation (`verify`). No letter goes out per order or sale. Set it to
+`true` and restart the API, worker and scheduler to send event letters again. Letters are not
+back-filled for the time it was off.
+
 ## The outbox
 
 ```sql

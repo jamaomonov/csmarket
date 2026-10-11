@@ -15,6 +15,9 @@ Transactional email for csmarket (M4b, ADR-0008). Email only: no SMS, no push, n
   `trade_sent` without the market's deadline asks to accept within 15 minutes: an unaccepted
   offer may be cancelled about then, and a run of unaccepted offers can restrict our buying on
   LIS-SKINS (`docs/runbooks/lisskins.md`). The order page says the same.
+- **The switch:** `CSMARKET_EMAIL_EVENT_LETTERS_ENABLED`. With it `false` (prod since
+  2026-10-11, the owner's call), `enqueue` writes nothing for the event letters — `receipt`,
+  `trade_sent`, `refunded` and the sale letters. `verify` (`ALWAYS_SENT`) is always sent.
 - **Enqueue:** `notifications.api.enqueue(db, kind=…, user_id=…, order_id=…, address=…,
 payload=…)` inside the event's own transaction — the row and its `NOTIFY emails` land on
   commit or not at all. Flushes, never commits. A replayed event returns `None`.
