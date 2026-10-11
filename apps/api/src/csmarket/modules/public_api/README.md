@@ -71,13 +71,13 @@ Webhook contract: `docs/api/public-v1.md`; stuck deliveries: `docs/runbooks/publ
 
 ## Redis keys
 
-| Key                                     | TTL         | Notes                                                |
-| --------------------------------------- | ----------- | ---------------------------------------------------- |
-| `public_api:feed:current`               | 1500 s      | `{snap, pages, at}`; absent = 503 `feed_unavailable` |
-| `public_api:feed:{snap}:{n}`            | 1800 s      | one JSON text page of 1000 items                     |
-| `public_api:offers:{profile}:{item_id}` | 60 s        | priced offers per tariff                             |
-| `public_api:rl:{bucket}:{key_id}`       | 60 s window | per-key counters (`read`, `order`, `feed`, `check`)  |
-| `public_api:authfail:{hash_short(ip)}`  | 60 s window | failed authentications, 30 a minute                  |
+| Key                                     | TTL         | Notes                                                                                                                                   |
+| --------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `public_api:feed:current`               | 1500 s      | `{snap, pages, at, digest}`; absent = 503 `feed_unavailable`                                                                            |
+| `public_api:feed:{snap}:{n}`            | 1800 s      | one page of 1000 items, zlib-compressed JSON as `z:` + base64; an unchanged catalogue renews the TTLs instead of writing a new snapshot |
+| `public_api:offers:{profile}:{item_id}` | 60 s        | priced offers per tariff                                                                                                                |
+| `public_api:rl:{bucket}:{key_id}`       | 60 s window | per-key counters (`read`, `order`, `feed`, `check`)                                                                                     |
+| `public_api:authfail:{hash_short(ip)}`  | 60 s window | failed authentications, 30 a minute                                                                                                     |
 
 Catalogued in `docs/architecture/cache-keys.md`.
 

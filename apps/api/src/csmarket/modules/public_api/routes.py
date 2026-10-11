@@ -149,7 +149,7 @@ async def catalog(
     raw = await redis.get(feed.page_key(snap, page_no))
     if raw is None:
         raise _cursor_expired()
-    rows: list[dict[str, Any]] = json.loads(raw)
+    rows = feed.decode_page(str(raw))  # decode_responses=True: always str
     if updated_since is not None:
         since = updated_since if updated_since.tzinfo else updated_since.replace(tzinfo=UTC)
         rows = [
