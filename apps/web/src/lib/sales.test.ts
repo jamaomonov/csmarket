@@ -15,7 +15,6 @@ const sale = (over: Partial<SaleOut>): SaleOut => ({
   offer: null,
   money_at: null,
   payout_status: null,
-  payout_reject_reason: null,
   created_at: "2026-10-08T10:00:00Z",
   ...over,
 });

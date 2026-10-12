@@ -66,7 +66,7 @@ export function PayoutPicker({ config, cards, value, onPick }: PayoutPickerProps
             type,
             digits: value.to === "new" && value.type === type ? value.digits : "",
           } as const, // keeps the literal types of the union, no widening
-          name: `${t("newCard")} ${CARD_BRANDS[type]}`,
+          name: t("newCard", { brand: CARD_BRANDS[type] }),
           note: fee(type),
           type,
         }))

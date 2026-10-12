@@ -24,36 +24,52 @@ interface SaleViewProps {
 
 const notFound = (err: unknown): boolean => err instanceof SessionApiError && err.status === 404;
 
+type StateT = ReturnType<typeof useTranslations<"web.sales.state">>;
+
+/** «Примите обмен»: the sentence is picked by what the offer tells — the bot, the deadline,
+ * both or neither — so it never reads with a blank. */
+function offeredText(t: StateT, offer: SaleOut["offer"], locale: string): string {
+  if (!offer) return t("offered.textNoOffer");
+  const bot = offer.bot_name?.trim() ?? "";
+  const time = offer.expires_at
+    ? new Intl.DateTimeFormat(locale, { timeStyle: "short", dateStyle: "short" }).format(
+        new Date(offer.expires_at),
+      )
+    : "";
+  if (bot && time) return t("offered.text", { bot, time });
+  if (bot) return t("offered.textNoTime", { bot });
+  if (time) return t("offered.textNoBot", { time });
+  return t("offered.textNoOffer");
+}
+
+/** Steam's 7 days: when the money comes to the balance, or when we send it to the card. */
+function holdText(t: StateT, sale: SaleOut, locale: string, card: string): string {
+  const amount = formatUzs(locale, sale.payout_uzs);
+  const date = sale.money_at
+    ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(
+        new Date(sale.money_at),
+      )
+    : null;
+  if (sale.payout_to === "card") {
+    return date
+      ? t("hold.textCard", { amount, date, card })
+      : t("hold.textCardSoon", { amount, card });
+  }
+  return date ? t("hold.text", { amount, date }) : t("hold.textSoon", { amount });
+}
+
 /** What the sale's state means to the seller: a headline and one sentence. */
 function useStateText(sale: SaleOut, locale: string): { title: string; text: string } {
   const t = useTranslations("web.sales.state");
   const amount = formatUzs(locale, sale.payout_uzs);
   const card = sale.card ? `${CARD_BRANDS[sale.card.type]} •••• ${sale.card.last4}` : "";
-  const when = (iso: string | null) =>
-    iso
-      ? new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" }).format(new Date(iso))
-      : "";
   switch (sale.status) {
     case "creating":
       return { title: t("creating.title"), text: t("creating.text") };
     case "offered":
-      if (!sale.offer) return { title: t("offered.title"), text: t("offered.textNoOffer") };
-      return {
-        title: t("offered.title"),
-        text: t("offered.text", {
-          bot: sale.offer.bot_name ?? "",
-          time: sale.offer.expires_at
-            ? new Intl.DateTimeFormat(locale, { timeStyle: "short", dateStyle: "short" }).format(
-                new Date(sale.offer.expires_at),
-              )
-            : "",
-        }),
-      };
+      return { title: t("offered.title"), text: offeredText(t, sale.offer, locale) };
     case "hold":
-      return {
-        title: t("hold.title"),
-        text: t("hold.text", { amount, date: when(sale.money_at) }),
-      };
+      return { title: t("hold.title"), text: holdText(t, sale, locale, card) };
     case "credited":
       return { title: t("credited.title"), text: t("credited.text", { amount }) };
     case "payout":
@@ -61,20 +77,12 @@ function useStateText(sale: SaleOut, locale: string): { title: string; text: str
         return { title: t("paid.title"), text: t("paid.text", { amount, card }) };
       if (sale.payout_status === "canceled")
         return { title: t("closed.title"), text: t("closed.text") };
-      if (sale.payout_status === "waiting_hold") {
-        return {
-          title: t("hold.title"),
-          text: t("hold.text", { amount, date: when(sale.money_at) }),
-        };
-      }
+      if (sale.payout_status === "waiting_hold")
+        return { title: t("hold.title"), text: holdText(t, sale, locale, card) };
       if (sale.payout_status === "rejected") {
+        // The admin's note stays in the admin: the seller reads one fixed sentence.
         const refunded = formatUzs(locale, sale.items_uzs);
-        return {
-          title: t("rejected.title"),
-          text: sale.payout_reject_reason
-            ? t("rejected.text", { amount: refunded, reason: sale.payout_reject_reason })
-            : t("rejected.textPlain", { amount: refunded }),
-        };
+        return { title: t("rejected.title"), text: t("rejected.text", { amount: refunded }) };
       }
       return { title: t("payout.title"), text: t("payout.text", { amount, card }) };
     case "closed":
@@ -132,6 +140,8 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
   const tone = saleBadge(sale).tone;
   const Icon = ICONS[tone];
   const uzs = (v: string) => formatUzs(locale, v);
+  // A rejected card payout put the items' sum on the balance, with no fee taken.
+  const returned = sale.payout_status === "rejected";
   return (
     <div className="flex flex-col gap-5">
       <section className="bg-surface flex flex-col gap-5 rounded-xl p-5" data-state={sale.status}>
@@ -186,7 +196,7 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
         <dl className="bg-surface grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 rounded-xl p-5 text-sm">
           <dt className="text-fg-muted">{sell("summary.items")}</dt>
           <dd className="num text-right">{uzs(sale.items_uzs)}</dd>
-          {sale.payout_to === "card" ? (
+          {returned ? null : sale.payout_to === "card" ? (
             <>
               <dt className="text-fg-muted">{t("fee")}</dt>
               <dd className="num text-right">−{uzs(sale.fee_uzs)}</dd>
@@ -199,7 +209,7 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
           )}
           <dt className="border-border border-t pt-2 font-bold">{sell("summary.payout")}</dt>
           <dd className="num text-accent border-border border-t pt-2 text-right font-bold">
-            {uzs(sale.payout_uzs)}
+            {uzs(returned ? sale.items_uzs : sale.payout_uzs)}
           </dd>
         </dl>
       </div>

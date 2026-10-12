@@ -7,16 +7,18 @@ import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
+import { InventoryRefusal } from "./InventoryRefusal";
 import { SellCart } from "./SellCart";
 import { SellItemCard } from "./SellItemCard";
 import { SellToolbar, type SellSort } from "./SellToolbar";
 
 import { TradeLinkForm } from "@/components/account/TradeLinkForm";
+import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
+import { TRADES } from "@/lib/paths";
 import {
   getInventory,
   INVENTORY_KEY,
-  sellError,
   sellSummary,
   type Inventory,
   type Payout,
@@ -73,7 +75,22 @@ export function SellView({ locale, config }: SellViewProps) {
       .sort(ORDER[sort]);
   }, [items, query, category, sort]);
   const picked = items.filter((x) => chosen.has(x.asset_id));
-  const allChosen = items.length > 0 && picked.length === Math.min(items.length, maxItems);
+  // «Выбрать все» acts on what the filter shows, and keeps what is chosen outside it.
+  const shownChosen = shown.filter((x) => chosen.has(x.asset_id)).length;
+  const allChosen =
+    shown.length > 0 &&
+    (shownChosen === shown.length || (chosen.size >= maxItems && shownChosen > 0));
+  const toggleShown = () => {
+    setChosen((cur) => {
+      const next = new Set(cur);
+      if (allChosen) {
+        for (const x of shown) next.delete(x.asset_id);
+        return next;
+      }
+      for (const x of shown) if (next.size < maxItems) next.add(x.asset_id);
+      return next;
+    });
+  };
   const toggle = (id: string) => {
     setChosen((cur) => {
       const next = new Set(cur);
@@ -127,21 +144,16 @@ export function SellView({ locale, config }: SellViewProps) {
       </div>
     );
   } else if (inventory.isError || !inventory.data) {
-    const refusal = sellError(inventory.error);
-    const reason = refusal?.reason ?? "other";
     body = (
-      <div className="bg-surface flex flex-col items-start gap-4 rounded-xl p-6">
-        <p className="text-fg-muted">
-          {refusal?.code === "steam_refused"
-            ? t.has(`steam.${reason}`)
-              ? t(`steam.${reason}`)
-              : t("steam.other")
-            : t("loadFailed")}
-        </p>
-        <Button variant="secondary" onClick={() => void reload()}>
-          {t("retry")}
-        </Button>
-      </div>
+      <InventoryRefusal
+        error={inventory.error}
+        user={user}
+        onRetry={() => void reload()}
+        onLinkChange={() => {
+          void refreshMe();
+          void inventory.refetch();
+        }}
+      />
     );
   } else {
     const cart = (
@@ -168,11 +180,7 @@ export function SellView({ locale, config }: SellViewProps) {
             category={category}
             onCategory={setCategory}
             allChosen={allChosen}
-            onToggleAll={() => {
-              setChosen(
-                allChosen ? new Set() : new Set(shown.slice(0, maxItems).map((x) => x.asset_id)),
-              );
-            }}
+            onToggleAll={toggleShown}
             onRefresh={() => void reload()}
             refreshing={refreshing}
           />
@@ -244,7 +252,14 @@ export function SellView({ locale, config }: SellViewProps) {
 
   return (
     <div className="flex flex-col gap-6 pb-24 lg:pb-0">
-      <h1 className="text-center text-3xl font-bold">{t("title")}</h1>
+      <div className="flex flex-col items-center gap-1">
+        <h1 className="text-center text-3xl font-bold">{t("title")}</h1>
+        {status === "signed_in" ? (
+          <Link href={`${TRADES}?type=sales`} className="text-accent text-sm font-semibold">
+            {t("mySales")}
+          </Link>
+        ) : null}
+      </div>
       {body}
     </div>
   );

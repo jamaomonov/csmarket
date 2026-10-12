@@ -27,7 +27,6 @@ export function saleOut(number: string, over: Partial<SaleOut> = {}): SaleOut {
     offer: null,
     money_at: "2026-10-15T16:14:00Z",
     payout_status: null,
-    payout_reject_reason: null,
     created_at: "2026-10-08T16:12:00Z",
     ...over,
   };

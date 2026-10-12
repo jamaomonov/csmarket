@@ -74,15 +74,23 @@ const SIGNED_IN = {
   refreshMe: vi.fn(),
 };
 
-function routeGets(inventory: () => Promise<unknown> = () => Promise.resolve(INVENTORY)) {
+function routeGets(
+  inventory: () => Promise<unknown> = () => Promise.resolve(INVENTORY),
+  cards: () => Promise<unknown> = () => Promise.resolve({ items: [] }),
+) {
   api.apiGet.mockImplementation((path: string) =>
     path.startsWith("/api/v1/sell/inventory")
       ? inventory()
       : path === "/api/v1/payout-cards"
-        ? Promise.resolve({ items: [] })
+        ? cards()
         : Promise.reject(new Error(path)),
   );
 }
+
+const cardCalls = () =>
+  api.apiGet.mock.calls.filter(([path]) => path === "/api/v1/payout-cards").length;
+const HUMO = "9860123456789015";
+const SAVED_HUMO = { id: "c1", type: "humo", last4: "9015", created_at: "2026-10-08T10:00:00Z" };
 
 function view() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -255,5 +263,150 @@ describe("SellView", () => {
     });
     expect(screen.getAllByText("Это не карта Humo")[0]).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Продать за/ })[0]).toBeDisabled();
+  });
+
+  it("a typo in a full number asks to check it, not that it is another card", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("radio", { name: /Новая карта Humo/ })));
+    fireEvent.change(first(screen.getAllByLabelText(/Номер карты Humo/)), {
+      target: { value: "9860 1234 5678 9016" },
+    });
+    expect(screen.getAllByText("Проверьте номер карты.")[0]).toBeInTheDocument();
+    expect(screen.queryByText("Это не карта Humo")).toBeNull();
+  });
+
+  it("after a refused card sale, re-reads the cards and pays to the one now saved", async () => {
+    let saved = false;
+    routeGets(undefined, () => Promise.resolve({ items: saved ? [SAVED_HUMO] : [] }));
+    api.apiPost.mockImplementation(() => {
+      saved = true;
+      return Promise.reject(new SessionApiError(409, "Conflict", { code: "prices_changed" }));
+    });
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("radio", { name: /Новая карта Humo/ })));
+    fireEvent.change(first(screen.getAllByLabelText(/Номер карты Humo/)), {
+      target: { value: HUMO },
+    });
+    const before = cardCalls();
+    fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за/ })));
+    await waitFor(() => {
+      expect(cardCalls()).toBeGreaterThan(before);
+    });
+    await waitFor(() => {
+      expect(first(screen.getAllByRole("radio", { name: /Humo •••• 9015/ }))).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    });
+    expect(screen.queryAllByLabelText(/Номер карты Humo/)).toHaveLength(0);
+  });
+
+  it("a saved card deleted elsewhere: says so, re-reads the cards, falls back to the balance", async () => {
+    let gone = false;
+    routeGets(undefined, () => Promise.resolve({ items: gone ? [] : [SAVED_HUMO] }));
+    api.apiPost.mockImplementation(() => {
+      gone = true;
+      return Promise.reject(new SessionApiError(404, "Not Found", null));
+    });
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(await screen.findAllByRole("radio", { name: /Humo •••• 9015/ })));
+    fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за/ })));
+    expect(await screen.findAllByText("Этой карты больше нет — выберите другую.")).not.toHaveLength(
+      0,
+    );
+    await waitFor(() => {
+      expect(screen.queryAllByRole("radio", { name: /Humo •••• 9015/ })).toHaveLength(0);
+    });
+    expect(first(screen.getAllByRole("radio", { name: /Баланс csmarket/ }))).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it("a minimum refused by the API says the minimum sum", async () => {
+    api.apiPost.mockRejectedValue(
+      new SessionApiError(409, "Conflict", { code: "below_minimum", min_sum_uzs: "11300" }),
+    );
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за/ })));
+    expect(await screen.findAllByText(/Минимальная сумма продажи — 11\s300/)).not.toHaveLength(0);
+  });
+
+  it("a Steam refusal at the sale names the account's problem", async () => {
+    api.apiPost.mockRejectedValue(
+      new SessionApiError(409, "Conflict", { code: "steam_refused", reason: "trade_banned" }),
+    );
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    fireEvent.click(first(screen.getAllByRole("button", { name: /Продать за/ })));
+    expect(await screen.findAllByText(/запрет обменов/)).not.toHaveLength(0);
+  });
+
+  it("says what happens after «Продать», per payout", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    expect(screen.getAllByText(/Примите обмен в Steam/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/на баланс через 7 дней/)[0]).toBeInTheDocument();
+    fireEvent.click(first(screen.getAllByRole("radio", { name: /Новая карта Humo/ })));
+    expect(screen.getAllByText(/на карту после 7 дней защиты Steam/)[0]).toBeInTheDocument();
+  });
+
+  it("links to the seller's sales", async () => {
+    view();
+    await screen.findAllByText(/Redline/);
+    expect(screen.getByRole("link", { name: "Мои продажи" })).toHaveAttribute(
+      "href",
+      "/account/trades?type=sales",
+    );
+  });
+
+  it("«Выбрать все» under a filter keeps the items chosen outside it", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Sand Dune/ }));
+    fireEvent.change(screen.getByPlaceholderText("Поиск по названию"), {
+      target: { value: "Redline" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Выбрать все" }));
+    expect(screen.getAllByText(/Выбрано 2 скина/)[0]).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Снять выбор" })).toBeInTheDocument();
+  });
+
+  describe("an inventory refusal says what to do", () => {
+    const refuse = (body: Record<string, unknown>, status = 409) => {
+      routeGets(() => Promise.reject(new SessionApiError(status, "Refused", body)));
+    };
+
+    it("a bad trade link: the reason, the link form to change it, no retry", async () => {
+      auth.value = {
+        ...SIGNED_IN,
+        user: { ...SIGNED_IN.user, trade_link_verdict: "warn", trade_link_reason: "hold" },
+      };
+      refuse({ code: "trade_link_bad", reason: "hold" });
+      view();
+      expect(await screen.findByText(/временный запрет обменов/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Изменить/ })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Повторить" })).toBeNull();
+    });
+
+    it("selling switched off: closed for now, no retry", async () => {
+      refuse({ code: "sales_disabled" });
+      view();
+      expect(await screen.findByText(/Выкуп скинов временно недоступен/)).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Повторить" })).toBeNull();
+    });
+
+    it.each([
+      ["rate_unavailable", 503, /Курс валюты сейчас недоступен/],
+      ["sales_unavailable", 503, /Попробуйте через минуту/],
+    ])("%s: says so, with a retry", async (code, status, text) => {
+      refuse({ code }, status);
+      view();
+      expect(await screen.findByText(text)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Повторить" })).toBeInTheDocument();
+    });
   });
 });

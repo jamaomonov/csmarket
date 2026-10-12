@@ -112,6 +112,16 @@ describe("sellError", () => {
     ).toBe("rate_unavailable");
   });
 
+  it("reads the minimum sum of a below_minimum refusal", () => {
+    const err = sellError(
+      new SessionApiError(409, "Conflict", { code: "below_minimum", min_sum_uzs: "11300" }),
+    );
+    expect(err?.minSumUzs).toBe("11300");
+    expect(sellError(new SessionApiError(409, "x", { code: "below_minimum" }))?.minSumUzs).toBe(
+      null,
+    );
+  });
+
   it("passes an already converted error through", () => {
     const err = new SellError("prices_changed", null);
     expect(sellError(err)).toBe(err);
