@@ -24,7 +24,9 @@ command in that message** (`AGENTS.md` § 14).
    `origin/main`; a tag that resolves to nothing fails the deploy), `pull`s, runs
    `alembic upgrade head` in a one-shot `api` container, writes `IMAGE_TAG=<tag>` into the
    checkout's `.env`, `up -d --remove-orphans`, recreates `caddy` when
-   `infra/caddy/Caddyfile.prod` changed, waits for `https://api.csmarket.uz/healthz`,
+   `infra/caddy/Caddyfile.prod` changed, recreates `prometheus` / `alertmanager` when their
+   config or alert rules changed (Prometheus reads rules only at start; the stamp of the last
+   applied config is `.deploy-<service>.sha` in the checkout), waits for `https://api.csmarket.uz/healthz`,
    `/readyz` and `https://csmarket.uz/`, then prunes old images (keeping three per service).
 
 Because the checkout follows the tag, `docker-compose.prod.yml`, the Caddyfile and the alert

@@ -103,6 +103,27 @@ jobs:
               docker compose -f docker-compose.prod.yml up -d --force-recreate caddy
             fi
 
+            # Same trap for monitoring config: Prometheus reads its rules and
+            # prometheus.yml only at start (no lifecycle API), and both it and
+            # Alertmanager mount files whose new contents ``up -d`` never sees.
+            # A changed alert would deploy as a silent no-op. Recreate each only
+            # when its config differs from the one it was last started with
+            # (a stamp in the git-ignored checkout; none = first run = recreate).
+            refresh_config() {
+              service="$1"; shift
+              want="$(cat "$@" | sha256sum | cut -d' ' -f1)"
+              stamp=".deploy-$service.sha"
+              if [ "$want" != "$(cat "$stamp" 2>/dev/null || true)" ]; then
+                echo "$service config changed; recreating"
+                docker compose -f docker-compose.prod.yml up -d --force-recreate "$service"
+                printf '%s\n' "$want" > "$stamp"
+              fi
+            }
+            refresh_config prometheus infra/prometheus/prometheus.yml infra/prometheus/alerts/*.yml
+            if docker compose -f docker-compose.prod.yml ps --services | grep -qx alertmanager; then
+              refresh_config alertmanager infra/alertmanager/alertmanager.tmpl.yml
+            fi
+
             # Poll the health endpoints instead of a fixed sleep: a freshly
             # recreated api can take longer than a few seconds to serve,
             # and a single early curl would 502 and false-fail an otherwise

@@ -91,3 +91,6 @@ test-results/
 .superpowers/
 .agents/
 .claude/
+
+# Deploy stamps of the monitoring config last started on the server (deploy.yml).
+.deploy-*.sha
