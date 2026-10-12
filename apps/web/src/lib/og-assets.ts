@@ -3,6 +3,9 @@
  * fail soft — a card without the picture, or in the renderer's built-in font, is still a card.
  */
 
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import { steamImageSize } from "@csmarket/utils/skins";
 
 /** A font as `ImageResponse` takes it. */
@@ -14,46 +17,36 @@ export interface OgFont {
 }
 
 /**
- * The site's font, IBM Plex Sans (500 and 700), from Google Fonts as TrueType — the renderer
- * reads TTF, not the woff2 `next/font` ships. Asked without a browser User-Agent, the CSS API
- * answers one full TTF per weight (Latin and Cyrillic).
+ * The site's font, IBM Plex Sans (500 and 700), as TrueType from the repo (`assets/og/`): the
+ * renderer reads TTF, not the woff2 `next/font` ships. `next start` runs in `apps/web`, so the
+ * files resolve from the working directory (the image copies the whole tree).
  */
-const FONT_CSS = "https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@500;700";
-const FONT_FACE = /font-weight:\s*(\d+);[^}]*?src:\s*url\((https:\/\/[^)]+\.ttf)\)/g;
+const FONT_FILES: readonly [500 | 700, string][] = [
+  [500, "IBMPlexSans-Medium.ttf"],
+  [700, "IBMPlexSans-Bold.ttf"],
+];
 const TIMEOUT_MS = 4000;
 /** A Steam skin picture is ~50–150 KB; anything far bigger is not one. */
 const MAX_IMAGE_BYTES = 2_000_000;
 
 let fonts: Promise<OgFont[]> | null = null;
 
-async function fetchFonts(): Promise<OgFont[]> {
-  const css = await fetch(FONT_CSS, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-  if (!css.ok) throw new Error(`font css ${String(css.status)}`);
-  const faces = [...(await css.text()).matchAll(FONT_FACE)];
-  const loaded = await Promise.all(
-    faces.map(async ([, weight, url]): Promise<OgFont | null> => {
-      if ((weight !== "500" && weight !== "700") || !url) return null;
-      const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-      if (!res.ok) throw new Error(`font ${String(res.status)}`);
-      return {
-        name: "IBM Plex Sans",
-        data: await res.arrayBuffer(),
-        weight: weight === "500" ? 500 : 700,
-        style: "normal",
-      };
+async function readFonts(): Promise<OgFont[]> {
+  return Promise.all(
+    FONT_FILES.map(async ([weight, file]): Promise<OgFont> => {
+      const buf = await readFile(join(process.cwd(), "assets", "og", file));
+      const data = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+      return { name: "IBM Plex Sans", data, weight, style: "normal" };
     }),
   );
-  const ok = loaded.filter((f): f is OgFont => f !== null);
-  if (ok.length === 0) throw new Error("no font faces");
-  return ok;
 }
 
 /**
- * IBM Plex Sans, fetched once per process. On a failure the answer is `[]` (the renderer's
+ * IBM Plex Sans, read once per process. On a failure the answer is `[]` (the renderer's
  * built-in font) and the next card tries again.
  */
 export async function ogFonts(): Promise<OgFont[]> {
-  fonts ??= fetchFonts();
+  fonts ??= readFonts();
   try {
     return await fonts;
   } catch {

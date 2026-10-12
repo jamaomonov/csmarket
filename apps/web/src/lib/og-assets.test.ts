@@ -4,17 +4,6 @@ import { ogFonts, ogSkinImage, resetOgFonts } from "./og-assets";
 
 const STEAM = "https://community.fastly.steamstatic.com/economy/image/abc";
 
-const CSS = `@font-face {
-  font-family: 'IBM Plex Sans';
-  font-weight: 500;
-  src: url(https://fonts.gstatic.com/s/x/m.ttf) format('truetype');
-}
-@font-face {
-  font-family: 'IBM Plex Sans';
-  font-weight: 700;
-  src: url(https://fonts.gstatic.com/s/x/b.ttf) format('truetype');
-}`;
-
 afterEach(() => {
   vi.unstubAllGlobals();
   resetOgFonts();
@@ -49,33 +38,17 @@ describe("ogSkinImage", () => {
 });
 
 describe("ogFonts", () => {
-  it("loads both weights once per process", async () => {
-    const fetchMock = vi.fn((url: string) =>
-      Promise.resolve(url.endsWith(".ttf") ? new Response(new Uint8Array([0])) : new Response(CSS)),
-    );
+  it("reads both weights from the repo, without the network", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("offline"));
     vi.stubGlobal("fetch", fetchMock);
+    const fonts = await ogFonts();
+    expect(fonts.map((f) => f.weight)).toEqual([500, 700]);
+    expect(fonts.every((f) => f.data.byteLength > 100_000)).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("is read once per process", async () => {
     const first = await ogFonts();
-    expect(first.map((f) => f.weight)).toEqual([500, 700]);
-    await ogFonts();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  it("a failure gives the built-in font and is retried next time", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
-    expect(await ogFonts()).toEqual([]);
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) =>
-        Promise.resolve(
-          url.endsWith(".ttf") ? new Response(new Uint8Array([0])) : new Response(CSS),
-        ),
-      ),
-    );
-    expect(await ogFonts()).toHaveLength(2);
-  });
-
-  it("a CSS answer without faces is a failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("")));
-    expect(await ogFonts()).toEqual([]);
+    expect(await ogFonts()).toBe(first);
   });
 });
