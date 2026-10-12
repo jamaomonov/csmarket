@@ -16,6 +16,7 @@ import {
 
 import type { Locale } from "@csmarket/i18n";
 
+import { PayConsent } from "@/components/legal/PayConsent";
 import { offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
 import { useRouter } from "@/i18n/navigation";
 import {
@@ -229,6 +230,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
         >
           {typed === 0 ? t("enterAmount") : t("submit", { amount: formatUzs(locale, typed) })}
         </Button>
+        <PayConsent doc="terms" />
       </div>
     </form>
   );

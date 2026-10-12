@@ -9,6 +9,7 @@ import { useId, useRef, useState } from "react";
 
 import { CARD_BRANDS, PayoutPicker } from "./PayoutPicker";
 
+import { PayConsent } from "@/components/legal/PayConsent";
 import { useRouter } from "@/i18n/navigation";
 import { salePath } from "@/lib/paths";
 import { CARDS_KEY, listCards } from "@/lib/sales";
@@ -237,6 +238,7 @@ export function SellCart(p: SellCartProps) {
             ? t("addMore", { sum: uzs(minItems - sum.items) })
             : t("submit", { sum: uzs(sum.payout) })}
       </Button>
+      <PayConsent doc="sell" />
     </aside>
   );
 }

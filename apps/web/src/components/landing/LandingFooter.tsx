@@ -5,11 +5,13 @@ import { PayMarks } from "./Wordmarks";
 
 import { Link } from "@/i18n/navigation";
 import { telegramUrl } from "@/lib/landing";
+import { LEGAL_DOCS } from "@/lib/legal";
 import {
   categoryPath,
   CHEAP,
   PAY_METHODS,
   PAY_NAMES,
+  legalPath,
   payPath,
   REVIEWS,
   SELL,
@@ -27,6 +29,7 @@ export async function LandingFooter({ locale }: { locale: string }) {
   const t = await getTranslations({ locale, namespace: "web.landing.footer" });
   const tCat = await getTranslations({ locale, namespace: "web.skins.category" });
   const tBuy = await getTranslations({ locale, namespace: "web.seoPages.footer" });
+  const tLegal = await getTranslations({ locale, namespace: "legal" });
   return (
     <footer className="site">
       <div className="wrap">
@@ -105,6 +108,13 @@ export async function LandingFooter({ locale }: { locale: string }) {
         </div>
         <div className="foot-b">
           <span>© {new Date().getFullYear()} csmarket.uz</span>
+          <nav aria-label={tLegal("index.title")} className="foot-legal">
+            {LEGAL_DOCS.map((doc) => (
+              <Link key={doc} href={legalPath(doc)}>
+                {tLegal(`${doc}.title`)}
+              </Link>
+            ))}
+          </nav>
           <span>{t("legal")}</span>
         </div>
       </div>

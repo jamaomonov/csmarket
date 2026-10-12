@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
 import { routing } from "@/i18n/routing";
+import { clientMessages } from "@/lib/legal";
 import { SITE } from "@/lib/site";
 
 import "../globals.css";
@@ -58,7 +59,7 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound();
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
-  const messages = await getMessages();
+  const messages = clientMessages(await getMessages());
   return (
     <html
       lang={locale === "uz" ? "uz-Latn" : locale}

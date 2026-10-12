@@ -1,3 +1,4 @@
+import { legalPaths } from "@/lib/legal";
 import { CHEAP, HOME, itemPath, MARKET, PAY_METHODS, payPath } from "@/lib/paths";
 import { landingPaths } from "@/lib/skin-landing";
 import { fetchSkinSlugs, getSkinFacets } from "@/lib/skins";
@@ -11,7 +12,7 @@ const notFound = (): Response => new Response("Not found", { status: 404 });
 /**
  * `/skins-sitemap/<n>.xml`: item pages `n × 5000` onwards, alphabetical;
  * `/skins-sitemap/landings.xml`: the home page, /market, /cheap, the payment-method pages and
- * the category and weapon landing pages.
+ * the category and weapon landing pages and the legal documents.
  * An API outage throws (a 500 the crawler retries), it is never a 404.
  */
 export async function GET(
@@ -24,7 +25,14 @@ export async function GET(
     if (!facets) return notFound();
     return xmlResponse(
       urlsetXml(
-        [HOME, MARKET, CHEAP, ...PAY_METHODS.map(payPath), ...landingPaths(facets)],
+        [
+          HOME,
+          MARKET,
+          CHEAP,
+          ...PAY_METHODS.map(payPath),
+          ...landingPaths(facets),
+          ...legalPaths(),
+        ],
         today(),
       ),
     );
