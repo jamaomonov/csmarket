@@ -1,0 +1,279 @@
+{
+  "home": "Home",
+  "breadcrumb": "Breadcrumbs",
+  "updatedLabel": "Updated:",
+  "index": {
+    "title": "Documents",
+    "intro": "The public offer, the user agreement, the skin buyback terms, the privacy policy, refunds and the seller's details — in one place."
+  },
+  "terms": {
+    "title": "Public offer",
+    "updated": "October 2026",
+    "intro": "This is a public offer — a proposal to conclude a contract for the sale of CS2 skins on the terms below. By paying for an order, you accept these terms in full.",
+    "sections": [
+      {
+        "h": "Who the seller is",
+        "p": "YTT OMONOV JAMSHID IBROHIM OʻGʻLI (trading name csmarket), Tax ID 50304056560048. Details and contacts are on the «Seller details» page."
+      },
+      {
+        "h": "What we sell",
+        "p": "In-game items for Counter-Strike 2 (skins). These are digital goods with no physical medium: an item is handed over through the Steam trading system. We resell items and are not their publisher. The item's name, look and properties (wear, stickers and others) are shown on its page."
+      },
+      {
+        "h": "What you need to buy",
+        "p": "A Steam account, sign-in to the site through Steam and that account's trade link saved in your profile. Your Steam inventory must be public and trading must be allowed on the account. We check the link before the purchase. If Steam does not allow trading with the account, the order cannot be placed."
+      },
+      {
+        "h": "How the contract is concluded",
+        "p": "The contract is concluded when the order is paid. Before paying, you see the item and the final price in soʻm. Pressing the pay button is acceptance of this offer. You can withdraw before paying: just do not complete the payment. An unpaid order is cancelled automatically when the time to pay runs out."
+      },
+      {
+        "h": "Price and payment",
+        "p": "Prices are in Uzbek soʻm. The price is fixed when the order is placed and does not change after that. If a listing's price changed while you were choosing it, we show the new price before payment. We charge no fee on top of the price. You can pay from your balance on the site or through Click, Payme or Uzum."
+      },
+      {
+        "h": "Handing over the item",
+        "p": "After payment, the seller sends the item as a Steam trade offer to your trade link. The order's status is shown on its page. Accept the trade in Steam by the time shown on the order page — usually you have 15 minutes. After that the offer may be cancelled. The item counts as handed over once you have accepted the trade."
+      },
+      {
+        "h": "If the item cannot be handed over",
+        "p": "If the trade did not happen — you declined it or did not accept it in time, Steam cancelled it, or the item is no longer available — the order amount goes back to your balance on the site at once. It can be returned to a card on request — see the «Refunds» page."
+      },
+      {
+        "h": "Your responsibility",
+        "p": "You are responsible for a correct trade link and for the state of your Steam account: a public inventory, no trade bans or holds, the Steam Guard mobile authenticator turned on. We never ask for your Steam password, Steam Guard codes or access to your account. If anyone asks for them in our name, it is fraud — let us know."
+      },
+      {
+        "h": "Steam rules",
+        "p": "Steam's rules apply to the item you receive. For example, Steam may temporarily bar passing it on or reverse a trade during its trade protection period. If a trade is reversed after you accepted it, there is no automatic refund: write to us and we will look into the case individually."
+      },
+      {
+        "h": "Fraud prevention",
+        "p": "We check transactions for signs of fraud in line with the laws of the Republic of Uzbekistan and the requirements of partner banks. When in doubt, we may suspend a transaction for a while, ask you to confirm your identity or payment method, or decline the transaction, and inform the bank where needed. You agree not to share passwords and confirmation codes with anyone and to tell us at once about suspicious transactions."
+      },
+      {
+        "h": "Changes to the terms",
+        "p": "We may change this offer. A new version applies from its publication on this page; the date of the update is shown at the top. A paid order is governed by the version in force at the time of payment."
+      },
+      {
+        "h": "Liability",
+        "p": "We are not responsible for the actions of Steam and Valve, including account bans and restrictions, changes to trading rules and Steam outages. Our liability for an order is limited to its amount. This does not limit liability that cannot be limited by law."
+      },
+      {
+        "h": "Disputes",
+        "p": "We settle disputes by negotiation — write to support@csmarket.uz. If no agreement is reached, the dispute is resolved under the procedure set by the laws of the Republic of Uzbekistan."
+      }
+    ]
+  },
+  "agreement": {
+    "title": "User agreement",
+    "updated": "October 2026",
+    "intro": "This agreement governs the use of csmarket.uz. The terms of a purchase are in the public offer, the terms of selling skins to us are in the buyback terms. By using the site, you accept this agreement.",
+    "sections": [
+      {
+        "h": "Who may use the site",
+        "p": "The site is for people over 18 who can enter into transactions on their own. If you are under 18, use the site only with the consent of your parents or other legal guardians and with their payment methods. One person — one account."
+      },
+      {
+        "h": "Signing in with Steam",
+        "p": "You can sign in only through Steam. Steam confirms that the account is yours and passes us its identifier (Steam ID). We take your name and avatar from your Steam profile. We never see your Steam password and never ask for it. You stay signed in for up to 30 days; you can sign out at any time."
+      },
+      {
+        "h": "Your account",
+        "p": "You are responsible for keeping access to your Steam account safe and for the actions taken on the site under it. The trade link must belong to the account you signed in with: the site will not accept another account's link."
+      },
+      {
+        "h": "Balance",
+        "p": "Every account has a balance in soʻm. You can top it up through Click, Payme or Uzum within the amounts shown on the top-up page. Money on the balance is spent on purchases on the site. Order refunds and money for skins you sold us also go to the balance. No interest is paid on the balance."
+      },
+      {
+        "h": "Emails",
+        "p": "Giving an email is optional. If you add one and confirm it through the link in our email, we will send you emails about your orders and sales. Emails go only to a confirmed address."
+      },
+      {
+        "h": "What is not allowed",
+        "p": "Paying with someone else's or stolen cards. Selling us items obtained unlawfully or belonging to other people. Giving knowingly false information. Using the site to launder criminal proceeds or for other unlawful purposes. Getting around limits, including through several accounts. Using automated tools to place orders or collect the site's data without our permission."
+      },
+      {
+        "h": "Checks",
+        "p": "If a transaction raises reasonable doubts, we may suspend it and ask you to confirm your identity or your right to the payment method. Our contracts with payment organisations and fraud prevention require this. Until we hear back, the order is not fulfilled. If no confirmation comes, we return the money to the balance."
+      },
+      {
+        "h": "Restrictions and blocking",
+        "p": "We may restrict access to the site, block an account or freeze a balance: if this agreement is breached, if there are reasonable signs of fraud or of using someone else's payment methods, if a requested confirmation is not provided, or at the request of the authorities. Items you have already received in Steam stay with you. If you think a block is a mistake, write to support@csmarket.uz — we will review your request."
+      },
+      {
+        "h": "Refusing an order",
+        "p": "We may refuse to fulfil an order — if the item is no longer available, in case of a technical or pricing error, and in the cases described above. The order amount then goes back to the balance in full."
+      },
+      {
+        "h": "Disputing payments",
+        "p": "If something is wrong with an order, write to us first. A dispute with the bank without contacting us leaves us no chance to sort it out and may lead to restricted access. This does not limit your consumer rights or your right to contact the bank that issued your card."
+      },
+      {
+        "h": "Liability",
+        "p": "The site is provided «as is». We are not responsible for the actions of Steam and Valve, including account bans and changes to trading rules, or for interruptions for reasons beyond our control. Our liability for an order is limited to its amount. This does not limit liability that cannot be limited by law."
+      },
+      {
+        "h": "Force majeure",
+        "p": "We are not responsible for failing to meet obligations because of force majeure: Steam and payment system failures, restrictions by government bodies, communication and power outages and other emergencies."
+      },
+      {
+        "h": "Site content",
+        "p": "The texts, design and code of the site belong to us. They may not be copied for commercial use without our consent. Counter-Strike, CS2 and Steam are trademarks of Valve Corporation. We are not affiliated with Valve and use these marks only to indicate compatibility."
+      },
+      {
+        "h": "Changes to the agreement",
+        "p": "We may change this agreement. A new version applies from its publication on this page; the date of the update is shown at the top. By continuing to use the site, you accept the new version. Paid orders are governed by the terms in force at the time of payment."
+      },
+      {
+        "h": "Governing law and language",
+        "p": "This agreement and all the site's documents are governed by the laws of the Republic of Uzbekistan. Disputes are settled by negotiation and, failing agreement, under the procedure set by the laws of the Republic of Uzbekistan. The documents are published in Russian, Uzbek and English. If they differ, the Russian version prevails."
+      }
+    ]
+  },
+  "sell": {
+    "title": "Buyback terms",
+    "updated": "October 2026",
+    "intro": "These terms apply when you sell us your CS2 skins in the «Sell skins» section. By pressing «Sell», you accept these terms.",
+    "sections": [
+      {
+        "h": "Who the buyer is",
+        "p": "The buyer is YTT OMONOV JAMSHID IBROHIM OʻGʻLI (trading name csmarket), Tax ID 50304056560048. Details are on the «Seller details» page."
+      },
+      {
+        "h": "What you need to sell",
+        "p": "Sign-in through Steam, a trade link in your profile, a public CS2 inventory and trading allowed on your Steam account. We do not buy every item: the «Sell skins» section shows the ones that can be sold now. We may change the list of items and the prices and close the buyback for a while."
+      },
+      {
+        "h": "Price",
+        "p": "You see each item's price and the total before the sale. The total is fixed when you press «Sell» and does not change after that. If prices changed while you were choosing items, we show the new total and you need to confirm the sale again."
+      },
+      {
+        "h": "Limits",
+        "p": "There is a minimum sale amount, a minimum card payout and a limit on the number of items in one sale. They are shown on the sale page."
+      },
+      {
+        "h": "How a sale goes",
+        "p": "We send you a Steam trade offer. Accept it by the time shown on the sale page. If the trade is declined or not accepted in time, the sale did not happen and the items stay with you."
+      },
+      {
+        "h": "When the money arrives",
+        "p": "The money arrives 7 days after the trade, when Steam's trade protection ends. The date is shown on the sale page. If the trade is reversed in Steam within these 7 days, the sale did not happen and no money is paid for it."
+      },
+      {
+        "h": "Where to receive the money",
+        "p": "To your csmarket balance — with a bonus, or to an Uzcard, Humo or Uzum Visa card — with a fee. The bonus and the fee are shown before the sale. We make card transfers by hand after the trade protection ends. If a card transfer fails, the amount before the fee goes to your balance."
+      },
+      {
+        "h": "Your warranties",
+        "p": "By selling items, you confirm that they are yours, were obtained lawfully, are not stolen and are free of other people's rights. If this turns out not to be so, you are responsible for the consequences, and we may report it to the authorities."
+      },
+      {
+        "h": "Refusal and limits",
+        "p": "We may refuse or limit a purchase — if we doubt where the items came from, if there are signs of fraud or if our documents are breached. If a trade is reversed after the money has been paid, you agree to return the amount received; we will contact you."
+      },
+      {
+        "h": "Card details",
+        "p": "We store the payout card number encrypted and use it only for payouts. You can delete a saved card in your profile."
+      },
+      {
+        "h": "Everything else",
+        "p": "Anything not covered here is governed by the user agreement, the privacy policy and the laws of the Republic of Uzbekistan. Questions and claims go to support@csmarket.uz."
+      }
+    ]
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "October 2026",
+    "intro": "What data we receive, why, who we share it with and how long we keep it. We take the minimum the site needs to work and do not sell data.",
+    "sections": [
+      {
+        "h": "Who processes the data",
+        "p": "YTT OMONOV JAMSHID IBROHIM OʻGʻLI (csmarket), Tax ID 50304056560048. For questions about your data, write to support@csmarket.uz."
+      },
+      {
+        "h": "What data we receive",
+        "p": "From Steam at sign-in — your Steam ID, name and avatar link. From you — your trade link, your email (optional) and a payout card number if you sell us skins with a card payout. As you use the site — orders, sales, top-ups and balance transactions. One of the payment services tells us the payer's phone number and card type. We never receive your Steam password. Card details for a payment are entered on the payment service's side — we do not see or store them."
+      },
+      {
+        "h": "IP address",
+        "p": "We do not save IP addresses in the database or write them to logs. An address is used only briefly, to protect the site from abuse."
+      },
+      {
+        "h": "Why we use data",
+        "p": "So that you can sign in, buy and receive an item, sell us skins and get paid, top up your balance and get emails about your orders. Also to answer requests, prevent fraud and meet legal requirements. We do not use data for advertising."
+      },
+      {
+        "h": "Who we share data with",
+        "p": "Only as far as the site needs to work. Steam — for sign-in and the trade link check: your Steam ID and trade link. Item sellers and the platforms the trade is sent through — your trade link, to deliver an item or accept your skins. The payment services Click, Payme and Uzum — the payment number and amount; your Steam ID is not passed to them. The email delivery service — the address, subject and text of an email. The site's delivery and protection service — technical request data, including the IP address. The hosting provider — the data stored on the site's servers. The error tracking service — a technical description of a failure without personal data. Government bodies — when the law requires it."
+      },
+      {
+        "h": "How we store data",
+        "p": "Data is stored on secure servers. Payout card numbers are encrypted. Only the site's administrators have access to data, limited to what they need to handle orders and requests. Personal data is not written to the site's logs."
+      },
+      {
+        "h": "How long we keep data",
+        "p": "Account data — while you use the site or until it is deleted at your request. The key part of the trade link in an order — 30 days after the order ends; after that only a masked part of the link remains. The address in an email confirmation letter — 7 days. Records of orders, sales, payments and balance transactions — as long as needed for accounting, settling disputes and meeting the law. Backups are kept for a limited time and then deleted."
+      },
+      {
+        "h": "Cookies",
+        "p": "The site uses only technical cookies: the sign-in session (up to 30 days) and a one-time Steam sign-in key (10 minutes). Service data about a payment in progress may be kept in your browser's storage. There are no advertising or analytics cookies."
+      },
+      {
+        "h": "Your rights",
+        "p": "You see your data in your profile, can change your trade link and email and delete saved cards. To get information about your data, correct it or delete it, write to support@csmarket.uz. We keep payment and order records as long as the law requires."
+      },
+      {
+        "h": "Changes",
+        "p": "We may update this policy. A new version applies from its publication on this page; the date of the update is shown at the top."
+      }
+    ]
+  },
+  "refunds": {
+    "title": "Refunds",
+    "updated": "October 2026",
+    "intro": "When we return money, where to and how fast.",
+    "sections": [
+      {
+        "h": "When we return money",
+        "p": "When a purchase could not be delivered: the trade did not happen — you declined it or did not accept it in time, Steam cancelled it — or the item turned out to be unavailable. The order amount is returned in full."
+      },
+      {
+        "h": "Where to",
+        "p": "At once and without a request — to your balance on the site. You can use it right away to pay for another order."
+      },
+      {
+        "h": "Refund to a card",
+        "p": "At your request to support, we return the money to a card or by the method you paid with — within 5 (five) working days of agreeing the refund. We bear the costs of the refund. Your bank may take extra time to credit the card."
+      },
+      {
+        "h": "When a refund is not possible",
+        "p": "Once you have accepted the trade, the item counts as handed over and its price is not refunded. If a trade is reversed after you accepted it, write to us — we will look into the case individually."
+      },
+      {
+        "h": "How to ask",
+        "p": "Write to support@csmarket.uz with your order number. The email fixes the date of your request — the term runs from it."
+      }
+    ]
+  },
+  "imprint": {
+    "title": "Seller details",
+    "updated": "October 2026",
+    "intro": "Who the seller is and how to reach us.",
+    "sections": [
+      {
+        "h": "Seller",
+        "p": "YTT OMONOV JAMSHID IBROHIM OʻGʻLI, trading name csmarket. Tax ID: 50304056560048. Individual entrepreneur registered in the Republic of Uzbekistan. Website: csmarket.uz."
+      },
+      {
+        "h": "Contact",
+        "p": "Email: support@csmarket.uz — the main channel for requests and claims. The date of the email counts as the date of the request."
+      },
+      {
+        "h": "Legal status",
+        "p": "An independent seller of in-game items. Not an official representative of Valve Corporation and not affiliated with it. Counter-Strike, CS2 and Steam are trademarks of Valve; they are used only to indicate compatibility."
+      }
+    ]
+  }
+}

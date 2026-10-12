@@ -1125,6 +1125,18 @@
   color: var(--dim);
   font-size: 13px;
 }
+.lp .foot-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+.lp .foot-legal a {
+  color: var(--dim);
+  transition: color 0.15s;
+}
+.lp .foot-legal a:hover {
+  color: var(--fg);
+}
 .lp .foot-pay {
   display: flex;
   gap: 8px;

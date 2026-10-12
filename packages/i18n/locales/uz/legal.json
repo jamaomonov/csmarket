@@ -1,0 +1,279 @@
+{
+  "home": "Bosh sahifa",
+  "breadcrumb": "Navigatsiya",
+  "updatedLabel": "Yangilangan:",
+  "index": {
+    "title": "Hujjatlar",
+    "intro": "Ommaviy oferta, foydalanuvchi kelishuvi, skinlarni sotib olish shartlari, maxfiylik siyosati, pulni qaytarish shartlari va sotuvchi rekvizitlari — bir joyda."
+  },
+  "terms": {
+    "title": "Ommaviy oferta",
+    "updated": "2026-yil oktyabr",
+    "intro": "Bu ommaviy oferta — CS2 skinlarini quyidagi shartlarda oldi-sotdi shartnomasini tuzish taklifi. Buyurtmani toʻlab, siz bu shartlarni toʻliq qabul qilasiz.",
+    "sections": [
+      {
+        "h": "Sotuvchi kim",
+        "p": "YTT OMONOV JAMSHID IBROHIM OʻGʻLI (savdo nomi csmarket), STIR 50304056560048. Rekvizitlar va aloqa — «Rekvizitlar» sahifasida."
+      },
+      {
+        "h": "Nimani sotamiz",
+        "p": "Counter-Strike 2 oʻyin ichidagi buyumlari (skinlar). Bular moddiy tashuvchisiz raqamli tovarlar: buyum Steam almashuv tizimi orqali topshiriladi. Biz buyumlarni qayta sotamiz va ularning noshiri emasmiz. Buyumning nomi, koʻrinishi va xususiyatlari (eskirish, stikerlar va boshqalar) buyum sahifasida koʻrsatilgan."
+      },
+      {
+        "h": "Xarid uchun nima kerak",
+        "p": "Steam hisobi, saytga Steam orqali kirish va profilda saqlangan shu hisobning almashuv havolasi. Steam inventari ochiq, hisobda almashuvlar ruxsat etilgan boʻlishi kerak. Xariddan oldin havolani tekshiramiz. Agar Steam bu hisob bilan almashuvga ruxsat bermasa, buyurtma berib boʻlmaydi."
+      },
+      {
+        "h": "Shartnoma qanday tuziladi",
+        "p": "Shartnoma buyurtma toʻlangan paytda tuziladi. Toʻlovdan oldin buyum va soʻmdagi yakuniy narxni koʻrasiz. Toʻlov tugmasini bosish — bu ofertani qabul qilish (aksept). Toʻlovgacha xariddan voz kechish mumkin: shunchaki toʻlovni yakunlamang. Toʻlanmagan buyurtma toʻlov vaqti tugaganda oʻzi bekor qilinadi."
+      },
+      {
+        "h": "Narx va toʻlov",
+        "p": "Narxlar oʻzbek soʻmida koʻrsatilgan. Narx buyurtma rasmiylashtirilganda qayd etiladi va keyin oʻzgarmaydi. Agar siz tanlayotgan paytda lot narxi oʻzgargan boʻlsa, yangi narxni toʻlovdan oldin koʻrsatamiz. Narx ustiga komissiya olmaymiz. Buyurtmani saytdagi balansdan yoki Click, Payme yoki Uzum orqali toʻlash mumkin."
+      },
+      {
+        "h": "Buyumni topshirish",
+        "p": "Toʻlovdan keyin sotuvchi buyumni Steamʼdagi almashuv taklifi bilan almashuv havolangizga yuboradi. Buyurtma holati uning sahifasida koʻrinadi. Almashuvni Steamʼda buyurtma sahifasida koʻrsatilgan vaqtgacha qabul qiling — odatda buning uchun 15 daqiqa bor. Keyin taklif bekor qilinishi mumkin. Almashuvni qabul qilganingizda buyum topshirilgan hisoblanadi."
+      },
+      {
+        "h": "Buyumni topshirib boʻlmasa",
+        "p": "Agar almashuv boʻlmasa — siz uni rad etgansiz yoki vaqtida qabul qilmagansiz, uni Steam bekor qilgan yoki buyum endi mavjud emas, — buyurtma summasi darhol saytdagi balansingizga qaytadi. Uni soʻrov boʻyicha kartaga qaytarish mumkin — tartib «Pulni qaytarish» sahifasida."
+      },
+      {
+        "h": "Sizning javobgarligingiz",
+        "p": "Almashuv havolasining toʻgʻriligi va Steam hisobingiz holati uchun siz javobgarsiz: inventar ochiq, almashuvlarga taqiq va kechikish yoʻq, mobil Steam Guard yoqilgan boʻlishi kerak. Biz hech qachon Steam parolini, Steam Guard kodlarini yoki hisobga kirishni soʻramaymiz. Kimdir ularni bizning nomimizdan soʻrasa — bu firibgarlik, bizga xabar bering."
+      },
+      {
+        "h": "Steam qoidalari",
+        "p": "Olingan buyumga Steam qoidalari amal qiladi. Masalan, Steam uni vaqtincha boshqaga berishni taqiqlashi yoki almashuvni himoya muddatida bekor qilishi mumkin. Agar almashuv siz qabul qilganingizdan keyin bekor qilinsa, pul avtomatik qaytarilmaydi: bizga yozing, bunday holatni alohida koʻrib chiqamiz."
+      },
+      {
+        "h": "Firibgarlikdan himoya",
+        "p": "Operatsiyalarni Oʻzbekiston Respublikasi qonunchiligi va hamkor banklar talablariga muvofiq firibgarlik belgilariga tekshiramiz. Shubha boʻlsa, operatsiyani vaqtincha toʻxtatish, shaxsingizni yoki toʻlov vositasini tasdiqlashni soʻrash yoxud operatsiyani rad etish, zarur boʻlsa, bu haqda bankka xabar berish huquqiga egamiz. Siz parollar va tasdiqlash kodlarini boshqalarga bermaslik va shubhali operatsiyalar haqida darhol bizga xabar berish majburiyatini olasiz."
+      },
+      {
+        "h": "Shartlarning oʻzgarishi",
+        "p": "Biz bu ofertani oʻzgartirishimiz mumkin. Yangi tahrir shu sahifada eʼlon qilingan paytdan kuchga kiradi; yangilangan sana yuqorida koʻrsatilgan. Toʻlangan buyurtmaga toʻlov paytida amalda boʻlgan tahrir qoʻllaniladi."
+      },
+      {
+        "h": "Javobgarlik",
+        "p": "Steam va Valve harakatlari, jumladan hisoblarni bloklash va cheklash, almashuv qoidalarining oʻzgarishi va Steam ishidagi uzilishlar uchun javobgar emasmiz. Buyurtma boʻyicha javobgarligimiz uning summasi bilan cheklanadi. Bu qonunga koʻra cheklab boʻlmaydigan javobgarlikni cheklamaydi."
+      },
+      {
+        "h": "Nizolar",
+        "p": "Nizolarni muzokaralar yoʻli bilan hal qilamiz — support@csmarket.uz manziliga yozing. Kelishuvga erishilmasa, nizo Oʻzbekiston Respublikasi qonunchiligida belgilangan tartibda koʻrib chiqiladi."
+      }
+    ]
+  },
+  "agreement": {
+    "title": "Foydalanuvchi kelishuvi",
+    "updated": "2026-yil oktyabr",
+    "intro": "Bu kelishuv csmarket.uz saytidan foydalanishni tartibga soladi. Xarid shartlari — ommaviy ofertada, bizga skin sotish shartlari — sotib olish shartlarida. Saytdan foydalanishni boshlab, siz bu kelishuvni qabul qilasiz.",
+    "sections": [
+      {
+        "h": "Kim foydalana oladi",
+        "p": "Sayt 18 yoshdan oshgan va mustaqil ravishda bitim tuza oladigan shaxslar uchun moʻljallangan. Agar siz 18 yoshga toʻlmagan boʻlsangiz, saytdan faqat ota-onangiz yoki boshqa qonuniy vakillaringiz roziligi bilan va ularning toʻlov vositalari bilan foydalaning. Bir kishi — bitta hisob."
+      },
+      {
+        "h": "Steam orqali kirish",
+        "p": "Saytga faqat Steam orqali kirish mumkin. Steam hisob sizniki ekanini tasdiqlaydi va bizga uning identifikatorini (Steam ID) beradi. Ism va avatarni Steam profilingizdan olamiz. Steam parolini koʻrmaymiz va hech qachon soʻramaymiz. Kirish 30 kungacha saqlanadi; istalgan payt chiqish mumkin."
+      },
+      {
+        "h": "Hisobingiz",
+        "p": "Steam hisobingizga kirish xavfsizligi va shu hisob ostida saytdagi harakatlar uchun siz javobgarsiz. Almashuv havolasi siz kirgan hisobga tegishli boʻlishi kerak: boshqa hisobning havolasini sayt qabul qilmaydi."
+      },
+      {
+        "h": "Balans",
+        "p": "Har bir hisobda soʻmdagi balans bor. Uni Click, Payme yoki Uzum orqali toʻldirish sahifasida koʻrsatilgan summalar doirasida toʻldirish mumkin. Balansdagi pul saytdagi xaridlarga sarflanadi. Balansga buyurtmalar boʻyicha qaytarilgan pul va bizga sotilgan skinlar uchun pul ham tushadi. Balansga foiz hisoblanmaydi."
+      },
+      {
+        "h": "Xatlar",
+        "p": "Emailni koʻrsatish shart emas. Agar uni koʻrsatib, xatdagi havola orqali tasdiqlasangiz, buyurtmalaringiz va sotuvlaringiz haqida xatlar yuboramiz. Xatlar faqat tasdiqlangan manzilga keladi."
+      },
+      {
+        "h": "Nima taqiqlanadi",
+        "p": "Birovning yoki oʻgʻirlangan kartalari bilan toʻlash. Bizga qonunga zid olingan yoki boshqa odamlarga tegishli buyumlarni sotish. Bila turib yolgʻon maʼlumot berish. Saytdan jinoiy yoʻl bilan olingan daromadlarni legallashtirish yoki boshqa noqonuniy maqsadlar uchun foydalanish. Cheklovlarni chetlab oʻtish, jumladan bir nechta hisob orqali. Ruxsatimizsiz buyurtma berish yoki sayt maʼlumotlarini yigʻish uchun avtomatik vositalardan foydalanish."
+      },
+      {
+        "h": "Tekshiruvlar",
+        "p": "Agar operatsiya asosli shubha uygʻotsa, uni toʻxtatib turish va shaxsingizni yoki toʻlov vositasiga huquqingizni tasdiqlashni soʻrash huquqiga egamiz. Buni toʻlov tashkilotlari bilan shartnomalarimiz va firibgarlikdan himoya talab qiladi. Javob kelmaguncha buyurtma bajarilmaydi. Tasdiq olinmasa, pulni balansga qaytaramiz."
+      },
+      {
+        "h": "Cheklash va bloklash",
+        "p": "Biz saytga kirishni cheklash, hisobni bloklash yoki balansni muzlatish huquqiga egamiz: bu kelishuv buzilganda, firibgarlik yoki birovning toʻlov vositalaridan foydalanish belgilari asosli boʻlganda, soʻralgan tasdiq berilmaganda, shuningdek vakolatli organlar talabi bilan. Steamʼda allaqachon olgan buyumlaringiz sizda qoladi. Agar bloklash xato deb hisoblasangiz, support@csmarket.uz manziliga yozing — murojaatingizni koʻrib chiqamiz."
+      },
+      {
+        "h": "Buyurtmani bajarishdan voz kechish",
+        "p": "Biz buyurtmani bajarishdan voz kechishimiz mumkin — buyum mavjud boʻlmay qolsa, texnik yoki narx xatosida va yuqorida tavsiflangan hollarda. Bunda buyurtma summasi balansga toʻliq qaytariladi."
+      },
+      {
+        "h": "Toʻlovlarga eʼtiroz",
+        "p": "Buyurtmada muammo boʻlsa, avval bizga yozing. Bizga murojaat qilmasdan bank bilan nizo boshlash muammoni hal qilish imkonini bermaydi va kirishning cheklanishiga olib kelishi mumkin. Bu isteʼmolchi huquqlaringizni va kartani chiqargan bankka murojaat qilish huquqingizni cheklamaydi."
+      },
+      {
+        "h": "Javobgarlik",
+        "p": "Sayt «qanday boʻlsa, shundayligicha» ishlaydi. Steam va Valve harakatlari, jumladan hisoblarni bloklash va almashuv qoidalarining oʻzgarishi, shuningdek bizga bogʻliq boʻlmagan sabablarga koʻra ishdagi uzilishlar uchun javobgar emasmiz. Buyurtma boʻyicha javobgarligimiz uning summasi bilan cheklanadi. Bu qonunga koʻra cheklab boʻlmaydigan javobgarlikni cheklamaydi."
+      },
+      {
+        "h": "Fors-major holatlari",
+        "p": "Fors-major holatlari tufayli majburiyatlar bajarilmagani uchun javobgar emasmiz: Steam va toʻlov tizimlaridagi nosozliklar, davlat organlarining cheklovlari, aloqa va elektr taʼminotidagi avariyalar va boshqa favqulodda hodisalar."
+      },
+      {
+        "h": "Sayt mazmuni",
+        "p": "Saytning matnlari, dizayni va dastur kodi bizga tegishli. Ularni roziligimizsiz tijorat maqsadida nusxalash mumkin emas. Counter-Strike, CS2 va Steam — Valve Corporation savdo belgilari. Biz Valve bilan bogʻliq emasmiz va bu belgilardan faqat moslikni koʻrsatish uchun foydalanamiz."
+      },
+      {
+        "h": "Kelishuvning oʻzgarishi",
+        "p": "Biz bu kelishuvni oʻzgartirishimiz mumkin. Yangi tahrir shu sahifada eʼlon qilingan paytdan kuchga kiradi; yangilangan sana yuqorida koʻrsatilgan. Saytdan foydalanishda davom etib, siz yangi tahrirni qabul qilasiz. Toʻlangan buyurtmalarga toʻlov paytida amalda boʻlgan shartlar qoʻllaniladi."
+      },
+      {
+        "h": "Qoʻllaniladigan huquq va til",
+        "p": "Bu kelishuvga va saytning barcha hujjatlariga Oʻzbekiston Respublikasi qonunchiligi qoʻllaniladi. Nizolar muzokaralar yoʻli bilan, kelishuvga erishilmasa — Oʻzbekiston Respublikasi qonunchiligida belgilangan tartibda hal qilinadi. Hujjatlar rus, oʻzbek va ingliz tillarida eʼlon qilingan. Ular oʻrtasida farq boʻlsa, rus tilidagi matn amal qiladi."
+      }
+    ]
+  },
+  "sell": {
+    "title": "Sotib olish shartlari",
+    "updated": "2026-yil oktyabr",
+    "intro": "Bu shartlar CS2 skinlaringizni «Skin sotish» boʻlimida bizga sotganingizda amal qiladi. «Sotish» tugmasini bosib, siz bu shartlarni qabul qilasiz.",
+    "sections": [
+      {
+        "h": "Xaridor kim",
+        "p": "Xaridor — YTT OMONOV JAMSHID IBROHIM OʻGʻLI (savdo nomi csmarket), STIR 50304056560048. Rekvizitlar — «Rekvizitlar» sahifasida."
+      },
+      {
+        "h": "Sotish uchun nima kerak",
+        "p": "Steam orqali kirish, profilda almashuv havolasi, ochiq CS2 inventari va Steam hisobida ruxsat etilgan almashuvlar. Biz hamma buyumlarni sotib olmaymiz: «Skin sotish» boʻlimida hozir sotish mumkin boʻlganlari koʻrsatilgan. Buyumlar roʻyxatini va narxlarni oʻzgartirish, shuningdek sotib olishni vaqtincha yopish huquqiga egamiz."
+      },
+      {
+        "h": "Narx",
+        "p": "Har bir buyum narxini va umumiy summani sotishdan oldin koʻrasiz. Summa «Sotish» tugmasini bosganingizda qayd etiladi va keyin oʻzgarmaydi. Agar buyumlarni tanlayotganingizda narxlar yangilangan boʻlsa, yangi summani koʻrsatamiz va sotuvni qayta tasdiqlash kerak boʻladi."
+      },
+      {
+        "h": "Cheklovlar",
+        "p": "Sotuvning minimal summasi, kartaga toʻlovning minimal summasi va bitta sotuvdagi buyumlar soniga chegara bor. Ular sotuv sahifasida koʻrsatilgan."
+      },
+      {
+        "h": "Sotuv qanday oʻtadi",
+        "p": "Sizga Steamʼda almashuv taklifini yuboramiz. Uni sotuv sahifasida koʻrsatilgan vaqtgacha qabul qiling. Agar almashuv rad etilsa yoki vaqtida qabul qilinmasa, sotuv amalga oshmagan hisoblanadi va buyumlar sizda qoladi."
+      },
+      {
+        "h": "Pul qachon keladi",
+        "p": "Pul almashuvdan 7 kun keyin, Steam almashuv himoyasi tugaganda keladi. Sana sotuv sahifasida koʻrinadi. Agar shu 7 kun ichida almashuv Steamʼda bekor qilinsa, sotuv amalga oshmagan hisoblanadi va u uchun pul hisoblanmaydi."
+      },
+      {
+        "h": "Pulni qayerga olish",
+        "p": "csmarket balansiga — bonus bilan, yoki Uzcard, Humo yoki Uzum Visa kartasiga — komissiya bilan. Bonus va komissiya miqdori sotuvdan oldin koʻrinadi. Kartaga oʻtkazmani almashuv himoyasi tugagandan keyin qoʻlda amalga oshiramiz. Agar kartaga oʻtkazma oʻtmasa, komissiya ushlanmagan summa balansingizga oʻtkaziladi."
+      },
+      {
+        "h": "Sizning kafolatlaringiz",
+        "p": "Buyumlarni sotib, ular sizga tegishli ekanini, qonuniy olinganini, oʻgʻirlanmaganini va boshqa shaxslarning huquqlari bilan bogʻlanmaganini tasdiqlaysiz. Agar bu unday boʻlmasa, oqibatlar uchun siz javobgarsiz, biz esa bu haqda vakolatli organlarga xabar berish huquqiga egamiz."
+      },
+      {
+        "h": "Rad etish va cheklovlar",
+        "p": "Biz xariddan voz kechish yoki uni cheklash huquqiga egamiz — buyumlarning kelib chiqishiga shubha boʻlsa, firibgarlik belgilari boʻlsa yoki hujjatlarimiz buzilsa. Agar almashuv pul toʻlangandan keyin bekor qilinsa, olingan summani qaytarish majburiyatini olasiz; biz siz bilan bogʻlanamiz."
+      },
+      {
+        "h": "Karta maʼlumotlari",
+        "p": "Toʻlovlar uchun karta raqamini shifrlangan holda saqlaymiz va faqat toʻlovlar uchun ishlatamiz. Saqlangan kartani profilda oʻchirish mumkin."
+      },
+      {
+        "h": "Boshqa masalalar",
+        "p": "Bu yerda aytilmagan barcha masalalarda foydalanuvchi kelishuvi, maxfiylik siyosati va Oʻzbekiston Respublikasi qonunchiligi amal qiladi. Savol va daʼvolar — support@csmarket.uz manziliga."
+      }
+    ]
+  },
+  "privacy": {
+    "title": "Maxfiylik siyosati",
+    "updated": "2026-yil oktyabr",
+    "intro": "Qanday maʼlumotlarni olamiz, nima uchun, kimga beramiz va qancha saqlaymiz. Sayt ishlashi uchun zarur boʻlgan minimumni olamiz va maʼlumotlarni sotmaymiz.",
+    "sections": [
+      {
+        "h": "Maʼlumotlarni kim qayta ishlaydi",
+        "p": "YTT OMONOV JAMSHID IBROHIM OʻGʻLI (csmarket), STIR 50304056560048. Maʼlumotlar boʻyicha savollar — support@csmarket.uz manziliga."
+      },
+      {
+        "h": "Qanday maʼlumotlarni olamiz",
+        "p": "Kirishda Steamʼdan — Steam ID, ism va avatar havolasi. Sizdan — almashuv havolasi, email (xohishga koʻra) va bizga skin sotib, pulni kartaga olsangiz, toʻlovlar uchun karta raqami. Sayt ishlashi davomida — buyurtmalar, sotuvlar, balansni toʻldirish va balans boʻyicha operatsiyalar. Toʻlov xizmatlaridan biri bizga toʻlovchining telefon raqami va karta turini maʼlum qiladi. Steam parolini olmaymiz. Toʻlovda karta maʼlumotlari toʻlov xizmati tomonida kiritiladi — biz ularni koʻrmaymiz va saqlamaymiz."
+      },
+      {
+        "h": "IP-manzil",
+        "p": "IP-manzilni maʼlumotlar bazasida saqlamaymiz va jurnallarga yozmaymiz. U faqat qisqa vaqt saytni suiisteʼmollardan himoya qilish uchun ishlatiladi."
+      },
+      {
+        "h": "Maʼlumotlardan nima uchun foydalanamiz",
+        "p": "Saytga kirishingiz, buyumni sotib olib, uni olishingiz, bizga skin sotib, pul olishingiz, balansni toʻldirishingiz va buyurtmalar haqida xat olishingiz uchun. Shuningdek, murojaatlarga javob berish, firibgarlikdan himoyalanish va qonun talablarini bajarish uchun. Maʼlumotlardan reklama uchun foydalanmaymiz."
+      },
+      {
+        "h": "Maʼlumotlarni kimga beramiz",
+        "p": "Faqat sayt ishlashi uchun zarur hajmda. Steam — kirish va almashuv havolasini tekshirish uchun: Steam ID va almashuv havolasi. Buyum sotuvchilari va almashuv yuboriladigan maydonchalar — buyumni yetkazish yoki skinlaringizni qabul qilish uchun almashuv havolasi. Click, Payme va Uzum toʻlov xizmatlari — toʻlov raqami va summasi; ularga Steam ID berilmaydi. Xat yuborish xizmati — xat manzili, mavzusi va matni. Saytni yetkazish va himoya qilish xizmati — soʻrovlarning texnik maʼlumotlari, jumladan IP-manzil. Xosting-provayder — sayt serverlarida saqlanadigan maʼlumotlar. Xatolarni qayd etish xizmati — shaxsiy maʼlumotlarsiz nosozlikning texnik tavsifi. Davlat organlari — qonun talab qilganda."
+      },
+      {
+        "h": "Maʼlumotlarni qanday saqlaymiz",
+        "p": "Maʼlumotlar himoyalangan serverlarda saqlanadi. Toʻlovlar uchun karta raqamlari shifrlangan. Maʼlumotlarga faqat sayt administratorlari kira oladi va bu buyurtmalar va murojaatlar bilan ishlash uchun zarur boʻlgan bilan cheklangan. Sayt ish jurnallariga shaxsiy maʼlumotlar yozilmaydi."
+      },
+      {
+        "h": "Maʼlumotlarni qancha saqlaymiz",
+        "p": "Hisob maʼlumotlari — saytdan foydalanayotganingizcha yoki soʻrovingiz boʻyicha oʻchirilgunga qadar. Buyurtmadagi almashuv havolasining kaliti — buyurtma yakunlangandan keyin 30 kun, keyin havoladan faqat yashirilgan qism qoladi. Emailni tasdiqlash xatidagi manzil — 7 kun. Buyurtmalar, sotuvlar, toʻlovlar va balans operatsiyalari yozuvlari — hisob-kitob, nizolarni hal qilish va qonunni bajarish uchun zarur muddat. Zaxira nusxalari cheklangan muddat saqlanadi, keyin oʻchiriladi."
+      },
+      {
+        "h": "Cookie",
+        "p": "Sayt faqat texnik cookie fayllaridan foydalanadi: kirish sessiyasi (30 kungacha) va Steam orqali kirishning bir martalik kaliti (10 daqiqa). Brauzer xotirasida joriy toʻlovning xizmat maʼlumotlari saqlanishi mumkin. Reklama va analitika cookie fayllari yoʻq."
+      },
+      {
+        "h": "Huquqlaringiz",
+        "p": "Maʼlumotlaringizni profilda koʻrasiz, almashuv havolasi va emailni oʻzgartirishingiz, saqlangan kartalarni oʻchirishingiz mumkin. Maʼlumotlaringiz haqida maʼlumot olish, ularni tuzatish yoki oʻchirish uchun support@csmarket.uz manziliga yozing. Toʻlovlar va buyurtmalar yozuvlarini qonun talab qilgan muddat saqlaymiz."
+      },
+      {
+        "h": "Oʻzgarishlar",
+        "p": "Bu siyosatni yangilashimiz mumkin. Yangi tahrir shu sahifada eʼlon qilingan paytdan kuchga kiradi; yangilangan sana yuqorida koʻrsatilgan."
+      }
+    ]
+  },
+  "refunds": {
+    "title": "Pulni qaytarish",
+    "updated": "2026-yil oktyabr",
+    "intro": "Pulni qachon, qayerga va qancha muddatda qaytaramiz.",
+    "sections": [
+      {
+        "h": "Pulni qachon qaytaramiz",
+        "p": "Xaridni yetkazib boʻlmaganda: almashuv boʻlmagan — siz uni rad etgansiz yoki vaqtida qabul qilmagansiz, uni Steam bekor qilgan — yoki buyum mavjud boʻlmay chiqqan. Buyurtma summasi toʻliq qaytariladi."
+      },
+      {
+        "h": "Qayerga",
+        "p": "Darhol va soʻrovsiz — saytdagi balansingizga. U bilan darhol boshqa buyurtmani toʻlash mumkin."
+      },
+      {
+        "h": "Kartaga qaytarish",
+        "p": "Qoʻllab-quvvatlash xizmatiga soʻrovingiz boʻyicha pulni kartaga yoki siz toʻlagan usulda — kelishilgan paytdan boshlab 5 (besh) ish kuni ichida qaytaramiz. Qaytarish xarajatlarini biz koʻtaramiz. Kartaga tushishi bankingiz tomonida qoʻshimcha vaqt olishi mumkin."
+      },
+      {
+        "h": "Qachon qaytarib boʻlmaydi",
+        "p": "Almashuvni qabul qilgan boʻlsangiz, buyum topshirilgan hisoblanadi va uning puli qaytarilmaydi. Agar almashuv siz qabul qilganingizdan keyin bekor qilinsa, bizga yozing — bunday holatni alohida koʻrib chiqamiz."
+      },
+      {
+        "h": "Qanday soʻrash kerak",
+        "p": "support@csmarket.uz manziliga buyurtma raqamini koʻrsatib yozing. Xat murojaat sanasini qayd etadi — muddat oʻshandan hisoblanadi."
+      }
+    ]
+  },
+  "imprint": {
+    "title": "Rekvizitlar",
+    "updated": "2026-yil oktyabr",
+    "intro": "Sotuvchi haqida maʼlumot va bogʻlanish usuli.",
+    "sections": [
+      {
+        "h": "Sotuvchi",
+        "p": "YTT OMONOV JAMSHID IBROHIM OʻGʻLI, savdo nomi — csmarket. STIR: 50304056560048. Oʻzbekiston Respublikasida roʻyxatdan oʻtgan yakka tartibdagi tadbirkor. Sayt: csmarket.uz."
+      },
+      {
+        "h": "Aloqa",
+        "p": "Elektron pochta: support@csmarket.uz — murojaat va daʼvolar uchun asosiy kanal. Xat sanasi murojaat sanasi hisoblanadi."
+      },
+      {
+        "h": "Huquqiy maqom",
+        "p": "Oʻyin ichidagi buyumlarning mustaqil sotuvchisi. Valve Corporationʼning rasmiy vakili emas va u bilan bogʻliq emas. Counter-Strike, CS2 va Steam — Valve savdo belgilari; ular faqat moslikni koʻrsatish uchun ishlatiladi."
+      }
+    ]
+  }
+}

@@ -66,3 +66,11 @@ export const REFERRAL = "/account/referral";
 
 /** «Пополнение баланса»: the wallet with the kassas (top-up; withdrawals later). */
 export const DEPOSIT = "/deposit";
+
+/** «Документы»: the index of the legal documents (`lib/legal.ts`). */
+export const LEGAL = "/legal";
+
+/** One legal document (`/legal/terms` …); the slugs are `LEGAL_DOCS`. */
+export function legalPath(doc: string): string {
+  return `${LEGAL}/${doc}`;
+}
