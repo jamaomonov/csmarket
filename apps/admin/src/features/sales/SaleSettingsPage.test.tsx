@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SETTINGS } from "./fixtures";
 import { SaleSettingsPage } from "./SaleSettingsPage";
 
+import { ApiError } from "@/lib/api";
+
 const api = vi.hoisted(() => ({ getSaleSettings: vi.fn(), saveSaleSettings: vi.fn() }));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<object>()), ...api }));
 
@@ -39,12 +41,18 @@ describe("SaleSettingsPage", () => {
     await waitFor(() => {
       expect(api.saveSaleSettings).toHaveBeenCalledOnce();
     });
-    const [doc, key] = api.saveSaleSettings.mock.calls[0] as [Record<string, unknown>, string];
+    const [doc, version, key] = api.saveSaleSettings.mock.calls[0] as [
+      Record<string, unknown>,
+      string | null,
+      string,
+    ];
     expect(doc).toMatchObject({
       enabled: true,
       card_min_uzs: 50000,
       card_fee_pct: { uzcard: "5", humo: "1.5", uzum_visa: "5" },
+      max_sale_usd: null,
     });
+    expect(version).toBeNull();
     expect(key).toMatch(/^admin-sale-settings-/);
   });
 
@@ -80,5 +88,41 @@ describe("SaleSettingsPage", () => {
     if (!second) throw new Error("no remove button");
     fireEvent.click(second);
     expect(inputs[0]).toBe(screen.getAllByLabelText(/^От, \$/)[0]);
+  });
+
+  it("sends the limits, empty as no limit, with the version it was edited from", async () => {
+    api.getSaleSettings.mockResolvedValue({
+      ...SETTINGS,
+      updated_at: "2026-10-12T10:00:00.123456Z",
+    });
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Максимум одной продажи, $"), {
+      target: { value: "200" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, сохранить" }));
+    await waitFor(() => {
+      expect(api.saveSaleSettings).toHaveBeenCalledOnce();
+    });
+    const [doc, version] = api.saveSaleSettings.mock.calls[0] as [Record<string, unknown>, string];
+    expect(doc).toMatchObject({ max_sale_usd: "200", max_user_day_usd: null, max_day_usd: null });
+    expect(version).toBe("2026-10-12T10:00:00.123456Z");
+  });
+
+  it("says a stale tab was overwritten by someone else", async () => {
+    api.saveSaleSettings.mockRejectedValue(
+      new ApiError(409, "conflict", { code: "settings_stale" }),
+    );
+    renderPage();
+    fireEvent.click(await screen.findByLabelText("Выкуп включён"));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, сохранить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("сохранил кто-то другой");
+  });
+
+  it("shows the money-losing warning", async () => {
+    api.getSaleSettings.mockResolvedValue({ ...SETTINGS, warnings: ["balance_bonus_eats_margin"] });
+    renderPage();
+    expect(await screen.findByText(/съедает маржу/)).toBeInTheDocument();
   });
 });

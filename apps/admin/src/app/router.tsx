@@ -23,6 +23,7 @@ import { PayoutsPage } from "@/features/sales/PayoutsPage";
 import { SaleDetail } from "@/features/sales/SaleDetail";
 import { SaleSettingsPage } from "@/features/sales/SaleSettingsPage";
 import { SalesPage } from "@/features/sales/SalesPage";
+import { SellBlocksPage } from "@/features/sales/SellBlocksPage";
 import { TradesPage } from "@/features/trades/TradesPage";
 import { UserCard } from "@/features/users/UserCard";
 import { UsersPage } from "@/features/users/UsersPage";
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: "/sales", element: <SalesPage /> },
           { path: "/sales/:number", element: <SaleDetail /> },
           { path: "/sale-settings", element: <SaleSettingsPage /> },
+          { path: "/sale-blocks", element: <SellBlocksPage /> },
           { path: "/api-keys", element: <Navigate to="/users?has_api_key=true" replace /> },
           { path: "/api-keys/:id", element: <ApiKeyRedirect /> },
           { path: "*", element: <NotFoundPage /> },

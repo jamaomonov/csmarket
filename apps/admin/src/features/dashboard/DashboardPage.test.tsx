@@ -120,6 +120,17 @@ describe("DashboardPage", () => {
     expect(tile).toHaveTextContent(/310\s400 сум/);
   });
 
+  it("links the sales waiting for «Проверено», only when there are some", async () => {
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      payouts: { ...DATA.payouts, sales_attention: 3 },
+    });
+    renderPage();
+    const tile = await screen.findByTestId("tile-Продажи: проверить");
+    expect(within(tile).getByRole("link")).toHaveAttribute("href", "/sales?attention=open");
+    expect(tile).toHaveTextContent("3");
+  });
+
   it("an unknown LIS-SKINS balance says so", async () => {
     api.getDashboard.mockResolvedValue({
       ...DATA,

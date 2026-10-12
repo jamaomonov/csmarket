@@ -22,11 +22,13 @@ describe("SalesPage", () => {
           quoted_usd: s.quoted_usd,
           payout_uzs: s.payout_uzs,
           margin_usd: s.margin_usd,
-          attention_reason: null,
+          attention_reason: "rolled_back",
+          attention_open: true,
           created_at: s.created_at,
         },
       ],
       next_cursor: null,
+      attention_open: 2,
     });
   });
 
@@ -45,5 +47,23 @@ describe("SalesPage", () => {
     );
     expect(screen.getAllByText("выплата на карту").length).toBeGreaterThan(1); // row + filter option
     expect(screen.getByText(/147\s400 сум/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ждут проверки: 2" })).toHaveAttribute(
+      "href",
+      "/sales?attention=open",
+    );
+  });
+
+  it("filters by the attention from the URL", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={["/sales?attention=open"]}>
+          <SalesPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("link", { name: "S7K2M9QX" });
+    expect(api.listSales).toHaveBeenCalledWith({ attention: "open" });
+    expect(screen.getByLabelText("Пометка")).toHaveValue("open");
   });
 });

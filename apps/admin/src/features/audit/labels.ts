@@ -19,6 +19,16 @@ export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "orders.buy.retry": "Повтор покупки",
   "sales.payout.paid": "Выплата отмечена",
   "sales.payout.reject": "Выплата отклонена",
+  "sales.payout.claim": "Выплата взята в работу",
+  "sales.payout.takeover": "Выплата забрана у другого",
+  "sales.payout.release": "Выплата отпущена",
+  "sales.payout.undo": "Выплата возвращена в очередь",
+  "sales.payout.cancel": "Выплата отменена (откат)",
+  "sales.card.show": "Номер карты показан",
+  "sales.card.copy": "Номер карты скопирован",
+  "sales.attention.resolve": "Продажа проверена",
+  "sales.user.block": "Выкуп запрещён",
+  "sales.user.unblock": "Выкуп разрешён",
   "sales.settings.save": "Настройки выкупа",
   "api_keys.tariff": "Тариф API-ключа",
   "api_keys.limits": "Лимиты API-ключа",
@@ -36,6 +46,7 @@ export const TARGET_TYPE_LABELS: Readonly<Record<string, string>> = {
   order: "Заказ",
   api_key: "API-ключ",
   payout_request: "Выплата",
+  sale: "Продажа",
   sale_settings: "Настройки выкупа",
   skin_pricing_rules: "Наценки",
 };
@@ -56,6 +67,8 @@ export function targetPath(type: string, id: string): string | null {
       return `/api-keys/${safe}`;
     case "payout_request":
       return `/payouts/${safe}`;
+    case "sale":
+      return `/sales/${safe}`;
     default:
       return null;
   }
@@ -72,6 +85,9 @@ const PAYLOAD_KEYS: Readonly<Record<string, string>> = {
   note: "комментарий",
   enabled: "включён",
   hidden: "скрыт",
+  override: "выплачено несмотря на блокировку",
+  was: "было",
+  last4: "карта",
 };
 
 const MAX_VALUE = 120;

@@ -1,199 +1,102 @@
 /**
- * «Заявка на выплату»: the card (masked; «Показать номер» / «Скопировать номер» go through the
- * audited reveal, the number lives only in this page's state), the money, the items, the
- * seller's history, and «Выплачено» / «Отклонить» behind a confirm, one key per submission.
+ * «Заявка на выплату», built for paying from a phone: on top what to send and where
+ * (`PayBlock`: «Беру в работу», amount, card, sale number), a red banner when the seller is
+ * banned or the wallet frozen, the decisions (`PayoutActions`), the risks (`RiskBlock`), then
+ * the money breakdown, the items and the seller's other sales and payouts.
  */
-import { Button } from "@csmarket/ui";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
-import { getPayout, markPaid, type PayoutDetail as Detail, rejectPayout, revealCard } from "./api";
-import { PAYOUTS_KEY, payoutKey, saleKey } from "./keys";
-import { cardLabel, groupDigits, PAYOUT_LABELS, payoutErrorText, SALE_LABELS } from "./labels";
+import { payoutKey } from "./keys";
+import { PAYOUT_LABELS, SALE_LABELS } from "./labels";
 import { ItemList } from "./Parts";
+import { PayBlock } from "./PayBlock";
+import { PayoutActions } from "./PayoutActions";
+import { getPayout, type PayoutDetail as Detail } from "./payoutsApi";
+import { RiskBlock } from "./RiskBlock";
 
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
-import { DetailGrid, Row, Section } from "@/components/Section";
-import { DASHBOARD_KEY } from "@/features/dashboard/keys";
+import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
-import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 
-const REVEAL_MS = 60_000;
+const at = (iso: string | null | undefined): string => (iso ? formatDateTime(iso) : "—");
 
-function CardBlock({ detail }: { detail: Detail }) {
-  const [number, setNumber] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
-  // The number is set from inside mutationFn and the mutation returns nothing, so the
-  // mutation cache never holds it.
-  const show = useMutation({
-    mutationFn: async (): Promise<void> => {
-      const r = await revealCard(detail.request.id, "show");
-      setNumber(r.number);
-    },
-  });
-  // Gone when the request is decided, and after a minute either way.
-  useEffect(() => {
-    setNumber(null);
-    setCopied(false);
-  }, [detail.request.status, detail.can_decide]);
-  useEffect(() => {
-    if (number === null) return;
-    const t = setTimeout(() => {
-      setNumber(null);
-    }, REVEAL_MS);
-    return () => {
-      clearTimeout(t);
-    };
-  }, [number]);
-  const copy = useMutation({
-    mutationFn: async () => {
-      const r = await revealCard(detail.request.id, "copy");
-      await navigator.clipboard.writeText(r.number);
-    },
-    onSuccess: () => {
-      setCopied(true);
-    },
-  });
+function MoneySection({ d }: { d: Detail }) {
+  const s = d.sale;
   return (
-    <section className="border-border flex flex-col gap-2 rounded-lg border p-4">
-      <h2 className="font-semibold">Карта</h2>
-      <p className="font-mono text-lg">
-        {cardLabel(detail.request.card_type, detail.request.card_masked)}
-      </p>
-      {number !== null ? (
-        <p className="font-mono text-lg tracking-wider">{groupDigits(number)}</p>
-      ) : null}
-      <div className="flex gap-2">
-        <Button
-          variant="secondary"
-          disabled={show.isPending}
-          onClick={() => {
-            show.mutate();
-          }}
-        >
-          Показать номер
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={copy.isPending}
-          onClick={() => {
-            copy.mutate();
-          }}
-        >
-          Скопировать номер
-        </Button>
-        {copied ? <span className="text-fg-muted self-center text-sm">Скопировано</span> : null}
-      </div>
-      {show.isError || copy.isError ? (
-        <p role="alert" className="text-danger text-sm">
-          {errorText(show.error ?? copy.error)}
-        </p>
-      ) : null}
-    </section>
+    <Section title="Деньги">
+      <dl>
+        <Row label="Предметы">
+          <Money uzs={s.items_uzs} />
+        </Row>
+        <Row label="Комиссия карты">
+          <Money uzs={`-${s.fee_uzs}`} />
+        </Row>
+        <Row label="К выплате">
+          <Money uzs={d.request.amount_uzs} className="font-semibold" />
+        </Row>
+        <Row label="Skinslink зачислил">
+          {s.amount_usd !== null ? <Money usd={s.amount_usd} /> : "ещё нет"}
+        </Row>
+        <Row label="Котировка Skinslink">
+          <Money usd={s.quoted_usd} />
+        </Row>
+        <Row label="Наша маржа">
+          <Money usd={s.margin_usd} />
+        </Row>
+        <Row label="Холд до">{at(s.hold_end_at)}</Row>
+        <Row label="К выплате с">{at(d.request.to_pay_at)}</Row>
+        {d.request.paid_at ? <Row label="Выплачено">{at(d.request.paid_at)}</Row> : null}
+        {d.decided_by ? <Row label="Решил">{d.decided_by.display_name ?? "—"}</Row> : null}
+        {d.note ? <Row label="Комментарий">{d.note}</Row> : null}
+        {d.reject_reason ? <Row label="Причина отказа">{d.reject_reason}</Row> : null}
+      </dl>
+    </Section>
   );
 }
 
-type Panel = "none" | "paid" | "reject";
-
-function Actions({ detail, onStale }: { detail: Detail; onStale: () => void }) {
-  const qc = useQueryClient();
-  const id = detail.request.id;
-  const [panel, setPanel] = useState<Panel>("none");
-  const [text, setText] = useState("");
-  const paidKey = useIdempotencyKey("admin-payout-paid");
-  const rejectKey = useIdempotencyKey("admin-payout-reject");
-  const act = useMutation({
-    mutationFn: (p: Exclude<Panel, "none">): Promise<Detail> => {
-      const value = text.trim();
-      return p === "paid"
-        ? markPaid(id, value || null, paidKey.keyFor(JSON.stringify({ id, value })))
-        : rejectPayout(id, value, rejectKey.keyFor(JSON.stringify({ id, value })));
-    },
-    onSuccess: (next, p) => {
-      (p === "paid" ? paidKey : rejectKey).reset();
-      qc.setQueryData(payoutKey(id), next);
-      void qc.invalidateQueries({ queryKey: PAYOUTS_KEY });
-      void qc.invalidateQueries({ queryKey: saleKey(detail.sale.number) });
-      void qc.invalidateQueries({ queryKey: DASHBOARD_KEY });
-      setPanel("none");
-      setText("");
-    },
-    onError: () => {
-      onStale();
-    },
-  });
-  if (!detail.can_decide) return null;
+function History({ d }: { d: Detail }) {
+  const li = "border-border flex justify-between gap-2 border-t py-1.5 first:border-t-0";
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <Button
-          onClick={() => {
-            setPanel("paid");
-          }}
-        >
-          Выплачено
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setPanel("reject");
-          }}
-        >
-          Отклонить
-        </Button>
-      </div>
-      {panel !== "none" ? (
-        <div
-          role="group"
-          aria-label="Подтверждение"
-          className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-4"
-        >
-          <label className="flex flex-col gap-1 text-sm">
-            {panel === "paid" ? "Комментарий" : "Причина"}
-            <textarea
-              maxLength={500}
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-              }}
-              className="border-border bg-bg rounded-md border p-2"
-            />
-          </label>
-          {panel === "reject" ? (
-            <p className="text-fg-muted text-sm">
-              {formatSum(Number(detail.request.amount_uzs) + Number(detail.request.fee_uzs))} будут
-              зачислены на баланс пользователя.
-            </p>
-          ) : null}
-          <div className="flex gap-2">
-            <Button
-              disabled={act.isPending || (panel === "reject" && text.trim() === "")}
-              onClick={() => {
-                act.mutate(panel);
-              }}
-            >
-              {panel === "paid" ? "Да, выплачено" : "Да, отклонить"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setPanel("none");
-              }}
-            >
-              Отмена
-            </Button>
-          </div>
-          {act.isError ? (
-            <p role="alert" className="text-danger text-sm">
-              {payoutErrorText(act.error)}
-            </p>
-          ) : null}
-        </div>
+    <Section title="Другие продажи и выплаты">
+      {d.history_sales.length + d.history_payouts.length === 0 ? (
+        <p className="text-fg-muted text-sm">Других продаж и выплат нет.</p>
       ) : null}
-    </section>
+      {d.history_payouts.length > 0 ? (
+        <>
+          <h3 className="text-fg-muted mb-1 text-xs uppercase">Выплаты</h3>
+          <ul className="mb-3 text-sm">
+            {d.history_payouts.map((h) => (
+              <li key={h.id} className={li}>
+                <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
+                  {h.sale_number}
+                </Link>
+                <span>{PAYOUT_LABELS[h.status]}</span>
+                <Money uzs={h.amount_uzs} />
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {d.history_sales.length > 0 ? (
+        <>
+          <h3 className="text-fg-muted mb-1 text-xs uppercase">Продажи</h3>
+          <ul className="text-sm">
+            {d.history_sales.map((h) => (
+              <li key={h.number} className={li}>
+                <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
+                  {h.number}
+                </Link>
+                <span>{SALE_LABELS[h.status]}</span>
+                <Money uzs={h.payout_uzs} />
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </Section>
   );
 }
 
@@ -210,6 +113,8 @@ export function PayoutDetail() {
   if (!detail.data) return <p className="text-fg-muted">Загрузка…</p>;
   const d = detail.data;
   const s = d.sale;
+  const refresh = () => void detail.refetch();
+  const blocked = d.can_decide && (d.risk?.banned === true || d.risk?.wallet_frozen === true);
   return (
     <div className="space-y-4">
       <PageHeader
@@ -224,75 +129,31 @@ export function PayoutDetail() {
         }
         meta={`${PAYOUT_LABELS[d.request.status]} · ${d.request.user.display_name ?? "Без имени"}`}
       />
+      {blocked ? (
+        <Banner>
+          {d.risk?.banned === true ? "Аккаунт заблокирован" : "Кошелёк заморожен"} — не платите.
+          «Выплачено» только с причиной.
+        </Banner>
+      ) : null}
+      {d.can_cancel === true ? (
+        <Banner>
+          Skinslink откатил обмен после того, как заявка стала к выплате. Если деньги ещё не ушли —
+          «Отменить (откат)».
+        </Banner>
+      ) : null}
       <DetailGrid
         main={
           <>
-            <Section title="Карта и действия">
-              <div className="space-y-4">
-                <CardBlock key={d.request.id} detail={d} />
-                <Actions detail={d} onStale={() => void detail.refetch()} />
-              </div>
-            </Section>
+            <PayBlock key={d.request.id} detail={d} onChanged={refresh} />
+            <PayoutActions detail={d} onStale={refresh} />
+            <RiskBlock detail={d} />
             <ItemList items={s.items} />
           </>
         }
         side={
           <>
-            <Section title="Деньги">
-              <dl>
-                <Row label="Предметы">
-                  <Money uzs={s.items_uzs} />
-                </Row>
-                <Row label="Комиссия карты">
-                  <Money uzs={`-${s.fee_uzs}`} />
-                </Row>
-                <Row label="К выплате">
-                  <Money uzs={d.request.amount_uzs} className="font-semibold" />
-                </Row>
-                <Row label="Skinslink платит нам">
-                  <Money usd={s.amount_usd ?? s.quoted_usd} />
-                </Row>
-                <Row label="Наша маржа">
-                  <Money usd={s.margin_usd} />
-                </Row>
-                <Row label="К выплате с">
-                  {d.request.to_pay_at ? formatDateTime(d.request.to_pay_at) : "—"}
-                </Row>
-                {d.note ? <Row label="Комментарий">{d.note}</Row> : null}
-                {d.reject_reason ? <Row label="Причина отказа">{d.reject_reason}</Row> : null}
-              </dl>
-            </Section>
-            <Section title="История пользователя">
-              <ul className="text-sm">
-                {d.history_sales.map((h) => (
-                  <li
-                    key={h.number}
-                    className="border-border flex justify-between gap-2 border-t py-1.5 first:border-t-0"
-                  >
-                    <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
-                      {h.number}
-                    </Link>
-                    <span>{SALE_LABELS[h.status]}</span>
-                    <Money uzs={h.payout_uzs} />
-                  </li>
-                ))}
-                {d.history_payouts.map((h) => (
-                  <li
-                    key={h.id}
-                    className="border-border flex justify-between gap-2 border-t py-1.5 first:border-t-0"
-                  >
-                    <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
-                      {h.sale_number}
-                    </Link>
-                    <span>{PAYOUT_LABELS[h.status]}</span>
-                    <Money uzs={h.amount_uzs} />
-                  </li>
-                ))}
-                {d.history_sales.length + d.history_payouts.length === 0 && (
-                  <li className="text-fg-muted">Других продаж и выплат нет.</li>
-                )}
-              </ul>
-            </Section>
+            <MoneySection d={d} />
+            <History d={d} />
           </>
         }
       />
