@@ -11,9 +11,14 @@ export function groupDigits(locale: string, value: string | number | null): stri
   );
 }
 
+/** A rarity colour for a glow; an item without one glows Mil-Spec blue. */
+export function rarityColor(color: string | null): string {
+  return color ?? "#4b69ff";
+}
+
 /** Rarity colour → a soft CSS var value for the card glows (falls back to Mil-Spec blue). */
 export function rarityVar(color: string | null): Record<string, string> {
-  return { "--r": color ?? "#4b69ff" };
+  return { "--r": rarityColor(color) };
 }
 
 /** Joins class names, skipping falsy ones (a leading-space template is trimmed by the formatter). */
