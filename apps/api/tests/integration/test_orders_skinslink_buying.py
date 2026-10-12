@@ -188,6 +188,23 @@ async def test_refund_reasons(
     assert (row.status, row.failure_reason) == ("failed", reason)
 
 
+@pytest.mark.parametrize(
+    ("answer", "status", "code"),
+    [
+        (SkinslinkError("perm", status=400, code="permissions"), "refused", "permissions"),
+        (purchase("failed", fail_reason="item_sold"), "failed", "item_sold"),
+    ],
+)
+async def test_a_refusal_is_kept_on_the_purchase_for_the_admin(
+    db_session: AsyncSession, settings: Settings, answer: object, status: str, code: str
+) -> None:
+    """The admin's order view reads Skinslink's status and reason from the purchase row."""
+    order = await _buying(db_session)
+    await attempt_skinslink_buy(db_session, FakeSkinslinkClient(answer), order_id=order.id)
+    p = await _purchase(db_session, order)
+    assert (p.status, p.fail_reason) == (status, code)
+
+
 async def test_a_bad_stored_link_is_refunded_without_a_call(
     db_session: AsyncSession, settings: Settings
 ) -> None:
