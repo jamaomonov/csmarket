@@ -12,8 +12,10 @@ Telegram).
    and deposits) — `docs/runbooks/skinslink.md`.
 2. Deploy with `CSMARKET_SALES_ENABLED=false`; then set it `true` in `secrets/api.env` and
    restart the API, the worker and the scheduler with the pinned `IMAGE_TAG`.
-3. In the admin, «Выкуп» → «Настройки выкупа»: set the real card fees, the bonus, the margin
-   brackets; leave «Выкуп включён» off. Read the `warnings` the settings answer carries:
+3. In the admin, «Настройки» → «Выкуп»: set the real card fees, the bonus, the margin
+   brackets; leave «Выкуп включён» off. A save made in a tab opened before someone else's save
+   is refused («Настройки уже сохранил кто-то другой», 409 `settings_stale`): reload and edit
+   again. Read the `warnings` the settings answer carries (a red banner on the page):
    `balance_bonus_eats_margin` means the top bracket's margin less the balance bonus less 1 %
    (Skinslink may credit 1 % under our quote) is zero or less — an expensive sale to the balance
    loses money. The save is not refused; fix the numbers before switching on.
@@ -25,16 +27,63 @@ Telegram).
 5. The owner makes a test sale with «Выкуп включён» on for a minute: inventory, offer, accept,
    `hold`. Check the sale page and «Продажи» in the admin; then decide whether to leave it on.
 
-## Paying a card request
+## Paying a card request (from a phone)
 
-«Выкуп» → «Заявки на выплату» → «К выплате» (the default tab). Open a request:
+«Выкуп» → «Заявки на выплату» → «К выплате» (the default tab). The queue is **oldest first**:
+the top card has waited longest («ждёт 2 д 3 ч» — orange after 24 h, red after 48 h). The strip
+above it shows what is payable now and what was paid / rejected since midnight (Tashkent) — the
+numbers to check against the bank statement. A chip «платит <имя>» means another admin has
+taken it; red chips are risks (below). The list refreshes itself every 15 s.
 
-1. «Скопировать номер» (or «Показать номер») — each is an audit row
-   (`sales.card.copy` / `sales.card.show`). Never paste the number anywhere but the bank.
-2. Pay the amount shown («К выплате») from the bank by hand.
-3. «Выплачено», with the bank's reference as the note. The seller gets a letter.
+Open the top request. The first screen is everything you need to pay:
+
+1. **«Беру в работу».** The request is yours for 15 minutes; everyone else sees «Платит <вы>»
+   and cannot copy the number or press «Выплачено» without «Забрать себе» (audited). If the
+   page says «Платит <другой> — не платите второй раз», stop: someone is paying it now. Changed
+   your mind — «Отпустить».
+2. **Look at the red banner and «Риски»** before sending money: a banned account or a frozen
+   wallet («не платите»), «Та же карта у других» (one card cashing out several fresh accounts),
+   a new account, many sales in 24 h, a large total. Not sure → do not pay; «Запретить выкуп»
+   (reason for the team only) and ask the owner.
+3. **«Скопировать сумму»** → paste into the bank app's amount (digits only, soʻm).
+4. **«Скопировать номер»** → paste into the card number. Each copy or show is an audit row
+   (`sales.card.copy` / `sales.card.show`) and also takes the request for you. If the phone
+   says «Не скопировалось» the number stays on screen in a field: tap it, «Выделить всё»,
+   «Скопировать». The number hides after a minute. Check the brand (Humo / Uzcard / Uzum Visa)
+   and the last four in the bank app before confirming there.
+5. Send the money in the bank app.
+6. **«Выплачено»** → the confirm says «Выплачено N сум на Humo •••• 1234, получатель X?» —
+   check it is the transfer you just made; put the bank's receipt number into «Комментарий
+   (номер чека банка)»; «Да, выплачено». The seller gets a letter.
 
 The number is never in a list, a letter or a log; do not screenshot it.
+
+**Banned or frozen seller.** «Выплачено» asks «Почему всё равно платите?» and is refused
+without an answer (409 `payout_user_blocked`); the answer goes into the audit row. Usually the
+right move is not to pay: leave it, or «Отклонить» if the wallet is active.
+
+**Pressed the wrong one?** For 10 minutes the page offers «Вернуть в очередь» (a reason is
+required, audited `sales.payout.undo`):
+
+- after «Выплачено»: the request is «К выплате» again. Use it only if the money did **not**
+  go out. If the letter had not left yet, it is dropped; if it had, tell the seller.
+- after «Отклонить»: the money credited to the seller's balance is taken back — only if it is
+  still there. «Пользователь уже потратил эти деньги» (409 `balance_spent`) means the undo is
+  impossible: pay nothing more and settle with the owner (a balance adjustment, audited).
+
+After 10 minutes nothing can be undone from the page.
+
+**Finding a request** when a seller calls: the search takes the sale number (`S…`), the card's
+last four, part of the name or the Steam ID, across all statuses.
+
+**After the deploy that brings migration 0033**, fill the fingerprint of cards saved before
+(otherwise «Та же карта у других» says «неизвестно» for them):
+
+```bash
+docker compose -f docker-compose.prod.yml exec api python -m csmarket.scripts.backfill_card_fp
+```
+
+It prints `filled N` and can be run again safely.
 
 ## Overdue
 
@@ -71,6 +120,8 @@ canceled — you may be paying it at that moment. The sale gets `attention = rol
 
 ## Blocking a seller
 
+In the admin: a payout's «Риски» → «Запретить выкуп» (a reason, never shown to the seller);
+«Выкуп» → «Запрет выкупа» lists everyone blocked, with «Разрешить». API:
 `PUT /admin/sales/blocks/{user_id}` `{"blocked": true, "reason": "…"}` stops a user's
 `POST /sell` (409 `sell_blocked`; the reason is never shown to them); `{"blocked": false}` lifts
 it. Both are audited (`sales.user.block` / `sales.user.unblock`). `GET /admin/sales/blocks`
@@ -95,7 +146,8 @@ lists the blocked users. Open sales of a blocked user still settle normally.
 `SaleAttentionOpen` fires per reason while a sale has an attention nobody marked checked
 (gauge `csmarket_sale_attention_open{reason}`, set by `sales.poll`). Find them with
 `GET /admin/sales?attention=open` (or `&reason=…`; the page's `attention_open` counts them all;
-the dashboard's `payouts.sales_attention` too). When handled, press «Проверено»:
+the dashboard's `payouts.sales_attention` too). In the admin: «Продажи» → «Пометка: ждут проверки» (the dashboard's «Продажи: проверить» tile
+links there). When handled, press «Проверено» on the sale's page (an optional note):
 `POST /admin/sales/{number}/resolve` `{"note": "…"}` — audited `sales.attention.resolve`,
 stamps `resolved_at/by/note` once. A new reason on the same sale opens it again.
 

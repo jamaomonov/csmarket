@@ -130,9 +130,10 @@ next_cursor}`, newest first. A dollar line has `amount_usd` signed (`"-1.500"`) 
   `"0"`; `fx_convert` shows on both lists (one leg each) and `admin_adjust_usd` on the dollar one. `amount_uzs` is
   **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal`,
   `admin_adjust`, `purchase`, `refund`, `sale_credit` (a skin sale paid to the balance) or
-  `payout_return` (a rejected card payout returned to the balance); `reference_number` is the
+  `payout_return` (a rejected card payout returned to the balance) or `payout_return_reversal`
+  (an admin undid that rejection; the money leaves the balance again); `reference_number` is the
   top-up's number for `topup` and `topup_reversal`, the order's number for `purchase` and `refund`,
-  the sale's number (`S…`) for `sale_credit` and `payout_return`, else `null`. The cursor is opaque; a malformed one is 422.
+  the sale's number (`S…`) for `sale_credit`, `payout_return` and `payout_return_reversal`, else `null`. The cursor is opaque; a malformed one is 422.
   `type=topup` keeps `topup` and `topup_reversal` lines; `type=withdrawal` is an empty list
   until payouts exist; any other `type` is 422 («Транзакции» filters).
 - `POST /dev/topups/{number}/pay` is not in this schema: it pays the owner's top-up through

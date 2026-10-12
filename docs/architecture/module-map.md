@@ -203,8 +203,10 @@ Flow: [`sequence-diagrams/lisskins-buy.mmd`](./sequence-diagrams/lisskins-buy.mm
 - **`skinslink`** — gains `deposits.py` (`inventory`, `create-deposit`, `deposit/status`); its
   webhook routes a signed deposit webhook to `sales.api.enqueue_sale_check`.
 - **`wallet`** — a credit-normal `house_skin_buys` account; `credit_sale` (key
-  `sale:{sale_id}`) and `credit_payout_return` (key `payout_return:{request_id}`); entries
-  `sale_credit` / `payout_return` show the sale's `S…` number.
+  `sale:{sale_id}`) and `credit_payout_return` (key `payout_return:{request_id}`), and
+  `debit_payout_return` (`payout_return_reversal`, an admin's undone rejection); entries
+  `sale_credit` / `payout_return` show the sale's `S…` number. `sales` also reads
+  `notifications.api.discard_pending` (a waiting letter about an undone payout decision).
 - **`notifications`** — `email_outbox.sale_id` and the letters `sale_hold`, `sale_paid`,
   `sale_canceled` (one per sale and kind).
 - **`realtime`** — `nudge_sale`: the socket frame `{"type": "sale.updated", "number"}`.

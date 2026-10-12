@@ -38,11 +38,15 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
   one query each. `GET /sales?status=hold` keeps only the sales in Steam's protection.
 - `admin_schemas.py`, `admin_sales.py`, `admin_payouts.py`, `admin_flags.py`,
   `admin_routes.py` — «Выкуп» (`admin_flags`: attention resolve, sell blocks).
+- `admin_payout_routes.py` (mounted before `admin_routes`), `admin_queue.py` (tabs, search,
+  totals, the dashboard summary), `admin_claims.py` («Беру в работу»), `admin_risk.py` (row
+  flags and the «Риски» block), `admin_undo.py` («Вернуть в очередь»).
 
 ## Boundaries
 
 Imports `skinslink.api` (the deposit client), `wallet.api` (`credit_sale`,
-`credit_payout_return`), `notifications.api` (`enqueue`), `realtime.api` (`nudge_sale`),
+`credit_payout_return`, `debit_payout_return`, `WalletAccount` for the frozen check),
+`notifications.api` (`enqueue`, `discard_pending`), `realtime.api` (`nudge_sale`),
 `fx.api`, `skins.api` (`Bracket`, `bracket_margin`, `SkinItem`), `users.api`, `auth.api`,
 `admin.api`. `skinslink.routes` imports `sales.api.enqueue_sale_check`; the dashboard
 `sales.api.payouts_summary`; the worker `drain_sale_checks`; the scheduler `poll_sales`.
@@ -59,6 +63,9 @@ Imports `skinslink.api` (the deposit client), `wallet.api` (`credit_sale`,
   card request is reopened with it.
 - A revert after a card sale became payable never cancels its request (the admin may be paying
   it): `rolled_back`, the request stays `to_pay`; «Выплачено» or «Отменить (откат)».
+- An undone «Отклонить» takes its credit back (`payout_return_reversal`, keyed
+  `payout_return_reversal:{id}:{n}`) only while the balance covers it; a rejection made again
+  credits under `payout_return:{id}:{n}` (`n` = `payout_requests.undo_count`).
 
 ## Settings
 
@@ -92,6 +99,33 @@ audited `sales.attention.resolve`); `POST /payouts/{id}/cancel` («Отмени�
 `to_pay` request of a `rolled_back` sale, audited `sales.payout.cancel`); `GET /blocks`,
 `GET|PUT /blocks/{user_id}` (audited `sales.user.block` / `unblock`). The dashboard's
 `payouts.sales_attention` counts the open attentions.
+
+Paying from a phone (admin review 2026-10-12, `docs/runbooks/sales.md`):
+
+- **Claim.** `POST /payouts/{id}/claim {takeover}` («Беру в работу») leases a `to_pay` request
+  for 15 minutes (`claimed_by` / `claimed_at`; renewed by a claim or a reveal; audited
+  `sales.payout.claim` / `takeover`), `POST /payouts/{id}/release` gives it back
+  (`sales.payout.release`). A reveal claims a free request on the way and is refused for any
+  status but `to_pay`. Another admin's live claim refuses reveal, paid, reject, cancel and undo
+  (409 `payout_claimed`). A decision clears the claim.
+- **Banned / frozen.** `paid` to a banned account or a frozen soʻm wallet is 409
+  `payout_user_blocked` unless the body carries `override_reason` (written into the
+  `sales.payout.paid` audit row as `override`); `reject` to a frozen wallet is 409
+  `wallet_frozen` before anything moves.
+- **Risks.** Queue rows carry `flags` (`banned`, `wallet_frozen`, `sell_blocked`,
+  `new_account` — under 7 days, `shared_card`) and the live claim; a request's page carries
+  `risk` (Steam link, account age, totals sold and paid, paid to this card on any account,
+  sales of the last 24 h, other accounts with the same card by `payout_cards.number_fp`) and
+  `paid_needs_override`. The page's history leaves the request itself out.
+- **Queue.** `to_pay` is oldest first by `to_pay_at`; the other tabs and `status=all` newest
+  first; `q` matches a sale-number prefix, the last four, a display-name substring or a Steam
+  ID; `totals` = payable now, paid / rejected since midnight in Tashkent.
+- **Undo.** `POST /payouts/{id}/undo {reason}` within 10 minutes of paid / rejected (`undo_until`
+  on the page): back to `to_pay`, `undo_count + 1`, the waiting `sale_paid` letter dropped;
+  undoing a rejection debits its credit (409 `balance_spent` / `wallet_frozen`), 409
+  `undo_expired` after the window. Audited `sales.payout.undo` (`was`, `reason`).
+- **Settings.** `PUT /settings` takes `If-Match` (the `updated_at` the edit started from, or
+  `none`): a newer save → 409 `settings_stale`.
 
 ## Process
 

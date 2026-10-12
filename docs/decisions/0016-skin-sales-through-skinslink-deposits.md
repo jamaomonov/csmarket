@@ -100,6 +100,39 @@ reversals) Skinslink's, and its `min_prices` lets us fix the payout when the sal
 Not done: SB-4 (P&L and reconciliation of Skinslink credits — a design of its own), SB-14
 (in-site notifications while email is off — the seller UI's work).
 
+## Amendment 2026-10-12 — paying out from a phone (admin review H1–H3, M1–M10)
+
+- **A claim before the money moves.** The money leaves through a bank app, outside our
+  system, so the double-booking guard does not stop a double _payment_. «Беру в работу» is a
+  15-minute lease on the request (`payout_requests.claimed_by / claimed_at`); a reveal claims
+  a free request; another admin's live claim refuses reveal and every decision (409
+  `payout_claimed`) until an explicit, audited takeover. A lease, not a status: an abandoned
+  claim frees itself, and the status machine (`waiting_hold` → `to_pay` → …) is unchanged.
+  The queue refreshes every 15 s.
+- **The card path is no weaker than the balance path.** «Выплачено» to a banned account or a
+  frozen wallet needs an audited override reason; «Отклонить» to a frozen wallet says so
+  (`wallet_frozen`).
+- **The same card on other accounts** is found by a keyed fingerprint
+  (`payout_cards.number_fp`, HMAC under an HKDF key of the app key) — not a plain hash, which
+  could be brute-forced over the card space from a dump. Existing cards are filled by a
+  one-off script after the deploy: the key never reaches SQL.
+- **Undo for 10 minutes.** A wrong «Выплачено» goes back to the queue (nothing was on our
+  ledger). A wrong «Отклонить» is undone only by taking its credit back: a new transaction kind
+  `payout_return_reversal` debits the seller's wallet under its lock and refuses when the
+  balance no longer covers the credit (`balance_spent`) — our code never drives a balance
+  below zero, and money already spent stays a matter for the owner. Keys carry the request's
+  `undo_count`, so a rejection made again credits once more and never replays the first.
+  The seller's letter about the undone decision is dropped while still waiting in the outbox;
+  one already sent stays sent.
+- **Settings saves are optimistic** (`If-Match` = the `updated_at` the edit started from; 409
+  `settings_stale`), so a stale tab cannot switch selling back on.
+- **The queue** is oldest first with search (sale number, last four, name, Steam ID) and the
+  day's totals in Tashkent time; the admin UI shows it as cards on a phone.
+
+Not done: a required bank reference on «Выплачено» (the comment says «номер чека банка» but is
+optional), a CSV export and a ledger entry for card payouts (M10's accounting half), the bank
+name / holder name of a card (L8), the per-request action trail on the page (L3).
+
 ## Validation
 
 Integration tests pin the double credit, a reversal before and after the credit, the forged
