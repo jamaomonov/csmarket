@@ -58,6 +58,21 @@ async def test_off_is_404(integration_client: AsyncClient) -> None:
     assert r.status_code == 404
 
 
+async def test_selling_switched_off_with_the_credentials_still_hears_deposits(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    sales_on: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """SB-8: a late deposit on a closed sale must still be seen after a switch-off."""
+    monkeypatch.setenv("CSMARKET_SALES_ENABLED", "false")
+    get_settings.cache_clear()
+    sale = await make_sale(db_session, status="closed", fail_reason="not_created")
+    r = await integration_client.post(URL, json=_body(sale.id))
+    assert r.status_code == 200
+    assert await _checks(db_session) == [sale.id]
+
+
 async def test_a_signed_deposit_webhook_queues_a_check_of_its_sale(
     db_session: AsyncSession, integration_client: AsyncClient, sales_on: None
 ) -> None:

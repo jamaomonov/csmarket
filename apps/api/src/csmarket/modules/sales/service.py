@@ -3,7 +3,8 @@
 
 Re-prices the chosen items from the snapshot the seller saw (Redis, 5 min — never the
 browser's numbers), checks the switches, the minimums, ``max_items`` and that the payout is
-the one the cart showed, stores the sale (``creating``), its items and a new card in one
+the one the cart showed, then what :mod:`.limits` refuses (a blocked seller, an item already
+in an open sale, the admin's USD ceilings — under locks held until the commit), stores the sale (``creating``), its items and a new card in one
 transaction and commits; only then calls Skinslink — one call, nothing open across it (AGENTS
 §11, ADR-0016). Its answer is applied by :func:`.status.apply_deposit`, like any later
 status. ``min_prices`` floors every item at 99 % of its quoted price; the seller's payout is
@@ -11,8 +12,8 @@ fixed here, whatever Skinslink credits above the floor (spec §3).
 
 A refusal closes the sale (``fail_reason`` = the code) and answers 409 (``prices_changed``
 also drops the kept snapshot); a 403 closes it and answers 503; an outage or a timeout leaves
-it ``creating`` for the poll; ``409 already exist`` — the call landed after all — is adopted
-through ``deposit/status``.
+it ``creating`` for the poll; ``already_exists`` — the call landed after all — is adopted
+through ``deposit/status`` (any other 409 is a refusal like the rest, SB-12).
 """
 
 from __future__ import annotations
@@ -41,6 +42,7 @@ from csmarket.modules.sales.inventory import (
     forget_snapshot,
     unavailable,
 )
+from csmarket.modules.sales.limits import check_sale_allowed
 from csmarket.modules.sales.models import Sale, SaleItem
 from csmarket.modules.sales.pricing import (
     ItemQuote,
@@ -171,6 +173,14 @@ async def _draft(
     _check_minimums(doc, rate, quoted, payout, body.payout.to)
     if payout.payout_uzs != body.expected_payout_uzs:
         raise _prices_changed()
+    await check_sale_allowed(
+        db,
+        user_id=user.id,
+        asset_ids=[i.id for i in chosen],
+        quoted_usd=quoted,
+        doc=doc,
+        at=now(),
+    )
     return _Draft(
         user_id=user.id,
         link=link,
@@ -282,7 +292,7 @@ async def _refused(
     draft: _Draft,
     exc: SkinslinkError,
 ) -> Sale:
-    if exc.status == 409 or exc.code == "already_exists":  # the call landed after all
+    if exc.code == "already_exists":  # the call landed after all
         await check_sale(db, client, sale_id=sale_id)
         return await _reload(db, sale_id)
     code = exc.code or f"http_{exc.status}"
@@ -343,7 +353,8 @@ async def create_sale(
     Raises:
         ConflictError: ``sales_disabled``, ``trade_link_missing``, ``trade_link_bad``,
             ``prices_changed``, ``below_minimum``, ``below_card_minimum``, ``too_many_items``,
-            ``steam_refused``, ``cards_limit``.
+            ``steam_refused``, ``cards_limit``, ``sell_blocked``, ``items_in_sale``,
+            ``above_sale_maximum``, ``user_daily_limit``, ``daily_limit``.
         ValidationError: ``card_invalid``.
         NotFoundError: A saved card that is not the seller's.
         RateUnavailableError: No fresh rate.

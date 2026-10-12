@@ -130,9 +130,23 @@ SKINSLINK_CALLS = Counter(
 )
 
 #: Where the status machine moved a sale (``sales.status.apply_deposit``; spec 2026-10-08).
+#: ``reopened``: a closed / reverted sale Skinslink reports alive again; ``unknown``: a status
+#: the machine does not know (alert: SaleUnknownStatus).
 _SALE_OUTCOMES = frozenset(
-    ("offered", "hold", "credited", "payout", "closed", "reverted", "attention")
+    (
+        "offered",
+        "hold",
+        "credited",
+        "payout",
+        "closed",
+        "reverted",
+        "attention",
+        "reopened",
+        "unknown",
+    )
 )
+#: ``sales.attention_reason`` values (``sales.models.ATTENTION_REASONS``).
+SaleAttentionReason = Literal["rolled_back", "late_deposit", "credit_blocked"]
 SALE_OUTCOMES = Counter(
     "csmarket_sale_outcomes_total",
     "Sales moved by the status machine, by where they went (spec 2026-10-08).",
@@ -280,6 +294,15 @@ PUBLIC_API_BUYING_OLDEST = Gauge(
 SALE_PAYOUTS_OVERDUE = Gauge(
     "csmarket_sale_payouts_overdue",
     "Card payouts payable for over 48 h (alert: SalePayoutsOverdue; set by sales.poll).",
+)
+SALE_ATTENTION_OPEN = Gauge(
+    "csmarket_sale_attention_open",
+    "Sales with an open attention, by reason (alert: SaleAttentionOpen; set by sales.poll).",
+    ("reason",),
+)
+SALE_HOLDS_OVERDUE = Gauge(
+    "csmarket_sale_holds_overdue",
+    "Sales still in hold 6 h past their hold end (alert: SaleHoldOverdue; set by sales.poll).",
 )
 TRADES_ATTENTION = Gauge(
     "csmarket_trades_attention",
@@ -558,6 +581,26 @@ def set_sale_payouts_overdue(count: int) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_sale_payouts_overdue", error=type(exc).__name__
+        )
+
+
+def set_sale_attention_open(reason: SaleAttentionReason, count: int) -> None:
+    """Set how many sales have an open attention of ``reason``. Never raises."""
+    try:
+        SALE_ATTENTION_OPEN.labels(reason=reason).set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_sale_attention_open", error=type(exc).__name__
+        )
+
+
+def set_sale_holds_overdue(count: int) -> None:
+    """Set how many sales sit in hold past their hold end. Never raises."""
+    try:
+        SALE_HOLDS_OVERDUE.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_sale_holds_overdue", error=type(exc).__name__
         )
 
 
@@ -864,6 +907,7 @@ __all__ = [
     "OrderBuyOutcome",
     "OrderRefundReason",
     "OrderStuckState",
+    "SaleAttentionReason",
     "SkinslinkEndpoint",
     "SkinslinkOutcome",
     "SteamApiConsumer",
@@ -892,6 +936,8 @@ __all__ = [
     "set_lisskins_snapshot",
     "set_orders_stuck",
     "set_public_api_buying_oldest",
+    "set_sale_attention_open",
+    "set_sale_holds_overdue",
     "set_sale_payouts_overdue",
     "set_skinslink_balance",
     "set_skinslink_enabled",

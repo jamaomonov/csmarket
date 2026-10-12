@@ -7,6 +7,11 @@ request may be decided (409 ``payout_not_payable``): before ``completed`` no mon
 give. «Отклонить» credits the balance with the amount before the card fee
 (``credit_payout_return``, keyed by the request). The full number leaves only through
 :func:`reveal`, audited each time; it is never part of a page or a replay.
+
+A Skinslink revert after the request became payable never cancels it (the admin may be paying
+it right now, review SB-3 / M7): the sale is flagged ``rolled_back`` and the request stays
+``to_pay``. «Выплачено» still records a transfer that went out; «Отменить (откат)»
+(:func:`cancel_rolled_back`) closes it unpaid.
 """
 
 from __future__ import annotations
@@ -25,6 +30,7 @@ from csmarket.core.logging import get_logger
 from csmarket.modules.admin.api import record
 from csmarket.modules.realtime.api import nudge_sale
 from csmarket.modules.sales.admin_sales import (
+    ATTENTION_OPEN_SQL,
     payout_row,
     sale_admin_out,
     sale_row,
@@ -162,7 +168,13 @@ async def payout_detail(db: AsyncSession, request_id: str) -> PayoutDetailOut:
         history_sales=[sale_row(s, user_of(users, s.user_id)) for s in sales],
         history_payouts=await _rows(db, list(payouts)),
         can_decide=request.status == "to_pay",
+        can_cancel=_cancelable(sale, request),
     )
+
+
+def _cancelable(sale: Sale, request: PayoutRequest) -> bool:
+    """«Отменить (откат)»: a payable request whose sale Skinslink reverted afterwards."""
+    return request.status == "to_pay" and sale.attention_reason == "rolled_back"
 
 
 async def reveal(
@@ -258,16 +270,45 @@ async def reject(db: AsyncSession, *, request_id: str, admin_id: str, reason: st
     return request
 
 
+async def cancel_rolled_back(
+    db: AsyncSession, *, request_id: str, admin_id: str, reason: str
+) -> PayoutRequest:
+    """«Отменить (откат)»: the sale was reverted after it became payable and the admin did not
+    pay; the request is canceled, the sale ``reverted``, its attention marked checked and the
+    seller gets the canceled letter. Flushes.
+
+    Raises:
+        ConflictError: ``payout_not_payable`` (not ``to_pay``), ``payout_not_cancelable``
+            (the sale was not reverted).
+    """
+    sale, request = await _locked(db, request_id)
+    if not _cancelable(sale, request):
+        raise ConflictError(
+            "only a payout whose sale was reverted can be canceled", code="payout_not_cancelable"
+        )
+    at = now()
+    request.status, request.paid_by, request.note = "canceled", admin_id, reason
+    sale.status, sale.fail_reason = "reverted", "reverted"
+    sale.resolved_at, sale.resolved_by, sale.resolved_note = at, admin_id, reason
+    await enqueue_sale_letter(db, sale, "sale_canceled")
+    await nudge_sale(db, user_id=sale.user_id, number=sale.number)
+    await db.flush()
+    log.info("sales.payout.canceled", number=sale.number, amount_uzs=str(request.amount_uzs))
+    return request
+
+
 @dataclass(frozen=True)
 class PayoutsSummary:
     """The dashboard's «К выплате»."""
 
     to_pay_count: int
     to_pay_uzs: Decimal
+    #: Sales with an open attention (any reason).
+    sales_attention: int = 0
 
 
 async def payouts_summary(db: AsyncSession) -> PayoutsSummary:
-    """How many card payouts are payable now, and their sum."""
+    """How many card payouts are payable now, their sum, and the sales waiting for a look."""
     count, total = (
         await db.execute(
             select(func.count(), func.coalesce(func.sum(PayoutRequest.amount_uzs), 0)).where(
@@ -275,11 +316,15 @@ async def payouts_summary(db: AsyncSession) -> PayoutsSummary:
             )
         )
     ).one()
-    return PayoutsSummary(to_pay_count=int(count), to_pay_uzs=Decimal(total))
+    flagged = await db.scalar(select(func.count()).select_from(Sale).where(ATTENTION_OPEN_SQL))
+    return PayoutsSummary(
+        to_pay_count=int(count), to_pay_uzs=Decimal(total), sales_attention=int(flagged or 0)
+    )
 
 
 __all__ = [
     "PayoutsSummary",
+    "cancel_rolled_back",
     "list_payouts",
     "mark_paid",
     "payout_detail",

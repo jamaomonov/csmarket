@@ -6,10 +6,15 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
-from csmarket.modules.sales.rules import CardType, PayoutTo, SaleSettings
+from csmarket.modules.sales.rules import CardType, PayoutTo, SaleSettings, SettingsWarning
 from csmarket.modules.sales.schemas import PayoutStatusOut, SaleStatusOut
+
+#: Why a sale waits for an admin (``sales.models.ATTENTION_REASONS``).
+AttentionReasonOut = Literal["rolled_back", "late_deposit", "credit_blocked"]
+#: The sales list's attention filter: ``open`` (unresolved), ``resolved``, ``any`` (either).
+AttentionFilter = Literal["open", "resolved", "any"]
 
 
 class AdminUserOut(BaseModel):
@@ -76,15 +81,19 @@ class AdminSaleRowOut(BaseModel):
     quoted_usd: str
     payout_uzs: str
     margin_usd: str
-    attention_reason: str | None
+    attention_reason: AttentionReasonOut | None
+    #: The attention is set and no admin marked it checked yet.
+    attention_open: bool
     created_at: datetime
 
 
 class AdminSalesPageOut(BaseModel):
-    """One page of sales and the next cursor."""
+    """One page of sales, the next cursor and how many sales have an open attention."""
 
     items: list[AdminSaleRowOut]
     next_cursor: str | None
+    #: Every sale with an open attention, whatever the filters (the tab's badge).
+    attention_open: int
 
 
 class AdminSaleOut(BaseModel):
@@ -110,7 +119,12 @@ class AdminSaleOut(BaseModel):
     offer_expiry_at: datetime | None
     hold_end_at: datetime | None
     fail_reason: str | None
-    attention_reason: str | None
+    attention_reason: AttentionReasonOut | None
+    attention_open: bool
+    #: «Проверено»: when, by whom, the admin's note.
+    resolved_at: datetime | None
+    resolved_by: AdminUserOut | None
+    resolved_note: str | None
     credited_at: datetime | None
     created_at: datetime
     updated_at: datetime
@@ -130,6 +144,9 @@ class PayoutDetailOut(BaseModel):
     history_payouts: list[PayoutRowOut]
     #: «Выплачено» and «Отклонить» are possible (the request is ``to_pay``).
     can_decide: bool
+    #: «Отменить (откат)» is possible: ``to_pay`` and the sale reverted after it became
+    #: payable (``attention_reason = rolled_back``).
+    can_cancel: bool
 
 
 class RevealIn(BaseModel):
@@ -157,11 +174,55 @@ class RejectIn(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
+class CancelIn(BaseModel):
+    """«Отменить (откат)» with the reason (required)."""
+
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class ResolveIn(BaseModel):
+    """«Проверено» with an optional note."""
+
+    note: str | None = Field(default=None, max_length=500)
+
+
+class SellBlockIn(BaseModel):
+    """Block a user from selling (a reason is required) or lift the block."""
+
+    blocked: bool
+    reason: str | None = Field(default=None, max_length=500)
+
+    @model_validator(mode="after")
+    def _reason(self) -> SellBlockIn:
+        if self.blocked and not (self.reason and self.reason.strip()):
+            raise ValueError("a block needs a reason")
+        return self
+
+
+class SellBlockOut(BaseModel):
+    """Whether a user may sell; who blocked them, when and why."""
+
+    user: AdminUserOut
+    blocked: bool
+    reason: str | None
+    blocked_by: AdminUserOut | None
+    blocked_at: datetime | None
+
+
+class SellBlocksOut(BaseModel):
+    """Every blocked user, newest block first."""
+
+    items: list[SellBlockOut]
+
+
 class SaleSettingsOut(BaseModel):
-    """The saved document, who saved it and when, and the rate now."""
+    """The saved document, who saved it and when, the rate now and what in it loses money."""
 
     settings: SaleSettings
     updated_at: datetime | None
     updated_by: AdminUserOut | None
     #: The CBU rate now (no uplift), before ``rate_cut_pct``; ``null`` without one.
     rate_uzs: str | None
+    #: Advice, never a refusal: ``balance_bonus_eats_margin`` — the top margin bracket less the
+    #: balance bonus less 1 % is zero or less.
+    warnings: list[SettingsWarning]

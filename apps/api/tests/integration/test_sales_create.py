@@ -409,6 +409,24 @@ async def test_a_used_tx_id_is_adopted_through_the_status(
     assert len(fake.status_calls) == 1
 
 
+async def test_another_409_is_a_refusal_not_an_adoption(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    fake: FakeDepositClient,
+) -> None:
+    """SB-12: only ``already_exists`` means the call landed; any other 409 closes the sale."""
+    fake.created = SkinslinkError("refused", status=409, code="active_deposit")
+    headers = await _seller(db_session, integration_client, customer_headers)
+    r = await integration_client.post(URL, json=BALANCE, headers={**headers, **_key()})
+    assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
+    assert fake.status_calls == []
+    sale = await db_session.scalar(select(Sale).execution_options(populate_existing=True))
+    assert sale is not None
+    assert (sale.status, sale.fail_reason) == ("closed", "active_deposit")
+
+
 async def test_a_timeout_leaves_the_sale_creating_for_the_poll(
     db_session: AsyncSession,
     integration_client: AsyncClient,
@@ -496,10 +514,12 @@ async def test_the_sale_is_committed_before_the_one_skinslink_call(
 
 
 @pytest.mark.parametrize(
-    ("closed_by", "attention"),
+    ("closed_by", "after"),
     [
-        ("bot_error", None),  # a Skinslink failure a webhook check applied first: stale answer
-        ("not_created", "late_deposit"),  # our poll saw no deposit; the answer proves one
+        # a Skinslink failure a webhook check applied first: a stale answer, ignored
+        ("bot_error", ("closed", "bot_error", None)),
+        # our poll saw no deposit; the answer proves one: the sale is reopened (SB-1)
+        ("not_created", ("creating", None, None)),
     ],
 )
 async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
@@ -510,7 +530,7 @@ async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
     sales_on: None,
     fake: FakeDepositClient,
     closed_by: str,
-    attention: str | None,
+    after: tuple[str, str | None, None],
 ) -> None:
     """SL-4: a webhook check closed the sale while ``create-deposit`` was in flight."""
     original = fake.create_deposit
@@ -527,11 +547,7 @@ async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
     headers = await _seller(db_session, integration_client, customer_headers)
     r = await integration_client.post(URL, json=BALANCE, headers={**headers, **_key()})
     sale = await _sale(db_session, r.json()["number"])
-    assert (sale.status, sale.fail_reason, sale.attention_reason) == (
-        "closed",
-        closed_by,
-        attention,
-    )
+    assert (sale.status, sale.fail_reason, sale.attention_reason) == after
 
 
 @pytest.mark.parametrize(

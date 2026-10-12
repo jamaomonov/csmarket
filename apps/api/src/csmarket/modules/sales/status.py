@@ -5,6 +5,7 @@
 transaction, asks Skinslink ``deposit/status`` and applies the answer under the lock — the
 worker (a webhook's check), the poll and ``POST /sell`` all go through it or through
 :func:`apply_deposit`, so a webhook body is never trusted and no call holds a lock.
+Statuses are compared lower-cased.
 
 - ``creating`` + ``active`` → ``offered`` (``new`` / ``pending`` only record the poll; never
   back from ``hold``);
@@ -14,10 +15,14 @@ worker (a webhook's check), the poll and ``POST /sell`` all go through it or thr
 - + ``failed`` / ``canceled`` → ``closed``; + ``reverted`` → ``reverted``; an open request is
   canceled — nothing was paid;
 - ``creating`` that Skinslink does not know after :data:`NOT_FOUND_GRACE` → ``closed``
-  (``not_created``: the call never landed);
-- settled: ``reverted`` after the money left → ``attention_reason = rolled_back``, no debit
-  (a ``payout`` whose request is still ``to_pay`` is reverted instead: nothing was paid); a
-  ``closed`` sale Skinslink reports alive or reverted → ``late_deposit`` (nothing was paid).
+  (``not_created``: the call never landed — the poll keeps asking for a day, SB-1);
+- a ``closed`` or ``reverted`` sale has paid nothing, so one Skinslink reports alive again
+  (``new`` … ``completed``) is **reopened** and follows the report — a late deposit is paid
+  normally (review 2026-10-11 SB-1, SB-11);
+- settled: ``reverted`` after the sale became payable or was paid → ``attention_reason =
+  rolled_back``, no debit, and a card request still ``to_pay`` is left for the admin (they may
+  be mid-transfer, SB-3); a ``closed`` sale reported ``reverted`` → ``late_deposit``;
+- an unknown status changes nothing and is counted (``outcome="unknown"``, SB-9).
 """
 
 from __future__ import annotations
@@ -36,7 +41,7 @@ from csmarket.core.metrics import record_sale_outcome
 from csmarket.modules.realtime.api import nudge_sale
 from csmarket.modules.sales.letters import enqueue_sale_letter
 from csmarket.modules.sales.models import OPEN_STATUSES, Sale
-from csmarket.modules.sales.payouts import cancel_request, open_request, request_of
+from csmarket.modules.sales.payouts import cancel_request, open_request
 from csmarket.modules.skinslink.api import (
     Deposit,
     DepositClient,
@@ -48,12 +53,25 @@ from csmarket.modules.wallet.api import credit_sale
 log = get_logger("csmarket.sales.status")
 
 Outcome = Literal[
-    "unchanged", "offered", "hold", "credited", "payout", "closed", "reverted", "attention"
+    "unchanged",
+    "offered",
+    "hold",
+    "credited",
+    "payout",
+    "closed",
+    "reverted",
+    "attention",
+    "reopened",
 ]
-#: How long a ``creating`` sale Skinslink does not know stays open (the call may be in flight).
-NOT_FOUND_GRACE = timedelta(minutes=2)
+#: How long a ``creating`` sale Skinslink does not know stays open: ``create-deposit`` sends
+#: the Steam offer before it answers, and a slow Steam takes long (SB-1).
+NOT_FOUND_GRACE = timedelta(minutes=10)
 _LIVE = frozenset({"new", "pending", "active"})
 _DEAD = frozenset({"failed", "canceled"})
+#: Statuses that say the deposit goes on: a closed or reverted sale reported so is reopened.
+_ALIVE = _LIVE | {"hold", "completed"}
+#: Settled statuses that paid nothing (no credit; the card request canceled).
+_UNPAID_SETTLED = frozenset({"closed", "reverted"})
 _USD = Decimal("0.000001")
 
 
@@ -103,12 +121,30 @@ async def apply_deposit(
         outcome = await _missing(db, sale, at)
     else:
         _record(sale, report)
+        status = report.status.lower()
+        reopened = sale.status in _UNPAID_SETTLED and status in _ALIVE
+        if reopened:
+            _reopen(sale)
         if sale.status in OPEN_STATUSES:
-            outcome = await _open(db, sale, report)
+            outcome = await _open(db, sale, status, report.fail_reason)
         else:
-            outcome = await _settled(db, sale, report.status)
+            outcome = await _settled(sale, status)
+        if reopened and outcome == "unchanged":
+            outcome = "reopened"
     await _moved(db, sale, outcome)
     return outcome
+
+
+def _reopen(sale: Sale) -> None:
+    """A closed / reverted sale Skinslink reports alive: back to ``creating`` to follow it.
+
+    Nothing was paid on it, so following the report pays the seller once (the credit is keyed
+    by the sale; ``payouts.open_request`` reopens a canceled card request).
+    """
+    log.warning("sales.reopened", number=sale.number, was=sale.status, reason=sale.fail_reason)
+    sale.status, sale.fail_reason = "creating", None
+    if sale.attention_reason in ("late_deposit", "credit_blocked"):
+        _clear_attention(sale)
 
 
 async def _moved(db: AsyncSession, sale: Sale, outcome: Outcome) -> None:
@@ -139,8 +175,7 @@ async def _missing(db: AsyncSession, sale: Sale, at: datetime) -> Outcome:
     return "unchanged"
 
 
-async def _open(db: AsyncSession, sale: Sale, report: Deposit) -> Outcome:
-    status = report.status
+async def _open(db: AsyncSession, sale: Sale, status: str, fail_reason: str | None) -> Outcome:
     if status in _LIVE:
         return _offered(sale, status)
     if status == "hold":
@@ -148,11 +183,12 @@ async def _open(db: AsyncSession, sale: Sale, report: Deposit) -> Outcome:
     if status == "completed":
         return await _complete_guarded(db, sale)
     if status in _DEAD:
-        reason = report.fail_reason or status
+        reason = fail_reason or status
         return await _close(db, sale, reason, letter=sale.status != "creating")
     if status == "reverted":
-        return await _revert(db, sale, report.fail_reason or status)
-    log.warning("sales.unknown_status", status=status, sale=sale.number)
+        return await _revert(db, sale, fail_reason or status)
+    log.warning("sales.unknown_status", status=status[:32], sale=sale.number)
+    record_sale_outcome("unknown")
     return "unchanged"
 
 
@@ -193,7 +229,8 @@ async def _complete(db: AsyncSession, sale: Sale) -> Outcome:
     at = now()
     if sale.payout_to == "balance":
         await credit_sale(db, user_id=sale.user_id, sale_id=sale.id, amount=sale.payout_uzs)
-        sale.status, sale.credited_at, sale.attention_reason = "credited", at, None
+        sale.status, sale.credited_at = "credited", at
+        _clear_blocked(sale)
         await enqueue_sale_letter(db, sale, "sale_paid", to="balance")
         return "credited"
     request = await open_request(db, sale, status="to_pay")
@@ -206,6 +243,7 @@ async def _complete(db: AsyncSession, sale: Sale) -> Outcome:
 
 async def _close(db: AsyncSession, sale: Sale, reason: str, *, letter: bool) -> Outcome:
     sale.status, sale.fail_reason = "closed", reason[:48]
+    _clear_blocked(sale)
     await cancel_request(db, sale)
     if letter:
         await enqueue_sale_letter(db, sale, "sale_canceled")
@@ -214,35 +252,45 @@ async def _close(db: AsyncSession, sale: Sale, reason: str, *, letter: bool) -> 
 
 async def _revert(db: AsyncSession, sale: Sale, reason: str) -> Outcome:
     sale.status, sale.fail_reason = "reverted", reason[:48]
+    _clear_blocked(sale)
     await cancel_request(db, sale)
     await enqueue_sale_letter(db, sale, "sale_canceled")
     return "reverted"
 
 
-async def _settled(db: AsyncSession, sale: Sale, status: str) -> Outcome:
-    if sale.status == "closed" and status not in _DEAD:  # nothing was paid: not a rollback
-        return _attention(sale, "late_deposit")
-    if status == "reverted":
-        return await _revert_settled(db, sale)
-    return "unchanged"
+async def _settled(sale: Sale, status: str) -> Outcome:
+    """A settled sale: only ``reverted`` matters (alive reports reopened unpaid ones above).
 
-
-async def _revert_settled(db: AsyncSession, sale: Sale) -> Outcome:
-    if sale.status == "reverted":
+    A reverted ``closed`` sale is ``late_deposit`` (nothing was paid, the skins went back);
+    a reverted ``credited`` / ``payout`` sale is ``rolled_back`` — never debited, and a card
+    request still ``to_pay`` stays open: the admin may be paying it right now (SB-3).
+    """
+    if status != "reverted" or sale.status == "reverted":
         return "unchanged"
-    if sale.status == "payout":
-        request = await request_of(db, sale.id, lock=True)
-        if request is not None and request.status == "to_pay":  # nothing was paid yet
-            return await _revert(db, sale, "reverted")
+    if sale.status == "closed":
+        return _attention(sale, "late_deposit")
     return _attention(sale, "rolled_back")
 
 
 def _attention(sale: Sale, reason: str) -> Outcome:
-    if sale.attention_reason is not None:
+    """Flag ``sale`` for an admin; a new reason reopens a resolved flag."""
+    if sale.attention_reason == reason:
         return "unchanged"
     sale.attention_reason = reason
+    sale.resolved_at = sale.resolved_by = sale.resolved_note = None
     log.warning("sales.attention", number=sale.number, reason=reason)
     return "attention"
+
+
+def _clear_attention(sale: Sale) -> None:
+    sale.attention_reason = None
+    sale.resolved_at = sale.resolved_by = sale.resolved_note = None
+
+
+def _clear_blocked(sale: Sale) -> None:
+    """A ``credit_blocked`` flag ends with the sale's credit, close or revert (SB-13)."""
+    if sale.attention_reason == "credit_blocked":
+        _clear_attention(sale)
 
 
 async def check_sale(db: AsyncSession, client: DepositClient, *, sale_id: str) -> Outcome:

@@ -16,6 +16,7 @@ from csmarket.modules.sales.payouts import request_of
 from csmarket.modules.sales.status import Outcome, apply_deposit, check_sale, close, lock_sale
 from csmarket.modules.skinslink.api import Deposit, SkinslinkUnavailableError
 from csmarket.modules.wallet.api import WalletTransaction, user_account, user_balance
+from prometheus_client import REGISTRY
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from structlog.testing import capture_logs
@@ -193,13 +194,19 @@ async def test_reverted_after_a_credit_opens_rolled_back_and_never_debits(
     assert await _credits(db_session, sale) == 1
 
 
-async def test_a_reverted_payout_still_to_pay_is_reverted(db_session: AsyncSession) -> None:
+async def test_a_reverted_payout_still_to_pay_waits_for_the_admin(
+    db_session: AsyncSession,
+) -> None:
+    """SB-3: the admin may be paying it right now; the request is never canceled under them."""
     sale = await make_sale(db_session, status="payout", payout_to="card")
     await make_request(db_session, sale, status="to_pay")
-    assert await _apply(db_session, sale, deposit("reverted")) == "reverted"
+    assert await _apply(db_session, sale, deposit("reverted")) == "attention"
     request = await request_of(db_session, sale.id)
     assert request is not None
-    assert request.status == "canceled"
+    assert request.status == "to_pay"
+    s = await _fresh(db_session, sale)
+    assert (s.status, s.attention_reason) == ("payout", "rolled_back")
+    assert await _letters(db_session, sale) == []
 
 
 async def test_a_reverted_payout_already_paid_waits_for_an_admin(db_session: AsyncSession) -> None:
@@ -213,16 +220,127 @@ async def test_a_reverted_payout_already_paid_waits_for_an_admin(db_session: Asy
 async def test_a_creating_sale_unknown_after_the_grace_closes(db_session: AsyncSession) -> None:
     young = await make_sale(db_session, status="creating")
     assert await _apply(db_session, young, None) == "unchanged"
-    old = await make_sale(db_session, status="creating", created_at=now() - timedelta(minutes=3))
+    mid = await make_sale(db_session, status="creating", created_at=now() - timedelta(minutes=3))
+    assert await _apply(db_session, mid, None) == "unchanged"  # SB-1: a slow Steam is slow
+    old = await make_sale(db_session, status="creating", created_at=now() - timedelta(minutes=11))
     assert await _apply(db_session, old, None) == "closed"
     assert (await _fresh(db_session, old)).fail_reason == "not_created"
 
 
-async def test_a_closed_sale_reported_alive_is_late_deposit(db_session: AsyncSession) -> None:
-    sale = await make_sale(db_session, status="closed", fail_reason="not_created")
-    assert await _apply(db_session, sale, deposit("hold")) == "attention"
+async def test_a_closed_sale_reported_in_hold_is_reopened(db_session: AsyncSession) -> None:
+    """SB-1: nothing was paid on a closed sale; a late deposit follows the report."""
+    sale = await make_sale(
+        db_session, status="closed", fail_reason="not_created", attention_reason="late_deposit"
+    )
+    with capture_logs() as logs:
+        assert await _apply(db_session, sale, deposit("hold")) == "hold"
     s = await _fresh(db_session, sale)
-    assert (s.status, s.attention_reason) == ("closed", "late_deposit")
+    assert (s.status, s.fail_reason, s.attention_reason) == ("hold", None, None)
+    assert await _letters(db_session, sale) == ["sale_hold"]
+    assert any(e["event"] == "sales.reopened" and e["was"] == "closed" for e in logs)
+
+
+async def test_a_late_completed_deposit_credits_the_balance_once(
+    db_session: AsyncSession,
+) -> None:
+    sale = await make_sale(
+        db_session, status="closed", fail_reason="not_created", payout_uzs=Decimal(158_300)
+    )
+    assert await _apply(db_session, sale, deposit("completed")) == "credited"
+    assert await _apply(db_session, sale, deposit("completed")) == "unchanged"
+    assert (await _fresh(db_session, sale)).status == "credited"
+    assert await user_balance(db_session, sale.user_id) == Decimal(158_300)
+    assert await _credits(db_session, sale) == 1
+
+
+async def test_a_late_card_deposit_reopens_its_canceled_request(db_session: AsyncSession) -> None:
+    sale = await make_sale(db_session, status="closed", fail_reason="canceled", payout_to="card")
+    await make_request(db_session, sale, status="canceled")
+    assert await _apply(db_session, sale, deposit("hold")) == "hold"
+    request = await request_of(db_session, sale.id)
+    assert request is not None
+    assert (request.status, request.to_pay_at) == ("waiting_hold", None)
+    assert await _apply(db_session, sale, deposit("completed")) == "payout"
+    request = await request_of(db_session, sale.id)
+    assert request is not None
+    assert request.status == "to_pay"
+    assert request.to_pay_at is not None
+
+
+async def test_a_late_completed_card_deposit_reopens_the_request_payable(
+    db_session: AsyncSession,
+) -> None:
+    sale = await make_sale(db_session, status="reverted", payout_to="card")
+    await make_request(db_session, sale, status="canceled")
+    assert await _apply(db_session, sale, deposit("completed")) == "payout"
+    request = await request_of(db_session, sale.id)
+    assert request is not None
+    assert request.status == "to_pay"
+    assert request.to_pay_at is not None
+
+
+async def test_a_closed_sale_reported_new_is_reopened_as_creating(
+    db_session: AsyncSession,
+) -> None:
+    sale = await make_sale(db_session, status="closed", fail_reason="not_created")
+    assert await _apply(db_session, sale, deposit("new")) == "reopened"
+    assert (await _fresh(db_session, sale)).status == "creating"
+    assert await _apply(db_session, sale, deposit("active")) == "offered"
+
+
+async def test_a_reverted_sale_reported_completed_is_paid(db_session: AsyncSession) -> None:
+    """SB-11: a reverted sale paid nothing, so a later ``completed`` is followed."""
+    sale = await make_sale(db_session, status="reverted", payout_uzs=Decimal(158_300))
+    assert await _apply(db_session, sale, deposit("completed")) == "credited"
+    assert await user_balance(db_session, sale.user_id) == Decimal(158_300)
+
+
+async def test_a_closed_sale_reported_failed_stays_closed(db_session: AsyncSession) -> None:
+    sale = await make_sale(db_session, status="closed", fail_reason="canceled")
+    assert await _apply(db_session, sale, deposit("failed")) == "unchanged"
+    assert await _apply(db_session, sale, deposit("reverted")) == "attention"
+    assert (await _fresh(db_session, sale)).status == "closed"
+
+
+async def test_a_reverted_sale_reported_reverted_again_changes_nothing(
+    db_session: AsyncSession,
+) -> None:
+    sale = await make_sale(db_session, status="reverted")
+    assert await _apply(db_session, sale, deposit("reverted")) == "unchanged"
+    assert await _apply(db_session, sale, deposit("canceled")) == "unchanged"
+
+
+async def test_a_credited_sale_reported_completed_again_changes_nothing(
+    db_session: AsyncSession,
+) -> None:
+    sale = await make_sale(db_session, status="credited")
+    assert await _apply(db_session, sale, deposit("completed")) == "unchanged"
+
+
+async def test_statuses_are_read_in_any_case(db_session: AsyncSession) -> None:
+    """SB-9: ``Hold`` is ``hold``."""
+    sale = await make_sale(db_session, status="offered")
+    assert await _apply(db_session, sale, deposit("Hold")) == "hold"
+
+
+async def test_a_new_attention_reason_reopens_a_resolved_one(db_session: AsyncSession) -> None:
+    sale = await make_sale(
+        db_session,
+        status="credited",
+        attention_reason="credit_blocked",
+        resolved_at=now(),
+        resolved_note="seen",
+    )
+    assert await _apply(db_session, sale, deposit("reverted")) == "attention"
+    s = await _fresh(db_session, sale)
+    assert (s.attention_reason, s.resolved_at, s.resolved_note) == ("rolled_back", None, None)
+
+
+async def test_a_revert_clears_a_credit_blocked_flag(db_session: AsyncSession) -> None:
+    """SB-13: nothing will be credited any more, so the flag has nothing left to say."""
+    sale = await make_sale(db_session, status="offered", attention_reason="credit_blocked")
+    assert await _apply(db_session, sale, deposit("reverted")) == "reverted"
+    assert (await _fresh(db_session, sale)).attention_reason is None
 
 
 async def test_a_closed_sale_reported_reverted_is_late_deposit_not_rolled_back(
@@ -306,8 +424,11 @@ async def test_an_unknown_skinslink_status_is_logged_and_changes_nothing(
     db_session: AsyncSession,
 ) -> None:
     sale = await make_sale(db_session, status="offered")
+    sample = {"outcome": "unknown"}
+    before = REGISTRY.get_sample_value("csmarket_sale_outcomes_total", sample) or 0.0
     with capture_logs() as logs:
         assert await _apply(db_session, sale, deposit("weird")) == "unchanged"
+    assert REGISTRY.get_sample_value("csmarket_sale_outcomes_total", sample) == before + 1
     assert any(
         e["event"] == "sales.unknown_status" and e["status"] == "weird" and e["sale"] == sale.number
         for e in logs

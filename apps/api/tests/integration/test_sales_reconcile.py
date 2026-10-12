@@ -8,7 +8,12 @@ from decimal import Decimal
 
 import pytest
 from csmarket.core.clock import now
-from csmarket.modules.sales.reconcile import payouts_overdue, poll_sales
+from csmarket.modules.sales.reconcile import (
+    attention_open,
+    holds_overdue,
+    payouts_overdue,
+    poll_sales,
+)
 from csmarket.modules.sales.status import check_sale
 from csmarket.modules.wallet.api import WalletTransaction, user_balance
 from prometheus_client import REGISTRY
@@ -83,3 +88,56 @@ async def test_one_failing_sale_never_stops_the_tick(
     client = FakeDepositClient(status=RuntimeError("boom"))
     assert await poll_sales(factory, client) == 2
     assert len(client.status_calls) == 2
+
+
+async def test_a_sale_closed_not_created_is_asked_about_for_a_day(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    """SB-1: a slow ``create-deposit`` may have sent the offer after all."""
+    at = now()
+    recent = await make_sale(db_session, status="closed", fail_reason="not_created")
+    await make_sale(
+        db_session,
+        status="closed",
+        fail_reason="not_created",
+        last_polled_at=at - timedelta(minutes=2),
+    )
+    await make_sale(
+        db_session,
+        status="closed",
+        fail_reason="not_created",
+        created_at=at - timedelta(hours=25),
+    )
+    await make_sale(db_session, status="closed", fail_reason="canceled")
+    client = FakeDepositClient(status=deposit("hold"))
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    assert await poll_sales(factory, client, at=at) == 1
+    assert client.status_calls == [recent.id]
+    await db_session.refresh(recent)
+    assert recent.status == "hold"
+
+
+async def test_the_tick_exports_open_attentions_and_overdue_holds(
+    db_session: AsyncSession, db_engine: AsyncEngine
+) -> None:
+    at = now()
+    await make_sale(db_session, status="credited", attention_reason="rolled_back")
+    await make_sale(db_session, status="credited", attention_reason="rolled_back", resolved_at=at)
+    await make_sale(db_session, status="closed", attention_reason="late_deposit")
+    stuck = at - timedelta(hours=7)
+    await make_sale(db_session, status="hold", hold_end_at=stuck, last_polled_at=at)
+    await make_sale(
+        db_session, status="hold", hold_end_at=at - timedelta(hours=1), last_polled_at=at
+    )
+    assert await attention_open(db_session) == {
+        "rolled_back": 1,
+        "late_deposit": 1,
+        "credit_blocked": 0,
+    }
+    assert await holds_overdue(db_session, at=at) == 1
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    await poll_sales(factory, FakeDepositClient(status=None), at=at)
+    sample = REGISTRY.get_sample_value
+    assert sample("csmarket_sale_attention_open", {"reason": "rolled_back"}) == 1.0
+    assert sample("csmarket_sale_attention_open", {"reason": "credit_blocked"}) == 0.0
+    assert sample("csmarket_sale_holds_overdue") == 1.0

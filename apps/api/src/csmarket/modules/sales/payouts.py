@@ -1,5 +1,6 @@
 """A card sale's payout request (spec 2026-10-08 §4, §6): opened at ``hold``, payable at
-``completed``, canceled when the sale fails or is reverted before it was paid.
+``completed``, canceled when the sale fails or is reverted before it became payable (a revert
+after that leaves it to the admin, who may be mid-transfer — review SB-3).
 
 Read under the sale's lock and then its own (the order :mod:`.status` and the admin's
 actions both take: sale, then request). Flush, never commit.
@@ -33,11 +34,18 @@ async def open_request(
 ) -> PayoutRequest:
     """The card sale's request, created in ``status`` if it has none yet.
 
+    A ``canceled`` one is reopened in ``status``: only a reopened sale (``status.apply_deposit``
+    — nothing was paid on it) asks for the request of a closed or reverted sale.
+
     Raises:
         ValueError: ``sale`` pays to the balance — a caller bug.
     """
     existing = await request_of(db, sale.id, lock=True)
     if existing is not None:
+        if existing.status == "canceled":
+            existing.status = status
+            existing.to_pay_at = now() if status == "to_pay" else None
+            await db.flush()
         return existing
     if sale.payout_card_id is None:
         raise ValueError("a balance sale has no payout request")
