@@ -29,7 +29,7 @@ async def enqueue_sale_letter(
     amount_uzs: Decimal | None = None,
     to: Literal["balance", "card"] | None = None,
     last4: str | None = None,
-    reason: str | None = None,
+    rejected: bool = False,
 ) -> None:
     """Queue ``kind`` about ``sale``; flushes with the caller's transaction, never commits."""
     payload = {
@@ -40,10 +40,10 @@ async def enqueue_sale_letter(
         payload["to"] = to
     if last4 is not None:
         payload["last4"] = last4
-    if reason is not None:
-        # An admin rejected the card payout: the seller sees why.
+    if rejected:
+        # An admin rejected the card payout. Their note is free text for the admin only: the
+        # seller's letter says the transfer failed and the money is on the balance.
         payload["rejected"] = "true"
-        payload["reason"] = reason
     await enqueue(db, kind=kind, user_id=sale.user_id, sale_id=sale.id, payload=payload)
 
 

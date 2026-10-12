@@ -5,7 +5,10 @@ A number is checked — 16 ASCII digits, the type's prefix, Luhn — and stored 
 replayed or put in a letter. The full number leaves the database through
 :func:`reveal_number` alone, which only the admin's audited reveal calls. At most
 :data:`MAX_LIVE_CARDS` live cards per user (the user row is locked while counting, so two
-adds cannot both pass). A delete is soft: a paid request keeps pointing at its card.
+adds cannot both pass). The same number again is the live card already saved, never a second
+row: a sale refused after its card was stored, then retried, must not fill the user's slots
+(the at most three live cards are decrypted and compared under the same lock). A delete is
+soft: a paid request keeps pointing at its card.
 """
 
 from __future__ import annotations
@@ -82,15 +85,22 @@ async def live_cards(db: AsyncSession, user_id: str) -> list[PayoutCard]:
 async def add_card(
     db: AsyncSession, *, user_id: str, card_type: CardType, raw_number: str
 ) -> PayoutCard:
-    """Check, encrypt and save a card; flushes, never commits.
+    """Check, encrypt and save a card — or return the user's live card with that number.
+
+    Flushes, never commits.
 
     Raises:
         ValidationError: ``card_invalid``.
-        ConflictError: ``cards_limit`` — the user already has :data:`MAX_LIVE_CARDS`.
+        ConflictError: ``cards_limit`` — the user already has :data:`MAX_LIVE_CARDS` other cards.
     """
     digits = card_digits(card_type, raw_number)
     await db.execute(select(User.id).where(User.id == user_id).with_for_update())
-    if len(await live_cards(db, user_id)) >= MAX_LIVE_CARDS:
+    live = await live_cards(db, user_id)
+    same = next((c for c in live if c.last4 == digits[-4:] and reveal_number(c) == digits), None)
+    if same is not None:
+        log.info("sales.card.reused", card_type=same.type, last4=same.last4)
+        return same
+    if len(live) >= MAX_LIVE_CARDS:
         raise ConflictError("you already have 3 saved cards", code="cards_limit")
     enc, nonce = encrypt(digits, purpose=CARD_PURPOSE)
     card = PayoutCard(

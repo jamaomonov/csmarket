@@ -27,6 +27,9 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
   `payouts.py` — a card sale's request; `checks.py` — the webhook's queue; `reconcile.py` —
   the poll and the overdue count; `letters.py` — the three letters.
 - `cards.py`, `views.py`, `schemas.py`, `routes.py`, `cards_routes.py` — the seller's API.
+  `add_card` returns the user's live card with the same number instead of a second row (the
+  ≤ 3 live cards decrypted and compared under the user lock), so retrying a refused card sale
+  never fills the `cards_limit`.
   `views.rows_of` loads a page's items, cards, requests and the items' catalogue look
   (`exterior`, `rarity_color` from `skin_items` by market name; `null` for an unlisted item) in
   one query each. `GET /sales?status=hold` keeps only the sales in Steam's protection.
@@ -65,8 +68,9 @@ It ships switched off with the demo's placeholder fees (5 %): the owner sets rea
 settings editor; `payouts_summary` feeds the dashboard's «К выплате» tile. Paid and reject lock
 the sale, then its request (the order `status.py` takes) and need a `to_pay` request (409
 `payout_not_payable`); a reject credits `amount + fee` (the pre-fee `items_uzs`) to the balance,
-keyed `payout_return:{id}`, and the seller sees the admin's reason in the letter and on the sale
-page. The full card number leaves only through the keyless `POST /payouts/{id}/reveal`, audited
+keyed `payout_return:{id}`. The admin's reason is free text for the admin only: the seller's
+letter and sale page say just that the transfer failed and the money is on the balance
+(`SaleOut` has no reason field). The full card number leaves only through the keyless `POST /payouts/{id}/reveal`, audited
 `sales.card.show` / `sales.card.copy` on every call; everything else shows the last four.
 
 ## Process

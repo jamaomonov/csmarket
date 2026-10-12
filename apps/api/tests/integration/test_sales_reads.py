@@ -217,7 +217,7 @@ async def test_signed_out_is_401(integration_client: AsyncClient) -> None:
         assert (await integration_client.get(url)).status_code == 401
 
 
-async def test_a_rejected_payout_shows_its_reason_to_the_seller_only_then(
+async def test_a_rejected_payout_never_shows_the_admins_note_to_the_seller(
     db_session: AsyncSession, integration_client: AsyncClient, customer_headers: Headers
 ) -> None:
     headers, me = await _me(db_session, customer_headers)
@@ -226,9 +226,8 @@ async def test_a_rejected_payout_shows_its_reason_to_the_seller_only_then(
     paying = await make_sale(db_session, user=me, payout_to="card", status="payout")
     await make_request(db_session, paying, status="to_pay", reject_reason="stale")
     got = await integration_client.get(f"/api/v1/sales/{rejected.number}", headers=headers)
-    assert (got.json()["payout_status"], got.json()["payout_reject_reason"]) == (
-        "rejected",
-        "Карта заблокирована",
-    )
+    assert got.json()["payout_status"] == "rejected"
+    assert "payout_reject_reason" not in got.json()
+    assert "Карта заблокирована" not in got.text
     other = await integration_client.get(f"/api/v1/sales/{paying.number}", headers=headers)
-    assert other.json()["payout_reject_reason"] is None
+    assert "stale" not in other.text

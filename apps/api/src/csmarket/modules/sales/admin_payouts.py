@@ -250,7 +250,7 @@ async def reject(db: AsyncSession, *, request_id: str, admin_id: str, reason: st
         amount_uzs=amount,
         to="balance",
         last4=card.last4 if card else None,
-        reason=reason,
+        rejected=True,
     )
     await nudge_sale(db, user_id=sale.user_id, number=sale.number)
     await db.flush()

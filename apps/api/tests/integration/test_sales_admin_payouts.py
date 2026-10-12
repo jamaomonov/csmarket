@@ -154,7 +154,7 @@ async def test_reject_credits_the_amount_before_the_fee_to_the_balance(
     assert await user_balance(db_session, request.user_id) == Decimal(155_200)
     letter = await db_session.scalar(select(EmailOutbox).where(EmailOutbox.kind == "sale_paid"))
     assert letter is not None
-    assert letter.payload["reason"] == "Карта заблокирована"
+    assert "reason" not in letter.payload  # the admin's note stays in the admin
     assert (letter.payload["to"], letter.payload["rejected"], letter.payload["last4"]) == (
         "balance",
         "true",

@@ -28,6 +28,8 @@ from tests.integration.payments_factory import make_user
 #: The CBU rate the sales tests price with (no uplift, no cut).
 RATE = Decimal("12650.5")
 HUMO = "9860123456789015"
+#: A second Humo number, for "another card of the same type".
+HUMO_2 = "9860123456789023"
 UZCARD = "8600123456789012"
 VISA = "4000000000000002"
 #: ``(asset_id, name, Skinslink USD, our soʻm)`` — the spec's two-item example at RATE with the

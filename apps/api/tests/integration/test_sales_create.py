@@ -26,7 +26,7 @@ from structlog.testing import capture_logs
 from tests.integration.conftest import CUSTOMER_STEAM_ID
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit, inv_item
 from tests.integration.payments_factory import make_user
-from tests.integration.sales_factory import HUMO, make_card
+from tests.integration.sales_factory import HUMO, HUMO_2, make_card
 from tests.integration.sales_kit import (  # noqa: F401 -- the fixture
     Headers,
     ready_seller,
@@ -586,10 +586,36 @@ async def test_a_fourth_card_is_409_and_stores_no_sale(
         await make_card(db_session, user)
     body = {
         **BALANCE,
-        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO}},
+        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO_2}},
         "expected_payout_uzs": 147_400,
     }
     r = await integration_client.post(URL, json=body, headers={**headers, **_key()})
     assert (r.status_code, r.json()["code"]) == (409, "cards_limit")
     assert await db_session.scalar(select(func.count()).select_from(Sale)) == 0
     assert fake.deposit_calls == []
+
+
+@pytest.mark.usefixtures("sales_on")
+async def test_retrying_a_refused_card_sale_never_saves_the_card_twice(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    fake: FakeDepositClient,
+) -> None:
+    fake.created = SkinslinkError("refused", status=400, code="inventory_reload")
+    headers = await _seller(db_session, integration_client, customer_headers)
+    body = {
+        **BALANCE,
+        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO}},
+        "expected_payout_uzs": 147_400,
+    }
+    for n in range(1, 5):  # past the 3-card limit: the same card is never a new one
+        assert (await integration_client.get("/api/v1/sell/inventory", headers=headers)).is_success
+        r = await integration_client.post(URL, json=body, headers={**headers, **_key(n)})
+        assert (r.status_code, r.json()["code"]) == (409, "prices_changed")
+    assert await db_session.scalar(select(func.count()).select_from(PayoutCard)) == 1
+    fake.created = deposit("active", amount_usd=Decimal("12.95"))
+    await integration_client.get("/api/v1/sell/inventory", headers=headers)
+    r = await integration_client.post(URL, json=body, headers={**headers, **_key(9)})
+    assert r.status_code == 201, r.text
+    assert await db_session.scalar(select(func.count()).select_from(PayoutCard)) == 1

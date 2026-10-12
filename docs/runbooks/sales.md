@@ -31,12 +31,20 @@ The number is never in a list, a letter or a log; do not screenshot it.
 `SalePayoutsOverdue`: a request has been «К выплате» for more than 48 h. Pay it as above, or
 «Отклонить» with a reason when the card cannot take it (blocked, wrong bank): the amount
 **before** the card fee goes to the seller's balance (`payout_return`), and they get a letter
-with your reason (it shows on their sale page too).
+saying the transfer failed. Your reason stays in the admin: the seller never sees it (write
+it for the team, not for them).
 
 ## Rejecting
 
-«Отклонить» needs a reason. It is possible only for a request «К выплате» — a request still
-waiting for its 7 days cannot be decided (409 `payout_not_payable`).
+«Отклонить» needs a reason (admin-only — the seller's page and letter show a fixed
+sentence). It is possible only for a request «К выплате» — a request still waiting for its
+7 days cannot be decided (409 `payout_not_payable`).
+
+## Saved cards
+
+A seller has at most three live cards. Typing a number already saved reuses that card (no
+second row), so retrying a refused card sale never hits `cards_limit`. A seller at the limit
+deletes one in the profile («Мои карты»).
 
 ## Stuck sales
 

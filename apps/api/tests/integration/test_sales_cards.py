@@ -22,7 +22,7 @@ from structlog.testing import capture_logs
 
 from tests.integration.conftest import CUSTOMER_STEAM_ID
 from tests.integration.payments_factory import make_user
-from tests.integration.sales_factory import HUMO, UZCARD, VISA, make_card
+from tests.integration.sales_factory import HUMO, HUMO_2, UZCARD, VISA, make_card
 
 pytestmark = pytest.mark.asyncio
 
@@ -70,14 +70,39 @@ async def test_a_fourth_live_card_is_cards_limit(db_session: AsyncSession) -> No
         await add_card(db_session, user_id=user_id, card_type=kind, raw_number=number)
     await db_session.commit()
     with pytest.raises(ConflictError) as caught:
-        await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO)
+        await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO_2)
     assert caught.value.extra["code"] == "cards_limit"
     await db_session.rollback()
     first = (await live_cards(db_session, user_id))[0]
     await delete_card(db_session, user_id=user_id, card_id=first.id)
-    await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO)
+    await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO_2)
     await db_session.commit()
     assert len(await live_cards(db_session, user_id)) == 3
+
+
+async def test_the_same_number_again_is_the_saved_card_even_at_the_limit(
+    db_session: AsyncSession,
+) -> None:
+    user_id = (await make_user(db_session)).id
+    first = await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO)
+    await add_card(db_session, user_id=user_id, card_type="uzcard", raw_number=UZCARD)
+    await add_card(db_session, user_id=user_id, card_type="uzum_visa", raw_number=VISA)
+    await db_session.commit()
+    again = await add_card(
+        db_session, user_id=user_id, card_type="humo", raw_number="9860 1234 5678 9015"
+    )
+    assert again.id == first.id
+    assert len(await live_cards(db_session, user_id)) == 3
+
+
+async def test_a_deleted_or_another_users_card_is_not_reused(db_session: AsyncSession) -> None:
+    user_id = (await make_user(db_session)).id
+    other = await make_user(db_session)
+    theirs = await make_card(db_session, other)
+    gone = await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO)
+    await delete_card(db_session, user_id=user_id, card_id=gone.id)
+    fresh = await add_card(db_session, user_id=user_id, card_type="humo", raw_number=HUMO)
+    assert fresh.id not in (gone.id, theirs.id)
 
 
 async def test_another_users_or_a_deleted_card_is_not_found(db_session: AsyncSession) -> None:
