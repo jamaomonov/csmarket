@@ -147,6 +147,14 @@ describe("SellView", () => {
     expect(submit).toBeDisabled();
   });
 
+  it("says selling accepts the buyback terms, with a link to them", async () => {
+    view();
+    fireEvent.click(await screen.findByRole("button", { name: /Redline/ }));
+    for (const link of screen.getAllByRole("link", { name: "условия выкупа" })) {
+      expect(link).toHaveAttribute("href", "/legal/sell");
+    }
+  });
+
   it("lets ten cheap items through: rounding each down must not block the sale", async () => {
     const letters = "ABCDEFGHIJ".split("");
     const base = INVENTORY.items[0];

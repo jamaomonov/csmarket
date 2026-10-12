@@ -242,6 +242,16 @@ describe("SkinBuyPanel — who can buy", () => {
     expect(m.refreshMe).toHaveBeenCalled();
   });
 
+  it("says paying accepts the public offer, with a link to it", async () => {
+    signedIn();
+    panel();
+    await buyButton("381 000");
+    expect(screen.getByRole("link", { name: "публичной оферты" })).toHaveAttribute(
+      "href",
+      "/legal/terms",
+    );
+  });
+
   it("a check that finds the link bad blocks the purchase", async () => {
     signedIn({ trade_link_verdict: null, trade_link_reason: null });
     m.check.mockResolvedValue({ trade_link: LINK, verdict: "bad", reason: "trade_ban" });

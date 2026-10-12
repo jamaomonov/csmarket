@@ -17,7 +17,12 @@ vi.mock("@/lib/balance", async (importOriginal) => ({
   ...(await importOriginal<typeof BalanceModule>()),
   ...api,
 }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("@/i18n/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
 
 function renderView() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

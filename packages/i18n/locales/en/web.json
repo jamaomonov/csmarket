@@ -883,5 +883,9 @@
       "pay": "With {method}",
       "cheap": "Cheap skins"
     }
+  },
+  "consent": {
+    "pay": "By paying, you accept the terms of the <link>public offer</link>.",
+    "sell": "By pressing «Sell», you accept the <link>buyback terms</link>."
   }
 }

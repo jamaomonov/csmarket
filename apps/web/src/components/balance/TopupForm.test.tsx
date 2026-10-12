@@ -21,7 +21,12 @@ vi.mock("@/lib/balance", async (importOriginal) => ({
   ...(await importOriginal<typeof BalanceModule>()),
   createTopup: mocks.createTopup,
 }));
-vi.mock("@/i18n/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
+vi.mock("@/i18n/navigation", () => ({
+  useRouter: () => ({ push: mocks.push }),
+  Link: ({ href, children }: { href: string; children: React.ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
+}));
 
 const TOPUP: Topup = {
   number: "T123",
@@ -209,6 +214,14 @@ describe("TopupForm", () => {
     for (const name of ["Click", "Payme", "Uzum", "Тестовая оплата"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
+  });
+
+  it("says paying accepts the public offer, with a link to it", () => {
+    setup();
+    expect(screen.getByRole("link", { name: "публичной оферты" })).toHaveAttribute(
+      "href",
+      "/legal/terms",
+    );
   });
 
   it("says top-ups are unavailable when no kassa is open", () => {

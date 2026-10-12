@@ -8,6 +8,7 @@ import { useRef, useState } from "react";
 
 import type { Locale } from "@csmarket/i18n";
 
+import { PayConsent } from "@/components/legal/PayConsent";
 import { PaymentPicker } from "@/components/skins/PaymentPicker";
 import { usePayMethods } from "@/components/skins/usePayMethods";
 import { BALANCE_KEY } from "@/lib/balance";
@@ -128,6 +129,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
       >
         {test ? t("payTest") : t("payNow", { price: formatUzs(locale, order.price_uzs) })}
       </Button>
+      <PayConsent doc="terms" />
     </div>
   );
 }

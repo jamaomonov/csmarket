@@ -14,6 +14,7 @@ import type { TradeLinkGate } from "./useTradeLinkGate";
 import type { Locale } from "@csmarket/i18n";
 import type { SkinListing } from "@csmarket/utils/skins";
 
+import { PayConsent } from "@/components/legal/PayConsent";
 import { Link, useRouter } from "@/i18n/navigation";
 import { BALANCE_KEY } from "@/lib/balance";
 import { orderArrivalPath } from "@/lib/order-arrival";
@@ -209,6 +210,7 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
       >
         {price !== null ? t("pay", { price: formatUzs(locale, price) }) : t("title")}
       </Button>
+      <PayConsent doc="terms" />
     </div>
   );
 }

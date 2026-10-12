@@ -120,6 +120,15 @@ describe("OrderPay", () => {
     expect(screen.getByRole("button", { name: /^Оплатить 381\s000 сум$/ })).toBeDisabled();
   });
 
+  it("says paying accepts the public offer, with a link to it", async () => {
+    setup();
+    await payButton();
+    expect(screen.getByRole("link", { name: "публичной оферты" })).toHaveAttribute(
+      "href",
+      "/legal/terms",
+    );
+  });
+
   it("keeps the kassa chosen on the item page even when the balance covers", async () => {
     m.balance.mockResolvedValue({ balance_uzs: "500000" });
     m.providers.mockResolvedValue({ providers: [{ slug: "click" }, { slug: "payme" }] });

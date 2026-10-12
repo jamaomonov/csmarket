@@ -883,5 +883,9 @@
       "pay": "{method} orqali",
       "cheap": "Arzon skinlar"
     }
+  },
+  "consent": {
+    "pay": "Toʻlov qilib, siz <link>ommaviy oferta</link> shartlarini qabul qilasiz.",
+    "sell": "«Sotish» tugmasini bosib, siz <link>sotib olish shartlarini</link> qabul qilasiz."
   }
 }
