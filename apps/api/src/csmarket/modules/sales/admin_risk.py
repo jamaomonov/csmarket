@@ -71,7 +71,7 @@ async def shared_fps(db: AsyncSession, fps: Iterable[str | None]) -> set[str]:
 async def row_flags(
     db: AsyncSession, requests: list[PayoutRequest], cards: dict[str, PayoutCard]
 ) -> dict[str, list[PayoutFlag]]:
-    """``request id → flags`` for a page of the queue (four queries whatever its size)."""
+    """``request id → flags`` for a page of the queue (five queries whatever its size)."""
     uids = {r.user_id for r in requests}
     if not uids:
         return {}
@@ -88,6 +88,16 @@ async def row_flags(
         (await db.scalars(select(SaleBlock.user_id).where(SaleBlock.user_id.in_(uids)))).all()
     )
     shared = await shared_fps(db, (c.number_fp for c in cards.values()))
+    reverted = set(
+        (
+            await db.scalars(
+                select(Sale.id).where(
+                    Sale.id.in_({r.sale_id for r in requests}),
+                    Sale.attention_reason == "rolled_back",
+                )
+            )
+        ).all()
+    )
     young = now() - NEW_ACCOUNT
     out: dict[str, list[PayoutFlag]] = {}
     for r in requests:
@@ -104,6 +114,8 @@ async def row_flags(
             flags.append("new_account")
         if fp in shared:
             flags.append("shared_card")
+        if r.sale_id in reverted:
+            flags.append("rolled_back")
         out[r.id] = flags
     return out
 

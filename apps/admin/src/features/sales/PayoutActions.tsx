@@ -171,7 +171,10 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
           <p className="font-medium">{consequence(panel, detail)}</p>
           {needsOverride ? (
             <label className="text-danger flex flex-col gap-1 text-sm">
-              Аккаунт заблокирован или кошелёк заморожен. Почему всё равно платите?
+              {detail.request.flags?.includes("rolled_back") === true
+                ? "Обмен отменён — скины вернулись к продавцу."
+                : "Аккаунт заблокирован или кошелёк заморожен."}{" "}
+              Почему всё равно платите?
               <textarea
                 maxLength={500}
                 value={override}

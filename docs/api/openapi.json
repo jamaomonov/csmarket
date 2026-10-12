@@ -6087,7 +6087,8 @@
                 "wallet_frozen",
                 "sell_blocked",
                 "new_account",
-                "shared_card"
+                "shared_card",
+                "rolled_back"
               ],
               "type": "string"
             },
@@ -11773,7 +11774,7 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `payout_user_blocked` (a banned account or a frozen wallet: send `override_reason`) or `idempotency_mismatch`"
+            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `payout_user_blocked` (a banned account or a frozen wallet), `payout_sale_reverted` (the trade was reverted) \u2014 both need `override_reason` \u2014 or `idempotency_mismatch`"
           },
           "422": {
             "content": {

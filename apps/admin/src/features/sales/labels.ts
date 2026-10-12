@@ -42,6 +42,7 @@ export const FLAG_LABELS: Record<PayoutFlag, { text: string; danger: boolean }> 
   sell_blocked: { text: "выкуп запрещён", danger: true },
   shared_card: { text: "карта у других", danger: true },
   new_account: { text: "новый аккаунт", danger: false },
+  rolled_back: { text: "обмен отменён", danger: true },
 };
 
 export const CARD_BRANDS: Record<CardType, string> = {
@@ -70,6 +71,8 @@ const PAYOUT_ERRORS: Record<string, string> = {
   payout_claimed: "Эту заявку уже платит другой администратор — страница обновлена.",
   payout_user_blocked:
     "Аккаунт заблокирован или кошелёк заморожен. Выплатить можно только с причиной.",
+  payout_sale_reverted:
+    "Обмен по этой продаже отменён — скины вернулись к продавцу. Выплатить можно только с причиной.",
   wallet_frozen:
     "Кошелёк пользователя заморожен — вернуть деньги на баланс нельзя. Разморозьте или выплатите на карту.",
   balance_spent: "Пользователь уже потратил эти деньги — отменить отказ нельзя.",

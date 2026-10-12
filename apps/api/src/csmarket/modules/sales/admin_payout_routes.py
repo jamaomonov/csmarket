@@ -160,7 +160,8 @@ async def post_release(request_id: uuid.UUID, admin: Admin, db: Db, key: Key) ->
     responses={
         409: {
             "description": f"`payout_not_payable`, {_CLAIMED}, `payout_user_blocked` (a banned "
-            "account or a frozen wallet: send `override_reason`) or `idempotency_mismatch`"
+            "account or a frozen wallet), `payout_sale_reverted` (the trade was reverted) — both "
+            "need `override_reason` — or `idempotency_mismatch`"
         }
     },
     summary="Mark a payout paid",

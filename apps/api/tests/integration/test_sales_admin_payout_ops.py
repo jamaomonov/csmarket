@@ -14,7 +14,7 @@ from csmarket.core.ids import new_id
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.notifications.models import EmailOutbox
 from csmarket.modules.sales.cards import backfill_fingerprints, card_fingerprint
-from csmarket.modules.sales.models import PayoutCard, PayoutRequest
+from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import debit_purchase, user_account, user_balance
 from httpx import AsyncClient
@@ -150,6 +150,31 @@ async def test_a_banned_seller_is_paid_only_with_an_override(
     )
     assert payload is not None
     assert payload["override"] == "owner said pay"
+
+
+async def test_a_reverted_sale_is_paid_only_with_an_override(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    """Skinslink reverted the trade while the request was payable: the seller has the skins back."""
+    headers = await admin_headers()
+    request = await _payable(db_session)
+    sale = await db_session.get(Sale, request.sale_id)
+    assert sale is not None
+    sale.attention_reason = "rolled_back"
+    await db_session.commit()
+    page = (await integration_client.get(f"{BASE}/{request.id}", headers=headers)).json()
+    assert page["paid_needs_override"] is True
+    assert "rolled_back" in page["request"]["flags"]
+    queue = (await integration_client.get(BASE, headers=headers)).json()
+    assert any("rolled_back" in row["flags"] for row in queue["items"])
+    url = f"{BASE}/{request.id}/paid"
+    refused = await integration_client.post(url, json={}, headers={**headers, **_key(40)})
+    assert (refused.status_code, refused.json()["code"]) == (409, "payout_sale_reverted")
+    assert (await _fresh(db_session, request)).status == "to_pay"
+    ok = await integration_client.post(
+        url, json={"override_reason": "seller re-sent the skins"}, headers={**headers, **_key(41)}
+    )
+    assert ok.status_code == 200, ok.text
 
 
 async def test_a_frozen_wallet_blocks_paid_and_reject_says_why(

@@ -109,10 +109,12 @@ deletes one in the profile («Мои карты»).
 
 Skinslink may report `reverted` after a card sale became payable. The request is **not**
 canceled — you may be paying it at that moment. The sale gets `attention = rolled_back`
-(`SaleAttentionOpen`) and the request stays «К выплате»; its page shows `can_cancel`.
+(`SaleAttentionOpen`) and the request stays «К выплате» with the red chip «обмен отменён»; its
+page shows `can_cancel`.
 
-- If the money already went out: «Выплачено» as usual (it is still recorded), then treat the
-  sale as `rolled_back` below.
+- If the money already went out: «Выплачено» with a reason (the API answers 409
+  `payout_sale_reverted` without `override_reason`; the reason is audited), then treat the sale
+  as `rolled_back` below.
 - If not: «Отменить (откат)» with a reason (`POST /admin/sales/payouts/{id}/cancel`, audited
   `sales.payout.cancel`) — nothing is paid, the sale becomes `reverted`, its attention is marked
   checked and the seller gets the canceled letter. Do **not** «Отклонить»: that would credit the

@@ -9,7 +9,7 @@ export type PayoutStatus = "to_pay" | "waiting_hold" | "paid" | "rejected" | "ca
 /** A tab of the queue; `all` is the search across every status. */
 export type PayoutTab = PayoutStatus | "all";
 export type PayoutFlag =
-  "banned" | "wallet_frozen" | "sell_blocked" | "new_account" | "shared_card";
+  "banned" | "wallet_frozen" | "sell_blocked" | "new_account" | "shared_card" | "rolled_back";
 
 /** The tabs, in the order the queue shows them; «К выплате» first. */
 export const PAYOUT_STATUSES: readonly PayoutStatus[] = [

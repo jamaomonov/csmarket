@@ -203,6 +203,19 @@ describe("PayoutDetail", () => {
     });
   });
 
+  it("a reverted sale is paid only with a reason that names the revert", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      paid_needs_override: true,
+      request: { ...PAYOUT_DETAIL.request, flags: ["rolled_back"] },
+    });
+    api.markPaid.mockResolvedValue({ ...PAYOUT_DETAIL, can_decide: false });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Выплачено" }));
+    expect(screen.getByRole("button", { name: "Да, выплачено" })).toBeDisabled();
+    expect(screen.getByLabelText(/Обмен отменён — скины вернулись к продавцу/)).toBeInTheDocument();
+  });
+
   it("«Отклонить» needs a reason", async () => {
     api.rejectPayout.mockResolvedValue({ ...PAYOUT_DETAIL, can_decide: false });
     renderPage();

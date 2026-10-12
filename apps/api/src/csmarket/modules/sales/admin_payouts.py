@@ -111,7 +111,8 @@ async def payout_detail(db: AsyncSession, request_id: str) -> PayoutDetailOut:
         can_decide=request.status == "to_pay",
         can_cancel=_cancelable(sale, request),
         undo_until=undo_until(request),
-        paid_needs_override=request.status == "to_pay" and (risk.banned or risk.wallet_frozen),
+        paid_needs_override=request.status == "to_pay"
+        and (risk.banned or risk.wallet_frozen or sale.attention_reason == "rolled_back"),
         risk=risk,
     )
 
@@ -236,14 +237,25 @@ async def mark_paid(
 
     Raises:
         ConflictError: ``payout_not_payable``, ``payout_claimed``, ``payout_user_blocked``
-            (a banned account or a frozen wallet, and no ``override_reason``).
+            (a banned account or a frozen wallet) or ``payout_sale_reverted`` (Skinslink
+            reverted the trade), each when no ``override_reason`` is given.
     """
     sale, request = await locked(db, request_id, admin_id=admin_id)
     overridden = False
+    given = bool(override_reason and override_reason.strip())
     if await _user_blocked(db, request.user_id):
-        if not (override_reason and override_reason.strip()):
+        if not given:
             raise ConflictError(
                 "the account is banned or its wallet frozen", code="payout_user_blocked"
+            )
+        overridden = True
+    if sale.attention_reason == "rolled_back":
+        # Skinslink reverted the trade while the request was payable (SB-3): the seller has the
+        # skins back, so paying the card needs a stated reason, like a banned account.
+        if not given:
+            raise ConflictError(
+                "the sale's trade was reverted; the seller has the skins back",
+                code="payout_sale_reverted",
             )
         overridden = True
     request.status, request.paid_by, request.paid_at, request.note = "paid", admin_id, now(), note

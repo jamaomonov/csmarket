@@ -16,7 +16,9 @@ AttentionReasonOut = Literal["rolled_back", "late_deposit", "credit_blocked"]
 #: The sales list's attention filter: ``open`` (unresolved), ``resolved``, ``any`` (either).
 AttentionFilter = Literal["open", "resolved", "any"]
 #: A payout row's risk flags (``admin_risk``).
-PayoutFlag = Literal["banned", "wallet_frozen", "sell_blocked", "new_account", "shared_card"]
+PayoutFlag = Literal[
+    "banned", "wallet_frozen", "sell_blocked", "new_account", "shared_card", "rolled_back"
+]
 #: The queue's tab: one status, or ``all`` (a search across every status, newest first).
 PayoutTab = Literal["to_pay", "waiting_hold", "paid", "rejected", "canceled", "all"]
 
