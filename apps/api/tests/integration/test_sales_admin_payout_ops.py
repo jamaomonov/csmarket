@@ -7,6 +7,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from decimal import Decimal
+from typing import Any
 
 import pytest
 from csmarket.core.clock import now
@@ -37,7 +38,7 @@ def _key(n: int) -> dict[str, str]:
     return {"Idempotency-Key": f"test-admin-payout-ops-{n:06d}"}
 
 
-async def _payable(db: AsyncSession, **over: object) -> PayoutRequest:
+async def _payable(db: AsyncSession, **over: Any) -> PayoutRequest:  # Any: factory kwargs
     sale = await make_sale(db, status="payout", payout_to="card", payout_uzs=Decimal(147_400))
     return await make_request(db, sale, **{"status": "to_pay", **over})
 

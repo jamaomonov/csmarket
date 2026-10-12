@@ -126,8 +126,11 @@ async def test_a_payout_reverted_mid_transfer_can_still_be_marked_paid(
     sale, request = await _rolled_back_payout(db_session)
     page = (await integration_client.get(f"{BASE}/payouts/{request.id}", headers=headers)).json()
     assert (page["can_decide"], page["can_cancel"]) == (True, True)
+    # The transfer already went out: «Выплачено» is still recorded, with a stated reason.
     r = await integration_client.post(
-        f"{BASE}/payouts/{request.id}/paid", json={}, headers={**headers, **_key(1)}
+        f"{BASE}/payouts/{request.id}/paid",
+        json={"override_reason": "the transfer had already gone out"},
+        headers={**headers, **_key(1)},
     )
     assert r.status_code == 200, r.text
     row = await _fresh(db_session, Sale, sale.id)
