@@ -36,7 +36,7 @@ log = get_logger("csmarket.sales.reconcile")
 
 OPEN_POLL_EVERY = timedelta(seconds=60)
 HOLD_POLL_EVERY = timedelta(minutes=30)
-OVERDUE_AFTER = timedelta(hours=48)
+OVERDUE_AFTER = timedelta(hours=10)  # sellers are promised the card within 12 h
 #: How long after its hold end a ``hold`` sale counts as stuck.
 HOLD_OVERDUE_AFTER = timedelta(hours=6)
 #: A ``not_created`` sale is asked about this often ...

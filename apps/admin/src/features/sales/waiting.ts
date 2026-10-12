@@ -1,10 +1,11 @@
-/** How long a payable request has waited, and whether it is late (24 h) or overdue (48 h). */
+/** How long a payable request has waited, and whether it is late (6 h) or overdue (10 h):
+ * sellers are promised the card within 12 h. */
 
 export type WaitLevel = "ok" | "late" | "overdue";
 
 const HOUR = 3_600_000;
-const LATE_HOURS = 24;
-const OVERDUE_HOURS = 48;
+const LATE_HOURS = 6;
+const OVERDUE_HOURS = 10;
 
 /** `"2 д 3 ч"`, `"5 ч 10 мин"`, `"12 мин"` since `iso`, and the tint it deserves. */
 export function waitingFor(

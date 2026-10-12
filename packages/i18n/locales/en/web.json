@@ -509,7 +509,7 @@
       "accept": "Accept the trade in Steam — otherwise your skins stay with you.",
       "protection": "We wait out Steam's 7-day protection.",
       "balance": "The money reaches your balance 7 days after the trade.",
-      "card": "We send the money to your card after Steam's 7-day protection, usually within 2 days."
+      "card": "We send the money to your card after Steam's 7-day protection, within 12 hours."
     },
     "submit": "Sell for {sum}",
     "addMore": "Add {sum} more",

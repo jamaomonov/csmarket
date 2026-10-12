@@ -30,7 +30,7 @@ Telegram).
 ## Paying a card request (from a phone)
 
 «Выкуп» → «Заявки на выплату» → «К выплате» (the default tab). The queue is **oldest first**:
-the top card has waited longest («ждёт 2 д 3 ч» — orange after 24 h, red after 48 h). The strip
+the top card has waited longest («ждёт 2 д 3 ч» — orange after 6 h, red after 10 h; sellers are promised 12 h). The strip
 above it shows what is payable now and what was paid / rejected since midnight (Tashkent) — the
 numbers to check against the bank statement. A chip «платит <имя>» means another admin has
 taken it; red chips are risks (below). The list refreshes itself every 15 s.
@@ -87,7 +87,7 @@ It prints `filled N` and can be run again safely.
 
 ## Overdue
 
-`SalePayoutsOverdue`: a request has been «К выплате» for more than 48 h. Pay it as above, or
+`SalePayoutsOverdue`: a request has been «К выплате» for more than 10 h (sellers are promised the card within 12 h of the hold's end). Pay it as above, or
 «Отклонить» with a reason when the card cannot take it (blocked, wrong bank): the amount
 **before** the card fee goes to the seller's balance (`payout_return`), and they get a letter
 saying the transfer failed. Your reason stays in the admin: the seller never sees it (write

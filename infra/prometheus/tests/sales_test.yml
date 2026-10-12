@@ -22,7 +22,7 @@ tests:
           - exp_labels:
               severity: warn
             exp_annotations:
-              summary: "2 card payout(s) payable for over 48 h"
+              summary: "2 card payout(s) payable for over 10 h (promised: 12 h)"
               description: "Open «Выкуп» → «Заявки на выплату» → «К выплате» in the admin and pay them by hand, or reject one with a reason (its money then goes to the seller's balance).\n"
               runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#overdue"
 

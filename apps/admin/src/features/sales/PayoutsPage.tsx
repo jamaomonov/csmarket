@@ -1,7 +1,7 @@
 /**
  * «Заявки на выплату»: status tabs with counts, the day's totals, a search (sale number, last
- * four, name, Steam ID). «К выплате» is oldest first with the waiting time tinted after 24 h
- * and 48 h, and who is paying each request right now. Cards on a phone; refreshed every 15 s so
+ * four, name, Steam ID). «К выплате» is oldest first with the waiting time tinted after 6 h
+ * and 10 h, and who is paying each request right now. Cards on a phone; refreshed every 15 s so
  * a request someone took or paid does not linger.
  */
 import { Button } from "@csmarket/ui";

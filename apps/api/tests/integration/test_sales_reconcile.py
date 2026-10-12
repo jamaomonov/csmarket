@@ -70,9 +70,10 @@ async def test_overdue_payouts_are_counted_and_exported(
 ) -> None:
     at = now()
     old = await make_sale(db_session, status="payout", payout_to="card")
-    await make_request(db_session, old, status="to_pay", to_pay_at=at - timedelta(hours=49))
+    # Sellers are promised the card within 12 h of the hold; the alarm rings at 10 h.
+    await make_request(db_session, old, status="to_pay", to_pay_at=at - timedelta(hours=11))
     young = await make_sale(db_session, status="payout", payout_to="card")
-    await make_request(db_session, young, status="to_pay", to_pay_at=at - timedelta(hours=1))
+    await make_request(db_session, young, status="to_pay", to_pay_at=at - timedelta(hours=9))
     assert await payouts_overdue(db_session, at=at) == 1
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     await poll_sales(factory, FakeDepositClient(status=None), at=at)
