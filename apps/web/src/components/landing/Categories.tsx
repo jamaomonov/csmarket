@@ -6,7 +6,7 @@ import { formatUzs, steamImageSize } from "@csmarket/utils/skins";
 import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 
-import { cx } from "./format";
+import { cx, rarityColor } from "./format";
 import { ArrowIcon } from "./Icons";
 
 import type { CSSProperties } from "react";
@@ -40,7 +40,7 @@ export async function Categories({ tiles, locale }: { tiles: CategoryTile[]; loc
           {shown.map((tile) => {
             const price = tile.fromUzs === null ? null : formatUzs(locale, tile.fromUzs);
             const style = {
-              "--r": tile.item?.rarity_color ?? "#4b69ff",
+              "--r": rarityColor(tile.item?.rarity_color ?? null),
               "--m": `url(/skins/categories/${tile.category}.png)`,
             } as CSSProperties; // CSS custom properties
             return (

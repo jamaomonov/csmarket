@@ -77,7 +77,11 @@ export interface ShareImage {
  * the category and weapon pages. Spread `openGraph` into `openGraph.images`, `twitter` as is.
  */
 export function shareImage(locale: string, alt: string): ShareImage {
-  const url = `${SITE}/og/${OG_LOCALE[locale] ? locale : "ru"}.jpg`;
+  return shareImageAt(`${SITE}/og/${OG_LOCALE[locale] ? locale : "ru"}.jpg`, alt);
+}
+
+/** A 1200×630 share picture at an absolute `url`: og:image with size and alt, a large card. */
+export function shareImageAt(url: string, alt: string): ShareImage {
   return {
     openGraph: [{ url, width: 1200, height: 630, alt }],
     twitter: { card: "summary_large_image", images: [url] },

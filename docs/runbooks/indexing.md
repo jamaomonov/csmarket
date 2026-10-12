@@ -28,7 +28,13 @@ switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
   rifles, pistols, cases and agents carry a paragraph of text. All are in `landings.xml` and in
   the landing's footer.
 - Share previews: the landing, `/market`, categories and weapons use `public/og/<locale>.jpg`
-  (1200×630, from `docs/design/og.html`); item pages use the skin's own picture.
+  (1200×630, from `docs/design/og.html`). Item pages get a generated card,
+  `/<locale>/item/<slug>/og.png` (`app/[locale]/item/[slug]/og.png/route.tsx`, `next/og`):
+  the logo, the weapon over the skin name, StatTrak™ / Souvenir / phase / wear, the skin on the
+  right in its rarity glow, no price. IBM Plex Sans comes from Google Fonts at runtime (once per
+  process; on failure the built-in font); a Steam picture that fails leaves the card without it;
+  an API outage redirects to `/og/<locale>.jpg`. Cached a day (`s-maxage`, Cloudflare). Telegram
+  keeps a link's preview: after a design change send the URL to @WebpageBot to refresh it.
 - `/llms.txt` — the shop for language models, with live category counts; the partner API has
   its own at `docs.csmarket.uz/llms.txt`. It is served (with `X-Robots-Tag: noindex`) while
   indexing is closed.

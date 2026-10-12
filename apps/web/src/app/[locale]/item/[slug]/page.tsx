@@ -1,4 +1,4 @@
-import { hasWear, isVanilla, steamImageSize } from "@csmarket/utils/skins";
+import { hasWear, isVanilla } from "@csmarket/utils/skins";
 import { ChevronRight } from "lucide-react";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
@@ -18,8 +18,9 @@ import { SkinSimilar } from "@/components/skins/SkinSimilar";
 import { SkinWearPicker } from "@/components/skins/SkinWearPicker";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { itemOgUrl } from "@/lib/og-item";
 import { categoryPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
-import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS } from "@/lib/seo";
+import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImageAt } from "@/lib/seo";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { skinAbout, skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
 import { similarSkins } from "@/lib/skin-similar";
@@ -57,6 +58,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? t("meta.itemDescription", { name, price, count: item.count })
       : t("meta.itemDescriptionNoPrice", { name });
   const path = itemPath(slug);
+  // The generated card (`og.png/route.tsx`): the skin on the site's dark, no price on it.
+  const share = shareImageAt(itemOgUrl(locale, slug), name);
   return {
     title,
     description,
@@ -69,9 +72,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: localeUrl(locale, path),
-      ...(item.image_url ? { images: [steamImageSize(item.image_url, "512fx384f")] } : {}),
+      images: share.openGraph,
       ...ogLocale(locale),
     },
+    twitter: share.twitter,
   };
 }
 

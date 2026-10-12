@@ -11,7 +11,10 @@ vi.mock("next-intl/server", () => ({
     Promise.resolve(Object.assign((k: string) => k, { rich: (k: string) => k })),
   setRequestLocale: () => undefined,
 }));
-vi.mock("@/lib/skins", () => ({ getSkinDetail: vi.fn().mockResolvedValue(null) }));
+const { getSkinDetail } = vi.hoisted(() => ({
+  getSkinDetail: vi.fn<() => Promise<unknown>>().mockResolvedValue(null),
+}));
+vi.mock("@/lib/skins", () => ({ getSkinDetail, displayPrice: () => null }));
 // The page's components import the locale-aware navigation, which loads Next's client router.
 vi.mock("@/i18n/navigation", () => ({ Link: () => null, useRouter: () => ({}) }));
 
@@ -30,5 +33,27 @@ describe("unknown item", () => {
     notFound.mockClear();
     await expect(SkinPage({ params })).rejects.toThrow("NEXT_NOT_FOUND");
     expect(notFound).toHaveBeenCalled();
+  });
+});
+
+describe("item share picture", () => {
+  it("og:image and twitter:image point at the generated 1200×630 card", async () => {
+    getSkinDetail.mockResolvedValueOnce({
+      slug: "awp-dragon-lore-mw",
+      name: "AWP | Dragon Lore (Minimal Wear)",
+      phase: null,
+      image_url: "https://community.fastly.steamstatic.com/economy/image/abc",
+      price_uzs: null,
+      price_usd: null,
+      count: 0,
+    });
+    const meta = await generateMetadata({
+      params: Promise.resolve({ locale: "en", slug: "awp-dragon-lore-mw" }),
+    });
+    const url = "https://csmarket.uz/en/item/awp-dragon-lore-mw/og.png";
+    expect(meta.openGraph?.images).toEqual([
+      { url, width: 1200, height: 630, alt: "AWP | Dragon Lore (Minimal Wear)" },
+    ]);
+    expect(meta.twitter).toEqual({ card: "summary_large_image", images: [url] });
   });
 });
