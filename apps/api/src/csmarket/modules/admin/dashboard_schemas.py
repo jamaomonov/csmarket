@@ -37,6 +37,8 @@ class PayoutsOut(BaseModel):
 
     to_pay_count: int
     to_pay_uzs: str
+    #: Sales with an open attention (rolled_back, late_deposit, credit_blocked).
+    sales_attention: int
 
 
 class DayOut(BaseModel):
@@ -130,6 +132,8 @@ class DashboardOut(BaseModel):
                 read_at=d.lisskins.read_at,
             ),
             payouts=PayoutsOut(
-                to_pay_count=payouts.to_pay_count, to_pay_uzs=_money(payouts.to_pay_uzs)
+                to_pay_count=payouts.to_pay_count,
+                to_pay_uzs=_money(payouts.to_pay_uzs),
+                sales_attention=payouts.sales_attention,
             ),
         )

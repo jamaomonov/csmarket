@@ -331,6 +331,7 @@
               "refund",
               "sale_credit",
               "payout_return",
+              "payout_return_reversal",
               "fx_convert",
               "admin_adjust_usd"
             ],
@@ -1738,9 +1739,18 @@
             ],
             "title": "Amount Usd"
           },
+          "attention_open": {
+            "title": "Attention Open",
+            "type": "boolean"
+          },
           "attention_reason": {
             "anyOf": [
               {
+                "enum": [
+                  "rolled_back",
+                  "late_deposit",
+                  "credit_blocked"
+                ],
                 "type": "string"
               },
               {
@@ -1896,6 +1906,39 @@
             "title": "Rate",
             "type": "string"
           },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Note"
+          },
           "status": {
             "enum": [
               "creating",
@@ -1962,6 +2005,10 @@
           "hold_end_at",
           "fail_reason",
           "attention_reason",
+          "attention_open",
+          "resolved_at",
+          "resolved_by",
+          "resolved_note",
           "credited_at",
           "created_at",
           "updated_at",
@@ -1974,9 +2021,18 @@
       "AdminSaleRowOut": {
         "description": "A sale as the admin list shows it.",
         "properties": {
+          "attention_open": {
+            "title": "Attention Open",
+            "type": "boolean"
+          },
           "attention_reason": {
             "anyOf": [
               {
+                "enum": [
+                  "rolled_back",
+                  "late_deposit",
+                  "credit_blocked"
+                ],
                 "type": "string"
               },
               {
@@ -2040,14 +2096,19 @@
           "payout_uzs",
           "margin_usd",
           "attention_reason",
+          "attention_open",
           "created_at"
         ],
         "title": "AdminSaleRowOut",
         "type": "object"
       },
       "AdminSalesPageOut": {
-        "description": "One page of sales and the next cursor.",
+        "description": "One page of sales, the next cursor and how many sales have an open attention.",
         "properties": {
+          "attention_open": {
+            "title": "Attention Open",
+            "type": "integer"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/AdminSaleRowOut"
@@ -2069,7 +2130,8 @@
         },
         "required": [
           "items",
-          "next_cursor"
+          "next_cursor",
+          "attention_open"
         ],
         "title": "AdminSalesPageOut",
         "type": "object"
@@ -3983,6 +4045,22 @@
         "title": "Bracket",
         "type": "object"
       },
+      "CancelIn": {
+        "description": "\u00ab\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c (\u043e\u0442\u043a\u0430\u0442)\u00bb with the reason (required).",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "CancelIn",
+        "type": "object"
+      },
       "CardFees-Input": {
         "description": "The fee kept on a payout to each card type, percent.",
         "properties": {
@@ -4375,6 +4453,18 @@
         "title": "CheapTail",
         "type": "object"
       },
+      "ClaimIn": {
+        "description": "\u00ab\u0411\u0435\u0440\u0443 \u0432 \u0440\u0430\u0431\u043e\u0442\u0443\u00bb; ``takeover`` takes a request another admin holds.",
+        "properties": {
+          "takeover": {
+            "default": false,
+            "title": "Takeover",
+            "type": "boolean"
+          }
+        },
+        "title": "ClaimIn",
+        "type": "object"
+      },
       "ConvertIn": {
         "additionalProperties": false,
         "description": "So\u02bbm to move into the dollar wallet.",
@@ -4622,6 +4712,7 @@
               "refund",
               "sale_credit",
               "payout_return",
+              "payout_return_reversal",
               "fx_convert",
               "admin_adjust_usd"
             ],
@@ -5610,7 +5701,7 @@
         "type": "object"
       },
       "PaidIn": {
-        "description": "\u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb with an optional note.",
+        "description": "\u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb with an optional note; ``override_reason`` pays a banned account or a\nfrozen wallet anyway (audited).",
         "properties": {
           "note": {
             "anyOf": [
@@ -5623,6 +5714,18 @@
               }
             ],
             "title": "Note"
+          },
+          "override_reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Reason"
           }
         },
         "title": "PaidIn",
@@ -5663,6 +5766,10 @@
       "PayoutDetailOut": {
         "description": "A request's page: the request, its sale, the seller's history, what may be done.",
         "properties": {
+          "can_cancel": {
+            "title": "Can Cancel",
+            "type": "boolean"
+          },
           "can_decide": {
             "title": "Can Decide",
             "type": "boolean"
@@ -5702,6 +5809,11 @@
             ],
             "title": "Note"
           },
+          "paid_needs_override": {
+            "default": false,
+            "title": "Paid Needs Override",
+            "type": "boolean"
+          },
           "reject_reason": {
             "anyOf": [
               {
@@ -5716,8 +5828,30 @@
           "request": {
             "$ref": "#/components/schemas/PayoutRowOut"
           },
+          "risk": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayoutRiskOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sale": {
             "$ref": "#/components/schemas/AdminSaleOut"
+          },
+          "undo_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Undo Until"
           }
         },
         "required": [
@@ -5728,7 +5862,8 @@
           "sale",
           "history_sales",
           "history_payouts",
-          "can_decide"
+          "can_decide",
+          "can_cancel"
         ],
         "title": "PayoutDetailOut",
         "type": "object"
@@ -5773,6 +5908,127 @@
         "title": "PayoutIn",
         "type": "object"
       },
+      "PayoutRiskOut": {
+        "description": "\u00ab\u0420\u0438\u0441\u043a\u0438\u00bb: who the seller is and how much went to them and to this card.",
+        "properties": {
+          "account_created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Created At"
+          },
+          "ban_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ban Reason"
+          },
+          "banned": {
+            "title": "Banned",
+            "type": "boolean"
+          },
+          "card_known": {
+            "title": "Card Known",
+            "type": "boolean"
+          },
+          "card_paid_uzs": {
+            "title": "Card Paid Uzs",
+            "type": "string"
+          },
+          "day_count": {
+            "title": "Day Count",
+            "type": "integer"
+          },
+          "day_usd": {
+            "title": "Day Usd",
+            "type": "string"
+          },
+          "paid_count": {
+            "title": "Paid Count",
+            "type": "integer"
+          },
+          "paid_uzs": {
+            "title": "Paid Uzs",
+            "type": "string"
+          },
+          "sell_block_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sell Block Reason"
+          },
+          "sell_blocked": {
+            "title": "Sell Blocked",
+            "type": "boolean"
+          },
+          "shared_card_users": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserOut"
+            },
+            "title": "Shared Card Users",
+            "type": "array"
+          },
+          "sold_count": {
+            "title": "Sold Count",
+            "type": "integer"
+          },
+          "sold_uzs": {
+            "title": "Sold Uzs",
+            "type": "string"
+          },
+          "steam_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steam Url"
+          },
+          "wallet_frozen": {
+            "title": "Wallet Frozen",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "steam_url",
+          "account_created_at",
+          "banned",
+          "ban_reason",
+          "wallet_frozen",
+          "sell_blocked",
+          "sell_block_reason",
+          "sold_count",
+          "sold_uzs",
+          "paid_count",
+          "paid_uzs",
+          "card_paid_uzs",
+          "day_count",
+          "day_usd",
+          "card_known",
+          "shared_card_users"
+        ],
+        "title": "PayoutRiskOut",
+        "type": "object"
+      },
       "PayoutRowOut": {
         "description": "A payout request in the queue.",
         "properties": {
@@ -5793,6 +6049,28 @@
             "title": "Card Type",
             "type": "string"
           },
+          "claimed_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "claimed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed Until"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -5801,6 +6079,21 @@
           "fee_uzs": {
             "title": "Fee Uzs",
             "type": "string"
+          },
+          "flags": {
+            "items": {
+              "enum": [
+                "banned",
+                "wallet_frozen",
+                "sell_blocked",
+                "new_account",
+                "shared_card",
+                "rolled_back"
+              ],
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
           },
           "id": {
             "title": "Id",
@@ -5865,9 +6158,21 @@
         "title": "PayoutRowOut",
         "type": "object"
       },
-      "PayoutsOut": {
-        "description": "\u00ab\u041a \u0432\u044b\u043f\u043b\u0430\u0442\u0435\u00bb: card payouts payable now (spec 2026-10-08).",
+      "PayoutTotalsOut": {
+        "description": "The queue's strip: payable now, and decided since midnight in Tashkent.",
         "properties": {
+          "paid_today_count": {
+            "title": "Paid Today Count",
+            "type": "integer"
+          },
+          "paid_today_uzs": {
+            "title": "Paid Today Uzs",
+            "type": "string"
+          },
+          "rejected_today_count": {
+            "title": "Rejected Today Count",
+            "type": "integer"
+          },
           "to_pay_count": {
             "title": "To Pay Count",
             "type": "integer"
@@ -5879,13 +6184,40 @@
         },
         "required": [
           "to_pay_count",
-          "to_pay_uzs"
+          "to_pay_uzs",
+          "paid_today_count",
+          "paid_today_uzs",
+          "rejected_today_count"
+        ],
+        "title": "PayoutTotalsOut",
+        "type": "object"
+      },
+      "PayoutsOut": {
+        "description": "\u00ab\u041a \u0432\u044b\u043f\u043b\u0430\u0442\u0435\u00bb: card payouts payable now (spec 2026-10-08).",
+        "properties": {
+          "sales_attention": {
+            "title": "Sales Attention",
+            "type": "integer"
+          },
+          "to_pay_count": {
+            "title": "To Pay Count",
+            "type": "integer"
+          },
+          "to_pay_uzs": {
+            "title": "To Pay Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to_pay_count",
+          "to_pay_uzs",
+          "sales_attention"
         ],
         "title": "PayoutsOut",
         "type": "object"
       },
       "PayoutsPageOut": {
-        "description": "One page of a status tab, every tab's count and the next cursor.",
+        "description": "One page of a status tab, every tab's count, the day's totals and the next cursor.",
         "properties": {
           "counts": {
             "$ref": "#/components/schemas/PayoutCountsOut"
@@ -5907,11 +6239,15 @@
               }
             ],
             "title": "Next Cursor"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PayoutTotalsOut"
           }
         },
         "required": [
           "items",
           "counts",
+          "totals",
           "next_cursor"
         ],
         "title": "PayoutsPageOut",
@@ -6693,6 +7029,25 @@
         "title": "RejectIn",
         "type": "object"
       },
+      "ResolveIn": {
+        "description": "\u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043e\u00bb with an optional note.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ResolveIn",
+        "type": "object"
+      },
       "RevealIn": {
         "description": "Why the admin asks for the number: to look at it or to copy it.",
         "properties": {
@@ -6911,17 +7266,6 @@
               }
             ]
           },
-          "payout_reject_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Payout Reject Reason"
-          },
           "payout_status": {
             "anyOf": [
               {
@@ -6979,7 +7323,6 @@
           "offer",
           "money_at",
           "payout_status",
-          "payout_reject_reason",
           "created_at"
         ],
         "title": "SaleOut",
@@ -7023,6 +7366,57 @@
             "minItems": 1,
             "title": "Margin",
             "type": "array"
+          },
+          "max_day_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Day Usd"
+          },
+          "max_sale_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sale Usd"
+          },
+          "max_user_day_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max User Day Usd"
           },
           "min_sum_usd": {
             "anyOf": [
@@ -7094,6 +7488,42 @@
             "title": "Margin",
             "type": "array"
           },
+          "max_day_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Day Usd"
+          },
+          "max_sale_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Sale Usd"
+          },
+          "max_user_day_usd": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max User Day Usd"
+          },
           "min_sum_usd": {
             "default": "1.10",
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,5}|(?=[\\d.]{1,8}0*$)\\d{0,5}\\.\\d{0,2}0*$)",
@@ -7117,7 +7547,7 @@
         "type": "object"
       },
       "SaleSettingsOut": {
-        "description": "The saved document, who saved it and when, and the rate now.",
+        "description": "The saved document, who saved it and when, the rate now and what in it loses money.",
         "properties": {
           "rate_uzs": {
             "anyOf": [
@@ -7154,13 +7584,22 @@
                 "type": "null"
               }
             ]
+          },
+          "warnings": {
+            "items": {
+              "const": "balance_bonus_eats_margin",
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
           }
         },
         "required": [
           "settings",
           "updated_at",
           "updated_by",
-          "rate_uzs"
+          "rate_uzs",
+          "warnings"
         ],
         "title": "SaleSettingsOut",
         "type": "object"
@@ -7230,6 +7669,103 @@
           "next_cursor"
         ],
         "title": "SalesPage",
+        "type": "object"
+      },
+      "SellBlockIn": {
+        "description": "Block a user from selling (a reason is required) or lift the block.",
+        "properties": {
+          "blocked": {
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "blocked"
+        ],
+        "title": "SellBlockIn",
+        "type": "object"
+      },
+      "SellBlockOut": {
+        "description": "Whether a user may sell; who blocked them, when and why.",
+        "properties": {
+          "blocked": {
+            "title": "Blocked",
+            "type": "boolean"
+          },
+          "blocked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked At"
+          },
+          "blocked_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUserOut"
+          }
+        },
+        "required": [
+          "user",
+          "blocked",
+          "reason",
+          "blocked_by",
+          "blocked_at"
+        ],
+        "title": "SellBlockOut",
+        "type": "object"
+      },
+      "SellBlocksOut": {
+        "description": "Every blocked user, newest block first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SellBlockOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SellBlocksOut",
         "type": "object"
       },
       "SellConfigOut": {
@@ -8702,6 +9238,22 @@
           "checked_at"
         ],
         "title": "TradeLinkOut",
+        "type": "object"
+      },
+      "UndoIn": {
+        "description": "\u00ab\u0412\u0435\u0440\u043d\u0443\u0442\u044c \u0432 \u043e\u0447\u0435\u0440\u0435\u0434\u044c\u00bb with the reason (required).",
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "UndoIn",
         "type": "object"
       },
       "UpdatedByOut": {
@@ -10466,7 +11018,7 @@
     },
     "/api/v1/admin/sales": {
       "get": {
-        "description": "Newest first; ``q`` is a number prefix in any case.",
+        "description": "Newest first; ``q`` is a number prefix in any case. ``attention=open`` keeps the sales\nwaiting for an admin (``resolved``: already checked, ``any``: either); ``reason`` one\nattention reason. ``attention_open`` counts every open one, whatever the filters.",
         "operationId": "get_sales_api_v1_admin_sales_get",
         "parameters": [
           {
@@ -10540,6 +11092,48 @@
             }
           },
           {
+            "in": "query",
+            "name": "attention",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "resolved",
+                    "any"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Attention"
+            }
+          },
+          {
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "rolled_back",
+                    "late_deposit",
+                    "credit_blocked"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -10584,9 +11178,205 @@
         ]
       }
     },
+    "/api/v1/admin/sales/blocks": {
+      "get": {
+        "description": "Every user an admin stopped from selling, newest block first.",
+        "operationId": "get_sell_blocks_api_v1_admin_sales_blocks_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellBlocksOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Users blocked from selling",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/blocks/{user_id}": {
+      "get": {
+        "description": "The user's sell block, if any.",
+        "operationId": "get_sell_block_api_v1_admin_sales_blocks__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellBlockOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such user"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Whether a user may sell",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "``blocked: true`` (with a ``reason``) stops the user's ``POST /sell`` (409\n``sell_blocked``); ``false`` lifts it. Audited ``sales.user.block`` / ``unblock``.",
+        "operationId": "put_sell_block_api_v1_admin_sales_blocks__user_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SellBlockIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellBlockOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such user"
+          },
+          "409": {
+            "description": "`idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Block or unblock a user's selling",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/sales/payouts": {
       "get": {
-        "description": "One status tab (``to_pay`` by default), newest first, with every tab's count.",
+        "description": "One status tab (``to_pay`` by default, oldest first; the others newest first; ``all``\nevery status) with every tab's count and the day's totals. ``q``: a sale-number prefix,\nthe card's last four, a name substring or a Steam ID.",
         "operationId": "get_payouts_api_v1_admin_sales_payouts_get",
         "parameters": [
           {
@@ -10596,11 +11386,12 @@
             "schema": {
               "default": "to_pay",
               "enum": [
-                "waiting_hold",
                 "to_pay",
+                "waiting_hold",
                 "paid",
                 "rejected",
-                "canceled"
+                "canceled",
+                "all"
               ],
               "title": "Status",
               "type": "string"
@@ -10632,6 +11423,23 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           },
           {
@@ -10681,7 +11489,7 @@
     },
     "/api/v1/admin/sales/payouts/{request_id}": {
       "get": {
-        "description": "The request, its sale, the seller's history; the card masked.",
+        "description": "The request, its sale, the risks, the seller's history; the card masked.",
         "operationId": "get_payout_api_v1_admin_sales_payouts__request_id__get",
         "parameters": [
           {
@@ -10739,9 +11547,173 @@
         ]
       }
     },
+    "/api/v1/admin/sales/payouts/{request_id}/cancel": {
+      "post": {
+        "description": "\u00ab\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c (\u043e\u0442\u043a\u0430\u0442)\u00bb (a reason is required): only a ``to_pay`` request whose sale\nSkinslink reverted afterwards (``rolled_back``); nothing is paid, the sale becomes\n``reverted`` and its attention is marked checked. If the money already went out, press\n\u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb instead.",
+        "operationId": "post_cancel_api_v1_admin_sales_payouts__request_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`payout_not_payable`, `payout_not_cancelable` (the sale was not reverted after it became payable), `payout_claimed` (another admin is paying it) or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel a payout whose sale was reverted",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/payouts/{request_id}/claim": {
+      "post": {
+        "description": "\u00ab\u0411\u0435\u0440\u0443 \u0432 \u0440\u0430\u0431\u043e\u0442\u0443\u00bb: the request is the admin's for 15 minutes (renewed by another claim or\na reveal); ``takeover`` takes it from another admin (audited ``sales.payout.takeover``).",
+        "operationId": "post_claim_api_v1_admin_sales_payouts__request_id__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Take a payout to pay it",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/sales/payouts/{request_id}/paid": {
       "post": {
-        "description": "\u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb (an optional note); the seller gets a letter.",
+        "description": "\u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb (an optional note); the seller gets a letter. A banned account or a frozen\nwallet needs ``override_reason`` (audited with the payment).",
         "operationId": "post_paid_api_v1_admin_sales_payouts__request_id__paid_post",
         "parameters": [
           {
@@ -10802,7 +11774,7 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "`payout_not_payable` or `idempotency_mismatch`"
+            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `payout_user_blocked` (a banned account or a frozen wallet), `payout_sale_reverted` (the trade was reverted) \u2014 both need `override_reason` \u2014 or `idempotency_mismatch`"
           },
           "422": {
             "content": {
@@ -10823,7 +11795,7 @@
     },
     "/api/v1/admin/sales/payouts/{request_id}/reject": {
       "post": {
-        "description": "\u00ab\u041e\u0442\u043a\u043b\u043e\u043d\u0438\u0442\u044c\u00bb (a reason is required): the amount before the card fee goes to the balance.",
+        "description": "\u00ab\u041e\u0442\u043a\u043b\u043e\u043d\u0438\u0442\u044c\u00bb (a reason is required): the amount before the card fee goes to the balance.\nA frozen wallet cannot take it (409 ``wallet_frozen``).",
         "operationId": "post_reject_api_v1_admin_sales_payouts__request_id__reject_post",
         "parameters": [
           {
@@ -10884,7 +11856,7 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "`payout_not_payable` or `idempotency_mismatch`"
+            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `wallet_frozen` or `idempotency_mismatch`"
           },
           "422": {
             "content": {
@@ -10903,9 +11875,81 @@
         ]
       }
     },
+    "/api/v1/admin/sales/payouts/{request_id}/release": {
+      "post": {
+        "description": "\u00ab\u041e\u0442\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u00bb: the claimer gives the request back (audited ``sales.payout.release``).",
+        "operationId": "post_release_api_v1_admin_sales_payouts__request_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`payout_claimed` (another admin is paying it) or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Give a claimed payout back",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/sales/payouts/{request_id}/reveal": {
       "post": {
-        "description": "The full card number to pay by hand; audited ``sales.card.show`` / ``sales.card.copy``.\n\nKeyless on purpose: it changes nothing but the audit trail, every reveal is its own audit\nrow, and storing a replay would store the number.",
+        "description": "The full card number to pay by hand, for a ``to_pay`` request only; audited\n``sales.card.show`` / ``sales.card.copy``, and the request is claimed for the admin.\n\nKeyless on purpose: the claim is idempotent by itself, every reveal is its own audit row,\nand storing a replay would store the number.",
         "operationId": "post_reveal_api_v1_admin_sales_payouts__request_id__reveal_post",
         "parameters": [
           {
@@ -10956,6 +12000,9 @@
             },
             "description": "Successful Response"
           },
+          "409": {
+            "description": "`payout_not_payable` or `payout_claimed` (another admin is paying it)"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -10968,6 +12015,88 @@
           }
         },
         "summary": "The card number",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/payouts/{request_id}/undo": {
+      "post": {
+        "description": "\u00ab\u0412\u0435\u0440\u043d\u0443\u0442\u044c \u0432 \u043e\u0447\u0435\u0440\u0435\u0434\u044c\u00bb (a reason is required) within 10 minutes of \u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb or\n\u00ab\u041e\u0442\u043a\u043b\u043e\u043d\u0438\u0442\u044c\u00bb. Undoing a rejection takes its credit back off the balance \u2014 refused when the\nbalance no longer covers it (``balance_spent``). Audited ``sales.payout.undo``.",
+        "operationId": "post_undo_api_v1_admin_sales_payouts__request_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UndoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`undo_expired`, `undo_not_yours`, `balance_spent`, `wallet_frozen`, `payout_claimed` (another admin is paying it) or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo a payout decided minutes ago",
         "tags": [
           "admin"
         ]
@@ -11023,9 +12152,28 @@
         ]
       },
       "put": {
-        "description": "Replace the document; new sales use it, existing ones keep their numbers.",
+        "description": "Replace the document; new sales use it, existing ones keep their numbers. ``warnings``\nname what loses money; they never refuse the save. Saved by someone else since the\n``If-Match`` version \u2192 409 ``settings_stale`` (reload and edit again).",
         "operationId": "put_sale_settings_api_v1_admin_sales_settings_put",
         "parameters": [
+          {
+            "description": "The `updated_at` the edit started from, or `none` (never saved). Absent: no check.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `updated_at` the edit started from, or `none` (never saved). Absent: no check.",
+              "title": "If-Match"
+            }
+          },
           {
             "in": "header",
             "name": "authorization",
@@ -11072,6 +12220,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "409": {
+            "description": "`settings_stale` or `idempotency_mismatch`"
           },
           "422": {
             "content": {
@@ -11147,6 +12298,90 @@
           }
         },
         "summary": "A sale",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/{number}/resolve": {
+      "post": {
+        "description": "\u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043e\u00bb (an optional note): stamps ``resolved_at/by/note`` once, audited\n``sales.attention.resolve``; already resolved \u2192 unchanged. A new attention reason on the\nsale later opens it again.",
+        "operationId": "post_resolve_api_v1_admin_sales__number__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSaleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "No such sale"
+          },
+          "409": {
+            "description": "`nothing_to_resolve` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mark a sale's attention as checked",
         "tags": [
           "admin"
         ]

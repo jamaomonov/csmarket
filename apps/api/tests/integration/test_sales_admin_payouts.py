@@ -91,6 +91,7 @@ async def test_the_card_number_leaves_only_through_the_audited_reveal(
     assert HUMO not in paid.text
     assert HUMO not in repr(logs)
     assert [a for a, _ in await _audit(db_session)] == [
+        "sales.payout.claim",  # the first reveal claims the request
         "sales.card.show",
         "sales.card.copy",
         "sales.payout.paid",
@@ -154,7 +155,7 @@ async def test_reject_credits_the_amount_before_the_fee_to_the_balance(
     assert await user_balance(db_session, request.user_id) == Decimal(155_200)
     letter = await db_session.scalar(select(EmailOutbox).where(EmailOutbox.kind == "sale_paid"))
     assert letter is not None
-    assert letter.payload["reason"] == "Карта заблокирована"
+    assert "reason" not in letter.payload  # the admin's note stays in the admin
     assert (letter.payload["to"], letter.payload["rejected"], letter.payload["last4"]) == (
         "balance",
         "true",
@@ -203,7 +204,7 @@ async def test_the_page_shows_the_breakdown_items_and_history(
     assert (sale["items_uzs"], sale["fee_uzs"], sale["payout_uzs"]) == ("155200", "7800", "147400")
     assert [i["asset_id"] for i in sale["items"]] == ["100", "101"]
     assert [s["number"] for s in body["history_sales"]] == [sale["number"]]
-    assert [p["id"] for p in body["history_payouts"]] == [request.id]
+    assert body["history_payouts"] == []  # the request itself is the page, not its history
     assert body["can_decide"] is True
 
 

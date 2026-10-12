@@ -88,6 +88,7 @@ class EntryOut(BaseModel):
         "refund",
         "sale_credit",
         "payout_return",
+        "payout_return_reversal",
         "fx_convert",
         "admin_adjust_usd",
     ]

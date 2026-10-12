@@ -37,8 +37,6 @@ export interface SaleOut {
   /** When the money is due, while `hold`. */
   money_at: string | null;
   payout_status: PayoutStatus | null;
-  /** Why a card payout was rejected; set only then. */
-  payout_reject_reason: string | null;
   created_at: string;
 }
 

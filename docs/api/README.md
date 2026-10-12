@@ -130,9 +130,10 @@ next_cursor}`, newest first. A dollar line has `amount_usd` signed (`"-1.500"`) 
   `"0"`; `fx_convert` shows on both lists (one leg each) and `admin_adjust_usd` on the dollar one. `amount_uzs` is
   **signed**: `+50000` credited, `-10000` debited. `kind` is `topup`, `topup_reversal`,
   `admin_adjust`, `purchase`, `refund`, `sale_credit` (a skin sale paid to the balance) or
-  `payout_return` (a rejected card payout returned to the balance); `reference_number` is the
+  `payout_return` (a rejected card payout returned to the balance) or `payout_return_reversal`
+  (an admin undid that rejection; the money leaves the balance again); `reference_number` is the
   top-up's number for `topup` and `topup_reversal`, the order's number for `purchase` and `refund`,
-  the sale's number (`S…`) for `sale_credit` and `payout_return`, else `null`. The cursor is opaque; a malformed one is 422.
+  the sale's number (`S…`) for `sale_credit`, `payout_return` and `payout_return_reversal`, else `null`. The cursor is opaque; a malformed one is 422.
   `type=topup` keeps `topup` and `topup_reversal` lines; `type=withdrawal` is an empty list
   until payouts exist; any other `type` is 422 («Транзакции» filters).
 - `POST /dev/topups/{number}/pay` is not in this schema: it pays the owner's top-up through
@@ -438,7 +439,8 @@ OpenAPI schema.
   with `purchase_id` (or `trade_id`) and `sign`; authenticated by
   `sign == base64(sha256(str(id) + secret))` (constant time) before anything else is read.
   **200** `{ok: true}`; 403 `bad_signature` for a bad or missing `sign`; 400 `bad_body` for a
-  body that is not a JSON object; **404 while Skinslink is off**.
+  body that is not a JSON object; **404 while either Skinslink credential is unset** (the
+  buy and sell switches do not close it: settled work must still be heard).
 - The signature covers only the id, so the body is **not trusted**: a purchase webhook queues a
   check and the worker reads the status from Skinslink's API; a deposit webhook (`trade_id`, ADR-0016) queues a check
   of the sale its `merchant_tx_id` names.
@@ -464,10 +466,12 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
   `sell-create`. One `create-deposit` call (10 s) after the sale is committed. 409
   `prices_changed`, `below_minimum` (+ `min_sum_uzs`), `below_card_minimum`
   (+ `card_min_uzs`), `too_many_items` (+ `max_items`), `steam_refused`, `cards_limit`,
-  `sales_disabled`, `trade_link_*`; 422 `card_invalid` (the number is never echoed); 404 a
-  card that is not mine; 503 `sales_unavailable` / `rate_unavailable`. 201 `SaleOut`; a timeout
-  answers `status: "creating"`. Two different keys make two sales (known gap,
-  `docs/runbooks/sales.md`).
+  `sales_disabled`, `trade_link_*`, `sell_blocked` (an admin stopped this seller),
+  `items_in_sale` (an item is in one of the seller's open sales), `above_sale_maximum`,
+  `user_daily_limit`, `daily_limit` (the admin's optional USD ceilings; + `limit_usd`,
+  `left_usd`); 422 `card_invalid` (the number is never echoed); 404 a card that is not mine;
+  503 `sales_unavailable` / `rate_unavailable`. 201 `SaleOut`; a timeout answers
+  `status: "creating"`.
 - `GET /sales?cursor=&status=`, `GET /sales/{number}` (`S…`; 404 for anyone else's),
   `GET /sales/pending` (`pending_uzs`: balance sales still in Steam's protection).
   `status` is optional and only `hold` is accepted (another value is 422): it keeps the sales in
@@ -482,9 +486,19 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
   audit trail and a replay would store the number; audited on every call),
   `POST /payouts/{id}/paid {note?}` and `POST /payouts/{id}/reject {reason}` (keyed, audited;
   409 `payout_not_payable` unless `to_pay`; a reject credits the pre-fee amount to the seller's
-  balance and shows the reason to the seller), `GET`/`PUT /settings` (keyed, audited
-  `sales.settings.save`), `GET ""?status=&q=`, `GET /{number}`. The dashboard gains
-  `payouts: {to_pay_count, to_pay_uzs}`.
+  balance and shows the reason to the seller), `POST /payouts/{id}/cancel {reason}` (keyed,
+  audited `sales.payout.cancel`; only a `to_pay` request whose sale Skinslink reverted after it
+  became payable — `can_cancel` on the page — else 409 `payout_not_cancelable`),
+  `GET`/`PUT /settings` (keyed, audited `sales.settings.save`; the answer carries `warnings`,
+  e.g. `balance_bonus_eats_margin`, never a refusal; the document's `max_sale_usd`,
+  `max_user_day_usd`, `max_day_usd` are optional, `null` = no limit),
+  `GET ""?status=&q=&attention=open|resolved|any&reason=` (rows carry `attention_open`; the page
+  `attention_open`, the count of every open attention), `GET /{number}` (+ `resolved_at`,
+  `resolved_by`, `resolved_note`), `POST /{number}/resolve {note?}` (keyed, audited
+  `sales.attention.resolve`; 409 `nothing_to_resolve`), `GET /blocks`,
+  `GET /blocks/{user_id}`, `PUT /blocks/{user_id} {blocked, reason?}` (keyed; a block needs a
+  reason; audited `sales.user.block` / `sales.user.unblock`). The dashboard gains
+  `payouts: {to_pay_count, to_pay_uzs, sales_attention}`.
 - **422 shape (app-wide)**: a `RequestValidationError` handler (`bootstrap.py`) answers
   `{"detail": [{type, loc, msg}]}` and drops pydantic's `input` and `ctx`, so a request body
   (a card number, a trade link) is never echoed.

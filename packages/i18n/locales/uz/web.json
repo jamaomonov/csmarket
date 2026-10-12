@@ -148,6 +148,7 @@
       "refund": "Balansga qaytarish",
       "sale_credit": "Skin sotuvi",
       "payout_return": "Balansga toʻlov",
+      "payout_return_reversal": "Balansga toʻlov bekor qilindi",
       "fx_convert": "USD ga oʻtkazma",
       "admin_adjust_usd": "USD tuzatish"
     },
@@ -446,6 +447,7 @@
   },
   "sell": {
     "title": "CS2 skinlaringizni soting",
+    "mySales": "Mening sotuvlarim",
     "search": "Nomi boʻyicha qidirish",
     "sortLabel": "Saralash",
     "sort": {
@@ -465,6 +467,7 @@
     "signedOut": "Skin sotish uchun Steam orqali kiring.",
     "loadFailed": "Inventarni yuklab boʻlmadi. Yana urinib koʻring.",
     "retry": "Qayta urinish",
+    "closed": "Skinlarni sotib olish vaqtincha mavjud emas. Keyinroq kiring.",
     "steam": {
       "trade_link_revoked": "Almashuv havolasi Steamʼda yangilangan. Profilda yangisini qoʻshing.",
       "trade_link_invalid": "Almashuv havolasi ishlamayapti. Profilda tekshiring.",
@@ -487,7 +490,7 @@
       "balance": "csmarket balansi",
       "balanceNote": "Summaga +{percent}%",
       "cardNote": "Komissiya {percent}%",
-      "newCard": "Yangi karta",
+      "newCard": "Yangi {brand} karta",
       "cardsLimit": "{count} ta karta saqlangan — yangisini qoʻshish uchun profilda bittasini oʻchiring."
     },
     "card": {
@@ -501,19 +504,26 @@
       "bonus": "Balans uchun bonus +{percent}%",
       "payout": "Siz olasiz"
     },
-    "when": "Pul almashuvdan 7 kun keyin tushadi.",
+    "steps": {
+      "title": "Keyin nima boʻladi",
+      "accept": "Steamʼda almashuvni qabul qiling — aks holda skinlar oʻzingizda qoladi.",
+      "protection": "Steamʼning 7 kunlik himoyasini kutamiz.",
+      "balance": "Pul almashuvdan 7 kun keyin balansga tushadi.",
+      "card": "Pulni Steamʼning 7 kunlik himoyasidan keyin, 12 soat ichida kartaga yuboramiz."
+    },
     "submit": "{sum} ga sotish",
     "addMore": "Yana {sum} qoʻshing",
     "sending": "Yuborilmoqda…",
     "errors": {
       "prices_changed": "Narxlar yangilandi — summani tekshirib, yana bosing.",
-      "below_minimum": "Summa eng kam miqdordan kam — buyum qoʻshing.",
+      "below_minimum": "Eng kam sotuv summasi — {sum}. Buyum qoʻshing.",
       "below_card_minimum": "Kartaga eng kam summadan boshlab. Balansni tanlang yoki buyum qoʻshing.",
       "too_many_items": "Bir martada juda koʻp buyum — bir qismini olib tashlang.",
       "steam_refused": "Steam bu akkaunt bilan almashuvga ruxsat bermayapti.",
       "sales_disabled": "Sotish hozir yopiq. Keyinroq kiring.",
       "cards_limit": "{count} ta karta saqlangan — profilda bittasini oʻchiring.",
       "card_invalid": "Karta raqamini tekshiring.",
+      "card_gone": "Bu karta endi yoʻq — boshqasini tanlang.",
       "trade_link_missing": "Almashuv havolasini qoʻshing.",
       "trade_link_bad": "Almashuv havolasi ishlamayapti. Profilda tekshiring.",
       "rate_unavailable": "Valyuta kursi hozir mavjud emas. Bir daqiqadan keyin urinib koʻring.",
@@ -557,11 +567,16 @@
       "offered": {
         "title": "Almashuvni qabul qiling",
         "text": "{bot} Steamʼda taklif yubordi. Uni {time} gacha qabul qiling.",
+        "textNoBot": "Almashuv taklifi Steamʼda. Uni {time} gacha qabul qiling.",
+        "textNoTime": "{bot} Steamʼda taklif yubordi. Uni oching va qabul qiling.",
         "textNoOffer": "Almashuv taklifini yubordik — Steamʼni ochib, uni qabul qiling."
       },
       "hold": {
         "title": "Skinlar qabul qilindi",
-        "text": "{amount} {date} tushadi."
+        "text": "{amount} {date} tushadi.",
+        "textSoon": "{amount} Steamʼning 7 kunlik himoyasidan keyin tushadi.",
+        "textCard": "{date} dan keyin {amount} ni {card} kartasiga yuboramiz.",
+        "textCardSoon": "Steamʼning 7 kunlik himoyasidan keyin {amount} ni {card} kartasiga yuboramiz."
       },
       "credited": {
         "title": "Pul balansda",
@@ -577,8 +592,7 @@
       },
       "rejected": {
         "title": "Pul balansda",
-        "text": "Kartaga oʻtkazma oʻtmadi: {reason}. {amount} balansingizga oʻtkazildi.",
-        "textPlain": "Kartaga oʻtkazma oʻtmadi. {amount} balansingizga oʻtkazildi."
+        "text": "Kartaga oʻtkazma oʻtmadi. {amount} balansingizga oʻtkazildi."
       },
       "closed": {
         "title": "Sotuv amalga oshmadi",

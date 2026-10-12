@@ -5,3 +5,4 @@ export const payoutKey = (id: string) => ["admin", "sales", "payout", id] as con
 export const SALES_LIST_KEY = ["admin", "sales", "list"] as const;
 export const saleKey = (number: string) => ["admin", "sales", "one", number] as const;
 export const SALE_SETTINGS_KEY = ["admin", "sales", "settings"] as const;
+export const SELL_BLOCKS_KEY = ["admin", "sales", "blocks"] as const;

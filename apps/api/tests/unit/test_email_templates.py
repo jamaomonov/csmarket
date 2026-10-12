@@ -165,7 +165,7 @@ REJECTED = {
 
 
 @pytest.mark.parametrize("locale", ["ru", "uz", "en"])
-def test_a_rejected_card_payout_letter_gives_the_reason_and_the_balance(locale: str) -> None:
+def test_a_rejected_card_payout_letter_names_the_balance_never_the_admins_note(locale: str) -> None:
     payload = {**REJECTED, "last4": "9015"}
     letter = render(
         "sale_paid",
@@ -174,7 +174,7 @@ def test_a_rejected_card_payout_letter_gives_the_reason_and_the_balance(locale: 
         payload=payload,
         links=SALE_LINKS,
     )
-    assert "Карта заблокирована" in letter.text
+    assert "Карта заблокирована" not in letter.text  # an old queued payload may still carry it
     assert "•••• 9015" in letter.text
     assert SALE_LINKS.balance_url in letter.text
     assert "155" in letter.text
@@ -186,4 +186,4 @@ def test_a_rejected_card_payout_letter_gives_the_reason_and_the_balance(locale: 
         links=SALE_LINKS,
     )
     assert "••••" not in without.text
-    assert "Карта заблокирована" in without.text
+    assert "Карта заблокирована" not in without.text

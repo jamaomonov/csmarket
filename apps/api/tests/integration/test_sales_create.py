@@ -26,7 +26,7 @@ from structlog.testing import capture_logs
 from tests.integration.conftest import CUSTOMER_STEAM_ID
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit, inv_item
 from tests.integration.payments_factory import make_user
-from tests.integration.sales_factory import HUMO, make_card
+from tests.integration.sales_factory import HUMO, HUMO_2, make_card
 from tests.integration.sales_kit import (  # noqa: F401 -- the fixture
     Headers,
     ready_seller,
@@ -409,6 +409,24 @@ async def test_a_used_tx_id_is_adopted_through_the_status(
     assert len(fake.status_calls) == 1
 
 
+async def test_another_409_is_a_refusal_not_an_adoption(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    fake: FakeDepositClient,
+) -> None:
+    """SB-12: only ``already_exists`` means the call landed; any other 409 closes the sale."""
+    fake.created = SkinslinkError("refused", status=409, code="active_deposit")
+    headers = await _seller(db_session, integration_client, customer_headers)
+    r = await integration_client.post(URL, json=BALANCE, headers={**headers, **_key()})
+    assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
+    assert fake.status_calls == []
+    sale = await db_session.scalar(select(Sale).execution_options(populate_existing=True))
+    assert sale is not None
+    assert (sale.status, sale.fail_reason) == ("closed", "active_deposit")
+
+
 async def test_a_timeout_leaves_the_sale_creating_for_the_poll(
     db_session: AsyncSession,
     integration_client: AsyncClient,
@@ -496,10 +514,12 @@ async def test_the_sale_is_committed_before_the_one_skinslink_call(
 
 
 @pytest.mark.parametrize(
-    ("closed_by", "attention"),
+    ("closed_by", "after"),
     [
-        ("bot_error", None),  # a Skinslink failure a webhook check applied first: stale answer
-        ("not_created", "late_deposit"),  # our poll saw no deposit; the answer proves one
+        # a Skinslink failure a webhook check applied first: a stale answer, ignored
+        ("bot_error", ("closed", "bot_error", None)),
+        # our poll saw no deposit; the answer proves one: the sale is reopened (SB-1)
+        ("not_created", ("creating", None, None)),
     ],
 )
 async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
@@ -510,7 +530,7 @@ async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
     sales_on: None,
     fake: FakeDepositClient,
     closed_by: str,
-    attention: str | None,
+    after: tuple[str, str | None, None],
 ) -> None:
     """SL-4: a webhook check closed the sale while ``create-deposit`` was in flight."""
     original = fake.create_deposit
@@ -527,11 +547,7 @@ async def test_an_answer_older_than_a_check_never_raises_a_false_alarm(
     headers = await _seller(db_session, integration_client, customer_headers)
     r = await integration_client.post(URL, json=BALANCE, headers={**headers, **_key()})
     sale = await _sale(db_session, r.json()["number"])
-    assert (sale.status, sale.fail_reason, sale.attention_reason) == (
-        "closed",
-        closed_by,
-        attention,
-    )
+    assert (sale.status, sale.fail_reason, sale.attention_reason) == after
 
 
 @pytest.mark.parametrize(
@@ -586,10 +602,36 @@ async def test_a_fourth_card_is_409_and_stores_no_sale(
         await make_card(db_session, user)
     body = {
         **BALANCE,
-        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO}},
+        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO_2}},
         "expected_payout_uzs": 147_400,
     }
     r = await integration_client.post(URL, json=body, headers={**headers, **_key()})
     assert (r.status_code, r.json()["code"]) == (409, "cards_limit")
     assert await db_session.scalar(select(func.count()).select_from(Sale)) == 0
     assert fake.deposit_calls == []
+
+
+@pytest.mark.usefixtures("sales_on")
+async def test_retrying_a_refused_card_sale_never_saves_the_card_twice(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    fake: FakeDepositClient,
+) -> None:
+    fake.created = SkinslinkError("refused", status=400, code="inventory_reload")
+    headers = await _seller(db_session, integration_client, customer_headers)
+    body = {
+        **BALANCE,
+        "payout": {"to": "card", "new_card": {"type": "humo", "number": HUMO}},
+        "expected_payout_uzs": 147_400,
+    }
+    for n in range(1, 5):  # past the 3-card limit: the same card is never a new one
+        assert (await integration_client.get("/api/v1/sell/inventory", headers=headers)).is_success
+        r = await integration_client.post(URL, json=body, headers={**headers, **_key(n)})
+        assert (r.status_code, r.json()["code"]) == (409, "prices_changed")
+    assert await db_session.scalar(select(func.count()).select_from(PayoutCard)) == 1
+    fake.created = deposit("active", amount_usd=Decimal("12.95"))
+    await integration_client.get("/api/v1/sell/inventory", headers=headers)
+    r = await integration_client.post(URL, json=body, headers={**headers, **_key(9)})
+    assert r.status_code == 201, r.text
+    assert await db_session.scalar(select(func.count()).select_from(PayoutCard)) == 1

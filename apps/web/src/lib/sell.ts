@@ -211,11 +211,13 @@ const SELL_ERRORS: ReadonlySet<string> = new Set<SellErrorCode>([
   "sales_unavailable",
 ]);
 
-/** A refusal the sell page explains; `reason` is the Steam account code of `steam_refused`. */
+/** A refusal the sell page explains; `reason` is the Steam account code of `steam_refused`
+ * (or the trade link's of `trade_link_bad`), `minSumUzs` the minimum of `below_minimum`. */
 export class SellError extends Error {
   constructor(
     public readonly code: SellErrorCode,
     public readonly reason: string | null,
+    public readonly minSumUzs: string | null = null,
   ) {
     super(code);
     this.name = "SellError";
@@ -228,11 +230,12 @@ export function sellError(err: unknown): SellError | null {
   if (!(err instanceof SessionApiError)) return null;
   const code = err.code ?? "";
   if (!SELL_ERRORS.has(code)) return null;
-  // A problem+json body: an unknown JSON object, of which only the `reason` field is read.
+  // A problem+json body: an unknown JSON object, of which only `reason` and `min_sum_uzs` are read.
   const body =
     typeof err.body === "object" && err.body !== null ? (err.body as Record<string, unknown>) : {};
+  const text = (v: unknown): string | null => (typeof v === "string" ? v : null);
   // Narrowed by the set above.
-  return new SellError(code as SellErrorCode, typeof body.reason === "string" ? body.reason : null);
+  return new SellError(code as SellErrorCode, text(body.reason), text(body.min_sum_uzs));
 }
 
 /** `POST /sell`; a refusal comes back as a {@link SellError}. */

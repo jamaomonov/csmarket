@@ -1,4 +1,5 @@
-import { type PayoutDetail, type PayoutRow, type SaleSettingsOut } from "./api";
+import { type SaleSettingsOut } from "./api";
+import { type PayoutDetail, type PayoutRow } from "./payoutsApi";
 
 export const PAYOUT_ROW: PayoutRow = {
   id: "p-1",
@@ -12,6 +13,9 @@ export const PAYOUT_ROW: PayoutRow = {
   to_pay_at: "2026-10-15T10:00:00Z",
   paid_at: null,
   created_at: "2026-10-08T10:00:00Z",
+  claimed_by: null,
+  claimed_until: null,
+  flags: [],
 };
 
 export const PAYOUT_DETAIL: PayoutDetail = {
@@ -41,6 +45,10 @@ export const PAYOUT_DETAIL: PayoutDetail = {
     hold_end_at: "2026-10-15T10:00:00Z",
     fail_reason: null,
     attention_reason: null,
+    attention_open: false,
+    resolved_at: null,
+    resolved_by: null,
+    resolved_note: null,
     credited_at: null,
     created_at: "2026-10-08T10:00:00Z",
     updated_at: "2026-10-15T10:00:00Z",
@@ -61,8 +69,29 @@ export const PAYOUT_DETAIL: PayoutDetail = {
     payout: PAYOUT_ROW,
   },
   history_sales: [],
-  history_payouts: [PAYOUT_ROW],
+  history_payouts: [],
   can_decide: true,
+  can_cancel: false,
+  undo_until: null,
+  paid_needs_override: false,
+  risk: {
+    steam_url: "https://steamcommunity.com/profiles/76561198000000001",
+    account_created_at: "2026-10-01T10:00:00Z",
+    banned: false,
+    ban_reason: null,
+    wallet_frozen: false,
+    sell_blocked: false,
+    sell_block_reason: null,
+    sold_count: 1,
+    sold_uzs: "147400",
+    paid_count: 0,
+    paid_uzs: "0",
+    card_paid_uzs: "0",
+    day_count: 1,
+    day_usd: "12.95",
+    card_known: true,
+    shared_card_users: [],
+  },
 };
 
 export const SETTINGS: SaleSettingsOut = {
@@ -79,8 +108,12 @@ export const SETTINGS: SaleSettingsOut = {
     card_fee_pct: { uzcard: "5", humo: "5", uzum_visa: "5" },
     card_min_uzs: 30000,
     min_sum_usd: "1",
+    max_sale_usd: null,
+    max_user_day_usd: null,
+    max_day_usd: null,
   },
   updated_at: null,
   updated_by: null,
   rate_uzs: "12650.5",
+  warnings: [],
 };

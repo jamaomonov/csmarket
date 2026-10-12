@@ -1,40 +1,24 @@
-/** «Настройки выкупа»: the sale-settings document. A save affects new sales only; audited. */
+/**
+ * «Настройки выкупа»: the sale-settings document. A save affects new sales only; audited. The
+ * save names the version it was edited from: a tab left open while someone else saved gets
+ * «уже сохранил кто-то другой» instead of silently writing old numbers back. `warnings` from
+ * the API (a balance bonus that eats the margin) show above the form.
+ */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
 import { CARD_TYPES_ORDER, getSaleSettings, saveSaleSettings, type SaleSettings } from "./api";
 import { SALE_SETTINGS_KEY } from "./keys";
-import { CARD_BRANDS } from "./labels";
+import { CARD_BRANDS, payoutErrorText } from "./labels";
+import { LimitsSection, NumberField, WARNING_TEXT, withLimits } from "./SettingsParts";
 
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { Banner } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
-
-interface NumberFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}
-
-function NumberField({ label, value, onChange }: NumberFieldProps) {
-  return (
-    <label className="flex flex-col gap-1 text-sm">
-      {label}
-      <input
-        aria-label={label}
-        inputMode="decimal"
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value.trim());
-        }}
-        className="border-border bg-bg w-40 rounded-md border px-3 py-1.5 tabular-nums"
-      />
-    </label>
-  );
-}
 
 export function SaleSettingsPage() {
   const qc = useQueryClient();
@@ -54,8 +38,10 @@ export function SaleSettingsPage() {
     setInvalid(null);
   };
   const key = useIdempotencyKey("admin-sale-settings");
+  const version = settings.data?.updated_at ?? null;
   const save = useMutation({
-    mutationFn: (doc: SaleSettings) => saveSaleSettings(doc, key.keyFor(JSON.stringify(doc))),
+    mutationFn: (doc: SaleSettings) =>
+      saveSaleSettings(doc, version, key.keyFor(JSON.stringify(doc))),
     onSuccess: (out) => {
       key.reset();
       qc.setQueryData(SALE_SETTINGS_KEY, out);
@@ -80,7 +66,7 @@ export function SaleSettingsPage() {
       return;
     }
     setInvalid(null);
-    save.mutate({ ...doc, card_min_uzs: Number(min) });
+    save.mutate(withLimits({ ...doc, card_min_uzs: Number(min) }));
   };
   const set = (patch: Partial<SaleSettings>) => {
     setDraft({ ...doc, ...patch });
@@ -100,6 +86,9 @@ export function SaleSettingsPage() {
           </>
         }
       />
+      {(settings.data.warnings ?? []).map((w) => (
+        <Banner key={w}>{WARNING_TEXT[w]}</Banner>
+      ))}
       <label
         className={`flex cursor-pointer items-center justify-between gap-4 rounded-lg border px-4 py-3 ${
           doc.enabled ? "border-success/40 bg-success/10" : "border-border bg-surface"
@@ -129,7 +118,7 @@ export function SaleSettingsPage() {
           <span className="w-40">Маржа, %</span>
         </div>
         {doc.margin.map((b, i) => (
-          <div key={ids[i]} className="flex items-end gap-2">
+          <div key={ids[i]} className="flex flex-wrap items-end gap-2">
             <NumberField
               label={`От, $ (${String(i + 1)})`}
               value={b.from_usd}
@@ -211,6 +200,7 @@ export function SaleSettingsPage() {
           }}
         />
       </section>
+      <LimitsSection doc={doc} onChange={set} />
       <div className="border-border bg-bg/95 sticky bottom-0 z-10 flex gap-2 border-t py-3 backdrop-blur">
         <Button
           disabled={draft === null || save.isPending}
@@ -244,6 +234,11 @@ export function SaleSettingsPage() {
               {invalid}
             </p>
           ) : null}
+          {save.isError ? (
+            <p role="alert" className="text-danger text-sm">
+              {payoutErrorText(save.error)}
+            </p>
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button
               variant="secondary"
@@ -269,9 +264,9 @@ export function SaleSettingsPage() {
           {invalid}
         </p>
       ) : null}
-      {save.isError ? (
+      {save.isError && !confirming ? (
         <p role="alert" className="text-danger">
-          {errorText(save.error)}
+          {payoutErrorText(save.error)}
         </p>
       ) : null}
     </div>

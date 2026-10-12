@@ -42,6 +42,7 @@ const KINDS: Record<string, string> = {
   refund: "Возврат на баланс",
   sale_credit: "Продажа скинов",
   payout_return: "Выплата на баланс",
+  payout_return_reversal: "Отмена выплаты на баланс",
   fx_convert: "Перевод в USD",
   admin_adjust_usd: "Корректировка USD",
 };

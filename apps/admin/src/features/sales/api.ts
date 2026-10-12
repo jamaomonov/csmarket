@@ -1,4 +1,9 @@
-/** Admin «Выкуп» API: thin typed wrappers over `/api/v1/admin/sales`. Mirrors the API's schemas. */
+/**
+ * Admin «Выкуп» API: thin typed wrappers over `/api/v1/admin/sales` (sales, settings, sell
+ * blocks). The payout requests are in `payoutsApi.ts`. Mirrors the API's schemas.
+ */
+import { type PayoutRow } from "./payoutsApi";
+
 import { session } from "@/lib/api";
 
 const BASE = "/api/v1/admin/sales";
@@ -6,19 +11,10 @@ const BASE = "/api/v1/admin/sales";
 export type CardType = "uzcard" | "humo" | "uzum_visa";
 export type SaleStatus =
   "creating" | "offered" | "hold" | "credited" | "payout" | "closed" | "reverted";
-export type PayoutStatus = "to_pay" | "waiting_hold" | "paid" | "rejected" | "canceled";
 
 /** The card types in the order the settings form lists them. */
 export const CARD_TYPES_ORDER: readonly CardType[] = ["uzcard", "humo", "uzum_visa"];
 
-/** The tabs, in the order the queue shows them; «К выплате» first. */
-export const PAYOUT_STATUSES: readonly PayoutStatus[] = [
-  "to_pay",
-  "waiting_hold",
-  "paid",
-  "rejected",
-  "canceled",
-];
 export const SALE_STATUSES: readonly SaleStatus[] = [
   "creating",
   "offered",
@@ -29,30 +25,13 @@ export const SALE_STATUSES: readonly SaleStatus[] = [
   "reverted",
 ];
 
+export type AttentionReason = "rolled_back" | "late_deposit" | "credit_blocked";
+export type AttentionFilter = "open" | "resolved" | "any";
+export const ATTENTION_FILTERS: readonly AttentionFilter[] = ["open", "resolved", "any"];
+
 export interface AdminUser {
   id: string;
   display_name: string | null;
-}
-
-export interface PayoutRow {
-  id: string;
-  sale_number: string;
-  user: AdminUser;
-  card_type: CardType;
-  /** `•••• 9015` — never the number. */
-  card_masked: string;
-  amount_uzs: string;
-  fee_uzs: string;
-  status: PayoutStatus;
-  to_pay_at: string | null;
-  paid_at: string | null;
-  created_at: string;
-}
-
-export interface PayoutsPage {
-  items: PayoutRow[];
-  counts: Record<PayoutStatus, number>;
-  next_cursor: string | null;
 }
 
 export interface AdminSaleItem {
@@ -70,13 +49,17 @@ export interface AdminSaleRow {
   quoted_usd: string;
   payout_uzs: string;
   margin_usd: string;
-  attention_reason: string | null;
+  attention_reason: AttentionReason | null;
+  /** Set and not marked «Проверено» yet. */
+  attention_open: boolean;
   created_at: string;
 }
 
 export interface AdminSalesPage {
   items: AdminSaleRow[];
   next_cursor: string | null;
+  /** Every sale with an open attention, whatever the filters. */
+  attention_open: number;
 }
 
 export interface AdminSale {
@@ -100,23 +83,16 @@ export interface AdminSale {
   offer_expiry_at: string | null;
   hold_end_at: string | null;
   fail_reason: string | null;
-  attention_reason: string | null;
+  attention_reason: AttentionReason | null;
+  attention_open: boolean;
+  resolved_at: string | null;
+  resolved_by: AdminUser | null;
+  resolved_note: string | null;
   credited_at: string | null;
   created_at: string;
   updated_at: string;
   items: AdminSaleItem[];
   payout: PayoutRow | null;
-}
-
-export interface PayoutDetail {
-  request: PayoutRow;
-  note: string | null;
-  reject_reason: string | null;
-  decided_by: AdminUser | null;
-  sale: AdminSale;
-  history_sales: AdminSaleRow[];
-  history_payouts: PayoutRow[];
-  can_decide: boolean;
 }
 
 export interface Bracket {
@@ -133,58 +109,42 @@ export interface SaleSettings {
   card_fee_pct: Record<CardType, string>;
   card_min_uzs: number;
   min_sum_usd: string;
+  /** USD ceilings; `null` = no limit. */
+  max_sale_usd?: string | null;
+  max_user_day_usd?: string | null;
+  max_day_usd?: string | null;
 }
+
+export type SettingsWarning = "balance_bonus_eats_margin";
 
 export interface SaleSettingsOut {
   settings: SaleSettings;
   updated_at: string | null;
   updated_by: AdminUser | null;
   rate_uzs: string | null;
+  warnings?: SettingsWarning[];
 }
 
-export function listPayouts(status: PayoutStatus, cursor?: string): Promise<PayoutsPage> {
-  const params = new URLSearchParams({ status });
-  if (cursor) params.set("cursor", cursor);
-  return session.apiGet<PayoutsPage>(`${BASE}/payouts?${params.toString()}`);
-}
-
-export function getPayout(id: string): Promise<PayoutDetail> {
-  return session.apiGet<PayoutDetail>(`${BASE}/payouts/${encodeURIComponent(id)}`);
-}
-
-/** The full card number (audited on the API side). Never keep it beyond the page. */
-export function revealCard(id: string, purpose: "show" | "copy"): Promise<{ number: string }> {
-  return session.apiPost<{ number: string }>(`${BASE}/payouts/${encodeURIComponent(id)}/reveal`, {
-    purpose,
-  });
-}
-
-export function markPaid(id: string, note: string | null, key: string): Promise<PayoutDetail> {
-  return session.apiPost<PayoutDetail>(
-    `${BASE}/payouts/${encodeURIComponent(id)}/paid`,
-    { note },
-    { idempotencyKey: key },
-  );
-}
-
-export function rejectPayout(id: string, reason: string, key: string): Promise<PayoutDetail> {
-  return session.apiPost<PayoutDetail>(
-    `${BASE}/payouts/${encodeURIComponent(id)}/reject`,
-    { reason },
-    { idempotencyKey: key },
-  );
+export interface SellBlock {
+  user: AdminUser;
+  blocked: boolean;
+  reason: string | null;
+  blocked_by: AdminUser | null;
+  blocked_at: string | null;
 }
 
 export interface ListSalesParams {
   status?: SaleStatus;
   q?: string;
   cursor?: string;
+  attention?: AttentionFilter;
 }
 
 export function listSales(p: ListSalesParams): Promise<AdminSalesPage> {
   const params = new URLSearchParams();
   if (p.status) params.set("status", p.status);
   if (p.q) params.set("q", p.q);
+  if (p.attention) params.set("attention", p.attention);
   if (p.cursor) params.set("cursor", p.cursor);
   return session.apiGet<AdminSalesPage>(`${BASE}?${params.toString()}`);
 }
@@ -197,6 +157,48 @@ export function getSaleSettings(): Promise<SaleSettingsOut> {
   return session.apiGet<SaleSettingsOut>(`${BASE}/settings`);
 }
 
-export function saveSaleSettings(doc: SaleSettings, key: string): Promise<SaleSettingsOut> {
-  return session.apiPut<SaleSettingsOut>(`${BASE}/settings`, doc, { idempotencyKey: key });
+/** `version` is the `updated_at` the edit started from (`null`: never saved): a save over
+ * someone else's is 409 `settings_stale`. */
+export function saveSaleSettings(
+  doc: SaleSettings,
+  version: string | null,
+  key: string,
+): Promise<SaleSettingsOut> {
+  return session.api<SaleSettingsOut>(`${BASE}/settings`, {
+    method: "PUT",
+    body: doc,
+    idempotencyKey: key,
+    headers: { "If-Match": version ?? "none" },
+  });
+}
+
+/** «Проверено»: the sale's attention is handled. */
+export function resolveSale(number: string, note: string | null, key: string): Promise<AdminSale> {
+  return session.apiPost<AdminSale>(
+    `${BASE}/${encodeURIComponent(number)}/resolve`,
+    { note },
+    { idempotencyKey: key },
+  );
+}
+
+export function listSellBlocks(): Promise<{ items: SellBlock[] }> {
+  return session.apiGet<{ items: SellBlock[] }>(`${BASE}/blocks`);
+}
+
+export function getSellBlock(userId: string): Promise<SellBlock> {
+  return session.apiGet<SellBlock>(`${BASE}/blocks/${encodeURIComponent(userId)}`);
+}
+
+/** Block (a reason is required) or unblock a user's selling. */
+export function setSellBlock(
+  userId: string,
+  blocked: boolean,
+  reason: string | null,
+  key: string,
+): Promise<SellBlock> {
+  return session.apiPut<SellBlock>(
+    `${BASE}/blocks/${encodeURIComponent(userId)}`,
+    { blocked, reason },
+    { idempotencyKey: key },
+  );
 }

@@ -39,7 +39,8 @@ def paid(*, locale: Locale, number: str, payload: Mapping[str, str], links: Link
     last4 = payload.get("last4", "")
     if payload.get("rejected") == "true":
         key = "sale_paid.body_rejected_card" if last4 else "sale_paid.body_rejected"
-        body = words[key].format(amount=money, last4=last4, reason=payload.get("reason", ""))
+        # A letter queued before 2026-10-12 may carry the admin's note as ``reason``: never shown.
+        body = words[key].format(amount=money, last4=last4)
     elif to_card:
         body = words["sale_paid.body_card"].format(amount=money, last4=last4)
     else:

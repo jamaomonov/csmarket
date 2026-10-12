@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import cast
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.errors import ValidationError
@@ -234,13 +234,33 @@ async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as th
         if err.code is None and err.status >= 400:  # M-5: no retry loop; the admin decides
             return await attention(db, snap, "source_forbidden", outcome="forbidden", stop=True)
         run.refusal = err.code
+        await _note_refusal(db, snap, status="refused", code=err.code)
         return None
     if report.status not in _REFUSED:
         return await record_purchase(db, snap, report)
     if report.fail_reason == "duplicate_purchase":
         return await _adopt(db, client, snap, run)
     run.refusal = report.fail_reason
+    await _note_refusal(db, snap, status=report.status, code=report.fail_reason, pid=report.id)
     return None
+
+
+async def _note_refusal(
+    db: AsyncSession, snap: PurchaseSnapshot, *, status: str, code: str | None, pid: int = 0
+) -> None:
+    """Keep Skinslink's refusal on the purchase row: the admin's order view reads it there.
+
+    ``status`` is Skinslink's (``failed`` / ``canceled``) or ``refused`` for an error answer
+    that names no purchase. Written in the refund's transaction.
+    """
+    values: dict[str, object] = {"status": status[:16], "fail_reason": code[:48] if code else None}
+    if pid:
+        values["purchase_id"] = pid
+    await db.execute(
+        update(SkinslinkPurchase)
+        .where(SkinslinkPurchase.order_id == snap.order_id)
+        .values(**values)
+    )
 
 
 async def _adopt(
@@ -257,6 +277,7 @@ async def _adopt(
     run.looked_up = True
     if report.status in _REFUSED:
         run.refusal = report.fail_reason
+        await _note_refusal(db, snap, status=report.status, code=report.fail_reason, pid=report.id)
         return None
     return await record_purchase(db, snap, report, outcome="adopted")
 

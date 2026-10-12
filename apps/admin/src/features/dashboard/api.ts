@@ -17,7 +17,8 @@ export interface DashboardOut {
   refunds: { count: number; amount_uzs: string };
   in_flight: number;
   attention: number;
-  payouts: { to_pay_count: number; to_pay_uzs: string };
+  /** `sales_attention`: sales with an open attention («Выкуп» → «Продажи», «Проверено»). */
+  payouts: { to_pay_count: number; to_pay_uzs: string; sales_attention?: number };
   by_day: { day: string; sales_count: number; revenue_uzs: string; margin_usd: string }[];
   waxpeer: { balance_usd: string | null; read_at: string | null };
   skinslink: { available_usd: string | null; hold_usd: string | null; read_at: string | null };

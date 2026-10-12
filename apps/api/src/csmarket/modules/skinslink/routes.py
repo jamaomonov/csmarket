@@ -43,9 +43,14 @@ class _BadBodyError(ValidationError):
 
 @router.post("/webhook", include_in_schema=False)
 async def skinslink_webhook(request: Request, db: DbSession) -> dict[str, bool]:
-    """Skinslink's purchase / deposit status webhook (signed; the status is not read)."""
+    """Skinslink's purchase / deposit status webhook (signed; the status is not read).
+
+    Open while both credentials are set, whatever the switches: purchases and sales made
+    before a switch-off still settle, and a late deposit on a closed sale is still seen
+    (review 2026-10-11 SB-8). The poll and the worker drain likewise need only the key.
+    """
     settings = get_settings()
-    if not (settings.skinslink_active or settings.sales_active):
+    if not (settings.skinslink_api_key and settings.skinslink_secret):
         raise NotFoundError("not found")
     raw = await read_capped(request, _MAX_BODY)
     try:

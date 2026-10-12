@@ -9,14 +9,15 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import ColumnElement, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import get_settings
 from csmarket.core.cursor import decode_cursor, encode_cursor
-from csmarket.core.errors import NotFoundError
+from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
 from csmarket.core.money import wire_uzs
 from csmarket.core.redis import get_redis
 from csmarket.modules.admin.api import AuditPayload, record
@@ -27,12 +28,14 @@ from csmarket.modules.sales.admin_schemas import (
     AdminSaleRowOut,
     AdminSalesPageOut,
     AdminUserOut,
+    AttentionFilter,
+    AttentionReasonOut,
     PayoutRowOut,
     SaleSettingsOut,
 )
 from csmarket.modules.sales.cards import masked
-from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale, SaleItem
-from csmarket.modules.sales.rules import SaleSettings
+from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale, SaleItem, SaleSettingsRow
+from csmarket.modules.sales.rules import SaleSettings, settings_warnings
 from csmarket.modules.sales.schemas import SaleStatusOut, plain
 from csmarket.modules.sales.settings_store import (
     read_sale_settings,
@@ -86,9 +89,19 @@ def sale_row(sale: Sale, user: AdminUserOut) -> AdminSaleRowOut:
         quoted_usd=plain(sale.quoted_usd),
         payout_uzs=wire_uzs(sale.payout_uzs),
         margin_usd=plain(sale.margin_usd),
-        attention_reason=sale.attention_reason,
+        attention_reason=sale.attention_reason,  # type: ignore[arg-type]  # the column's check
+        attention_open=attention_is_open(sale),
         created_at=sale.created_at,
     )
+
+
+def attention_is_open(sale: Sale) -> bool:
+    """The sale waits for an admin: an attention set and not marked checked."""
+    return sale.attention_reason is not None and sale.resolved_at is None
+
+
+#: An open attention, as SQL.
+ATTENTION_OPEN_SQL = and_(Sale.attention_reason.is_not(None), Sale.resolved_at.is_(None))
 
 
 async def sale_admin_out(db: AsyncSession, sale: Sale) -> AdminSaleOut:
@@ -100,7 +113,7 @@ async def sale_admin_out(db: AsyncSession, sale: Sale) -> AdminSaleOut:
     ).all()
     card = await db.get(PayoutCard, sale.payout_card_id) if sale.payout_card_id else None
     request = await db.scalar(select(PayoutRequest).where(PayoutRequest.sale_id == sale.id))
-    users = await users_by_id(db, [sale.user_id])
+    users = await users_by_id(db, [sale.user_id, *([sale.resolved_by] if sale.resolved_by else [])])
     user = user_of(users, sale.user_id)
     bonus, fee = bonus_fee(sale)
     return AdminSaleOut(
@@ -124,7 +137,11 @@ async def sale_admin_out(db: AsyncSession, sale: Sale) -> AdminSaleOut:
         offer_expiry_at=sale.offer_expiry_at,
         hold_end_at=sale.hold_end_at,
         fail_reason=sale.fail_reason,
-        attention_reason=sale.attention_reason,
+        attention_reason=sale.attention_reason,  # type: ignore[arg-type]  # the column's check
+        attention_open=attention_is_open(sale),
+        resolved_at=sale.resolved_at,
+        resolved_by=user_of(users, sale.resolved_by) if sale.resolved_by else None,
+        resolved_note=sale.resolved_note,
         credited_at=sale.credited_at,
         created_at=sale.created_at,
         updated_at=sale.updated_at,
@@ -157,6 +174,22 @@ async def sale_by_number(db: AsyncSession, number: str) -> AdminSaleOut:
     return await sale_admin_out(db, sale)
 
 
+def _attention_where(
+    attention: AttentionFilter | None, reason: AttentionReasonOut | None
+) -> list[ColumnElement[bool]]:
+    """The list's attention filters as SQL (``reason`` alone implies ``any``)."""
+    where: list[ColumnElement[bool]] = []
+    if reason is not None:
+        where.append(Sale.attention_reason == reason)
+    elif attention is not None:
+        where.append(Sale.attention_reason.is_not(None))
+    if attention == "open":
+        where.append(Sale.resolved_at.is_(None))
+    elif attention == "resolved":
+        where.append(Sale.resolved_at.is_not(None))
+    return where
+
+
 async def list_sales_admin(
     db: AsyncSession,
     *,
@@ -164,9 +197,13 @@ async def list_sales_admin(
     q: str | None,
     cursor: str | None,
     limit: int,
+    attention: AttentionFilter | None = None,
+    reason: AttentionReasonOut | None = None,
 ) -> AdminSalesPageOut:
-    """Sales newest first; ``q`` is a number prefix in any case."""
+    """Sales newest first; ``q`` is a number prefix in any case; ``attention`` / ``reason``
+    keep the flagged ones (``open``: not marked checked yet)."""
     stmt = select(Sale).order_by(Sale.created_at.desc(), Sale.id.desc()).limit(limit + 1)
+    stmt = stmt.where(*_attention_where(attention, reason))
     if status is not None:
         stmt = stmt.where(Sale.status == status)
     if q:
@@ -180,8 +217,11 @@ async def list_sales_admin(
     page = found[:limit]
     users = await users_by_id(db, (s.user_id for s in page))
     next_cursor = encode_cursor(page[-1].created_at, page[-1].id) if len(found) > limit else None
+    open_count = await db.scalar(select(func.count()).select_from(Sale).where(ATTENTION_OPEN_SQL))
     return AdminSalesPageOut(
-        items=[sale_row(s, user_of(users, s.user_id)) for s in page], next_cursor=next_cursor
+        items=[sale_row(s, user_of(users, s.user_id)) for s in page],
+        next_cursor=next_cursor,
+        attention_open=int(open_count or 0),
     )
 
 
@@ -192,8 +232,10 @@ async def settings_view(db: AsyncSession) -> SaleSettingsOut:
     fx = await current_usd_uzs(
         db, get_redis(), max_age_days=get_settings().fx_max_age_days, uplift_pct=Decimal(0)
     )
+    doc = await read_sale_settings(db)
     return SaleSettingsOut(
-        settings=await read_sale_settings(db),
+        settings=doc,
+        warnings=settings_warnings(doc),
         updated_at=row.updated_at if row else None,
         updated_by=user_of(users, row.updated_by) if row and row.updated_by else None,
         rate_uzs=plain(fx.rate) if fx is not None else None,
@@ -209,8 +251,28 @@ def _diff(before: SaleSettings, after: SaleSettings) -> AuditPayload:
     return changed or {"unchanged": "true"}
 
 
-async def save_settings(db: AsyncSession, *, doc: SaleSettings, admin_id: str) -> None:
-    """Replace the document; audited ``sales.settings.save``. Flushes, never commits."""
+def _stale(row_at: datetime | None, expected: str) -> bool:
+    """Whether the row moved since ``expected`` (an ``updated_at`` or ``none``)."""
+    if expected.strip().strip('"').lower() == "none":
+        return row_at is not None
+    try:
+        seen = datetime.fromisoformat(expected.strip().strip('"'))
+    except ValueError as exc:
+        raise ValidationError("If-Match is not a version", code="if_match") from exc
+    return row_at is None or row_at != seen
+
+
+async def save_settings(
+    db: AsyncSession, *, doc: SaleSettings, admin_id: str, expected: str | None = None
+) -> None:
+    """Replace the document; audited ``sales.settings.save``. Flushes, never commits.
+
+    Raises:
+        ConflictError: ``settings_stale`` — ``expected`` is not the saved version.
+    """
+    row = await db.get(SaleSettingsRow, 1, with_for_update=True, populate_existing=True)
+    if expected is not None and _stale(row.updated_at if row else None, expected):
+        raise ConflictError("the settings were saved by someone else", code="settings_stale")
     before = await read_sale_settings(db)
     await save_sale_settings(db, settings=doc, admin_id=admin_id)
     await record(
@@ -224,6 +286,8 @@ async def save_settings(db: AsyncSession, *, doc: SaleSettings, admin_id: str) -
 
 
 __all__ = [
+    "ATTENTION_OPEN_SQL",
+    "attention_is_open",
     "list_sales_admin",
     "payout_row",
     "sale_admin_out",

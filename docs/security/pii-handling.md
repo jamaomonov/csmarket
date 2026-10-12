@@ -158,6 +158,20 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   idempotency replay, never in a letter, a log (`card_number`, `number_enc`, `new_card`, `pan`
   are redacted keys), a metric or an admin list. `NewCardIn.number` and the service's draft
   are `repr=False`. A 422 for a bad number never echoes it (`card_invalid`).
+- **Card fingerprint** (2026-10-12, migration 0033) — `payout_cards.number_fp`: HMAC-SHA256
+  of the 16 digits under a key HKDF-derived from `CSMARKET_APP_ENC_KEY` with the purpose
+  `csmarket:payout-card-fp:v1` (`sales.cards.card_fingerprint`). It finds the same card on
+  other accounts for the admin's «Риски» block without decrypting anything. A dump without
+  the app key cannot test a guessed number against it (a plain hash could be brute-forced
+  over the card space). It is never logged, never in a response (the admin sees only the
+  names of the other accounts), never in a metric. Cards saved before 0033 get it from
+  `python -m csmarket.scripts.backfill_card_fp` (it decrypts in memory and prints a count
+  only); the key never reaches SQL, so the migration cannot fill it.
+- **Reveal** — since 2026-10-12 only a `to_pay` request reveals its number (a decided request
+  no longer needs it), and a reveal claims the request for the admin.
+- **Seller's Steam link** — the admin's payout page (`risk.steam_url`) carries the seller's
+  Steam profile URL (the steamid64 the admin user page already shows); admin only, never
+  logged.
 - **422 bodies** — an app-wide `RequestValidationError` handler (`bootstrap.py`) answers 422 as
   `{"detail": [{type, loc, msg}]}` and drops `input` and `ctx`, so no request body (card
   numbers, trade links) is echoed back by pydantic.

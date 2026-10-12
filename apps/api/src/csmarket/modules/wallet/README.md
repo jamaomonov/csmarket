@@ -24,7 +24,7 @@ refunds (M4a): ADR-0007, `docs/runbooks/orders.md`.
 (`"wallet"`: `orders.paid_with` / `payments.provider` of a balance payment),
 `InsufficientBalanceError`, and the three models.
 
-**Sales (2026-10-08):** transaction kinds `sale_credit` (key `sale:{sale_id}`) and `payout_return` (key `payout_return:{request_id}`) post D `user_wallet` / C `house_skin_buys`; `house_skin_buys` is a credit-side house account.
+**Sales (2026-10-08):** transaction kinds `sale_credit` (key `sale:{sale_id}`) and `payout_return` (key `payout_return:{request_id}`, `…:{n}` for a rejection made again after `n` undos) post D `user_wallet` / C `house_skin_buys`; `house_skin_buys` is a credit-side house account. `payout_return_reversal` (2026-10-12, `debit_payout_return`, key `payout_return_reversal:{request_id}:{n}`) is the mirror: an admin undid a rejection within minutes; the wallet is locked and a balance below the credit refuses it (`balance_spent`).
 
 **Routes (`routes.py`):** `GET /wallet` → `{balance_uzs, usd}` (`usd` is `null` unless switched on) and `GET /wallet/entries` for
 the signed-in customer. The top-up routes under `/wallet/topups` are mounted from

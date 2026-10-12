@@ -4,15 +4,55 @@ groups:
       # The gauge comes from the scheduler's `sales.poll` job (every minute), so the selector
       # is pinned to job="scheduler": the API and the worker expose it but never set it.
 
-      # A card payout payable for 48 h and still not paid: a seller waits for their money.
-      # Spec 2026-10-08 §7.
+      # A card payout payable for 10 h and still not paid: sellers are promised the card within
+      # 12 h of the hold's end (owner, 2026-10-12).
       - alert: SalePayoutsOverdue
         expr: max(csmarket_sale_payouts_overdue{job="scheduler"}) > 0
         for: 5m
         labels: { severity: warn }
         annotations:
-          summary: '{{ $value | printf "%.0f" }} card payout(s) payable for over 48 h'
+          summary: '{{ $value | printf "%.0f" }} card payout(s) payable for over 10 h (promised: 12 h)'
           description: >
             Open «Выкуп» → «Заявки на выплату» → «К выплате» in the admin and pay them by
             hand, or reject one with a reason (its money then goes to the seller's balance).
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#overdue"
+
+      # A sale waits for an admin (review 2026-10-11 SB-2): `rolled_back` — Skinslink took the
+      # skins back after the sale became payable (our loss, or a card payout to stop);
+      # `late_deposit` — a closed sale Skinslink reports reverted; `credit_blocked` — a frozen
+      # wallet refused a seller's credit. Cleared by «Проверено» in the admin.
+      - alert: SaleAttentionOpen
+        expr: max by (reason) (csmarket_sale_attention_open{job="scheduler"}) > 0
+        for: 5m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} sale(s) flagged {{ $labels.reason }}'
+          description: >
+            Open «Выкуп» → «Продажи» with the attention filter in the admin, follow the runbook
+            for the reason, then press «Проверено» on each sale.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#attention"
+
+      # A sale still in hold 6 h after Steam's protection ended (SB-7): its status read keeps
+      # failing (a rotated key, a lost IP whitelist) and the seller is not paid.
+      - alert: SaleHoldOverdue
+        expr: max(csmarket_sale_holds_overdue{job="scheduler"}) > 0
+        for: 15m
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} sale(s) in hold past their hold end'
+          description: >
+            Skinslink's deposit status is not being read or the deposit is stuck. Check the
+            scheduler's `sales.status_unread` logs and the Skinslink key / whitelist.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#hold-overdue"
+
+      # Skinslink answered a deposit status the status machine does not know (SB-9): the sale
+      # does not move until the code learns it. Any process may count it.
+      - alert: SaleUnknownStatus
+        expr: sum(increase(csmarket_sale_outcomes_total{outcome="unknown"}[1h])) > 0
+        labels: { severity: warn }
+        annotations:
+          summary: "Skinslink reported a deposit status we do not know"
+          description: >
+            Find `sales.unknown_status` in the logs (the status and the sale number) and teach
+            sales/status.py the new status.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#unknown-status"

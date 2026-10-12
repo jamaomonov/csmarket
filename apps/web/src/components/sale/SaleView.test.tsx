@@ -55,7 +55,6 @@ const SALE: SaleOut = {
   },
   money_at: null,
   payout_status: null,
-  payout_reject_reason: null,
   created_at: "2026-10-08T10:00:00Z",
 };
 
@@ -115,7 +114,7 @@ describe("SaleView", () => {
     expect(screen.getByText(/отправлены на карту .*•••• 9015/)).toBeInTheDocument();
   });
 
-  it("shows why a card payout was rejected and that the money is on the balance", async () => {
+  it("a rejected card payout says the money is on the balance, with no fee, never a note", async () => {
     api.getSale.mockResolvedValue({
       ...SALE,
       status: "payout",
@@ -123,13 +122,49 @@ describe("SaleView", () => {
       card: { type: "humo", last4: "9015" },
       offer: null,
       payout_status: "rejected",
-      payout_reject_reason: "Карта заблокирована",
+      fee_uzs: "7800",
+      payout_uzs: "147400",
+      // An older API still sent the admin's free text: never shown.
+      payout_reject_reason: "внутренняя заметка",
     });
     view();
     expect(
-      await screen.findByText(
-        /Перевод на карту не прошёл: Карта заблокирована\. 155\s200 .* зачислены на ваш баланс/,
-      ),
+      await screen.findByText(/Перевод на карту не прошёл\. 155\s200 .* зачислены на ваш баланс/),
+    ).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/внутренняя заметка/);
+    expect(screen.queryByText("Комиссия за перевод на карту")).toBeNull();
+    expect(document.body.textContent).not.toMatch(/147\s400/);
+  });
+
+  it.each([
+    [{ bot_name: null }, /^Предложение обмена уже в Steam\. Примите его до .+\.$/],
+    [{ expires_at: null }, /^Bot #3 прислал предложение в Steam\. Откройте его и примите\.$/],
+    [{ bot_name: null, expires_at: null }, /^Мы отправили предложение обмена — откройте Steam/],
+  ])("the offer sentence reads whole without a bot or a deadline (%o)", async (over, text) => {
+    const offer = {
+      url: "https://steam.test/o",
+      bot_name: "Bot #3",
+      expires_at: "2026-10-08T12:30:00Z",
+    };
+    api.getSale.mockResolvedValue({ ...SALE, offer: { ...offer, ...over } });
+    view();
+    expect(await screen.findByText(text)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/до\s*\.|\s\./);
+  });
+
+  it("a card sale in its 7 days says the money is sent to the card after them", async () => {
+    api.getSale.mockResolvedValue({
+      ...SALE,
+      status: "hold",
+      payout_to: "card",
+      card: { type: "humo", last4: "9015" },
+      offer: null,
+      money_at: "2026-10-15T10:00:00Z",
+      payout_uzs: "147400",
+    });
+    view();
+    expect(
+      await screen.findByText(/После 15 октября отправим 147\s400 .* на карту Humo •••• 9015/),
     ).toBeInTheDocument();
   });
 
@@ -160,6 +195,25 @@ describe("SaleView", () => {
     view();
     expect(await screen.findByText("Скины получены")).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/Скоро отправим/);
+  });
+
+  it("a card payout waiting out the days without a date still reads whole", async () => {
+    api.getSale.mockResolvedValue({
+      ...SALE,
+      status: "payout",
+      payout_to: "card",
+      card: { type: "humo", last4: "9015" },
+      offer: null,
+      payout_status: "waiting_hold",
+      money_at: null,
+      payout_uzs: "147400",
+    });
+    view();
+    expect(
+      await screen.findByText(
+        /После 7 дней защиты Steam отправим 147\s400 .* на карту Humo •••• 9015\./,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("an offered sale without an offer yet asks to open Steam, with no blanks", async () => {

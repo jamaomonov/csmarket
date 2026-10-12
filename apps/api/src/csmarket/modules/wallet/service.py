@@ -61,7 +61,8 @@ KIND_CURRENCY: dict[str, Currency] = {
 }
 
 #: Transaction kinds (spec §5): ``purchase`` and ``refund`` book an order (M4a);
-#: ``sale_credit`` and ``payout_return`` a sale (2026-10-08).
+#: ``sale_credit`` and ``payout_return`` a sale (2026-10-08); ``payout_return_reversal`` an
+#: admin's undone «Отклонить» (2026-10-12).
 TX_KINDS: tuple[str, ...] = (
     "topup",
     "topup_reversal",
@@ -70,6 +71,7 @@ TX_KINDS: tuple[str, ...] = (
     "refund",
     "sale_credit",
     "payout_return",
+    "payout_return_reversal",
     "fx_convert",
     "admin_adjust_usd",
 )

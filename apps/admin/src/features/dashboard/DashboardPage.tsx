@@ -74,6 +74,11 @@ function Now({ data }: { data: DashboardOut }) {
         <Tile title="В пути" to="/trades?view=active">
           {data.in_flight}
         </Tile>
+        {(data.payouts.sales_attention ?? 0) > 0 ? (
+          <Tile title="Продажи: проверить" to="/sales?attention=open" alert>
+            <span className="text-danger">{data.payouts.sales_attention}</span>
+          </Tile>
+        ) : null}
       </div>
     </section>
   );

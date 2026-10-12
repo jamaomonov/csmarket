@@ -11,6 +11,7 @@ from uuid import uuid4
 from csmarket.core.crypto import encrypt
 from csmarket.core.ids import new_id
 from csmarket.core.numbers import allocate, sale_number
+from csmarket.modules.sales.cards import card_fingerprint
 from csmarket.modules.sales.models import (
     CARD_PURPOSE,
     PayoutCard,
@@ -28,6 +29,8 @@ from tests.integration.payments_factory import make_user
 #: The CBU rate the sales tests price with (no uplift, no cut).
 RATE = Decimal("12650.5")
 HUMO = "9860123456789015"
+#: A second Humo number, for "another card of the same type".
+HUMO_2 = "9860123456789023"
 UZCARD = "8600123456789012"
 VISA = "4000000000000002"
 #: ``(asset_id, name, Skinslink USD, our soʻm)`` — the spec's two-item example at RATE with the
@@ -39,9 +42,14 @@ ITEMS: tuple[tuple[str, str, Decimal, Decimal], ...] = (
 
 
 async def make_card(
-    db: AsyncSession, user: User, *, card_type: str = "humo", number: str = HUMO
+    db: AsyncSession,
+    user: User,
+    *,
+    card_type: str = "humo",
+    number: str = HUMO,
+    fingerprint: bool = True,
 ) -> PayoutCard:
-    """A committed, encrypted card of ``user``."""
+    """A committed, encrypted card of ``user`` (with its fingerprint unless told otherwise)."""
     enc, nonce = encrypt(number, purpose=CARD_PURPOSE)
     card = PayoutCard(
         id=new_id(),
@@ -50,6 +58,7 @@ async def make_card(
         number_enc=enc,
         number_nonce=nonce,
         last4=number[-4:],
+        number_fp=card_fingerprint(number) if fingerprint else None,
     )
     db.add(card)
     await db.commit()

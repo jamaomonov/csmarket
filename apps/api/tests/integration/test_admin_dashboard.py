@@ -211,4 +211,8 @@ async def test_the_dashboard_counts_the_payouts_to_pay(
         sale = await make_sale(db_session, status="payout", payout_to="card")
         await make_request(db_session, sale, status="to_pay")
     r = await integration_client.get("/api/v1/admin/dashboard", headers=headers)
-    assert r.json()["payouts"] == {"to_pay_count": 2, "to_pay_uzs": "310400"}
+    assert r.json()["payouts"] == {
+        "to_pay_count": 2,
+        "to_pay_uzs": "310400",
+        "sales_attention": 0,
+    }

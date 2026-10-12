@@ -148,6 +148,7 @@
       "refund": "Refund to balance",
       "sale_credit": "Skins sold",
       "payout_return": "Payout to balance",
+      "payout_return_reversal": "Payout to balance undone",
       "fx_convert": "Transfer to USD",
       "admin_adjust_usd": "USD adjustment"
     },
@@ -446,6 +447,7 @@
   },
   "sell": {
     "title": "Sell your CS2 skins",
+    "mySales": "My sales",
     "search": "Search by name",
     "sortLabel": "Sort",
     "sort": {
@@ -465,6 +467,7 @@
     "signedOut": "Sign in with Steam to sell skins.",
     "loadFailed": "Could not load your inventory. Try again.",
     "retry": "Try again",
+    "closed": "Skin buyback is unavailable for now. Come back later.",
     "steam": {
       "trade_link_revoked": "Your trade link was reset in Steam. Add the new one in your profile.",
       "trade_link_invalid": "Your trade link does not work. Check it in your profile.",
@@ -487,7 +490,7 @@
       "balance": "csmarket balance",
       "balanceNote": "+{percent}% on top",
       "cardNote": "Fee {percent}%",
-      "newCard": "New card",
+      "newCard": "New {brand} card",
       "cardsLimit": "{count, plural, one {# card} other {# cards}} saved — delete one in your profile to add another."
     },
     "card": {
@@ -501,19 +504,26 @@
       "bonus": "Balance bonus +{percent}%",
       "payout": "You get"
     },
-    "when": "The money arrives 7 days after the trade.",
+    "steps": {
+      "title": "What happens next",
+      "accept": "Accept the trade in Steam — otherwise your skins stay with you.",
+      "protection": "We wait out Steam's 7-day protection.",
+      "balance": "The money reaches your balance 7 days after the trade.",
+      "card": "We send the money to your card after Steam's 7-day protection, within 12 hours."
+    },
     "submit": "Sell for {sum}",
     "addMore": "Add {sum} more",
     "sending": "Sending…",
     "errors": {
       "prices_changed": "Prices changed — check the sum and press again.",
-      "below_minimum": "The sum is under the minimum — add items.",
+      "below_minimum": "The minimum sale is {sum}. Add items.",
       "below_card_minimum": "A card needs at least the minimum sum. Choose the balance or add items.",
       "too_many_items": "Too many items at a time — remove some.",
       "steam_refused": "Steam does not allow trading with this account.",
       "sales_disabled": "Selling is closed right now. Come back later.",
       "cards_limit": "{count, plural, one {# card} other {# cards}} saved — delete one in your profile.",
       "card_invalid": "Check the card number.",
+      "card_gone": "This card is no longer saved — choose another.",
       "trade_link_missing": "Add your trade link.",
       "trade_link_bad": "Your trade link does not work. Check it in your profile.",
       "rate_unavailable": "The exchange rate is unavailable right now. Try again in a minute.",
@@ -557,11 +567,16 @@
       "offered": {
         "title": "Accept the trade",
         "text": "{bot} sent you an offer in Steam. Accept it by {time}.",
+        "textNoBot": "The trade offer is in Steam. Accept it by {time}.",
+        "textNoTime": "{bot} sent you an offer in Steam. Open it and accept.",
         "textNoOffer": "We sent a trade offer — open Steam and accept it."
       },
       "hold": {
         "title": "Skins received",
-        "text": "{amount} will arrive on {date}."
+        "text": "{amount} will arrive on {date}.",
+        "textSoon": "{amount} will arrive after Steam's 7-day protection.",
+        "textCard": "After {date} we will send {amount} to the card {card}.",
+        "textCardSoon": "After Steam's 7-day protection we will send {amount} to the card {card}."
       },
       "credited": {
         "title": "Money on your balance",
@@ -577,8 +592,7 @@
       },
       "rejected": {
         "title": "Money on your balance",
-        "text": "The card transfer failed: {reason}. {amount} was added to your balance.",
-        "textPlain": "The card transfer failed. {amount} was added to your balance."
+        "text": "The card transfer failed. {amount} was added to your balance."
       },
       "closed": {
         "title": "The sale did not go through",

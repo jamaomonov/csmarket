@@ -1,12 +1,15 @@
-/** «Продажи»: find a sale by number, filter by status, newest first. */
+/**
+ * «Продажи»: find a sale by number, filter by status and by attention («ждут проверки» — the
+ * sales an admin has not marked «Проверено» yet; the badge counts them all), newest first.
+ */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { type AdminSalesPage, listSales, SALE_STATUSES } from "./api";
+import { ATTENTION_FILTERS, type AdminSalesPage, listSales, SALE_STATUSES } from "./api";
 import { SALES_LIST_KEY } from "./keys";
-import { ATTENTION_LABELS, SALE_LABELS } from "./labels";
+import { ATTENTION_FILTER_LABELS, ATTENTION_LABELS, SALE_LABELS } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
@@ -25,6 +28,7 @@ export function SalesPage() {
   const navigate = useNavigate();
   const url = useUrlParams();
   const status = pick(SALE_STATUSES, url.get("status"));
+  const attention = pick(ATTENTION_FILTERS, url.get("attention"));
   const q = upTo(url.get("q"), 8);
   // The box writes the URL once typing settles, not on every key.
   const [text, setText] = useState(q);
@@ -42,10 +46,11 @@ export function SalesPage() {
     readonly unknown[],
     string | null
   >({
-    queryKey: [...SALES_LIST_KEY, status ?? "", q],
+    queryKey: [...SALES_LIST_KEY, status ?? "", q, attention ?? ""],
     queryFn: ({ pageParam }) =>
       listSales({
         ...(status ? { status } : {}),
+        ...(attention ? { attention } : {}),
         ...(q ? { q } : {}),
         ...(pageParam ? { cursor: pageParam } : {}),
       }),
@@ -53,9 +58,19 @@ export function SalesPage() {
     getNextPageParam: (last) => last.next_cursor,
   });
   const items = query.data?.pages.flatMap((p) => p.items);
+  const open = query.data?.pages[0]?.attention_open ?? 0;
   return (
     <section className="space-y-4">
-      <PageHeader title="Продажи" />
+      <PageHeader
+        title="Продажи"
+        meta={
+          open > 0 ? (
+            <Link to="/sales?attention=open" className="text-danger hover:underline">
+              Ждут проверки: {open}
+            </Link>
+          ) : undefined
+        }
+      />
       <FiltersBar>
         <SearchBox label="Номер продажи" value={text} maxLength={8} mono onChange={setText} />
         <FilterSelect
@@ -67,6 +82,15 @@ export function SalesPage() {
             url.set("status", v);
           }}
         />
+        <FilterSelect
+          label="Пометка"
+          value={attention ?? ""}
+          options={ATTENTION_FILTERS}
+          text={(a) => ATTENTION_FILTER_LABELS[a]}
+          onChange={(v) => {
+            url.set("attention", v);
+          }}
+        />
       </FiltersBar>
       <DataTable
         label="Продажи"
@@ -75,7 +99,7 @@ export function SalesPage() {
         loading={query.isPending}
         error={query.isError ? errorText(query.error) : undefined}
         empty="Продаж не нашли."
-        attention={(s) => s.attention_reason !== null}
+        attention={(s) => s.attention_open}
         onRowClick={(s) => {
           void navigate(`/sales/${s.number}`);
         }}
@@ -96,8 +120,9 @@ export function SalesPage() {
               <>
                 {SALE_LABELS[s.status]}
                 {s.attention_reason ? (
-                  <div className="text-danger text-xs">
-                    {ATTENTION_LABELS[s.attention_reason] ?? s.attention_reason}
+                  <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
+                    {ATTENTION_LABELS[s.attention_reason]}
+                    {s.attention_open ? "" : " · проверено"}
                   </div>
                 ) : null}
               </>

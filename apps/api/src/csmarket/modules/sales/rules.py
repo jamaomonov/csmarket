@@ -4,13 +4,17 @@ The margin is progressive by price bracket like the retail brackets (``skins.Bra
 reused), but here it is taken **off** Skinslink's price. Fees and the bonus are percents; the
 minimum sum is Skinslink's own (1 $) or more. The default ships switched off: the owner sets
 the real fees before turning selling on (the card fees below are the demo's placeholders).
+
+The three USD ceilings (per sale, per seller per 24 h, everyone per 24 h) are optional: a
+missing key or ``null`` is no limit, so a document saved before they existed reads as before.
+:func:`settings_warnings` names a document that loses money; it never blocks a save.
 """
 
 from __future__ import annotations
 
 from decimal import Decimal
 from itertools import pairwise
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -18,9 +22,19 @@ from csmarket.modules.skins.api import Bracket
 
 CardType = Literal["uzcard", "humo", "uzum_visa"]
 PayoutTo = Literal["balance", "card"]
+#: ``balance_bonus_eats_margin``: the top bracket's margin less the balance bonus less the 1 %
+#: Skinslink may credit under our quote (``min_prices``) is zero or less — an expensive sale
+#: to the balance loses money.
+SettingsWarning = Literal["balance_bonus_eats_margin"]
 
 #: A margin bracket keeps less than all of the price.
 _MAX_PERCENT = Decimal(100)
+#: How far under our quote Skinslink may credit us (``pricing.min_prices``: 99 %).
+_CREDIT_GAP_PCT = Decimal(1)
+
+
+#: A USD ceiling (an optional field: ``None`` is no limit).
+UsdLimit = Annotated[Decimal, Field(gt=0, le=10_000_000, max_digits=12, decimal_places=2)]
 
 
 class CardFees(BaseModel):
@@ -58,6 +72,12 @@ class SaleSettings(BaseModel):
     min_sum_usd: Decimal = Field(
         default=Decimal("1.10"), gt=1, le=1000, max_digits=7, decimal_places=2
     )
+    #: The most one sale may be worth (Σ Skinslink prices), USD; ``None``: no limit.
+    max_sale_usd: UsdLimit | None = None
+    #: The most one seller may sell in the last 24 h, USD; ``None``: no limit.
+    max_user_day_usd: UsdLimit | None = None
+    #: The most everyone together may sell in the last 24 h, USD; ``None``: no limit.
+    max_day_usd: UsdLimit | None = None
 
     @model_validator(mode="after")
     def _brackets(self) -> SaleSettings:
@@ -69,6 +89,14 @@ class SaleSettings(BaseModel):
         if any(not 0 <= b.percent < _MAX_PERCENT for b in self.margin):
             raise ValueError("margin: every percent is at least 0 and under 100")
         return self
+
+
+def settings_warnings(doc: SaleSettings) -> list[SettingsWarning]:
+    """What in ``doc`` loses money (shown beside the settings; a save is never refused)."""
+    top = doc.margin[-1].percent
+    if top - doc.balance_bonus_pct - _CREDIT_GAP_PCT <= 0:
+        return ["balance_bonus_eats_margin"]
+    return []
 
 
 DEFAULT_SALE_SETTINGS = SaleSettings(
@@ -87,4 +115,12 @@ DEFAULT_SALE_SETTINGS = SaleSettings(
     min_sum_usd=Decimal("1.10"),
 )
 
-__all__ = ["DEFAULT_SALE_SETTINGS", "CardFees", "CardType", "PayoutTo", "SaleSettings"]
+__all__ = [
+    "DEFAULT_SALE_SETTINGS",
+    "CardFees",
+    "CardType",
+    "PayoutTo",
+    "SaleSettings",
+    "SettingsWarning",
+    "settings_warnings",
+]

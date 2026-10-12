@@ -22,7 +22,7 @@ tests:
           - exp_labels:
               severity: warn
             exp_annotations:
-              summary: "2 card payout(s) payable for over 48 h"
+              summary: "2 card payout(s) payable for over 10 h (promised: 12 h)"
               description: "Open «Выкуп» → «Заявки на выплату» → «К выплате» in the admin and pay them by hand, or reject one with a reason (its money then goes to the seller's balance).\n"
               runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#overdue"
 
@@ -35,3 +35,63 @@ tests:
       - eval_time: 8m
         alertname: SalePayoutsOverdue
         exp_alerts: []
+
+  # One alert per open reason; the API's copy of the gauge is never read.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_sale_attention_open{job="scheduler",reason="rolled_back"}'
+        values: "0 0 1 1 1 1 1 1 1 1"
+      - series: 'csmarket_sale_attention_open{job="scheduler",reason="late_deposit"}'
+        values: "0 0 0 0 0 0 0 0 0 0"
+      - series: 'csmarket_sale_attention_open{job="api",reason="credit_blocked"}'
+        values: "4 4 4 4 4 4 4 4 4 4"
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: SaleAttentionOpen
+        exp_alerts: []
+      - eval_time: 8m
+        alertname: SaleAttentionOpen
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+              reason: rolled_back
+            exp_annotations:
+              summary: "1 sale(s) flagged rolled_back"
+              description: "Open «Выкуп» → «Продажи» with the attention filter in the admin, follow the runbook for the reason, then press «Проверено» on each sale.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#attention"
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_sale_holds_overdue{job="scheduler"}'
+        values: "0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SaleHoldOverdue
+        exp_alerts: []
+      - eval_time: 18m
+        alertname: SaleHoldOverdue
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "2 sale(s) in hold past their hold end"
+              description: "Skinslink's deposit status is not being read or the deposit is stuck. Check the scheduler's `sales.status_unread` logs and the Skinslink key / whitelist.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#hold-overdue"
+
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_sale_outcomes_total{job="worker",outcome="unknown"}'
+        values: "0 0 0 1 1 1"
+    alert_rule_test:
+      - eval_time: 2m
+        alertname: SaleUnknownStatus
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: SaleUnknownStatus
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "Skinslink reported a deposit status we do not know"
+              description: "Find `sales.unknown_status` in the logs (the status and the sale number) and teach sales/status.py the new status.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/sales.md#unknown-status"
