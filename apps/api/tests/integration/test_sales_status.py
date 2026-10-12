@@ -279,6 +279,16 @@ async def test_a_late_completed_card_deposit_reopens_the_request_payable(
     assert request.to_pay_at is not None
 
 
+async def test_a_reopened_sale_drops_its_rolled_back_flag(db_session: AsyncSession) -> None:
+    """A sale canceled as rolled back that Skinslink now reports completed is a normal payout."""
+    sale = await make_sale(
+        db_session, status="reverted", payout_to="card", attention_reason="rolled_back"
+    )
+    await make_request(db_session, sale, status="canceled")
+    assert await _apply(db_session, sale, deposit("completed")) == "payout"
+    assert (await _fresh(db_session, sale)).attention_reason is None
+
+
 async def test_a_closed_sale_reported_new_is_reopened_as_creating(
     db_session: AsyncSession,
 ) -> None:

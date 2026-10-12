@@ -143,7 +143,9 @@ def _reopen(sale: Sale) -> None:
     """
     log.warning("sales.reopened", number=sale.number, was=sale.status, reason=sale.fail_reason)
     sale.status, sale.fail_reason = "creating", None
-    if sale.attention_reason in ("late_deposit", "credit_blocked"):
+    # ``rolled_back`` too: a sale canceled as rolled back that Skinslink now reports alive is an
+    # ordinary payout again, and a stale flag would demand an override to pay it.
+    if sale.attention_reason in ("late_deposit", "credit_blocked", "rolled_back"):
         _clear_attention(sale)
 
 

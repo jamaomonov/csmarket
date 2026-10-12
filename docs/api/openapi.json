@@ -12083,7 +12083,7 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "`undo_expired`, `balance_spent`, `wallet_frozen`, `payout_claimed` (another admin is paying it) or `idempotency_mismatch`"
+            "description": "`undo_expired`, `undo_not_yours`, `balance_spent`, `wallet_frozen`, `payout_claimed` (another admin is paying it) or `idempotency_mismatch`"
           },
           "422": {
             "content": {

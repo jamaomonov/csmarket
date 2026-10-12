@@ -214,7 +214,7 @@ async def post_reject(
     response_model=PayoutDetailOut,
     responses={
         409: {
-            "description": f"`undo_expired`, `balance_spent`, `wallet_frozen`, {_CLAIMED} or "
+            "description": f"`undo_expired`, `undo_not_yours`, `balance_spent`, `wallet_frozen`, {_CLAIMED} or "
             "`idempotency_mismatch`"
         }
     },

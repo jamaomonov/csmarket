@@ -277,6 +277,23 @@ async def test_undo_paid_puts_it_back_and_drops_the_waiting_letter(
     assert "sales.payout.undo" in await _actions(db_session)
 
 
+async def test_only_the_admin_who_marked_it_paid_can_undo_it(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    """Another admin cannot know whether the transfer went out: an undo by them could pay twice."""
+    headers = await admin_headers()
+    request = await _payable(db_session)
+    url = f"{BASE}/{request.id}"
+    paid = await integration_client.post(f"{url}/paid", json={}, headers={**headers, **_key(50)})
+    assert paid.status_code == 200, paid.text
+    other = await dev_login_headers(integration_client, steam_id=OTHER_ADMIN, admin=True)
+    refused = await integration_client.post(
+        f"{url}/undo", json={"reason": "not mine"}, headers={**other, **_key(51)}
+    )
+    assert (refused.status_code, refused.json()["code"]) == (409, "undo_not_yours")
+    assert (await _fresh(db_session, request)).status == "paid"
+
+
 async def test_undo_reject_takes_the_credit_back_and_a_new_reject_credits_again(
     db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
 ) -> None:

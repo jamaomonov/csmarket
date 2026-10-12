@@ -39,12 +39,17 @@ async def undo(db: AsyncSession, *, request_id: str, admin_id: str) -> tuple[Pay
 
     Raises:
         ConflictError: ``undo_expired`` (not decided, or decided too long ago),
-            ``balance_spent``, ``wallet_frozen``, ``payout_claimed``.
+            ``undo_not_yours`` (a «Выплачено» marked by another admin), ``balance_spent``,
+            ``wallet_frozen``, ``payout_claimed``.
     """
     sale, request = await locked(db, request_id, admin_id=admin_id, status=None)
     if undo_until(request) is None:
         raise ConflictError("this decision can no longer be undone", code="undo_expired")
     was = request.status
+    if was == "paid" and request.paid_by != admin_id:
+        # Only the admin who sent the transfer knows it did not go out; another admin's undo
+        # followed by «Отклонить» or a second «Выплачено» could pay the seller twice.
+        raise ConflictError("only the admin who marked it paid can undo it", code="undo_not_yours")
     if was == "rejected":
         if request.user_id in await frozen_users(db, [request.user_id]):
             raise ConflictError("the seller's wallet is frozen", code="wallet_frozen")
