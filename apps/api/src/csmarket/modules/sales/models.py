@@ -9,6 +9,7 @@
 - :class:`SaleSettingsRow` — row 1, the admin's document (``rules.SaleSettings``).
 - :class:`SaleCheck` — «ask Skinslink about sale N»: queued by the webhook, drained by the
   worker's ``sales`` queue.
+- :class:`SaleBlock` — a user an admin stopped from selling (``POST /sell`` refuses them).
 """
 
 from __future__ import annotations
@@ -48,8 +49,9 @@ OPEN_STATUSES = ("creating", "offered", "hold")
 PAYOUT_TO = ("balance", "card")
 CARD_TYPES = ("uzcard", "humo", "uzum_visa")
 REQUEST_STATUSES = ("waiting_hold", "to_pay", "paid", "rejected", "canceled")
-#: ``rolled_back``: reverted after the money left; ``late_deposit``: a closed sale Skinslink
-#: reports alive. Both wait for an admin (``docs/runbooks/sales.md``).
+#: ``rolled_back``: reverted after the sale became payable (a card payout may be mid-transfer);
+#: ``late_deposit``: a closed sale Skinslink reports reverted; ``credit_blocked``: a frozen
+#: wallet refused the credit. Open = set and ``resolved_at`` unset (``docs/runbooks/sales.md``).
 ATTENTION_REASONS = ("rolled_back", "late_deposit", "credit_blocked")
 
 
@@ -132,6 +134,12 @@ class Sale(Base):
     fail_reason: Mapped[str | None] = mapped_column(String(48), nullable=True)
     credited_at: Mapped[datetime | None] = _at()
     attention_reason: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    #: An admin checked the attention («Проверено»): when, who, what they found.
+    resolved_at: Mapped[datetime | None] = _at()
+    resolved_by: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    resolved_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String(160), nullable=False)
     last_polled_at: Mapped[datetime | None] = _at()
     created_at: Mapped[datetime] = _ts()
@@ -158,6 +166,12 @@ class Sale(Base):
             "status",
             "last_polled_at",
             postgresql_where=text("status IN ('creating', 'offered', 'hold')"),
+        ),
+        Index("ix_sales_created_at", "created_at"),
+        Index(
+            "ix_sales_attention_open",
+            "attention_reason",
+            postgresql_where=text("attention_reason IS NOT NULL AND resolved_at IS NULL"),
         ),
     )
 
@@ -261,6 +275,22 @@ class SaleCheck(Base):
     __table_args__ = (Index("ix_sale_checks_created_at", "created_at"),)
 
 
+class SaleBlock(Base):
+    """A user an admin stopped from selling; the row's presence is the block."""
+
+    __tablename__ = "sale_blocks"
+
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    #: Why, in the admin's words (never shown to the seller).
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    blocked_by: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = _ts()
+
+
 __all__ = [
     "ATTENTION_REASONS",
     "CARD_PURPOSE",
@@ -273,6 +303,7 @@ __all__ = [
     "PayoutCard",
     "PayoutRequest",
     "Sale",
+    "SaleBlock",
     "SaleCheck",
     "SaleItem",
     "SaleSettingsRow",
