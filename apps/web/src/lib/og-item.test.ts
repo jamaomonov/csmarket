@@ -156,6 +156,12 @@ describe("itemOgModel", () => {
     expect(m.title.lines.join(" ")).toBe("NATUS VINCERE (HOLO) | PARIS 2023");
     expect(m.rarity).toBeNull();
     expect(m.glow).toBe("#4b69ff");
+    // Steam draws stickers small inside a padded square: the card zooms them in.
+    expect(m.pictureScale).toBeGreaterThan(1);
+  });
+
+  it("a weapon skin keeps its picture at natural size", () => {
+    expect(itemOgModel(base, labels).pictureScale).toBe(1);
   });
 
   it("an agent or a case: the category over the full name", () => {

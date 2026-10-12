@@ -73,12 +73,22 @@ function Tag({ tag }: { tag: OgTag }) {
   );
 }
 
-function Picture({ image }: { image: string | null }) {
+function Picture({ image, scale }: { image: string | null; scale: number }) {
   const box = { position: "absolute", right: 40, top: 110, width: 560, height: 420 } as const;
   if (image) {
+    // A zoomed picture grows around the same centre; the card's overflow clips it.
+    const w = Math.round(560 * scale);
+    const h = Math.round(420 * scale);
+    const zoomed = {
+      ...box,
+      right: 40 - (w - 560) / 2,
+      top: 110 - (h - 420) / 2,
+      width: w,
+      height: h,
+    };
     return (
       // eslint-disable-next-line @next/next/no-img-element -- Satori draws plain <img> only
-      <img src={image} alt="" width={560} height={420} style={{ ...box, objectFit: "contain" }} />
+      <img src={image} alt="" width={w} height={h} style={{ ...zoomed, objectFit: "contain" }} />
     );
   }
   return (
@@ -93,7 +103,7 @@ function Picture({ image }: { image: string | null }) {
 }
 
 export function ItemOgCard({ model, image }: ItemOgCardProps) {
-  const { kicker, star, title, tags, rarity, glow } = model;
+  const { kicker, star, title, tags, rarity, glow, pictureScale } = model;
   return (
     <div
       style={{
@@ -116,7 +126,7 @@ export function ItemOgCard({ model, image }: ItemOgCardProps) {
           backgroundImage: `radial-gradient(circle at 77% 52%, ${glow}66 0%, ${glow}26 26%, ${glow}00 52%), radial-gradient(circle at 4% 0%, rgba(75, 243, 100, 0.13) 0%, rgba(75, 243, 100, 0) 34%)`,
         }}
       />
-      <Picture image={image} />
+      <Picture image={image} scale={pictureScale} />
       {/* The SVG carries 20 px of padding: the lockup itself starts at 72 / 64. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- Satori draws plain <img> only */}
       <img

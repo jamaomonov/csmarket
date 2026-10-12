@@ -173,6 +173,8 @@ export interface ItemOgModel {
   rarity: { name: string; color: string } | null;
   /** The glow behind the picture. */
   glow: string;
+  /** How much to zoom the picture: Steam draws stickers and the like small in a padded square. */
+  pictureScale: number;
 }
 
 /** The localised words the card needs (`web.skins`). */
@@ -182,6 +184,10 @@ export interface ItemOgLabels {
   category: string | null;
   exterior: (exterior: Exterior) => string;
 }
+
+/** Categories whose Steam picture sits small in transparent padding. */
+const PADDED = new Set(["stickers", "patches", "graffiti", "charms"]);
+const PADDED_SCALE = 1.5;
 
 const STATTRAK = "#e07a3f";
 const SOUVENIR = "#facc15";
@@ -225,5 +231,6 @@ export function itemOgModel(item: SkinItem, labels: ItemOgLabels): ItemOgModel {
     tags,
     rarity: item.rarity ? { name: item.rarity, color } : null,
     glow: color,
+    pictureScale: PADDED.has(item.category) ? PADDED_SCALE : 1,
   };
 }
