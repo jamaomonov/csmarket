@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -88,3 +88,23 @@ async def verify_sent_at(db: AsyncSession, *, user_id: str, address: str) -> dat
             EmailOutbox.address == address,
         )
     )
+
+
+async def discard_pending(db: AsyncSession, *, sale_id: str, kind: str) -> bool:
+    """Drop the sale's ``kind`` letter if it still waits in the outbox (an admin undid the
+    event it reports), so the event redone can enqueue a fresh one. A letter already sent
+    stays; one the worker is sending this second may still go. Flushes, never commits.
+
+    Returns:
+        Whether a waiting letter was dropped.
+    """
+    gone = await db.scalar(
+        delete(EmailOutbox)
+        .where(
+            EmailOutbox.sale_id == sale_id,
+            EmailOutbox.kind == kind,
+            EmailOutbox.status == "pending",
+        )
+        .returning(EmailOutbox.id)
+    )
+    return gone is not None

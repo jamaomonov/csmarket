@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import ColumnElement, and_, func, or_, select
@@ -16,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import get_settings
 from csmarket.core.cursor import decode_cursor, encode_cursor
-from csmarket.core.errors import NotFoundError
+from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
 from csmarket.core.money import wire_uzs
 from csmarket.core.redis import get_redis
 from csmarket.modules.admin.api import AuditPayload, record
@@ -33,7 +34,7 @@ from csmarket.modules.sales.admin_schemas import (
     SaleSettingsOut,
 )
 from csmarket.modules.sales.cards import masked
-from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale, SaleItem
+from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale, SaleItem, SaleSettingsRow
 from csmarket.modules.sales.rules import SaleSettings, settings_warnings
 from csmarket.modules.sales.schemas import SaleStatusOut, plain
 from csmarket.modules.sales.settings_store import (
@@ -250,8 +251,28 @@ def _diff(before: SaleSettings, after: SaleSettings) -> AuditPayload:
     return changed or {"unchanged": "true"}
 
 
-async def save_settings(db: AsyncSession, *, doc: SaleSettings, admin_id: str) -> None:
-    """Replace the document; audited ``sales.settings.save``. Flushes, never commits."""
+def _stale(row_at: datetime | None, expected: str) -> bool:
+    """Whether the row moved since ``expected`` (an ``updated_at`` or ``none``)."""
+    if expected.strip().strip('"').lower() == "none":
+        return row_at is not None
+    try:
+        seen = datetime.fromisoformat(expected.strip().strip('"'))
+    except ValueError as exc:
+        raise ValidationError("If-Match is not a version", code="if_match") from exc
+    return row_at is None or row_at != seen
+
+
+async def save_settings(
+    db: AsyncSession, *, doc: SaleSettings, admin_id: str, expected: str | None = None
+) -> None:
+    """Replace the document; audited ``sales.settings.save``. Flushes, never commits.
+
+    Raises:
+        ConflictError: ``settings_stale`` — ``expected`` is not the saved version.
+    """
+    row = await db.get(SaleSettingsRow, 1, with_for_update=True, populate_existing=True)
+    if expected is not None and _stale(row.updated_at if row else None, expected):
+        raise ConflictError("the settings were saved by someone else", code="settings_stale")
     before = await read_sale_settings(db)
     await save_sale_settings(db, settings=doc, admin_id=admin_id)
     await record(

@@ -148,6 +148,7 @@
       "refund": "Refund to balance",
       "sale_credit": "Skins sold",
       "payout_return": "Payout to balance",
+      "payout_return_reversal": "Payout to balance undone",
       "fx_convert": "Transfer to USD",
       "admin_adjust_usd": "USD adjustment"
     },

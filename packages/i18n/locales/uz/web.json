@@ -148,6 +148,7 @@
       "refund": "Balansga qaytarish",
       "sale_credit": "Skin sotuvi",
       "payout_return": "Balansga toʻlov",
+      "payout_return_reversal": "Balansga toʻlov bekor qilindi",
       "fx_convert": "USD ga oʻtkazma",
       "admin_adjust_usd": "USD tuzatish"
     },

@@ -9,19 +9,29 @@ adds cannot both pass). The same number again is the live card already saved, ne
 row: a sale refused after its card was stored, then retried, must not fill the user's slots
 (the at most three live cards are decrypted and compared under the same lock). A delete is
 soft: a paid request keeps pointing at its card.
+
+:func:`card_fingerprint` is an HMAC-SHA256 of the digits under a key HKDF-derived from the app
+key (:data:`~csmarket.modules.sales.models.CARD_FP_PURPOSE`): stored as ``number_fp``, it finds
+the same card on other accounts (the admin's risk block) without anyone holding the number.
+A database dump without the app key cannot test a guessed number against it.
 """
 
 from __future__ import annotations
+
+import hashlib
+import hmac
+from functools import lru_cache
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
-from csmarket.core.crypto import decrypt, encrypt
+from csmarket.core.config import get_settings
+from csmarket.core.crypto import decrypt, derive_key, encrypt, input_key_material
 from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
-from csmarket.modules.sales.models import CARD_PURPOSE, PayoutCard
+from csmarket.modules.sales.models import CARD_FP_PURPOSE, CARD_PURPOSE, PayoutCard
 from csmarket.modules.sales.rules import CardType
 from csmarket.modules.users.api import User
 
@@ -67,6 +77,17 @@ def card_digits(card_type: str, raw: str) -> str:
     return digits
 
 
+@lru_cache(maxsize=1)
+def _fp_key() -> bytes:
+    return derive_key(input_key_material(get_settings()), CARD_FP_PURPOSE)
+
+
+def card_fingerprint(digits: str) -> str:
+    """The card's keyed fingerprint (hex HMAC-SHA256 of the 16 digits). Not PII by itself,
+    but never log it next to a person."""
+    return hmac.new(_fp_key(), digits.encode("ascii"), hashlib.sha256).hexdigest()
+
+
 def masked(last4: str) -> str:
     """How a card is shown: ``•••• 9015``."""
     return f"•••• {last4}"
@@ -110,6 +131,7 @@ async def add_card(
         number_enc=enc,
         number_nonce=nonce,
         last4=digits[-4:],
+        number_fp=card_fingerprint(digits),
     )
     db.add(card)
     await db.flush()
@@ -157,10 +179,36 @@ def reveal_number(card: PayoutCard) -> str:
     return decrypt(card.number_enc, card.number_nonce, purpose=CARD_PURPOSE)
 
 
+async def backfill_fingerprints(db: AsyncSession, *, batch: int = 500) -> int:
+    """Fill ``number_fp`` of every card saved before it existed; flushes per batch, never
+    commits. The number is decrypted in memory only.
+
+    Returns:
+        How many cards were filled.
+    """
+    done = 0
+    while True:
+        cards = list(
+            (
+                await db.scalars(
+                    select(PayoutCard).where(PayoutCard.number_fp.is_(None)).limit(batch)
+                )
+            ).all()
+        )
+        if not cards:
+            return done
+        for card in cards:
+            card.number_fp = card_fingerprint(reveal_number(card))
+        await db.flush()
+        done += len(cards)
+
+
 __all__ = [
     "MAX_LIVE_CARDS",
     "add_card",
+    "backfill_fingerprints",
     "card_digits",
+    "card_fingerprint",
     "delete_card",
     "live_cards",
     "luhn_ok",

@@ -91,6 +91,7 @@ async def test_the_card_number_leaves_only_through_the_audited_reveal(
     assert HUMO not in paid.text
     assert HUMO not in repr(logs)
     assert [a for a, _ in await _audit(db_session)] == [
+        "sales.payout.claim",  # the first reveal claims the request
         "sales.card.show",
         "sales.card.copy",
         "sales.payout.paid",
@@ -203,7 +204,7 @@ async def test_the_page_shows_the_breakdown_items_and_history(
     assert (sale["items_uzs"], sale["fee_uzs"], sale["payout_uzs"]) == ("155200", "7800", "147400")
     assert [i["asset_id"] for i in sale["items"]] == ["100", "101"]
     assert [s["number"] for s in body["history_sales"]] == [sale["number"]]
-    assert [p["id"] for p in body["history_payouts"]] == [request.id]
+    assert body["history_payouts"] == []  # the request itself is the page, not its history
     assert body["can_decide"] is True
 
 

@@ -27,6 +27,7 @@ from sqlalchemy import (
     Integer,
     LargeBinary,
     Numeric,
+    SmallInteger,
     String,
     Text,
     UniqueConstraint,
@@ -42,6 +43,8 @@ from csmarket.core.ids import new_id
 SALES_CHANNEL = "sales"
 #: The ``core.crypto`` purpose label of a card number. A new cipher means a new label.
 CARD_PURPOSE = "csmarket:payout-card:v1"
+#: The HKDF label of the card fingerprint's HMAC key (``cards.card_fingerprint``).
+CARD_FP_PURPOSE = "csmarket:payout-card-fp:v1"
 
 SALE_STATUSES = ("creating", "offered", "hold", "credited", "payout", "closed", "reverted")
 #: Statuses Skinslink may still move; everything else is settled.
@@ -86,12 +89,17 @@ class PayoutCard(Base):
     number_enc: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     number_nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
     last4: Mapped[str] = mapped_column(String(4), nullable=False)
+    #: HMAC-SHA256 of the 16 digits under a key derived from the app key
+    #: (:data:`CARD_FP_PURPOSE`), hex: finds the same card on other accounts without the number.
+    #: ``NULL`` on a card saved before 0033 until ``scripts.backfill_card_fp`` runs.
+    number_fp: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = _ts()
     deleted_at: Mapped[datetime | None] = _at()
 
     __table_args__ = (
         CheckConstraint(f"type IN {_in(CARD_TYPES)}", name="type"),
         Index("ix_payout_cards_user_live", "user_id", postgresql_where=text("deleted_at IS NULL")),
+        Index("ix_payout_cards_number_fp", "number_fp"),
     )
 
 
@@ -229,6 +237,15 @@ class PayoutRequest(Base):
     rejected_at: Mapped[datetime | None] = _at()
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     reject_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: «Беру в работу»: the admin paying it now and since when; live for ``admin_claims.TTL``.
+    claimed_by: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    claimed_at: Mapped[datetime | None] = _at()
+    #: How many times a decision was undone; keys the ledger of a second «Отклонить».
+    undo_count: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=0, server_default="0"
+    )
     created_at: Mapped[datetime] = _ts()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -293,6 +310,7 @@ class SaleBlock(Base):
 
 __all__ = [
     "ATTENTION_REASONS",
+    "CARD_FP_PURPOSE",
     "CARD_PURPOSE",
     "CARD_TYPES",
     "OPEN_STATUSES",

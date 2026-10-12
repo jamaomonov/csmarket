@@ -7,7 +7,12 @@ Nothing here imports ``orders`` or ``payments`` at import time.
 
 from __future__ import annotations
 
-from csmarket.modules.notifications.outbox import EMAILS_CHANNEL, enqueue, verify_sent_at
+from csmarket.modules.notifications.outbox import (
+    EMAILS_CHANNEL,
+    discard_pending,
+    enqueue,
+    verify_sent_at,
+)
 from csmarket.modules.notifications.sender import drain_emails
 
-__all__ = ["EMAILS_CHANNEL", "drain_emails", "enqueue", "verify_sent_at"]
+__all__ = ["EMAILS_CHANNEL", "discard_pending", "drain_emails", "enqueue", "verify_sent_at"]

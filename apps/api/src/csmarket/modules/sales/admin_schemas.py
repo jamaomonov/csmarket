@@ -15,6 +15,10 @@ from csmarket.modules.sales.schemas import PayoutStatusOut, SaleStatusOut
 AttentionReasonOut = Literal["rolled_back", "late_deposit", "credit_blocked"]
 #: The sales list's attention filter: ``open`` (unresolved), ``resolved``, ``any`` (either).
 AttentionFilter = Literal["open", "resolved", "any"]
+#: A payout row's risk flags (``admin_risk``).
+PayoutFlag = Literal["banned", "wallet_frozen", "sell_blocked", "new_account", "shared_card"]
+#: The queue's tab: one status, or ``all`` (a search across every status, newest first).
+PayoutTab = Literal["to_pay", "waiting_hold", "paid", "rejected", "canceled", "all"]
 
 
 class AdminUserOut(BaseModel):
@@ -40,6 +44,11 @@ class PayoutRowOut(BaseModel):
     to_pay_at: datetime | None
     paid_at: datetime | None
     created_at: datetime
+    #: «Беру в работу»: who pays it now and until when; ``null`` when free or expired.
+    claimed_by: AdminUserOut | None = None
+    claimed_until: datetime | None = None
+    #: What to look at before paying (``banned``, ``wallet_frozen``, …).
+    flags: list[PayoutFlag] = Field(default_factory=list)
 
 
 class PayoutCountsOut(BaseModel):
@@ -52,12 +61,51 @@ class PayoutCountsOut(BaseModel):
     canceled: int = 0
 
 
+class PayoutTotalsOut(BaseModel):
+    """The queue's strip: payable now, and decided since midnight in Tashkent."""
+
+    to_pay_count: int
+    to_pay_uzs: str
+    paid_today_count: int
+    paid_today_uzs: str
+    rejected_today_count: int
+
+
 class PayoutsPageOut(BaseModel):
-    """One page of a status tab, every tab's count and the next cursor."""
+    """One page of a status tab, every tab's count, the day's totals and the next cursor."""
 
     items: list[PayoutRowOut]
     counts: PayoutCountsOut
+    totals: PayoutTotalsOut
     next_cursor: str | None
+
+
+class PayoutRiskOut(BaseModel):
+    """«Риски»: who the seller is and how much went to them and to this card."""
+
+    #: The seller's Steam profile (admin only).
+    steam_url: str | None
+    account_created_at: datetime | None
+    banned: bool
+    ban_reason: str | None
+    wallet_frozen: bool
+    sell_blocked: bool
+    sell_block_reason: str | None
+    #: Sales that paid or will pay the seller, and their soʻm.
+    sold_count: int
+    sold_uzs: str
+    #: Card payouts already paid to the seller.
+    paid_count: int
+    paid_uzs: str
+    #: Paid to this card number on any account.
+    card_paid_uzs: str
+    #: The seller's sales of the last 24 h (not closed or reverted), USD at Skinslink's prices.
+    day_count: int
+    day_usd: str
+    #: The card has a fingerprint (``false``: saved before 0033 and not backfilled yet).
+    card_known: bool
+    #: Other accounts that saved the same card.
+    shared_card_users: list[AdminUserOut]
 
 
 class AdminSaleItemOut(BaseModel):
@@ -147,6 +195,11 @@ class PayoutDetailOut(BaseModel):
     #: «Отменить (откат)» is possible: ``to_pay`` and the sale reverted after it became
     #: payable (``attention_reason = rolled_back``).
     can_cancel: bool
+    #: «Вернуть в очередь» is possible until then (a decision of the last minutes).
+    undo_until: datetime | None = None
+    #: «Выплачено» needs ``override_reason``: the account is banned or its wallet frozen.
+    paid_needs_override: bool = False
+    risk: PayoutRiskOut | None = None
 
 
 class RevealIn(BaseModel):
@@ -163,9 +216,23 @@ class RevealOut(BaseModel):
 
 
 class PaidIn(BaseModel):
-    """«Выплачено» with an optional note."""
+    """«Выплачено» with an optional note; ``override_reason`` pays a banned account or a
+    frozen wallet anyway (audited)."""
 
     note: str | None = Field(default=None, max_length=500)
+    override_reason: str | None = Field(default=None, max_length=500)
+
+
+class ClaimIn(BaseModel):
+    """«Беру в работу»; ``takeover`` takes a request another admin holds."""
+
+    takeover: bool = False
+
+
+class UndoIn(BaseModel):
+    """«Вернуть в очередь» with the reason (required)."""
+
+    reason: str = Field(min_length=1, max_length=500)
 
 
 class RejectIn(BaseModel):

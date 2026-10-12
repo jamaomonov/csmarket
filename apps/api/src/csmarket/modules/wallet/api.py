@@ -37,7 +37,7 @@ from csmarket.modules.wallet.purchases import (
     debit_purchase,
     debit_purchase_usd,
 )
-from csmarket.modules.wallet.sales import credit_payout_return, credit_sale
+from csmarket.modules.wallet.sales import credit_payout_return, credit_sale, debit_payout_return
 from csmarket.modules.wallet.service import (
     KIND_CURRENCY,
     NORMAL_SIDE,
@@ -90,6 +90,7 @@ __all__ = [
     "credit_payout_return",
     "credit_sale",
     "credit_topup",
+    "debit_payout_return",
     "debit_purchase",
     "debit_purchase_usd",
     "ensure_account",
