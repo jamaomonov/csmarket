@@ -365,3 +365,74 @@ async def test_customers_are_403(
     headers = {**await customer_headers(), **_key(90)}
     r = await integration_client.post(BASE + path.format(id=request.id), json=body, headers=headers)
     assert r.status_code == 403
+
+
+async def test_replays_and_edges_of_claim_release_and_undo(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    headers = await admin_headers()
+    request = await _payable(db_session)
+    url = f"{BASE}/{request.id}"
+    # Releasing a request nobody holds is a quiet no-op, and a replay answers the same.
+    first = await integration_client.post(f"{url}/release", headers={**headers, **_key(100)})
+    again = await integration_client.post(f"{url}/release", headers={**headers, **_key(100)})
+    assert first.status_code == again.status_code == 200
+    assert "sales.payout.release" not in await _actions(db_session)
+    # Undo of a request nobody decided is refused.
+    early = await integration_client.post(
+        f"{url}/undo", json={"reason": "x"}, headers={**headers, **_key(101)}
+    )
+    assert (early.status_code, early.json()["code"]) == (409, "undo_expired")
+    await integration_client.post(
+        f"{url}/reject", json={"reason": "x"}, headers={**headers, **_key(102)}
+    )
+    replay = await integration_client.post(
+        f"{url}/reject", json={"reason": "x"}, headers={**headers, **_key(102)}
+    )
+    assert replay.status_code == 200
+    claim_paid = await integration_client.post(
+        f"{url}/claim", json={}, headers={**headers, **_key(103)}
+    )
+    assert (claim_paid.status_code, claim_paid.json()["code"]) == (409, "payout_not_payable")
+    wallet = await user_account(db_session, request.user_id)
+    wallet.status = "frozen"
+    await db_session.commit()
+    frozen = await integration_client.post(
+        f"{url}/undo", json={"reason": "x"}, headers={**headers, **_key(104)}
+    )
+    assert (frozen.status_code, frozen.json()["code"]) == (409, "wallet_frozen")
+    wallet = await user_account(db_session, request.user_id)
+    wallet.status = "active"
+    await db_session.commit()
+    undone = await integration_client.post(
+        f"{url}/undo", json={"reason": "x"}, headers={**headers, **_key(105)}
+    )
+    undone_again = await integration_client.post(
+        f"{url}/undo", json={"reason": "x"}, headers={**headers, **_key(105)}
+    )
+    assert undone.status_code == undone_again.status_code == 200
+    assert undone.json() == undone_again.json()
+
+
+async def test_newest_first_tabs_page_by_cursor(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    headers = await admin_headers()
+    made = [await _payable(db_session, status="paid", paid_at=now()) for _ in range(3)]
+    first = (
+        await integration_client.get(BASE, params={"status": "paid", "limit": 2}, headers=headers)
+    ).json()
+    rest = (
+        await integration_client.get(
+            BASE,
+            params={"status": "paid", "limit": 2, "cursor": first["next_cursor"]},
+            headers=headers,
+        )
+    ).json()
+    assert [r["id"] for r in first["items"] + rest["items"]] == [m.id for m in reversed(made)]
+    nobody = (
+        await integration_client.get(
+            BASE, params={"status": "all", "q": "no-such-seller"}, headers=headers
+        )
+    ).json()
+    assert nobody["items"] == []
