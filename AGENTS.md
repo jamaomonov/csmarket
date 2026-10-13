@@ -32,8 +32,8 @@
   2026-10-06** on the VPS `57.131.198.69` (Ubuntu 24.04, user `deploy`, checkout `~/opt/csmarket`,
   password and root SSH off), image tag `sha-3aa03e4`: all five hosts answer through Cloudflare
   with Let's Encrypt certificates, the client IP check passed — M0 is done for good. Search
-  indexing stays closed (`CSMARKET_INDEXING=off`, `docs/runbooks/indexing.md`) until the owner
-  opens it. M5 started 2026-10-11 (without the kassas): nightly backups to R2 are live (`ops` profile,
+  indexing is open since 2026-10-13 (`CSMARKET_INDEXING=on`, `docs/runbooks/indexing.md`), after
+  a full SEO review. M5 started 2026-10-11 (without the kassas): nightly backups to R2 are live (`ops` profile,
   `docs/runbooks/backups.md`, alerts `BackupStale` / `BackupNeverRan`); Alertmanager runs in the
   `alerts` profile. Still to come: Sentry, Resend, the kassas, test buys, opening indexing.
   The partner API docs live at `docs.csmarket.uz` (static Scalar page, `infra/docs-site`,
