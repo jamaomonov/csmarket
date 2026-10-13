@@ -14,7 +14,7 @@ import base64
 import binascii
 import json
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -23,6 +23,7 @@ from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.errors import NotFoundError, ValidationError
+from csmarket.modules.skins.colors import SKIN_COLORS
 from csmarket.modules.skins.models import SkinItem, SkinSearchAlias
 from csmarket.modules.skins.naming import search_text
 
@@ -42,6 +43,8 @@ class CatalogQuery:
     rarity: str | None = None
     #: An agent's side, ``ct`` / ``t``.
     team: str | None = None
+    #: Colour keys, comma-separated: an item with any of them (spec 2026-10-14-skin-colors).
+    color: str | None = None
     #: Bounds on our **sell** price (what the card shows), not on Waxpeer's cost.
     min_usd: Decimal | None = None
     max_usd: Decimal | None = None
@@ -63,6 +66,8 @@ class Facets:
     exteriors: list[tuple[str, int]]
     #: (name, count, colour) — the colour is the game's for that grade.
     rarities: list[tuple[str, int, str | None]]
+    #: The skins' own colours, in ``SKIN_COLORS`` order; empty ones left out.
+    colors: list[tuple[str, int]] = field(default_factory=list)
 
 
 CursorValue = int | Decimal | None
@@ -123,6 +128,8 @@ def _filtered(query: CatalogQuery, categories: list[str]) -> Select[SkinItem]:
         stmt = stmt.where(SkinItem.rarity == query.rarity)
     if query.team:
         stmt = stmt.where(SkinItem.team == query.team)
+    if query.color:
+        stmt = stmt.where(SkinItem.colors.overlap(query.color.split(",")))
     if query.min_usd is not None:
         stmt = stmt.where(SkinItem.sell_price_usd >= query.min_usd)
     if query.max_usd is not None:
@@ -291,7 +298,18 @@ async def facets(db: AsyncSession, *, categories: list[str], category: str | Non
             ((str(r), int(c), color) for r, c, color in rarity_rows.all()),
             key=lambda rc: (-RARITY_TIER.get(rc[0], -1), rc[0]),
         ),
+        colors=await _color_counts(db, scoped),
     )
+
+
+async def _color_counts(
+    db: AsyncSession, where: list[ColumnElement[bool]]
+) -> list[tuple[str, int]]:
+    """Items per colour (an item with two counts in both), in the swatch order."""
+    unnested = select(func.unnest(SkinItem.colors).label("color")).where(*where).subquery()
+    rows = await db.execute(select(unnested.c.color, func.count()).group_by(unnested.c.color))
+    counts = {str(c): int(n) for c, n in rows.all()}
+    return [(c, counts[c]) for c in SKIN_COLORS if counts.get(c)]
 
 
 async def suggest(

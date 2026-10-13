@@ -44,6 +44,7 @@ from csmarket_scheduler.jobs import (
     purge_refresh_tokens,
     sales_poll,
     skins_catalog_import,
+    skins_colors,
     skins_price_sync,
     skinslink_balance,
     skinslink_mirror,
@@ -71,6 +72,7 @@ def build_scheduler() -> AsyncIOScheduler:
     purge_refresh_tokens.register(scheduler)
     fx_refresh.register(scheduler)
     skins_catalog_import.register(scheduler)
+    skins_colors.register(scheduler)
     skins_price_sync.register(scheduler)
     skinslink_mirror.register(scheduler)
     skinslink_reconcile.register(scheduler)

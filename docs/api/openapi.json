@@ -2136,6 +2136,43 @@
         "title": "AdminSalesPageOut",
         "type": "object"
       },
+      "AdminSkinColorsIn": {
+        "description": "An item's colours set by hand (one or two keys), or ``null`` to give them back to the job.",
+        "properties": {
+          "colors": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "red",
+                    "orange",
+                    "yellow",
+                    "green",
+                    "blue",
+                    "purple",
+                    "pink",
+                    "brown",
+                    "beige",
+                    "black",
+                    "white",
+                    "grey"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Colors"
+          }
+        },
+        "title": "AdminSkinColorsIn",
+        "type": "object"
+      },
       "AdminSkinItemOut": {
         "description": "One row of the admin item search.",
         "properties": {
@@ -2146,6 +2183,19 @@
           "category": {
             "title": "Category",
             "type": "string"
+          },
+          "colors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "colors_manual": {
+            "default": false,
+            "title": "Colors Manual",
+            "type": "boolean"
           },
           "cost_usd": {
             "anyOf": [
@@ -8243,6 +8293,14 @@
             ],
             "title": "Collection"
           },
+          "colors": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
           "count": {
             "title": "Count",
             "type": "integer"
@@ -8468,6 +8526,14 @@
               "$ref": "#/components/schemas/FacetOut"
             },
             "title": "Categories",
+            "type": "array"
+          },
+          "colors": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FacetOut"
+            },
+            "title": "Colors",
             "type": "array"
           },
           "exteriors": {
@@ -13189,6 +13255,91 @@
         ]
       }
     },
+    "/api/v1/admin/skins/items/{slug}/colors": {
+      "put": {
+        "description": "Set the colours of the item and its wears, or give them back to the job (``null``).",
+        "operationId": "put_colors_api_v1_admin_skins_items__slug__colors_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminSkinColorsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminSkinItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set an item's colours",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/skins/items/{slug}/pricing": {
       "put": {
         "description": "Set or clear the item's margin override and pinned price, and reprice it.",
@@ -16910,6 +17061,23 @@
                 }
               ],
               "title": "Team"
+            }
+          },
+          {
+            "in": "query",
+            "name": "color",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Color"
             }
           },
           {

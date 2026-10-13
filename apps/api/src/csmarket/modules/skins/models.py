@@ -32,7 +32,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from csmarket.core.db import Base
@@ -68,6 +68,17 @@ class SkinItem(Base):
     #: The cases the skin drops from, by their market names («Operation Phoenix Weapon Case»).
     crates: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
+    #: The skin's own colours (``colors.SKIN_COLORS`` keys, one or two), read from its picture
+    #: by the ``skins.colors`` job; ``{}`` until then (spec 2026-10-14-skin-colors).
+    colors: Mapped[list[str]] = mapped_column(
+        ARRAY(String(16)), nullable=False, server_default=text("'{}'")
+    )
+    #: The ``image_url`` the colours were read from; a new picture is read again.
+    colors_image: Mapped[str | None] = mapped_column(Text, nullable=True)
+    #: An admin set the colours by hand: the job leaves them alone.
+    colors_manual: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=text("false")
     )
     #: Valve's description, in English (ByMykel has no Russian or Uzbek); plain text.
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -141,6 +152,7 @@ class SkinItem(Base):
         Index("ix_skin_items_category_sell", "category", "sell_price_usd"),
         Index("ix_skin_items_discount", "discount_percent"),
         Index("ix_skin_items_category_def_index", "category", "def_index"),
+        Index("ix_skin_items_colors", "colors", postgresql_using="gin"),
         Index(
             "ix_skin_items_search_trgm",
             "search_text",

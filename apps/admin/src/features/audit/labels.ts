@@ -7,6 +7,7 @@ export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "users.unban": "Разблокировка",
   "wallet.adjust": "Изменение баланса",
   "skins.item.hide": "Скин скрыт",
+  "skins.item.colors": "Цвета скина изменены",
   "skins.item.unhide": "Скин показан",
   "skins.alias.put": "Синоним сохранён",
   "skins.alias.delete": "Синоним удалён",

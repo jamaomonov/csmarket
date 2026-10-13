@@ -109,6 +109,8 @@ def item_out(item: SkinItem) -> AdminSkinItemOut:
         else _plain(Decimal(item.min_auto_units) / Decimal(1000)),
         margin_override_pp=_text(item.margin_override_pp),
         fixed_price_usd=_text(item.fixed_price_usd),
+        colors=list(item.colors),
+        colors_manual=item.colors_manual,
     )
 
 

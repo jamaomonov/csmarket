@@ -71,6 +71,8 @@ class SkinFacetsOut(BaseModel):
     rarities: list[RarityFacetOut]
     #: An agent's side (``ct`` / ``t``); empty outside a category that has sides.
     teams: list[FacetOut] = []
+    #: The skins' own colours, in the fixed swatch order (spec 2026-10-14-skin-colors).
+    colors: list[FacetOut] = []
 
 
 class SkinSuggestOut(BaseModel):
@@ -120,6 +122,8 @@ class SkinDetailOut(SkinItemOut):
     crates: list[SkinCrateOut] = []
     #: Valve's description, English only (the import's source has no Russian or Uzbek).
     description: str | None = None
+    #: The skin's own colours (``colors.SKIN_COLORS`` keys); empty until read.
+    colors: list[str] = []
 
 
 class SkinStickerOut(BaseModel):

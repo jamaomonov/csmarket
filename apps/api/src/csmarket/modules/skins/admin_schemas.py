@@ -12,6 +12,7 @@ from typing import Annotated, Self
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from csmarket.modules.skins.colors import SkinColor
 from csmarket.modules.skins.pricing import PricingRules
 
 
@@ -75,12 +76,21 @@ class AdminSkinItemOut(BaseModel):
     margin_override_pp: str | None = None
     #: A pinned sell price, honoured while it covers cost + min margin.
     fixed_price_usd: str | None = None
+    #: The skin's own colours; ``colors_manual`` when an admin set them.
+    colors: list[str] = []
+    colors_manual: bool = False
 
 
 class AdminSkinItemsOut(BaseModel):
     """Admin item search results (no paging: narrow the query instead)."""
 
     items: list[AdminSkinItemOut]
+
+
+class AdminSkinColorsIn(BaseModel):
+    """An item's colours set by hand (one or two keys), or ``null`` to give them back to the job."""
+
+    colors: list[SkinColor] | None = Field(default=None, min_length=1, max_length=2)
 
 
 class AdminSkinItemPatchIn(BaseModel):
