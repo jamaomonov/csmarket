@@ -97,7 +97,8 @@ reversals) Skinslink's, and its `min_prices` lets us fix the payout when the sal
   carry a `warnings` entry; the save is never refused.
 - **Only `already_exists` adopts a deposit**; any other 409 from `create-deposit` is a refusal.
 
-Not done: SB-4 (P&L and reconciliation of Skinslink credits — a design of its own), SB-14
+SB-4 (P&L and reconciliation of Skinslink credits) done 2026-10-13: spec
+`2026-10-13-sales-pnl-design.md`. Not done: SB-14
 (in-site notifications while email is off — the seller UI's work).
 
 ## Amendment 2026-10-12 — paying out from a phone (admin review H1–H3, M1–M10)

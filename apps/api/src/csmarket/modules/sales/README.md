@@ -5,15 +5,15 @@ Spec: `docs/superpowers/specs/2026-10-08-skin-sales-design.md`. Decision: ADR-00
 
 ## Owns
 
-| Table             | What                                                                        |
-| ----------------- | --------------------------------------------------------------------------- |
-| `sales`           | One per deposit; `id` = Skinslink's `merchant_tx_id`; the payout fixed      |
-| `sale_items`      | The items at the prices the seller saw (USD from Skinslink, soʻm ours)      |
-| `payout_cards`    | Saved cards, the number encrypted (`CARD_PURPOSE`), `last4` in the clear    |
-| `payout_requests` | Card payouts an admin pays by hand (`waiting_hold` → `to_pay` → `paid` / …) |
-| `sale_settings`   | Row 1: the admin's document (`rules.SaleSettings`)                          |
-| `sale_checks`     | «Ask Skinslink about sale N», queued by the deposit webhook                 |
-| `sale_blocks`     | Users an admin stopped from selling (`POST /sell` → 409 `sell_blocked`)     |
+| Table             | What                                                                                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `sales`           | One per deposit; `id` = Skinslink's `merchant_tx_id`; the payout fixed                                             |
+| `sale_items`      | The items at the prices the seller saw (USD from Skinslink, soʻm ours)                                             |
+| `payout_cards`    | Saved cards, the number encrypted (`CARD_PURPOSE`), `last4` in the clear                                           |
+| `payout_requests` | Card payouts an admin pays by hand (`waiting_hold` → `to_pay` → `paid` / …); `bank_fee_uzs` written at «Выплачено» |
+| `sale_settings`   | Row 1: the admin's document (`rules.SaleSettings`)                                                                 |
+| `sale_checks`     | «Ask Skinslink about sale N», queued by the deposit webhook                                                        |
+| `sale_blocks`     | Users an admin stopped from selling (`POST /sell` → 409 `sell_blocked`)                                            |
 
 Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), the outbox
 (`notifications`), the socket (`realtime`).
@@ -29,6 +29,10 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
   commit); `status.py` — every transition (`apply_deposit`, `check_sale`);
   `payouts.py` — a card sale's request; `checks.py` — the webhook's queue; `reconcile.py` —
   the poll and the alert gauges; `letters.py` — the three letters.
+- `pnl.py` — one sale's P&L and reconciliation flag (pure); `pnl_query.py` — the window's
+  rows (completed = `credited_at`, or the card request's `to_pay_at`; the CBU rate of the
+  sale's creation from `fx_snapshots`), the dashboard's `sales_pnl` and «Сверка»;
+  `admin_recon_routes.py` — `GET /admin/sales/reconciliation` (spec 2026-10-13-sales-pnl).
 - `cards.py`, `views.py`, `schemas.py`, `routes.py`, `cards_routes.py` — the seller's API.
   `add_card` returns the user's live card with the same number instead of a second row (the
   ≤ 3 live cards decrypted and compared under the user lock), so retrying a refused card sale
@@ -76,7 +80,8 @@ Imports `skinslink.api` (the deposit client), `wallet.api` (`credit_sale`,
 | `CSMARKET_SALES_DEPOSIT_TIMEOUT_SECONDS`   | `10`    | Skinslink `create-deposit` on `POST /sell` |
 
 The admin's document (`/admin/sales/settings`): `enabled`, `margin[]`, `rate_cut_pct`,
-`balance_bonus_pct`, `card_fee_pct{uzcard, humo, uzum_visa}`, `card_min_uzs`, `min_sum_usd`,
+`balance_bonus_pct`, `card_fee_pct{uzcard, humo, uzum_visa}`, `bank_fee_pct` (the bank's charge to us on a card
+transfer, default 1; only the P&L reads it), `card_min_uzs`, `min_sum_usd`,
 and the optional USD ceilings `max_sale_usd`, `max_user_day_usd`, `max_day_usd` (`null` or
 missing = no limit; the 24 h windows count sales that did not end `closed` / `reverted`). It
 ships switched off with the demo's placeholder fees (5 %): the owner sets real ones first. The

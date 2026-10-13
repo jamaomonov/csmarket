@@ -226,6 +226,8 @@ class PayoutRequest(Base):
     amount_uzs: Mapped[Decimal] = mapped_column(Numeric(14, 0), nullable=False)
     #: The card fee kept (``items_uzs − payout_uzs``); a rejection credits both.
     fee_uzs: Mapped[Decimal] = mapped_column(Numeric(14, 0), nullable=False)
+    #: The bank's charge on the transfer, written at «Выплачено» (P&L, spec 2026-10-13).
+    bank_fee_uzs: Mapped[Decimal | None] = mapped_column(Numeric(14, 0), nullable=True)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     #: Since when it is payable (``completed`` seen).
     to_pay_at: Mapped[datetime | None] = _at()

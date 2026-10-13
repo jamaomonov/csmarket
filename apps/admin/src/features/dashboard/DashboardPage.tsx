@@ -1,14 +1,15 @@
 /**
  * «Дашборд»: today / 7 / 30 Tashkent days — sales, revenue, margin, refunds — and what needs
- * a look now: orders in flight, open attentions, the Waxpeer, Skinslink and LIS-SKINS balances. Re-read every minute.
+ * a look now: orders in flight, open attentions, the Waxpeer, Skinslink and LIS-SKINS balances;
+ * «Выкуп»: what buying skins from users earned. Re-read every minute.
  */
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
-import { Link } from "react-router-dom";
 
 import { type DashboardOut, type Days, getDashboard } from "./api";
 import { DASHBOARD_KEY } from "./keys";
 import { freshness, shortDay, TAB_KEYS, TABS } from "./labels";
+import { SalesPnlBlock } from "./SalesPnlBlock";
+import { Tile } from "./Tile";
 
 import { formatMoneyUsd } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
@@ -18,40 +19,6 @@ import { pick } from "@/lib/url-guards";
 import { useUrlParams } from "@/lib/useUrlParams";
 
 const REFRESH_MS = 60_000;
-
-interface TileProps {
-  title: string;
-  children: ReactNode;
-  /** The whole tile opens this page. */
-  to?: string;
-  /** Something waits for an operator: a red edge. */
-  alert?: boolean;
-}
-
-function Tile({ title, children, to, alert = false }: TileProps) {
-  const body = (
-    <>
-      <div className="text-fg-muted text-sm font-normal">{title}</div>
-      <div className="mt-1 flex flex-col gap-0.5 text-lg font-semibold tabular-nums">
-        {children}
-      </div>
-    </>
-  );
-  const cls = `border-border bg-surface block h-full rounded-lg border p-4 ${
-    alert ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""
-  }`;
-  return (
-    <div data-testid={`tile-${title}`} className="h-full">
-      {to === undefined ? (
-        <div className={cls}>{body}</div>
-      ) : (
-        <Link to={to} className={`${cls} hover:bg-surface-hover`}>
-          {body}
-        </Link>
-      )}
-    </div>
-  );
-}
 
 const usd = (v: string | number): string => formatMoneyUsd(v);
 
@@ -230,6 +197,7 @@ export function DashboardPage() {
         <>
           <Period data={query.data} />
           <ByDay data={query.data} />
+          <SalesPnlBlock pnl={query.data.sales_pnl} />
           <Balances data={query.data} />
         </>
       )}

@@ -183,6 +183,13 @@ export function SaleSettingsPage() {
           />
         ))}
         <NumberField
+          label="Комиссия банка, %"
+          value={doc.bank_fee_pct ?? "1"}
+          onChange={(v) => {
+            set({ bank_fee_pct: v });
+          }}
+        />
+        <NumberField
           label="Минимум на карту, сум"
           value={minText ?? String(doc.card_min_uzs)}
           onChange={(v) => {

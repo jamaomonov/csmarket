@@ -37,6 +37,7 @@ const NAV: NavEntry[] = [
     items: [
       { to: "/payouts", label: "Заявки на выплату", counter: "toPay" },
       { to: "/sales", label: "Продажи" },
+      { to: "/sales/reconciliation", label: "Сверка" },
       { to: "/sale-blocks", label: "Запрет выкупа" },
     ],
   },

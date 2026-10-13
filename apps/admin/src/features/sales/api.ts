@@ -109,6 +109,8 @@ export interface SaleSettings {
   card_fee_pct: Record<CardType, string>;
   card_min_uzs: number;
   min_sum_usd: string;
+  /** What the bank charges us on a card transfer, percent; optional for an older API. */
+  bank_fee_pct?: string;
   /** USD ceilings; `null` = no limit. */
   max_sale_usd?: string | null;
   max_user_day_usd?: string | null;

@@ -156,4 +156,39 @@ describe("DashboardPage", () => {
     const rows = await screen.findAllByRole("row");
     expect(rows.map((r) => r.textContent)).toContain("01.100—$0.00");
   });
+
+  it("shows what buying skins from users earned", async () => {
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      sales_pnl: {
+        count: 2,
+        income_usd: "25.9",
+        to_cards_uzs: "151500",
+        to_balances_uzs: "125000",
+        to_pay_uzs: "0",
+        withheld_uzs: "5200",
+        bank_uzs: "1500",
+        cost_uzs: "276500",
+        cost_usd: "22.12",
+        profit_usd: "-1.5",
+        profit_percent: "-5.8",
+        by_day: [],
+      },
+    });
+    renderPage();
+    const profit = await screen.findByTestId("tile-Выкуп: прибыль");
+    expect(profit).toHaveTextContent("-5.8 % от полученного");
+    expect(tile("Выкуп: получено")).toHaveTextContent("продаж: 2");
+    expect(within(tile("Выкуп: получено")).getByRole("link")).toHaveAttribute(
+      "href",
+      "/sales/reconciliation",
+    );
+    expect(tile("Выкуп: выплачено")).not.toHaveTextContent("к выплате");
+  });
+
+  it("hides the skin-sales block without sales", async () => {
+    renderPage();
+    await screen.findByTestId("tile-Продажи");
+    expect(screen.queryByTestId("tile-Выкуп: прибыль")).toBeNull();
+  });
 });

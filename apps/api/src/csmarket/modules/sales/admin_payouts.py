@@ -43,6 +43,8 @@ from csmarket.modules.sales.cards import reveal_number
 from csmarket.modules.sales.letters import enqueue_sale_letter
 from csmarket.modules.sales.models import PayoutCard, PayoutRequest, Sale
 from csmarket.modules.sales.payouts import request_of
+from csmarket.modules.sales.pnl import bank_fee
+from csmarket.modules.sales.settings_store import read_sale_settings
 from csmarket.modules.sales.status import lock_sale
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import credit_payout_return
@@ -259,6 +261,8 @@ async def mark_paid(
             )
         overridden = True
     request.status, request.paid_by, request.paid_at, request.note = "paid", admin_id, now(), note
+    doc = await read_sale_settings(db)
+    request.bank_fee_uzs = bank_fee(request.amount_uzs, doc.bank_fee_pct)
     admin_claims.clear(request)
     card = await db.get(PayoutCard, request.card_id)
     await enqueue_sale_letter(
