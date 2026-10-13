@@ -45,12 +45,26 @@ const AI_CRAWLERS = [
  */
 const DISALLOW = ["/api/", "/account", "/*/account", "/auth/", "/*/auth/"];
 
+/**
+ * Yandex's `Clean-param` (Google ignores it and goes by the canonical): ad and click tags
+ * never change a page, and the catalogue's sort and «show more» cursor only reorder or
+ * continue the same `noindex` set. Without it Yandex crawls every variant as its own page.
+ * Yandex reads the `*` group (it is not in the AI-crawler group), so the lines live there.
+ */
+const CLEAN_PARAMS = [
+  "Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&gclid&yclid&ysclid&fbclid",
+  "Clean-param: sort&cursor /market",
+  "Clean-param: sort&cursor /uz/market",
+  "Clean-param: sort&cursor /en/market",
+];
+
 /** One robots.txt group: its user-agent lines, access rules, and content signal. */
-function group(agents: string[]): string {
+function group(agents: string[], extra: string[] = []): string {
   return [
     ...agents.map((a) => `User-Agent: ${a}`),
     "Allow: /",
     ...DISALLOW.map((d) => `Disallow: ${d}`),
+    ...extra,
     CONTENT_SIGNAL,
   ].join("\n");
 }
@@ -60,11 +74,11 @@ export const dynamic = "force-dynamic";
 
 export function GET(): Response {
   const body = [
-    group(["*"]),
+    group(["*"], CLEAN_PARAMS),
     "",
     group(AI_CRAWLERS),
     "",
-    `Host: ${SITE}`,
+    // No `Host:`: Yandex dropped it in 2018 and reads the 301 from www instead.
     `Sitemap: ${SITE}/sitemap.xml`,
     "",
   ].join("\n");

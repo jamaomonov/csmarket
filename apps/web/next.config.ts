@@ -6,6 +6,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Metadata before the first byte for every client, not only Next's list of "HTML-limited"
+  // bots: with streamed metadata a `notFound()` in `generateMetadata` arrives after the 200
+  // has gone out, and Googlebot sees a soft 404 (a 200 around «Страница не найдена»). Item,
+  // category and weapon pages check existence in `generateMetadata`; a real 404 needs this.
+  htmlLimitedBots: /.*/,
   typedRoutes: true,
   // Lint runs via `make lint` / CI; a Docker build must not conflate the two.
   eslint: { ignoreDuringBuilds: true },

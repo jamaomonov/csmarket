@@ -25,8 +25,22 @@ export function marketRedirect(request: NextRequest): NextResponse | null {
   return NextResponse.redirect(target, 301);
 }
 
+/** The default locale spelled out: `/ru`, `/ru/market?…`. */
+const DEFAULT_PREFIX = new RegExp(`^/${routing.defaultLocale}(/.*)?$`);
+
+/**
+ * `/ru/…` answers **308** to the unprefixed URL. next-intl would send a 307, which search
+ * engines read as temporary and keep the `/ru` URL around; the move is for good.
+ */
+export function defaultLocaleRedirect(request: NextRequest): NextResponse | null {
+  const match = DEFAULT_PREFIX.exec(request.nextUrl.pathname);
+  if (match === null) return null;
+  const target = new URL(`${match[1] ?? "/"}${request.nextUrl.search}`, request.nextUrl.origin);
+  return NextResponse.redirect(target, 308);
+}
+
 export default function middleware(request: NextRequest): NextResponse {
-  return marketRedirect(request) ?? intl(request);
+  return defaultLocaleRedirect(request) ?? marketRedirect(request) ?? intl(request);
 }
 
 export const config = {
