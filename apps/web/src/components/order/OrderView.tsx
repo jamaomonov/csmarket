@@ -19,6 +19,7 @@ import { ENTRIES_KEY } from "@/components/balance/EntriesList";
 import { StatusBadge } from "@/components/trades/StatusBadge";
 import { TradeSteps, type TradeStep } from "@/components/trades/TradeSteps";
 import { Link } from "@/i18n/navigation";
+import { trackPurchase } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY } from "@/lib/balance";
 import { orderPollInterval } from "@/lib/order-poll";
@@ -89,6 +90,11 @@ export function OrderView({ locale, number }: OrderViewProps) {
     void qc.invalidateQueries({ queryKey: ENTRIES_KEY });
     void qc.invalidateQueries({ queryKey: ORDERS_KEY });
   }, [shown, qc]);
+
+  // Counted once, on the first sight of the order paid (`trackPurchase` keeps the numbers sent).
+  useEffect(() => {
+    if (order.data) trackPurchase(order.data);
+  }, [order.data]);
 
   if (status === "loading") return <Skeleton />;
   if (status === "suspended") return <p className="text-danger">{authT("suspended")}</p>;

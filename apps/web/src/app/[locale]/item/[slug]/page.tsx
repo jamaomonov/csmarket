@@ -6,6 +6,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import type { Metadata } from "next";
 
+import { TrackEvent } from "@/components/Analytics";
 import { JsonLd } from "@/components/JsonLd";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SkinBuyPanel } from "@/components/skins/SkinBuyPanel";
@@ -19,6 +20,7 @@ import { SkinSimilar } from "@/components/skins/SkinSimilar";
 import { SkinWearPicker } from "@/components/skins/SkinWearPicker";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { gaItem } from "@/lib/analytics";
 import { itemOgUrl } from "@/lib/og-item";
 import { categoryPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
 import {
@@ -233,6 +235,16 @@ export default async function SkinPage({ params }: Props) {
                 locale={locale}
               />
               {item.buy_enabled && <SkinBuyPanel slug={item.slug} locale={locale} />}
+              <TrackEvent
+                event={{
+                  name: "view_item",
+                  params: {
+                    currency: "UZS",
+                    value: Number(item.price_uzs ?? 0),
+                    items: [gaItem(item.slug, item.name, item.price_uzs)],
+                  },
+                }}
+              />
             </div>
             <div className="space-y-5 md:col-start-1 md:row-start-2">{details}</div>
           </section>

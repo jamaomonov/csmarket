@@ -206,7 +206,7 @@
       },
       {
         "h": "Maʼlumotlarni kimga beramiz",
-        "p": "Faqat sayt ishlashi uchun zarur hajmda. Steam — kirish va almashuv havolasini tekshirish uchun: Steam ID va almashuv havolasi. Buyum sotuvchilari va almashuv yuboriladigan maydonchalar — buyumni yetkazish yoki skinlaringizni qabul qilish uchun almashuv havolasi. Click, Payme va Uzum toʻlov xizmatlari — toʻlov raqami va summasi; ularga Steam ID berilmaydi. Xat yuborish xizmati — xat manzili, mavzusi va matni. Saytni yetkazish va himoya qilish xizmati — soʻrovlarning texnik maʼlumotlari, jumladan IP-manzil. Xosting-provayder — sayt serverlarida saqlanadigan maʼlumotlar. Xatolarni qayd etish xizmati — shaxsiy maʼlumotlarsiz nosozlikning texnik tavsifi. Davlat organlari — qonun talab qilganda."
+        "p": "Faqat sayt ishlashi uchun zarur hajmda. Steam — kirish va almashuv havolasini tekshirish uchun: Steam ID va almashuv havolasi. Buyum sotuvchilari va almashuv yuboriladigan maydonchalar — buyumni yetkazish yoki skinlaringizni qabul qilish uchun almashuv havolasi. Click, Payme va Uzum toʻlov xizmatlari — toʻlov raqami va summasi; ularga Steam ID berilmaydi. Xat yuborish xizmati — xat manzili, mavzusi va matni. Saytni yetkazish va himoya qilish xizmati — soʻrovlarning texnik maʼlumotlari, jumladan IP-manzil. Xosting-provayder — sayt serverlarida saqlanadigan maʼlumotlar. Xatolarni qayd etish xizmati — shaxsiy maʼlumotlarsiz nosozlikning texnik tavsifi. Google Analytics — tashriflarning shaxsiylashtirilmagan statistikasi: qaysi sahifalar ochilgani hamda buyurtmalar raqami va summasi, Steam ID, email va almashuv havolasisiz. Davlat organlari — qonun talab qilganda."
       },
       {
         "h": "Maʼlumotlarni qanday saqlaymiz",
@@ -218,7 +218,7 @@
       },
       {
         "h": "Cookie",
-        "p": "Sayt faqat texnik cookie fayllaridan foydalanadi: kirish sessiyasi (30 kungacha) va Steam orqali kirishning bir martalik kaliti (10 daqiqa). Brauzer xotirasida joriy toʻlovning xizmat maʼlumotlari saqlanishi mumkin. Reklama va analitika cookie fayllari yoʻq."
+        "p": "Sayt texnik cookie fayllaridan foydalanadi: kirish sessiyasi (30 kungacha) va Steam orqali kirishning bir martalik kaliti (10 daqiqa). Brauzer xotirasida joriy toʻlovning xizmat maʼlumotlari saqlanishi mumkin. Tashriflar statistikasi uchun sayt Google Analytics cookie fayllaridan foydalanadi (2 yilgacha); reklama cookie fayllari yoʻq. Ularni brauzer sozlamalarida oʻchirish mumkin — sayt ishlashda davom etadi."
       },
       {
         "h": "Huquqlaringiz",

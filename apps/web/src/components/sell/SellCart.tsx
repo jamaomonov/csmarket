@@ -13,6 +13,7 @@ import { SellSteps } from "./SellSteps";
 
 import { PayConsent } from "@/components/legal/PayConsent";
 import { useRouter } from "@/i18n/navigation";
+import { track } from "@/lib/analytics";
 import { salePath } from "@/lib/paths";
 import { CARDS_KEY, listCards, type SavedCard } from "@/lib/sales";
 import {
@@ -118,6 +119,10 @@ export function SellCart(p: SellCartProps) {
     },
     onSuccess: (sale) => {
       key.current = null;
+      track({
+        name: "sell",
+        params: { transaction_id: sale.number, currency: "UZS", value: Number(sale.payout_uzs) },
+      });
       void qc.invalidateQueries({ queryKey: CARDS_KEY });
       router.push(salePath(sale.number));
     },

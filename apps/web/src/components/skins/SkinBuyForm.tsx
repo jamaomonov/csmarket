@@ -16,6 +16,7 @@ import type { SkinListing } from "@csmarket/utils/skins";
 
 import { PayConsent } from "@/components/legal/PayConsent";
 import { Link, useRouter } from "@/i18n/navigation";
+import { gaItem, track } from "@/lib/analytics";
 import { BALANCE_KEY } from "@/lib/balance";
 import { orderArrivalPath } from "@/lib/order-arrival";
 import { mintOrderKey, mintPayKey, orderKeyFor, type OrderKey } from "@/lib/order-key";
@@ -136,6 +137,12 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
     setNotice(null);
     setFailed(false);
     const bought = offer;
+    const value = Number(price);
+    track({
+      name: "begin_checkout",
+      params: { currency: "UZS", value, items: [gaItem(slug, slug, value)] },
+    });
+    track({ name: "add_payment_info", params: { payment_type: provider } });
     const body = { slug, listing_id: bought.listing_id, price_uzs: Number(price) };
     const pay = { provider, locale };
     let key = orderKeyFor(orderKey.current, bought.listing_id, gate.link, mintOrderKey);
