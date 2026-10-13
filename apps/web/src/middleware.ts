@@ -3,6 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 
 import { routing } from "./i18n/routing";
+import { MD_HEADER, mdTarget, prefersMarkdown } from "./lib/agent-md";
 import { MARKET } from "./lib/paths";
 
 const intl = createMiddleware(routing);
@@ -39,8 +40,27 @@ export function defaultLocaleRedirect(request: NextRequest): NextResponse | null
   return NextResponse.redirect(target, 308);
 }
 
+/**
+ * An AI agent asking for `text/markdown` gets the page's Markdown twin (`app/md`) at the same
+ * URL; everyone else the HTML. Neither is stored (`no-store`), so no cache mixes them up.
+ */
+export function agentMarkdown(request: NextRequest): NextResponse | null {
+  const target = mdTarget(request.nextUrl.pathname);
+  if (target === null || !prefersMarkdown(request.headers.get("accept"))) return null;
+  const path = [target.locale, ...target.segments].map(encodeURIComponent).join("/");
+  const headers = new Headers(request.headers);
+  headers.set(MD_HEADER, "1");
+  return NextResponse.rewrite(new URL(`/md/${path}`, request.nextUrl.origin), {
+    request: { headers },
+  });
+}
+
 export default function middleware(request: NextRequest): NextResponse {
-  return defaultLocaleRedirect(request) ?? marketRedirect(request) ?? intl(request);
+  const redirect = defaultLocaleRedirect(request) ?? marketRedirect(request);
+  if (redirect) return redirect;
+  const md = agentMarkdown(request);
+  if (md) return md;
+  return intl(request);
 }
 
 export const config = {

@@ -1,4 +1,3 @@
-import { skinQueryString } from "@csmarket/utils/skins";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -7,7 +6,8 @@ import type { Metadata } from "next";
 
 import { SkinLanding } from "@/components/skins/SkinLanding";
 import { routing } from "@/i18n/routing";
-import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
+import { loadWeapon, type WeaponData, weaponContent } from "@/lib/landing-content";
+import { weaponPath } from "@/lib/paths";
 import {
   alternates,
   GEO_META,
@@ -17,8 +17,7 @@ import {
   ROBOTS,
   shareImage,
 } from "@/lib/seo";
-import { countUnit, findWeapon, isSkinCategory, isThinLanding } from "@/lib/skin-landing";
-import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
+import { countUnit, isThinLanding } from "@/lib/skin-landing";
 
 interface Props {
   params: Promise<{ locale: string; weapon: string }>;
@@ -31,16 +30,11 @@ interface Props {
  */
 
 /** The weapon behind the slug and its numbers; calls `notFound()` when the catalogue has none. */
-async function load(locale: string, slug: string) {
+async function load(locale: string, slug: string): Promise<WeaponData> {
   if (!hasLocale(routing.locales, locale)) notFound();
-  const facets = await getSkinFacets();
-  const weapon = facets ? findWeapon(facets, slug) : null;
-  if (!weapon) notFound();
-  const cheapest = await getSkinsPage({ sort: "price", weapon: weapon.value });
-  const first = cheapest.items[0];
-  const from = first ? displayPrice(locale, first.price_uzs, first.price_usd) : null;
-  const category = first && isSkinCategory(first.category) ? first.category : null;
-  return { weapon, from, category };
+  const data = await loadWeapon(locale, slug);
+  if (!data) notFound();
+  return data;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -83,49 +77,16 @@ export default async function SkinWeaponPage({ params }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
   const data = await load(locale, slug);
-  const t = await getTranslations("web.skins");
-  const w = data.weapon.value;
-  const query = {
-    sort: "popular" as const,
-    weapon: w,
-    ...(data.category ? { category: data.category } : {}),
-  };
-  const page = await getSkinsPage(query);
-  const items = t("landing.count", { unit: countUnit(undefined), count: data.weapon.count });
-  // The category page's questions, asked about the weapon and answered from live numbers.
-  const tSeo = await getTranslations({ locale, namespace: "web.seoPages.cat" });
-  const skinsOf = t("landing.skinsOf", { weapon: w });
-  const entries = [
-    ...(data.from
-      ? [
-          {
-            question: tSeo("priceQ", { name: skinsOf }),
-            answer: tSeo("priceA", { price: data.from, items }),
-          },
-        ]
-      : []),
-    { question: tSeo("howQ", { inline: skinsOf }), answer: tSeo("howA") },
-  ];
+  const c = await weaponContent(locale, data);
   return (
     <SkinLanding
       locale={locale}
-      h1={t("landing.weaponH1", { weapon: w })}
-      intro={data.from ? t("landing.intro", { items, price: data.from, kind: "skin" }) : null}
-      items={page.items}
-      faq={{ title: t("faq.title"), entries }}
-      allHref={MARKET + skinQueryString(query)}
-      crumbs={[
-        { name: t("market"), path: MARKET },
-        ...(data.category
-          ? [
-              {
-                name: t("landing.categoryH1", { name: t(`category.${data.category}`) }),
-                path: categoryPath(data.category),
-              },
-            ]
-          : []),
-        { name: t("landing.weaponH1", { weapon: w }), path: weaponPath(slug) },
-      ]}
+      h1={c.h1}
+      intro={c.intro}
+      items={c.items}
+      faq={{ title: (await getTranslations("web.skins"))("faq.title"), entries: c.faq }}
+      allHref={c.allHref}
+      crumbs={c.crumbs}
     />
   );
 }
