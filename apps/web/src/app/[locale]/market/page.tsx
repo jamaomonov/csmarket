@@ -42,6 +42,9 @@ interface Props {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+/** Cards loaded eagerly: the first row on a wide screen, two rows on a phone. */
+const FIRST_ROW = 4;
+
 /**
  * Reads `searchParams`, so Next renders it per request; the data helpers cache upstream
  * fetches themselves. Stated explicitly so a build never tries to prerender `/` against an API.
@@ -135,9 +138,9 @@ export default async function HomePage({ params, searchParams }: Props) {
               </div>
             ) : (
               <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {page.items.map((item) => (
+                {page.items.map((item, i) => (
                   <li key={item.slug}>
-                    <SkinCard item={item} locale={locale} />
+                    <SkinCard item={item} locale={locale} priority={i < FIRST_ROW} />
                   </li>
                 ))}
                 {/* Later batches join this same grid, so a short last row fills up. */}

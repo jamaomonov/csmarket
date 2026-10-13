@@ -117,6 +117,8 @@ csmarket.uz, www.csmarket.uz {
 	}
 	handle @robotsClosed {
 		header Content-Type "text/plain; charset=utf-8"
+		# Never cached: Cloudflare would otherwise keep «Disallow: /» for hours after the flip.
+		header Cache-Control "no-store"
 		respond <<TXT
 			User-agent: *
 			Disallow: /

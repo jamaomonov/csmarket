@@ -2,6 +2,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
+import { preconnect } from "react-dom";
 
 import type { Metadata } from "next";
 
@@ -60,6 +61,8 @@ export default async function LocaleLayout({
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
   const messages = clientMessages(await getMessages());
+  // Skin pictures come from Steam's CDN: open the connection before the first <img> asks.
+  preconnect("https://community.fastly.steamstatic.com");
   return (
     <html
       lang={locale === "uz" ? "uz-Latn" : locale}

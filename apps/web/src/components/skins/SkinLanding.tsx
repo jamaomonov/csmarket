@@ -37,6 +37,9 @@ interface Props {
   after?: ReactNode;
 }
 
+/** Cards loaded eagerly: the first row on a wide screen, two rows on a phone. */
+const FIRST_ROW = 4;
+
 /**
  * A CS2 landing page — a category («Ножи КС2 (CS2)») or a weapon («Скины AK-47 КС2 (CS2)»):
  * the heading, a line of real numbers (how many, from what price), the most popular 48, a
@@ -116,9 +119,9 @@ export async function SkinLanding({
 
         {before}
         <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {items.map((item) => (
+          {items.map((item, i) => (
             <li key={item.slug}>
-              <SkinCard item={item} locale={locale} />
+              <SkinCard item={item} locale={locale} priority={i < FIRST_ROW} />
             </li>
           ))}
         </ul>

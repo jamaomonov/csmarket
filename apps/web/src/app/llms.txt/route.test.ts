@@ -33,6 +33,15 @@ test("describes the shop and links its sections, with live counts", async () => 
   expect(body).toContain("https://csmarket.uz/uz");
 });
 
+test("tells an assistant how buying, refunds and the terms work", async () => {
+  const body = await (await GET()).text();
+  expect(body).toContain("https://csmarket.uz/pay/click");
+  expect(body).toContain("https://csmarket.uz/cheap");
+  expect(body).toContain("## Refunds");
+  expect(body).toContain("support@csmarket.uz");
+  expect(body).toContain("[Public offer](https://csmarket.uz/legal/terms)");
+});
+
 test("an API outage still answers, without numbers", async () => {
   facets.current = null;
   const body = await (await GET()).text();

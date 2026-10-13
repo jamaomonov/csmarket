@@ -1,6 +1,18 @@
+import enLegal from "@csmarket/i18n/locales/en/legal.json";
 import en from "@csmarket/i18n/locales/en/web.json";
 
-import { categoryPath, MARKET, REVIEWS, SELL } from "@/lib/paths";
+import { LEGAL_DOCS } from "@/lib/legal";
+import {
+  categoryPath,
+  CHEAP,
+  legalPath,
+  MARKET,
+  PAY_METHODS,
+  PAY_NAMES,
+  payPath,
+  REVIEWS,
+  SELL,
+} from "@/lib/paths";
 import { localeUrl } from "@/lib/seo";
 import { getSkinFacets } from "@/lib/skins";
 
@@ -12,8 +24,9 @@ const n = (v: number): string => v.toLocaleString("en-US");
 
 /**
  * `/llms.txt` (llmstxt.org): what the shop is, for language models answering about buying CS2
- * skins in Uzbekistan — the sections with live counts, payment, delivery, languages and the
- * partner API's own llms.txt. In English, the convention; an API outage drops the numbers.
+ * skins in Uzbekistan — the sections with live counts, payment, delivery, refunds, the legal
+ * documents, languages and the partner API's own llms.txt. Only what the site and its terms
+ * say: an assistant quotes this, so no promise lives here that the offer does not make. In English, the convention; an API outage drops the numbers.
  */
 export async function GET(): Promise<Response> {
   const facets = await getSkinFacets();
@@ -41,6 +54,28 @@ export async function GET(): Promise<Response> {
     ...cats.map(section),
     `- [Sell skins](${url(SELL)})`,
     `- [Reviews](${url(REVIEWS)})`,
+    "",
+    "## Buying",
+    "",
+    ...PAY_METHODS.map(
+      (m) => `- [Buy CS2 skins with ${PAY_NAMES[m]}](${url(payPath(m))}): steps and popular skins`,
+    ),
+    `- [Cheap CS2 skins](${url(CHEAP)}): weapon skins under 100,000 soʻm`,
+    "",
+    "How it works: sign in with Steam, add your Steam trade link, pick a skin and pay. The seller",
+    "sends the skin as a Steam trade offer to that link; accept it in Steam. Steam then keeps the",
+    "item for 7 days before it can be traded or sold again (Steam's rule on every marketplace).",
+    "",
+    "## Refunds",
+    "",
+    "If a purchase cannot be delivered (the trade was declined, not accepted in time, cancelled by",
+    "Steam, or the item was unavailable), the full amount returns to the site balance at once.",
+    "On request to support it is returned to a card within 5 working days. An accepted trade is",
+    "not refunded. Support: support@csmarket.uz",
+    "",
+    "## Terms",
+    "",
+    ...LEGAL_DOCS.map((d) => `- [${enLegal[d].title}](${url(legalPath(d))})`),
     "",
     "## Languages",
     "",
