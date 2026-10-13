@@ -16,7 +16,14 @@ import { displayPrice } from "@/lib/skins";
  *
  * No `"use client"`: rendered inside the server grid on `/`.
  */
-export function SkinCard({ item, locale }: { item: SkinItem; locale: string }) {
+interface SkinCardProps {
+  item: SkinItem;
+  locale: string;
+  /** Load the picture eagerly, with high priority: the first row, likely the page's LCP. */
+  priority?: boolean;
+}
+
+export function SkinCard({ item, locale, priority = false }: SkinCardProps) {
   const t = useTranslations("web.skins");
   const price = displayPrice(locale, item.price_uzs, item.price_usd);
   const glow = rarityGlow(item.rarity_color);
@@ -43,6 +50,7 @@ export function SkinCard({ item, locale }: { item: SkinItem; locale: string }) {
             src={steamImageSize(item.image_url, "256fx256f")}
             alt={item.name}
             fill
+            priority={priority}
             // A Steam CDN image already cut to size (256fx256f): the optimizer adds nothing.
             unoptimized
             sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw"

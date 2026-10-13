@@ -10,6 +10,7 @@ const base = {
   stattrak: false,
   souvenir: false,
   phase: null,
+  exterior: null,
   category: "Винтовки",
 };
 
@@ -46,5 +47,12 @@ it("keeps a StatTrak™ marker in the H1 even without a weapon", () => {
   );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
     /^StatTrak™ Наборы музыки Sandstorm$/,
+  );
+});
+
+it("puts the wear in the H1, so the wears of one skin differ", () => {
+  render(<SkinItemTitle {...base} name="Redline" exterior="После полевых испытаний" />);
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    /^AK-47 Redline · После полевых испытаний$/,
   );
 });

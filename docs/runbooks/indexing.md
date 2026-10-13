@@ -31,8 +31,8 @@ switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
   (1200×630, from `docs/design/og.html`). Item pages get a generated card,
   `/<locale>/item/<slug>/og.png` (`app/[locale]/item/[slug]/og.png/route.tsx`, `next/og`):
   the logo, the weapon over the skin name, StatTrak™ / Souvenir / phase / wear, the skin on the
-  right in its rarity glow, no price. IBM Plex Sans comes from Google Fonts at runtime (once per
-  process; on failure the built-in font); a Steam picture that fails leaves the card without it;
+  right in its rarity glow, no price. IBM Plex Sans is read from the repo (`apps/web/assets/og`,
+  once per process; on failure the built-in font); a Steam picture that fails leaves the card without it;
   an API outage redirects to `/og/<locale>.jpg`. Cached a day (`s-maxage`, Cloudflare). Telegram
   keeps a link's preview: after a design change send the URL to @WebpageBot to refresh it.
 - `/llms.txt` — the shop for language models, with live category counts; the partner API has
@@ -69,5 +69,31 @@ consoles' removal tools.
 
 ## Cloudflare
 
-Cloudflare's cache may hold `robots.txt` for up to an hour (`max-age=3600`). After a flip,
-purge `https://csmarket.uz/robots.txt` in the Cloudflare dashboard (Caching → Purge by URL).
+- **After a flip, purge everything** (Caching → Configuration → Purge Everything). Static files
+  (`/og/*.jpg`, `/_next/static/*`) sit in Cloudflare's cache with the header they were served with,
+  `X-Robots-Tag: noindex` included, until they expire. The closed `robots.txt` itself is sent with
+  `Cache-Control: no-store`; the open one is cached an hour.
+- **Bot settings** (Security → Bots, AI Crawl Control): «Block AI bots» off, AI crawlers allowed,
+  «Bot Fight Mode» off, **«Manage robots.txt» / «Bot Preference Sync» off** — it would prepend
+  Cloudflare's own rules to ours. `robots.txt` is the storefront's alone (`apps/web/src/app/robots.txt`).
+
+## After opening
+
+1. Google Search Console: add the **domain** property `csmarket.uz` (DNS TXT record in Cloudflare),
+   submit `https://csmarket.uz/sitemap.xml`, inspect `/`, `/market` and one item URL.
+2. Yandex Webmaster: add `https://csmarket.uz`, verify (meta tag or DNS), submit the sitemap, set
+   the region to **Uzbekistan** («Региональность»), check «Clean-param» is read under
+   «Анализ robots.txt».
+3. A week later: Search Console → Pages: «Discovered — not indexed» and soft 404s;
+   Yandex → «Страницы в поиске» → excluded pages.
+
+## What crawlers and assistants are told
+
+- `robots.txt`: everything but `/api/`, the account and the sign-in callback; Yandex's
+  `Clean-param` for ad tags and the catalogue's `sort` / `cursor`; AI crawlers (GPTBot, ClaudeBot,
+  PerplexityBot, …) welcome with `Content-Signal: search=yes, ai-input=yes, ai-train=no`.
+- Out of the index on purpose (`noindex, follow`): filtered and searched `/market` views, item pages
+  with nothing in stock (back once stocked), category and weapon pages with fewer than 10 items
+  (`MIN_LANDING_ITEMS`, also left out of `landings.xml`), `/sell`, `/steam`, `/reviews`.
+- `/llms.txt`: the shop, sections with live counts, buying by payment method, how delivery and
+  refunds work (as the terms say), the legal documents.

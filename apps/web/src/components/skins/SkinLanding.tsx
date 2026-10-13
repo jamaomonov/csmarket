@@ -6,6 +6,7 @@ import type { SkinItem } from "@csmarket/utils/skins";
 import type { ReactNode } from "react";
 
 import { JsonLd } from "@/components/JsonLd";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { SkinFaq } from "@/components/skins/SkinFaq";
 import { Link } from "@/i18n/navigation";
@@ -35,6 +36,9 @@ interface Props {
   /** Shown under the grid, above the FAQ (a category's text, related links). */
   after?: ReactNode;
 }
+
+/** Cards loaded eagerly: the first row on a wide screen, two rows on a phone. */
+const FIRST_ROW = 4;
 
 /**
  * A CS2 landing page — a category («Ножи КС2 (CS2)») or a weapon («Скины AK-47 КС2 (CS2)»):
@@ -69,65 +73,68 @@ export async function SkinLanding({
   const parents = crumbs.slice(0, -1);
   const current = crumbs.at(-1);
   return (
-    <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-28 pt-6 sm:px-6">
-      <JsonLd data={breadcrumbLd} />
-      {listLd && <JsonLd data={listLd} />}
-      <nav
-        aria-label="breadcrumb"
-        className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
-      >
-        {parents.map((c) => (
-          <span key={c.path} className="flex items-center gap-1">
-            <Link href={c.path} className="hover:text-fg">
-              {c.name}
-            </Link>
-            <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-          </span>
-        ))}
-        {current && (
-          <span aria-current="page" className="text-fg-muted">
-            {current.name}
-          </span>
+    <>
+      <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-10 pt-6 sm:px-6">
+        <JsonLd data={breadcrumbLd} />
+        {listLd && <JsonLd data={listLd} />}
+        <nav
+          aria-label="breadcrumb"
+          className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
+        >
+          {parents.map((c) => (
+            <span key={c.path} className="flex items-center gap-1">
+              <Link href={c.path} className="hover:text-fg">
+                {c.name}
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </span>
+          ))}
+          {current && (
+            <span aria-current="page" className="text-fg-muted">
+              {current.name}
+            </span>
+          )}
+        </nav>
+        <h1 className="font-sans text-2xl font-bold md:text-3xl">{h1}</h1>
+        {intro && <p className="text-fg-muted mt-2 max-w-2xl text-[14px]">{intro}</p>}
+
+        {links && links.items.length > 0 && (
+          <section className="mt-5">
+            <h2 className="sr-only">{links.title}</h2>
+            <ul className="flex flex-wrap gap-2">
+              {links.items.map((l) => (
+                <li key={l.path}>
+                  <Link
+                    href={l.path}
+                    className="border-border hover:border-border-strong inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold"
+                  >
+                    {l.label}
+                    <span className="text-fg-dim tabular-nums">{l.count}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-      </nav>
-      <h1 className="font-sans text-2xl font-bold md:text-3xl">{h1}</h1>
-      {intro && <p className="text-fg-muted mt-2 max-w-2xl text-[14px]">{intro}</p>}
 
-      {links && links.items.length > 0 && (
-        <section className="mt-5">
-          <h2 className="sr-only">{links.title}</h2>
-          <ul className="flex flex-wrap gap-2">
-            {links.items.map((l) => (
-              <li key={l.path}>
-                <Link
-                  href={l.path}
-                  className="border-border hover:border-border-strong inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold"
-                >
-                  {l.label}
-                  <span className="text-fg-dim tabular-nums">{l.count}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {before}
-      <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {items.map((item) => (
-          <li key={item.slug}>
-            <SkinCard item={item} locale={locale} />
-          </li>
-        ))}
-      </ul>
-      <Link
-        href={allHref}
-        className="border-border hover:border-border-strong mx-auto mt-6 block w-fit rounded-xl border px-6 py-3 font-semibold"
-      >
-        {t("landing.all")}
-      </Link>
-      {after}
-      {faq && <SkinFaq title={faq.title} entries={faq.entries} />}
-    </main>
+        {before}
+        <ul className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {items.map((item, i) => (
+            <li key={item.slug}>
+              <SkinCard item={item} locale={locale} priority={i < FIRST_ROW} />
+            </li>
+          ))}
+        </ul>
+        <Link
+          href={allHref}
+          className="border-border hover:border-border-strong mx-auto mt-6 block w-fit rounded-xl border px-6 py-3 font-semibold"
+        >
+          {t("landing.all")}
+        </Link>
+        {after}
+        {faq && <SkinFaq title={faq.title} entries={faq.entries} />}
+      </main>
+      <SiteFooter locale={locale} />
+    </>
   );
 }

@@ -27,13 +27,31 @@ export function findWeapon(facets: SkinFacets, slug: string): Facet | null {
   return facets.weapons.find((w) => weaponSlug(w.value) === slug) ?? null;
 }
 
-/** Every landing page the facets imply, categories first — for the sitemap. */
+/**
+ * A landing with fewer items than this is thin (`/category/keys` with three): it stays
+ * `noindex, follow` and out of the sitemap until the catalogue fills it.
+ */
+export const MIN_LANDING_ITEMS = 10;
+
+export function isThinLanding(count: number): boolean {
+  return count < MIN_LANDING_ITEMS;
+}
+
+/**
+ * Every landing page the facets imply, categories first — for the sitemap. Thin ones are
+ * left out; a weapon is judged by its first facet, the one `findWeapon` serves.
+ */
 export function landingPaths(facets: SkinFacets): string[] {
+  const seen = new Set<string>();
+  const weapons = facets.weapons.flatMap((w) => {
+    const path = weaponPath(weaponSlug(w.value));
+    if (seen.has(path)) return [];
+    seen.add(path);
+    return isThinLanding(w.count) ? [] : [path];
+  });
   return [
-    ...facets.categories.map((c) => categoryPath(c.value)),
-    ...facets.weapons
-      .map((w) => weaponPath(weaponSlug(w.value)))
-      .filter((p, i, all) => all.indexOf(p) === i),
+    ...facets.categories.filter((c) => !isThinLanding(c.count)).map((c) => categoryPath(c.value)),
+    ...weapons,
   ];
 }
 
@@ -48,4 +66,20 @@ const COUNT_UNITS: Record<string, string> = {
 
 export function countUnit(category: string | undefined): string {
   return (category !== undefined ? COUNT_UNITS[category] : undefined) ?? "other";
+}
+
+/** Categories whose items are not weapon finishes: the copy says «предмет», not «скин». */
+const ITEM_CATEGORIES = new Set([
+  "cases",
+  "keys",
+  "music-kits",
+  "charms",
+  "stickers",
+  "graffiti",
+  "patches",
+]);
+
+/** The noun a landing's copy uses (`{kind, select, skin {…} other {…}}`). */
+export function landingKind(category: string | undefined): "skin" | "item" {
+  return category !== undefined && ITEM_CATEGORIES.has(category) ? "item" : "skin";
 }

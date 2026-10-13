@@ -7,7 +7,7 @@ test("robots.txt opens the catalogue and names the sitemap index", async () => {
   expect(body).toContain("Allow: /\n");
   // No blanket `Disallow: /` (the pre-launch policy): only the private paths are listed.
   expect(body).not.toMatch(/^Disallow: \/$/m);
-  expect(body).toContain("Host: https://csmarket.uz");
+  expect(body).not.toContain("Host:");
   expect(body).toContain("Sitemap: https://csmarket.uz/sitemap.xml");
 });
 
@@ -28,4 +28,12 @@ test("declares content signals and welcomes AI crawlers", async () => {
 
 test("is rendered per request", () => {
   expect(dynamic).toBe("force-dynamic");
+});
+
+test("tells Yandex which query parameters never change a page", async () => {
+  const body = await GET().text();
+  expect(body).toMatch(/^Clean-param: utm_source&.*&yclid&ysclid&fbclid$/m);
+  expect(body).toContain("Clean-param: sort&cursor /market\n");
+  // Only in the `*` group, which Yandex reads: before the AI-crawler group starts.
+  expect(body.indexOf("Clean-param")).toBeLessThan(body.indexOf("User-Agent: GPTBot"));
 });

@@ -26,7 +26,7 @@ const FACETS = {
   categories: [],
   weapons: [
     { value: "AK-47", count: 594 },
-    { value: "★ Karambit", count: 3 },
+    { value: "★ Karambit", count: 30 },
   ],
   exteriors: [],
   rarities: [],

@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 
 import { getPathname } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { categoryPath, CHEAP, MARKET } from "@/lib/paths";
 
 import "./globals.css";
 
@@ -48,6 +49,18 @@ export default async function NotFound() {
   const locale = await requestLocale();
   const t = await getTranslations("web.notFound");
   const common = await getTranslations("common");
+  const tCat = await getTranslations("web.skins.category");
+  const tSkins = await getTranslations("web.skins");
+  const tBuy = await getTranslations("web.seoPages.footer");
+  // Somewhere to go on from a dead link: the catalogue and its busiest sections.
+  const links = [
+    { href: MARKET, label: tSkins("market") },
+    ...(["knives", "gloves", "rifles", "cases"] as const).map((c) => ({
+      href: categoryPath(c),
+      label: tCat(c),
+    })),
+    { href: CHEAP, label: tBuy("cheap") },
+  ];
   return (
     <html
       lang={locale === "uz" ? "uz-Latn" : locale}
@@ -64,6 +77,17 @@ export default async function NotFound() {
           >
             {common("actions.home")}
           </Link>
+          <nav aria-label={tSkins("market")} className="mt-6">
+            <ul className="text-fg-muted flex flex-wrap justify-center gap-x-4 gap-y-2 text-[14px]">
+              {links.map((l) => (
+                <li key={l.href}>
+                  <Link href={getPathname({ locale, href: l.href })} className="hover:text-fg">
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </main>
       </body>
     </html>

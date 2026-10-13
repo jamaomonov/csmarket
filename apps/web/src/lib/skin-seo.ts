@@ -51,6 +51,7 @@ type FaqKey =
   | "faq.steamA"
   | "faq.floatQ"
   | "faq.floatA"
+  | "faq.floatOffers"
   | "faq.payQ"
   | "faq.payA"
   | "faq.holdQ"
@@ -108,13 +109,15 @@ export function skinFaq(
   }
   const range = wearFloatRange(item);
   if (range && item.exterior) {
+    const answer = t("faq.floatA", {
+      exterior: t(`exterior.${item.exterior}`),
+      min: range[0],
+      max: range[1],
+    });
     out.push({
       question: t("faq.floatQ", { name }),
-      answer: t("faq.floatA", {
-        exterior: t(`exterior.${item.exterior}`),
-        min: range[0],
-        max: range[1],
-      }),
+      // «…in the list above» only when there is a list.
+      answer: item.count > 0 ? `${answer} ${t("faq.floatOffers")}` : answer,
     });
   }
   if (item.crates.length > 0) {
@@ -222,6 +225,7 @@ type AboutKey =
   | "about.item"
   | "about.rarity"
   | "about.float"
+  | "about.wear"
   | "about.wears"
   | "about.stattrak"
   | "about.souvenir"
@@ -234,8 +238,8 @@ export type AboutT = (key: AboutKey, values?: Record<string, string | number>) =
 
 /**
  * «О предмете»: a paragraph written from the item's own facts — what it is, its rarity, the
- * skin's float range, the wears and variants it comes in, and the price — so every item page
- * carries text of its own. A fact the item lacks is left out, never guessed.
+ * skin's float range, this wear's band, the wears and variants it comes in, and the price — so
+ * every item page, each wear included, carries text of its own. A fact the item lacks is left out, never guessed.
  */
 export function skinAbout(
   item: SkinDetail,
@@ -267,6 +271,13 @@ export function skinAbout(
       }),
     );
   }
+  // The one fact that tells this wear's page from its siblings' («Field-Tested: 0.15–0.38»).
+  const band = wearFloatRange(item);
+  if (band && item.exterior) {
+    out.push(
+      t("about.wear", { exterior: t(`exterior.${item.exterior}`), min: band[0], max: band[1] }),
+    );
+  }
   const wears = [...new Set(item.family.flatMap((m) => (m.exterior ? [m.exterior] : [])))];
   if (wears.length > 1) {
     out.push(t("about.wears", { list: wears.map((w) => t(`exterior.${w}`)).join(", ") }));
@@ -276,4 +287,9 @@ export function skinAbout(
   const price = displayPrice(locale, item.price_uzs, item.price_usd);
   if (price !== null && item.count > 0) out.push(t("about.buy", { price }));
   return out.join(" ");
+}
+
+/** What the copy calls the item: a «скин» for a weapon, knife or glove finish, else a «предмет». */
+export function itemKind(item: Pick<SkinItem, "weapon">): "skin" | "item" {
+  return item.weapon ? "skin" : "item";
 }

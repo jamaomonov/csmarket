@@ -13,6 +13,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/JsonLd";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { SkinCategoryBar } from "@/components/skins/SkinCategoryBar";
 import { SkinFilterDrawer } from "@/components/skins/SkinFilterDrawer";
@@ -40,6 +41,9 @@ interface Props {
   params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
+
+/** Cards loaded eagerly: the first row on a wide screen, two rows on a phone. */
+const FIRST_ROW = 4;
 
 /**
  * Reads `searchParams`, so Next renders it per request; the data helpers cache upstream
@@ -91,69 +95,72 @@ export default async function HomePage({ params, searchParams }: Props) {
   const listLd = filtered ? null : itemListLd(locale, page.items);
 
   return (
-    <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-28 pt-2 sm:px-6">
-      {listLd && <JsonLd data={listLd} />}
-      <h1 className="mb-5 text-center text-[26px] font-semibold">{t("title")}</h1>
-      <div className="lg:flex lg:gap-3">
-        {facets && (
-          <aside className="hidden lg:block lg:w-[250px] lg:shrink-0">
-            <Panel className="sticky top-4">
-              <p className="mb-1 flex items-center gap-2 text-[17px] font-semibold">
-                <SlidersHorizontal className="size-4" aria-hidden />
-                {t("filters")}
-              </p>
-              <SkinFilters query={query} facets={facets} />
-            </Panel>
-          </aside>
-        )}
-        <section className="min-w-0 flex-1">
-          <Panel className="mb-3 flex flex-col gap-2.5 p-3 sm:flex-row">
-            <SkinSearch initial={query.q ?? ""} locale={locale} query={query} />
-            <div className="flex gap-2">
-              {facets && (
-                <SkinFilterDrawer count={activeFilterCount(query)}>
-                  <SkinFilters query={query} facets={facets} />
-                </SkinFilterDrawer>
-              )}
-              <SkinSort query={query} />
-            </div>
-          </Panel>
+    <>
+      <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-10 pt-2 sm:px-6">
+        {listLd && <JsonLd data={listLd} />}
+        <h1 className="mb-5 text-center text-[26px] font-semibold">{t("title")}</h1>
+        <div className="lg:flex lg:gap-3">
           {facets && (
-            <Panel className="p-2">
-              <SkinCategoryBar query={query} facets={facets} />
+            <aside className="hidden lg:block lg:w-[250px] lg:shrink-0">
+              <Panel className="sticky top-4">
+                <p className="mb-1 flex items-center gap-2 text-[17px] font-semibold">
+                  <SlidersHorizontal className="size-4" aria-hidden />
+                  {t("filters")}
+                </p>
+                <SkinFilters query={query} facets={facets} />
+              </Panel>
+            </aside>
+          )}
+          <section className="min-w-0 flex-1">
+            <Panel className="mb-3 flex flex-col gap-2.5 p-3 sm:flex-row">
+              <SkinSearch initial={query.q ?? ""} locale={locale} query={query} />
+              <div className="flex gap-2">
+                {facets && (
+                  <SkinFilterDrawer count={activeFilterCount(query)}>
+                    <SkinFilters query={query} facets={facets} />
+                  </SkinFilterDrawer>
+                )}
+                <SkinSort query={query} />
+              </div>
             </Panel>
-          )}
-          {page.items.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 py-16 text-center">
-              <SearchX className="text-fg-dim h-10 w-10" aria-hidden />
-              <p className="text-fg-muted max-w-sm">{t("empty")}</p>
-              <Link href={MARKET} className={buttonVariants({ variant: "secondary" })}>
-                {t("resetFilters")}
-              </Link>
-            </div>
-          ) : (
-            <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {page.items.map((item) => (
-                <li key={item.slug}>
-                  <SkinCard item={item} locale={locale} />
-                </li>
-              ))}
-              {/* Later batches join this same grid, so a short last row fills up. */}
-              {page.next_cursor && (
-                <SkinGridMore
-                  key={skinQueryString(query)}
-                  query={query}
-                  cursor={page.next_cursor}
-                  locale={locale}
-                  shown={page.items.map((i) => i.slug)}
-                />
-              )}
-            </ul>
-          )}
-          {/* The unfiltered home links its landing pages; a filtered view is noindex anyway. */}
-          {!filtered && facets && <SkinLandingLinks facets={facets} />}
-        </section>
-      </div>
-    </main>
+            {facets && (
+              <Panel className="p-2">
+                <SkinCategoryBar query={query} facets={facets} />
+              </Panel>
+            )}
+            {page.items.length === 0 ? (
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <SearchX className="text-fg-dim h-10 w-10" aria-hidden />
+                <p className="text-fg-muted max-w-sm">{t("empty")}</p>
+                <Link href={MARKET} className={buttonVariants({ variant: "secondary" })}>
+                  {t("resetFilters")}
+                </Link>
+              </div>
+            ) : (
+              <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {page.items.map((item, i) => (
+                  <li key={item.slug}>
+                    <SkinCard item={item} locale={locale} priority={i < FIRST_ROW} />
+                  </li>
+                ))}
+                {/* Later batches join this same grid, so a short last row fills up. */}
+                {page.next_cursor && (
+                  <SkinGridMore
+                    key={skinQueryString(query)}
+                    query={query}
+                    cursor={page.next_cursor}
+                    locale={locale}
+                    shown={page.items.map((i) => i.slug)}
+                  />
+                )}
+              </ul>
+            )}
+            {/* The unfiltered home links its landing pages; a filtered view is noindex anyway. */}
+            {!filtered && facets && <SkinLandingLinks facets={facets} />}
+          </section>
+        </div>
+      </main>
+      <SiteFooter locale={locale} />
+    </>
   );
 }

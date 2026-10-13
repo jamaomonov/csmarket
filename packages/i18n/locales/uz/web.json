@@ -182,11 +182,11 @@
   "skins": {
     "meta": {
       "title": "CS2 skinlari marketi — pichoqlar, qoʻlqoplar va qurollar soʻmda",
-      "description": "CS2 skinlari tezkor yetkazib berish bilan: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Soʻmda toʻlov.",
+      "description": "CS2 skinlari soʻmda: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Click, Payme yoki Uzum orqali toʻlov.",
       "itemTitle": "{name} — Oʻzbekistonda {price}ga sotib olish",
       "itemTitleNoPrice": "{name} — Oʻzbekistonda soʻmga sotib olish",
-      "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Click, Payme yoki Uzum orqali soʻmda toʻlov, skin Steamʼga keladi.",
-      "itemDescriptionNoPrice": "{name} — CS2 skini, soʻmda tezkor yetkazib berish bilan sotib oling.",
+      "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Click, Payme yoki Uzum orqali soʻmda toʻlov, {kind, select, skin {skin} other {buyum}} Steamʼga keladi.",
+      "itemDescriptionNoPrice": "{name} — CS2 {kind, select, skin {skini} other {buyumi}}. Hozir mavjud emas: csmarketʼda boshqa variantlar va oʻxshashlarini koʻring.",
       "marketDescription": "{count} ta CS2 skini mavjud: pichoqlar, qoʻlqoplar, qurollar, agentlar va keyslar. Narx, eskirish va noyoblik boʻyicha filtrlar. Click, Payme yoki Uzum orqali soʻmda toʻlov."
     },
     "title": "CS2 skinlari bozori",
@@ -253,8 +253,8 @@
       "weaponH1": "{weapon} skinlari",
       "categoryTitle": "CS2 {name} — Oʻzbekistonda soʻmga sotib olish",
       "categoryH1": "CS2 {name}",
-      "intro": "{items} {price}dan. Soʻmda toʻlov, skin Steamʼga keladi.",
-      "description": "{name}ni Oʻzbekistonda sotib oling: {items} {price}dan. Soʻmda toʻlov, skin Steamʼga keladi.",
+      "intro": "{items} {price}dan. Soʻmda toʻlov, {kind, select, skin {skin} other {buyum}} Steamʼga keladi.",
+      "description": "{name}ni Oʻzbekistonda sotib oling: {items} {price}dan. Soʻmda toʻlov, {kind, select, skin {skin} other {buyum}} Steamʼga keladi.",
       "all": "Hammasi, filtrlar bilan",
       "weapons": "Qurollar",
       "categories": "Boʻlimlar",
@@ -279,13 +279,14 @@
       "steamQ": "{name} Steamʼdagidan arzonmi?",
       "steamA": "Ha: Steam savdo maydonchasida u ${steam}, bizda {percent}% arzonroq ({date} holatiga).",
       "floatQ": "{name} floati qanday?",
-      "floatA": "{exterior}: float {min}dan {max}gacha. Har bir taklifning aniq floati yuqoridagi roʻyxatda.",
+      "floatA": "{exterior}: float {min}dan {max}gacha.",
       "payQ": "{name}ni soʻmda qanday toʻlash mumkin?",
       "payA": "Click, Payme yoki Uzum orqali Uzcard yoki Humo kartasi bilan yoki sayt balansidan. Xorijiy karta kerak emas.",
       "holdQ": "Nega {name}ni darhol boshqaga berib boʻlmaydi?",
       "holdA": "Bu Steam almashuv himoyasi: 7 kun davomida buyum inventaringizda turadi, lekin uni berish yoki sotish mumkin emas. Qoida barcha maydonchalar uchun bir xil.",
       "crateQ": "{name} qaysi keysdan tushadi?",
-      "crateA": "Keys: {list}. Skinni keys ochmasdan darhol csmarket’da sotib olish mumkin."
+      "crateA": "Keys: {list}. Skinni keys ochmasdan darhol csmarket’da sotib olish mumkin.",
+      "floatOffers": "Har bir taklifning aniq floati yuqoridagi roʻyxatda."
     },
     "allOf": {
       "knives": "Barcha pichoqlar",
@@ -316,7 +317,8 @@
       "buy": "csmarket’da — {price}dan: Click, Payme yoki Uzum orqali soʻmda toʻlov, buyum Steam’ga almashuv taklifi sifatida keladi.",
       "collection": "{collection} kolleksiyasiga kiradi.",
       "crates": "Tushadigan keys: {list}.",
-      "valve": "Valve tavsifi"
+      "valve": "Valve tavsifi",
+      "wear": "«{exterior}» eskirishida float {min}dan {max}gacha."
     },
     "similar": {
       "weapon": "Boshqa {weapon} skinlari",
@@ -654,7 +656,7 @@
   "landing": {
     "meta": {
       "title": "CS2 skinlari Oʻzbekistonda — soʻmda sotib oling: Click, Payme, Uzum",
-      "description": "CS2 skinlari soʻmdagi narxlarda: pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlang — skin Steam’ga keladi. Skinlaringizni Uzcard, Humo yoki Uzum Visa kartasiga soting.",
+      "description": "CS2 skinlari soʻmda: pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlov, skin Steam’ga keladi. Skinlarni kartaga soting.",
       "ogAlt": "csmarket — CS2 skinlari Oʻzbekistonda"
     },
     "eyebrow": "Oʻzbekistonlik oʻyinchilar uchun skinlar doʻkoni",

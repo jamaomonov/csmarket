@@ -2,6 +2,8 @@ interface SkinItemTitleProps {
   /** The skin (or «Ванильный», or the item's full name when it has no skin). */
   name: string;
   phase: string | null;
+  /** The localised wear («Field-Tested»), or `null` for an item without one. */
+  exterior: string | null;
   weapon: string | null;
   stattrak: boolean;
   souvenir: boolean;
@@ -14,11 +16,13 @@ interface SkinItemTitleProps {
  * above the skin name, as before, but inside the `<h1>`: «Redline» alone would be the same
  * H1 on every weapon and variant that shares the skin. An item with no weapon and no
  * variant (a case, a sticker) already carries its full name, so its category line stays
- * outside; a StatTrak™ music kit keeps the marker (and so the category) inside.
+ * outside; a StatTrak™ music kit keeps the marker (and so the category) inside. The wear is
+ * in the `<h1>` too: without it the five wears of a skin share one heading.
  */
 export function SkinItemTitle({
   name,
   phase,
+  exterior,
   weapon,
   stattrak,
   souvenir,
@@ -29,6 +33,7 @@ export function SkinItemTitle({
     <span className="block font-sans text-2xl font-bold md:text-3xl">
       {name}
       {phase && <span className="text-fg-muted"> · {phase}</span>}
+      {exterior && <span className="text-fg-muted"> · {exterior}</span>}
     </span>
   );
   if (!weapon && !stattrak && !souvenir) {

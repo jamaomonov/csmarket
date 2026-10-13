@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider, useTranslations } from "next-intl";
 import { expect, it } from "vitest";
 
-import { countUnit } from "./skin-landing";
+import { countUnit, landingKind } from "./skin-landing";
 import en from "../../../../packages/i18n/locales/en/web.json";
 import ru from "../../../../packages/i18n/locales/ru/web.json";
 import uz from "../../../../packages/i18n/locales/uz/web.json";
@@ -28,6 +28,7 @@ function Description({ name, category }: { name: string; category: string }) {
         name: inline,
         items: t("landing.count", { unit: countUnit(category), count: 3 }),
         price: "446 300 сум",
+        kind: landingKind(category),
       })}
     </p>
   );
@@ -77,7 +78,9 @@ it("names every category in full, so running text reads naturally (ru)", () => {
   inLocale("ru", ru, <Description name={names.smgs} category="smgs" />);
   expect(screen.getByText(/^Купить пистолеты-пулемёты КС2 в Узбекистане/)).toBeInTheDocument();
   inLocale("ru", ru, <Description name={names["music-kits"]} category="music-kits" />);
-  expect(screen.getByText(/^Купить наборы музыки КС2 в Узбекистане/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/^Купить наборы музыки КС2 в Узбекистане.*Предмет приходит в Steam\.$/),
+  ).toBeInTheDocument();
   inLocale("ru", ru, <Description name={names.heavy} category="heavy" />);
   expect(screen.getByText(/^Купить тяжёлое оружие КС2 в Узбекистане/)).toBeInTheDocument();
 });

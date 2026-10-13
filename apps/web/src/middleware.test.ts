@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 
-import { marketRedirect } from "./middleware";
+import { defaultLocaleRedirect, marketRedirect } from "./middleware";
 
 const at = (url: string) => marketRedirect(new NextRequest(new URL(url, "https://csmarket.uz")));
 
@@ -30,5 +30,24 @@ describe("filtered root URLs move to /market", () => {
   it("never touches other paths", () => {
     expect(at("/market?category=knives")).toBeNull();
     expect(at("/item/ak-47-redline-field-tested?q=x")).toBeNull();
+  });
+});
+
+describe("the spelled-out default locale moves for good", () => {
+  const ru = (url: string) =>
+    defaultLocaleRedirect(new NextRequest(new URL(url, "https://csmarket.uz")));
+
+  it("answers 308 to the unprefixed URL, keeping the query", () => {
+    const r = ru("/ru/market?category=knives");
+    expect(r?.status).toBe(308);
+    expect(r?.headers.get("location")).toBe("https://csmarket.uz/market?category=knives");
+    expect(ru("/ru")?.headers.get("location")).toBe("https://csmarket.uz/");
+    expect(ru("/ru/")?.headers.get("location")).toBe("https://csmarket.uz/");
+  });
+
+  it("leaves other locales and look-alike paths alone", () => {
+    expect(ru("/uz/market")).toBeNull();
+    expect(ru("/rules")).toBeNull();
+    expect(ru("/market")).toBeNull();
   });
 });
