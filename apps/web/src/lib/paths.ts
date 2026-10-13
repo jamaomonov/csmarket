@@ -32,6 +32,11 @@ export function payPath(method: PayMethod): string {
 /** Cheap skins, under `CHEAP_MAX_UZS` (`lib/landing.ts`). */
 export const CHEAP = "/cheap";
 
+/** A colour's landing (`/color/red`), spec 2026-10-14-skin-colors. */
+export function colorPath(color: string): string {
+  return `/color/${color}`;
+}
+
 /** `weaponSlug` is the slugged weapon name (`ak-47`), see `skin-landing.ts`. */
 export function weaponPath(weaponSlug: string): string {
   return `/weapon/${weaponSlug}`;

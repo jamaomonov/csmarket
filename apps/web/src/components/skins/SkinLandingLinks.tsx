@@ -3,7 +3,8 @@ import { getTranslations } from "next-intl/server";
 import type { SkinFacets } from "@csmarket/utils/skins";
 
 import { Link } from "@/i18n/navigation";
-import { categoryPath, weaponPath } from "@/lib/paths";
+import { categoryPath, colorPath, weaponPath } from "@/lib/paths";
+import { isSkinColor } from "@/lib/skin-colors";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 
 /** How many weapons the hub links to — the most stocked ones. */
@@ -39,7 +40,20 @@ export async function SkinLandingLinks({ facets }: { facets: SkinFacets }) {
           path: weaponPath(weaponSlug(w.value)),
         })),
     },
-  ];
+    {
+      title: t("color.title"),
+      links: (facets.colors ?? []).flatMap((c) =>
+        isSkinColor(c.value)
+          ? [
+              {
+                label: t("color.h1", { plural: t(`color.plural.${c.value}`) }),
+                path: colorPath(c.value),
+              },
+            ]
+          : [],
+      ),
+    },
+  ].filter((g) => g.links.length > 0);
   return (
     <nav
       className="border-border mt-10 space-y-5 border-t pt-6"

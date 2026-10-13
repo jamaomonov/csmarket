@@ -37,7 +37,7 @@ export interface MdTarget {
   segments: string[];
 }
 
-const KINDS = new Set(["market", "category", "weapon", "item"]);
+const KINDS = new Set(["market", "category", "weapon", "color", "item"]);
 
 /** The page a path names, when it has a Markdown twin; `null` otherwise. */
 export function mdTarget(pathname: string): MdTarget | null {

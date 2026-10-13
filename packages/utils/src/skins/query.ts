@@ -24,6 +24,27 @@ export type SkinCategory = (typeof SKIN_CATEGORIES)[number];
 /** An agent's side: Counter-Terrorist or Terrorist. */
 export const SKIN_TEAMS = ["ct", "t"] as const;
 export type SkinTeam = (typeof SKIN_TEAMS)[number];
+/**
+ * A skin's own colours, twelve broad groups in swatch order (spec 2026-10-14-skin-colors):
+ * blue holds sky and teal, yellow holds gold, red holds maroon…
+ */
+export const SKIN_COLORS = [
+  "red",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "pink",
+  "brown",
+  "beige",
+  "black",
+  "white",
+  "grey",
+] as const;
+export type SkinColor = (typeof SKIN_COLORS)[number];
+/** Colours one query may ask for at once (the API's limit). */
+export const MAX_COLORS = 3;
 const SORTS: readonly SkinSort[] = ["price", "-price", "discount", "popular"];
 /** What the catalogue opens on: knives and gloves first, as the market does — `popular` opened on a wall of cases, `price` on $0.20 stickers. */
 export const DEFAULT_SORT: SkinSort = "-price";
@@ -72,6 +93,8 @@ export interface SkinFacets {
   rarities: Facet[];
   /** An agent's side, counted inside a category; the schema marks it optional (default `[]`). */
   teams?: Facet[];
+  /** The skins' own colours in swatch order; optional for an API from before them. */
+  colors?: Facet[];
 }
 export interface SkinFamilyMember {
   slug: string;
@@ -98,6 +121,8 @@ export interface SkinDetail extends SkinItem {
   description: string | null;
   /** Buying is switched on: the item page shows the buy panel. */
   buy_enabled: boolean;
+  /** The skin's own colours (`SKIN_COLORS` keys); optional for an API from before them. */
+  colors?: string[];
 }
 /** One of the cheapest stored offers shown on the item page before live offers load. */
 export interface SkinListingSummary {
@@ -141,6 +166,8 @@ export interface SkinQuery {
   rarity?: string;
   /** An agent's side. */
   team?: SkinTeam;
+  /** Colours, comma-separated in swatch order (`colorParam`): an item with any of them. */
+  color?: string;
   stattrak?: boolean;
   q?: string;
   minUzs?: number;
@@ -161,6 +188,18 @@ const CURSOR = /^[A-Za-z0-9_-]{1,200}$/;
 function amount(v: string | undefined): number | undefined {
   if (v === undefined || !/^\d{1,12}$/.test(v)) return undefined;
   return Number(v);
+}
+
+/** A set of colours as the `color` param: known ones, swatch order, at most three. */
+export function colorParam(names: readonly string[]): string | undefined {
+  const set = SKIN_COLORS.filter((c) => names.includes(c)).slice(0, MAX_COLORS);
+  return set.length > 0 ? set.join(",") : undefined;
+}
+
+/** The colours a query asks for. */
+export function colorsOf(q: SkinQuery): SkinColor[] {
+  const asked = q.color ? q.color.split(",") : [];
+  return SKIN_COLORS.filter((c) => asked.includes(c));
 }
 
 /** The weapon models a query asks for (`weapon` holds one, or several comma-separated). */
@@ -195,6 +234,8 @@ export function parseSkinQuery(params: Params): SkinQuery {
   if (rarity && SAFE_TEXT.test(rarity)) q.rarity = rarity;
   const team = first(params.team);
   if (team && (SKIN_TEAMS as readonly string[]).includes(team)) q.team = team as SkinTeam; // narrowed above
+  const color = colorParam((first(params.color) ?? "").split(","));
+  if (color) q.color = color;
   if (first(params.stattrak) === "1") q.stattrak = true;
   const text = first(params.q);
   if (text && SAFE_TEXT.test(text)) q.q = text;
@@ -215,6 +256,7 @@ const ORDER: readonly (keyof SkinQuery)[] = [
   "exterior",
   "rarity",
   "team",
+  "color",
   "stattrak",
   "q",
   "minUzs",
@@ -228,6 +270,7 @@ const KEY: Record<keyof SkinQuery, string> = {
   exterior: "exterior",
   rarity: "rarity",
   team: "team",
+  color: "color",
   stattrak: "stattrak",
   q: "q",
   minUzs: "min",
@@ -290,6 +333,8 @@ export interface FilterSections {
   wear: boolean;
   /** StatTrak™ toggle: only where StatTrak items exist. */
   stattrak: boolean;
+  /** The colour swatches to offer (those with items), in swatch order. */
+  colors: Facet[];
   /** The rarity checkboxes to offer. */
   rarities: Facet[];
 }
@@ -316,5 +361,6 @@ export function filterSections(
     wear: facets.exteriors.length > 0,
     stattrak: category === undefined || STATTRAK_CATEGORIES.has(category),
     rarities,
+    colors: facets.colors ?? [],
   };
 }

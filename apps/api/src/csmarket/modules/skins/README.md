@@ -343,6 +343,21 @@ LIS-SKINS), and shows one Steam asset once — the cheapest (then tie-winning) o
 Checkout re-checks a chosen `ls:` lot live (`orders/README.md`, ADR-0012). Tests:
 `tests/integration/test_lisskins_offers.py`, `test_lisskins_listings_route.py`.
 
+## Colours (spec 2026-10-14-skin-colors, ADR-0019)
+
+- `colors.py` (pure, Pillow): a picture → one or two of twelve broad groups (`SKIN_COLORS`).
+  Pixels by hue / saturation / brightness; once ≥ 12 % of the item is coloured, grey and black
+  (metal, shadows) stop counting and white needs ≥ 25 %.
+- `color_job.py`: the `skins.colors` scheduler job's work, per distinct `image_url` (wears share
+  a picture): fetch `…/128fx96f` from the configured Steam host (6 s, 4 at a time, 300 a tick),
+  write `colors` + `colors_image` to every row showing it. A failed fetch waits for the next
+  tick; an undecodable picture is stored with no colours. `colors_manual` rows are never touched.
+- Read API: `GET /skins/catalog?color=red,blue` (any of ≤ 3; unknown → 422 `skins_color`),
+  `colors` in `/skins/facets` (swatch order) and in an item's detail.
+- `admin_color_routes.py`: `PUT /admin/skins/items/{slug}/colors {colors | null}` — sets the
+  colours of every row with the item's picture, manual; `null` gives them back to the job.
+  Audited `skins.item.colors`.
+
 ## Cache keys
 
 All in [`docs/architecture/cache-keys.md`](../../../../../../docs/architecture/cache-keys.md); none

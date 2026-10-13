@@ -9,8 +9,16 @@ import { getTranslations } from "next-intl/server";
 
 import type { FaqEntry } from "@/lib/skin-seo";
 
-import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
-import { countUnit, findWeapon, isSkinCategory, landingKind, weaponSlug } from "@/lib/skin-landing";
+import { categoryPath, colorPath, MARKET, weaponPath } from "@/lib/paths";
+import { isSkinColor } from "@/lib/skin-colors";
+import {
+  countUnit,
+  findWeapon,
+  isSkinCategory,
+  isThinLanding,
+  landingKind,
+  weaponSlug,
+} from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
 
 /** Categories with a paragraph of their own (`seoPages.cat.text.<category>`). */
@@ -173,6 +181,63 @@ export async function weaponContent(locale: string, data: WeaponData): Promise<L
           ]
         : []),
       { name: h1, path: weaponPath(data.slug) },
+    ],
+    allHref: MARKET + skinQueryString(query),
+  };
+}
+
+/** The colour and its numbers; `null` for an unknown colour or one with no items. */
+export async function loadColor(locale: string, color: string) {
+  if (!isSkinColor(color)) return null;
+  const [facets, cheapest] = await Promise.all([
+    getSkinFacets(),
+    getSkinsPage({ sort: "price", color }),
+  ]);
+  const facet = facets?.colors?.find((c) => c.value === color);
+  if (!facets || !facet) return null;
+  const first = cheapest.items[0];
+  const from = first ? displayPrice(locale, first.price_uzs, first.price_usd) : null;
+  return { color, facet, facets, from };
+}
+
+export type ColorData = NonNullable<Awaited<ReturnType<typeof loadColor>>>;
+
+export async function colorContent(locale: string, data: ColorData): Promise<LandingContent> {
+  const t = await getTranslations({ locale, namespace: "web.skins" });
+  const tSeo = await getTranslations({ locale, namespace: "web.seoPages.cat" });
+  const query = { sort: "popular" as const, color: data.color };
+  const page = await getSkinsPage(query);
+  const plural = t(`color.plural.${data.color}`);
+  const items = t("landing.count", { unit: countUnit(undefined), count: data.facet.count });
+  // «красные скины»: mid-sentence, lower-cased.
+  const inline = t("color.inline", { plural }).toLocaleLowerCase(locale);
+  const faq: FaqEntry[] = [
+    ...(data.from
+      ? [
+          {
+            question: tSeo("priceQ", { name: inline }),
+            answer: tSeo("priceA", { price: data.from, items }),
+          },
+        ]
+      : []),
+    { question: tSeo("howQ", { inline }), answer: tSeo("howA") },
+  ];
+  const others = (data.facets.colors ?? []).flatMap((c) =>
+    c.value !== data.color && isSkinColor(c.value) && !isThinLanding(c.count)
+      ? [{ label: t(`color.names.${c.value}`), path: colorPath(c.value), count: c.count }]
+      : [],
+  );
+  const h1 = t("color.h1", { plural });
+  return {
+    h1,
+    intro: data.from ? t("landing.intro", { items, price: data.from, kind: "skin" }) : null,
+    items: page.items,
+    faq,
+    text: null,
+    links: { title: t("color.other"), items: others },
+    crumbs: [
+      { name: t("market"), path: MARKET },
+      { name: h1, path: colorPath(data.color) },
     ],
     allHref: MARKET + skinQueryString(query),
   };

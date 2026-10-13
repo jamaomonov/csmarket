@@ -327,7 +327,43 @@
       "allCategory": "Butun «{category}» boʻlimi"
     },
     "collection": "Kolleksiya",
-    "cases": "Keys"
+    "cases": "Keys",
+    "color": {
+      "title": "Rang",
+      "names": {
+        "red": "Qizil",
+        "orange": "Toʻq sariq",
+        "yellow": "Sariq",
+        "green": "Yashil",
+        "blue": "Koʻk",
+        "purple": "Binafsha",
+        "pink": "Pushti",
+        "brown": "Jigarrang",
+        "beige": "Bej",
+        "black": "Qora",
+        "white": "Oq",
+        "grey": "Kulrang"
+      },
+      "plural": {
+        "red": "Qizil",
+        "orange": "Toʻq sariq",
+        "yellow": "Sariq",
+        "green": "Yashil",
+        "blue": "Koʻk",
+        "purple": "Binafsha",
+        "pink": "Pushti",
+        "brown": "Jigarrang",
+        "beige": "Bej",
+        "black": "Qora",
+        "white": "Oq",
+        "grey": "Kulrang"
+      },
+      "h1": "{plural} CS2 skinlari",
+      "metaTitle": "{plural} CS2 skinlari — Oʻzbekistonda soʻmga sotib olish",
+      "inline": "{plural} skinlar",
+      "other": "Boshqa ranglar",
+      "item": "Rang"
+    }
   },
   "buy": {
     "title": "Sotib olish",

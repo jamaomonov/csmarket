@@ -1,10 +1,11 @@
-/** Find an item by name and hide or show it in the public catalogue. */
+/** Find an item by name, hide or show it in the public catalogue, and fix its colours. */
 import { Button } from "@csmarket/ui";
 import { steamImageSize } from "@csmarket/utils/skins";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { type AdminSkinItem, findItems, setHidden } from "./api";
+import { ColorEditor } from "./ColorEditor";
 
 import { ApiError, formatApiError } from "@/lib/api";
 import { useDebounced } from "@/lib/useDebounced";
@@ -44,6 +45,7 @@ function ItemRow({ item, pending, onToggle }: ItemRowProps) {
           {item.price_usd ? ` · $${item.price_usd}` : ""}
           {item.hidden ? " · скрыт" : ""}
         </div>
+        <ColorEditor item={item} />
       </div>
       <span
         className={`rounded px-2 py-0.5 text-xs ${item.active ? "bg-success text-success-fg" : "bg-surface-2 text-fg-muted"}`}

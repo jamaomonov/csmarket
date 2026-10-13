@@ -22,7 +22,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { gaItem } from "@/lib/analytics";
 import { itemOgUrl } from "@/lib/og-item";
-import { categoryPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
+import { categoryPath, colorPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
 import {
   alternates,
   GEO_META,
@@ -32,6 +32,7 @@ import {
   ROBOTS,
   shareImageAt,
 } from "@/lib/seo";
+import { isSkinColor, swatchBackground } from "@/lib/skin-colors";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { itemKind, skinAbout, skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
 import { similarSkins } from "@/lib/skin-similar";
@@ -156,6 +157,27 @@ export default async function SkinPage({ params }: Props) {
           <Fact label={t("inStock")} value={t("pieces", { count: item.count })} />
         )}
         {item.collection && <Fact label={t("collection")} value={item.collection} />}
+        {(item.colors ?? []).length > 0 && (
+          <div>
+            <dt className="text-fg-dim text-[12px]">{t("color.item")}</dt>
+            <dd className="flex flex-wrap gap-x-2 font-semibold">
+              {(item.colors ?? []).filter(isSkinColor).map((c) => (
+                <Link
+                  key={c}
+                  href={colorPath(c)}
+                  className="hover:text-accent inline-flex items-center gap-1.5 underline-offset-2 hover:underline"
+                >
+                  <span
+                    aria-hidden
+                    className="size-3 rounded-full shadow-[inset_0_0_0_1px_rgba(127,127,127,0.45)]"
+                    style={{ background: swatchBackground(c) }}
+                  />
+                  {t(`color.names.${c}`)}
+                </Link>
+              ))}
+            </dd>
+          </div>
+        )}
         {item.crates.length > 0 && (
           <div>
             <dt className="text-fg-dim text-[12px]">{t("cases")}</dt>

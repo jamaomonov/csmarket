@@ -42,6 +42,9 @@ export interface AdminSkinItem {
   hidden: boolean;
   price_usd: string | null;
   count: number;
+  /** The skin's own colours; `colors_manual` when an admin set them. */
+  colors?: string[];
+  colors_manual?: boolean;
 }
 
 export interface Alias {
@@ -77,6 +80,15 @@ export function setHidden(slug: string, hidden: boolean): Promise<AdminSkinItem>
   return session.apiPatch<AdminSkinItem>(
     `${BASE}/items/${encodeURIComponent(slug)}`,
     { hidden },
+    freshKey(),
+  );
+}
+
+/** Set an item's (and its wears') colours by hand, or `null` to give them back to the job. */
+export function setColors(slug: string, colors: string[] | null): Promise<AdminSkinItem> {
+  return session.apiPut<AdminSkinItem>(
+    `${BASE}/items/${encodeURIComponent(slug)}/colors`,
+    { colors },
     freshKey(),
   );
 }

@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 
 import { MD_HEADER, mdResponse, mdTarget } from "@/lib/agent-md";
-import { categoryMd, homeMd, itemMd, marketMd, weaponMd } from "@/lib/agent-md-pages";
+import { categoryMd, colorMd, homeMd, itemMd, marketMd, weaponMd } from "@/lib/agent-md-pages";
 
 /** Per request: prices move; a build never needs the API. */
 export const dynamic = "force-dynamic";
@@ -36,6 +36,9 @@ export async function GET(
       break;
     case "weapon":
       body = slug === undefined ? null : await weaponMd(locale, slug);
+      break;
+    case "color":
+      body = slug === undefined ? null : await colorMd(locale, slug);
       break;
     case "item":
       body = slug === undefined ? null : await itemMd(locale, slug);

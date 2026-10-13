@@ -327,7 +327,43 @@
       "allCategory": "The whole “{category}” section"
     },
     "collection": "Collection",
-    "cases": "Case"
+    "cases": "Case",
+    "color": {
+      "title": "Colour",
+      "names": {
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "brown": "Brown",
+        "beige": "Beige",
+        "black": "Black",
+        "white": "White",
+        "grey": "Grey"
+      },
+      "plural": {
+        "red": "Red",
+        "orange": "Orange",
+        "yellow": "Yellow",
+        "green": "Green",
+        "blue": "Blue",
+        "purple": "Purple",
+        "pink": "Pink",
+        "brown": "Brown",
+        "beige": "Beige",
+        "black": "Black",
+        "white": "White",
+        "grey": "Grey"
+      },
+      "h1": "{plural} CS2 skins",
+      "metaTitle": "{plural} CS2 skins — buy in Uzbekistan for soʻm",
+      "inline": "{plural} skins",
+      "other": "Other colours",
+      "item": "Colour"
+    }
   },
   "buy": {
     "title": "Buy",

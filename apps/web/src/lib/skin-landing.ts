@@ -9,7 +9,7 @@ import { SKIN_CATEGORIES } from "@csmarket/utils/skins";
 
 import type { Facet, SkinCategory, SkinFacets } from "@csmarket/utils/skins";
 
-import { categoryPath, weaponPath } from "@/lib/paths";
+import { categoryPath, colorPath, weaponPath } from "@/lib/paths";
 
 export function isSkinCategory(value: string): value is SkinCategory {
   return (SKIN_CATEGORIES as readonly string[]).includes(value);
@@ -52,6 +52,7 @@ export function landingPaths(facets: SkinFacets): string[] {
   return [
     ...facets.categories.filter((c) => !isThinLanding(c.count)).map((c) => categoryPath(c.value)),
     ...weapons,
+    ...(facets.colors ?? []).filter((c) => !isThinLanding(c.count)).map((c) => colorPath(c.value)),
   ];
 }
 
