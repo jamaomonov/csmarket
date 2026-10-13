@@ -184,6 +184,34 @@ the reads work, the next poll pays the sale.
 does not move. Find `sales.unknown_status` in the logs (status, sale number), check the deposit
 in the cabinet, and teach `sales/status.py` the status.
 
+## P&L and «Сверка»
+
+Spec `2026-10-13-sales-pnl`. The dashboard's «Выкуп» block (today / 7 / 30 Tashkent days)
+counts the sales Skinslink completed in the period:
+
+- **получено** — what Skinslink credited (`amount_usd`); a sale rolled back after payout brings
+  nothing;
+- **выплачено** — card transfers plus the bank's charge to us (`bank_fee_pct`, «Настройки
+  выкупа», default 1 %; written into the request at «Выплачено»), payouts to the balance with
+  the bonus (a cost at once, owner ruling), rejected card requests at what the balance got;
+  **к выплате** — card requests not paid yet, with the expected bank fee;
+- **комиссии** — the card fee kept from sellers vs what the bank took; they should be close;
+- **прибыль** — received minus paid out, soʻm converted at the CBU rate of the sale's creation.
+
+«Выкуп» → «Сверка» (`/sales/reconciliation`) lists each sale: quoted, credited, difference.
+Flags and what to do:
+
+- **Недозачислено** — credited under 99 % of the quote (`min_prices` should prevent it): write to
+  Skinslink support with the sale's `trade_id` (on the sale page).
+- **Нет зачисления** — completed but no amount recorded: open the sale, check the Skinslink
+  cabinet by `trade_id`; if it is credited there, the amount was lost on our side — tell the
+  developer.
+- **Откат** — `rolled_back` / `late_deposit` (see «Attention» above); handle it there, then
+  «Проверено» removes it from the list once outside the period.
+
+If the bank changes its fee, change «Комиссия банка, %»; requests paid before keep the fee
+written at the time.
+
 ## Switching off
 
 The admin's «Выкуп включён» off (instant), or `CSMARKET_SALES_ENABLED=false` (a restart).
