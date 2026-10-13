@@ -6,6 +6,7 @@ import { preconnect } from "react-dom";
 
 import type { Metadata } from "next";
 
+import { Analytics } from "@/components/Analytics";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
 import { routing } from "@/i18n/routing";
@@ -84,6 +85,7 @@ export default async function LocaleLayout({
             {children}
           </Providers>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );

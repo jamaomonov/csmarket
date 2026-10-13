@@ -206,7 +206,7 @@
       },
       {
         "h": "Who we share data with",
-        "p": "Only as far as the site needs to work. Steam — for sign-in and the trade link check: your Steam ID and trade link. Item sellers and the platforms the trade is sent through — your trade link, to deliver an item or accept your skins. The payment services Click, Payme and Uzum — the payment number and amount; your Steam ID is not passed to them. The email delivery service — the address, subject and text of an email. The site's delivery and protection service — technical request data, including the IP address. The hosting provider — the data stored on the site's servers. The error tracking service — a technical description of a failure without personal data. Government bodies — when the law requires it."
+        "p": "Only as far as the site needs to work. Steam — for sign-in and the trade link check: your Steam ID and trade link. Item sellers and the platforms the trade is sent through — your trade link, to deliver an item or accept your skins. The payment services Click, Payme and Uzum — the payment number and amount; your Steam ID is not passed to them. The email delivery service — the address, subject and text of an email. The site's delivery and protection service — technical request data, including the IP address. The hosting provider — the data stored on the site's servers. The error tracking service — a technical description of a failure without personal data. Google Analytics — anonymous visit statistics: which pages are opened and order numbers with amounts, without your Steam ID, email or trade link. Government bodies — when the law requires it."
       },
       {
         "h": "How we store data",
@@ -218,7 +218,7 @@
       },
       {
         "h": "Cookies",
-        "p": "The site uses only technical cookies: the sign-in session (up to 30 days) and a one-time Steam sign-in key (10 minutes). Service data about a payment in progress may be kept in your browser's storage. There are no advertising or analytics cookies."
+        "p": "The site uses technical cookies: the sign-in session (up to 30 days) and a one-time Steam sign-in key (10 minutes). Service data about a payment in progress may be kept in your browser's storage. For visit statistics the site uses Google Analytics cookies (up to 2 years); there are no advertising cookies. You can turn them off in your browser settings and the site keeps working."
       },
       {
         "h": "Your rights",

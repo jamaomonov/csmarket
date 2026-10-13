@@ -99,7 +99,7 @@
 csmarket.uz, www.csmarket.uz {
 	encode zstd gzip
 	import security_headers
-	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.csmarket.uz wss://api.csmarket.uz; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.csmarket.uz wss://api.csmarket.uz https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	@www host www.csmarket.uz
 	redir @www https://csmarket.uz{uri} permanent
 

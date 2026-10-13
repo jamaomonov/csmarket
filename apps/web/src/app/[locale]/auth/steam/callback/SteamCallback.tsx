@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useRouter } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
+import { track } from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 
 /** Steam returns here (ruling P1); we hand the openid.* params to the API. */
@@ -34,6 +35,7 @@ export function SteamCallback() {
     window.history.replaceState(null, "", window.location.pathname);
     completeSteamSignIn(params)
       .then(() => {
+        track({ name: "login", params: { method: "steam" } });
         router.replace("/account", { locale });
       })
       .catch(() => {
