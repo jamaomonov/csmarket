@@ -97,3 +97,11 @@ consoles' removal tools.
   (`MIN_LANDING_ITEMS`, also left out of `landings.xml`), `/sell`, `/steam`, `/reviews`.
 - `/llms.txt`: the shop, sections with live counts, buying by payment method, how delivery and
   refunds work (as the terms say), the legal documents.
+- **Markdown for agents** (2026-10-13): a request that asks for `text/markdown` above `text/html`
+  (`Accept: text/markdown`) to the home page, `/market`, a category, a weapon or an item page —
+  any locale — gets the page's Markdown twin at the same URL (`middleware.ts` → `app/md`,
+  `lib/agent-md*.ts`): the same headings, live prices, item links and FAQ as the HTML. Browsers
+  and search crawlers (`text/html`, `*/*`) get the HTML as before. The twin is `no-store`,
+  `Vary: Accept`, `X-Robots-Tag: noindex`; `/md/…` opened directly is a 404. Check it:
+  `curl -H "Accept: text/markdown" https://csmarket.uz/item/ak-47-redline-field-tested`. This is
+  our own version of Cloudflare's «Markdown for Agents» (a Pro-plan switch, not used).
