@@ -36,6 +36,7 @@ describe("SaleSettingsPage", () => {
       target: { value: "50000" },
     });
     fireEvent.change(screen.getByLabelText("Комиссия Humo, %"), { target: { value: "1.5" } });
+    fireEvent.change(screen.getByLabelText("Комиссия банка, %"), { target: { value: "0.5" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     fireEvent.click(screen.getByRole("button", { name: "Да, сохранить" }));
     await waitFor(() => {
@@ -50,6 +51,7 @@ describe("SaleSettingsPage", () => {
       enabled: true,
       card_min_uzs: 50000,
       card_fee_pct: { uzcard: "5", humo: "1.5", uzum_visa: "5" },
+      bank_fee_pct: "0.5",
       max_sale_usd: null,
     });
     expect(version).toBeNull();

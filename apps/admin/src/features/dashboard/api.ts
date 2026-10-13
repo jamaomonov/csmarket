@@ -23,6 +23,23 @@ export interface DashboardOut {
   waxpeer: { balance_usd: string | null; read_at: string | null };
   skinslink: { available_usd: string | null; hold_usd: string | null; read_at: string | null };
   lisskins: { available_usd: string | null; locked_usd: string | null; read_at: string | null };
+  /** «Выкуп» (spec 2026-10-13-sales-pnl); optional for an API from before it. */
+  sales_pnl?: SalesPnlOut;
+}
+
+export interface SalesPnlOut {
+  count: number;
+  income_usd: string;
+  to_cards_uzs: string;
+  to_balances_uzs: string;
+  to_pay_uzs: string;
+  withheld_uzs: string;
+  bank_uzs: string;
+  cost_uzs: string;
+  cost_usd: string;
+  profit_usd: string;
+  profit_percent: string;
+  by_day: { day: string; count: number; income_usd: string; profit_usd: string }[];
 }
 
 export function getDashboard(days: Days): Promise<DashboardOut> {
