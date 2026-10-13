@@ -65,6 +65,9 @@ class SaleSettings(BaseModel):
     #: Percent added to a payout to the balance.
     balance_bonus_pct: Decimal = Field(ge=0, le=20, max_digits=5, decimal_places=2)
     card_fee_pct: CardFees
+    #: What the bank charges the sender on a card transfer, percent (owner 2026-10-13: 1 %);
+    #: the P&L adds it to each card payout (spec 2026-10-13-sales-pnl).
+    bank_fee_pct: Decimal = Field(default=Decimal(1), ge=0, le=10, max_digits=4, decimal_places=2)
     #: The smallest payout to a card, whole soʻm.
     card_min_uzs: int = Field(ge=0, le=100_000_000)
     #: The smallest sum of the chosen items' Skinslink prices, USD (Skinslink's floor is 1).

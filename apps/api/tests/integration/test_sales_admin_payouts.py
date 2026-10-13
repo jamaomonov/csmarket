@@ -131,6 +131,9 @@ async def test_paid_stamps_the_request_writes_a_letter_and_replays(
     letter = await db_session.scalar(select(EmailOutbox).where(EmailOutbox.kind == "sale_paid"))
     assert letter is not None
     assert (letter.payload["to"], letter.payload["last4"]) == ("card", "9015")
+    # The bank's 1 % on 147 400, rounded up (the default bank_fee_pct).
+    await db_session.refresh(request)
+    assert request.bank_fee_uzs == Decimal(1_474)
     other_key = await integration_client.post(
         url, json={"note": "x"}, headers={**headers, **_key(3)}
     )

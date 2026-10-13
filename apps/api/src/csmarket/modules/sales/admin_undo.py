@@ -63,7 +63,7 @@ async def undo(db: AsyncSession, *, request_id: str, admin_id: str) -> tuple[Pay
             attempt=request.undo_count,
         )
     request.status, request.paid_by, request.paid_at, request.note = "to_pay", None, None, None
-    request.rejected_at, request.reject_reason = None, None
+    request.rejected_at, request.reject_reason, request.bank_fee_uzs = None, None, None
     request.undo_count += 1
     await discard_pending(db, sale_id=sale.id, kind="sale_paid")
     await nudge_sale(db, user_id=sale.user_id, number=sale.number)

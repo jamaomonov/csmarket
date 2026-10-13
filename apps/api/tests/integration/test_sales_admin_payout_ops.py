@@ -270,6 +270,8 @@ async def test_undo_paid_puts_it_back_and_drops_the_waiting_letter(
     )
     assert undone.status_code == 200, undone.text
     assert (undone.json()["request"]["status"], undone.json()["can_decide"]) == ("to_pay", True)
+    await db_session.refresh(request)
+    assert request.bank_fee_uzs is None
     letters = await db_session.scalar(select(func.count()).select_from(EmailOutbox))
     assert letters == 0
     again = await integration_client.post(f"{url}/paid", json={}, headers={**headers, **_key(42)})

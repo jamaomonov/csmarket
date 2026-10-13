@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 import csmarket.modules.sales.api as sales_api
+import pytest
 from csmarket.core.config import Settings
 from csmarket.core.logging import REDACTED_KEYS
+from csmarket.modules.sales.rules import DEFAULT_SALE_SETTINGS, SaleSettings
+from pydantic import ValidationError
 
 
 def _make(**kw: object) -> Settings:
@@ -30,6 +35,14 @@ def test_active_needs_the_switch_the_key_and_the_secret() -> None:
 
 def test_card_numbers_are_redacted() -> None:
     assert {"card_number", "number_enc", "new_card", "pan"} <= REDACTED_KEYS
+
+
+def test_the_bank_fee_defaults_to_one_percent_and_is_bounded() -> None:
+    doc = DEFAULT_SALE_SETTINGS.model_dump(mode="json")
+    doc.pop("bank_fee_pct", None)
+    assert SaleSettings.model_validate(doc).bank_fee_pct == Decimal(1)
+    with pytest.raises(ValidationError):
+        SaleSettings.model_validate({**doc, "bank_fee_pct": "11"})
 
 
 def test_the_module_has_a_public_interface() -> None:
