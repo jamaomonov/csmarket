@@ -80,7 +80,6 @@ vi.mock("@/lib/skins", async (importOriginal) => ({
   getSkinsPage: () => Promise.resolve({ items: [ITEM], next_cursor: null }),
 }));
 
-
 describe("Markdown twins", () => {
   it("an item: name, price, facts, other wears, FAQ and its URL", async () => {
     const md = await itemMd("ru", ITEM.slug);
