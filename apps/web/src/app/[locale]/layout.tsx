@@ -45,7 +45,16 @@ export async function generateMetadata({
     metadataBase: new URL(SITE),
     title: { default: t("title"), template: "%s — csmarket" },
     description: t("description"),
-    icons: { icon: "/favicon.svg", apple: "/apple-touch-icon.png" },
+    icons: {
+      // Google wants a square favicon in a multiple of 48 px, Yandex and older tools ask for
+      // /favicon.ico; browsers that can take the SVG prefer it.
+      icon: [
+        { url: "/favicon.ico", sizes: "48x48" },
+        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/icon-96.png", type: "image/png", sizes: "96x96" },
+      ],
+      apple: "/apple-touch-icon.png",
+    },
   };
 }
 

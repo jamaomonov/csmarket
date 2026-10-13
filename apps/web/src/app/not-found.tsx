@@ -36,7 +36,12 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     robots: { index: false, follow: false },
-    icons: { icon: "/favicon.svg" },
+    icons: {
+      icon: [
+        { url: "/favicon.ico", sizes: "48x48" },
+        { url: "/favicon.svg", type: "image/svg+xml" },
+      ],
+    },
   };
 }
 

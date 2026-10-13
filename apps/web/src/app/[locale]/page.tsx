@@ -66,8 +66,8 @@ function siteJsonLd(locale: string, description: string): object[] {
       "@type": "Organization",
       name: "csmarket",
       url: `${SITE}/`,
-      // Google wants a raster logo of at least 112 px; the 180 px touch icon is one.
-      logo: `${SITE}/apple-touch-icon.png`,
+      // Google wants a raster logo of at least 112 px.
+      logo: `${SITE}/icon-512.png`,
       description,
       areaServed: { "@type": "Country", name: "Uzbekistan" },
       ...(socialUrls().length > 0 && { sameAs: socialUrls() }),
