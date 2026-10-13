@@ -26,6 +26,7 @@ dependencies = [
     "orjson>=3.10",
     "pyjwt[crypto]>=2.10",
     "email-validator>=2.2",
+    "pillow>=11.0",
 ]
 
 [dependency-groups]

@@ -23,6 +23,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "auth.purge_refresh_tokens",
         "fx.refresh",
         "skins.catalog_import",
+        "skins.colors",
         "skins.price_sync",
         "skinslink.mirror",
         "skinslink.reconcile",

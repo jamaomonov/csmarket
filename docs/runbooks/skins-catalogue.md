@@ -123,6 +123,16 @@ Catalogue page -> find the item -> «Скрыть». It is audited (`admin_audit
 Hide is not delete: nothing is lost. To remove an item from the shop for good, leave it
 hidden.
 
+## Fix a skin's colour
+
+The colour filter and `/color/<name>` pages read `skin_items.colors`, filled by the
+`skins.colors` job from each picture (every 5 min, ~300 pictures a tick; the first fill after a
+deploy takes a few hours). If a skin sits in the wrong colour: Catalogue → find it → «Цвет» →
+pick one or two → «Сохранить». It applies to every wear of that skin and the job leaves it
+alone. «Авто» gives it back to the job, which reads the picture again on its next tick.
+
+A skin with no colour yet is simply absent from colour filters; nothing breaks.
+
 ## Add a search alias
 
 Catalogue page -> Aliases: a short word people type («ак») and the text it stands for

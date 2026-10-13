@@ -1,6 +1,7 @@
-# Filter by skin colour — parked idea (2026-10-10)
+# Filter by skin colour — parked idea (2026-10-10), built 2026-10-14
 
-> Not planned. On 2026-10-10 the owner asked to keep it as a feature for later.
+> Built on 2026-10-14: spec `docs/superpowers/specs/2026-10-14-skin-colors-design.md`, ADR-0019.
+> Kept for its history. Not planned. On 2026-10-10 the owner asked to keep it as a feature for later.
 > This note keeps the design discussed in chat, so it does not have to be discussed again.
 
 ## Why

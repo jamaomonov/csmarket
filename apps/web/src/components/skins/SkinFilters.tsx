@@ -3,6 +3,7 @@ import { activeFilterCount, filterSections, skinQueryString } from "@csmarket/ut
 import { RotateCcw } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { SkinColorFilter } from "./SkinColorFilter";
 import { SkinPriceFilter } from "./SkinPriceFilter";
 
 import type { SkinQueryPatch, Exterior, SkinFacets, SkinQuery } from "@csmarket/utils/skins";
@@ -66,6 +67,12 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
               );
             })}
           </ul>
+        </Accordion>
+      )}
+
+      {show.colors.length > 0 && (
+        <Accordion title={t("color.title")} defaultOpen>
+          <SkinColorFilter query={query} colors={show.colors} href={href} />
         </Accordion>
       )}
 
@@ -135,6 +142,7 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
             exterior: undefined,
             rarity: undefined,
             team: undefined,
+            color: undefined,
             stattrak: undefined,
             minUzs: undefined,
             maxUzs: undefined,

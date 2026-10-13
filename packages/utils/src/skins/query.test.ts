@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  colorParam,
+  colorsOf,
   filterSections,
   isFilteredQuery,
   parseSkinQuery,
@@ -179,5 +181,20 @@ describe("several weapons", () => {
   it("joins a set back for the URL", () => {
     expect(weaponParam(["AWP", "AK-47"])).toBe("AK-47,AWP");
     expect(weaponParam([])).toBeUndefined();
+  });
+});
+
+describe("colour", () => {
+  it("keeps known colours in swatch order, at most three", () => {
+    expect(parseSkinQuery({ color: "blue,red" }).color).toBe("red,blue");
+    expect(parseSkinQuery({ color: "teal" }).color).toBeUndefined();
+    expect(parseSkinQuery({ color: "grey,white,black,red" }).color).toBe("red,black,white");
+  });
+
+  it("travels in the URL and reads back", () => {
+    const q = parseSkinQuery({ color: "pink", category: "knives" });
+    expect(skinQueryString(q)).toBe("?category=knives&color=pink");
+    expect(colorsOf(q)).toEqual(["pink"]);
+    expect(colorParam([])).toBeUndefined();
   });
 });

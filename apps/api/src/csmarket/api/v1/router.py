@@ -38,6 +38,7 @@ from csmarket.modules.sales.admin_recon_routes import router as sales_recon_rout
 from csmarket.modules.sales.admin_routes import router as sales_admin_router
 from csmarket.modules.sales.cards_routes import router as payout_cards_router
 from csmarket.modules.sales.routes import router as sales_router
+from csmarket.modules.skins.admin_color_routes import router as skins_colors_admin_router
 from csmarket.modules.skins.admin_routes import router as skins_admin_router
 from csmarket.modules.skins.dev_routes import router as skins_dev_router
 from csmarket.modules.skins.pricing_routes import router as skins_pricing_router
@@ -79,6 +80,7 @@ router.include_router(payout_cards_router)
 router.include_router(sales_router)
 router.include_router(realtime_router)
 router.include_router(skins_admin_router)
+router.include_router(skins_colors_admin_router)
 router.include_router(skins_pricing_router)
 router.include_router(skins_dev_router)
 # /skins/seo/* must precede /skins/{slug}, which would otherwise swallow it.

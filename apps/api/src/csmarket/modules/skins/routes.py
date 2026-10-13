@@ -28,6 +28,7 @@ from csmarket.modules.auth.api import guard_ip
 from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.lisskins.api import offers_for as lisskins_offers
 from csmarket.modules.skins.cachekeys import catalog_version
+from csmarket.modules.skins.colors import SKIN_COLORS
 from csmarket.modules.skins.images import steam_image, steam_image_only
 from csmarket.modules.skins.listings import (
     Listing,
@@ -157,6 +158,24 @@ async def _cached(key_parts: dict[str, Any], build: Callable[[], Awaitable[_Body
 MAX_WEAPONS = 30
 
 
+#: Colours one catalogue request may ask for at once.
+MAX_COLORS_ASKED = 3
+
+
+def _colors(raw: str | None) -> str | None:
+    """``color``: one or several keys, comma-separated — sorted, so the cache sees one key.
+
+    Raises:
+        ValidationError: An unknown colour or more than :data:`MAX_COLORS_ASKED`.
+    """
+    if raw is None:
+        return None
+    names = sorted({n.strip() for n in raw.split(",") if n.strip()})
+    if len(names) > MAX_COLORS_ASKED or any(n not in SKIN_COLORS for n in names):
+        raise ValidationError("unknown colour or too many colours", code="skins_color")
+    return ",".join(names) or None
+
+
 def _weapons(raw: str | None) -> str | None:
     """``weapon``: one model or several, comma-separated — sorted and deduplicated, so the
     page cache sees one key per set.
@@ -183,6 +202,7 @@ async def get_catalog(
     souvenir: bool | None = None,
     rarity: Annotated[str | None, Query(max_length=64)] = None,
     team: Annotated[Literal["ct", "t"] | None, Query()] = None,
+    color: Annotated[str | None, Query(max_length=60)] = None,
     min_uzs: Annotated[Decimal | None, Query(ge=0, le=10**12)] = None,
     max_uzs: Annotated[Decimal | None, Query(ge=0, le=10**12)] = None,
     q: Annotated[str | None, Query(max_length=80)] = None,
@@ -210,6 +230,7 @@ async def get_catalog(
         souvenir=souvenir,
         rarity=rarity,
         team=team,
+        color=_colors(color),
         min_usd=min_usd,
         max_usd=max_usd,
         q=q,
@@ -257,6 +278,7 @@ async def get_facets(
             exteriors=[FacetOut(value=v, count=c) for v, c in f.exteriors],
             rarities=[RarityFacetOut(value=v, count=c, color=k) for v, c, k in f.rarities],
             teams=[FacetOut(value=v, count=c) for v, c in f.teams],
+            colors=[FacetOut(value=v, count=c) for v, c in f.colors],
         ).model_dump(mode="json")
 
     return SkinFacetsOut.model_validate(
@@ -332,6 +354,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
         collection=item.collection,
         crates=[SkinCrateOut(name=n, slug=crate_links.get(n)) for n in item.crates],
         description=item.description,
+        colors=list(item.colors),
     )
 
 

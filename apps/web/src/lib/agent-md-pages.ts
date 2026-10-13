@@ -9,14 +9,17 @@ import { getTranslations } from "next-intl/server";
 import { mdDoc, mdFaq, mdLink, mdText } from "@/lib/agent-md";
 import {
   categoryContent,
+  colorContent,
   type LandingContent,
   loadCategory,
+  loadColor,
   loadWeapon,
   weaponContent,
 } from "@/lib/landing-content";
 import {
   categoryPath,
   CHEAP,
+  colorPath,
   itemPath,
   MARKET,
   PAY_METHODS,
@@ -25,6 +28,7 @@ import {
   weaponPath,
 } from "@/lib/paths";
 import { localeUrl } from "@/lib/seo";
+import { isSkinColor } from "@/lib/skin-colors";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
 import { skinAbout, skinFaq, skinFullName } from "@/lib/skin-seo";
 import { displayPrice, getSkinDetail, getSkinFacets, getSkinsPage } from "@/lib/skins";
@@ -83,6 +87,14 @@ export async function weaponMd(locale: string, slug: string): Promise<string | n
   return landingMd(locale, c, t("faq.title"), t("landing.all"), await itemList(locale, c.items));
 }
 
+export async function colorMd(locale: string, color: string): Promise<string | null> {
+  const data = await loadColor(locale, color);
+  if (!data) return null;
+  const c = await colorContent(locale, data);
+  const t = await getTranslations({ locale, namespace: "web.skins" });
+  return landingMd(locale, c, t("faq.title"), t("landing.all"), await itemList(locale, c.items));
+}
+
 export async function itemMd(locale: string, slug: string): Promise<string | null> {
   const item = await getSkinDetail(slug);
   if (!item) return null;
@@ -101,6 +113,11 @@ export async function itemMd(locale: string, slug: string): Promise<string | nul
       item.max_float !== null &&
       `- ${t("float")}: ${Number(item.min_float).toFixed(2)}–${Number(item.max_float).toFixed(2)}`,
     item.collection && `- ${t("collection")}: ${mdText(item.collection)}`,
+    (item.colors ?? []).length > 0 &&
+      `- ${t("color.item")}: ${(item.colors ?? [])
+        .filter(isSkinColor)
+        .map((c) => mdLink(t(`color.names.${c}`), localeUrl(locale, colorPath(c))))
+        .join(", ")}`,
     item.crates.length > 0 &&
       `- ${t("cases")}: ${item.crates.map((c) => mdText(c.name)).join(", ")}`,
   ].filter((f): f is string => typeof f === "string");
