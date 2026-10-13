@@ -30,10 +30,12 @@ payout to the balance, the card request's `to_pay_at` for a card (a card sale ha
 | `payout_to = balance`, credited                        | `amount_usd` | `payout_uzs` (bonus included)                    |
 | card request `paid`                                    | `amount_usd` | `amount_uzs + bank_fee_uzs`                      |
 | card request `rejected` (credited instead)             | `amount_usd` | `items_uzs` (what the balance got)               |
-| card request `waiting_hold` / `to_pay`                 | `amount_usd` | `amount_uzs` + expected bank fee, as «к выплате» |
+| card request `to_pay`                                  | `amount_usd` | `amount_uzs` + expected bank fee, as «к выплате» |
 | card request `canceled` (rolled back)                  | `0`          | `0`                                              |
 | any of the above with `attention_reason = rolled_back` | `0`          | as its row above (what we paid stays a cost)     |
 
+- A request is `waiting_hold` only before Skinslink completes the sale, so such a sale is not
+  counted yet; it enters as `to_pay` on completion.
 - `amount_usd` null on a completed sale counts `0` income and is a reconciliation problem.
 - `bank_fee_uzs` is a new nullable column on `payout_requests`, written at «Выплачено» as
   `ceil(amount_uzs × bank_fee_pct / 100)`. An older `paid` row without it uses the current
