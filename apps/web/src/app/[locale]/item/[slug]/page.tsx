@@ -7,6 +7,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/JsonLd";
+import { SiteFooter } from "@/components/SiteFooter";
 import { SkinBuyPanel } from "@/components/skins/SkinBuyPanel";
 import { SkinFaq } from "@/components/skins/SkinFaq";
 import { SkinHero } from "@/components/skins/SkinHero";
@@ -180,111 +181,114 @@ export default async function SkinPage({ params }: Props) {
   );
 
   return (
-    <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-28 pt-6 sm:px-6">
-      {productLd && <JsonLd data={productLd} />}
-      <JsonLd data={breadcrumbLd} />
-      <nav
-        aria-label="breadcrumb"
-        className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
-      >
-        <Link href={MARKET} className="hover:text-fg">
-          {t("market")}
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-        <Link href={parent.path} className="hover:text-fg">
-          {parent.label}
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-        <span aria-current="page" className="text-fg-muted">
-          {skinFullName(item)}
-        </span>
-      </nav>
+    <>
+      <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-10 pt-6 sm:px-6">
+        {productLd && <JsonLd data={productLd} />}
+        <JsonLd data={breadcrumbLd} />
+        <nav
+          aria-label="breadcrumb"
+          className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
+        >
+          <Link href={MARKET} className="hover:text-fg">
+            {t("market")}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          <Link href={parent.path} className="hover:text-fg">
+            {parent.label}
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+          <span aria-current="page" className="text-fg-muted">
+            {skinFullName(item)}
+          </span>
+        </nav>
 
-      <SkinOffersProvider slug={item.slug}>
-        <section className="border-border bg-surface grid gap-6 rounded-2xl border p-4 sm:p-5 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-8 md:gap-y-5 md:p-8">
-          {/* Left: the cheapest offer on the picture; on wide screens the wears and facts
+        <SkinOffersProvider slug={item.slug}>
+          <section className="border-border bg-surface grid gap-6 rounded-2xl border p-4 sm:p-5 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-8 md:gap-y-5 md:p-8">
+            {/* Left: the cheapest offer on the picture; on wide screens the wears and facts
               fill the space under it. Right: name and price. On phones the order is the
               source order: picture → name and price → wears and facts. */}
-          <div className="md:col-start-1 md:row-start-1">
-            <SkinHero
-              image={item.image_url}
-              name={item.name}
-              exterior={item.exterior}
-              rarityColor={item.rarity_color}
-            />
-          </div>
-          <div className="flex flex-col gap-5 md:col-start-2 md:row-span-2 md:row-start-1">
-            <SkinItemTitle
-              name={name}
-              phase={item.phase}
-              exterior={item.exterior ? t(`exterior.${item.exterior}`) : null}
-              weapon={item.weapon}
-              stattrak={item.stattrak}
-              souvenir={item.souvenir}
-              category={category}
-            />
-            <SkinPriceBlock
-              storedUzs={item.price_uzs}
-              storedUsd={item.price_usd}
-              steamUsd={item.steam_price_usd}
-              steamUrl={steamMarketUrl(item.name)}
-              locale={locale}
-            />
-            {item.buy_enabled && <SkinBuyPanel slug={item.slug} locale={locale} />}
-          </div>
-          <div className="space-y-5 md:col-start-1 md:row-start-2">{details}</div>
+            <div className="md:col-start-1 md:row-start-1">
+              <SkinHero
+                image={item.image_url}
+                name={item.name}
+                exterior={item.exterior}
+                rarityColor={item.rarity_color}
+              />
+            </div>
+            <div className="flex flex-col gap-5 md:col-start-2 md:row-span-2 md:row-start-1">
+              <SkinItemTitle
+                name={name}
+                phase={item.phase}
+                exterior={item.exterior ? t(`exterior.${item.exterior}`) : null}
+                weapon={item.weapon}
+                stattrak={item.stattrak}
+                souvenir={item.souvenir}
+                category={category}
+              />
+              <SkinPriceBlock
+                storedUzs={item.price_uzs}
+                storedUsd={item.price_usd}
+                steamUsd={item.steam_price_usd}
+                steamUrl={steamMarketUrl(item.name)}
+                locale={locale}
+              />
+              {item.buy_enabled && <SkinBuyPanel slug={item.slug} locale={locale} />}
+            </div>
+            <div className="space-y-5 md:col-start-1 md:row-start-2">{details}</div>
+          </section>
+
+          {worn && (
+            <section className="mt-8">
+              <h2 className="mb-3 text-[17px] font-bold">
+                {t("offers")}{" "}
+                <span className="text-fg-dim text-[14px] tabular-nums">{item.count}</span>
+              </h2>
+              <SkinListings
+                locale={locale}
+                image={item.image_url}
+                exterior={item.exterior}
+                selectable={item.buy_enabled}
+              />
+            </section>
+          )}
+        </SkinOffersProvider>
+
+        <SkinSimilar
+          title={
+            item.weapon
+              ? t("similar.weapon", { weapon: item.weapon })
+              : t("similar.category", { category })
+          }
+          items={neighbours}
+          locale={locale}
+          allHref={parent.path}
+          allLabel={
+            item.weapon
+              ? t("similar.all", { weapon: item.weapon })
+              : t("similar.allCategory", { category })
+          }
+        />
+
+        <section className="mt-10 max-w-3xl" aria-labelledby="skin-about">
+          <h2 id="skin-about" className="mb-2 text-[17px] font-bold">
+            {t("about.title")}
+          </h2>
+          <p className="text-fg-muted text-[14px] leading-relaxed">{about}</p>
+          {/* Valve's text exists in English only: it shows where the page is English. */}
+          {locale === "en" && item.description && (
+            <blockquote className="border-border text-fg-muted mt-4 whitespace-pre-line border-l-2 pl-4 text-[14px] italic leading-relaxed">
+              <span className="text-fg-dim mb-1 block text-[12px] not-italic">
+                {t("about.valve")}
+              </span>
+              {item.description}
+            </blockquote>
+          )}
         </section>
 
-        {worn && (
-          <section className="mt-8">
-            <h2 className="mb-3 text-[17px] font-bold">
-              {t("offers")}{" "}
-              <span className="text-fg-dim text-[14px] tabular-nums">{item.count}</span>
-            </h2>
-            <SkinListings
-              locale={locale}
-              image={item.image_url}
-              exterior={item.exterior}
-              selectable={item.buy_enabled}
-            />
-          </section>
-        )}
-      </SkinOffersProvider>
-
-      <SkinSimilar
-        title={
-          item.weapon
-            ? t("similar.weapon", { weapon: item.weapon })
-            : t("similar.category", { category })
-        }
-        items={neighbours}
-        locale={locale}
-        allHref={parent.path}
-        allLabel={
-          item.weapon
-            ? t("similar.all", { weapon: item.weapon })
-            : t("similar.allCategory", { category })
-        }
-      />
-
-      <section className="mt-10 max-w-3xl" aria-labelledby="skin-about">
-        <h2 id="skin-about" className="mb-2 text-[17px] font-bold">
-          {t("about.title")}
-        </h2>
-        <p className="text-fg-muted text-[14px] leading-relaxed">{about}</p>
-        {/* Valve's text exists in English only: it shows where the page is English. */}
-        {locale === "en" && item.description && (
-          <blockquote className="border-border text-fg-muted mt-4 whitespace-pre-line border-l-2 pl-4 text-[14px] italic leading-relaxed">
-            <span className="text-fg-dim mb-1 block text-[12px] not-italic">
-              {t("about.valve")}
-            </span>
-            {item.description}
-          </blockquote>
-        )}
-      </section>
-
-      <SkinFaq title={t("faq.title")} entries={skinFaq(item, t, locale)} />
-    </main>
+        <SkinFaq title={t("faq.title")} entries={skinFaq(item, t, locale)} />
+      </main>
+      <SiteFooter locale={locale} />
+    </>
   );
 }
 

@@ -8,8 +8,22 @@ import type { Metadata } from "next";
 import { SkinLanding } from "@/components/skins/SkinLanding";
 import { routing } from "@/i18n/routing";
 import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
-import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@/lib/seo";
-import { countUnit, isSkinCategory, landingKind, weaponSlug } from "@/lib/skin-landing";
+import {
+  alternates,
+  GEO_META,
+  localeUrl,
+  NOINDEX_FOLLOW,
+  ogLocale,
+  ROBOTS,
+  shareImage,
+} from "@/lib/seo";
+import {
+  countUnit,
+  isSkinCategory,
+  isThinLanding,
+  landingKind,
+  weaponSlug,
+} from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
 
 /** Categories with a paragraph of their own (`seoPages.cat.text.<category>`). */
@@ -68,7 +82,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: alternates(locale, path),
     other: GEO_META,
-    robots: ROBOTS,
+    robots: isThinLanding(data.facet.count) ? NOINDEX_FOLLOW : ROBOTS,
     openGraph: {
       type: "website",
       siteName: "csmarket",

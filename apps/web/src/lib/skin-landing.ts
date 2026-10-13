@@ -27,13 +27,31 @@ export function findWeapon(facets: SkinFacets, slug: string): Facet | null {
   return facets.weapons.find((w) => weaponSlug(w.value) === slug) ?? null;
 }
 
-/** Every landing page the facets imply, categories first — for the sitemap. */
+/**
+ * A landing with fewer items than this is thin (`/category/keys` with three): it stays
+ * `noindex, follow` and out of the sitemap until the catalogue fills it.
+ */
+export const MIN_LANDING_ITEMS = 10;
+
+export function isThinLanding(count: number): boolean {
+  return count < MIN_LANDING_ITEMS;
+}
+
+/**
+ * Every landing page the facets imply, categories first — for the sitemap. Thin ones are
+ * left out; a weapon is judged by its first facet, the one `findWeapon` serves.
+ */
 export function landingPaths(facets: SkinFacets): string[] {
+  const seen = new Set<string>();
+  const weapons = facets.weapons.flatMap((w) => {
+    const path = weaponPath(weaponSlug(w.value));
+    if (seen.has(path)) return [];
+    seen.add(path);
+    return isThinLanding(w.count) ? [] : [path];
+  });
   return [
-    ...facets.categories.map((c) => categoryPath(c.value)),
-    ...facets.weapons
-      .map((w) => weaponPath(weaponSlug(w.value)))
-      .filter((p, i, all) => all.indexOf(p) === i),
+    ...facets.categories.filter((c) => !isThinLanding(c.count)).map((c) => categoryPath(c.value)),
+    ...weapons,
   ];
 }
 

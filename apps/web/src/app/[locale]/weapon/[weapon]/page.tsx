@@ -8,8 +8,16 @@ import type { Metadata } from "next";
 import { SkinLanding } from "@/components/skins/SkinLanding";
 import { routing } from "@/i18n/routing";
 import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
-import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@/lib/seo";
-import { countUnit, findWeapon, isSkinCategory } from "@/lib/skin-landing";
+import {
+  alternates,
+  GEO_META,
+  localeUrl,
+  NOINDEX_FOLLOW,
+  ogLocale,
+  ROBOTS,
+  shareImage,
+} from "@/lib/seo";
+import { countUnit, findWeapon, isSkinCategory, isThinLanding } from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
 
 interface Props {
@@ -55,7 +63,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description,
     alternates: alternates(locale, path),
     other: GEO_META,
-    robots: ROBOTS,
+    robots: isThinLanding(data.weapon.count) ? NOINDEX_FOLLOW : ROBOTS,
     openGraph: {
       type: "website",
       siteName: "csmarket",
@@ -84,12 +92,27 @@ export default async function SkinWeaponPage({ params }: Props) {
   };
   const page = await getSkinsPage(query);
   const items = t("landing.count", { unit: countUnit(undefined), count: data.weapon.count });
+  // The category page's questions, asked about the weapon and answered from live numbers.
+  const tSeo = await getTranslations({ locale, namespace: "web.seoPages.cat" });
+  const skinsOf = t("landing.skinsOf", { weapon: w });
+  const entries = [
+    ...(data.from
+      ? [
+          {
+            question: tSeo("priceQ", { name: skinsOf }),
+            answer: tSeo("priceA", { price: data.from, items }),
+          },
+        ]
+      : []),
+    { question: tSeo("howQ", { inline: skinsOf }), answer: tSeo("howA") },
+  ];
   return (
     <SkinLanding
       locale={locale}
       h1={t("landing.weaponH1", { weapon: w })}
       intro={data.from ? t("landing.intro", { items, price: data.from, kind: "skin" }) : null}
       items={page.items}
+      faq={{ title: t("faq.title"), entries }}
       allHref={MARKET + skinQueryString(query)}
       crumbs={[
         { name: t("market"), path: MARKET },

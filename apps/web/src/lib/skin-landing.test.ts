@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { categoryPath, itemPath, weaponPath } from "./paths";
-import { countUnit, findWeapon, isSkinCategory, landingPaths, weaponSlug } from "./skin-landing";
+import {
+  countUnit,
+  findWeapon,
+  isSkinCategory,
+  isThinLanding,
+  landingPaths,
+  weaponSlug,
+} from "./skin-landing";
 
 const FACETS = {
   categories: [
@@ -44,6 +51,18 @@ describe("skin landings", () => {
       "/weapon/desert-eagle",
       "/weapon/karambit",
     ]);
+  });
+
+  it("leaves thin landings out of the sitemap", () => {
+    const paths = landingPaths({
+      ...FACETS,
+      categories: [...FACETS.categories, { value: "keys", count: 3 }],
+      weapons: [...FACETS.weapons, { value: "Zeus x27", count: 2, category: "heavy" }],
+    });
+    expect(paths).not.toContain("/category/keys");
+    expect(paths).not.toContain("/weapon/zeus-x27");
+    expect(isThinLanding(9)).toBe(true);
+    expect(isThinLanding(10)).toBe(false);
   });
 
   it("builds locale-less paths", () => {
