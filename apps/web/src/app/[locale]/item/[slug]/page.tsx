@@ -20,9 +20,17 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { itemOgUrl } from "@/lib/og-item";
 import { categoryPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
-import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImageAt } from "@/lib/seo";
+import {
+  alternates,
+  GEO_META,
+  localeUrl,
+  NOINDEX_FOLLOW,
+  ogLocale,
+  ROBOTS,
+  shareImageAt,
+} from "@/lib/seo";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
-import { skinAbout, skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
+import { itemKind, skinAbout, skinFaq, skinFullName, skinProductLd } from "@/lib/skin-seo";
 import { similarSkins } from "@/lib/skin-similar";
 import { displayPrice, getSkinDetail } from "@/lib/skins";
 
@@ -53,19 +61,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // the copy drops the price rather than print a hole.
   const title =
     price !== null ? t("meta.itemTitle", { name, price }) : t("meta.itemTitleNoPrice", { name });
+  const kind = itemKind(item);
   const description =
     price !== null && item.count > 0
-      ? t("meta.itemDescription", { name, price, count: item.count })
-      : t("meta.itemDescriptionNoPrice", { name });
+      ? t("meta.itemDescription", { name, price, count: item.count, kind })
+      : t("meta.itemDescriptionNoPrice", { name, kind });
   const path = itemPath(slug);
   // The generated card (`og.png/route.tsx`): the skin on the site's dark, no price on it.
   const share = shareImageAt(itemOgUrl(locale, slug), name);
   return {
-    title,
+    // No «— csmarket» suffix: item titles are long already, and the name must not be cut.
+    title: { absolute: title },
     description,
     alternates: alternates(locale, path),
     other: GEO_META,
-    robots: ROBOTS,
+    // Nothing to buy, nothing to rank: an empty item page stays out of the index (its links
+    // to the other wears and similar items are still followed) and comes back when stocked.
+    robots: item.count > 0 ? ROBOTS : NOINDEX_FOLLOW,
     openGraph: {
       type: "website",
       siteName: "csmarket",
@@ -118,7 +130,7 @@ export default async function SkinPage({ params }: Props) {
     ],
   };
   // The other wears and the facts: under the picture on wide screens, under the price on
-  // phones (rendered once per breakpoint).
+  // phones — one copy, placed by the grid (a second copy would repeat its heading and text).
   const details = (
     <>
       {worn && item.family.length > 1 && (
@@ -189,23 +201,23 @@ export default async function SkinPage({ params }: Props) {
       </nav>
 
       <SkinOffersProvider slug={item.slug}>
-        <section className="border-border bg-surface grid gap-6 rounded-2xl border p-4 sm:p-5 md:grid-cols-2 md:gap-8 md:p-8">
+        <section className="border-border bg-surface grid gap-6 rounded-2xl border p-4 sm:p-5 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-8 md:gap-y-5 md:p-8">
           {/* Left: the cheapest offer on the picture; on wide screens the wears and facts
-              fill the space under it. Right: name and price. On phones the order is
-              picture → name and price → wears and facts. */}
-          <div className="space-y-5">
+              fill the space under it. Right: name and price. On phones the order is the
+              source order: picture → name and price → wears and facts. */}
+          <div className="md:col-start-1 md:row-start-1">
             <SkinHero
               image={item.image_url}
               name={item.name}
               exterior={item.exterior}
               rarityColor={item.rarity_color}
             />
-            <div className="hidden space-y-5 md:block">{details}</div>
           </div>
-          <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-5 md:col-start-2 md:row-span-2 md:row-start-1">
             <SkinItemTitle
               name={name}
               phase={item.phase}
+              exterior={item.exterior ? t(`exterior.${item.exterior}`) : null}
               weapon={item.weapon}
               stattrak={item.stattrak}
               souvenir={item.souvenir}
@@ -219,8 +231,8 @@ export default async function SkinPage({ params }: Props) {
               locale={locale}
             />
             {item.buy_enabled && <SkinBuyPanel slug={item.slug} locale={locale} />}
-            <div className="space-y-5 md:hidden">{details}</div>
           </div>
+          <div className="space-y-5 md:col-start-1 md:row-start-2">{details}</div>
         </section>
 
         {worn && (

@@ -49,3 +49,19 @@ const COUNT_UNITS: Record<string, string> = {
 export function countUnit(category: string | undefined): string {
   return (category !== undefined ? COUNT_UNITS[category] : undefined) ?? "other";
 }
+
+/** Categories whose items are not weapon finishes: the copy says «предмет», not «скин». */
+const ITEM_CATEGORIES = new Set([
+  "cases",
+  "keys",
+  "music-kits",
+  "charms",
+  "stickers",
+  "graffiti",
+  "patches",
+]);
+
+/** The noun a landing's copy uses (`{kind, select, skin {…} other {…}}`). */
+export function landingKind(category: string | undefined): "skin" | "item" {
+  return category !== undefined && ITEM_CATEGORIES.has(category) ? "item" : "skin";
+}

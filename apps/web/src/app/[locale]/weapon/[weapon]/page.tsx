@@ -46,6 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         name: t("landing.skinsOf", { weapon: w }),
         items: t("landing.count", { unit: countUnit(undefined), count: data.weapon.count }),
         price: data.from,
+        kind: "skin",
       })
     : t("meta.description");
   const path = weaponPath(slug);
@@ -87,7 +88,7 @@ export default async function SkinWeaponPage({ params }: Props) {
     <SkinLanding
       locale={locale}
       h1={t("landing.weaponH1", { weapon: w })}
-      intro={data.from ? t("landing.intro", { items, price: data.from }) : null}
+      intro={data.from ? t("landing.intro", { items, price: data.from, kind: "skin" }) : null}
       items={page.items}
       allHref={MARKET + skinQueryString(query)}
       crumbs={[

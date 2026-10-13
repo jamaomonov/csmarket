@@ -9,7 +9,7 @@ import { SkinLanding } from "@/components/skins/SkinLanding";
 import { routing } from "@/i18n/routing";
 import { categoryPath, MARKET, weaponPath } from "@/lib/paths";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@/lib/seo";
-import { countUnit, isSkinCategory, weaponSlug } from "@/lib/skin-landing";
+import { countUnit, isSkinCategory, landingKind, weaponSlug } from "@/lib/skin-landing";
 import { displayPrice, getSkinFacets, getSkinsPage } from "@/lib/skins";
 
 /** Categories with a paragraph of their own (`seoPages.cat.text.<category>`). */
@@ -59,6 +59,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
             : t("landing.categoryInline", { name: name.toLocaleLowerCase(locale) }),
         items: t("landing.count", { unit: countUnit(data.category), count: data.facet.count }),
         price: data.from,
+        kind: landingKind(data.category),
       })
     : t("meta.description");
   const path = categoryPath(category);
@@ -135,7 +136,9 @@ export default async function SkinCategoryPage({ params }: Props) {
     <SkinLanding
       locale={locale}
       h1={t("landing.categoryH1", { name })}
-      intro={data.from ? t("landing.intro", { items, price: data.from }) : null}
+      intro={
+        data.from ? t("landing.intro", { items, price: data.from, kind: landingKind(cat) }) : null
+      }
       items={page.items}
       faq={{ title: t("faq.title"), entries }}
       {...(text !== null && {

@@ -68,6 +68,14 @@ describe("skinFaq", () => {
     expect(faq[4]?.answer).toMatch(/7 дней/);
   });
 
+  it("does not point at a list of offers when there is none", () => {
+    const faq = skinFaq({ ...ITEM, count: 0 }, t, "ru", DAY);
+    const float = faq.find((f) => f.question.startsWith("Какой флоат"));
+    expect(float?.answer).toBe("Закалённое в боях: флоат от 0.45 до 1.00.");
+    const stocked = skinFaq(ITEM, t, "ru", DAY).find((f) => f.question.startsWith("Какой флоат"));
+    expect(stocked?.answer).toMatch(/в списке выше\.$/);
+  });
+
   it("writes the Steam price in dollars and cents, as the API's units can carry more", () => {
     const at = (steam: string) =>
       skinFaq({ ...ITEM, steam_price_usd: steam }, t, "ru", DAY)
@@ -175,6 +183,7 @@ describe("skinAbout", () => {
     expect(text).toBe(
       "AK-47 | Slate (Battle-Scarred) — скин для AK-47 в КС2 (CS2). Редкость — Restricted. " +
         "Флоат у этого скина бывает от 0.00 до 1.00. " +
+        "В износе «Закалённое в боях» флоат — от 0.45 до 1.00. " +
         "Бывает в износе: Прямо с завода, После полевых испытаний, Закалённое в боях. " +
         "Есть версия StatTrak™ со счётчиком убийств. " +
         "На csmarket — от 40\u00a0000 сум: оплата в сумах через Click, Payme или Uzum, " +
