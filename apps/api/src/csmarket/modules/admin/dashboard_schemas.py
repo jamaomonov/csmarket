@@ -8,7 +8,7 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 from csmarket.modules.orders.api import Dashboard
-from csmarket.modules.sales.api import PayoutsSummary
+from csmarket.modules.sales.api import PayoutsSummary, SalesPnl
 
 
 def _money(value: Decimal) -> str:
@@ -69,6 +69,60 @@ class LisskinsOut(BaseModel):
     read_at: datetime | None
 
 
+class SalesPnlDayOut(BaseModel):
+    day: date
+    count: int
+    income_usd: str
+    profit_usd: str
+
+
+class SalesPnlOut(BaseModel):
+    """«Выкуп»: buying skins from users in the window (spec 2026-10-13-sales-pnl)."""
+
+    count: int
+    #: What Skinslink credited us.
+    income_usd: str
+    #: Paid card transfers, the bank's charge included.
+    to_cards_uzs: str
+    #: Payouts to the balance (bonus included) and rejected card requests.
+    to_balances_uzs: str
+    #: Card requests not paid yet, the expected bank fee included.
+    to_pay_uzs: str
+    withheld_uzs: str
+    bank_uzs: str
+    cost_uzs: str
+    cost_usd: str
+    profit_usd: str
+    profit_percent: str
+    by_day: list[SalesPnlDayOut]
+
+    @classmethod
+    def of(cls, p: SalesPnl) -> SalesPnlOut:
+        """Strings for the money."""
+        return cls(
+            count=p.count,
+            income_usd=_money(p.income_usd),
+            to_cards_uzs=_money(p.to_cards_uzs),
+            to_balances_uzs=_money(p.to_balances_uzs),
+            to_pay_uzs=_money(p.to_pay_uzs),
+            withheld_uzs=_money(p.withheld_uzs),
+            bank_uzs=_money(p.bank_uzs),
+            cost_uzs=_money(p.cost_uzs),
+            cost_usd=_money(p.cost_usd),
+            profit_usd=_money(p.profit_usd),
+            profit_percent=_money(p.profit_percent),
+            by_day=[
+                SalesPnlDayOut(
+                    day=d.day,
+                    count=d.count,
+                    income_usd=_money(d.income_usd),
+                    profit_usd=_money(d.profit_usd),
+                )
+                for d in p.by_day
+            ],
+        )
+
+
 class DashboardOut(BaseModel):
     """Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look."""
 
@@ -83,9 +137,10 @@ class DashboardOut(BaseModel):
     skinslink: SkinslinkOut
     lisskins: LisskinsOut
     payouts: PayoutsOut
+    sales_pnl: SalesPnlOut
 
     @classmethod
-    def of(cls, d: Dashboard, payouts: PayoutsSummary) -> DashboardOut:
+    def of(cls, d: Dashboard, payouts: PayoutsSummary, pnl: SalesPnl) -> DashboardOut:
         """Strings for the money."""
         s = d.sales
         return cls(
@@ -136,4 +191,5 @@ class DashboardOut(BaseModel):
                 to_pay_uzs=_money(payouts.to_pay_uzs),
                 sales_attention=payouts.sales_attention,
             ),
+            sales_pnl=SalesPnlOut.of(pnl),
         )

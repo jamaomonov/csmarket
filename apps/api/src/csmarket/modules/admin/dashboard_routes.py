@@ -14,7 +14,7 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.admin.dashboard_schemas import DashboardOut
 from csmarket.modules.admin.deps import require_admin
 from csmarket.modules.orders.api import Days, dashboard_summary
-from csmarket.modules.sales.api import payouts_summary
+from csmarket.modules.sales.api import payouts_summary, sales_pnl
 
 _WINDOWS = frozenset({1, 7, 30})
 
@@ -27,10 +27,12 @@ async def dashboard(
     days: Annotated[int, Query(description="1 (today), 7 or 30 Tashkent days")] = 1,
 ) -> DashboardOut:
     """Sales, margin and refunds by Tashkent day, orders in flight, open attentions and the
-    last Waxpeer balance read. Reads only. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.
+    last Waxpeer balance read, and the skin-sales P&L (``sales_pnl``). Reads only. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.
     """
     if days not in _WINDOWS:
         raise ValidationError("days must be 1, 7 or 30", code="dashboard_days")
     window = cast("Days", days)
-    summary = await dashboard_summary(db, get_redis(), days=window, at=now())
-    return DashboardOut.of(summary, await payouts_summary(db))
+    at = now()
+    summary = await dashboard_summary(db, get_redis(), days=window, at=at)
+    pnl = await sales_pnl(db, days=window, at=at)
+    return DashboardOut.of(summary, await payouts_summary(db), pnl)

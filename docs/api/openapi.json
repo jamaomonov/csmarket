@@ -4550,6 +4550,9 @@
           "sales": {
             "$ref": "#/components/schemas/SalesOut"
           },
+          "sales_pnl": {
+            "$ref": "#/components/schemas/SalesPnlOut"
+          },
           "since": {
             "format": "date-time",
             "title": "Since",
@@ -4573,7 +4576,8 @@
           "waxpeer",
           "skinslink",
           "lisskins",
-          "payouts"
+          "payouts",
+          "sales_pnl"
         ],
         "title": "DashboardOut",
         "type": "object"
@@ -6995,6 +6999,143 @@
         "title": "RarityFacetOut",
         "type": "object"
       },
+      "ReconOut": {
+        "properties": {
+          "credited_usd": {
+            "title": "Credited Usd",
+            "type": "string"
+          },
+          "diff_usd": {
+            "title": "Diff Usd",
+            "type": "string"
+          },
+          "expected_usd": {
+            "title": "Expected Usd",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReconRowOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "problems": {
+            "title": "Problems",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "expected_usd",
+          "credited_usd",
+          "diff_usd",
+          "problems"
+        ],
+        "title": "ReconOut",
+        "type": "object"
+      },
+      "ReconRowOut": {
+        "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "diff_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Usd"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "enum": [
+                  "short",
+                  "missing",
+                  "reverted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Flag"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "quoted_usd": {
+            "title": "Quoted Usd",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "trade_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Id"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "done_at",
+          "trade_id",
+          "quoted_usd",
+          "amount_usd",
+          "diff_usd",
+          "flag"
+        ],
+        "title": "ReconRowOut",
+        "type": "object"
+      },
       "RefundsOut": {
         "properties": {
           "amount_uzs": {
@@ -7345,6 +7486,21 @@
             ],
             "title": "Balance Bonus Pct"
           },
+          "bank_fee_pct": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "1",
+            "title": "Bank Fee Pct"
+          },
           "card_fee_pct": {
             "$ref": "#/components/schemas/CardFees-Input"
           },
@@ -7464,6 +7620,12 @@
           "balance_bonus_pct": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,3}|(?=[\\d.]{1,6}0*$)\\d{0,3}\\.\\d{0,2}0*$)",
             "title": "Balance Bonus Pct",
+            "type": "string"
+          },
+          "bank_fee_pct": {
+            "default": "1",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+            "title": "Bank Fee Pct",
             "type": "string"
           },
           "card_fee_pct": {
@@ -7669,6 +7831,107 @@
           "next_cursor"
         ],
         "title": "SalesPage",
+        "type": "object"
+      },
+      "SalesPnlDayOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "income_usd": {
+            "title": "Income Usd",
+            "type": "string"
+          },
+          "profit_usd": {
+            "title": "Profit Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "day",
+          "count",
+          "income_usd",
+          "profit_usd"
+        ],
+        "title": "SalesPnlDayOut",
+        "type": "object"
+      },
+      "SalesPnlOut": {
+        "description": "\u00ab\u0412\u044b\u043a\u0443\u043f\u00bb: buying skins from users in the window (spec 2026-10-13-sales-pnl).",
+        "properties": {
+          "bank_uzs": {
+            "title": "Bank Uzs",
+            "type": "string"
+          },
+          "by_day": {
+            "items": {
+              "$ref": "#/components/schemas/SalesPnlDayOut"
+            },
+            "title": "By Day",
+            "type": "array"
+          },
+          "cost_usd": {
+            "title": "Cost Usd",
+            "type": "string"
+          },
+          "cost_uzs": {
+            "title": "Cost Uzs",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "income_usd": {
+            "title": "Income Usd",
+            "type": "string"
+          },
+          "profit_percent": {
+            "title": "Profit Percent",
+            "type": "string"
+          },
+          "profit_usd": {
+            "title": "Profit Usd",
+            "type": "string"
+          },
+          "to_balances_uzs": {
+            "title": "To Balances Uzs",
+            "type": "string"
+          },
+          "to_cards_uzs": {
+            "title": "To Cards Uzs",
+            "type": "string"
+          },
+          "to_pay_uzs": {
+            "title": "To Pay Uzs",
+            "type": "string"
+          },
+          "withheld_uzs": {
+            "title": "Withheld Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "income_usd",
+          "to_cards_uzs",
+          "to_balances_uzs",
+          "to_pay_uzs",
+          "withheld_uzs",
+          "bank_uzs",
+          "cost_uzs",
+          "cost_usd",
+          "profit_usd",
+          "profit_percent",
+          "by_day"
+        ],
+        "title": "SalesPnlOut",
         "type": "object"
       },
       "SellBlockIn": {
@@ -10252,7 +10515,7 @@
     },
     "/api/v1/admin/dashboard": {
       "get": {
-        "description": "Sales, margin and refunds by Tashkent day, orders in flight, open attentions and the\nlast Waxpeer balance read. Reads only. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.",
+        "description": "Sales, margin and refunds by Tashkent day, orders in flight, open attentions and the\nlast Waxpeer balance read, and the skin-sales P&L (``sales_pnl``). Reads only. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.",
         "operationId": "dashboard_api_v1_admin_dashboard_get",
         "parameters": [
           {
@@ -12097,6 +12360,97 @@
           }
         },
         "summary": "Undo a payout decided minutes ago",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/reconciliation": {
+      "get": {
+        "description": "Sales Skinslink completed in the window (and any open revert): quoted, credited, the\ndifference and a flag \u2014 ``short`` (under 99 % of the quote), ``missing`` (completed with no\namount) or ``reverted``. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.",
+        "operationId": "get_reconciliation_api_v1_admin_sales_reconciliation_get",
+        "parameters": [
+          {
+            "description": "1 (today), 7 or 30 Tashkent days",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "description": "1 (today), 7 or 30 Tashkent days",
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Only the flagged sales",
+            "in": "query",
+            "name": "problems",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Only the flagged sales",
+              "title": "Problems",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skinslink reconciliation",
         "tags": [
           "admin"
         ]

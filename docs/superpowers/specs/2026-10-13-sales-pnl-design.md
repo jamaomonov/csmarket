@@ -21,7 +21,9 @@ Skinslink calls: every amount is already in our tables.
 
 ## What counts
 
-A sale enters the period by `credited_at` (Skinslink said `completed`) in Tashkent days.
+A sale enters the period when Skinslink completed it, in Tashkent days: `credited_at` for a
+payout to the balance, the card request's `to_pay_at` for a card (a card sale has no
+`credited_at`).
 
 | Sale outcome                                           | Income (USD) | Cost (soʻm)                                      |
 | ------------------------------------------------------ | ------------ | ------------------------------------------------ |

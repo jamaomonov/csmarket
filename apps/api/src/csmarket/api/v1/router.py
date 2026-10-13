@@ -34,6 +34,7 @@ from csmarket.modules.public_api.site_routes import router as api_key_router
 from csmarket.modules.public_api.tradelink_route import router as public_tradelink_router
 from csmarket.modules.realtime.routes import router as realtime_router
 from csmarket.modules.sales.admin_payout_routes import router as payouts_admin_router
+from csmarket.modules.sales.admin_recon_routes import router as sales_recon_router
 from csmarket.modules.sales.admin_routes import router as sales_admin_router
 from csmarket.modules.sales.cards_routes import router as payout_cards_router
 from csmarket.modules.sales.routes import router as sales_router
@@ -59,6 +60,7 @@ router.include_router(admin_dashboard_router)
 router.include_router(admin_orders_router)
 # Before ``sales_admin_router``: its ``/admin/sales/{number}`` would read ``payouts`` as a sale.
 router.include_router(payouts_admin_router)
+router.include_router(sales_recon_router)
 router.include_router(sales_admin_router)
 router.include_router(api_key_router)
 router.include_router(public_api_router)
