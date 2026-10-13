@@ -200,6 +200,8 @@ async def test_reconciliation_refuses_other_windows_and_customers(
 ) -> None:
     bad = await integration_client.get("/api/v1/admin/sales/reconciliation?days=3", headers=headers)
     assert (bad.status_code, bad.json()["code"]) == (422, "dashboard_days")
+    # Minted on the real clock: a token issued at the pinned NOW reads as expired (401).
+    core_clock.reset_clock()
     customer = await customer_headers()
     r = await integration_client.get("/api/v1/admin/sales/reconciliation", headers=customer)
     assert r.status_code == 403
