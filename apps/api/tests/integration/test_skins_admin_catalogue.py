@@ -271,6 +271,8 @@ async def test_admin_item_search(
         "cost_usd",
         "margin_override_pp",
         "fixed_price_usd",
+        "colors",
+        "colors_manual",
     }
     await _hide(integration_client, await admin_headers(), True, KEY)
     hidden = await integration_client.get(
