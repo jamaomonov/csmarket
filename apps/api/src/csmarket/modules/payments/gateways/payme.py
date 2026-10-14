@@ -10,6 +10,7 @@ Payme has no merchant-initiated refund: a refund is a ``CancelTransaction`` from
 from __future__ import annotations
 
 import base64
+from decimal import Decimal
 
 from csmarket.core.config import get_settings
 from csmarket.modules.payments.gateways.base import return_url
@@ -30,7 +31,7 @@ class PaymeGateway:
         s = get_settings()
         return bool(s.payme_merchant_id and s.payme_keys())
 
-    def intent_url(self, *, payable: Payable, locale: str) -> str:
+    def intent_url(self, *, payable: Payable, charge_uzs: Decimal, locale: str) -> str:
         """``{payme_checkout_url}/{base64("m=<id>;ac.order=<number>;a=<tiyin>;c=<back>;l=<locale>")}``.
 
         Raises:
@@ -39,7 +40,7 @@ class PaymeGateway:
         s = get_settings()
         params = (
             f"m={s.payme_merchant_id};ac.order={payable.number};"
-            f"a={int(payable.amount_uzs * 100)};c={return_url(payable.number, locale)};l={locale}"
+            f"a={int(charge_uzs * 100)};c={return_url(payable.number, locale)};l={locale}"
         )
         encoded = base64.b64encode(params.encode()).decode()
         return f"{s.payme_checkout_url.rstrip('/')}/{encoded}"

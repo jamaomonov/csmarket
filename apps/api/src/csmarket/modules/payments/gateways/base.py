@@ -9,6 +9,7 @@ client-supplied return URL to validate.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Protocol
 
 from csmarket.core.config import get_settings
@@ -30,8 +31,12 @@ class PaymentGateway(Protocol):
         """Whether this gateway can take payments here (credentials set, not prod for mock)."""
         ...
 
-    def intent_url(self, *, payable: Payable, locale: str) -> str:
-        """Where to send the customer to pay ``payable``, in the kassa's ``locale`` page."""
+    def intent_url(self, *, payable: Payable, charge_uzs: Decimal, locale: str) -> str:
+        """Where to send the customer to pay ``payable``, in the kassa's ``locale`` page.
+
+        ``charge_uzs`` is what the kassa takes: the base plus the fee frozen on the attempt
+        (``hooks.charge_of``, spec 2026-10-14-kassa-fee).
+        """
         ...
 
 

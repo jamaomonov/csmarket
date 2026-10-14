@@ -23,6 +23,8 @@ never the user.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +34,7 @@ from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.modules.orders.api import Order, mark_paid
 from csmarket.modules.payments.external_ids import unclaimed_external_id
+from csmarket.modules.payments.fees import current_charge
 from csmarket.modules.payments.fsm import LIVE, InvalidTransitionError, move
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable
@@ -168,7 +171,8 @@ async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -
     """The owner's live (``created``/``pending``) attempt of ``provider``, or a new one.
 
     The owner is the top-up or the order ``payable`` resolved to; a new attempt carries its
-    number, user and amount (``amount_uzs`` / ``price_uzs``) and starts ``created`` with
+    number, user and amount (``amount_uzs`` / ``price_uzs``), freezes the kassa's fee at today's
+    rate (``fee_pct`` / ``fee_uzs``, spec 2026-10-14-kassa-fee) and starts ``created`` with
     ``provider_ref = <provider>:<number>`` — suffixed with its id when an earlier attempt of
     the provider holds that reference (a declined card retried in the same kassa). The
     caller resolved ``payable`` with ``lock=True``, so two concurrent calls for one owner
@@ -203,6 +207,8 @@ async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -
     live = (await db.execute(live_stmt)).scalar_one_or_none()
     if live is not None:
         return live
+    base = owner.price_uzs if isinstance(owner, Order) else owner.amount_uzs
+    charge = await current_charge(db, base=base, provider=provider)
     payment_id = new_id()
     ref = await unclaimed_external_id(
         db, provider=provider, external_id=f"{provider}:{owner.number}", payment_id=payment_id
@@ -216,13 +222,20 @@ async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -
         user_id=owner.user_id,
         provider=provider,
         provider_ref=ref,
-        amount_uzs=owner.price_uzs if isinstance(owner, Order) else owner.amount_uzs,
+        amount_uzs=base,
+        fee_pct=charge.pct,
+        fee_uzs=charge.fee_uzs,
         status="created",
     )
     db.add(payment)
     await db.flush()
     log.info("payments.attempt.created", number=owner.number, provider=provider)
     return payment
+
+
+def charge_of(payment: Payment) -> Decimal:
+    """What the kassa takes for ``payment``: its base plus its frozen fee."""
+    return payment.amount_uzs + payment.fee_uzs
 
 
 async def mark_pending(db: AsyncSession, *, payment: Payment) -> None:
@@ -381,6 +394,7 @@ __all__ = [
     "ReversalRefusedError",
     "TopupSpentError",
     "cancel_pending",
+    "charge_of",
     "ensure_attempt",
     "lock_owner_or_skip",
     "mark_pending",

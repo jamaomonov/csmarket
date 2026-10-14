@@ -7,6 +7,8 @@ real ``hooks.settle``.
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from csmarket.core.config import get_settings
 from csmarket.modules.payments.gateways.base import return_url
 from csmarket.modules.payments.payable import Payable
@@ -22,7 +24,7 @@ class MockGateway:
         """Everywhere but production."""
         return not get_settings().is_prod
 
-    def intent_url(self, *, payable: Payable, locale: str) -> str:
+    def intent_url(self, *, payable: Payable, charge_uzs: Decimal, locale: str) -> str:  # noqa: ARG002 -- no kassa, no amount
         """The payable's status page (top-up or order), flagged ``?mock=1``."""
         return f"{return_url(payable.number, locale)}?mock=1"
 

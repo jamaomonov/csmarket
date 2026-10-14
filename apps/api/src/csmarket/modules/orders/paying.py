@@ -41,6 +41,7 @@ from csmarket.modules.payments.api import (
     Payable,
     Payment,
     available_providers,
+    charge_of,
     ensure_attempt,
     get_gateway,
     mark_pending,
@@ -141,8 +142,10 @@ async def _open_in_kassa(db: AsyncSession, payable: Payable, *, provider: str, l
     """
     if provider not in available_providers():
         raise ValidationError("payment provider not available", code="order_provider")
-    await ensure_attempt(db, payable=payable, provider=provider)
-    return get_gateway(provider).intent_url(payable=payable, locale=locale)
+    payment = await ensure_attempt(db, payable=payable, provider=provider)
+    return get_gateway(provider).intent_url(
+        payable=payable, charge_uzs=charge_of(payment), locale=locale
+    )
 
 
 async def pay_order(

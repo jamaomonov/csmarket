@@ -86,5 +86,12 @@ def test_intent_url_is_the_click_pay_page_in_soum(locale: str, back: str) -> Non
             "return_url": back,
         }
     )
-    url = ClickGateway().intent_url(payable=_PAYABLE, locale=locale)
+    url = ClickGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale=locale)
     assert url == f"https://my.click.uz/services/pay?{query}"
+
+
+@pytest.mark.usefixtures("click_env")
+def test_intent_url_asks_for_the_total_with_the_kassa_fee() -> None:
+    """Spec 2026-10-14-kassa-fee: the base plus the fee frozen on the attempt."""
+    url = ClickGateway().intent_url(payable=_PAYABLE, charge_uzs=Decimal(50500), locale="ru")
+    assert "amount=50500&" in url

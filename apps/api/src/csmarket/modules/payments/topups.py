@@ -26,6 +26,7 @@ from csmarket.core.errors import ConflictError, ValidationError
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.core.numbers import allocate, is_topup_number, topup_number
+from csmarket.modules.payments.fees import kassa_charge
 from csmarket.modules.payments.gateways import PaymentGateway, available_providers, get_gateway
 from csmarket.modules.payments.hooks import cancel_pending, ensure_attempt, mark_pending, settle
 from csmarket.modules.payments.models import Payment, WalletTopup
@@ -80,10 +81,15 @@ def _gateway_or_none(provider: str) -> PaymentGateway | None:
     return get_gateway(provider)
 
 
-def _intent(gateway: PaymentGateway | None, payable: Payable, locale: str) -> str | None:
+async def _intent(
+    db: AsyncSession, gateway: PaymentGateway | None, payable: Payable, locale: str
+) -> str | None:
+    """The kassa page for ``payable``, asking for what the kassa's webhook will check: the base
+    plus the live attempt's frozen fee, or today's rate (spec 2026-10-14-kassa-fee)."""
     if gateway is None or not payable.payable:
         return None
-    return gateway.intent_url(payable=payable, locale=locale)
+    charge = await kassa_charge(db, payable, gateway.provider)
+    return gateway.intent_url(payable=payable, charge_uzs=charge.total_uzs, locale=locale)
 
 
 async def _by_key(db: AsyncSession, *, user_id: str, idempotency_key: str) -> WalletTopup | None:
@@ -135,7 +141,7 @@ async def _replay(
     if first is None:  # the top-up and its attempt commit together; never seen
         raise ConflictError("top-up has no payment attempt yet; retry")
     payable = await resolve(db, existing.number)
-    return existing, first, _intent(_gateway_or_none(provider), payable, locale)
+    return existing, first, await _intent(db, _gateway_or_none(provider), payable, locale)
 
 
 async def create_topup(
@@ -193,7 +199,7 @@ async def create_topup(
     log.info(
         "payments.topup.created", number=topup.number, provider=provider, amount=str(amount_uzs)
     )
-    return topup, payment, _intent(gateway, payable, locale)
+    return topup, payment, await _intent(db, gateway, payable, locale)
 
 
 async def owned_topup(db: AsyncSession, *, user_id: str, number: str) -> WalletTopup | None:
@@ -221,7 +227,7 @@ async def topup_view(db: AsyncSession, topup: WalletTopup, *, locale: str) -> To
     return TopupView(
         topup=current,
         provider=first.provider if first is not None else None,
-        intent_url=_intent(gateway, payable, locale),
+        intent_url=await _intent(db, gateway, payable, locale),
         awaiting_kassa=await awaiting_kassa(db, current),
     )
 

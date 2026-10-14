@@ -122,7 +122,7 @@ def test_registered_under_its_slug() -> None:
     ],
 )
 def test_intent_url_is_the_open_service_link_without_an_amount(locale: str, back: str) -> None:
-    url = UzumGateway().intent_url(payable=_PAYABLE, locale=locale)
+    url = UzumGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale=locale)
     parts = urlsplit(url)
     assert f"{parts.scheme}://{parts.netloc}{parts.path}" == "https://uzumbank.uz/open-service"
     assert parse_qs(parts.query) == {
@@ -137,11 +137,11 @@ def test_intent_url_is_the_open_service_link_without_an_amount(locale: str, back
 def test_intent_url_follows_the_configured_host(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("CSMARKET_UZUM_OPEN_SERVICE_URL", "https://sandbox.example/open-service")
     get_settings.cache_clear()
-    url = UzumGateway().intent_url(payable=_PAYABLE, locale="ru")
+    url = UzumGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale="ru")
     assert url.startswith("https://sandbox.example/open-service?serviceId=101202&order=T7K3M9QX&")
 
 
 @pytest.mark.usefixtures("uzum_env")
 def test_intent_url_refuses_an_unknown_locale() -> None:
     with pytest.raises(ValueError, match="locale"):
-        UzumGateway().intent_url(payable=_PAYABLE, locale="de")
+        UzumGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale="de")
