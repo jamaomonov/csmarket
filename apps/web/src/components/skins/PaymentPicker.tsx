@@ -15,6 +15,17 @@ const KASSA_NAMES: Readonly<Record<string, string>> = {
   uzum: "Uzum",
 };
 
+/** The kassas' app icons (`public/pay/`, the landing's too); the dev `mock` kassa has none. */
+const KASSA_ICONS: Readonly<Record<string, string>> = {
+  click: "/pay/click.png",
+  payme: "/pay/payme.png",
+  uzum: "/pay/uzum.png",
+};
+
+function kassaIcon(slug: string): string | null {
+  return KASSA_ICONS[slug] ?? null;
+}
+
 /** The tile's name for a kassa slug; `null` for one this storefront does not offer. */
 export function kassaLabel(slug: string, testLabel: string): string | null {
   return slug === "mock" ? testLabel : (KASSA_NAMES[slug] ?? null);
@@ -124,10 +135,21 @@ export function PaymentPicker({
               }}
               className={cn(
                 TILE,
-                size === "lg" ? "h-20 rounded-lg text-lg font-bold" : "h-12",
+                "flex items-center justify-center gap-2",
+                size === "lg" ? "h-20 gap-3 rounded-lg text-lg font-bold" : "h-12",
                 tileState(p.slug === method),
               )}
             >
+              {kassaIcon(p.slug) !== null && (
+                // eslint-disable-next-line @next/next/no-img-element -- static brand logos from /public
+                <img
+                  src={kassaIcon(p.slug) ?? ""}
+                  alt=""
+                  width={size === "lg" ? 32 : 24}
+                  height={size === "lg" ? 32 : 24}
+                  className={size === "lg" ? "rounded-lg" : "rounded-md"}
+                />
+              )}
               {kassaLabel(p.slug, labels.test)}
             </button>
           ))}

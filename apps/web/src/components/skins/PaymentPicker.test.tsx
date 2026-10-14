@@ -35,6 +35,15 @@ describe("PaymentPicker", () => {
     expect(screen.getByRole("button", { name: "Click" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("puts the kassa's app icon beside its name; the test kassa has none", () => {
+    setup();
+    const icon = (name: string) =>
+      screen.getByRole("button", { name }).querySelector("img")?.getAttribute("src");
+    expect(icon("Click")).toBe("/pay/click.png");
+    expect(icon("Payme")).toBe("/pay/payme.png");
+    expect(icon("Тестовая оплата")).toBeUndefined();
+  });
+
   it("reports a tap", () => {
     const onPick = setup();
     fireEvent.click(screen.getByRole("button", { name: "Payme" }));
