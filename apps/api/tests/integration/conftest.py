@@ -150,6 +150,7 @@ _EMPTY_IN_ORDER: tuple[str, ...] = (
     "sales",
     "payout_cards",
     "sale_settings",
+    "payment_settings",
     "skinslink_checks",
     "skinslink_purchases",
     "skinslink_items",

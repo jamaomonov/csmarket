@@ -227,7 +227,9 @@ async def prepare(
     try:
         async with db.begin_nested():
             try:
-                payment = await ensure_attempt(db, payable=payable, provider=PROVIDER)
+                payment = await ensure_attempt(
+                    db, payable=payable, provider=PROVIDER, charge=charge
+                )
             except AlreadyPaidError:  # pragma: no cover - _check_payable refused it under the lock
                 raise already_paid() from None
             await mark_pending(db, payment=payment)

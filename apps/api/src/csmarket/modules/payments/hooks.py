@@ -34,7 +34,7 @@ from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.modules.orders.api import Order, mark_paid
 from csmarket.modules.payments.external_ids import unclaimed_external_id
-from csmarket.modules.payments.fees import current_charge
+from csmarket.modules.payments.fees import Charge, current_charge
 from csmarket.modules.payments.fsm import LIVE, InvalidTransitionError, move
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable
@@ -167,12 +167,16 @@ def _owner_of(payable: Payable) -> Owner:
     return owner
 
 
-async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -> Payment:
+async def ensure_attempt(
+    db: AsyncSession, *, payable: Payable, provider: str, charge: Charge | None = None
+) -> Payment:
     """The owner's live (``created``/``pending``) attempt of ``provider``, or a new one.
 
     The owner is the top-up or the order ``payable`` resolved to; a new attempt carries its
     number, user and amount (``amount_uzs`` / ``price_uzs``), freezes the kassa's fee at today's
-    rate (``fee_pct`` / ``fee_uzs``, spec 2026-10-14-kassa-fee) and starts ``created`` with
+    rate (``fee_pct`` / ``fee_uzs``, spec 2026-10-14-kassa-fee) — or ``charge``, the one a
+    webhook already checked the kassa's amount against, so the two never read the rate apart —
+    and starts ``created`` with
     ``provider_ref = <provider>:<number>`` — suffixed with its id when an earlier attempt of
     the provider holds that reference (a declined card retried in the same kassa). The
     caller resolved ``payable`` with ``lock=True``, so two concurrent calls for one owner
@@ -208,7 +212,8 @@ async def ensure_attempt(db: AsyncSession, *, payable: Payable, provider: str) -
     if live is not None:
         return live
     base = owner.price_uzs if isinstance(owner, Order) else owner.amount_uzs
-    charge = await current_charge(db, base=base, provider=provider)
+    if charge is None:
+        charge = await current_charge(db, base=base, provider=provider)
     payment_id = new_id()
     ref = await unclaimed_external_id(
         db, provider=provider, external_id=f"{provider}:{owner.number}", payment_id=payment_id

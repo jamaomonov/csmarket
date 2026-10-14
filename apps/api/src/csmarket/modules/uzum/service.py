@@ -234,12 +234,15 @@ async def create(
     if await _txn_by_trans_id(db, trans_id) is not None:
         raise transaction_already_created()
     _check_payable(payable)
-    if amount != _tiyin((await kassa_charge(db, payable, PROVIDER)).total_uzs):
+    charge = await kassa_charge(db, payable, PROVIDER)
+    if amount != _tiyin(charge.total_uzs):
         raise invalid_amount()
     try:
         async with db.begin_nested():
             try:
-                payment = await ensure_attempt(db, payable=payable, provider=PROVIDER)
+                payment = await ensure_attempt(
+                    db, payable=payable, provider=PROVIDER, charge=charge
+                )
             except AlreadyPaidError:  # pragma: no cover - refused above under the same lock
                 raise payment_already_made() from None
             await mark_pending(db, payment=payment)

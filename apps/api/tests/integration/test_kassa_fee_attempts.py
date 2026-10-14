@@ -5,8 +5,9 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from csmarket.modules.payments.fees import kassa_charge
+from csmarket.modules.payments.fees import kassa_charge, read_kassa_fees
 from csmarket.modules.payments.hooks import charge_of, ensure_attempt
+from csmarket.modules.payments.models import PaymentSettingsRow
 from csmarket.modules.payments.payable import resolve
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -68,3 +69,24 @@ async def test_no_rate_no_fee(db_session: AsyncSession) -> None:
     payment = await ensure_attempt(db_session, payable=payable, provider="click")
     assert payment.fee_uzs == 0
     assert charge_of(payment) == Decimal(50000)
+
+
+async def test_a_webhook_freezes_the_charge_it_checked(db_session: AsyncSession) -> None:
+    """The amount a kassa was checked against is the one stored, even if the rate moved since."""
+    await set_fees(db_session, payme="1")
+    topup = await make_topup(db_session, amount=Decimal(100000))
+    payable = await resolve(db_session, topup.number, lock=True)
+    checked = await kassa_charge(db_session, payable, "payme")
+    await set_fees(db_session, payme="3")
+    payable = await resolve(db_session, topup.number, lock=True)
+    payment = await ensure_attempt(db_session, payable=payable, provider="payme", charge=checked)
+    assert payment.fee_uzs == Decimal(1000)
+
+
+async def test_an_unreadable_row_reads_as_no_fees(db_session: AsyncSession) -> None:
+    await set_fees(db_session, payme="1")
+    row = await db_session.get(PaymentSettingsRow, 1)
+    assert row is not None
+    row.settings = {"payme": "lots"}
+    await db_session.commit()
+    assert (await read_kassa_fees(db_session)).pct("payme") == 0
