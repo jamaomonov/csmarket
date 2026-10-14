@@ -171,6 +171,9 @@ function Body({ detail }: { detail: AdminPaymentDetail }) {
             <dl className="space-y-1 text-sm">
               <Field label="Назначение">{PURPOSE_LABELS[payment.purpose]}</Field>
               <Field label="Сумма">{formatSum(payment.amount_uzs)}</Field>
+              {payment.fee_uzs !== "0" && (
+                <Field label="Комиссия кассы">{formatSum(payment.fee_uzs)}</Field>
+              )}
               <Field label="Касса">{providerLabel(payment.provider)}</Field>
               <Field label="Статус">
                 <StatusChip status={payment.status} />

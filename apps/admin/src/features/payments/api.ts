@@ -16,8 +16,10 @@ export interface AdminPaymentRow {
   number: string;
   purpose: PaymentPurpose;
   provider: PaymentProvider;
-  /** Whole soʻm as a digit string. */
+  /** Whole soʻm as a digit string: the base (the order's price, the top-up's credit). */
   amount_uzs: string;
+  /** The kassa fee the buyer paid on top, whole soʻm; `"0"` for none. */
+  fee_uzs: string;
   status: PaymentStatus;
   created_at: string;
   succeeded_at: string | null;
@@ -95,4 +97,36 @@ export function listPayments(p: ListPaymentsParams = {}): Promise<AdminPaymentsP
 
 export function getPayment(id: string): Promise<AdminPaymentDetail> {
   return session.apiGet<AdminPaymentDetail>(`${BASE}/${encodeURIComponent(id)}`);
+}
+
+/** «Настройки оплаты»: the percent each kassa adds on top (decimals as strings). */
+export interface KassaFees {
+  click: string;
+  payme: string;
+  uzum: string;
+}
+
+export interface FeeSettingsOut {
+  settings: KassaFees;
+  updated_at: string | null;
+  updated_by: PaymentUser | null;
+}
+
+export function getFeeSettings(): Promise<FeeSettingsOut> {
+  return session.apiGet<FeeSettingsOut>(`${BASE}/settings`);
+}
+
+/** `version` is the `updated_at` the edit started from (`null`: never saved): a save over
+ * someone else's is 409 `settings_stale`. */
+export function saveFeeSettings(
+  doc: KassaFees,
+  version: string | null,
+  key: string,
+): Promise<FeeSettingsOut> {
+  return session.api<FeeSettingsOut>(`${BASE}/settings`, {
+    method: "PUT",
+    body: doc,
+    idempotencyKey: key,
+    headers: { "If-Match": version ?? "none" },
+  });
 }

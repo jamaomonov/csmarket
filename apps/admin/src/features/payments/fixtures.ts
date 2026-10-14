@@ -7,6 +7,7 @@ export const ROW: AdminPaymentRow = {
   purpose: "topup",
   provider: "click",
   amount_uzs: "50000",
+  fee_uzs: "0",
   status: "succeeded",
   created_at: "2026-09-30T10:00:00Z",
   succeeded_at: "2026-09-30T10:01:00Z",

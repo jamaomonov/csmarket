@@ -53,7 +53,7 @@ describe("Layout", () => {
       within(menu)
         .getAllByRole("menuitem")
         .map((a) => a.textContent),
-    ).toEqual(["Цены", "Каталог", "Выкуп", "Журнал"]);
+    ).toEqual(["Цены", "Каталог", "Выкуп", "Оплата", "Журнал"]);
   });
 
   it("counts what waits for an operator", async () => {

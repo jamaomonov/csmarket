@@ -4,7 +4,12 @@ import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { type AdminPaymentsPage, listPayments, type ListPaymentsParams } from "./api";
+import {
+  type AdminPaymentRow,
+  type AdminPaymentsPage,
+  listPayments,
+  type ListPaymentsParams,
+} from "./api";
 import { PAYMENT_PROVIDERS, PAYMENT_PURPOSES, PAYMENT_STATUSES } from "./kinds";
 import { PURPOSE_LABELS, STATUS_LABELS } from "./labels";
 import { StatusChip } from "./StatusChip";
@@ -23,6 +28,11 @@ import { useUrlParams } from "@/lib/useUrlParams";
 const DEBOUNCE_MS = 300;
 /** The API's `q` ceiling (and the input's `maxLength`). */
 const Q_MAX = 32;
+
+/** What the buyer paid: the base plus the kassa fee (spec 2026-10-14-kassa-fee). */
+function paidTotal(p: AdminPaymentRow): string {
+  return String(Number(p.amount_uzs) + Number(p.fee_uzs));
+}
 
 export function PaymentsPage() {
   const navigate = useNavigate();
@@ -133,7 +143,7 @@ export function PaymentsPage() {
               key: "sum",
               header: "Сумма",
               align: "right",
-              cell: (p) => <Money uzs={p.amount_uzs} />,
+              cell: (p) => <Money uzs={paidTotal(p)} />,
             },
             { key: "kassa", header: "Касса", cell: (p) => providerLabel(p.provider) },
             { key: "status", header: "Статус", cell: (p) => <StatusChip status={p.status} /> },
@@ -156,7 +166,7 @@ export function PaymentsPage() {
             <div className="space-y-1 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-mono">{p.number}</span>
-                <Money uzs={p.amount_uzs} />
+                <Money uzs={paidTotal(p)} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <StatusChip status={p.status} />
