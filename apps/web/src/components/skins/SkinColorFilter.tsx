@@ -16,7 +16,8 @@ interface Props {
 /**
  * «Цвет»: one round swatch per colour, several at once (up to three, the API's limit). Each
  * toggles its colour in the URL; the chosen ones wear a ring. The name and the count are the
- * link's label and tooltip.
+ * link's label and tooltip. Six to a row must fit the 250 px column: a 36 px swatch was squeezed
+ * narrower than tall there, and its ring turned oval.
  */
 export function SkinColorFilter({ query, colors, href }: Props) {
   const t = useTranslations("web.skins.color");
@@ -36,13 +37,13 @@ export function SkinColorFilter({ query, colors, href }: Props) {
               aria-label={label}
               aria-current={on ? "true" : undefined}
               title={label}
-              className={`flex size-9 items-center justify-center rounded-full ring-offset-2 transition-shadow ${
+              className={`flex aspect-square size-8 shrink-0 items-center justify-center rounded-full ring-offset-2 transition-shadow ${
                 on ? "ring-accent ring-2" : "hover:ring-border-strong hover:ring-2"
               } ring-offset-[var(--color-surface)]`}
             >
               <span
                 aria-hidden
-                className="size-7 rounded-full shadow-[inset_0_0_0_1px_rgba(127,127,127,0.45)]"
+                className="size-6 shrink-0 rounded-full shadow-[inset_0_0_0_1px_rgba(127,127,127,0.45)]"
                 style={{ background: swatchBackground(c) }}
               />
             </Link>
