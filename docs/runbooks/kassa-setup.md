@@ -28,6 +28,10 @@ curl -s https://api.csmarket.uz/api/v1/payments/providers
 
 - **Currency:** soʻm, whole. Click sends soʻm; Payme and Uzum send **tiyin** (soʻm × 100);
   Uzum's `/check` answer gives the amount back in whole soʻm.
+- **Kassa fee:** Админка → Настройки → «Оплата»: the percent each kassa adds on top of an
+  order or a top-up paid through it (0 by default; spec 2026-10-14-kassa-fee). A change applies
+  to new payments at once; an open one keeps the fee it was shown. After changing it, pay a
+  small top-up in that kassa and check the kassa's page asks for the total.
 - **Limits:** one top-up is 1 000 – 10 000 000 soʻm (owner decision D1). If the cabinet has
   min/max fields, enter the same.
 - **Return URL:** nothing to enter. Every checkout link carries our own page,

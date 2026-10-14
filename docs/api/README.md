@@ -94,11 +94,14 @@ no `Idempotency-Key`. Bodies of the catalogue, facets and suggest are cached 60 
 
 Signed in (401 without a token), except the provider list.
 
-- `GET /payments/providers` — anonymous; `{providers: [{slug}]}`, the kassas available now in
-  the order `click, payme, uzum, mock` (`mock` never in prod). The balance page shows these.
+- `GET /payments/providers` — anonymous; `{providers: [{slug, fee_pct}]}`, the kassas available
+  now in the order `click, payme, uzum, mock` (`mock` never in prod). The balance page shows
+  these. `fee_pct` (`"1.5"`, `"0"`) is what the buyer pays on top through that kassa — the
+  kassa charges `base + ceil(base × fee_pct / 100)` (spec 2026-10-14-kassa-fee).
 - `POST /wallet/topups` `{amount_uzs, provider, locale}` + **required** `Idempotency-Key`
-  (16..160 chars) → **201** `TopupOut {number, amount_uzs, provider, status, expires_at,
-intent_url, awaiting_kassa}`. `amount_uzs` is a JSON **integer** of whole soʻm, 1 000..10 000 000 (a
+  (16..160 chars) → **201** `TopupOut {number, amount_uzs, fee_uzs, charge_uzs, provider, status, expires_at,
+intent_url, awaiting_kassa}` — `amount_uzs` reaches the balance, the kassa charges `charge_uzs`
+  (`amount_uzs + fee_uzs`, the fee frozen on the attempt). `amount_uzs` is a JSON **integer** of whole soʻm, 1 000..10 000 000 (a
   string, a fraction or a boolean is 422). `locale` `ru|uz|en` picks the kassa page and the
   page the customer returns to. Send the customer to `intent_url`; every kassa returns them
   to `/account/balance/topups/{number}`. The same key with the same amount and provider
@@ -502,6 +505,15 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
 - **422 shape (app-wide)**: a `RequestValidationError` handler (`bootstrap.py`) answers
   `{"detail": [{type, loc, msg}]}` and drops pydantic's `input` and `ctx`, so a request body
   (a card number, a trade link) is never echoed.
+
+## Admin payment settings (spec 2026-10-14-kassa-fee)
+
+Admin only. `GET /admin/payments/settings` → `PaymentSettingsOut {settings: {click, payme, uzum},
+updated_at, updated_by: {id, display_name} | null}` (percents as decimal strings, 0–10, two
+places). `PUT` the same path with `{click, payme, uzum}`, a required `Idempotency-Key` and
+`If-Match` (the `updated_at` the edit started from, or `none`): a stale tab is 409
+`settings_stale`, a rate outside 0–10 is 422. Audited `payments.settings.save`; open payments
+keep the fee they were created with. The admin payment rows carry `fee_uzs`.
 
 ## Admin pricing and dashboard (M4b)
 
