@@ -33,7 +33,9 @@ TIME = 1_790_000_000_000
 async def _fails(coro: Any) -> int:
     with pytest.raises((PaymeError, ClickError, UzumError)) as exc:
         await coro
-    return int(exc.value.code)
+    err = exc.value
+    assert isinstance(err, PaymeError | ClickError | UzumError)
+    return int(err.code)
 
 
 async def test_payme_wants_the_total(db_session: AsyncSession) -> None:
@@ -91,7 +93,7 @@ async def test_click_prepares_and_completes_the_total(db_session: AsyncSession) 
     done = await click_svc.complete(
         db_session,
         click_trans_id=7002,
-        merchant_prepare_id=prepared["merchant_prepare_id"],
+        merchant_prepare_id=int(prepared["merchant_prepare_id"]),
         amount="101000.00",
         **common,
     )

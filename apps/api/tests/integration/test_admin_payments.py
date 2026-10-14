@@ -125,6 +125,7 @@ async def test_list_row_shape_and_newest_first(
         "purpose": "topup",
         "provider": "click",
         "amount_uzs": "120000",
+        "fee_uzs": "0",
         "status": "succeeded",
         "created_at": "2026-09-30T10:05:00Z",
         "succeeded_at": "2026-09-30T10:06:00Z",
