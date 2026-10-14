@@ -145,13 +145,70 @@ export interface ProductLd {
   image?: string;
   category: string;
   url: string;
+  brand: { "@type": "Brand"; name: string };
   offers: {
     "@type": "Offer";
     price: number;
     priceCurrency: "UZS";
     availability: string;
     url: string;
+    validFrom: string;
     priceValidUntil: string;
+    shippingDetails: ShippingLd;
+    hasMerchantReturnPolicy: ReturnPolicyLd;
+  };
+}
+
+interface ShippingLd {
+  "@type": "OfferShippingDetails";
+  shippingRate: { "@type": "MonetaryAmount"; value: 0; currency: "UZS" };
+  shippingDestination: { "@type": "DefinedRegion"; addressCountry: "UZ" };
+  deliveryTime: {
+    "@type": "ShippingDeliveryTime";
+    handlingTime: QuantityLd;
+    transitTime: QuantityLd;
+  };
+}
+
+interface QuantityLd {
+  "@type": "QuantitativeValue";
+  minValue: 0;
+  maxValue: 0;
+  unitCode: "DAY";
+}
+
+interface ReturnPolicyLd {
+  "@type": "MerchantReturnPolicy";
+  applicableCountry: "UZ";
+  returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted";
+  merchantReturnLink?: string;
+}
+
+const SAME_DAY: QuantityLd = {
+  "@type": "QuantitativeValue",
+  minValue: 0,
+  maxValue: 0,
+  unitCode: "DAY",
+};
+
+/**
+ * Delivery is a Steam trade offer sent minutes after payment: free, same day, in Uzbekistan.
+ * Google's merchant listings ask for it even on digital goods.
+ */
+const SHIPPING: ShippingLd = {
+  "@type": "OfferShippingDetails",
+  shippingRate: { "@type": "MonetaryAmount", value: 0, currency: "UZS" },
+  shippingDestination: { "@type": "DefinedRegion", addressCountry: "UZ" },
+  deliveryTime: { "@type": "ShippingDeliveryTime", handlingTime: SAME_DAY, transitTime: SAME_DAY },
+};
+
+/** The «Возвраты» page: an accepted trade is not returnable (a failed one is refunded in full). */
+function returnPolicy(returnsUrl?: string): ReturnPolicyLd {
+  return {
+    "@type": "MerchantReturnPolicy",
+    applicableCountry: "UZ",
+    returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+    ...(returnsUrl ? { merchantReturnLink: returnsUrl } : {}),
   };
 }
 
@@ -162,12 +219,14 @@ export interface ProductLd {
  * A single Offer at our cheapest price rather than an AggregateOffer: the page
  * knows the lowest price but not the highest, and an AggregateOffer without
  * `highPrice` is flagged in Search Console. A priced item that has sold out keeps
- * its Offer, marked out of stock.
+ * its Offer, marked out of stock. The brand is Valve, whose items these are (CS2 items
+ * have no GTIN). `validFrom` is today: the price is the one synced now.
  */
 export function skinProductLd(
   item: SkinDetail,
   url: string,
   description?: string,
+  returnsUrl?: string,
 ): ProductLd | null {
   if (item.price_uzs === null) return null;
   return {
@@ -178,14 +237,18 @@ export function skinProductLd(
     ...(item.image_url ? { image: item.image_url } : {}),
     category: `CS2 ${item.weapon ?? item.category}`,
     url,
+    brand: { "@type": "Brand", name: "Valve" },
     offers: {
       "@type": "Offer",
       price: Math.round(Number(item.price_uzs)),
       priceCurrency: "UZS",
       availability: item.count > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
       url,
+      validFrom: new Date().toISOString().slice(0, 10),
       // Prices follow a five-minute sync; a short, rolling window keeps the claim true.
       priceValidUntil: new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10),
+      shippingDetails: SHIPPING,
+      hasMerchantReturnPolicy: returnPolicy(returnsUrl),
     },
   };
 }

@@ -22,7 +22,7 @@ import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { gaItem } from "@/lib/analytics";
 import { itemOgUrl } from "@/lib/og-item";
-import { categoryPath, colorPath, MARKET, itemPath, weaponPath } from "@/lib/paths";
+import { categoryPath, colorPath, MARKET, itemPath, legalPath, weaponPath } from "@/lib/paths";
 import {
   alternates,
   GEO_META,
@@ -118,7 +118,7 @@ export default async function SkinPage({ params }: Props) {
   const worn = hasWear(item.category);
   const url = localeUrl(locale, itemPath(item.slug));
   const about = skinAbout(item, t, locale, category);
-  const productLd = skinProductLd(item, url, about);
+  const productLd = skinProductLd(item, url, about, localeUrl(locale, legalPath("refunds")));
   const breadcrumbLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",

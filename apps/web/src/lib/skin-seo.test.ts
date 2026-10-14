@@ -123,6 +123,20 @@ describe("skinProductLd", () => {
     );
   });
 
+  it("carries what Google's merchant listings ask for: brand, delivery and returns", () => {
+    const ld = skinProductLd(ITEM, "u", undefined, "https://csmarket.uz/legal/refunds");
+    expect(ld?.brand).toEqual({ "@type": "Brand", name: "Valve" });
+    expect(ld?.offers.validFrom).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(ld?.offers.shippingDetails.shippingRate.value).toBe(0);
+    expect(ld?.offers.shippingDetails.shippingDestination.addressCountry).toBe("UZ");
+    expect(ld?.offers.hasMerchantReturnPolicy).toEqual({
+      "@type": "MerchantReturnPolicy",
+      applicableCountry: "UZ",
+      returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+      merchantReturnLink: "https://csmarket.uz/legal/refunds",
+    });
+  });
+
   it("emits no Product at all without a price", () => {
     expect(skinProductLd({ ...ITEM, price_uzs: null }, "u")).toBeNull();
   });
