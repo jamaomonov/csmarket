@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useRef, useState, useTransition } from "react";
 
+import { ChargeLines } from "./ChargeLines";
 import { PaymentPicker } from "./PaymentPicker";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
 import { usePayMethods } from "./usePayMethods";
@@ -18,6 +19,7 @@ import { PayConsent } from "@/components/legal/PayConsent";
 import { Link, useRouter } from "@/i18n/navigation";
 import { gaItem, track } from "@/lib/analytics";
 import { BALANCE_KEY } from "@/lib/balance";
+import { kassaCharge } from "@/lib/kassa-fee";
 import { orderArrivalPath } from "@/lib/order-arrival";
 import { mintOrderKey, mintPayKey, orderKeyFor, type OrderKey } from "@/lib/order-key";
 import {
@@ -63,6 +65,7 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
   const { select, reprice, drop } = useSelectedOffer();
   const price = offer.price_uzs;
   const { kassas, chosen, provider, wallet, balancePending, pick } = usePayMethods(locale, price);
+  const charge = price !== null ? kassaCharge(Number(price), kassas, chosen) : null;
   const [notice, setNotice] = useState<Notice | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -183,12 +186,16 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
         </p>
       )}
       <PaymentPicker
+        locale={locale}
         providers={kassas}
         method={chosen}
         onPick={pick}
         labels={{ legend: t("methodTitle"), test: t("methodTest"), none: t("methodNone") }}
         {...(wallet ? { wallet } : {})}
       />
+      {price !== null && (
+        <ChargeLines locale={locale} base={Number(price)} charge={charge} kind="order" />
+      )}
       {shown !== null && (
         <p role="status" className="text-sm font-semibold text-amber-400">
           {shown}
@@ -215,7 +222,9 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
           void buy();
         }}
       >
-        {price !== null ? t("pay", { price: formatUzs(locale, price) }) : t("title")}
+        {price !== null
+          ? t("pay", { price: formatUzs(locale, charge?.total ?? price) })
+          : t("title")}
       </Button>
       <PayConsent doc="terms" />
     </div>

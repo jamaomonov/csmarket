@@ -17,6 +17,8 @@ class ProviderOut(BaseModel):
     """A kassa the storefront may offer."""
 
     slug: str
+    #: The percent the buyer pays on top through this kassa, e.g. ``"1.5"``; ``"0"`` for none.
+    fee_pct: str
 
 
 class ProvidersOut(BaseModel):
@@ -41,8 +43,12 @@ class TopupOut(BaseModel):
     """A top-up as its owner sees it."""
 
     number: str
-    #: Whole soʻm as digits.
+    #: Whole soʻm as digits: what reaches the balance.
     amount_uzs: str
+    #: The kassa fee on top, whole soʻm; ``"0"`` for none.
+    fee_uzs: str
+    #: What the kassa charges: ``amount_uzs + fee_uzs``.
+    charge_uzs: str
     #: The kassa the top-up was opened in.
     provider: str | None
     status: Literal["pending", "succeeded", "expired", "reversed"]
@@ -60,6 +66,8 @@ class TopupOut(BaseModel):
         return cls(
             number=t.number,
             amount_uzs=wire_uzs(t.amount_uzs),
+            fee_uzs=wire_uzs(view.fee_uzs),
+            charge_uzs=wire_uzs(t.amount_uzs + view.fee_uzs),
             provider=view.provider,
             status=t.status,  # type: ignore[arg-type]  # DB check constraint guarantees the set
             expires_at=t.expires_at,

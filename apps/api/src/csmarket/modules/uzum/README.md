@@ -56,7 +56,8 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS on any of them   10003 at HTTP 400 (never a 40
 
 - **Tiyin on the wire, soʻm only in `/check`'s `data`.** `amount` on `/create`, `/confirm`,
   `/reverse`, `/status` is tiyin and must equal the top-up's `amount_uzs × 100` (an
-  order's `price_uzs × 100`) exactly (the
+  order's `price_uzs × 100`) plus the kassa fee frozen on the attempt
+  (`payments.kassa_charge`, spec 2026-10-14-kassa-fee) exactly (the
   soʻm figure is `10011`). `/check` answers `data.amount.value` = whole soʻm as a bare
   integer string (`"50000"`) — Uzum's app prefills the amount from it. Do not unify the
   units: the asymmetry is Uzum's contract.

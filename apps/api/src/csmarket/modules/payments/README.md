@@ -25,7 +25,25 @@ adds `ix_payments_order` — an order's attempts are found by `order_id`).
   provider when set), `amount_uzs`, `status`, `idempotency_key` (unique when set),
   `metadata` (kassa event ids, never PII),
   `created_at`, `updated_at`, `succeeded_at`. A top-up or an order (its _owner_) has 1..N
-  attempts, at most one live (`created`/`pending`) per provider.
+  attempts, at most one live (`created`/`pending`) per provider. Since migration
+  `0036_kassa_fee`, `amount_uzs` is the **base** (the order's price, the top-up's credit) and
+  every attempt also carries `fee_pct` and `fee_uzs`: the kassa fee the buyer pays on top,
+  frozen when the attempt is created.
+- `payment_settings` — row 1, the admin's `{click, payme, uzum}` percents (0–10, two places;
+  0 by default), edited at `GET/PUT /admin/payments/settings` (`If-Match`, audited
+  `payments.settings.save`).
+
+## Kassa fee (`fees.py`, spec 2026-10-14-kassa-fee)
+
+The buyer pays the kassa's percent on top of an order or a top-up paid through it: `fee =
+ceil(base × pct / 100)` whole soʻm; the balance and `mock` carry none. `ensure_attempt` freezes
+today's rate on a new attempt; `kassa_charge(db, payable, provider)` is the one amount rule
+every kassa-facing figure uses — the live attempt's `amount_uzs + fee_uzs`, or today's rate
+before an attempt exists (a webhook that arrives first). The intent URLs, Payme `−31001`,
+Click `−2` and Uzum `/check` / `10011` all read it. Settling, the ledger and refunds are
+unchanged: an order is paid at its price, a top-up credits its `amount_uzs`, a refund to the
+balance returns the price (the fee stays with the kassa). `GET /payments/providers` carries
+each kassa's `fee_pct`; a top-up answers `fee_uzs` and `charge_uzs`.
 
 **Interface (`api.py`):** `Payment`, `WalletTopup`, `Payable`, `resolve`, `ensure_attempt`,
 `mark_pending`, `settle`, `reverse`, `cancel_pending`, `lock_owner_or_skip`, `Owner`,

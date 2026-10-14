@@ -45,6 +45,7 @@ from csmarket.modules.payments.api import (
     ReversalRefusedError,
     cancel_pending,
     ensure_attempt,
+    kassa_charge,
     lock_owner_or_skip,
     mark_pending,
     resolve,
@@ -105,9 +106,9 @@ def _check_payable(payable: Payable) -> None:
         raise _REFUSALS[payable.reason]()
 
 
-def _tiyin(payable: Payable) -> int:
-    """The payable's amount in tiyin (whole soʻm × 100, exact)."""
-    return int(payable.amount_uzs * 100)
+def _tiyin(total_uzs: Decimal) -> int:
+    """Whole soʻm in tiyin (× 100, exact)."""
+    return int(total_uzs * 100)
 
 
 async def _txn_by_trans_id(db: AsyncSession, trans_id: str) -> UzumTransaction | None:
@@ -203,7 +204,9 @@ async def check(db: AsyncSession, *, account: str) -> Result:
     """
     payable = await resolve(db, account, lock=True)
     _check_payable(payable)
-    return {"status": "OK", "data": {"amount": {"value": wire_uzs(payable.amount_uzs)}}}
+    # The payable plus the kassa fee (spec 2026-10-14-kassa-fee).
+    charge = await kassa_charge(db, payable, PROVIDER)
+    return {"status": "OK", "data": {"amount": {"value": wire_uzs(charge.total_uzs)}}}
 
 
 async def create(
@@ -231,12 +234,15 @@ async def create(
     if await _txn_by_trans_id(db, trans_id) is not None:
         raise transaction_already_created()
     _check_payable(payable)
-    if amount != _tiyin(payable):
+    charge = await kassa_charge(db, payable, PROVIDER)
+    if amount != _tiyin(charge.total_uzs):
         raise invalid_amount()
     try:
         async with db.begin_nested():
             try:
-                payment = await ensure_attempt(db, payable=payable, provider=PROVIDER)
+                payment = await ensure_attempt(
+                    db, payable=payable, provider=PROVIDER, charge=charge
+                )
             except AlreadyPaidError:  # pragma: no cover - refused above under the same lock
                 raise payment_already_made() from None
             await mark_pending(db, payment=payment)

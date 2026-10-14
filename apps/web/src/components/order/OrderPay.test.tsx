@@ -76,7 +76,12 @@ async function payButton(): Promise<HTMLElement> {
 beforeEach(() => {
   for (const f of [m.pay, m.devPay, m.balance, m.providers, assign, onPaid]) f.mockReset();
   m.balance.mockResolvedValue({ balance_uzs: "0" });
-  m.providers.mockResolvedValue({ providers: [{ slug: "click" }, { slug: "mock" }] });
+  m.providers.mockResolvedValue({
+    providers: [
+      { slug: "click", fee_pct: "0" },
+      { slug: "mock", fee_pct: "0" },
+    ],
+  });
   vi.stubGlobal("location", { pathname: "/orders/A100", search: "", hash: "", assign });
 });
 afterEach(() => {
@@ -131,7 +136,12 @@ describe("OrderPay", () => {
 
   it("keeps the kassa chosen on the item page even when the balance covers", async () => {
     m.balance.mockResolvedValue({ balance_uzs: "500000" });
-    m.providers.mockResolvedValue({ providers: [{ slug: "click" }, { slug: "payme" }] });
+    m.providers.mockResolvedValue({
+      providers: [
+        { slug: "click", fee_pct: "0" },
+        { slug: "payme", fee_pct: "0" },
+      ],
+    });
     m.pay.mockResolvedValue({ order: orderOut("A100"), intent_url: KASSA });
     setup("payme");
     await screen.findByRole("button", { name: /Баланс 500/ });

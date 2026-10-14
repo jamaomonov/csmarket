@@ -96,7 +96,7 @@ def test_registered_under_its_slug() -> None:
     ],
 )
 def test_intent_url_is_the_payme_checkout_in_tiyin(locale: str, back: str) -> None:
-    url = PaymeGateway().intent_url(payable=_PAYABLE, locale=locale)
+    url = PaymeGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale=locale)
     prefix = "https://checkout.paycom.uz/"
     assert url.startswith(prefix)
     params = base64.b64decode(url.removeprefix(prefix)).decode()
@@ -106,7 +106,7 @@ def test_intent_url_is_the_payme_checkout_in_tiyin(locale: str, back: str) -> No
 @pytest.mark.usefixtures("payme_env")
 def test_intent_url_follows_the_sandbox_checkout_host(monkeypatch: pytest.MonkeyPatch) -> None:
     _set(monkeypatch, CSMARKET_PAYME_CHECKOUT_URL="https://test.paycom.uz/")
-    url = PaymeGateway().intent_url(payable=_PAYABLE, locale="ru")
+    url = PaymeGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale="ru")
     assert url.startswith("https://test.paycom.uz/")
     assert "//" not in url.removeprefix("https://")
 
@@ -114,4 +114,12 @@ def test_intent_url_follows_the_sandbox_checkout_host(monkeypatch: pytest.Monkey
 @pytest.mark.usefixtures("payme_env")
 def test_intent_url_refuses_an_unknown_locale() -> None:
     with pytest.raises(ValueError, match="locale"):
-        PaymeGateway().intent_url(payable=_PAYABLE, locale="de")
+        PaymeGateway().intent_url(payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale="de")
+
+
+@pytest.mark.usefixtures("payme_env")
+def test_intent_url_asks_for_the_total_with_the_kassa_fee() -> None:
+    """Spec 2026-10-14-kassa-fee: the base plus the fee frozen on the attempt, in tiyin."""
+    url = PaymeGateway().intent_url(payable=_PAYABLE, charge_uzs=Decimal(50500), locale="ru")
+    params = base64.b64decode(url.removeprefix("https://checkout.paycom.uz/")).decode()
+    assert ";a=5050000;" in params

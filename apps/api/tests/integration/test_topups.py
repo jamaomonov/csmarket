@@ -58,6 +58,7 @@ async def test_create_topup_returns_number_and_intent(
     assert len(number) == 8
     assert body["status"] == "pending"
     assert body["amount_uzs"] == "50000"
+    assert (body["fee_uzs"], body["charge_uzs"]) == ("0", "50000")  # mock: no kassa, no fee
     assert body["provider"] == "mock"
     assert body["intent_url"] == (f"http://localhost:3100/account/balance/topups/{number}?mock=1")
     assert body["expires_at"]
@@ -427,7 +428,7 @@ async def test_providers_endpoint_lists_mock_in_dev_only(
 ) -> None:
     r = await integration_client.get("/api/v1/payments/providers")
     assert r.status_code == 200
-    assert r.json() == {"providers": [{"slug": "mock"}]}
+    assert r.json() == {"providers": [{"slug": "mock", "fee_pct": "0"}]}
     from csmarket.bootstrap import create_app
 
     monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")

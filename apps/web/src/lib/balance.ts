@@ -76,6 +76,8 @@ export interface EntriesPage {
 /** `ProviderOut`: a kassa the storefront may offer (`click`, `payme`, `uzum`, dev `mock`). */
 export interface Provider {
   slug: string;
+  /** The percent the buyer pays on top through this kassa (`"1.5"`); `"0"` for none. */
+  fee_pct: string;
 }
 
 /** `UsdWalletOut`: the USD wallet, present once an admin switched it on. */

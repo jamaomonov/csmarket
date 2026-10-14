@@ -38,7 +38,12 @@ const TOPUP: Topup = {
   awaiting_kassa: false,
 };
 
-function setup(providers: Provider[] | undefined = [{ slug: "click" }, { slug: "mock" }]) {
+function setup(
+  providers: Provider[] | undefined = [
+    { slug: "click", fee_pct: "0" },
+    { slug: "mock", fee_pct: "0" },
+  ],
+) {
   render(
     <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
       <TopupForm locale="ru" providers={providers} />
@@ -210,7 +215,12 @@ describe("TopupForm", () => {
   });
 
   it("shows kassa names as brands and the dev kassa as a test payment", () => {
-    setup([{ slug: "click" }, { slug: "payme" }, { slug: "uzum" }, { slug: "mock" }]);
+    setup([
+      { slug: "click", fee_pct: "0" },
+      { slug: "payme", fee_pct: "0" },
+      { slug: "uzum", fee_pct: "0" },
+      { slug: "mock", fee_pct: "0" },
+    ]);
     for (const name of ["Click", "Payme", "Uzum", "Тестовая оплата"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }

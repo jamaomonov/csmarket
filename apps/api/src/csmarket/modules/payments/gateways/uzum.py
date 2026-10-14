@@ -9,6 +9,7 @@ merchant-initiated refund: a refund is Uzum calling ``/reverse``.
 
 from __future__ import annotations
 
+from decimal import Decimal
 from urllib.parse import urlencode
 
 from csmarket.core.config import get_settings
@@ -30,7 +31,7 @@ class UzumGateway:
         s = get_settings()
         return bool(s.uzum_service_id and s.uzum_pairs())
 
-    def intent_url(self, *, payable: Payable, locale: str) -> str:
+    def intent_url(self, *, payable: Payable, charge_uzs: Decimal, locale: str) -> str:  # noqa: ARG002 -- the kassa prefills the amount from /check
         """``{uzum_open_service_url}?serviceId=<id>&order=<number>&redirectUrl=<our page>``.
 
         Raises:

@@ -59,11 +59,13 @@ from csmarket.modules.payme.models import (
 )
 from csmarket.modules.payments.api import (
     AlreadyPaidError,
+    Charge,
     Payable,
     Payment,
     ReversalRefusedError,
     cancel_pending,
     ensure_attempt,
+    kassa_charge,
     lock_owner_or_skip,
     mark_pending,
     resolve,
@@ -109,12 +111,18 @@ def _account_number(account: dict[str, Any]) -> str:
     return number
 
 
-def _check_payable(payable: Payable, amount: int) -> None:
-    """−31050 unknown, −31051 paid / expired / reversed, −31001 amount ≠ soʻm × 100."""
+async def _check_payable(db: AsyncSession, payable: Payable, amount: int) -> Charge:
+    """−31050 unknown, −31051 paid / expired / reversed, −31001 amount ≠ the charge × 100.
+
+    The charge is the payable plus the kassa fee frozen on its live Payme attempt, or today's
+    rate before there is one (spec 2026-10-14-kassa-fee).
+    """
     if not payable.payable:
         raise _REFUSALS[payable.reason]()
-    if amount != int(payable.amount_uzs * 100):
+    charge = await kassa_charge(db, payable, PROVIDER)
+    if amount != int(charge.total_uzs * 100):
         raise invalid_amount()
+    return charge
 
 
 async def _txn_by_payme_id(
@@ -231,7 +239,7 @@ async def check_perform_transaction(
         PaymeError: −31050 unknown, −31051 paid / expired / reversed, −31001 amount.
     """
     payable = await resolve(db, _account_number(account), lock=True)
-    _check_payable(payable, amount)
+    await _check_payable(db, payable, amount)
     return {"allow": True}
 
 
@@ -265,7 +273,7 @@ async def create_transaction(
         if seen.account != number:
             raise operation_not_permitted()
         return _replay_create(await _lock_txn(db, seen.id), number=number, amount=amount)
-    _check_payable(payable, amount)
+    charge = await _check_payable(db, payable, amount)
     busy = (
         await db.execute(
             select(PaymeTransaction.id)
@@ -282,7 +290,9 @@ async def create_transaction(
     try:
         async with db.begin_nested():
             try:
-                payment = await ensure_attempt(db, payable=payable, provider=PROVIDER)
+                payment = await ensure_attempt(
+                    db, payable=payable, provider=PROVIDER, charge=charge
+                )
             except AlreadyPaidError:  # pragma: no cover - refused above under the same lock
                 raise account_not_payable() from None
             await mark_pending(db, payment=payment)

@@ -30,7 +30,12 @@ vi.mock("@/lib/api", () => ({
       if (path.startsWith("/api/v1/orders/")) return m.get(path);
       if (path === "/api/v1/wallet") return Promise.resolve({ balance_uzs: "0" });
       if (path === "/api/v1/payments/providers") {
-        return Promise.resolve({ providers: [{ slug: "click" }, { slug: "mock" }] });
+        return Promise.resolve({
+          providers: [
+            { slug: "click", fee_pct: "0" },
+            { slug: "mock", fee_pct: "0" },
+          ],
+        });
       }
       return Promise.reject(new Error(`unexpected GET ${path}`));
     },

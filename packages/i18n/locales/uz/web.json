@@ -385,7 +385,14 @@
     "offerGone": "Bu lotni allaqachon sotib olishdi. Keyingisi — {price}",
     "noneLeft": "Takliflar tugadi",
     "failed": "Buyurtmani rasmiylashtirib boʻlmadi. Qayta urinib koʻring.",
-    "howItWorks": "Toʻlovdan keyin sotuvchi Steamʼda almashuv yuboradi. Uni qabul qiling — skin sizniki."
+    "howItWorks": "Toʻlovdan keyin sotuvchi Steamʼda almashuv yuboradi. Uni qabul qiling — skin sizniki.",
+    "charge": {
+      "price": "Narx",
+      "toBalance": "Balansga",
+      "fee": "{kassa} komissiyasi",
+      "total": "Jami",
+      "toPay": "Toʻlov"
+    }
   },
   "orders": {
     "title": "Almashuvlar",

@@ -47,7 +47,8 @@ GET|PUT|PATCH|DELETE|HEAD|OPTIONS       -32300 (never a 405)
 ## Amounts and account
 
 - Payme speaks **tiyin**: the amount must equal the top-up's `amount_uzs × 100` (an
-  order's `price_uzs × 100`) exactly;
+  order's `price_uzs × 100`) plus the kassa fee frozen on the attempt (`payments.kassa_charge`,
+  spec 2026-10-14-kassa-fee) exactly;
   the soʻm figure itself is `-31001`.
 - The account field is **`order`** (R9): `params.account.order` = the top-up number
   (`T` + 7) or an order number (M4a). The checkout link sends it as `ac.order`; `GetStatement` rows carry

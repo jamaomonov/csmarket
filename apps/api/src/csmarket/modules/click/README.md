@@ -66,7 +66,8 @@ a top-up (the refusals key on `payable.reason`) and settling it marks it `paid` 
 has no reversal of a completed payment, so an order's money never goes back through Click).
 
 - prepare on a paid top-up or order → `-4`; an expired top-up or order (or a cancelled
-  order) → `-9`; the amount must be the order's `price_uzs` in soʻm (`-2`).
+  order) → `-9`; the amount must be the order's `price_uzs` plus the kassa fee in soʻm (`-2`;
+  `payments.kassa_charge`, spec 2026-10-14-kassa-fee).
 - complete when the owner was paid meanwhile — through another kassa, or through a sibling
   Click row sharing the same attempt (a retried checkout reuses the live attempt) → `-4`,
   and the row is **committed** as `CANCELLED` (`ClickError.persist`), so Click cancels this

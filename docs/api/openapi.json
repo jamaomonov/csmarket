@@ -1418,6 +1418,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "fee_uzs": {
+            "title": "Fee Uzs",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -1503,6 +1507,7 @@
           "purpose",
           "provider",
           "amount_uzs",
+          "fee_uzs",
           "status",
           "created_at",
           "succeeded_at",
@@ -1523,6 +1528,10 @@
           "created_at": {
             "format": "date-time",
             "title": "Created At",
+            "type": "string"
+          },
+          "fee_uzs": {
+            "title": "Fee Uzs",
             "type": "string"
           },
           "id": {
@@ -1579,6 +1588,7 @@
           "purpose",
           "provider",
           "amount_uzs",
+          "fee_uzs",
           "status",
           "created_at",
           "succeeded_at",
@@ -4990,6 +5000,83 @@
         "title": "JobOut",
         "type": "object"
       },
+      "KassaFees-Input": {
+        "description": "The whole document, as stored in ``payment_settings.settings``: percent per kassa.",
+        "properties": {
+          "click": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Click"
+          },
+          "payme": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Payme"
+          },
+          "uzum": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Uzum"
+          }
+        },
+        "title": "KassaFees",
+        "type": "object"
+      },
+      "KassaFees-Output": {
+        "description": "The whole document, as stored in ``payment_settings.settings``: percent per kassa.",
+        "properties": {
+          "click": {
+            "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+            "title": "Click",
+            "type": "string"
+          },
+          "payme": {
+            "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+            "title": "Payme",
+            "type": "string"
+          },
+          "uzum": {
+            "default": "0",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
+            "title": "Uzum",
+            "type": "string"
+          }
+        },
+        "title": "KassaFees",
+        "type": "object"
+      },
       "KassaTimes": {
         "description": "When the kassa created, performed and cancelled the transaction (``null`` = not yet).",
         "properties": {
@@ -5783,6 +5870,43 @@
           }
         },
         "title": "PaidIn",
+        "type": "object"
+      },
+      "PaymentSettingsOut": {
+        "description": "The kassa fees, who saved them and when (``null`` before the first save).",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/KassaFees-Output"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SettingsAuthorOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "settings",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "PaymentSettingsOut",
         "type": "object"
       },
       "PayoutCountsOut": {
@@ -6772,13 +6896,18 @@
       "ProviderOut": {
         "description": "A kassa the storefront may offer.",
         "properties": {
+          "fee_pct": {
+            "title": "Fee Pct",
+            "type": "string"
+          },
           "slug": {
             "title": "Slug",
             "type": "string"
           }
         },
         "required": [
-          "slug"
+          "slug",
+          "fee_pct"
         ],
         "title": "ProviderOut",
         "type": "object"
@@ -8238,6 +8367,32 @@
         "title": "SellItemOut",
         "type": "object"
       },
+      "SettingsAuthorOut": {
+        "description": "Who saved the settings.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "SettingsAuthorOut",
+        "type": "object"
+      },
       "SkinCrateOut": {
         "description": "A case the skin drops from.",
         "properties": {
@@ -9371,9 +9526,17 @@
             "title": "Awaiting Kassa",
             "type": "boolean"
           },
+          "charge_uzs": {
+            "title": "Charge Uzs",
+            "type": "string"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
+            "type": "string"
+          },
+          "fee_uzs": {
+            "title": "Fee Uzs",
             "type": "string"
           },
           "intent_url": {
@@ -9416,6 +9579,8 @@
         "required": [
           "number",
           "amount_uzs",
+          "fee_uzs",
+          "charge_uzs",
           "provider",
           "status",
           "expires_at",
@@ -11281,6 +11446,145 @@
           }
         },
         "summary": "Find payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/settings": {
+      "get": {
+        "description": "The percent per kassa, who saved it and when.",
+        "operationId": "get_payment_settings_api_v1_admin_payments_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The kassa fees",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Replace the percents; new payments use them, open ones keep the fee they were shown.",
+        "operationId": "put_payment_settings_api_v1_admin_payments_settings_put",
+        "parameters": [
+          {
+            "description": "The `updated_at` the edit started from, or `none` (never saved). Absent: no check.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `updated_at` the edit started from, or `none` (never saved). Absent: no check.",
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KassaFees-Input"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`settings_stale` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save the kassa fees",
         "tags": [
           "admin"
         ]
@@ -15498,7 +15802,7 @@
     },
     "/api/v1/payments/providers": {
       "get": {
-        "description": "Anonymous: the storefront shows these tiles on the balance page.",
+        "description": "Anonymous: the storefront shows these tiles, each with the percent the buyer pays on\ntop (spec 2026-10-14-kassa-fee).",
         "operationId": "list_providers_api_v1_payments_providers_get",
         "responses": {
           "200": {

@@ -49,6 +49,7 @@ const NAV: NavEntry[] = [
       { to: "/pricing", label: "Цены" },
       { to: "/catalogue", label: "Каталог" },
       { to: "/sale-settings", label: "Выкуп" },
+      { to: "/payment-settings", label: "Оплата" },
       { to: "/audit", label: "Журнал" },
     ],
   },

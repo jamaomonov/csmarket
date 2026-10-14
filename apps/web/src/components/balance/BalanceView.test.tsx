@@ -51,7 +51,7 @@ describe("BalanceView", () => {
   beforeEach(() => {
     sales.getPendingSales.mockReset().mockResolvedValue({ pending_uzs: "0" });
     api.getBalance.mockReset().mockResolvedValue({ balance_uzs: "150000" });
-    api.getProviders.mockReset().mockResolvedValue([{ slug: "click" }]);
+    api.getProviders.mockReset().mockResolvedValue([{ slug: "click", fee_pct: "0" }]);
     api.getEntries.mockReset().mockResolvedValue({ items: [], next_cursor: null });
   });
 

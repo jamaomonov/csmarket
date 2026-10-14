@@ -70,7 +70,12 @@ def test_an_unknown_provider_is_not_found() -> None:
     ],
 )
 def test_mock_intent_is_the_topup_page(locale: str, url: str) -> None:
-    assert get_gateway("mock").intent_url(payable=_PAYABLE, locale=locale) == url
+    assert (
+        get_gateway("mock").intent_url(
+            payable=_PAYABLE, charge_uzs=_PAYABLE.amount_uzs, locale=locale
+        )
+        == url
+    )
 
 
 def test_return_url_refuses_an_unknown_locale() -> None:
@@ -94,6 +99,6 @@ def test_return_url_is_the_payables_own_page(number: str, locale: str, url: str)
 def test_mock_intent_of_an_order_is_the_order_page() -> None:
     payable = Payable("order", "K7M3Q9X2", Decimal(171800), "u", True, "ok", None)
     assert (
-        get_gateway("mock").intent_url(payable=payable, locale="en")
+        get_gateway("mock").intent_url(payable=payable, charge_uzs=payable.amount_uzs, locale="en")
         == "http://localhost:3100/en/orders/K7M3Q9X2?mock=1"
     )

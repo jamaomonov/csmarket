@@ -385,7 +385,14 @@
     "offerGone": "This offer was just bought. Next one — {price}",
     "noneLeft": "No offers left",
     "failed": "Couldn't place the order. Please try again.",
-    "howItWorks": "After you pay, the seller sends you a Steam trade offer. Accept it — the skin is yours."
+    "howItWorks": "After you pay, the seller sends you a Steam trade offer. Accept it — the skin is yours.",
+    "charge": {
+      "price": "Price",
+      "toBalance": "To balance",
+      "fee": "{kassa} fee",
+      "total": "Total",
+      "toPay": "To pay"
+    }
   },
   "orders": {
     "title": "Trades",

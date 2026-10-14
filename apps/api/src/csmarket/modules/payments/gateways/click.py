@@ -8,6 +8,7 @@ number; Click sends it back as ``merchant_trans_id``. Click has no merchant-init
 
 from __future__ import annotations
 
+from decimal import Decimal
 from urllib.parse import urlencode
 
 from csmarket.core.config import get_settings
@@ -27,7 +28,7 @@ class ClickGateway:
         s = get_settings()
         return bool(s.click_merchant_id and s.click_service_id and s.click_secret_key)
 
-    def intent_url(self, *, payable: Payable, locale: str) -> str:
+    def intent_url(self, *, payable: Payable, charge_uzs: Decimal, locale: str) -> str:
         """``{click_pay_url}?service_id=&merchant_id=&amount=&transaction_param=&return_url=``.
 
         Raises:
@@ -37,7 +38,7 @@ class ClickGateway:
         query = {
             "service_id": str(s.click_service_id),
             "merchant_id": str(s.click_merchant_id),
-            "amount": wire_uzs(payable.amount_uzs),
+            "amount": wire_uzs(charge_uzs),
             "transaction_param": payable.number,
             "return_url": return_url(payable.number, locale),
         }
