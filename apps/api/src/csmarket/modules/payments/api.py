@@ -8,6 +8,7 @@ orders only through ``orders.api`` (a settled order attempt marks the order paid
 from __future__ import annotations
 
 from csmarket.modules.payments.external_ids import unclaimed_external_id
+from csmarket.modules.payments.fees import Charge, KassaFees, kassa_charge, read_kassa_fees
 from csmarket.modules.payments.fsm import LIVE, TRANSITIONS, InvalidTransitionError, Status, move
 from csmarket.modules.payments.gateways import (
     PaymentGateway,
@@ -42,7 +43,9 @@ __all__ = [
     "LIVE",
     "TRANSITIONS",
     "AlreadyPaidError",
+    "Charge",
     "InvalidTransitionError",
+    "KassaFees",
     "OrderReversalRefusedError",
     "Owner",
     "Payable",
@@ -59,10 +62,12 @@ __all__ = [
     "ensure_attempt",
     "expire_stale",
     "get_gateway",
+    "kassa_charge",
     "lock_owner_or_skip",
     "mark_pending",
     "move",
     "owned_topup",
+    "read_kassa_fees",
     "resolve",
     "return_url",
     "reverse",

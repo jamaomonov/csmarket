@@ -21,6 +21,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     UniqueConstraint,
@@ -118,8 +119,16 @@ class Payment(Base):
     provider: Mapped[str] = mapped_column(String(16), nullable=False)
     #: Our reference at the kassa (``<provider>:<number>``, suffixed on a retry).
     provider_ref: Mapped[str | None] = mapped_column(String(160), nullable=True)
-    #: Whole soʻm.
+    #: Whole soʻm: the order's price or the top-up's credit — the base, without the kassa fee.
     amount_uzs: Mapped[Decimal] = mapped_column(Numeric(14, 0), nullable=False)
+    #: The kassa's percent frozen on this attempt (spec 2026-10-14-kassa-fee); 0 for the balance.
+    fee_pct: Mapped[Decimal] = mapped_column(
+        Numeric(4, 2), nullable=False, server_default=text("0"), default=Decimal(0)
+    )
+    #: What the buyer pays the kassa on top of ``amount_uzs``, whole soʻm.
+    fee_uzs: Mapped[Decimal] = mapped_column(
+        Numeric(14, 0), nullable=False, server_default=text("0"), default=Decimal(0)
+    )
     status: Mapped[str] = mapped_column(
         String(12), nullable=False, server_default=text("'created'")
     )
@@ -140,6 +149,7 @@ class Payment(Base):
         CheckConstraint(f"purpose IN {_in(PURPOSES)}", name="purpose"),
         CheckConstraint(f"status IN {_in(PAYMENT_STATUSES)}", name="status"),
         CheckConstraint("amount_uzs > 0", name="amount_positive"),
+        CheckConstraint("fee_uzs >= 0", name="fee_non_negative"),
         CheckConstraint("(purpose = 'topup') = (topup_id IS NOT NULL)", name="purpose_topup"),
         CheckConstraint("(purpose = 'order') = (order_id IS NOT NULL)", name="purpose_order"),
         Index(
@@ -166,4 +176,29 @@ class Payment(Base):
     )
 
 
-__all__ = ["PAYMENT_STATUSES", "PURPOSES", "TOPUP_STATUSES", "Payment", "WalletTopup"]
+class PaymentSettingsRow(Base):
+    """Row 1: the kassa fees (``fees.KassaFees``) an admin edits."""
+
+    __tablename__ = "payment_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Any: a JSONB document validated by ``fees.KassaFees`` on every read.
+    settings: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP")
+    )
+
+    __table_args__ = (CheckConstraint("id = 1", name="singleton"),)
+
+
+__all__ = [
+    "PAYMENT_STATUSES",
+    "PURPOSES",
+    "TOPUP_STATUSES",
+    "Payment",
+    "PaymentSettingsRow",
+    "WalletTopup",
+]
