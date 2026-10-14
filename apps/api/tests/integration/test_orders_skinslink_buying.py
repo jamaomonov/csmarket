@@ -171,7 +171,7 @@ async def test_a_sold_offer_is_refunded_never_replaced(
         (SkinslinkError("hold", status=400, code="hold"), "trade_hold"),
         (SkinslinkError("bad", status=400, code="validation"), "source_refused"),
         (purchase("failed", fail_reason="item_not_available"), "sold_out"),
-        (purchase("failed", fail_reason="provider_unavailable"), "source_refused"),
+        (purchase("failed", fail_reason="service_unavailable"), "source_refused"),
         (SkinslinkError("broke", status=400, code="insufficient_balance"), "source_low_balance"),
         # SL-2: a 200 + ``failed`` naming the link is the link's fault, as on the status path.
         (purchase("failed", fail_reason="trade_link_invalid"), "invalid_trade_link"),

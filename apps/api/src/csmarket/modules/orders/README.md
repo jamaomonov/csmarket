@@ -417,7 +417,7 @@ across a call, a lost answer resolved by asking, never by buying again. Flow:
   | HTTP 429                                                                                                                  | `rate_limited` | nothing; next try after 20 s                                                        |
   | timeout, 408, 5xx, network                                                                                                | `unconfirmed`  | `buy_unconfirmed_at`, `buy_pending = false`; the reconcile asks under the same id   |
   | sold or moved (`SOLD_FAIL_REASONS`: `item_sold`, `item_not_available`, `price_changed`, `item_specified_price_not_found`) | `sold_out`     | `failed` + refund `sold_out`                                                        |
-  | any other `failed` / `canceled` reason or coded 4xx (`provider_unavailable`, `seller_too_slow`, none)                     | `refused`      | `failed` + refund `source_refused` (partners read `supplier_refused`)               |
+  | any other `failed` / `canceled` reason or coded 4xx (`service_unavailable`, `skinslink_too_slow`, none)                   | `refused`      | `failed` + refund `source_refused` (partners read `supplier_refused`)               |
   | a buy that went through but the rows moved during the call                                                                | `stale_bought` | attention `ambiguous_trade`                                                         |
 
   Before any refusal is refunded, `purchase/status` is asked under `merchant_tx_id` (review

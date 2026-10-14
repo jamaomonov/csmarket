@@ -25,7 +25,10 @@ from csmarket.core.metrics import SkinslinkEndpoint, record_skinslink_call
 
 log = get_logger("csmarket.skinslink.client")
 
-#: ``fail_reason`` of a failed purchase (Create Purchase).
+#: ``fail_reason`` of a failed purchase (Create Purchase). Skinslink renamed four codes on
+#: 2026-10-14 (``provider_*`` → ``service_unavailable`` / ``game_unsupported`` / ``maintenance``,
+#: ``seller_too_slow`` → ``skinslink_too_slow``); only the sold-out set below decides anything,
+#: and every other code, unknown ones included, is a generic refusal.
 PURCHASE_FAIL_REASONS = frozenset(
     {
         "insufficient_balance",
@@ -34,11 +37,11 @@ PURCHASE_FAIL_REASONS = frozenset(
         "item_not_available",
         "duplicate_purchase",
         "item_specified_price_not_found",
-        "provider_unavailable",
+        "service_unavailable",
     }
 )
 #: ``fail_reason`` / refusal codes that mean the offer itself is gone or dearer: the order is
-#: refunded ``sold_out``. Any other refusal (``seller_too_slow``, ``provider_unavailable``,
+#: refunded ``sold_out``. Any other refusal (``skinslink_too_slow``, ``service_unavailable``,
 #: an unknown code) is ``source_refused`` — the lot was there, it was not handed over.
 SOLD_FAIL_REASONS = frozenset(
     {"item_sold", "item_not_available", "price_changed", "item_specified_price_not_found"}

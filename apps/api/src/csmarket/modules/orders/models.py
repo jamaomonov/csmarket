@@ -74,7 +74,7 @@ FAILURE_REASONS = (
     "trade_hold",
     "price_moved",
     #: The market or its seller refused for another reason than a sold lot (Skinslink's
-    #: ``seller_too_slow``, an unknown LIS-SKINS code): partners read ``supplier_refused``.
+    #: ``skinslink_too_slow``, an unknown LIS-SKINS code): partners read ``supplier_refused``.
     "source_refused",
 )
 #: Where an order was placed: the storefront or the public API.

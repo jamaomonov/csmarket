@@ -97,8 +97,8 @@ async def test_a_declined_offer_returns_the_money(db_session: AsyncSession, stat
         ("item_not_available", "sold_out"),
         ("price_changed", "sold_out"),
         # The seller did not hand the skin over (YuPay's 1P26ZCTN): not «sold out».
-        ("seller_too_slow", "source_refused"),
-        ("provider_unavailable", "source_refused"),
+        ("skinslink_too_slow", "source_refused"),
+        ("service_unavailable", "source_refused"),
         (None, "source_refused"),
     ],
 )

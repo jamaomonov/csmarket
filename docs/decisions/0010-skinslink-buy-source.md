@@ -85,7 +85,7 @@ hardened, and every Skinslink offer competes on price from day one.
   try one substitute of its own, within the **order's** ceiling (`cost_units × 1.03`, never
   counted from a substitute's price). A rerun after a Skinslink substitute (`<id>:2`) never
   looks for another.
-- Any other `failed` reason (incl. `provider_unavailable`) and any 4xx that is neither a
+- Any other `failed` reason (incl. `service_unavailable`) and any 4xx that is neither a
   trade-link code nor 409 is a refused offer: substitute once, then refund `sold_out`. Superseded by ADR-0013: no substitutes. A 409
   or `duplicate_purchase` adopts the stored purchase; a stored failed one counts as refused.
 - `hold` with an offer on a `buying` order moves it to `trade_sent` (a missed `active`). The
