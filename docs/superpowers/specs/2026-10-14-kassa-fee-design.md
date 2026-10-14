@@ -39,10 +39,12 @@ default 0`: what this attempt adds. `payments.amount_uzs` stays the **base** (th
   `charge_uzs`: the Click and Payme intent URLs, Payme `CheckPerformTransaction` /
   `CreateTransaction` (−31001), Click prepare (−2), Uzum `/check` and create (10011).
 - Settle: the order is paid at its price, the top-up credits its `amount_uzs` — unchanged.
-- Ledger: the kassa's clearing account takes the gross (`amount + fee`); the fee lands in a new
-  income account `kassa_fee` — so clearing still matches what the kassa settles.
-- Refund to the balance credits `order.price_uzs` — unchanged (the fee stays booked as income).
-- A top-up reversal debits the balance by `topup.amount_uzs` and reverses the fee entry.
+- Ledger: unchanged. A kassa-paid order books nothing on the ledger today, and a top-up books its
+  credited amount; the fee lives on `payments.fee_uzs` (what the analytics reads), so no new
+  account and no half-booked gross.
+- Refund to the balance credits `order.price_uzs` — unchanged.
+- A top-up reversal debits the balance by `topup.amount_uzs` — unchanged; the kassa returns the
+  whole paid sum to the card on its side.
 
 ## Storefront
 
