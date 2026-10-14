@@ -76,6 +76,7 @@ async def test_a_rate_change_after_create_keeps_the_old_total(db_session: AsyncS
 async def test_click_prepares_and_completes_the_total(db_session: AsyncSession) -> None:
     await set_fees(db_session, click="1")
     topup = await make_topup(db_session, amount=BASE)
+    user_id = topup.user_id  # read before the rollback expires the row
     common: dict[str, Any] = {
         "service_id": CLICK_SERVICE,
         "merchant_trans_id": topup.number,
@@ -99,20 +100,21 @@ async def test_click_prepares_and_completes_the_total(db_session: AsyncSession) 
     )
     await db_session.commit()
     assert done["error"] == 0
-    assert await user_balance(db_session, topup.user_id) == BASE
+    assert await user_balance(db_session, user_id) == BASE
 
 
 async def test_uzum_reports_and_wants_the_total(db_session: AsyncSession) -> None:
     await set_fees(db_session, uzum="1")
     topup = await make_topup(db_session, amount=BASE)
-    checked = await uzum_svc.check(db_session, account=topup.number)
+    number, user_id = topup.number, topup.user_id  # read before the rollback expires the row
+    checked = await uzum_svc.check(db_session, account=number)
     assert checked["data"]["amount"]["value"] == "101000"
     create = uzum_svc.create
     bare = create(
         db_session,
         service_id=UZUM_SERVICE,
         trans_id="u-bare",
-        account=topup.number,
+        account=number,
         amount=10_000_000,
     )
     assert await _fails(bare) == 10011
@@ -121,13 +123,13 @@ async def test_uzum_reports_and_wants_the_total(db_session: AsyncSession) -> Non
         db_session,
         service_id=UZUM_SERVICE,
         trans_id="u-full",
-        account=topup.number,
+        account=number,
         amount=10_100_000,
     )
     await db_session.commit()
     await uzum_svc.confirm(db_session, trans_id="u-full", payment_source=SOURCE)
     await db_session.commit()
-    assert await user_balance(db_session, topup.user_id) == BASE
+    assert await user_balance(db_session, user_id) == BASE
 
 
 async def test_an_order_is_paid_at_its_price_and_refunded_without_the_fee(
