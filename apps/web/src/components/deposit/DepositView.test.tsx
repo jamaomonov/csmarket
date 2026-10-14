@@ -37,7 +37,10 @@ function renderView() {
 
 describe("DepositView", () => {
   beforeEach(() => {
-    api.getProviders.mockReset().mockResolvedValue([{ slug: "click" }, { slug: "payme" }]);
+    api.getProviders.mockReset().mockResolvedValue([
+      { slug: "click", fee_pct: "0" },
+      { slug: "payme", fee_pct: "0" },
+    ]);
   });
 
   it("the wallet: top-up tab with the kassas and the amount", async () => {

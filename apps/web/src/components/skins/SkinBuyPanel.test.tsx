@@ -186,7 +186,12 @@ beforeEach(() => {
     items: [offer(2, "31.00", "393700"), offer(1, "30.00", "381000")],
   });
   m.balance.mockResolvedValue({ balance_uzs: "0" });
-  m.providers.mockResolvedValue({ providers: [{ slug: "click" }, { slug: "mock" }] });
+  m.providers.mockResolvedValue({
+    providers: [
+      { slug: "click", fee_pct: "0" },
+      { slug: "mock", fee_pct: "0" },
+    ],
+  });
   m.create.mockResolvedValue(order("A100"));
   m.pay.mockResolvedValue({ order: order("A100"), intent_url: null });
   signedIn();

@@ -17,6 +17,7 @@ import {
 import type { Locale } from "@csmarket/i18n";
 
 import { PayConsent } from "@/components/legal/PayConsent";
+import { ChargeLines } from "@/components/skins/ChargeLines";
 import { offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
 import { useRouter } from "@/i18n/navigation";
 import {
@@ -36,6 +37,7 @@ import {
   type AttemptStore,
   type Provider,
 } from "@/lib/balance";
+import { kassaCharge } from "@/lib/kassa-fee";
 
 type FormError = "badAmount" | "failed";
 
@@ -92,6 +94,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
   const offered = offeredKassas(providers);
   const method = offered.find((p) => p.slug === chosen)?.slug ?? offered[0]?.slug ?? null;
   const typed = amountValue(amount);
+  const charge = typed > 0 ? kassaCharge(typed, providers, method) : null;
   const bounds = { min: formatUzs(locale, TOPUP_MIN), max: formatUzs(locale, TOPUP_MAX) };
   const outOfRange = typed > TOPUP_MAX || (error === "badAmount" && typed < TOPUP_MIN);
 
@@ -142,6 +145,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
           {d("note")}
         </p>
         <PaymentPicker
+          locale={locale}
           size="lg"
           providers={providers}
           method={method}
@@ -211,11 +215,17 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
           </p>
         </div>
 
-        <p className="mt-auto flex items-baseline gap-3 text-sm">
-          <span className="text-fg-muted">{d("total")}</span>
-          <span aria-hidden className="border-border flex-1 border-b border-dashed" />
-          <span className="text-accent num font-bold">{formatUzs(locale, typed)}</span>
-        </p>
+        {charge !== null ? (
+          <div className="mt-auto">
+            <ChargeLines locale={locale} base={typed} charge={charge} kind="topup" />
+          </div>
+        ) : (
+          <p className="mt-auto flex items-baseline gap-3 text-sm">
+            <span className="text-fg-muted">{d("total")}</span>
+            <span aria-hidden className="border-border flex-1 border-b border-dashed" />
+            <span className="text-accent num font-bold">{formatUzs(locale, typed)}</span>
+          </p>
+        )}
 
         {error ? (
           <p role="alert" className="text-danger text-sm">
@@ -228,7 +238,9 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
           size="lg"
           disabled={busy || navigating || method === null || typed === 0}
         >
-          {typed === 0 ? t("enterAmount") : t("submit", { amount: formatUzs(locale, typed) })}
+          {typed === 0
+            ? t("enterAmount")
+            : t("submit", { amount: formatUzs(locale, charge?.total ?? typed) })}
         </Button>
         <PayConsent doc="terms" />
       </div>

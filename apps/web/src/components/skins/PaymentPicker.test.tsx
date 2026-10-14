@@ -14,10 +14,16 @@ function setup(over: Partial<PaymentPickerProps> = {}) {
   const onPick = vi.fn<(method: string) => void>();
   render(
     <PaymentPicker
-      providers={[{ slug: "click" }, { slug: "payme" }, { slug: "mock" }, { slug: "odd" }]}
+      providers={[
+        { slug: "click", fee_pct: "0" },
+        { slug: "payme", fee_pct: "1.5" },
+        { slug: "mock", fee_pct: "0" },
+        { slug: "odd", fee_pct: "0" },
+      ]}
       method="click"
       onPick={onPick}
       labels={LABELS}
+      locale="ru"
       {...over}
     />,
   );
@@ -28,7 +34,7 @@ describe("PaymentPicker", () => {
   it("shows kassas as brands, the dev kassa as a test payment, and skips unknown ones", () => {
     setup();
     expect(screen.getByRole("group", { name: "Способ оплаты" })).toBeInTheDocument();
-    for (const name of ["Click", "Payme", "Тестовая оплата"]) {
+    for (const name of ["Click", /^Payme/, "Тестовая оплата"]) {
       expect(screen.getByRole("button", { name })).toBeInTheDocument();
     }
     expect(screen.queryByRole("button", { name: /odd/i })).not.toBeInTheDocument();
@@ -37,16 +43,22 @@ describe("PaymentPicker", () => {
 
   it("puts the kassa's app icon beside its name; the test kassa has none", () => {
     setup();
-    const icon = (name: string) =>
+    const icon = (name: string | RegExp) =>
       screen.getByRole("button", { name }).querySelector("img")?.getAttribute("src");
     expect(icon("Click")).toBe("/pay/click.png");
-    expect(icon("Payme")).toBe("/pay/payme.png");
+    expect(icon(/^Payme/)).toBe("/pay/payme.png");
     expect(icon("Тестовая оплата")).toBeUndefined();
+  });
+
+  it("shows a kassa's fee under its name, and nothing for a kassa without one", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /Payme/ })).toHaveTextContent(/1,5\s%/);
+    expect(screen.getByRole("button", { name: "Click" })).not.toHaveTextContent("%");
   });
 
   it("reports a tap", () => {
     const onPick = setup();
-    fireEvent.click(screen.getByRole("button", { name: "Payme" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Payme/ }));
     expect(onPick).toHaveBeenCalledWith("payme");
   });
 

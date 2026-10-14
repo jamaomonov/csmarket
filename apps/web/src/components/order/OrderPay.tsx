@@ -9,9 +9,11 @@ import { useRef, useState } from "react";
 import type { Locale } from "@csmarket/i18n";
 
 import { PayConsent } from "@/components/legal/PayConsent";
+import { ChargeLines } from "@/components/skins/ChargeLines";
 import { PaymentPicker } from "@/components/skins/PaymentPicker";
 import { usePayMethods } from "@/components/skins/usePayMethods";
 import { BALANCE_KEY } from "@/lib/balance";
+import { kassaCharge } from "@/lib/kassa-fee";
 import { mintPayKey } from "@/lib/order-key";
 import {
   BalanceTooLowError,
@@ -55,6 +57,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   // `busy` disables the button from the next render; this blocks a click that lands first.
   const inFlight = useRef(false);
   const test = provider === "mock";
+  const charge = kassaCharge(Number(order.price_uzs), kassas, chosen);
 
   /** Pays; `true` when the page is now leaving for the kassa. */
   async function run(method: PayProvider): Promise<boolean> {
@@ -103,6 +106,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   return (
     <div className="flex w-full flex-col gap-4">
       <PaymentPicker
+        locale={locale}
         providers={kassas}
         method={chosen}
         onPick={pick}
@@ -113,6 +117,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
         }}
         {...(wallet ? { wallet } : {})}
       />
+      <ChargeLines locale={locale} base={Number(order.price_uzs)} charge={charge} kind="order" />
       {failed ? (
         <p role="alert" className="text-danger text-sm">
           {common("errors.generic")}
@@ -127,7 +132,9 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
           void pay();
         }}
       >
-        {test ? t("payTest") : t("payNow", { price: formatUzs(locale, order.price_uzs) })}
+        {test
+          ? t("payTest")
+          : t("payNow", { price: formatUzs(locale, charge?.total ?? order.price_uzs) })}
       </Button>
       <PayConsent doc="terms" />
     </div>

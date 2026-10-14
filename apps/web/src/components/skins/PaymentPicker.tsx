@@ -22,6 +22,13 @@ const KASSA_ICONS: Readonly<Record<string, string>> = {
   uzum: "/pay/uzum.png",
 };
 
+/** A kassa's fee percent in the visitor's locale: «1,5 %». */
+function percent(pct: string, locale: string): string {
+  return new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 2 }).format(
+    Number(pct) / 100,
+  );
+}
+
 function kassaIcon(slug: string): string | null {
   return KASSA_ICONS[slug] ?? null;
 }
@@ -57,6 +64,8 @@ export interface PaymentPickerProps {
   wallet?: WalletOption;
   /** `lg`: big tiles, three to a row (the deposit page). Default `md`. */
   size?: "md" | "lg";
+  /** Formats a kassa's percent («1,5 %»). */
+  locale: string;
 }
 
 const TILE = "rounded-md border px-3 text-sm font-semibold";
@@ -71,6 +80,7 @@ export function PaymentPicker({
   labels,
   wallet,
   size = "md",
+  locale,
 }: PaymentPickerProps) {
   const offered = offeredKassas(providers);
   const noKassa = providers !== undefined && offered.length === 0;
@@ -150,7 +160,14 @@ export function PaymentPicker({
                   className={size === "lg" ? "rounded-lg" : "rounded-md"}
                 />
               )}
-              {kassaLabel(p.slug, labels.test)}
+              <span className="flex flex-col items-start leading-tight">
+                {kassaLabel(p.slug, labels.test)}
+                {Number(p.fee_pct) > 0 && (
+                  <span className="text-fg-dim text-[12px] font-normal">
+                    {percent(p.fee_pct, locale)}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>
