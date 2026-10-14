@@ -49,6 +49,7 @@ from csmarket.modules.payments.api import (
     Payment,
     cancel_pending,
     ensure_attempt,
+    kassa_charge,
     lock_owner_or_skip,
     mark_pending,
     resolve,
@@ -204,7 +205,8 @@ async def prepare(
 
     Raises:
         ClickError: ``-5`` unknown, ``-4`` already paid, ``-9`` expired or reversed,
-            ``-2`` amount not the top-up's ``amount_uzs`` / the order's ``price_uzs``.
+            ``-2`` amount not the top-up's ``amount_uzs`` / the order's ``price_uzs`` plus
+            the kassa fee.
     """
     payable = await resolve(db, merchant_trans_id, lock=True)
     existing = await _txn_by_click(
@@ -213,7 +215,9 @@ async def prepare(
     if existing is not None:
         return _prepare_response(existing)
     _check_payable(payable)
-    if not _amount_is(amount, payable.amount_uzs):
+    # The payable plus the kassa fee (spec 2026-10-14-kassa-fee); complete checks the stored row.
+    charge = await kassa_charge(db, payable, PROVIDER)
+    if not _amount_is(amount, charge.total_uzs):
         raise incorrect_amount()
     # SAVEPOINT: two first-time prepares with one (click_trans_id, service_id) but different
     # accounts lock different owners, so both can reach this insert; the loser re-reads the
@@ -232,7 +236,7 @@ async def prepare(
                 service_id=service_id,
                 payment_id=payment.id,
                 account=payable.number,
-                amount=payable.amount_uzs,
+                amount=charge.total_uzs,
                 status=PREPARED,
                 click_paydoc_id=click_paydoc_id,
                 prepare_time=now(),
