@@ -39,6 +39,7 @@ def _row_fields(payment: Payment, display_name: str | None) -> dict[str, object]
         "purpose": payment.purpose,
         "provider": payment.provider,
         "amount_uzs": wire_uzs(payment.amount_uzs),
+        "fee_uzs": wire_uzs(payment.fee_uzs),
         "status": payment.status,
         "created_at": payment.created_at,
         "succeeded_at": payment.succeeded_at,

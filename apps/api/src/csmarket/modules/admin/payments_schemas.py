@@ -34,8 +34,10 @@ class AdminPaymentRow(BaseModel):
     number: str
     purpose: Purpose
     provider: str
-    #: Whole soʻm, digits.
+    #: Whole soʻm, digits: the base (the order's price or the top-up's credit).
     amount_uzs: str
+    #: The kassa fee the buyer paid on top, whole soʻm (spec 2026-10-14-kassa-fee); ``"0"``.
+    fee_uzs: str
     status: PaymentStatus
     created_at: datetime
     succeeded_at: datetime | None

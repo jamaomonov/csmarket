@@ -49,6 +49,11 @@ def fee_of(base: Decimal, pct: Decimal) -> Decimal:
     return (base * pct / 100).to_integral_value(rounding=ROUND_CEILING)
 
 
+def plain_pct(pct: Decimal) -> str:
+    """A percent as the shortest digits: ``1.50`` → ``"1.5"``, ``0.00`` → ``"0"``."""
+    return format(pct.normalize(), "f")
+
+
 @dataclass(frozen=True)
 class Charge:
     """What a kassa takes for a payable: the percent, the fee and base + fee, whole soʻm."""
@@ -125,6 +130,7 @@ __all__ = [
     "current_charge",
     "fee_of",
     "kassa_charge",
+    "plain_pct",
     "read_kassa_fees",
     "save_kassa_fees",
     "settings_row",

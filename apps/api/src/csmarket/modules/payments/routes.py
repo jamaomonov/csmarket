@@ -16,6 +16,7 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.errors import NotFoundError
 from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_key
 from csmarket.modules.auth.api import current_user, guard_ip
+from csmarket.modules.payments.fees import DEFAULT_KASSA_FEES, plain_pct, read_kassa_fees
 from csmarket.modules.payments.gateways import available_providers
 from csmarket.modules.payments.schemas import (
     Locale,
@@ -38,9 +39,14 @@ wallet_router = APIRouter(prefix="/wallet", tags=["wallet"])
 
 
 @router.get("/providers", response_model=ProvidersOut, summary="Kassas available now")
-async def list_providers() -> ProvidersOut:
-    """Anonymous: the storefront shows these tiles on the balance page."""
-    return ProvidersOut(providers=[ProviderOut(slug=slug) for slug in available_providers()])
+async def list_providers(db: Annotated[AsyncSession, Depends(db_session)]) -> ProvidersOut:
+    """Anonymous: the storefront shows these tiles, each with the percent the buyer pays on
+    top (spec 2026-10-14-kassa-fee)."""
+    slugs = available_providers()
+    fees = await read_kassa_fees(db) if slugs else DEFAULT_KASSA_FEES
+    return ProvidersOut(
+        providers=[ProviderOut(slug=slug, fee_pct=plain_pct(fees.pct(slug))) for slug in slugs]
+    )
 
 
 @wallet_router.post(
@@ -74,6 +80,7 @@ async def post_topup(
         provider=payment.provider,
         intent_url=url,
         awaiting_kassa=await awaiting_kassa(db, topup),
+        fee_uzs=payment.fee_uzs,
     )
     return TopupOut.of(view)
 

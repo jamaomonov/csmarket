@@ -51,6 +51,8 @@ class TopupView:
     #: Still ``pending`` while a kassa holds an attempt (Payme state 1, a prepared Click or a
     #: created Uzum transaction): that kassa may still settle it past ``expires_at``.
     awaiting_kassa: bool = False
+    #: The kassa fee on top, frozen on the first attempt (spec 2026-10-14-kassa-fee).
+    fee_uzs: Decimal = Decimal(0)
 
 
 def _check_amount(amount: Decimal) -> None:
@@ -229,6 +231,7 @@ async def topup_view(db: AsyncSession, topup: WalletTopup, *, locale: str) -> To
         provider=first.provider if first is not None else None,
         intent_url=await _intent(db, gateway, payable, locale),
         awaiting_kassa=await awaiting_kassa(db, current),
+        fee_uzs=first.fee_uzs if first is not None else Decimal(0),
     )
 
 
