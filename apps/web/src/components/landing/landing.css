@@ -1116,9 +1116,8 @@
 }
 .lp .foot-b {
   display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
   margin-top: 48px;
   padding-top: 24px;
   border-top: 1px solid var(--border);
@@ -1136,6 +1135,14 @@
 }
 .lp .foot-legal a:hover {
   color: var(--fg);
+}
+.lp .foot-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.75;
 }
 .lp .foot-pay {
   display: flex;

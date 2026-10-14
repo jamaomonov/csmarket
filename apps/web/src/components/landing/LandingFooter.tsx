@@ -106,8 +106,8 @@ export async function LandingFooter({ locale }: { locale: string }) {
             </ul>
           </nav>
         </div>
+        {/* Two rows: the documents, then the copyright beside the trademark note. */}
         <div className="foot-b">
-          <span>© {new Date().getFullYear()} csmarket.uz</span>
           <nav aria-label={tLegal("index.title")} className="foot-legal">
             {LEGAL_DOCS.map((doc) => (
               <Link key={doc} href={legalPath(doc)}>
@@ -115,7 +115,10 @@ export async function LandingFooter({ locale }: { locale: string }) {
               </Link>
             ))}
           </nav>
-          <span>{t("legal")}</span>
+          <p className="foot-note">
+            <span>© {new Date().getFullYear()} csmarket.uz</span>
+            <span>{t("legal")}</span>
+          </p>
         </div>
       </div>
     </footer>
