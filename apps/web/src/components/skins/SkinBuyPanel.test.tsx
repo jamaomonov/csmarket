@@ -198,12 +198,25 @@ beforeEach(() => {
 });
 
 describe("SkinBuyPanel — who can buy", () => {
-  it("asks a visitor to sign in with Steam", async () => {
+  it("shows a visitor the kassas and the price; «Купить» asks to sign in, orders nothing", async () => {
+    // jsdom has no modal dialogs: open the element the way a browser would.
+    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+      this.open = true;
+    };
     m.auth.value = { status: "anonymous", user: null, signInHref: (l: string) => `/start?l=${l}` };
     panel();
-    const link = await screen.findByRole("link", { name: "Войдите через Steam, чтобы купить" });
-    expect(link).toHaveAttribute("href", "/start?l=ru");
-    expect(screen.queryByRole("button", { name: /Купить за/ })).not.toBeInTheDocument();
+    const buy = await screen.findByRole("button", { name: /Купить за 381\s000/ });
+    expect(await screen.findByText("Click")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Войти через Steam" })).not.toBeInTheDocument();
+    fireEvent.click(buy);
+    const dialog = await screen.findByRole("dialog", { name: "Войдите, чтобы купить" });
+    expect(dialog).toBeVisible();
+    expect(screen.getByRole("link", { name: "Войти через Steam" })).toHaveAttribute(
+      "href",
+      "/start?l=ru",
+    );
+    expect(m.balance).not.toHaveBeenCalled();
+    expect(m.create).not.toHaveBeenCalled();
   });
 
   it("asks for a trade link when there is none", async () => {

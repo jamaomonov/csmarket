@@ -14,7 +14,8 @@ ADR-0007; operations: [`orders.md`](../../runbooks/orders.md),
    cheapest is pre-selected), and the «Купить» panel shows the method picker («Баланс» —
    pre-selected when it covers the price, else «Не хватает …» with «Пополнить» — then Click,
    Payme, Uzum) and «Купить за 381 000 сум».
-   - Signed out: «Войдите через Steam, чтобы купить».
+   - Signed out: the same kassa tiles, total and «Купить за …» (no balance tile); the button
+     opens a «Войдите, чтобы купить» dialog with the Steam sign-in, and nothing is ordered.
    - No trade link: «Добавьте трейд-ссылку, чтобы купить» + «Добавить ссылку». A link never
      checked is checked once («Проверяем трейд-ссылку…»); a bad one (including a Steam trade
      hold) shows the account page's verdict and the button stays off.

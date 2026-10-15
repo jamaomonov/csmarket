@@ -393,6 +393,12 @@
       "fee": "{kassa} komissiyasi",
       "total": "Jami",
       "toPay": "Toʻlov"
+    },
+    "signInDialog": {
+      "title": "Sotib olish uchun kiring",
+      "text": "Steam orqali kirish — roʻyxatdan oʻtish va parolsiz. Skin Steam akkauntingizga keladi.",
+      "cta": "Steam orqali kirish",
+      "close": "Yopish"
     }
   },
   "orders": {

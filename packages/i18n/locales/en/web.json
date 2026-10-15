@@ -393,6 +393,12 @@
       "fee": "{kassa} fee",
       "total": "Total",
       "toPay": "To pay"
+    },
+    "signInDialog": {
+      "title": "Sign in to buy",
+      "text": "Sign in with Steam — no sign-up, no passwords. The skin arrives in your Steam account.",
+      "cta": "Sign in with Steam",
+      "close": "Close"
     }
   },
   "orders": {
