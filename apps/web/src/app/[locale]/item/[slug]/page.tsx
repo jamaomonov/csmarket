@@ -133,18 +133,17 @@ export default async function SkinPage({ params }: Props) {
       { "@type": "ListItem", position: 3, name: skinFullName(item), item: url },
     ],
   };
-  // The other wears and the facts: under the picture on wide screens, under the price on
-  // phones — one copy, placed by the grid (a second copy would repeat its heading and text).
-  const details = (
+  // The other wears sit under the picture; the facts under the price.
+  const wears = worn && item.family.length > 1 && (
+    <div className="space-y-2.5">
+      <h2 className="text-fg-muted text-label font-semibold uppercase tracking-wider">
+        {t("otherWears")}
+      </h2>
+      <SkinWearPicker family={item.family} current={item} locale={locale} />
+    </div>
+  );
+  const facts = (
     <>
-      {worn && item.family.length > 1 && (
-        <div className="space-y-2.5">
-          <h2 className="text-fg-muted text-label font-semibold uppercase tracking-wider">
-            {t("otherWears")}
-          </h2>
-          <SkinWearPicker family={item.family} current={item} locale={locale} />
-        </div>
-      )}
       <dl className="border-border divide-border text-small divide-y overflow-hidden rounded-xl border">
         {item.exterior && <Fact label={t("wear")} value={t(`exterior.${item.exterior}`)} />}
         {item.rarity && (
@@ -225,16 +224,17 @@ export default async function SkinPage({ params }: Props) {
 
         <SkinOffersProvider slug={item.slug}>
           <section className="grid gap-6 md:grid-cols-2 lg:gap-8">
-            {/* Left: the picture with the cheapest offer on it, held in view while the right
-              column scrolls. Right: name, price and buying, then the wears and the facts.
-              On phones the order is the source order: picture → buying → wears and facts. */}
-            <div className="md:sticky md:top-20 md:self-start">
+            {/* Left: the picture with the cheapest offer on it, then the other wears. Right:
+              name, price and buying, then the facts. On phones the order is the source order:
+              picture → wears → buying → facts. */}
+            <div className="flex min-w-0 flex-col gap-6">
               <SkinHero
                 image={item.image_url}
                 name={item.name}
                 exterior={item.exterior}
                 rarityColor={item.rarity_color}
               />
+              {wears}
             </div>
             <div className="flex min-w-0 flex-col gap-6">
               <div className="border-border bg-surface flex flex-col gap-5 rounded-xl border p-5 sm:p-6">
@@ -266,7 +266,7 @@ export default async function SkinPage({ params }: Props) {
                   }}
                 />
               </div>
-              {details}
+              {facts}
             </div>
           </section>
 
