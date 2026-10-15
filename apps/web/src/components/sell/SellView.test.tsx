@@ -272,7 +272,7 @@ describe("SellView", () => {
     fireEvent.change(first(screen.getAllByLabelText(/Номер карты Humo/)), {
       target: { value: "9860 1234 5678 9016" },
     });
-    expect(screen.getAllByText("Проверьте номер карты.")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Номер карты с ошибкой — проверьте цифры.")[0]).toBeInTheDocument();
     expect(screen.queryByText("Это не карта Humo")).toBeNull();
   });
 
