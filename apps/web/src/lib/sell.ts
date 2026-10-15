@@ -97,10 +97,16 @@ export function formatCard(digits: string): string {
   return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
 }
 
-/** The first digits of each card type we pay to (Uzcard has two ranges). */
+/** Co-badged Uzcard / Humo cards: Visa (4), Mastercard (5), UnionPay (6). */
+const CO_BADGED = ["4", "5", "6"] as const;
+
+/**
+ * The first digits of each card type we pay to, as the API checks them: each type's own range
+ * (Uzcard 8600 and its NFC 5614, Humo 9860) and the co-badged cards both issue.
+ */
 export const CARD_PREFIX: Readonly<Record<CardType, readonly string[]>> = {
-  uzcard: ["8600", "5614"],
-  humo: ["9860"],
+  uzcard: ["8600", ...CO_BADGED],
+  humo: ["9860", ...CO_BADGED],
   uzum_visa: ["4"],
 };
 

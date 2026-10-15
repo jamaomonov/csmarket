@@ -57,6 +57,11 @@ describe("cards", () => {
     expect(luhnOk("9860123456789016")).toBe(false);
     expect(cardFits("humo", "9860123456789015")).toBe(true);
     expect(cardFits("uzcard", "9860123456789015")).toBe(false);
+    // Co-badged cards (Visa 4, Mastercard 5, UnionPay 6) of either national system.
+    expect(cardFits("humo", "4111111111111111")).toBe(true);
+    expect(cardFits("uzcard", "5400123456789010")).toBe(true);
+    expect(cardFits("uzcard", "6228481234567894")).toBe(true);
+    expect(cardFits("humo", "1234567812345670")).toBe(false);
     expect(cardFits("uzum_visa", "4000000000000002")).toBe(true);
     expect(cardFits("humo", "986012345678901")).toBe(false);
   });

@@ -26,6 +26,9 @@ def test_luhn_refuses_a_typo() -> None:
         ("humo", "9860 1234 5678 9015", HUMO),
         ("uzcard", "8600-1234-5678-9012", UZCARD),
         ("uzcard", "5614 1234 5678 9012", "5614123456789012"),  # Uzcard's 5614 range (owner)
+        ("uzcard", "4111 1111 1111 1111", "4111111111111111"),  # co-badged Uzcard-Visa
+        ("humo", "5400 1234 5678 9010", "5400123456789010"),  # co-badged Humo-Mastercard
+        ("uzcard", "6228 4812 3456 7894", "6228481234567894"),  # co-badged Uzcard-UnionPay
         ("uzum_visa", VISA, VISA),
     ],
 )
@@ -39,6 +42,7 @@ def test_spaces_and_dashes_are_dropped(card_type: str, raw: str, digits: str) ->
         ("humo", UZCARD),  # another type's prefix
         ("uzcard", HUMO),
         ("uzum_visa", HUMO),
+        ("humo", "1234567812345670"),  # passes Luhn, but no card system's range
         ("humo", "9860123456789016"),  # Luhn
         ("humo", HUMO[:-1]),  # 15 digits
         ("humo", HUMO + "0"),  # 17 digits
