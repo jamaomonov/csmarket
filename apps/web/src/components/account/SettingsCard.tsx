@@ -62,7 +62,9 @@ interface SettingsPanelProps {
 /** A titled surface that holds settings rows. */
 export function SettingsPanel({ title, description, className, children }: SettingsPanelProps) {
   return (
-    <section className={cn("bg-surface overflow-hidden rounded-xl", className)}>
+    <section
+      className={cn("bg-surface border-border overflow-hidden rounded-xl border", className)}
+    >
       <header className="border-border border-b px-4 py-3.5 sm:px-5">
         <h2 className="text-fg-dim text-xs font-semibold uppercase tracking-wider">{title}</h2>
         {description ? <p className="text-fg-muted mt-1 text-sm">{description}</p> : null}

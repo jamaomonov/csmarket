@@ -27,7 +27,7 @@ function ModelPicture({ model }: { model: WeaponFacet }) {
     <span
       data-model-glow
       aria-hidden
-      className="flex h-10 w-16 shrink-0 items-center justify-center bg-[radial-gradient(closest-side,rgba(235,75,75,0.55),rgba(235,75,75,0.18)_55%,transparent)]"
+      className="flex h-10 w-16 shrink-0 items-center justify-center bg-[radial-gradient(closest-side,rgba(235,75,75,0.22),rgba(235,75,75,0.06)_55%,transparent)]"
     >
       {model.image && (
         <Image

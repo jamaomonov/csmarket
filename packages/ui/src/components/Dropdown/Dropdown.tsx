@@ -96,7 +96,7 @@ function PlainLink({ children, ...props }: DropdownLinkProps) {
 const itemClass = (tone: DropdownItem["tone"], current: boolean | undefined) =>
   cn(
     "flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-body outline-none",
-    "hover:bg-border-strong focus-visible:bg-border-strong",
+    "hover:bg-border focus-visible:bg-border",
     tone === "danger" ? "text-danger" : current || tone === "accent" ? "text-accent" : "text-fg",
   );
 
@@ -300,7 +300,7 @@ export function Dropdown({
           onKeyDown={onMenuKey}
           style={menuStyle(strategy, place, align, maxHeight)}
           className={cn(
-            "bg-surface-2 shadow-menu z-50 min-w-[200px] rounded-lg p-1.5",
+            "bg-surface-2 border-border-strong shadow-menu z-50 min-w-[200px] rounded-lg border p-1.5",
             strategy === "fixed"
               ? "max-w-[calc(100vw-16px)]"
               : cn("absolute mt-2", align === "end" ? "right-0" : "left-0"),

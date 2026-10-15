@@ -29,7 +29,7 @@ export function SellToolbar(p: SellToolbarProps) {
     skins.has(`chipLabel.${c}`) ? skins(`chipLabel.${c}`) : skins(`category.${c}`);
   return (
     <div className="flex flex-col gap-3">
-      <div className="bg-surface flex flex-col gap-2 rounded-xl p-3 sm:flex-row">
+      <div className="bg-surface border-border flex flex-col gap-2 rounded-xl border p-3 sm:flex-row">
         <label className="relative flex-1">
           <Search
             className="text-fg-dim absolute left-3 top-1/2 size-4 -translate-y-1/2"

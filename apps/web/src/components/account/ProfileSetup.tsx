@@ -19,7 +19,7 @@ export function ProfileSetup({ steps }: ProfileSetupProps) {
   const done = steps.filter((s) => s.done).length;
   const total = steps.length;
   return (
-    <section className="bg-surface rounded-xl p-4 sm:p-5">
+    <section className="bg-surface border-border rounded-xl border p-4 sm:p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-lead font-semibold">{t("setupTitle")}</h2>
         <span className="num text-fg-muted text-sm">{t("setupProgress", { done, total })}</span>
@@ -84,12 +84,7 @@ export function ReferralTeaser() {
   const t = useTranslations("web.account.profile");
   const soon = useTranslations("web.soon");
   return (
-    <section className="bg-surface relative overflow-hidden rounded-xl p-4 sm:p-5">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-10 -top-10 size-36 rounded-full"
-        style={{ background: "radial-gradient(closest-side, rgb(75 243 100 / 0.14), transparent)" }}
-      />
+    <section className="bg-surface border-border relative overflow-hidden rounded-xl border p-4 sm:p-5">
       <div className="relative flex items-start gap-3">
         <span className="bg-accent-subtle text-accent grid size-10 shrink-0 place-items-center rounded-lg">
           <Gift className="size-5" aria-hidden />

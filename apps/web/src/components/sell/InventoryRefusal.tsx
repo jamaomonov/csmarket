@@ -39,7 +39,7 @@ export function InventoryRefusal({ error, user, onRetry, onLinkChange }: Invento
     return (
       <div className="flex max-w-2xl flex-col gap-3">
         <p className="text-fg-muted">{reason ? t(`steam.${reason}`) : t(`errors.${code}`)}</p>
-        <div className="bg-surface rounded-xl">
+        <div className="bg-surface border-border rounded-xl border">
           <TradeLinkForm
             initial={{
               trade_link: user.trade_link,
@@ -63,7 +63,7 @@ export function InventoryRefusal({ error, user, onRetry, onLinkChange }: Invento
           ? t(`errors.${code}`)
           : t("loadFailed");
   return (
-    <div className="bg-surface flex flex-col items-start gap-4 rounded-xl p-6">
+    <div className="bg-surface border-border flex flex-col items-start gap-4 rounded-xl border p-6">
       <p className="text-fg-muted">{text}</p>
       {retry ? (
         <Button variant="secondary" onClick={onRetry}>

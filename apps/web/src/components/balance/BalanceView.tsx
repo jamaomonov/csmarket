@@ -61,7 +61,7 @@ export function BalanceView({ locale, type }: BalanceViewProps) {
   }
   return (
     <div className="flex flex-col gap-6">
-      <div className="bg-surface flex flex-wrap items-center justify-between gap-4 rounded-xl p-5">
+      <div className="bg-surface border-border flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5">
         <div>
           <p className="text-fg-muted text-sm">{t("amount")}</p>
           {balance.data ? (

@@ -26,8 +26,12 @@ export function SkinWearPicker({
   const t = useTranslations("web.skins");
   const c = wearChoices(family, current);
   const toggles = [
-    { label: "StatTrak™", toggle: c.stattrak, tone: "text-orange-400 border-orange-400/60" },
-    { label: "Souvenir", toggle: c.souvenir, tone: "text-yellow-400 border-yellow-400/60" },
+    { label: "StatTrak™", toggle: c.stattrak, tone: "text-stattrak border-stattrak/60" },
+    {
+      label: "Souvenir",
+      toggle: c.souvenir,
+      tone: "text-rarity-contraband border-rarity-contraband/60",
+    },
   ].filter(({ toggle }) => toggle.slug !== null || toggle.on);
 
   return (

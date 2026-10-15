@@ -95,7 +95,7 @@ export async function SkinLanding({
             </span>
           )}
         </nav>
-        <h1 className="font-sans text-2xl font-bold md:text-3xl">{h1}</h1>
+        <h1 className="text-h2 font-semibold tracking-tight">{h1}</h1>
         {intro && <p className="text-fg-muted text-body mt-2 max-w-2xl">{intro}</p>}
 
         {links && links.items.length > 0 && (

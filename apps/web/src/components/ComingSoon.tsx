@@ -25,7 +25,7 @@ export function ComingSoon({ section, icon: Icon }: ComingSoonProps) {
         <Icon className="size-8" aria-hidden />
       </span>
       <Badge>{t("badge")}</Badge>
-      <h1 className="text-2xl font-bold">{nav(section)}</h1>
+      <h1 className="text-h2 font-semibold tracking-tight">{nav(section)}</h1>
       <p className="text-fg-muted">{t("text")}</p>
       <Link href={MARKET} className={buttonVariants({ size: "md" })}>
         {t("toMarket")}

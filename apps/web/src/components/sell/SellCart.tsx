@@ -165,7 +165,10 @@ export function SellCart(p: SellCartProps) {
     sell.isPending;
   const title = t("cart.title", { count: p.chosen.length });
   return (
-    <aside aria-label={title} className="bg-surface flex flex-col gap-5 rounded-xl p-5">
+    <aside
+      aria-label={title}
+      className="bg-surface border-border flex flex-col gap-5 rounded-xl border p-5"
+    >
       <h2 className="text-lg font-bold">
         {title}
         {p.chosen.length > 0 ? <span className="text-accent num"> · {uzs(sum.items)}</span> : null}

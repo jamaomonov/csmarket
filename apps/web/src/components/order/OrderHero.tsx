@@ -34,7 +34,7 @@ export function OrderHero({ order, locale }: OrderHeroProps) {
   const float = order.float_value === null ? null : Number(order.float_value);
   const chip = "bg-surface-2 text-fg-muted rounded-md px-2.5 py-1 text-small";
   return (
-    <div className="bg-surface grid w-full gap-5 rounded-xl p-5 sm:grid-cols-[200px_1fr_auto] sm:items-center">
+    <div className="bg-surface border-border grid w-full gap-5 rounded-xl border p-5 sm:grid-cols-[200px_1fr_auto] sm:items-center">
       <div className="flex flex-col items-center gap-2.5">
         <div className="relative flex h-32 w-full items-center justify-center rounded-lg">
           {glow ? (

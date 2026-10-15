@@ -51,7 +51,7 @@ export function SkinTradeCard({ trade, locale, steps = null }: SkinTradeCardProp
   return (
     <section
       aria-labelledby={titleId}
-      className="bg-surface flex w-full flex-col gap-4 rounded-xl p-5"
+      className="bg-surface border-border flex w-full flex-col gap-4 rounded-xl border p-5"
     >
       <h2 id={titleId} className="text-fg-dim text-xs font-semibold uppercase tracking-wider">
         {t("title")}

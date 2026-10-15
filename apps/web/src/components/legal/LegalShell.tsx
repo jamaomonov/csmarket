@@ -49,7 +49,7 @@ export async function LegalShell({ locale, title, updated, intro, isDoc, childre
           </span>
         )}
       </nav>
-      <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
+      <h1 className="text-h2 font-semibold tracking-tight">{title}</h1>
       {updated !== undefined && (
         <p className="text-fg-dim text-label mt-2">
           {t("updatedLabel")} {updated}

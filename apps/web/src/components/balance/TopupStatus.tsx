@@ -238,7 +238,7 @@ function Outcome({ view, title }: OutcomeProps) {
   const t = useTranslations("web.balance.topup");
   return (
     <Panel view={view}>
-      <h1 className="text-2xl font-bold">{title}</h1>
+      <h1 className="text-h2 font-semibold tracking-tight">{title}</h1>
       <Link href={TRANSACTIONS} className={buttonVariants({ variant: "secondary" })}>
         {t("toBalance")}
       </Link>
@@ -264,7 +264,9 @@ function Waiting({ view, amount, kassa, stopped, onRefresh, devPay: test }: Wait
   return (
     <Panel view={view}>
       <div>
-        <h1 className="text-2xl font-bold">{t(view === "checking" ? "checking" : "waiting")}</h1>
+        <h1 className="text-h2 font-semibold tracking-tight">
+          {t(view === "checking" ? "checking" : "waiting")}
+        </h1>
         <p className="mt-2 text-3xl font-bold tabular-nums">{amount}</p>
         {view === "checking" ? <p className="text-fg-muted mt-2">{t("checkingNote")}</p> : null}
       </div>

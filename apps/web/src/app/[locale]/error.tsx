@@ -17,7 +17,7 @@ export default function LocaleError({
   }, [error]);
   return (
     <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <h1 className="text-h2 font-semibold tracking-tight">{t("title")}</h1>
       <p className="text-fg-muted mt-3">{t("body")}</p>
       <button
         type="button"

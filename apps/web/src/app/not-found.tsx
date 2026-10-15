@@ -74,7 +74,7 @@ export default async function NotFound() {
       <body>
         <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
           <p className="text-accent font-mono text-6xl font-bold">404</p>
-          <h1 className="mt-4 text-2xl font-bold">{t("title")}</h1>
+          <h1 className="text-h2 mt-4 font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-fg-muted mt-3">{t("subtitle")}</p>
           <Link
             href={getPathname({ locale, href: "/" })}

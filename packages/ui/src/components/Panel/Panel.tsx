@@ -10,5 +10,9 @@ interface PanelProps {
 
 /** The surface container: filter sidebar, toolbar, cards of content. */
 export function Panel({ as: Tag = "div", className, children }: PanelProps) {
-  return <Tag className={cn("bg-surface rounded-xl p-4", className)}>{children}</Tag>;
+  return (
+    <Tag className={cn("bg-surface border-border rounded-xl border p-4", className)}>
+      {children}
+    </Tag>
+  );
 }
