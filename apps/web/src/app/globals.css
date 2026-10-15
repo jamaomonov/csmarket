@@ -10,8 +10,8 @@
   --font-mono: var(--app-font-mono);
   /* The storefront's cards are a light veil over the page, not an opaque slab: the grain, the
      top light and an item's rarity tint run through them (the admin keeps the opaque tokens). */
-  --color-surface: rgb(255 255 255 / 0.035);
-  --color-surface-hover: rgb(255 255 255 / 0.055);
+  --color-surface: rgb(19 22 29 / 0.78);
+  --color-surface-hover: rgb(24 28 36 / 0.86);
 }
 
 @layer base {
