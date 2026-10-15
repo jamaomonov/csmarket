@@ -2,11 +2,11 @@
 import { getTranslations } from "next-intl/server";
 
 import { ArrowIcon } from "./Icons";
-import { LandingCard } from "./LandingCard";
 import { PopularTabs } from "./PopularTabs";
 
 import type { SkinItem } from "@csmarket/utils/skins";
 
+import { SkinCard } from "@/components/skins/SkinCard";
 import { Link } from "@/i18n/navigation";
 import { type PopularTab, POPULAR_TABS } from "@/lib/landing";
 import { MARKET } from "@/lib/paths";
@@ -19,7 +19,6 @@ export async function Popular({
   locale: string;
 }) {
   const t = await getTranslations({ locale, namespace: "web.landing.popular" });
-  const tSkins = await getTranslations({ locale, namespace: "web.skins" });
   const panels = POPULAR_TABS.map((tab) => ({
     key: tab,
     label: t(`tabs.${tab}`),
@@ -29,15 +28,7 @@ export async function Popular({
           {t("empty")}
         </p>
       ) : (
-        lists[tab].map((item) => (
-          <LandingCard
-            key={item.slug}
-            item={item}
-            locale={locale}
-            pieces={t("pieces", { count: item.count })}
-            vanilla={tSkins("vanilla")}
-          />
-        ))
+        lists[tab].map((item) => <SkinCard key={item.slug} item={item} locale={locale} />)
       ),
   }));
   return (

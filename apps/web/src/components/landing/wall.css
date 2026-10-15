@@ -20,7 +20,7 @@
 }
 .lp .pay-logo.on {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgb(75 243 100/0.15);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
 }
 .lp .paywith {
   display: flex;
@@ -113,8 +113,8 @@
   display: flex;
   flex-direction: column;
   padding: 12px 14px 14px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #232b3e, #1a2131);
+  border-radius: 12px;
+  background: var(--surface);
   border: 1px solid var(--border);
   overflow: hidden;
   isolation: isolate;
@@ -142,7 +142,7 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--r) 30%, transparent),
+    color-mix(in srgb, var(--r) 12%, transparent),
     transparent
   );
   z-index: -1;
@@ -150,8 +150,7 @@
 .lp .wc:hover,
 .lp .wc:focus-visible {
   border-color: color-mix(in srgb, var(--r) 60%, var(--border));
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 24px 40px -20px rgb(0 0 0/0.9);
+  background: var(--surface-hover);
   outline: none;
 }
 .lp .wc-top {
@@ -168,7 +167,7 @@
   background: rgb(255 255 255/0.06);
 }
 .lp .wc-top .st {
-  color: #f59a3d;
+  color: var(--color-stattrak);
 }
 .lp .wc-img {
   width: 100%;
@@ -179,7 +178,7 @@
   transition: transform 0.4s var(--ease);
 }
 .lp .wc:hover .wc-img {
-  transform: rotate(-5deg) scale(1.06);
+  transform: scale(1.04);
 }
 .lp .wc-m {
   font-size: 12px;
@@ -205,8 +204,8 @@
 }
 .lp .wc-p {
   font-size: 15px;
-  font-weight: 700;
-  color: var(--accent);
+  font-weight: 600;
+  color: var(--fg);
   transition: opacity 0.2s;
 }
 .lp .wc-buy {
