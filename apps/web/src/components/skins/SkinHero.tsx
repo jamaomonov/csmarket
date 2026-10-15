@@ -34,7 +34,7 @@ export function SkinHero({
   const inspect = offer?.inspect_url?.startsWith("steam://") ? offer.inspect_url : null;
 
   return (
-    <div className="bg-surface border-border relative aspect-[4/3] overflow-hidden rounded-xl border lg:aspect-[16/10]">
+    <div className="bg-surface border-border relative aspect-[4/3] max-h-[min(480px,60vh)] w-full overflow-hidden rounded-xl border">
       {glow && <span aria-hidden className="absolute inset-0" style={{ background: glow }} />}
       {image && (
         <Image

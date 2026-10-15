@@ -99,7 +99,7 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
         </p>
       )}
       {body}
-      <p className="text-fg-dim text-small">{t("howItWorks")}</p>
+      {selected && <p className="text-fg-dim text-small">{t("howItWorks")}</p>}
     </section>
   );
 }

@@ -224,11 +224,11 @@ export default async function SkinPage({ params }: Props) {
         </nav>
 
         <SkinOffersProvider slug={item.slug}>
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:gap-x-8">
-            {/* Left: the cheapest offer on the picture; on wide screens the wears and facts
-              fill the space under it. Right: name and price. On phones the order is the
-              source order: picture → name and price → wears and facts. */}
-            <div className="lg:col-start-1 lg:row-start-1">
+          <section className="grid gap-6 md:grid-cols-2 lg:gap-8">
+            {/* Left: the picture with the cheapest offer on it, held in view while the right
+              column scrolls. Right: name, price and buying, then the wears and the facts.
+              On phones the order is the source order: picture → buying → wears and facts. */}
+            <div className="md:sticky md:top-20 md:self-start">
               <SkinHero
                 image={item.image_url}
                 name={item.name}
@@ -236,36 +236,38 @@ export default async function SkinPage({ params }: Props) {
                 rarityColor={item.rarity_color}
               />
             </div>
-            <div className="border-border bg-surface flex flex-col gap-5 self-start rounded-xl border p-5 sm:p-6 lg:sticky lg:top-20 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-              <SkinItemTitle
-                name={name}
-                phase={item.phase}
-                exterior={item.exterior ? t(`exterior.${item.exterior}`) : null}
-                weapon={item.weapon}
-                stattrak={item.stattrak}
-                souvenir={item.souvenir}
-                category={category}
-              />
-              <SkinPriceBlock
-                storedUzs={item.price_uzs}
-                storedUsd={item.price_usd}
-                steamUsd={item.steam_price_usd}
-                steamUrl={steamMarketUrl(item.name)}
-                locale={locale}
-              />
-              {item.buy_enabled && <SkinBuyPanel slug={item.slug} locale={locale} />}
-              <TrackEvent
-                event={{
-                  name: "view_item",
-                  params: {
-                    currency: "UZS",
-                    value: Number(item.price_uzs ?? 0),
-                    items: [gaItem(item.slug, item.name, item.price_uzs)],
-                  },
-                }}
-              />
+            <div className="flex min-w-0 flex-col gap-6">
+              <div className="border-border bg-surface flex flex-col gap-5 rounded-xl border p-5 sm:p-6">
+                <SkinItemTitle
+                  name={name}
+                  phase={item.phase}
+                  exterior={item.exterior ? t(`exterior.${item.exterior}`) : null}
+                  weapon={item.weapon}
+                  stattrak={item.stattrak}
+                  souvenir={item.souvenir}
+                  category={category}
+                />
+                <SkinPriceBlock
+                  storedUzs={item.price_uzs}
+                  storedUsd={item.price_usd}
+                  steamUsd={item.steam_price_usd}
+                  steamUrl={steamMarketUrl(item.name)}
+                  locale={locale}
+                />
+                {item.buy_enabled && <SkinBuyPanel slug={item.slug} locale={locale} />}
+                <TrackEvent
+                  event={{
+                    name: "view_item",
+                    params: {
+                      currency: "UZS",
+                      value: Number(item.price_uzs ?? 0),
+                      items: [gaItem(item.slug, item.name, item.price_uzs)],
+                    },
+                  }}
+                />
+              </div>
+              {details}
             </div>
-            <div className="space-y-6 lg:col-start-1 lg:row-start-2">{details}</div>
           </section>
 
           {worn && (
