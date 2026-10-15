@@ -98,7 +98,7 @@ function TradesList({ locale, type }: TradesViewProps) {
   }
   return (
     <div className="flex flex-col gap-4">
-      <ul className="flex flex-col gap-2">
+      <ul className="border-border divide-border flex flex-col divide-y overflow-hidden rounded-xl border">
         {entries.map((e) => (
           <li key={e.kind === "order" ? `o-${e.order.number}` : `s-${e.sale.number}`}>
             {e.kind === "order" ? (

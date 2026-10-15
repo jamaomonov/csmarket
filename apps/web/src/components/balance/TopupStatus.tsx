@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
 import { Button, buttonVariants } from "@csmarket/ui";
 import { assertNever, formatUzs } from "@csmarket/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CheckCircle2, Clock, Loader2, XCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -267,7 +268,7 @@ function Waiting({ view, amount, kassa, stopped, onRefresh, devPay: test }: Wait
         <h1 className="text-h2 font-semibold tracking-tight">
           {t(view === "checking" ? "checking" : "waiting")}
         </h1>
-        <p className="mt-2 text-3xl font-bold tabular-nums">{amount}</p>
+        <p className="text-h1 mt-2 font-semibold tracking-tight">{amount}</p>
         {view === "checking" ? <p className="text-fg-muted mt-2">{t("checkingNote")}</p> : null}
       </div>
       {test ? (
@@ -290,7 +291,7 @@ function Waiting({ view, amount, kassa, stopped, onRefresh, devPay: test }: Wait
             {t("refresh")}
           </button>
         ) : null}
-        <Link href={TRANSACTIONS} className="text-fg-muted hover:text-fg">
+        <Link href={TRANSACTIONS} className={buttonVariants({ variant: "secondary", size: "sm" })}>
           {t("toBalance")}
         </Link>
       </div>
@@ -309,9 +310,45 @@ function Panel({ view, children }: PanelProps) {
       data-testid="topup-status"
       data-state={view}
       aria-live="polite"
-      className="flex flex-col items-start gap-5"
+      className="bg-surface border-border flex max-w-xl flex-col items-start gap-5 rounded-xl border p-6 sm:p-8"
     >
+      <StateIcon view={view} />
       {children}
     </section>
   );
+}
+
+/** The state at a glance: done, still waiting, or over without money. */
+function StateIcon({ view }: { view: View | "notFound" }) {
+  const box = "grid size-12 place-items-center rounded-xl";
+  switch (view) {
+    case "succeeded":
+      return (
+        <span className={`${box} bg-success/15 text-success`}>
+          <CheckCircle2 className="size-6" aria-hidden />
+        </span>
+      );
+    case "pending":
+    case "checking":
+      return (
+        <span className={`${box} bg-info/15 text-info`}>
+          <Loader2 className="size-6 animate-spin" aria-hidden />
+        </span>
+      );
+    case "expired":
+      return (
+        <span className={`${box} bg-surface-2 text-fg-muted`}>
+          <Clock className="size-6" aria-hidden />
+        </span>
+      );
+    case "reversed":
+    case "notFound":
+      return (
+        <span className={`${box} bg-danger/15 text-danger`}>
+          <XCircle className="size-6" aria-hidden />
+        </span>
+      );
+    default:
+      return assertNever(view);
+  }
 }

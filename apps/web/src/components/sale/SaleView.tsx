@@ -172,7 +172,7 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
         </div>
         {steps ? <TradeSteps steps={steps} /> : null}
       </section>
-      <div className="grid items-start gap-5 md:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[minmax(0,1fr)_300px]">
         <ul className="bg-surface border-border flex flex-col rounded-xl border px-4 py-1">
           {sale.items.map((i) => (
             <li
@@ -192,7 +192,9 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
                   </span>
                 ) : null}
               </span>
-              <span className="num text-sm font-semibold">{uzs(i.price_uzs)}</span>
+              <span className="num shrink-0 whitespace-nowrap text-sm font-semibold">
+                {uzs(i.price_uzs)}
+              </span>
             </li>
           ))}
         </ul>

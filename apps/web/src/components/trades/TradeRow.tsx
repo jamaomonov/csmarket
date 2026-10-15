@@ -105,7 +105,7 @@ function Row(p: RowFrameProps) {
       href={p.href}
       data-testid={p.testId}
       data-state={p.state}
-      className="bg-surface hover:bg-surface-hover hover:border-border-strong group grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-2 rounded-xl border border-transparent p-3 transition-colors sm:grid-cols-[auto_1fr_auto_auto] sm:px-4"
+      className="bg-surface hover:bg-surface-hover group grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 p-3 transition-colors sm:grid-cols-[auto_minmax(0,1fr)_auto_auto] sm:gap-y-2 sm:px-4"
     >
       {p.thumb}
       <span className="min-w-0">
@@ -118,7 +118,8 @@ function Row(p: RowFrameProps) {
           <span className="whitespace-nowrap">{p.meta}</span>
         </span>
       </span>
-      <span className="text-right">
+      {/* Phones: the amount goes under the status, so a long status never runs into it. */}
+      <span className="col-start-2 flex items-baseline gap-2 sm:col-start-auto sm:block sm:text-right">
         <span className={cn("num block whitespace-nowrap font-bold", p.amountClass)}>
           {p.amount}
         </span>
