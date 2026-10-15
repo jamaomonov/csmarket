@@ -11,6 +11,12 @@
   }
   body {
     @apply bg-bg text-fg min-h-screen font-sans antialiased;
+    /* Depth without decoration (redesign 2026-10-15): a fine grain over the whole page and a
+       cool light falling from under the header, gone by the middle of the first screen. */
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .06 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(ellipse 70% 520px at 50% 0, rgb(120 140 185 / 0.11), transparent 75%);
+    background-repeat: repeat, no-repeat;
   }
   :focus-visible {
     outline: 2px solid var(--color-accent);

@@ -29,7 +29,8 @@
   --gut: 32px;
 }
 .lp {
-  background: var(--bg);
+  /* Transparent: the page's grain and top light (globals.css) show through. */
+  background: transparent;
   color: var(--fg);
   font:
     400 15px/1.5 var(--font-sans),
