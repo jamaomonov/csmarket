@@ -364,7 +364,8 @@
       "inline": "{plural} скины",
       "other": "Другие цвета",
       "item": "Цвет"
-    }
+    },
+    "inStockCount": "{count}+ скинов в наличии"
   },
   "buy": {
     "title": "Купить",

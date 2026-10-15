@@ -13,6 +13,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { Metadata } from "next";
 
 import { JsonLd } from "@/components/JsonLd";
+import { groupDigits } from "@/components/landing/format";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SkinCard } from "@/components/skins/SkinCard";
 import { SkinCategoryBar } from "@/components/skins/SkinCategoryBar";
@@ -93,12 +94,25 @@ export default async function HomePage({ params, searchParams }: Props) {
   ]);
   // Only the indexable hub describes its list; a filtered view is noindex.
   const listLd = filtered ? null : itemListLd(locale, page.items);
+  // Rounded down to the thousand, as on the landing: the count moves every few minutes.
+  const total = facets?.categories.reduce((sum, c) => sum + c.count, 0) ?? 0;
+  const inStock =
+    filtered || total === 0 ? null : total >= 1000 ? Math.floor(total / 1000) * 1000 : total;
 
   return (
     <>
       <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-12 pt-4 sm:px-6">
         {listLd && <JsonLd data={listLd} />}
-        <h1 className="text-h2 mb-5 font-semibold tracking-tight">{t("title")}</h1>
+        {/* The H1 stays (the page's main search signal) but as a quiet line, not a banner;
+            the in-stock count only on the bare catalogue, where it is the list's own size. */}
+        <div className="text-small mb-4 flex flex-wrap items-baseline gap-x-2">
+          <h1 className="text-fg-muted font-medium">{t("title")}</h1>
+          {inStock !== null && (
+            <span className="text-fg-dim">
+              · {t("inStockCount", { count: groupDigits(locale, inStock) ?? "" })}
+            </span>
+          )}
+        </div>
         <div className="lg:flex lg:gap-6">
           {facets && (
             <aside className="hidden lg:block lg:w-[244px] lg:shrink-0">

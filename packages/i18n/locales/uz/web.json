@@ -364,7 +364,8 @@
       "inline": "{plural} skinlar",
       "other": "Boshqa ranglar",
       "item": "Rang"
-    }
+    },
+    "inStockCount": "{count}+ ta skin mavjud"
   },
   "buy": {
     "title": "Sotib olish",

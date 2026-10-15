@@ -364,7 +364,8 @@
       "inline": "{plural} skins",
       "other": "Other colours",
       "item": "Colour"
-    }
+    },
+    "inStockCount": "{count}+ skins in stock"
   },
   "buy": {
     "title": "Buy",
