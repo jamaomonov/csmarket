@@ -181,10 +181,10 @@
   },
   "skins": {
     "meta": {
-      "title": "CS2 skinlari marketi — pichoqlar, qoʻlqoplar va qurollar soʻmda",
+      "title": "CS2 (CS:GO) skinlari marketi — Steam skinlarini sotib oling: pichoqlar, qoʻlqoplar, qurollar",
       "description": "CS2 skinlari soʻmda: qurollar, pichoqlar, qoʻlqoplar, agentlar va keyslar. Click, Payme yoki Uzum orqali toʻlov.",
-      "itemTitle": "{name} — Oʻzbekistonda {price}ga sotib olish",
-      "itemTitleNoPrice": "{name} — Oʻzbekistonda soʻmga sotib olish",
+      "itemTitle": "{name} — {kind, select, skin {CS2 skini} other {CS2}}: Oʻzbekistonda {price}ga sotib olish",
+      "itemTitleNoPrice": "{name} — {kind, select, skin {CS2 skini} other {CS2}}: Oʻzbekistonda soʻmga sotib olish",
       "itemDescription": "{name}ni Oʻzbekistonda sotib oling: {price}dan, {count} ta taklif. Click, Payme yoki Uzum orqali soʻmda toʻlov, {kind, select, skin {skin} other {buyum}} Steamʼga keladi.",
       "itemDescriptionNoPrice": "{name} — CS2 {kind, select, skin {skini} other {buyumi}}. Hozir mavjud emas: csmarketʼda boshqa variantlar va oʻxshashlarini koʻring.",
       "marketDescription": "{count} ta CS2 skini mavjud: pichoqlar, qoʻlqoplar, qurollar, agentlar va keyslar. Narx, eskirish va noyoblik boʻyicha filtrlar. Click, Payme yoki Uzum orqali soʻmda toʻlov."
@@ -249,9 +249,9 @@
     "close": "Yopish",
     "belowSteam": "Steamʼdan −{percent}%",
     "landing": {
-      "weaponTitle": "CS2 {weapon} skinlari — Oʻzbekistonda soʻmga sotib olish",
+      "weaponTitle": "CS2 (CS:GO) {weapon} skinlari — Oʻzbekistonda soʻmga sotib olish",
       "weaponH1": "{weapon} skinlari",
-      "categoryTitle": "CS2 {name} — Oʻzbekistonda soʻmga sotib olish",
+      "categoryTitle": "CS2 (CS:GO) {name} — Oʻzbekistonda soʻmga sotib olish",
       "categoryH1": "CS2 {name}",
       "intro": "{items} {price}dan. Soʻmda toʻlov, {kind, select, skin {skin} other {buyum}} Steamʼga keladi.",
       "description": "{name}ni Oʻzbekistonda sotib oling: {items} {price}dan. Soʻmda toʻlov, {kind, select, skin {skin} other {buyum}} Steamʼga keladi.",
@@ -587,7 +587,7 @@
     "close": "Yopish",
     "seo": {
       "title": "Skin sotish — CS2 (CS:GO) skinlarini sotib, pulni Uzcard, Humo kartasiga chiqarish",
-      "description": "CS2 (CS:GO) skinlarini Steam inventaringizdan haqiqiy pulga — soʻmga soting va Uzcard, Humo, Uzum Visa kartasiga yoki csmarket balansiga chiqaring. Narx darhol koʻrinadi, kirish faqat Steam orqali."
+      "description": "Oʻzbekistonda CS2 (CS:GO) skin sotish: Steam skinlarini haqiqiy pulga — soʻmga soting va Uzcard, Humo, Uzum Visa kartasiga yoki csmarket balansiga chiqaring. Narx darhol koʻrinadi."
     },
     "guide": {
       "title": "Skin sotish: CS2 skinlarini qanday sotib, pulni kartaga chiqarish mumkin",
@@ -620,6 +620,10 @@
         {
           "q": "Sotilgan skinlar uchun pul qachon keladi?",
           "a": "Almashuvdan 7 kun oʻtib: Steam almashuv himoyasi shuncha davom etadi. Aniq sana sotish sahifasida koʻrinadi. Agar shu vaqt ichida almashuv Steam’da bekor qilinsa, sotuv amalga oshmaydi."
+        },
+        {
+          "q": "Nega skinlar uchun pul darhol emas, 7 kundan keyin keladi?",
+          "a": "Steam almashuv himoyasi shunday ishlaydi: almashuvdan keyin 7 kun davomida Steam uni bekor qilishi mumkin. Biz bu muddat tugagach toʻlaymiz. Narx va umumiy summani darhol koʻrasiz, sotuvdan keyin u oʻzgarmaydi."
         },
         {
           "q": "CS2 (CS:GO) pichoq yoki qoʻlqopini haqiqiy pulga qanday sotish mumkin?",
@@ -759,7 +763,7 @@
   },
   "landing": {
     "meta": {
-      "title": "CS2 skinlari Oʻzbekistonda — soʻmda sotib oling: Click, Payme, Uzum",
+      "title": "CS2 (CS:GO) skinlari Oʻzbekistonda — Steam skin doʻkoni, soʻmga sotib olish",
       "description": "CS2 skinlari soʻmda: pichoqlar, qoʻlqoplar, avtomatlar va keyslar. Click, Payme yoki Uzum orqali toʻlov, skin Steam’ga keladi. Skinlarni kartaga soting.",
       "ogAlt": "csmarket — CS2 skinlari Oʻzbekistonda"
     },
@@ -971,7 +975,7 @@
       ]
     },
     "cheap": {
-      "title": "Arzon CS2 skinlari 100 000 soʻmgacha — Oʻzbekistonda sotib olish",
+      "title": "Arzon CS2 (CS:GO) skinlari 100 000 soʻmgacha — Oʻzbekistonda sotib olish",
       "description": "100 000 soʻmgacha arzon CS2 skinlari — {price}dan. Click, Payme yoki Uzum orqali toʻlov, skin Steam’ga keladi.",
       "descriptionNoPrice": "100 000 soʻmgacha arzon CS2 skinlari. Click, Payme yoki Uzum orqali toʻlov, skin Steam’ga keladi.",
       "h1": "Arzon CS2 skinlari 100 000 soʻmgacha",

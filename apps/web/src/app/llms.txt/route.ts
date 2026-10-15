@@ -38,7 +38,7 @@ export async function GET(): Promise<Response> {
   const lines = [
     "# csmarket.uz",
     "",
-    "> A Counter-Strike 2 (CS2) skins shop for players in Uzbekistan. Prices are in Uzbek soʻm (UZS);",
+    "> A Counter-Strike 2 (CS2, formerly CS:GO) skins shop for players in Uzbekistan. Prices are in Uzbek soʻm (UZS);",
     "> pay with Click, Payme or Uzum (Uzcard / Humo cards) or from the site balance. The bought skin",
     "> arrives as a Steam trade offer. Sign-in is through Steam only; no passwords.",
     "",
@@ -70,7 +70,7 @@ export async function GET(): Promise<Response> {
     `- [Sell CS2 (CS:GO) skins and cash out to a card](${url(SELL)}): how it works, where the money goes, questions`,
     "",
     "Where to sell CS2 (CS:GO) skins for real money in Uzbekistan and cash out to a Uzcard or Humo",
-    "card: csmarket.uz buys skins, knives and gloves from players' Steam inventories for Uzbek soʻm.",
+    "card: csmarket.uz buys skins (a skin buy-back), knives and gloves from players' Steam inventories for Uzbek soʻm.",
     "To sell, sign in with Steam, add the trade link, pick skins (the price of each and the total show",
     "before selling and are fixed once the sale is confirmed), then accept csmarket's trade offer",
     "in Steam. The money comes 7 days after the trade, when Steam's trade protection ends: to the",

@@ -105,10 +105,31 @@ consoles' removal tools.
   too. Neither names the sale bonus or the card fees (owner, 2026-10-15): they move, and an
   assistant would quote a stale number; the sale form shows them.
 - **Markdown for agents** (2026-10-13): a request that asks for `text/markdown` above `text/html`
-  (`Accept: text/markdown`) to the home page, `/market`, a category, a weapon or an item page —
+  (`Accept: text/markdown`) to the home page, `/market`, `/sell`, a category, a weapon or an item page —
   any locale — gets the page's Markdown twin at the same URL (`middleware.ts` → `app/md`,
   `lib/agent-md*.ts`): the same headings, live prices, item links and FAQ as the HTML. Browsers
   and search crawlers (`text/html`, `*/*`) get the HTML as before. The twin is `no-store`,
   `Vary: Accept`, `X-Robots-Tag: noindex`; `/md/…` opened directly is a 404. Check it:
   `curl -H "Accept: text/markdown" https://csmarket.uz/item/ak-47-redline-field-tested`. This is
   our own version of Cloudflare's «Markdown for Agents» (a Pro-plan switch, not used).
+
+## What people search (Google Keyword Planner, Uzbekistan, 2026-10-15)
+
+The titles and the sale copy follow this; check it again against Search Console once the pages
+have a few weeks of impressions, and against Yandex Wordstat (region Uzbekistan).
+
+- **«cs2 skin» is the one big query: 1–10k a month.** Everything else is 10–100 a month each — a
+  long tail. The item pages (a skin's English name + «скин КС2 (CS2)» / «CS2 skin» in the title)
+  are what answers it.
+- **Russian searches say «кс го», not «кс2»** (no «кс2 / cs2» query had volume). Russian titles
+  keep «КС2 (CS2)» (copy rule) and add «КС ГО»: «… КС2 (CS2, КС ГО) …».
+- Buying: «купить скины (кс го)», «скины кс го», «магазин скинов», «купить скины дешево»,
+  «скины steam / для стима», «купить нож / перчатки / кейс кс го», «купить awp».
+- Selling: «вывести деньги со скинов / на карту», «продать скины за реальные деньги», «где продать
+  скины и вывести деньги», «скупка скинов», «продать скины быстро»; in Uzbek «skin sotish»
+  (rising). No Uzbek buying query had volume.
+- **Nobody adds «Узбекистан», «сумы», «Click», «Payme», «Uzcard», «Humo»** — Google localises by
+  itself; those words are for assistants and trust, not for search volume.
+- «cs2» alone collides with Adobe Creative Suite 2: say «скины КС2 (CS2)», never bare «cs2».
+- Seen around skinsavdo.uz: Steam-account queries («steam аккаунт», 100–1k) — not our business
+  (Steam's rules); «купить / продать скины» carry ads at $0.08–0.54 a click.

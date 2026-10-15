@@ -181,10 +181,10 @@
   },
   "skins": {
     "meta": {
-      "title": "CS2 skins market — knives, gloves and weapons in soʻm",
+      "title": "CS2 (CS:GO) skins market — buy Steam skins: knives, gloves, weapons",
       "description": "CS2 skins priced in soʻm: weapons, knives, gloves, agents and cases. Pay with Click, Payme or Uzum.",
-      "itemTitle": "{name} — buy in Uzbekistan for {price}",
-      "itemTitleNoPrice": "{name} — buy in Uzbekistan for soʻm",
+      "itemTitle": "{name} — {kind, select, skin {CS2 skin} other {CS2 item}}: buy in Uzbekistan for {price}",
+      "itemTitleNoPrice": "{name} — {kind, select, skin {CS2 skin} other {CS2 item}}: buy in Uzbekistan for soʻm",
       "itemDescription": "Buy {name} in Uzbekistan: from {price}, {count, plural, one {# offer} other {# offers}}. Pay in soʻm with Click, Payme or Uzum; the {kind, select, skin {skin} other {item}} arrives in Steam.",
       "itemDescriptionNoPrice": "{name} — a CS2 {kind, select, skin {skin} other {item}}. Out of stock right now: see the other versions and similar items on csmarket.",
       "marketDescription": "{count, plural, one {# CS2 skin} other {# CS2 skins}} in stock: knives, gloves, weapons, agents and cases. Filter by price, wear and rarity. Pay in soʻm with Click, Payme or Uzum."
@@ -249,9 +249,9 @@
     "close": "Close",
     "belowSteam": "−{percent}% vs Steam",
     "landing": {
-      "weaponTitle": "CS2 {weapon} skins — buy in Uzbekistan for soʻm",
+      "weaponTitle": "CS2 (CS:GO) {weapon} skins — buy in Uzbekistan for soʻm",
       "weaponH1": "{weapon} skins",
-      "categoryTitle": "CS2 {name} — buy in Uzbekistan for soʻm",
+      "categoryTitle": "CS2 (CS:GO) {name} — buy in Uzbekistan for soʻm",
       "categoryH1": "CS2 {name}",
       "intro": "{items} from {price}. Pay in soʻm; the {kind, select, skin {skin} other {item}} arrives in Steam.",
       "description": "Buy {name} in Uzbekistan: {items} from {price}. Pay in soʻm; the {kind, select, skin {skin} other {item}} arrives in Steam.",
@@ -587,7 +587,7 @@
     "close": "Close",
     "seo": {
       "title": "Sell CS2 (CS:GO) skins and cash out to a Uzcard or Humo card",
-      "description": "Sell CS2 (CS:GO) skins from your Steam inventory for real money in Uzbek soʻm and cash out to a Uzcard, Humo or Uzum Visa card or the csmarket balance. The price shows at once; sign in with Steam only."
+      "description": "CS2 (CS:GO) skin buy-back in Uzbekistan: sell Steam skins for real money in soʻm and cash out to a Uzcard, Humo or Uzum Visa card or the csmarket balance. The price shows at once."
     },
     "guide": {
       "title": "How to sell CS2 (CS:GO) skins and cash out to a card",
@@ -620,6 +620,10 @@
         {
           "q": "When does the money for sold skins arrive?",
           "a": "7 days after the trade: that is how long Steam’s trade protection lasts. The exact date shows on the sale page. If the trade is reversed in Steam in that time, the sale does not happen."
+        },
+        {
+          "q": "Why does the money for skins come in 7 days, not at once?",
+          "a": "That is Steam’s trade protection: for 7 days after a trade Steam can reverse it. We pay when that period ends. You see the price and the total at once, and it does not change after the sale."
         },
         {
           "q": "How do I sell a CS2 (CS:GO) knife or gloves for real money?",
@@ -759,7 +763,7 @@
   },
   "landing": {
     "meta": {
-      "title": "CS2 skins in Uzbekistan — buy in soʻm with Click, Payme, Uzum",
+      "title": "CS2 (CS:GO) skins in Uzbekistan — Steam skin shop, buy in soʻm",
       "description": "CS2 skins in soʻm: knives, gloves, rifles and cases. Pay with Click, Payme or Uzum; the skin arrives in Steam. Sell your skins to a card.",
       "ogAlt": "csmarket — CS2 skins in Uzbekistan"
     },
@@ -971,7 +975,7 @@
       ]
     },
     "cheap": {
-      "title": "Cheap CS2 skins under 100,000 soʻm — buy in Uzbekistan",
+      "title": "Cheap CS2 (CS:GO) skins under 100,000 soʻm — buy in Uzbekistan",
       "description": "Cheap CS2 skins under 100,000 soʻm — from {price}. Pay with Click, Payme or Uzum; the skin arrives in Steam.",
       "descriptionNoPrice": "Cheap CS2 skins under 100,000 soʻm. Pay with Click, Payme or Uzum; the skin arrives in Steam.",
       "h1": "Cheap CS2 skins under 100,000 soʻm",

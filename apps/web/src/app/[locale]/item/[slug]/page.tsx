@@ -63,9 +63,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const price = displayPrice(locale, item.price_uzs, item.price_usd);
   // "купить X в Узбекистане за 40 000 сум": the query people type. No price, no "от —":
   // the copy drops the price rather than print a hole.
-  const title =
-    price !== null ? t("meta.itemTitle", { name, price }) : t("meta.itemTitleNoPrice", { name });
   const kind = itemKind(item);
+  // «скин КС2 (CS2)» for a skin: «cs2 skin» is the one big query (Keyword Planner, 2026-10-15).
+  const title =
+    price !== null
+      ? t("meta.itemTitle", { name, price, kind })
+      : t("meta.itemTitleNoPrice", { name, kind });
   const description =
     price !== null && item.count > 0
       ? t("meta.itemDescription", { name, price, count: item.count, kind })
