@@ -24,7 +24,7 @@ export function Section({ title, actions, children, label }: SectionProps) {
       className="border-border bg-surface rounded-lg border"
     >
       <div className="border-border flex items-center justify-between gap-2 border-b px-4 py-2.5">
-        <h2 className="text-[15px] font-semibold">{title}</h2>
+        <h2 className="text-lead font-semibold">{title}</h2>
         {actions}
       </div>
       <div className="p-4">{children}</div>

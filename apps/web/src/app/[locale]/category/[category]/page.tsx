@@ -91,7 +91,7 @@ export default async function SkinCategoryPage({ params }: Props) {
       items={c.items}
       faq={{ title: (await getTranslations("web.skins"))("faq.title"), entries: c.faq }}
       {...(c.text !== null && {
-        after: <p className="text-fg-muted mt-8 max-w-3xl text-[14px] leading-relaxed">{c.text}</p>,
+        after: <p className="text-fg-muted text-body mt-8 max-w-3xl leading-relaxed">{c.text}</p>,
       })}
       allHref={c.allHref}
       crumbs={c.crumbs}

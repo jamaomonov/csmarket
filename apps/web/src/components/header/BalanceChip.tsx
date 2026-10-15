@@ -22,7 +22,7 @@ export function BalanceChip({ compact = false }: { compact?: boolean }) {
   const pending = useQuery({ queryKey: PENDING_KEY, queryFn: getPendingSales });
   const hold = pending.data?.pending_uzs;
   return (
-    <span className="bg-surface flex items-center gap-2.5 rounded-lg py-1.5 pl-3.5 pr-1.5 text-[14px] font-semibold">
+    <span className="bg-surface text-body flex items-center gap-2.5 rounded-lg py-1.5 pl-3.5 pr-1.5 font-semibold">
       <span className="flex flex-col leading-tight">
         <span className="num">
           {amount === undefined
@@ -36,7 +36,7 @@ export function BalanceChip({ compact = false }: { compact?: boolean }) {
             href={`${TRADES}?type=hold`}
             data-testid="balance-hold"
             aria-label={t("inHold", { sum: formatUzs(locale, hold) })}
-            className="text-warning num flex items-center gap-0.5 whitespace-nowrap text-[11px] font-medium hover:underline"
+            className="text-warning num text-meta flex items-center gap-0.5 whitespace-nowrap font-medium hover:underline"
           >
             {compact ? (
               // Phones: no room for words — an hourglass and the sum.

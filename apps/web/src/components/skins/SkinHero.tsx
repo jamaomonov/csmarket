@@ -34,7 +34,7 @@ export function SkinHero({
   const inspect = offer?.inspect_url?.startsWith("steam://") ? offer.inspect_url : null;
 
   return (
-    <div className="bg-surface-2 relative aspect-[4/3] overflow-hidden rounded-xl">
+    <div className="bg-surface border-border relative aspect-[4/3] overflow-hidden rounded-xl border lg:aspect-[16/10]">
       {glow && <span aria-hidden className="absolute inset-0" style={{ background: glow }} />}
       {image && (
         <Image
@@ -45,7 +45,7 @@ export function SkinHero({
           // A Steam CDN image already cut to size (512fx384f): the optimizer adds nothing.
           unoptimized
           sizes="(min-width: 768px) 50vw, 100vw"
-          className="object-contain p-8"
+          className="object-contain p-10"
         />
       )}
 
@@ -54,7 +54,7 @@ export function SkinHero({
           href={inspect}
           aria-label={t("inspect")}
           title={t("inspect")}
-          className="bg-bg/70 text-fg-muted hover:text-fg absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12px] font-semibold backdrop-blur"
+          className="bg-bg/70 text-fg-muted hover:text-fg text-label absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-semibold backdrop-blur"
         >
           <Eye className="h-4 w-4" aria-hidden />
           <span className="hidden sm:inline">{t("inspect")}</span>
@@ -63,7 +63,7 @@ export function SkinHero({
 
       {(float !== null || exterior) && (
         <div className="bg-bg/70 absolute right-3 top-3 w-40 rounded-lg px-2.5 py-2 backdrop-blur">
-          <div className="mb-1.5 flex items-baseline justify-between gap-2 text-[12px]">
+          <div className="text-label mb-1.5 flex items-baseline justify-between gap-2">
             <span className="tabular-nums">{float !== null ? float.toFixed(4) : t("float")}</span>
             {exterior && (
               <span className="font-bold" style={{ color: wearColor(exterior) ?? undefined }}>

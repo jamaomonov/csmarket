@@ -14,7 +14,7 @@ import { MARKET } from "@/lib/paths";
 const EXTERIORS: Exterior[] = ["FN", "MW", "FT", "WW", "BS"];
 
 function option(active: boolean): string {
-  return `flex items-center gap-2.5 rounded-md px-1 py-1.5 text-[14px] transition-colors ${
+  return `flex items-center gap-2.5 rounded-md px-1 py-1.5 text-body transition-colors ${
     active ? "text-fg" : "text-fg-muted hover:text-fg"
   }`;
 }
@@ -88,7 +88,7 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
                 >
                   <CheckMark checked={query.exterior === e} />
                   <span className="flex-1">{t(`exterior.${e}`)}</span>
-                  <span className="text-fg-dim text-[12px]">{e}</span>
+                  <span className="text-fg-dim text-label">{e}</span>
                 </Link>
               </li>
             ))}
@@ -151,7 +151,7 @@ export function SkinFilters({ query, facets }: { query: SkinQuery; facets: SkinF
         >
           <RotateCcw className="h-4 w-4" aria-hidden />
           {t("reset")}
-          <span className="bg-accent text-accent-fg rounded-full px-1.5 text-[11px] font-bold leading-[18px]">
+          <span className="bg-accent text-accent-fg text-meta rounded-full px-1.5 font-bold leading-[18px]">
             {active}
           </span>
         </Link>

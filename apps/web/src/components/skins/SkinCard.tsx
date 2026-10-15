@@ -1,4 +1,3 @@
-import { Badge } from "@csmarket/ui";
 import { isVanilla, rarityGlow, steamImageSize } from "@csmarket/utils/skins";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
@@ -10,9 +9,9 @@ import { itemPath } from "@/lib/paths";
 import { displayPrice } from "@/lib/skins";
 
 /**
- * One catalogue tile (design system, variant B): wear, StatTrak and the lot count on
- * top, the discount vs Steam as a badge, the art over a glow in its rarity colour,
- * weapon and skin, the price in green and how much dearer Steam is.
+ * One catalogue tile: the art over a faint wash of its rarity with a thin rarity line
+ * under it, wear / StatTrak / Souvenir as small tags, the discount vs Steam, weapon and
+ * skin, then the price and the lot count on one line.
  *
  * No `"use client"`: rendered inside the server grid on `/`.
  */
@@ -23,10 +22,13 @@ interface SkinCardProps {
   priority?: boolean;
 }
 
+const HEX = /^#[0-9a-f]{6}$/i;
+
 export function SkinCard({ item, locale, priority = false }: SkinCardProps) {
   const t = useTranslations("web.skins");
   const price = displayPrice(locale, item.price_uzs, item.price_usd);
   const glow = rarityGlow(item.rarity_color);
+  const rarity = item.rarity_color && HEX.test(item.rarity_color) ? item.rarity_color : null;
   // Under 5 % a badge on every other card only dilutes the ones that matter.
   const discount =
     item.discount_percent !== null && item.discount_percent >= 5 ? item.discount_percent : null;
@@ -34,16 +36,9 @@ export function SkinCard({ item, locale, priority = false }: SkinCardProps) {
   return (
     <Link
       href={itemPath(item.slug)}
-      className="bg-surface hover:bg-surface-hover hover:border-border focus-visible:ring-accent focus-visible:ring-offset-bg group relative flex h-full flex-col rounded-lg border border-transparent px-3 pb-3 pt-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      className="bg-surface border-border hover:border-border-strong hover:bg-surface-hover focus-visible:ring-accent focus-visible:ring-offset-bg group relative flex h-full flex-col overflow-hidden rounded-lg border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
     >
-      <div className="text-fg-dim flex items-center gap-1.5 text-[11px]">
-        {item.exterior && <span>{item.exterior}</span>}
-        {item.stattrak && <span className="text-stattrak font-semibold">ST™</span>}
-        {item.souvenir && <span className="text-rarity-contraband font-semibold">SV</span>}
-        <span className="ml-auto">{t("pieces", { count: item.count })}</span>
-      </div>
-      {discount !== null && <Badge className="absolute right-3 top-8 z-10">−{discount}%</Badge>}
-      <div className="relative my-1 aspect-[4/3] w-full">
+      <div className="relative aspect-[4/3] w-full">
         {glow && <span aria-hidden className="absolute inset-0" style={{ background: glow }} />}
         {item.image_url && (
           <Image
@@ -54,21 +49,57 @@ export function SkinCard({ item, locale, priority = false }: SkinCardProps) {
             // A Steam CDN image already cut to size (256fx256f): the optimizer adds nothing.
             unoptimized
             sizes="(min-width: 1280px) 20vw, (min-width: 640px) 33vw, 50vw"
-            className="object-contain p-2 transition duration-300 group-hover:scale-[1.04]"
+            className="object-contain p-4 transition duration-300 group-hover:scale-[1.04]"
+          />
+        )}
+        <div className="absolute inset-x-2.5 top-2.5 flex items-center gap-1">
+          {item.exterior && (
+            <span className="bg-bg/70 text-fg-muted text-meta rounded-sm px-1.5 py-px font-medium">
+              {item.exterior}
+            </span>
+          )}
+          {item.stattrak && (
+            <span className="bg-bg/70 text-stattrak text-meta rounded-sm px-1.5 py-px font-semibold">
+              ST™
+            </span>
+          )}
+          {item.souvenir && (
+            <span className="bg-bg/70 text-rarity-contraband text-meta rounded-sm px-1.5 py-px font-semibold">
+              SV
+            </span>
+          )}
+          {discount !== null && (
+            <span className="bg-accent-subtle text-accent text-meta ml-auto rounded-sm px-1.5 py-px font-semibold">
+              −{discount}%
+            </span>
+          )}
+        </div>
+        {rarity && (
+          <span
+            aria-hidden
+            className="absolute inset-x-0 bottom-0 h-0.5 opacity-80"
+            style={{ backgroundColor: rarity }}
           />
         )}
       </div>
-      {item.weapon && <div className="text-fg-dim truncate text-[12px]">{item.weapon}</div>}
-      <div className="truncate text-[13px] font-medium">
-        {isVanilla(item) ? t("vanilla") : (item.skin ?? item.name)}
-        {item.phase && <span className="text-fg-dim"> · {item.phase}</span>}
-      </div>
-      <div className="mt-auto pt-2">
-        {price ? (
-          <span className="text-accent num text-[14px] font-semibold">{price}</span>
-        ) : (
-          <span className="text-fg-dim text-[12px]">{t("soldOut")}</span>
-        )}
+      <div className="border-border flex flex-1 flex-col border-t px-3 pb-3 pt-2.5">
+        {item.weapon && <div className="text-fg-dim text-label truncate">{item.weapon}</div>}
+        <div className="text-small truncate font-medium">
+          {isVanilla(item) ? t("vanilla") : (item.skin ?? item.name)}
+          {item.phase && <span className="text-fg-dim"> · {item.phase}</span>}
+        </div>
+        <div className="mt-auto flex items-baseline gap-2 pt-2">
+          {price ? (
+            <span className="text-fg text-body font-semibold">{price}</span>
+          ) : (
+            <span className="text-fg-dim text-label">{t("soldOut")}</span>
+          )}
+          {item.count > 1 && (
+            <span className="text-fg-dim num text-meta ml-auto">
+              {t("pieces", { count: item.count })}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );

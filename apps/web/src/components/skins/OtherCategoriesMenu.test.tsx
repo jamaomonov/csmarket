@@ -49,7 +49,7 @@ describe("OtherCategoriesMenu", () => {
   it("names and highlights the chosen one", () => {
     renderMenu("cases");
     const trigger = screen.getByRole("button", { name: /Кейсы/ });
-    expect(trigger.className.split(" ")).toContain("bg-accent");
+    expect(trigger.className.split(" ")).toContain("bg-fg");
     fireEvent.click(trigger);
     expect(screen.getByRole("menuitem", { name: /Кейсы/ })).toHaveAttribute("aria-current", "true");
   });

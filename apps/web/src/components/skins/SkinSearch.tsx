@@ -109,7 +109,7 @@ export function SkinSearch({
                   <span className="bg-surface h-9 w-12 shrink-0 rounded" aria-hidden />
                 )}
                 <span className="min-w-0 flex-1 leading-tight">
-                  <span className="text-fg-muted block truncate text-[12px]">
+                  <span className="text-fg-muted text-label block truncate">
                     {i.stattrak && <span className="text-stattrak">StatTrak™ </span>}
                     {i.souvenir && <span className="text-rarity-contraband">Souvenir </span>}
                     {i.weapon}
@@ -125,12 +125,12 @@ export function SkinSearch({
                       </>
                     )}
                   </span>
-                  <span className="block truncate text-[14px] font-semibold">
+                  <span className="text-body block truncate font-semibold">
                     {i.skin ?? i.name}
                     {i.phase && <span className="text-fg-muted"> · {i.phase}</span>}
                   </span>
                 </span>
-                <span className="shrink-0 whitespace-nowrap text-[13px] font-bold tabular-nums">
+                <span className="text-small shrink-0 whitespace-nowrap font-bold tabular-nums">
                   {displayPrice(locale, i.price_uzs, i.price_usd) ?? t("soldOut")}
                 </span>
               </Link>

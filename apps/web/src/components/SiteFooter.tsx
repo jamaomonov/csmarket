@@ -34,7 +34,7 @@ interface ColumnProps {
 function Column({ title, links }: ColumnProps) {
   return (
     <nav aria-label={title}>
-      <h2 className="text-fg mb-2 text-[13px] font-bold">{title}</h2>
+      <h2 className="text-fg text-small mb-2 font-bold">{title}</h2>
       <ul className="space-y-1.5">
         {links.map((l) => (
           <li key={l.href}>
@@ -54,7 +54,7 @@ export async function SiteFooter({ locale }: { locale: string }) {
   const tBuy = await getTranslations({ locale, namespace: "web.seoPages.footer" });
   const tLegal = await getTranslations({ locale, namespace: "legal" });
   return (
-    <footer className="border-border text-fg-dim border-t text-[13px]">
+    <footer className="border-border text-fg-dim text-small border-t">
       <div className="mx-auto grid max-w-[1320px] grid-cols-2 gap-6 px-4 pb-28 pt-8 sm:px-6 md:grid-cols-4 md:pb-10">
         <Column
           title={t("market")}

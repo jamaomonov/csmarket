@@ -25,7 +25,7 @@ export function StatusBadge({ badge, className }: StatusBadgeProps) {
       data-testid="status-badge"
       data-tone={badge.tone}
       className={cn(
-        "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[13px] font-semibold",
+        "text-small inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 font-semibold",
         TONES[badge.tone],
         className,
       )}

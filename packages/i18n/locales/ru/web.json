@@ -328,6 +328,7 @@
     },
     "collection": "Коллекция",
     "cases": "Кейс",
+    "casesMore": "ещё {count}",
     "color": {
       "title": "Цвет",
       "names": {

@@ -85,7 +85,7 @@ function CounterBadge({ kind, value }: { kind: Counter; value: number }) {
   return (
     <span
       aria-label={`${COUNTER_LABEL[kind]}: ${String(value)}`}
-      className="bg-danger text-danger-fg rounded-full px-1.5 text-[11px] font-semibold tabular-nums"
+      className="bg-danger text-danger-fg text-meta rounded-full px-1.5 font-semibold tabular-nums"
     >
       {value}
     </span>
@@ -189,7 +189,7 @@ function MobileSheet({
       to={item.to}
       end={item.end ?? false}
       aria-current={isCurrent(item, pathname) ? "page" : undefined}
-      className={`flex items-center justify-between rounded-md px-3 py-2.5 text-[15px] ${
+      className={`text-lead flex items-center justify-between rounded-md px-3 py-2.5 ${
         isCurrent(item, pathname) ? "bg-accent-subtle text-accent" : "hover:bg-surface-2"
       }`}
     >
@@ -220,7 +220,7 @@ function MobileSheet({
         {NAV.map((entry) =>
           isMenu(entry) ? (
             <div key={entry.label} className="border-border mt-2 border-t pt-2">
-              <p className="text-fg-dim px-3 pb-1 text-[11px] font-medium uppercase tracking-wider">
+              <p className="text-fg-dim text-meta px-3 pb-1 font-medium uppercase tracking-wider">
                 {entry.label}
               </p>
               {entry.items.map(link)}

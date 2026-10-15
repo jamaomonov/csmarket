@@ -13,7 +13,7 @@ describe("Chip", () => {
     const chip = screen.getByRole("button", { name: "Ножи" });
     expect(chip).toHaveAttribute("aria-pressed", "true");
     expect(chip.firstElementChild).toBe(screen.getByTestId("ico"));
-    expect(chip.className.split(" ")).toContain("bg-accent");
+    expect(chip.className.split(" ")).toContain("bg-fg");
   });
 
   it("is a plain surface chip when inactive", () => {

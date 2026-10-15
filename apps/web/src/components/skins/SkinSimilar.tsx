@@ -21,10 +21,10 @@ export function SkinSimilar({ title, items, locale, allHref, allLabel }: Props) 
   return (
     <section className="mt-10" aria-labelledby="skin-similar">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="skin-similar" className="text-[17px] font-bold">
+        <h2 id="skin-similar" className="text-title font-bold">
           {title}
         </h2>
-        <Link href={allHref} className="text-accent text-[14px] font-semibold hover:underline">
+        <Link href={allHref} className="text-accent text-body font-semibold hover:underline">
           {allLabel}
         </Link>
       </div>

@@ -74,7 +74,7 @@ export function CardsList({ locale }: CardsListProps) {
                 />
                 <span className="min-w-0 flex-1 leading-tight">
                   <span className="block text-sm font-semibold">{CARD_BRANDS[c.type]}</span>
-                  <span className="num text-fg-muted mt-0.5 block text-[13px]">•••• {c.last4}</span>
+                  <span className="num text-fg-muted text-small mt-0.5 block">•••• {c.last4}</span>
                 </span>
                 <Button
                   variant="ghost"

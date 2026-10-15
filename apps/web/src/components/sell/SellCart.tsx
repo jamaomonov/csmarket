@@ -180,8 +180,8 @@ export function SellCart(p: SellCartProps) {
                 // eslint-disable-next-line @next/next/no-img-element -- Steam CDN images
                 <img src={x.image_url} alt="" className="h-8 w-12 shrink-0 object-contain" />
               ) : null}
-              <span className="min-w-0 flex-1 truncate text-[13px]">{x.name}</span>
-              <span className="num shrink-0 text-[13px] font-semibold">
+              <span className="text-small min-w-0 flex-1 truncate">{x.name}</span>
+              <span className="num text-small shrink-0 font-semibold">
                 {uzs(Number(x.price_uzs))}
               </span>
               <button

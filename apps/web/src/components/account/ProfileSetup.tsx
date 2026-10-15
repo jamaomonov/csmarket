@@ -21,7 +21,7 @@ export function ProfileSetup({ steps }: ProfileSetupProps) {
   return (
     <section className="bg-surface rounded-xl p-4 sm:p-5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-[15px] font-semibold">{t("setupTitle")}</h2>
+        <h2 className="text-lead font-semibold">{t("setupTitle")}</h2>
         <span className="num text-fg-muted text-sm">{t("setupProgress", { done, total })}</span>
       </div>
       <div
@@ -96,7 +96,7 @@ export function ReferralTeaser() {
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-[15px] font-semibold">{t("referralTitle")}</h3>
+            <h3 className="text-lead font-semibold">{t("referralTitle")}</h3>
             <Badge tone="neutral">{soon("badge")}</Badge>
           </div>
           <p className="text-fg-muted mt-1 text-sm">{t("referralHint")}</p>

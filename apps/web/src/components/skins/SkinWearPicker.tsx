@@ -46,10 +46,10 @@ export function SkinWearPicker({
             const price = w.available ? displayPrice(locale, w.price_uzs, w.price_usd) : null;
             const label = (
               <>
-                <span className="text-fg-muted block text-[12px] font-semibold leading-tight">
+                <span className="text-fg-muted text-label block font-semibold leading-tight">
                   {t(`exterior.${w.exterior}`)}
                 </span>
-                <span className="block whitespace-nowrap text-[13px] font-bold tabular-nums">
+                <span className="text-small block whitespace-nowrap font-bold tabular-nums">
                   {price ?? "—"}
                 </span>
               </>
@@ -79,7 +79,7 @@ export function SkinWearPicker({
               key={label}
               href={itemPath(toggle.slug ?? current.slug)}
               aria-current={toggle.on ? "page" : undefined}
-              className={`rounded-lg border px-3 py-1.5 text-[13px] font-semibold transition ${
+              className={`text-small rounded-lg border px-3 py-1.5 font-semibold transition ${
                 toggle.on ? tone : "border-border text-fg-muted hover:border-border-strong"
               }`}
             >

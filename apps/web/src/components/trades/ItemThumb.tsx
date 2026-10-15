@@ -26,7 +26,7 @@ export function ItemThumb({ imageUrl, rarityColor, more = 0, className }: ItemTh
         />
       ) : null}
       {more > 0 ? (
-        <span className="bg-surface-2 border-surface text-fg num absolute -bottom-1.5 -right-1.5 rounded-full border-2 px-1.5 text-[12px] font-bold">
+        <span className="bg-surface-2 border-surface text-fg num text-label absolute -bottom-1.5 -right-1.5 rounded-full border-2 px-1.5 font-bold">
           +{more}
         </span>
       ) : null}

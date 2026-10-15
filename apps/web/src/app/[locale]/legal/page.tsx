@@ -59,8 +59,8 @@ export default async function LegalIndexPage({ params }: Props) {
               className="border-border bg-surface hover:border-border-strong hover:bg-surface-hover group flex items-start gap-4 rounded-xl border p-4"
             >
               <span className="min-w-0 flex-1">
-                <span className="block text-[17px] font-bold">{t(`${doc}.title`)}</span>
-                <span className="text-fg-muted mt-1 block text-[14px] leading-relaxed">
+                <span className="text-title block font-bold">{t(`${doc}.title`)}</span>
+                <span className="text-fg-muted text-body mt-1 block leading-relaxed">
                   {t(`${doc}.intro`)}
                 </span>
               </span>

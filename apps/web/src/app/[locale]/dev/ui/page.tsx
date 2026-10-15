@@ -53,7 +53,7 @@ export function assertDevOnly(): void {
 function Section({ name, children }: { name: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[17px] font-semibold">{name}</h2>
+      <h2 className="text-title font-semibold">{name}</h2>
       <div className="flex flex-wrap items-start gap-3">{children}</div>
     </section>
   );
@@ -62,7 +62,7 @@ function Section({ name, children }: { name: string; children: React.ReactNode }
 export function Showcase() {
   return (
     <main className="mx-auto max-w-[1320px] space-y-10 px-6 py-8">
-      <h1 className="text-[26px] font-semibold">Design system</h1>
+      <h1 className="text-h2 font-semibold">Design system</h1>
       <Section name="Tokens">
         {SWATCHES.map((s) => (
           <div key={s} className="w-40">
@@ -70,7 +70,7 @@ export function Showcase() {
               className="border-border h-12 rounded-md border"
               style={{ background: `var(--color-${s})` }}
             />
-            <p className="text-fg-muted mt-1 font-mono text-[12px]">{`--color-${s}`}</p>
+            <p className="text-fg-muted text-label mt-1 font-mono">{`--color-${s}`}</p>
           </div>
         ))}
       </Section>
@@ -104,7 +104,7 @@ export function Showcase() {
       </Section>
       <Section name="Checkbox">
         <Checkbox>Только StatTrak™</Checkbox>
-        <span className="flex items-center gap-2 text-[14px]">
+        <span className="text-body flex items-center gap-2">
           <CheckMark checked /> CheckMark
         </span>
       </Section>
@@ -129,10 +129,10 @@ export function Showcase() {
       <Section name="Accordion">
         <Panel className="w-64">
           <Accordion title="Качество" defaultOpen>
-            <p className="text-fg-muted text-[14px]">Прямо с завода</p>
+            <p className="text-fg-muted text-body">Прямо с завода</p>
           </Accordion>
           <Accordion title="Редкость">
-            <p className="text-fg-muted text-[14px]">Covert</p>
+            <p className="text-fg-muted text-body">Covert</p>
           </Accordion>
         </Panel>
       </Section>

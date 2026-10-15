@@ -328,6 +328,7 @@
     },
     "collection": "Kolleksiya",
     "cases": "Keys",
+    "casesMore": "yana {count} ta",
     "color": {
       "title": "Rang",
       "names": {

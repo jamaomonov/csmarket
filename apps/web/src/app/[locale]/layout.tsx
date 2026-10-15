@@ -1,4 +1,4 @@
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Onest } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
@@ -15,7 +15,7 @@ import { SITE } from "@/lib/site";
 
 import "../globals.css";
 
-const sans = IBM_Plex_Sans({
+const sans = Onest({
   subsets: ["latin", "latin-ext", "cyrillic"],
   weight: ["400", "500", "600", "700"],
   variable: "--app-font-sans",

@@ -138,12 +138,14 @@ export default async function SkinPage({ params }: Props) {
   const details = (
     <>
       {worn && item.family.length > 1 && (
-        <div className="space-y-2">
-          <h2 className="text-[15px] font-bold">{t("otherWears")}</h2>
+        <div className="space-y-2.5">
+          <h2 className="text-fg-muted text-label font-semibold uppercase tracking-wider">
+            {t("otherWears")}
+          </h2>
           <SkinWearPicker family={item.family} current={item} locale={locale} />
         </div>
       )}
-      <dl className="border-border grid grid-cols-2 gap-x-6 gap-y-2 border-t pt-4 text-[13px] sm:grid-cols-3">
+      <dl className="border-border divide-border text-small divide-y overflow-hidden rounded-xl border">
         {item.exterior && <Fact label={t("wear")} value={t(`exterior.${item.exterior}`)} />}
         {item.rarity && (
           <Fact
@@ -158,9 +160,9 @@ export default async function SkinPage({ params }: Props) {
         )}
         {item.collection && <Fact label={t("collection")} value={item.collection} />}
         {(item.colors ?? []).length > 0 && (
-          <div>
-            <dt className="text-fg-dim text-[12px]">{t("color.item")}</dt>
-            <dd className="flex flex-wrap gap-x-2 font-semibold">
+          <div className="flex items-start justify-between gap-6 px-4 py-2.5">
+            <dt className="text-fg-muted shrink-0">{t("color.item")}</dt>
+            <dd className="flex flex-wrap justify-end gap-x-3 gap-y-1 font-medium">
               {(item.colors ?? []).filter(isSkinColor).map((c) => (
                 <Link
                   key={c}
@@ -179,24 +181,19 @@ export default async function SkinPage({ params }: Props) {
           </div>
         )}
         {item.crates.length > 0 && (
-          <div>
-            <dt className="text-fg-dim text-[12px]">{t("cases")}</dt>
-            <dd className="font-semibold">
-              {item.crates.map((c, i) => (
-                <span key={c.name}>
-                  {i > 0 && ", "}
-                  {c.slug ? (
-                    <Link
-                      href={itemPath(c.slug)}
-                      className="hover:text-accent underline-offset-2 hover:underline"
-                    >
-                      {c.name}
-                    </Link>
-                  ) : (
-                    c.name
-                  )}
-                </span>
-              ))}
+          <div className="flex items-start justify-between gap-6 px-4 py-2.5">
+            <dt className="text-fg-muted shrink-0">{t("cases")}</dt>
+            <dd className="min-w-0 text-right font-medium">
+              <CrateList crates={item.crates.slice(0, CRATES_SHOWN)} />
+              {item.crates.length > CRATES_SHOWN && (
+                // Souvenir skins drop from a dozen packages: the rest wait behind a toggle.
+                <details className="group">
+                  <summary className="text-fg-dim hover:text-fg text-label cursor-pointer list-none group-open:hidden">
+                    {t("casesMore", { count: item.crates.length - CRATES_SHOWN })}
+                  </summary>
+                  <CrateList crates={item.crates.slice(CRATES_SHOWN)} />
+                </details>
+              )}
             </dd>
           </div>
         )}
@@ -211,7 +208,7 @@ export default async function SkinPage({ params }: Props) {
         <JsonLd data={breadcrumbLd} />
         <nav
           aria-label="breadcrumb"
-          className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
+          className="text-fg-dim text-small mb-4 flex flex-wrap items-center gap-1"
         >
           <Link href={MARKET} className="hover:text-fg">
             {t("market")}
@@ -227,11 +224,11 @@ export default async function SkinPage({ params }: Props) {
         </nav>
 
         <SkinOffersProvider slug={item.slug}>
-          <section className="border-border bg-surface grid gap-6 rounded-2xl border p-4 sm:p-5 md:grid-cols-2 md:grid-rows-[auto_1fr] md:gap-x-8 md:gap-y-5 md:p-8">
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:grid-rows-[auto_1fr] lg:gap-x-8">
             {/* Left: the cheapest offer on the picture; on wide screens the wears and facts
               fill the space under it. Right: name and price. On phones the order is the
               source order: picture → name and price → wears and facts. */}
-            <div className="md:col-start-1 md:row-start-1">
+            <div className="lg:col-start-1 lg:row-start-1">
               <SkinHero
                 image={item.image_url}
                 name={item.name}
@@ -239,7 +236,7 @@ export default async function SkinPage({ params }: Props) {
                 rarityColor={item.rarity_color}
               />
             </div>
-            <div className="flex flex-col gap-5 md:col-start-2 md:row-span-2 md:row-start-1">
+            <div className="border-border bg-surface flex flex-col gap-5 self-start rounded-xl border p-5 sm:p-6 lg:sticky lg:top-20 lg:col-start-2 lg:row-span-2 lg:row-start-1">
               <SkinItemTitle
                 name={name}
                 phase={item.phase}
@@ -268,14 +265,14 @@ export default async function SkinPage({ params }: Props) {
                 }}
               />
             </div>
-            <div className="space-y-5 md:col-start-1 md:row-start-2">{details}</div>
+            <div className="space-y-6 lg:col-start-1 lg:row-start-2">{details}</div>
           </section>
 
           {worn && (
-            <section className="mt-8">
-              <h2 className="mb-3 text-[17px] font-bold">
+            <section className="mt-12">
+              <h2 className="text-title mb-4 font-semibold">
                 {t("offers")}{" "}
-                <span className="text-fg-dim text-[14px] tabular-nums">{item.count}</span>
+                <span className="text-fg-dim text-body tabular-nums">{item.count}</span>
               </h2>
               <SkinListings
                 locale={locale}
@@ -304,14 +301,14 @@ export default async function SkinPage({ params }: Props) {
         />
 
         <section className="mt-10 max-w-3xl" aria-labelledby="skin-about">
-          <h2 id="skin-about" className="mb-2 text-[17px] font-bold">
+          <h2 id="skin-about" className="text-title mb-2 font-bold">
             {t("about.title")}
           </h2>
-          <p className="text-fg-muted text-[14px] leading-relaxed">{about}</p>
+          <p className="text-fg-muted text-body leading-relaxed">{about}</p>
           {/* Valve's text exists in English only: it shows where the page is English. */}
           {locale === "en" && item.description && (
-            <blockquote className="border-border text-fg-muted mt-4 whitespace-pre-line border-l-2 pl-4 text-[14px] italic leading-relaxed">
-              <span className="text-fg-dim mb-1 block text-[12px] not-italic">
+            <blockquote className="border-border text-fg-muted text-body mt-4 whitespace-pre-line border-l-2 pl-4 italic leading-relaxed">
+              <span className="text-fg-dim text-label mb-1 block not-italic">
                 {t("about.valve")}
               </span>
               {item.description}
@@ -326,13 +323,33 @@ export default async function SkinPage({ params }: Props) {
   );
 }
 
+/** Cases shown before «ещё N». */
+const CRATES_SHOWN = 2;
+
 function Fact({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <div>
-      <dt className="text-fg-dim text-[12px]">{label}</dt>
-      <dd className="font-semibold" style={color ? { color } : undefined}>
+    <div className="flex items-start justify-between gap-6 px-4 py-2.5">
+      <dt className="text-fg-muted shrink-0">{label}</dt>
+      <dd className="text-right font-medium" style={color ? { color } : undefined}>
         {value}
       </dd>
     </div>
   );
+}
+
+function CrateList({ crates }: { crates: { name: string; slug: string | null }[] }) {
+  return crates.map((c) => (
+    <span key={c.name} className="block">
+      {c.slug ? (
+        <Link
+          href={itemPath(c.slug)}
+          className="hover:text-accent underline-offset-2 hover:underline"
+        >
+          {c.name}
+        </Link>
+      ) : (
+        c.name
+      )}
+    </span>
+  ));
 }

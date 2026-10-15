@@ -86,7 +86,7 @@ export function DepositView({ locale }: DepositViewProps) {
                   setTab(key);
                 }}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-4 py-2 text-[14px] font-medium transition-colors",
+                  "text-body flex items-center gap-2 rounded-md px-4 py-2 font-medium transition-colors",
                   tab === key ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg",
                 )}
               >

@@ -1,4 +1,4 @@
-import { buttonVariants, Panel } from "@csmarket/ui";
+import { buttonVariants } from "@csmarket/ui";
 import {
   activeFilterCount,
   isFilteredQuery,
@@ -96,23 +96,23 @@ export default async function HomePage({ params, searchParams }: Props) {
 
   return (
     <>
-      <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-10 pt-2 sm:px-6">
+      <main id="main-content" className="mx-auto max-w-[1320px] px-4 pb-12 pt-4 sm:px-6">
         {listLd && <JsonLd data={listLd} />}
-        <h1 className="mb-5 text-center text-[26px] font-semibold">{t("title")}</h1>
-        <div className="lg:flex lg:gap-3">
+        <h1 className="text-h2 mb-5 font-semibold tracking-tight">{t("title")}</h1>
+        <div className="lg:flex lg:gap-6">
           {facets && (
-            <aside className="hidden lg:block lg:w-[250px] lg:shrink-0">
-              <Panel className="sticky top-4">
-                <p className="mb-1 flex items-center gap-2 text-[17px] font-semibold">
-                  <SlidersHorizontal className="size-4" aria-hidden />
+            <aside className="hidden lg:block lg:w-[244px] lg:shrink-0">
+              <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pb-4 [scrollbar-width:thin]">
+                <p className="text-fg-muted text-label mb-1 flex items-center gap-2 font-semibold uppercase tracking-wider">
+                  <SlidersHorizontal className="size-3.5" aria-hidden />
                   {t("filters")}
                 </p>
                 <SkinFilters query={query} facets={facets} />
-              </Panel>
+              </div>
             </aside>
           )}
           <section className="min-w-0 flex-1">
-            <Panel className="mb-3 flex flex-col gap-2.5 p-3 sm:flex-row">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <SkinSearch initial={query.q ?? ""} locale={locale} query={query} />
               <div className="flex gap-2">
                 {facets && (
@@ -122,11 +122,11 @@ export default async function HomePage({ params, searchParams }: Props) {
                 )}
                 <SkinSort query={query} />
               </div>
-            </Panel>
+            </div>
             {facets && (
-              <Panel className="p-2">
+              <div className="border-border mt-3 border-b pb-3">
                 <SkinCategoryBar query={query} facets={facets} />
-              </Panel>
+              </div>
             )}
             {page.items.length === 0 ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
@@ -137,7 +137,7 @@ export default async function HomePage({ params, searchParams }: Props) {
                 </Link>
               </div>
             ) : (
-              <ul className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {page.items.map((item, i) => (
                   <li key={item.slug}>
                     <SkinCard item={item} locale={locale} priority={i < FIRST_ROW} />

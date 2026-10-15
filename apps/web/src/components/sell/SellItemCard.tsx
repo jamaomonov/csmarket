@@ -28,7 +28,7 @@ export function SellItemCard({ item, locale, selected, onToggle }: SellItemCardP
         selected ? "border-accent" : "hover:border-border-strong border-transparent",
       )}
     >
-      <span className="text-fg-dim flex items-center gap-1.5 text-[11px] font-semibold">
+      <span className="text-fg-dim text-meta flex items-center gap-1.5 font-semibold">
         {item.exterior}
         {parts.stattrak ? <span className="text-stattrak">ST™</span> : null}
       </span>
@@ -55,7 +55,7 @@ export function SellItemCard({ item, locale, selected, onToggle }: SellItemCardP
         ) : null}
       </span>
       <span className="text-fg-dim truncate text-xs">{parts.weapon}</span>
-      <span className="truncate text-[13px] font-medium">{parts.skin}</span>
+      <span className="text-small truncate font-medium">{parts.skin}</span>
       <span className="text-accent num mt-1.5 text-sm font-semibold">
         {formatUzs(locale, item.price_uzs)}
       </span>

@@ -77,10 +77,10 @@ export default async function LegalDocPage({ params }: Props) {
         {sections.map((s, i) => (
           <li key={s.h}>
             <section aria-labelledby={`s${String(i + 1)}`}>
-              <h2 id={`s${String(i + 1)}`} className="text-[17px] font-bold">
+              <h2 id={`s${String(i + 1)}`} className="text-title font-bold">
                 {i + 1}. {s.h}
               </h2>
-              <p className="text-fg-muted mt-2 text-[15px] leading-relaxed">{s.p}</p>
+              <p className="text-fg-muted text-lead mt-2 leading-relaxed">{s.p}</p>
             </section>
           </li>
         ))}

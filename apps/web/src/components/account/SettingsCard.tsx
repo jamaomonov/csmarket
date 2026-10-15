@@ -40,7 +40,7 @@ export function SettingsCard({
       <div className="min-w-0 flex-1">
         <div className="flex min-h-10 items-center justify-between gap-3 sm:min-h-11">
           <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">{title}</h3>
+            <h3 className="text-lead flex items-center gap-1.5 font-semibold">{title}</h3>
             {hint ? <div className="text-fg-muted mt-0.5 text-sm">{hint}</div> : null}
           </div>
           {aside ? <div className="shrink-0">{aside}</div> : null}

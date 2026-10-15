@@ -37,7 +37,7 @@ export function TradeSteps({ steps }: { steps: TradeStep[] }) {
           <span className={cn("block font-semibold", s.state === "todo" && "text-fg-dim")}>
             {s.label}
           </span>
-          {s.note ? <span className="text-fg-dim block text-[13px]">{s.note}</span> : null}
+          {s.note ? <span className="text-fg-dim text-small block">{s.note}</span> : null}
         </li>
       ))}
     </ol>

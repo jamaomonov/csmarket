@@ -184,7 +184,7 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{i.name}</span>
                 {i.exterior ? (
-                  <span className="text-fg-dim block text-[12px]">
+                  <span className="text-fg-dim text-label block">
                     {skins(`exterior.${i.exterior}`)}
                   </span>
                 ) : null}

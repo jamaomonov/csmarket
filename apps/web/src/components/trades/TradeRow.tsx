@@ -110,8 +110,8 @@ function Row(p: RowFrameProps) {
       {p.thumb}
       <span className="min-w-0">
         <span className="block truncate font-semibold">{p.name}</span>
-        <span className="text-fg-dim mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[13px]">
-          <span className="border-border-strong text-fg-muted rounded-md border px-1.5 py-px text-[11px] font-semibold uppercase tracking-wide">
+        <span className="text-fg-dim text-small mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+          <span className="border-border-strong text-fg-muted text-meta rounded-md border px-1.5 py-px font-semibold uppercase tracking-wide">
             {p.kind}
           </span>
           <StatusBadge badge={p.badge} />
@@ -122,7 +122,7 @@ function Row(p: RowFrameProps) {
         <span className={cn("num block whitespace-nowrap font-bold", p.amountClass)}>
           {p.amount}
         </span>
-        {p.note ? <span className="text-fg-dim block text-[12px]">{p.note}</span> : null}
+        {p.note ? <span className="text-fg-dim text-label block">{p.note}</span> : null}
       </span>
       <ChevronRight
         aria-hidden

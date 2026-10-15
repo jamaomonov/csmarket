@@ -26,10 +26,7 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "typ
 export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
   ({ children, className, ...props }, ref) => (
     <label
-      className={cn(
-        "text-fg-muted flex cursor-pointer items-center gap-2.5 text-[14px]",
-        className,
-      )}
+      className={cn("text-fg-muted text-body flex cursor-pointer items-center gap-2.5", className)}
     >
       <input
         ref={ref}

@@ -72,7 +72,7 @@ export function ProfileHero({ user, locale }: ProfileHeroProps) {
             className="ring-surface -mt-12 rounded-full ring-4 sm:-mt-14"
           />
           <div className="min-w-0 pb-0.5">
-            <h2 className="truncate text-[22px] font-bold leading-tight sm:text-[26px]">
+            <h2 className="text-h3 sm:text-h2 truncate font-bold leading-tight">
               {user.display_name ?? "Steam"}
             </h2>
             <p className="text-fg-muted mt-1 flex items-start gap-1.5 text-sm">

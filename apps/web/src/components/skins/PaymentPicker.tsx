@@ -110,7 +110,7 @@ export function PaymentPicker({
               ) : (
                 <span
                   className={cn(
-                    "block text-[13px] font-normal tabular-nums",
+                    "text-small block font-normal tabular-nums",
                     wallet.covers ? "text-fg-dim" : "text-danger",
                   )}
                 >
@@ -163,7 +163,7 @@ export function PaymentPicker({
               <span className="flex flex-col items-start leading-tight">
                 {kassaLabel(p.slug, labels.test)}
                 {Number(p.fee_pct) > 0 && (
-                  <span className="text-fg-dim text-[12px] font-normal">
+                  <span className="text-fg-dim text-label font-normal">
                     {percent(p.fee_pct, locale)}
                   </span>
                 )}

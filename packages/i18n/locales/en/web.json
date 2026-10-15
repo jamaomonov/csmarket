@@ -328,6 +328,7 @@
     },
     "collection": "Collection",
     "cases": "Case",
+    "casesMore": "{count} more",
     "color": {
       "title": "Colour",
       "names": {

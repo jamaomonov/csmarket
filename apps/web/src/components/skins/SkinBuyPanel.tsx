@@ -78,9 +78,9 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
     <section
       id="buy"
       aria-labelledby={headingId}
-      className="border-border bg-surface-2/40 flex flex-col gap-4 rounded-xl border p-4"
+      className="border-border flex flex-col gap-4 border-t pt-5"
     >
-      <h2 id={headingId} className="text-[15px] font-bold">
+      <h2 id={headingId} className="sr-only">
         {t("title")}
       </h2>
       {selected && (
@@ -99,7 +99,7 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
         </p>
       )}
       {body}
-      <p className="text-fg-dim text-[13px]">{t("howItWorks")}</p>
+      <p className="text-fg-dim text-small">{t("howItWorks")}</p>
     </section>
   );
 }
