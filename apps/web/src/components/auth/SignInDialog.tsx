@@ -41,7 +41,7 @@ export function SignInDialog({ open, onClose, locale }: SignInDialogProps) {
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="bg-surface border-border text-fg backdrop:bg-bg/70 m-auto w-[min(440px,calc(100vw-32px))] rounded-2xl border p-0 shadow-[0_24px_60px_rgb(0_0_0/0.5)] backdrop:backdrop-blur-sm"
+      className="bg-surface-solid border-border text-fg backdrop:bg-bg/70 m-auto w-[min(440px,calc(100vw-32px))] rounded-2xl border p-0 shadow-[0_24px_60px_rgb(0_0_0/0.5)] backdrop:backdrop-blur-sm"
     >
       <div className="relative flex flex-col items-center gap-4 px-6 pb-7 pt-9 text-center sm:px-8">
         <button

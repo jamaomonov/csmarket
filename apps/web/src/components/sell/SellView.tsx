@@ -213,7 +213,7 @@ export function SellView({ locale, config }: SellViewProps) {
         </div>
         <div className="hidden lg:sticky lg:top-4 lg:block">{cart}</div>
         {picked.length > 0 ? (
-          <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
+          <div className="bg-surface-solid border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
             <span className="flex-1 text-sm font-semibold">
               {t("cart.title", { count: picked.length })}
               <span className="text-accent num block">

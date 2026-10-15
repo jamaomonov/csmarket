@@ -1,8 +1,17 @@
 @import "@csmarket/config-tailwind/preset.css";
 
+/* Overlays (dialogs, sheets, fixed bars) keep an opaque surface: nothing shows through them. */
+@theme {
+  --color-surface-solid: #13161d;
+}
+
 :root {
   --font-sans: var(--app-font-sans);
   --font-mono: var(--app-font-mono);
+  /* The storefront's cards are a light veil over the page, not an opaque slab: the grain, the
+     top light and an item's rarity tint run through them (the admin keeps the opaque tokens). */
+  --color-surface: rgb(255 255 255 / 0.035);
+  --color-surface-hover: rgb(255 255 255 / 0.055);
 }
 
 @layer base {

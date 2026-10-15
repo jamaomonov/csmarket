@@ -92,7 +92,7 @@ export function SkinFilterDrawer({ count, children }: { count: number; children:
           />
           <div
             ref={panel}
-            className="bg-surface border-border absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl border-t"
+            className="bg-surface-solid border-border absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl border-t"
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-4">
               <p className="text-lead font-bold">{t("filters")}</p>
