@@ -32,7 +32,7 @@ export function StatusChip({ tone, children, sub, title, testId }: StatusChipPro
         {children}
       </span>
       {sub !== undefined && sub !== null && (
-        <span className="text-fg-dim whitespace-nowrap text-[11px]">{sub}</span>
+        <span className="text-fg-dim text-meta whitespace-nowrap">{sub}</span>
       )}
     </span>
   );

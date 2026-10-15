@@ -40,7 +40,7 @@ export function SettingsCard({
       <div className="min-w-0 flex-1">
         <div className="flex min-h-10 items-center justify-between gap-3 sm:min-h-11">
           <div className="min-w-0">
-            <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">{title}</h3>
+            <h3 className="text-lead flex items-center gap-1.5 font-semibold">{title}</h3>
             {hint ? <div className="text-fg-muted mt-0.5 text-sm">{hint}</div> : null}
           </div>
           {aside ? <div className="shrink-0">{aside}</div> : null}
@@ -62,7 +62,9 @@ interface SettingsPanelProps {
 /** A titled surface that holds settings rows. */
 export function SettingsPanel({ title, description, className, children }: SettingsPanelProps) {
   return (
-    <section className={cn("bg-surface overflow-hidden rounded-xl", className)}>
+    <section
+      className={cn("bg-surface border-border overflow-hidden rounded-xl border", className)}
+    >
       <header className="border-border border-b px-4 py-3.5 sm:px-5">
         <h2 className="text-fg-dim text-xs font-semibold uppercase tracking-wider">{title}</h2>
         {description ? <p className="text-fg-muted mt-1 text-sm">{description}</p> : null}

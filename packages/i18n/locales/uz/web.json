@@ -328,6 +328,7 @@
     },
     "collection": "Kolleksiya",
     "cases": "Keys",
+    "casesMore": "yana {count} ta",
     "color": {
       "title": "Rang",
       "names": {
@@ -363,7 +364,8 @@
       "inline": "{plural} skinlar",
       "other": "Boshqa ranglar",
       "item": "Rang"
-    }
+    },
+    "inStockCount": "{count}+ ta skin mavjud"
   },
   "buy": {
     "title": "Sotib olish",
@@ -392,6 +394,12 @@
       "fee": "{kassa} komissiyasi",
       "total": "Jami",
       "toPay": "Toʻlov"
+    },
+    "signInDialog": {
+      "title": "Sotib olish uchun kiring",
+      "text": "Steam orqali kirish — roʻyxatdan oʻtish va parolsiz. Skin Steam akkauntingizga keladi.",
+      "cta": "Steam orqali kirish",
+      "close": "Yopish"
     }
   },
   "orders": {
@@ -567,7 +575,7 @@
       "steam_refused": "Steam bu akkaunt bilan almashuvga ruxsat bermayapti.",
       "sales_disabled": "Sotish hozir yopiq. Keyinroq kiring.",
       "cards_limit": "{count} ta karta saqlangan — profilda bittasini oʻchiring.",
-      "card_invalid": "Karta raqamini tekshiring.",
+      "card_invalid": "Karta raqamida xato bor — raqamlarni tekshiring.",
       "card_gone": "Bu karta endi yoʻq — boshqasini tanlang.",
       "trade_link_missing": "Almashuv havolasini qoʻshing.",
       "trade_link_bad": "Almashuv havolasi ishlamayapti. Profilda tekshiring.",

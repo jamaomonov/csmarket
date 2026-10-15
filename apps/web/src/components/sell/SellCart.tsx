@@ -165,7 +165,10 @@ export function SellCart(p: SellCartProps) {
     sell.isPending;
   const title = t("cart.title", { count: p.chosen.length });
   return (
-    <aside aria-label={title} className="bg-surface flex flex-col gap-5 rounded-xl p-5">
+    <aside
+      aria-label={title}
+      className="bg-surface border-border flex flex-col gap-5 rounded-xl border p-5"
+    >
       <h2 className="text-lg font-bold">
         {title}
         {p.chosen.length > 0 ? <span className="text-accent num"> · {uzs(sum.items)}</span> : null}
@@ -180,8 +183,8 @@ export function SellCart(p: SellCartProps) {
                 // eslint-disable-next-line @next/next/no-img-element -- Steam CDN images
                 <img src={x.image_url} alt="" className="h-8 w-12 shrink-0 object-contain" />
               ) : null}
-              <span className="min-w-0 flex-1 truncate text-[13px]">{x.name}</span>
-              <span className="num shrink-0 text-[13px] font-semibold">
+              <span className="text-small min-w-0 flex-1 truncate">{x.name}</span>
+              <span className="num text-small shrink-0 font-semibold">
                 {uzs(Number(x.price_uzs))}
               </span>
               <button
@@ -225,7 +228,7 @@ export function SellCart(p: SellCartProps) {
             aria-invalid={wrongCard}
             {...(wrongCard ? { "aria-describedby": cardHint } : {})}
             className={cn(
-              "bg-bg num h-12 w-full rounded-lg border px-4 text-lg tracking-wider outline-none",
+              "num h-12 w-full rounded-lg border bg-black/20 px-4 text-lg tracking-wider outline-none",
               wrongCard ? "border-danger" : "border-border focus:border-accent",
             )}
           />

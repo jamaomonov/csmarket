@@ -130,7 +130,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
     }
   }
 
-  const panel = "bg-surface flex flex-col gap-5 rounded-xl p-5 sm:p-6";
+  const panel = "bg-surface border-border border flex flex-col gap-5 rounded-xl p-5 sm:p-6";
   return (
     <form
       noValidate
@@ -185,7 +185,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
             maxLength={FIELD_MAX}
             aria-invalid={outOfRange}
             aria-describedby={rangeId}
-            className="border-border bg-bg focus:border-accent h-14 w-full rounded-lg border px-4 text-2xl font-bold tabular-nums outline-none"
+            className="border-border focus:border-accent h-14 w-full rounded-lg border bg-black/20 px-4 text-2xl font-bold tabular-nums outline-none"
           />
           <div className="mt-3 grid grid-cols-2 gap-2">
             {QUICK_AMOUNTS.map((v) => (

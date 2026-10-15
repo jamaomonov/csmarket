@@ -119,7 +119,7 @@ export function SellView({ locale, config }: SellViewProps) {
     body = <div aria-busy className="bg-surface h-96 animate-pulse rounded-xl" />;
   } else if (status !== "signed_in" || !user) {
     body = (
-      <div className="bg-surface flex flex-col items-start gap-4 rounded-xl p-6">
+      <div className="bg-surface border-border flex flex-col items-start gap-4 rounded-xl border p-6">
         <p className="text-fg-muted">{t("signedOut")}</p>
         <a
           href={signInHref(locale)}
@@ -133,7 +133,7 @@ export function SellView({ locale, config }: SellViewProps) {
     body = (
       <div className="flex max-w-2xl flex-col gap-3">
         <p className="text-fg-muted">{t("needTradeLink")}</p>
-        <div className="bg-surface rounded-xl">
+        <div className="bg-surface border-border rounded-xl border">
           <TradeLinkForm
             initial={{ trade_link: null, verdict: null, reason: null }}
             onChange={() => {
@@ -213,7 +213,7 @@ export function SellView({ locale, config }: SellViewProps) {
         </div>
         <div className="hidden lg:sticky lg:top-4 lg:block">{cart}</div>
         {picked.length > 0 ? (
-          <div className="bg-surface border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
+          <div className="bg-surface-solid border-border fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t p-3 lg:hidden">
             <span className="flex-1 text-sm font-semibold">
               {t("cart.title", { count: picked.length })}
               <span className="text-accent num block">
@@ -252,10 +252,13 @@ export function SellView({ locale, config }: SellViewProps) {
 
   return (
     <div className="flex flex-col gap-6 pb-24 lg:pb-0">
-      <div className="flex flex-col items-center gap-1">
-        <h1 className="text-center text-3xl font-bold">{t("title")}</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h1 className="text-h2 font-semibold tracking-tight">{t("title")}</h1>
         {status === "signed_in" ? (
-          <Link href={`${TRADES}?type=sales`} className="text-accent text-sm font-semibold">
+          <Link
+            href={`${TRADES}?type=sales`}
+            className="text-fg-muted hover:text-fg text-small font-medium"
+          >
             {t("mySales")}
           </Link>
         ) : null}

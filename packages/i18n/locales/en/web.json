@@ -328,6 +328,7 @@
     },
     "collection": "Collection",
     "cases": "Case",
+    "casesMore": "{count} more",
     "color": {
       "title": "Colour",
       "names": {
@@ -363,7 +364,8 @@
       "inline": "{plural} skins",
       "other": "Other colours",
       "item": "Colour"
-    }
+    },
+    "inStockCount": "{count}+ skins in stock"
   },
   "buy": {
     "title": "Buy",
@@ -392,6 +394,12 @@
       "fee": "{kassa} fee",
       "total": "Total",
       "toPay": "To pay"
+    },
+    "signInDialog": {
+      "title": "Sign in to buy",
+      "text": "Sign in with Steam — no sign-up, no passwords. The skin arrives in your Steam account.",
+      "cta": "Sign in with Steam",
+      "close": "Close"
     }
   },
   "orders": {
@@ -567,7 +575,7 @@
       "steam_refused": "Steam does not allow trading with this account.",
       "sales_disabled": "Selling is closed right now. Come back later.",
       "cards_limit": "{count, plural, one {# card} other {# cards}} saved — delete one in your profile.",
-      "card_invalid": "Check the card number.",
+      "card_invalid": "The card number has a typo — check the digits.",
       "card_gone": "This card is no longer saved — choose another.",
       "trade_link_missing": "Add your trade link.",
       "trade_link_bad": "Your trade link does not work. Check it in your profile.",

@@ -79,7 +79,7 @@ export async function SkinLanding({
         {listLd && <JsonLd data={listLd} />}
         <nav
           aria-label="breadcrumb"
-          className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
+          className="text-fg-dim text-small mb-4 flex flex-wrap items-center gap-1"
         >
           {parents.map((c) => (
             <span key={c.path} className="flex items-center gap-1">
@@ -95,8 +95,8 @@ export async function SkinLanding({
             </span>
           )}
         </nav>
-        <h1 className="font-sans text-2xl font-bold md:text-3xl">{h1}</h1>
-        {intro && <p className="text-fg-muted mt-2 max-w-2xl text-[14px]">{intro}</p>}
+        <h1 className="text-h2 font-semibold tracking-tight">{h1}</h1>
+        {intro && <p className="text-fg-muted text-body mt-2 max-w-2xl">{intro}</p>}
 
         {links && links.items.length > 0 && (
           <section className="mt-5">
@@ -106,7 +106,7 @@ export async function SkinLanding({
                 <li key={l.path}>
                   <Link
                     href={l.path}
-                    className="border-border hover:border-border-strong inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-semibold"
+                    className="border-border hover:border-border-strong text-small inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-semibold"
                   >
                     {l.label}
                     <span className="text-fg-dim tabular-nums">{l.count}</span>

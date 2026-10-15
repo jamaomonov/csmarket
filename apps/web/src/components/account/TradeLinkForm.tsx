@@ -40,7 +40,7 @@ interface SavedLinkProps {
 function SavedLink({ url }: SavedLinkProps) {
   const short = shortTradeLink(url);
   return (
-    <span className="block truncate font-mono text-[13px]">
+    <span className="text-small block truncate font-mono">
       {short === null ? (
         url
       ) : (

@@ -8,7 +8,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 
 const item = (on: boolean) =>
   cn(
-    "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-[15px] font-medium transition-colors",
+    "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-1 pb-3 pt-1 text-lead font-medium transition-colors",
     on ? "border-accent text-fg" : "text-fg-muted hover:text-fg border-transparent",
   );
 

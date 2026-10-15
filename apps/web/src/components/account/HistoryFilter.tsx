@@ -23,7 +23,7 @@ export function HistoryFilter({ options, current }: HistoryFilterProps) {
           href={o.href}
           aria-current={o.key === current ? "page" : undefined}
           className={cn(
-            "rounded-md px-4 py-2 text-[14px] font-medium transition-colors",
+            "text-body rounded-md px-4 py-2 font-medium transition-colors",
             o.key === current ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg",
           )}
         >

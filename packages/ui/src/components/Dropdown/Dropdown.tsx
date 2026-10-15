@@ -95,8 +95,8 @@ function PlainLink({ children, ...props }: DropdownLinkProps) {
 
 const itemClass = (tone: DropdownItem["tone"], current: boolean | undefined) =>
   cn(
-    "flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-[14px] outline-none",
-    "hover:bg-border-strong focus-visible:bg-border-strong",
+    "flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-body outline-none",
+    "hover:bg-border focus-visible:bg-border",
     tone === "danger" ? "text-danger" : current || tone === "accent" ? "text-accent" : "text-fg",
   );
 
@@ -285,7 +285,7 @@ export function Dropdown({
         }}
         onKeyDown={onTriggerKey}
         className={cn(
-          "bg-surface text-fg inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[14px]",
+          "bg-surface text-fg text-body inline-flex items-center gap-2 rounded-lg px-3 py-2",
           "focus-visible:ring-accent focus-visible:ring-offset-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
           triggerClassName,
         )}
@@ -300,16 +300,16 @@ export function Dropdown({
           onKeyDown={onMenuKey}
           style={menuStyle(strategy, place, align, maxHeight)}
           className={cn(
-            "bg-surface-2 shadow-menu z-50 min-w-[200px] rounded-lg p-1.5",
+            "bg-surface-2 border-border-strong shadow-menu z-50 min-w-[200px] rounded-lg border p-1.5",
             strategy === "fixed"
               ? "max-w-[calc(100vw-16px)]"
               : cn("absolute mt-2", align === "end" ? "right-0" : "left-0"),
             menuClassName,
           )}
         >
-          {status && <p className="text-fg-muted px-3 py-2 text-[13px]">{status}</p>}
+          {status && <p className="text-fg-muted text-small px-3 py-2">{status}</p>}
           {loading ? (
-            <p role="status" className="text-fg-muted px-3 py-2 text-[13px]">
+            <p role="status" className="text-fg-muted text-small px-3 py-2">
               …
             </p>
           ) : (
@@ -324,7 +324,7 @@ export function Dropdown({
                     <span className="truncate">{entry.label}</span>
                   </span>
                   {entry.meta !== undefined && (
-                    <span className="text-fg-muted shrink-0 text-[13px]">{entry.meta}</span>
+                    <span className="text-fg-muted text-small shrink-0">{entry.meta}</span>
                   )}
                 </>
               );

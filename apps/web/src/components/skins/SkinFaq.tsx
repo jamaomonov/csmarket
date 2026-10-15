@@ -24,7 +24,7 @@ export function SkinFaq({ title, entries }: { title: string; entries: FaqEntry[]
   return (
     <section className="mt-8" aria-labelledby="skin-faq">
       <JsonLd data={ld} />
-      <h2 id="skin-faq" className="mb-3 text-[17px] font-bold">
+      <h2 id="skin-faq" className="text-title mb-3 font-bold">
         {title}
       </h2>
       <div className="space-y-2">
@@ -33,7 +33,7 @@ export function SkinFaq({ title, entries }: { title: string; entries: FaqEntry[]
             key={e.question}
             className="border-border bg-surface hover:border-border-strong open:border-accent/40 group rounded-xl border transition-colors"
           >
-            <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 text-[14px] font-semibold [&::-webkit-details-marker]:hidden">
+            <summary className="text-body flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 font-semibold [&::-webkit-details-marker]:hidden">
               <span className="flex-1">{e.question}</span>
               <span
                 aria-hidden
@@ -42,7 +42,7 @@ export function SkinFaq({ title, entries }: { title: string; entries: FaqEntry[]
                 <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
               </span>
             </summary>
-            <p className="text-fg-muted -mt-1 px-4 pb-4 pr-14 text-[14px] leading-relaxed">
+            <p className="text-fg-muted text-body -mt-1 px-4 pb-4 pr-14 leading-relaxed">
               {e.answer}
             </p>
           </details>

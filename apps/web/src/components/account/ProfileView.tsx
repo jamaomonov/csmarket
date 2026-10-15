@@ -39,7 +39,7 @@ export function ProfileView({ locale }: ProfileViewProps) {
   }
   if (status !== "signed_in" || !user) {
     return (
-      <div className="bg-surface flex flex-col items-start gap-4 rounded-xl p-6">
+      <div className="bg-surface border-border flex flex-col items-start gap-4 rounded-xl border p-6">
         <p className="text-fg-muted">{t("signedOut")}</p>
         <a
           href={signInHref(locale)}

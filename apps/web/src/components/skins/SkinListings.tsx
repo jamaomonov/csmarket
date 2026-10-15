@@ -43,9 +43,12 @@ export function SkinListings({
 
   if (offers === null) {
     return (
-      <ul className="space-y-2" aria-hidden>
+      <ul
+        className="border-border divide-border divide-y overflow-hidden rounded-xl border"
+        aria-hidden
+      >
         {[0, 1, 2, 3, 4].map((i) => (
-          <li key={i} className="bg-surface-2 h-[52px] animate-pulse rounded-xl" />
+          <li key={i} className="bg-surface h-[68px] animate-pulse" />
         ))}
       </ul>
     );
@@ -57,13 +60,14 @@ export function SkinListings({
   const shown = all ? offers : offers.slice(0, FIRST);
   return (
     <>
-      <ul className="space-y-2">
+      <ul className="border-border divide-border divide-y overflow-hidden rounded-xl border">
         {shown.map((l) => (
           <li
             key={l.listing_id}
+            data-selected={selected?.listing_id === l.listing_id ? "" : undefined}
             // Phones: a 3-column grid — picture, wear and float, price; then stickers under
             // them and the actions under the price. Wider: one line, left to right.
-            className="bg-surface border-border grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 rounded-xl border px-3 py-2.5 sm:flex sm:gap-x-4 sm:px-4"
+            className="bg-surface hover:bg-surface-hover data-[selected]:bg-accent/[0.06] relative grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors data-[selected]:shadow-[inset_2px_0_0_var(--color-accent)] sm:flex sm:gap-x-5 sm:px-4"
           >
             {image && (
               // A Steam CDN thumbnail, the same for every row: next/image adds nothing.
@@ -80,7 +84,7 @@ export function SkinListings({
             <div className="w-24 shrink-0">
               {exterior && (
                 <span
-                  className="block text-[13px] font-bold"
+                  className="text-small block font-bold"
                   style={{ color: wearColor(exterior) ?? undefined }}
                 >
                   {exterior}
@@ -88,20 +92,20 @@ export function SkinListings({
               )}
               {l.float_value !== null && (
                 <>
-                  <span className="text-fg-dim block text-[12px] tabular-nums">
+                  <span className="text-fg-dim text-label block tabular-nums">
                     {l.float_value.toFixed(4)}
                   </span>
                   <span className="sr-only">{t("float")}</span>
                 </>
               )}
               {l.paint_seed !== null && (
-                <span className="text-fg-dim block text-[11px]">
+                <span className="text-fg-dim text-meta block">
                   {t("seed")} <span className="tabular-nums">{l.paint_seed}</span>
                 </span>
               )}
             </div>
             {l.float_value !== null && (
-              <div className="hidden w-28 shrink-0 md:block">
+              <div className="hidden w-44 shrink-0 md:block">
                 <SkinFloatBar value={l.float_value} />
               </div>
             )}
@@ -127,7 +131,7 @@ export function SkinListings({
                 ),
               )}
             </span>
-            <span className="col-start-3 row-start-1 ml-auto whitespace-nowrap text-right text-[15px] font-bold tabular-nums">
+            <span className="text-lead col-start-3 row-start-1 ml-auto whitespace-nowrap text-right font-semibold tabular-nums">
               {displayPrice(locale, l.price_uzs, l.price_usd)}
             </span>
             <div className="col-start-3 row-start-2 flex items-center justify-end gap-2">
@@ -139,10 +143,10 @@ export function SkinListings({
                     select(l.listing_id);
                   }}
                   className={cn(
-                    "h-9 shrink-0 rounded-lg border px-3 text-[13px] font-semibold",
+                    "text-small h-9 shrink-0 rounded-lg border px-3 font-semibold",
                     selected?.listing_id === l.listing_id
-                      ? "border-accent bg-accent/10"
-                      : "border-border hover:border-border-strong",
+                      ? "border-accent/60 bg-accent/10 text-accent"
+                      : "border-border hover:border-border-strong hover:bg-surface-2",
                   )}
                 >
                   {selected?.listing_id === l.listing_id ? tb("selected") : tb("choose")}
@@ -153,7 +157,7 @@ export function SkinListings({
                   href={l.inspect_url}
                   aria-label={t("inspect")}
                   title={t("inspect")}
-                  className="text-fg-muted hover:text-fg border-border inline-flex size-9 shrink-0 items-center justify-center rounded-lg border"
+                  className="text-fg-muted hover:text-fg border-border hover:bg-surface-2 inline-flex size-9 shrink-0 items-center justify-center rounded-lg border"
                 >
                   <Eye className="h-4 w-4" aria-hidden />
                 </a>
@@ -168,7 +172,7 @@ export function SkinListings({
           onClick={() => {
             setAll(true);
           }}
-          className="border-border mx-auto mt-4 block rounded-xl border px-6 py-2.5 text-[14px] font-semibold"
+          className="border-border hover:border-border-strong hover:bg-surface text-small mx-auto mt-4 block rounded-lg border px-5 py-2 font-semibold transition-colors"
         >
           {t("loadMore")}
         </button>

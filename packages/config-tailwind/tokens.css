@@ -1,26 +1,27 @@
 /* csmarket design tokens — single source of truth (docs/design-system.md, ADR-0009).
-   Tailwind v4 reads them via @theme. Dark only; navy surfaces, one green accent. */
+   Tailwind v4 reads them via @theme. Dark only; graphite surfaces, one green accent
+   for the main action. */
 
 @theme {
   /* ---------- Surfaces ---------- */
-  --color-bg: #0d111b;
-  --color-surface: #1d2434;
-  --color-surface-2: #2c3449;
-  --color-surface-hover: #232b3e;
-  --color-border: #2c3449;
-  --color-border-strong: #3a4460;
+  --color-bg: #0b0d12;
+  --color-surface: #13161d;
+  --color-surface-2: #1c2029;
+  --color-surface-hover: #181c24;
+  --color-border: #222731;
+  --color-border-strong: #2f3542;
 
   /* ---------- Text ---------- */
-  --color-fg: #ffffff;
-  --color-fg-muted: #aab2c5;
+  --color-fg: #f2f4f7;
+  --color-fg-muted: #a4abb8;
   /* only on bg / surface — on surface-2 use fg-muted (4.0:1 there) */
-  --color-fg-dim: #8a93a8;
+  --color-fg-dim: #7f8796;
 
   /* ---------- Accent: action and price only ---------- */
   --color-accent: #4bf364;
   --color-accent-hover: #6cf682;
   --color-accent-active: #3ed957;
-  --color-accent-fg: #0d111b;
+  --color-accent-fg: #0b0d12;
   --color-accent-soft: #a7f3b2;
   --color-accent-subtle: rgb(75 243 100 / 0.12);
 
@@ -55,8 +56,28 @@
   /* ---------- Typography ----------
      The fallback inside var() matters: an app that loads no font (the admin) would
      otherwise get an invalid declaration and the browser's serif default. */
-  --font-sans: var(--app-font-sans, "IBM Plex Sans"), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--app-font-sans, "Onest"), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--app-font-mono, "IBM Plex Mono"), ui-monospace, Menlo, monospace;
+
+  /* ---------- Type scale (use these, never text-[Npx]) ---------- */
+  --text-meta: 11px;
+  --text-meta--line-height: 16px;
+  --text-label: 12px;
+  --text-label--line-height: 16px;
+  --text-small: 13px;
+  --text-small--line-height: 18px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-lead: 15px;
+  --text-lead--line-height: 22px;
+  --text-title: 17px;
+  --text-title--line-height: 24px;
+  --text-h3: 20px;
+  --text-h3--line-height: 28px;
+  --text-h2: 26px;
+  --text-h2--line-height: 32px;
+  --text-h1: 34px;
+  --text-h1--line-height: 40px;
 
   /* ---------- Shadows / motion ---------- */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);

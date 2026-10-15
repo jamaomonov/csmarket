@@ -27,7 +27,7 @@ export async function LegalShell({ locale, title, updated, intro, isDoc, childre
     <main id="main-content" className="mx-auto max-w-[760px] px-4 pb-28 pt-6 sm:px-6">
       <nav
         aria-label={t("breadcrumb")}
-        className="text-fg-dim mb-4 flex flex-wrap items-center gap-1 text-[13px]"
+        className="text-fg-dim text-small mb-4 flex flex-wrap items-center gap-1"
       >
         <Link href={HOME} className="hover:text-fg">
           {t("home")}
@@ -49,13 +49,13 @@ export async function LegalShell({ locale, title, updated, intro, isDoc, childre
           </span>
         )}
       </nav>
-      <h1 className="text-2xl font-bold md:text-3xl">{title}</h1>
+      <h1 className="text-h2 font-semibold tracking-tight">{title}</h1>
       {updated !== undefined && (
-        <p className="text-fg-dim mt-2 text-[12px]">
+        <p className="text-fg-dim text-label mt-2">
           {t("updatedLabel")} {updated}
         </p>
       )}
-      <p className="text-fg-muted mt-4 text-[15px] leading-relaxed">{intro}</p>
+      <p className="text-fg-muted text-lead mt-4 leading-relaxed">{intro}</p>
       {children}
     </main>
   );

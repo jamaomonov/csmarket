@@ -48,7 +48,7 @@ export function DepositView({ locale }: DepositViewProps) {
     );
   } else if (tab === "withdraw") {
     body = (
-      <div className="bg-surface text-fg-muted flex items-center gap-3 rounded-xl p-6">
+      <div className="bg-surface border-border text-fg-muted flex items-center gap-3 rounded-xl border p-6">
         <ArrowUpFromLine className="text-fg-dim size-5" aria-hidden />
         {t("withdrawSoon")}
       </div>
@@ -70,7 +70,7 @@ export function DepositView({ locale }: DepositViewProps) {
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="flex items-center gap-3 text-3xl font-bold">
+        <h1 className="text-h2 flex items-center gap-3 font-semibold tracking-tight">
           <Wallet className="text-accent size-8" aria-hidden />
           {t("wallet")}
         </h1>
@@ -86,7 +86,7 @@ export function DepositView({ locale }: DepositViewProps) {
                   setTab(key);
                 }}
                 className={cn(
-                  "flex items-center gap-2 rounded-md px-4 py-2 text-[14px] font-medium transition-colors",
+                  "text-body flex items-center gap-2 rounded-md px-4 py-2 font-medium transition-colors",
                   tab === key ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg",
                 )}
               >

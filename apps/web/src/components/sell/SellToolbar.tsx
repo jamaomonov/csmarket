@@ -1,10 +1,27 @@
 "use client";
 
-import { Chip, inputClass, selectClass, cn } from "@csmarket/ui";
-import { CheckCheck, RefreshCw, Search, X } from "lucide-react";
+import { Chip, inputClass, cn } from "@csmarket/ui";
+import {
+  ArrowDownAZ,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  CheckCheck,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { SortMenu } from "@/components/SortMenu";
+
 export type SellSort = "expensive" | "cheap" | "name";
+
+const SELL_SORTS = ["expensive", "cheap", "name"] as const satisfies readonly SellSort[];
+const SORT_ICONS = {
+  expensive: ArrowDownWideNarrow,
+  cheap: ArrowUpNarrowWide,
+  name: ArrowDownAZ,
+} as const;
 
 interface SellToolbarProps {
   query: string;
@@ -29,7 +46,7 @@ export function SellToolbar(p: SellToolbarProps) {
     skins.has(`chipLabel.${c}`) ? skins(`chipLabel.${c}`) : skins(`category.${c}`);
   return (
     <div className="flex flex-col gap-3">
-      <div className="bg-surface flex flex-col gap-2 rounded-xl p-3 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <label className="relative flex-1">
           <Search
             className="text-fg-dim absolute left-3 top-1/2 size-4 -translate-y-1/2"
@@ -45,24 +62,21 @@ export function SellToolbar(p: SellToolbarProps) {
           />
         </label>
         <div className="flex min-w-0 gap-2">
-          <select
-            aria-label={t("sortLabel")}
+          <SortMenu
+            label={t("sortLabel")}
+            options={SELL_SORTS.map((s) => ({
+              value: s,
+              label: t(`sort.${s}`),
+              icon: SORT_ICONS[s],
+            }))}
             value={p.sort}
-            onChange={(e) => {
-              p.onSort(e.target.value as SellSort); // one of the three options below
-            }}
-            className={cn(selectClass, "min-w-0 flex-1 sm:w-48 sm:flex-none")}
-          >
-            {(["expensive", "cheap", "name"] as const).map((s) => (
-              <option key={s} value={s}>
-                {t(`sort.${s}`)}
-              </option>
-            ))}
-          </select>
+            onPick={p.onSort}
+            className="min-w-0 flex-1 sm:w-52 sm:flex-none"
+          />
           <button
             type="button"
             onClick={p.onToggleAll}
-            className="bg-surface-2 hover:bg-border-strong flex shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium"
+            className="border-border-strong bg-surface hover:bg-surface-hover flex h-10 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors"
           >
             {p.allChosen ? (
               <X className="size-4" aria-hidden />
@@ -77,7 +91,7 @@ export function SellToolbar(p: SellToolbarProps) {
             title={t("refresh")}
             onClick={p.onRefresh}
             disabled={p.refreshing}
-            className="bg-surface-2 hover:bg-border-strong grid size-10 shrink-0 place-items-center rounded-lg disabled:opacity-60"
+            className="border-border-strong bg-surface hover:bg-surface-hover grid size-10 shrink-0 place-items-center rounded-lg border transition-colors disabled:opacity-60"
           >
             <RefreshCw className={cn("size-4", p.refreshing && "animate-spin")} aria-hidden />
           </button>

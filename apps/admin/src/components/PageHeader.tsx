@@ -21,7 +21,7 @@ export function PageHeader({ title, meta, back, actions, badges }: PageHeaderPro
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h1 className="truncate text-[22px] font-semibold leading-tight">{title}</h1>
+          <h1 className="text-h3 truncate font-semibold leading-tight">{title}</h1>
           {badges}
         </div>
         {actions !== undefined && <div className="flex flex-wrap gap-2">{actions}</div>}

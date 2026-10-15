@@ -144,7 +144,10 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
   const returned = sale.payout_status === "rejected";
   return (
     <div className="flex flex-col gap-5">
-      <section className="bg-surface flex flex-col gap-5 rounded-xl p-5" data-state={sale.status}>
+      <section
+        className="bg-surface border-border flex flex-col gap-5 rounded-xl border p-5"
+        data-state={sale.status}
+      >
         <div className="flex items-start gap-4">
           <span
             aria-hidden
@@ -169,8 +172,8 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
         </div>
         {steps ? <TradeSteps steps={steps} /> : null}
       </section>
-      <div className="grid items-start gap-5 md:grid-cols-[1fr_300px]">
-        <ul className="bg-surface flex flex-col rounded-xl px-4 py-1">
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[minmax(0,1fr)_300px]">
+        <ul className="bg-surface border-border flex flex-col rounded-xl border px-4 py-1">
           {sale.items.map((i) => (
             <li
               key={i.asset_id}
@@ -184,16 +187,18 @@ function SaleBody({ sale, locale }: { sale: SaleOut; locale: string }) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium">{i.name}</span>
                 {i.exterior ? (
-                  <span className="text-fg-dim block text-[12px]">
+                  <span className="text-fg-dim text-label block">
                     {skins(`exterior.${i.exterior}`)}
                   </span>
                 ) : null}
               </span>
-              <span className="num text-sm font-semibold">{uzs(i.price_uzs)}</span>
+              <span className="num shrink-0 whitespace-nowrap text-sm font-semibold">
+                {uzs(i.price_uzs)}
+              </span>
             </li>
           ))}
         </ul>
-        <dl className="bg-surface grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 rounded-xl p-5 text-sm">
+        <dl className="bg-surface border-border grid grid-cols-[1fr_auto] gap-x-6 gap-y-2 rounded-xl border p-5 text-sm">
           <dt className="text-fg-muted">{sell("summary.items")}</dt>
           <dd className="num text-right">{uzs(sale.items_uzs)}</dd>
           {returned ? null : sale.payout_to === "card" ? (
@@ -267,7 +272,7 @@ export function SaleView({ locale, number }: SaleViewProps) {
       </Link>
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 className="text-3xl font-bold">{t("number", { number })}</h1>
+          <h1 className="text-h2 font-semibold tracking-tight">{t("number", { number })}</h1>
           {sale.data ? <StatusBadge badge={saleBadge(sale.data)} /> : null}
         </div>
         {sale.data ? <SaleSubtitle sale={sale.data} locale={locale} /> : null}

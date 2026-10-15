@@ -1,4 +1,4 @@
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, Onest } from "next/font/google";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 
@@ -10,7 +10,7 @@ import { categoryPath, CHEAP, MARKET } from "@/lib/paths";
 
 import "./globals.css";
 
-const sans = IBM_Plex_Sans({
+const sans = Onest({
   subsets: ["latin", "latin-ext", "cyrillic"],
   weight: ["400", "500", "600", "700"],
   variable: "--app-font-sans",
@@ -73,8 +73,8 @@ export default async function NotFound() {
     >
       <body>
         <main className="mx-auto flex min-h-screen max-w-xl flex-col items-center justify-center px-6 text-center">
-          <p className="text-accent font-mono text-6xl font-bold">404</p>
-          <h1 className="mt-4 text-2xl font-bold">{t("title")}</h1>
+          <p className="text-fg-dim font-mono text-6xl font-bold">404</p>
+          <h1 className="text-h2 mt-4 font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-fg-muted mt-3">{t("subtitle")}</p>
           <Link
             href={getPathname({ locale, href: "/" })}
@@ -83,7 +83,7 @@ export default async function NotFound() {
             {common("actions.home")}
           </Link>
           <nav aria-label={tSkins("market")} className="mt-6">
-            <ul className="text-fg-muted flex flex-wrap justify-center gap-x-4 gap-y-2 text-[14px]">
+            <ul className="text-fg-muted text-body flex flex-wrap justify-center gap-x-4 gap-y-2">
               {links.map((l) => (
                 <li key={l.href}>
                   <Link href={getPathname({ locale, href: l.href })} className="hover:text-fg">

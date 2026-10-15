@@ -21,11 +21,11 @@ export function ComingSoon({ section, icon: Icon }: ComingSoonProps) {
       id="main-content"
       className="mx-auto flex max-w-md flex-col items-center gap-4 px-6 py-20 text-center"
     >
-      <span className="bg-accent-subtle text-accent grid size-16 place-items-center rounded-2xl">
+      <span className="bg-surface border-border text-fg-muted grid size-16 place-items-center rounded-2xl border">
         <Icon className="size-8" aria-hidden />
       </span>
-      <Badge>{t("badge")}</Badge>
-      <h1 className="text-2xl font-bold">{nav(section)}</h1>
+      <Badge tone="neutral">{t("badge")}</Badge>
+      <h1 className="text-h2 font-semibold tracking-tight">{nav(section)}</h1>
       <p className="text-fg-muted">{t("text")}</p>
       <Link href={MARKET} className={buttonVariants({ size: "md" })}>
         {t("toMarket")}

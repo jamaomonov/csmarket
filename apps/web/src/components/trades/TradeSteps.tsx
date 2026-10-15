@@ -28,7 +28,7 @@ export function TradeSteps({ steps }: { steps: TradeStep[] }) {
             className={cn(
               "absolute left-0 top-0 flex size-5 items-center justify-center rounded-full border-2",
               s.state === "done" && "border-accent bg-accent text-accent-fg",
-              s.state === "now" && "border-accent bg-bg ring-accent/15 ring-4",
+              s.state === "now" && "border-accent bg-surface-solid ring-accent/15 ring-4",
               s.state === "todo" && "border-border-strong bg-surface-2",
             )}
           >
@@ -37,7 +37,7 @@ export function TradeSteps({ steps }: { steps: TradeStep[] }) {
           <span className={cn("block font-semibold", s.state === "todo" && "text-fg-dim")}>
             {s.label}
           </span>
-          {s.note ? <span className="text-fg-dim block text-[13px]">{s.note}</span> : null}
+          {s.note ? <span className="text-fg-dim text-small block">{s.note}</span> : null}
         </li>
       ))}
     </ol>

@@ -42,13 +42,14 @@ function renderMenu(query: SkinQuery = { sort: "-price" }, initial?: WeaponFacet
     <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
       <WeaponMenu
         category="rifles"
-        label="Винтовки"
+
         query={query}
         {...(initial ? { initial } : {})}
+        trigger="Винтовки"
       />
     </NextIntlClientProvider>,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Модели: Винтовки" }));
+  fireEvent.click(screen.getByRole("button", { name: "Винтовки" }));
 }
 
 const lastUrl = () => replace.mock.calls.at(-1)?.[0] as string; // the router's recorded URL
@@ -114,10 +115,15 @@ describe("WeaponMenu", () => {
     impl.fn = () => new Promise(() => undefined);
     const { unmount } = render(
       <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-        <WeaponMenu category="rifles" label="Винтовки" query={{ sort: "-price" }} />
+        <WeaponMenu
+          category="rifles"
+
+          query={{ sort: "-price" }}
+          trigger="Винтовки"
+        />
       </NextIntlClientProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Модели: Винтовки" }));
+    fireEvent.click(screen.getByRole("button", { name: "Винтовки" }));
     const signal = fetchFacets.mock.calls[0]?.[1] as AbortSignal; // the mock's recorded argument
     expect(signal.aborted).toBe(false);
     unmount();

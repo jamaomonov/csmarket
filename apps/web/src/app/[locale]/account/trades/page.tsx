@@ -29,7 +29,7 @@ export default async function TradesPage({ params, searchParams }: Props) {
   const type = TYPES.find((x) => x === raw) ?? "all";
   return (
     <main id="main-content" className="min-w-0 flex-1">
-      <h1 className="mb-6 text-3xl font-bold">{t("title")}</h1>
+      <h1 className="text-h2 mb-6 font-semibold tracking-tight">{t("title")}</h1>
       <TradesView locale={locale} type={type} />
     </main>
   );

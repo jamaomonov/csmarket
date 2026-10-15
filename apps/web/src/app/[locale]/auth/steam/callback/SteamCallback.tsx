@@ -47,7 +47,7 @@ export function SteamCallback() {
     <main className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center px-6 text-center">
       {failed ? (
         <>
-          <h1 className="text-xl font-bold">{t("failed")}</h1>
+          <h1 className="text-h3 font-semibold">{t("failed")}</h1>
           <a
             href={signInHref(locale)}
             className="bg-accent text-accent-fg mt-6 rounded-md px-5 py-3 font-semibold"

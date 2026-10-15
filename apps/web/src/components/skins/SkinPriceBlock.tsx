@@ -33,13 +33,13 @@ export function SkinPriceBlock({
   const price = displayPrice(locale, head.uzs, head.usd);
   const off = head.usd !== null ? steamDiscount(head.usd, steamUsd) : null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="font-sans text-3xl font-bold tabular-nums">
+        <span className="text-h1 font-sans font-semibold tracking-tight">
           {price === null ? t("soldOut") : head.from ? t("fromPrice", { price }) : price}
         </span>
         {off !== null && (
-          <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[13px] font-bold text-emerald-400">
+          <span className="bg-accent-subtle text-accent text-label rounded-sm px-2 py-0.5 font-semibold">
             {t("belowSteam", { percent: off })}
           </span>
         )}
@@ -48,7 +48,7 @@ export function SkinPriceBlock({
         href={steamUrl}
         target="_blank"
         rel="nofollow noopener noreferrer"
-        className="text-fg-dim hover:text-fg inline-flex items-center gap-1 text-[13px]"
+        className="text-fg-dim hover:text-fg text-small inline-flex items-center gap-1"
       >
         {t("steamPrice")}
         <ExternalLink className="h-3.5 w-3.5" aria-hidden />

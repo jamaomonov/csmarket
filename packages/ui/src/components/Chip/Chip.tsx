@@ -3,18 +3,18 @@ import { type ButtonHTMLAttributes, forwardRef, type ReactNode } from "react";
 
 import { cn } from "../../lib/cn";
 
-/** A filter toggle: surface by default, green when active. Links reuse `chipVariants`. */
+/** A filter toggle: surface by default, light when active (green is for the main action). Links reuse `chipVariants`. */
 export const chipVariants = cva(
   [
-    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-[13px] font-medium",
+    "inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-md px-3.5 py-2 text-small font-medium",
     "transition-colors duration-(--duration-fast)",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
   ],
   {
     variants: {
       active: {
-        true: "bg-accent text-accent-fg font-semibold",
-        false: "bg-surface text-fg-muted hover:bg-surface-2 hover:text-fg",
+        true: "bg-fg text-bg font-semibold",
+        false: "bg-surface text-fg-muted hover:bg-surface-hover hover:text-fg",
       },
     },
     defaultVariants: { active: false },

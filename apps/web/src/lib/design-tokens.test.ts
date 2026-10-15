@@ -28,15 +28,15 @@ function contrast(a: string, b: string): number {
 
 describe("design tokens", () => {
   it.each([
-    ["color-bg", "#0D111B"],
-    ["color-surface", "#1D2434"],
-    ["color-surface-2", "#2C3449"],
-    ["color-surface-hover", "#232B3E"],
-    ["color-fg", "#FFFFFF"],
-    ["color-fg-muted", "#AAB2C5"],
-    ["color-fg-dim", "#8A93A8"],
+    ["color-bg", "#0B0D12"],
+    ["color-surface", "#13161D"],
+    ["color-surface-2", "#1C2029"],
+    ["color-surface-hover", "#181C24"],
+    ["color-fg", "#F2F4F7"],
+    ["color-fg-muted", "#A4ABB8"],
+    ["color-fg-dim", "#7F8796"],
     ["color-accent", "#4BF364"],
-    ["color-accent-fg", "#0D111B"],
+    ["color-accent-fg", "#0B0D12"],
     ["color-accent-soft", "#A7F3B2"],
     ["color-success", "#2FBF71"],
     ["color-danger", "#FF7A7A"],
@@ -50,9 +50,9 @@ describe("design tokens", () => {
     expect(token(name).toUpperCase()).toBe(value.toUpperCase());
   });
 
-  it("uses IBM Plex through the app font variables", () => {
+  it("uses Onest through the app font variables", () => {
     expect(token("font-sans")).toContain("var(--app-font-sans, ");
-    expect(token("font-sans")).toContain("IBM Plex Sans");
+    expect(token("font-sans")).toContain("Onest");
   });
 
   it.each([
@@ -66,6 +66,7 @@ describe("design tokens", () => {
     ["color-danger", "color-surface-2", 4.5],
     ["color-stattrak", "color-surface", 4.5],
     ["color-stattrak", "color-surface-hover", 4.5],
+    ["color-fg-muted", "color-surface-hover", 4.5],
   ])("%s on %s meets AA", (fg, bg, min) => {
     expect(contrast(token(fg), token(bg))).toBeGreaterThanOrEqual(min);
   });

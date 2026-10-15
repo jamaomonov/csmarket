@@ -11,39 +11,43 @@ the spec is `docs/superpowers/specs/2026-10-04-storefront-design-system-design.m
 
 ## Tokens
 
-| Group   | Token                                             | Value                                         | Use                                                           |
-| ------- | ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
-| Surface | `bg`                                              | `#0D111B`                                     | page                                                          |
-|         | `surface`                                         | `#1D2434`                                     | panels, cards, filter bar, sidebar                            |
-|         | `surface-2`                                       | `#2C3449`                                     | raised: inputs, selects, open chip, menus                     |
-|         | `surface-hover`                                   | `#232B3E`                                     | card hover                                                    |
-|         | `border` / `border-strong`                        | `#2C3449` / `#3A4460`                         | dividers / menu dividers                                      |
-| Text    | `fg`                                              | `#FFFFFF`                                     | primary                                                       |
-|         | `fg-muted`                                        | `#AAB2C5`                                     | secondary, any surface                                        |
-|         | `fg-dim`                                          | `#8A93A8`                                     | tertiary, **only on `bg` / `surface`**                        |
-| Accent  | `accent` (+ `-hover`, `-active`)                  | `#4BF364`                                     | action and price                                              |
-|         | `accent-fg`                                       | `#0D111B`                                     | text on accent                                                |
-|         | `accent-soft`                                     | `#A7F3B2`                                     | light tint                                                    |
-|         | `accent-subtle`                                   | `rgb(75 243 100 / 0.12)`                      | badge background                                              |
-| Status  | `success` / `danger` / `warning` / `info`         | `#2FBF71` / `#FF7A7A` / `#F5B83D` / `#5DB2FF` | states — success is not the accent                            |
-| Rarity  | `rarity-consumer … rarity-contraband`, `stattrak` | Steam's colours                               | legends and filters; a card glows in the API's `rarity_color` |
-| Radius  | `rounded-sm/md/lg/xl`                             | 6 / 8 / 10 / 12 px                            | badge / input, chip / card, button / panel, menu              |
-| Shadow  | `shadow-menu`                                     | `0 12px 30px rgb(0 0 0 / .45)`                | dropdown menus only                                           |
-| Type    | `font-sans`                                       | IBM Plex Sans 400–700                         | everything                                                    |
-|         | `font-mono`                                       | IBM Plex Mono 500                             | codes (order numbers), not prices                             |
-|         | `.num`                                            | tabular numerals                              | prices and columns of numbers                                 |
+| Group   | Token                                             | Value                                         | Use                                                    |
+| ------- | ------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------ |
+| Surface | `bg`                                              | `#0B0D12`                                     | page                                                   |
+|         | `surface`                                         | `#13161D`                                     | panels and cards, always outlined with `border-border` |
+|         | `surface-2`                                       | `#1C2029`                                     | raised: menus, tiles inside a card                     |
+|         | `surface-hover`                                   | `#181C24`                                     | card and row hover                                     |
+|         | `border` / `border-strong`                        | `#222731` / `#2F3542`                         | outlines, dividers / hover outline, secondary button   |
+| Text    | `fg`                                              | `#F2F4F7`                                     | primary; prices                                        |
+|         | `fg-muted`                                        | `#A4ABB8`                                     | secondary, any surface                                 |
+|         | `fg-dim`                                          | `#7F8796`                                     | tertiary, **only on `bg` / `surface`**                 |
+| Accent  | `accent` (+ `-hover`, `-active`)                  | `#4BF364`                                     | the main action; the discount                          |
+|         | `accent-fg`                                       | `#0B0D12`                                     | text on accent                                         |
+|         | `accent-soft`                                     | `#A7F3B2`                                     | light tint                                             |
+|         | `accent-subtle`                                   | `rgb(75 243 100 / 0.12)`                      | badge background                                       |
+| Status  | `success` / `danger` / `warning` / `info`         | `#2FBF71` / `#FF7A7A` / `#F5B83D` / `#5DB2FF` | states — success is not the accent                     |
+| Rarity  | `rarity-consumer … rarity-contraband`, `stattrak` | Steam's colours                               | legends, filters; a card's 2 px line and a faint wash  |
+| Radius  | `rounded-sm/md/lg/xl`                             | 6 / 8 / 10 / 12 px                            | badge / input, chip / card, button / panel, menu       |
+| Shadow  | `shadow-menu`                                     | `0 12px 30px rgb(0 0 0 / .45)`                | dropdown menus only                                    |
+| Type    | `font-sans`                                       | Onest 400–700                                 | everything                                             |
+|         | `font-mono`                                       | IBM Plex Mono 500                             | codes (order numbers), not prices                      |
+|         | `.num`                                            | tabular numerals                              | prices and columns of numbers                          |
 
-Type scale: 11 meta · 12 label · 13 small body · 14 body · 15 nav · 17 panel title · 22 logo · 26 page title.
+Type scale, as utilities (`--text-*` in `tokens.css`; never `text-[Npx]`): `text-meta` 11 · `text-label` 12 ·
+`text-small` 13 · `text-body` 14 · `text-lead` 15 · `text-title` 17 · `text-h3` 20 · `text-h2` 26 (page
+titles) · `text-h1` 34 (the item price). `cn` (tailwind-merge) knows the scale, so `text-small` and a
+text colour do not cancel each other.
 
 ## Components (`@csmarket/ui`)
 
-- **Button** / `buttonVariants` — `primary` (the page's main action, green), `secondary`
-  (raised surface), `ghost` (quiet), `danger`; sizes `sm` / `md` / `lg`.
+- **Button** / `buttonVariants` — `primary` (the page's main action, green; disabled turns grey),
+  `secondary` (outlined surface), `ghost` (quiet), `danger`; sizes `sm` / `md` / `lg`.
 - **Chip** / `chipVariants({active})` — a filter toggle; links (category chips) use the
-  class helper. Active = green.
+  class helper. Active = light (`bg-fg text-bg`): green stays for the main action.
 - **Badge** — `accent` (a discount), `neutral` (a code), `danger`.
-- **Panel** — the surface container (`div` / `section` / `aside`).
-- **Input** / `inputClass`, **Select** / `selectClass` — raised fields with the focus ring.
+- **Panel** — the outlined surface container (`div` / `section` / `aside`).
+- **Input** / `inputClass`, **Select** / `selectClass` — outlined fields; focus turns the outline
+  green with a soft ring.
 - **Checkbox** — a real input; **CheckMark** — the box alone, for filter options that are links.
 - **Dropdown** — a menu button (WAI-ARIA menu): items are links (pass the app's router `Link`
   as `LinkComponent`) or actions, with an optional count (`meta`), separators, a loading and a
@@ -60,18 +64,20 @@ Domain components stay in `apps/web`: `SkinCard`, `SkinCategoryBar`, `WeaponMenu
 
 ## Rules
 
-1. **Green means action or price.** Primary buttons, the active chip, prices, the discount
-   badge. Not decoration, not status (status uses `success`).
-2. **Muted text by surface.** `fg-dim` only on `bg` / `surface` (contrast 6.1 / 5.0); on
-   `surface-2` use `fg-muted` (`fg-dim` there is 4.0, below AA).
+1. **Green means the main action.** The primary button and the discount badge — not prices (they
+   are `fg`), not the active chip, not decoration, not status (`success`). No glows, gradients
+   behind panels or lifted hovers: a hover changes the outline and the surface.
+2. **Muted text by surface.** `fg-dim` on `bg` / `surface` (contrast 5.4 / 5.0); on `surface-2`
+   prefer `fg-muted` (7.1 — `fg-dim` there is 4.5, the bare minimum).
 3. **Icons are silhouettes** — category PNGs as a CSS mask over `currentColor`
    (`SkinCategoryIcon`), lucide for UI glyphs. No emoji.
 4. **One focus style** — `focus-visible:ring-2 ring-accent ring-offset-2 ring-offset-bg`.
 5. **Radii:** chips and cards 8–10, panels 12, menus 10, badges 6.
+6. **Surfaces are outlined.** A `bg-surface` card carries `border border-border`; a list of rows is
+   one outlined box with `divide-y`, not a stack of cards. Page titles are `text-h2 font-semibold`,
+   left-aligned.
 
-Measured contrast (WCAG): `fg` on `surface` 15.5; `fg-muted` on `surface-2` 5.8; `accent` on
-`surface` 10.6; `accent-fg` on `accent` 12.9; `danger` on `surface-2` 4.9; `stattrak` on
-`surface` 5.2. `apps/web/src/lib/design-tokens.test.ts` pins
+Contrast (WCAG AA, ≥ 4.5) is checked, not quoted: `apps/web/src/lib/design-tokens.test.ts` pins
 the values and these ratios.
 
 ## Adding a component

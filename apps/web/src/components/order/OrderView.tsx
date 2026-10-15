@@ -113,7 +113,7 @@ export function OrderView({ locale, number }: OrderViewProps) {
     if (isNotFound(order.error)) {
       return (
         <Panel state="notFound">
-          <h1 className="text-2xl font-bold">{t("notFound")}</h1>
+          <h1 className="text-h2 font-semibold tracking-tight">{t("notFound")}</h1>
         </Panel>
       );
     }
@@ -131,7 +131,9 @@ export function OrderView({ locale, number }: OrderViewProps) {
     <Panel state={data.status}>
       <header className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 className="text-3xl font-bold">{t("number", { number: data.number })}</h1>
+          <h1 className="text-h2 font-semibold tracking-tight">
+            {t("number", { number: data.number })}
+          </h1>
           <span data-testid="order-status-label">
             <StatusBadge badge={orderBadge(data)} />
           </span>

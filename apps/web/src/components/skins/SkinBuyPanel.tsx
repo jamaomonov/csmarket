@@ -1,15 +1,14 @@
 "use client";
 
 import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
-import { cn } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 import { useId, type ReactNode } from "react";
 
 import { SkinBuyForm } from "./SkinBuyForm";
+import { SkinGuestForm } from "./SkinGuestForm";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
 import { useTradeLinkGate } from "./useTradeLinkGate";
 
-import { SteamIcon } from "@/components/icons/SteamIcon";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { displayPrice } from "@/lib/skins";
@@ -29,7 +28,7 @@ const CTA = "bg-accent text-accent-fg inline-block rounded-md px-5 py-3 text-cen
 export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
   const t = useTranslations("web.buy");
   const tauth = useTranslations("web.auth");
-  const { status, user, signInHref, refreshMe } = useAuth();
+  const { status, user, refreshMe } = useAuth();
   const signedIn = status === "signed_in" && user !== null;
   const gate = useTradeLinkGate(signedIn ? user : null, refreshMe);
   const offers = useSkinOffers();
@@ -44,15 +43,7 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
   } else if (status === "suspended") {
     body = <p className="text-danger text-sm">{tauth("suspended")}</p>;
   } else if (!signedIn) {
-    body = (
-      <a
-        href={signInHref(locale)}
-        className={cn(CTA, "inline-flex items-center justify-center gap-2")}
-      >
-        <SteamIcon className="size-5" aria-hidden />
-        {t("signIn")}
-      </a>
-    );
+    body = <SkinGuestForm locale={locale} offer={selected} />;
   } else if (gate.link === null) {
     body = (
       <div className="flex flex-col items-start gap-3">
@@ -78,9 +69,9 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
     <section
       id="buy"
       aria-labelledby={headingId}
-      className="border-border bg-surface-2/40 flex flex-col gap-4 rounded-xl border p-4"
+      className="border-border flex flex-col gap-4 border-t pt-5"
     >
-      <h2 id={headingId} className="text-[15px] font-bold">
+      <h2 id={headingId} className="sr-only">
         {t("title")}
       </h2>
       {selected && (
@@ -99,7 +90,7 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
         </p>
       )}
       {body}
-      <p className="text-fg-dim text-[13px]">{t("howItWorks")}</p>
+      {selected && <p className="text-fg-dim text-small">{t("howItWorks")}</p>}
     </section>
   );
 }

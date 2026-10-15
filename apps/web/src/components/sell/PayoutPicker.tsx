@@ -98,7 +98,7 @@ export function PayoutPicker({ config, cards, value, onPick }: PayoutPickerProps
               )}
             >
               {o.type === null ? (
-                <span className="bg-bg grid size-10 shrink-0 place-items-center rounded-lg">
+                <span className="bg-surface-2 grid size-10 shrink-0 place-items-center rounded-lg">
                   <LogoMark className="text-accent size-6" />
                 </span>
               ) : (

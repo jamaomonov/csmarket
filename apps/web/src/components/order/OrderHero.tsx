@@ -32,9 +32,9 @@ export function OrderHero({ order, locale }: OrderHeroProps) {
   const glow = rarityGlow(order.rarity_color);
   const { weapon, skin } = splitName(order.name);
   const float = order.float_value === null ? null : Number(order.float_value);
-  const chip = "bg-surface-2 text-fg-muted rounded-md px-2.5 py-1 text-[13px]";
+  const chip = "bg-surface-2 text-fg-muted rounded-md px-2.5 py-1 text-small";
   return (
-    <div className="bg-surface grid w-full gap-5 rounded-xl p-5 sm:grid-cols-[200px_1fr_auto] sm:items-center">
+    <div className="bg-surface border-border grid w-full gap-5 rounded-xl border p-5 sm:grid-cols-[200px_1fr_auto] sm:items-center">
       <div className="flex flex-col items-center gap-2.5">
         <div className="relative flex h-32 w-full items-center justify-center rounded-lg">
           {glow ? (
@@ -52,7 +52,7 @@ export function OrderHero({ order, locale }: OrderHeroProps) {
         {float !== null && Number.isFinite(float) ? (
           <div data-testid="order-float" className="w-full max-w-[180px]">
             <SkinFloatBar value={float} />
-            <p className="text-fg-dim mt-1.5 flex justify-between text-[12px]">
+            <p className="text-fg-dim text-label mt-1.5 flex justify-between">
               <span>{t("skins.float")}</span>
               <span className="text-fg num font-semibold">{order.float_value}</span>
             </p>

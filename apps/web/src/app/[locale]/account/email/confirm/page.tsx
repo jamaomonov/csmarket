@@ -24,7 +24,7 @@ export default async function ConfirmEmailPage({ params }: Props) {
   const t = await getTranslations("web.account.email.confirm");
   return (
     <main id="main-content" className="min-w-0 flex-1">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <h1 className="text-h2 font-semibold tracking-tight">{t("title")}</h1>
       <div className="mt-6">
         <ConfirmEmail />
       </div>

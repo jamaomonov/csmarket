@@ -197,7 +197,7 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
         <ChargeLines locale={locale} base={Number(price)} charge={charge} kind="order" />
       )}
       {shown !== null && (
-        <p role="status" className="text-sm font-semibold text-amber-400">
+        <p role="status" className="text-warning text-sm font-semibold">
           {shown}
         </p>
       )}

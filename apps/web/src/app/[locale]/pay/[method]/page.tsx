@@ -91,7 +91,7 @@ export default async function PayPage({ params }: Props) {
       faq={{ title: tSkins("faq.title"), entries: faq }}
       before={
         <section className="mt-6" aria-labelledby="pay-steps">
-          <h2 id="pay-steps" className="mb-3 flex items-center gap-2.5 text-[17px] font-bold">
+          <h2 id="pay-steps" className="text-title mb-3 flex items-center gap-2.5 font-bold">
             <Image src={`/pay/${m}.png`} alt="" width={28} height={28} className="rounded-md" />
             {t("stepsTitle", { method: name })}
           </h2>
@@ -99,9 +99,9 @@ export default async function PayPage({ params }: Props) {
             {steps.map((s, i) => (
               <li
                 key={s}
-                className="border-border bg-surface flex items-start gap-3 rounded-xl border p-3.5 text-[14px]"
+                className="border-border bg-surface text-body flex items-start gap-3 rounded-xl border p-3.5"
               >
-                <span className="bg-accent/15 text-accent flex size-7 shrink-0 items-center justify-center rounded-full text-[13px] font-bold">
+                <span className="bg-accent/15 text-accent text-small flex size-7 shrink-0 items-center justify-center rounded-full font-bold">
                   {i + 1}
                 </span>
                 {s}
@@ -112,13 +112,13 @@ export default async function PayPage({ params }: Props) {
       }
       after={
         <nav className="mt-8" aria-label={t("other")}>
-          <h2 className="mb-3 text-[17px] font-bold">{t("other")}</h2>
+          <h2 className="text-title mb-3 font-bold">{t("other")}</h2>
           <ul className="flex flex-wrap gap-2">
             {PAY_METHODS.filter((p) => p !== m).map((p) => (
               <li key={p}>
                 <Link
                   href={payPath(p)}
-                  className="border-border hover:border-border-strong inline-flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 text-[13px] font-semibold"
+                  className="border-border hover:border-border-strong text-small inline-flex items-center gap-2 rounded-full border py-1.5 pl-1.5 pr-3.5 font-semibold"
                 >
                   <Image src={`/pay/${p}.png`} alt="" width={22} height={22} className="rounded" />
                   {t("crumb", { method: PAY_NAMES[p] })}

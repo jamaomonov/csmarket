@@ -28,9 +28,9 @@ export function SkinItemTitle({
   souvenir,
   category,
 }: SkinItemTitleProps) {
-  const eyebrow = "text-fg-dim block text-[14px] font-semibold";
+  const eyebrow = "text-fg-muted mb-1 block text-small font-medium";
   const title = (
-    <span className="block font-sans text-2xl font-bold md:text-3xl">
+    <span className="text-h3 md:text-h2 block font-sans font-semibold tracking-tight">
       {name}
       {phase && <span className="text-fg-muted"> · {phase}</span>}
       {exterior && <span className="text-fg-muted"> · {exterior}</span>}
@@ -47,8 +47,8 @@ export function SkinItemTitle({
   return (
     <h1>
       <span className={eyebrow}>
-        {stattrak && <span className="text-orange-400">StatTrak™ </span>}
-        {souvenir && <span className="text-yellow-400">Souvenir </span>}
+        {stattrak && <span className="text-stattrak">StatTrak™ </span>}
+        {souvenir && <span className="text-rarity-contraband">Souvenir </span>}
         {weapon ?? category}
       </span>{" "}
       {title}

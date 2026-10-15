@@ -139,7 +139,7 @@ export function ApiKeyCard({ locale }: ApiKeyCardProps) {
           <code
             ref={tokenRef}
             aria-label={t("tokenTitle")}
-            className="num bg-bg/40 border-border min-w-0 flex-1 break-all rounded-lg border px-3 py-2 text-[13px]"
+            className="num bg-bg/40 border-border text-small min-w-0 flex-1 break-all rounded-lg border px-3 py-2"
           >
             {token}
           </code>
@@ -367,7 +367,7 @@ function IpAllowlist({ apiKey, busy }: IpAllowlistProps) {
             spellCheck={false}
             aria-label={t("title")}
             aria-describedby="ip-allowlist-hint"
-            className="num bg-bg/40 border-border mt-2 w-full rounded-lg border px-3 py-2 text-[13px]"
+            className="num bg-bg/40 border-border text-small mt-2 w-full rounded-lg border px-3 py-2"
             onChange={(e) => {
               setText(e.target.value);
             }}

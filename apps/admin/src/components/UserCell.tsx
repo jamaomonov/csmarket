@@ -18,7 +18,7 @@ export function UserCell({ id, name, avatarUrl, sub }: UserCellProps) {
       ) : (
         <span
           aria-hidden
-          className="bg-surface-2 text-fg-muted grid size-6 shrink-0 place-items-center rounded-full text-[11px] font-medium"
+          className="bg-surface-2 text-fg-muted text-meta grid size-6 shrink-0 place-items-center rounded-full font-medium"
         >
           {shown.slice(0, 1).toUpperCase()}
         </span>

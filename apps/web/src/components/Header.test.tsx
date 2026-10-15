@@ -46,9 +46,6 @@ describe("Header", () => {
     const link = screen.getByRole("link", { name: "Войти через Steam" });
     expect(link.getAttribute("href")).toContain("app=web&locale=ru");
     expect(link.querySelector("[data-steam-icon]")).not.toBeNull();
-    expect(
-      screen.getByRole("link", { name: "Пополнить Steam" }).querySelector("[data-steam-icon]"),
-    ).not.toBeNull();
   });
 
   it("shows the balance chip and the account menu to a signed-in user", () => {
@@ -72,7 +69,7 @@ describe("Header", () => {
     );
   });
 
-  it("the nav: sell, market, Steam top-up and reviews, each with an icon", () => {
+  it("the nav: sell, market, Steam top-up and reviews, as plain text links", () => {
     auth.value = { status: "anonymous", user: null, signInHref: () => "" };
     renderHeader();
     const nav = screen.getByRole("navigation");
@@ -83,7 +80,8 @@ describe("Header", () => {
       ["Пополнить Steam", "/steam"],
       ["Отзывы", "/reviews"],
     ]);
-    for (const a of links) expect(a.querySelector("svg")).not.toBeNull();
+    // Text only since the redesign (2026-10-15): the icons repeated the words.
+    for (const a of links) expect(a.querySelector("svg")).toBeNull();
     // `/` is the landing now: no section is current there.
     expect(within(nav).getByRole("link", { name: "Маркет" })).not.toHaveAttribute("aria-current");
   });

@@ -98,7 +98,7 @@ export function UsdWalletCard({ locale, usd }: UsdWalletCardProps) {
 
   const unavailable = rate === null;
   return (
-    <section className="bg-surface flex flex-col gap-4 rounded-xl p-5">
+    <section className="bg-surface border-border flex flex-col gap-4 rounded-xl border p-5">
       <div>
         <h2 className="text-fg-muted text-sm">{t("title")}</h2>
         <p className="mt-1 text-3xl font-bold tabular-nums">{`$${usd.balance_usd}`}</p>

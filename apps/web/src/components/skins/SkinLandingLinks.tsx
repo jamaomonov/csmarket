@@ -61,13 +61,13 @@ export async function SkinLandingLinks({ facets }: { facets: SkinFacets }) {
     >
       {groups.map((g) => (
         <div key={g.title}>
-          <h2 className="mb-2 text-[15px] font-bold">{g.title}</h2>
+          <h2 className="text-lead mb-2 font-bold">{g.title}</h2>
           <ul className="flex flex-wrap gap-2">
             {g.links.map((l) => (
               <li key={l.path}>
                 <Link
                   href={l.path}
-                  className="border-border hover:border-border-strong text-fg-muted hover:text-fg inline-block rounded-full border px-3 py-1.5 text-[13px]"
+                  className="border-border hover:border-border-strong text-fg-muted hover:text-fg text-small inline-block rounded-full border px-3 py-1.5"
                 >
                   {l.label}
                 </Link>

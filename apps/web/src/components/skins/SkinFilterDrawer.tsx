@@ -64,13 +64,13 @@ export function SkinFilterDrawer({ count, children }: { count: number; children:
         onClick={() => {
           setOpen(true);
         }}
-        className="bg-surface-2 flex h-10 shrink-0 items-center gap-2 rounded-md px-4 text-[14px] font-medium lg:hidden"
+        className="border-border-strong bg-surface hover:bg-surface-hover text-body flex h-10 shrink-0 items-center gap-2 rounded-md border px-4 font-medium transition-colors lg:hidden"
         aria-label={count > 0 ? `${t("filters")}: ${String(count)}` : t("filters")}
       >
         <SlidersHorizontal className="h-4 w-4" aria-hidden />
         {t("filters")}
         {count > 0 && (
-          <span className="bg-accent text-accent-fg rounded-full px-1.5 text-[11px] font-bold">
+          <span className="bg-accent text-accent-fg text-meta rounded-full px-1.5 font-bold">
             {count}
           </span>
         )}
@@ -92,10 +92,10 @@ export function SkinFilterDrawer({ count, children }: { count: number; children:
           />
           <div
             ref={panel}
-            className="bg-surface border-border absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl border-t"
+            className="bg-surface-solid border-border absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl border-t"
           >
             <div className="flex items-center justify-between px-5 pb-2 pt-4">
-              <p className="text-[16px] font-bold">{t("filters")}</p>
+              <p className="text-lead font-bold">{t("filters")}</p>
               <button
                 ref={closeButton}
                 type="button"
@@ -115,7 +115,7 @@ export function SkinFilterDrawer({ count, children }: { count: number; children:
                 onClick={() => {
                   setOpen(false);
                 }}
-                className="bg-accent text-accent-fg w-full rounded-xl py-3 text-[15px] font-bold"
+                className="bg-accent text-accent-fg text-lead w-full rounded-xl py-3 font-bold"
               >
                 {t("done")}
               </button>

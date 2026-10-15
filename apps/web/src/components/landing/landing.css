@@ -1,34 +1,38 @@
 /* The SEO landing (docs/design/landing-hifi.html), scoped under .lp so the rest of the site is untouched. */
 
 .lp {
-  --bg: #0d111b;
-  --bg-2: #0a0e17;
-  --surface: #1d2434;
-  --surface-2: #2c3449;
-  --surface-hover: #232b3e;
-  --border: #2c3449;
-  --border-strong: #3a4460;
-  --fg: #fff;
-  --muted: #aab2c5;
-  --dim: #8a93a8;
-  --accent: #4bf364;
-  --accent-hover: #6cf682;
-  --accent-fg: #0d111b;
-  --accent-soft: #a7f3b2;
-  --accent-subtle: rgb(75 243 100/0.12);
-  --success: #2fbf71;
-  --info: #5db2ff;
-  --warning: #f5b83d;
-  --covert: #eb4b4b;
-  --classified: #d32ce6;
-  --restricted: #8847ff;
-  --milspec: #4b69ff;
+  /* The site's tokens (packages/config-tailwind/tokens.css), under the landing's short names. */
+  --bg: var(--color-bg);
+  --bg-2: var(--color-bg);
+  /* A box inside a panel: a faint lift over it, never the page's opaque black. */
+  --inset: rgb(255 255 255 / 0.03);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --surface-hover: var(--color-surface-hover);
+  --border: var(--color-border);
+  --border-strong: var(--color-border-strong);
+  --fg: var(--color-fg);
+  --muted: var(--color-fg-muted);
+  --dim: var(--color-fg-dim);
+  --accent: var(--color-accent);
+  --accent-hover: var(--color-accent-hover);
+  --accent-fg: var(--color-accent-fg);
+  --accent-soft: var(--color-accent-soft);
+  --accent-subtle: var(--color-accent-subtle);
+  --success: var(--color-success);
+  --info: var(--color-info);
+  --warning: var(--color-warning);
+  --covert: var(--color-rarity-covert);
+  --classified: var(--color-rarity-classified);
+  --restricted: var(--color-rarity-restricted);
+  --milspec: var(--color-rarity-milspec);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --w: 1280px;
   --gut: 32px;
 }
 .lp {
-  background: var(--bg);
+  /* Transparent: the page's grain and top light (globals.css) show through. */
+  background: transparent;
   color: var(--fg);
   font:
     400 15px/1.5 var(--font-sans),
@@ -53,7 +57,7 @@
   cursor: pointer;
 }
 .lp .num {
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: normal;
 }
 .lp .wrap {
   max-width: calc(var(--w) + var(--gut) * 2);
@@ -106,19 +110,17 @@
 .lp .btn-primary {
   background: var(--accent);
   color: var(--accent-fg);
-  box-shadow: 0 8px 24px -8px rgb(75 243 100/0.55);
 }
 .lp .btn-primary:hover {
   background: var(--accent-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 12px 30px -8px rgb(75 243 100/0.65);
 }
 .lp .btn-secondary {
-  background: var(--surface-2);
+  background: var(--surface);
   color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 .lp .btn-secondary:hover {
-  background: var(--border-strong);
+  background: var(--surface-2);
 }
 .lp .btn-sm {
   height: 40px;
@@ -146,14 +148,11 @@
   inset: -20% -10% auto;
   height: 900px;
   z-index: -2;
-  background:
-    radial-gradient(
-      42% 46% at 76% 40%,
-      color-mix(in srgb, var(--hr, #eb4b4b) 22%, transparent),
-      transparent 70%
-    ),
-    radial-gradient(30% 40% at 8% 18%, rgb(75 243 100/0.13), transparent 70%),
-    radial-gradient(40% 50% at 40% 100%, rgb(136 71 255/0.1), transparent 70%);
+  background: radial-gradient(
+    40% 44% at 76% 40%,
+    color-mix(in srgb, var(--hr, #eb4b4b) 9%, transparent),
+    transparent 70%
+  );
   transition: background 1s var(--ease);
 }
 .lp .hero::after {
@@ -161,7 +160,7 @@
   position: absolute;
   inset: 0;
   z-index: -1;
-  opacity: 0.55;
+  opacity: 0;
   background-image:
     linear-gradient(rgb(255 255 255/0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgb(255 255 255/0.035) 1px, transparent 1px);
@@ -181,7 +180,7 @@
   gap: 10px;
   padding: 6px 14px 6px 8px;
   border-radius: 999px;
-  background: rgb(29 36 52/0.7);
+  background: var(--surface);
   border: 1px solid var(--border);
   font-size: 13px;
   color: var(--muted);
@@ -207,27 +206,13 @@
 }
 .lp h1 {
   margin: 22px 0 20px;
-  font-size: clamp(38px, 5.2vw, 68px);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
-  font-weight: 700;
+  font-size: clamp(36px, 4.4vw, 58px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  font-weight: 650;
 }
 .lp h1 .hl {
-  position: relative;
-  display: inline-block;
-  color: var(--accent-fg);
-  padding: 0 0.18em 0 0.14em;
-  margin: 0 0.04em 0 0.12em;
-  z-index: 0;
-}
-.lp h1 .hl::before {
-  content: "";
-  position: absolute;
-  inset: 0.08em 0 0.02em;
-  background: var(--accent);
-  transform: skewX(-14deg);
-  border-radius: 6px;
-  z-index: -1;
+  color: var(--accent);
 }
 .lp h1 .sub {
   display: block;
@@ -259,7 +244,7 @@
 /* ---------- popular ---------- */
 
 .lp section {
-  padding: 88px 0 0;
+  padding: 72px 0 0;
 }
 .lp .sec-h {
   display: flex;
@@ -271,28 +256,21 @@
 }
 .lp h2 {
   margin: 0;
-  font-size: clamp(26px, 3vw, 38px);
-  line-height: 1.12;
-  letter-spacing: -0.025em;
-  font-weight: 700;
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 650;
 }
 .lp .kicker {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 12px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
-  letter-spacing: 0.02em;
-}
-.lp .kicker::before {
-  content: "";
-  width: 18px;
-  height: 6px;
-  border-radius: 2px;
-  background: var(--accent);
-  transform: skewX(-14deg);
+  color: var(--dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 .lp .sec-lead {
   margin: 12px 0 0;
@@ -350,8 +328,8 @@
   color: var(--fg);
 }
 .lp .tab[aria-selected="true"] {
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: var(--surface-2);
+  color: var(--fg);
   font-weight: 600;
 }
 .lp .live {
@@ -416,7 +394,6 @@
   transition: opacity 0.25s;
 }
 .lp .card:hover {
-  transform: translateY(-4px);
   background: var(--surface-hover);
   border-color: var(--border-strong);
   box-shadow: 0 18px 36px -18px rgb(0 0 0/0.8);
@@ -498,7 +475,7 @@
 .lp .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border-radius: 18px;
+  border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -508,11 +485,6 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(
-    104deg,
-    transparent 0 30px,
-    rgb(255 255 255/0.018) 30px 31px
-  );
   pointer-events: none;
 }
 .lp .stat {
@@ -554,7 +526,7 @@
   min-height: 150px;
   padding: 20px;
   border-radius: 14px;
-  background: linear-gradient(160deg, #222a3d, #1a2131);
+  background: var(--surface);
   border: 1px solid var(--border);
   overflow: hidden;
   isolation: isolate;
@@ -573,16 +545,15 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--r) 32%, transparent),
+    color-mix(in srgb, var(--r) 12%, transparent),
     transparent
   );
   z-index: -1;
   transition: transform 0.4s var(--ease);
 }
 .lp .cat:hover {
-  transform: translateY(-4px);
+  background: var(--surface-hover);
   border-color: var(--border-strong);
-  box-shadow: 0 22px 40px -22px rgb(0 0 0/0.9);
 }
 .lp .cat:hover::before {
   transform: scale(1.15);
@@ -625,7 +596,7 @@
   transition: transform 0.45s var(--ease);
 }
 .lp .cat:hover .cat-img {
-  transform: translate(-4px, -6px) rotate(-4deg) scale(1.04);
+  transform: scale(1.04);
 }
 .lp .cat-go {
   position: absolute;
@@ -645,8 +616,8 @@
   height: 16px;
 }
 .lp .cat:hover .cat-go {
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: var(--surface-2);
+  color: var(--fg);
 }
 .lp .cat--big {
   grid-column: span 2;
@@ -671,15 +642,10 @@
   height: 32px;
 }
 .lp .cat--all {
-  background: linear-gradient(160deg, rgb(75 243 100/0.14), rgb(75 243 100/0.04));
-  border-color: rgb(75 243 100/0.28);
+  background: var(--surface);
 }
 .lp .cat--all .cat-t {
   color: var(--accent);
-}
-.lp .cat--all .cat-go {
-  background: var(--accent);
-  color: var(--accent-fg);
 }
 
 /* ---------- buy / sell ---------- */
@@ -690,7 +656,7 @@
 }
 .lp .panel {
   position: relative;
-  border-radius: 22px;
+  border-radius: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   overflow: hidden;
@@ -709,9 +675,10 @@
 }
 .lp .panel h3 {
   margin: 0;
-  font-size: 28px;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 .lp .panel p.pl {
   margin: 12px 0 0;
@@ -724,7 +691,7 @@
   position: absolute;
   inset: auto -20% -40% 30%;
   height: 70%;
-  background: radial-gradient(closest-side, rgb(75 243 100/0.14), transparent);
+  background: none;
   z-index: -1;
 }
 .lp .panel-sell::before {
@@ -732,7 +699,7 @@
   position: absolute;
   inset: auto 20% -40% -20%;
   height: 70%;
-  background: radial-gradient(closest-side, rgb(93 178 255/0.14), transparent);
+  background: none;
   z-index: -1;
 }
 
@@ -760,7 +727,6 @@
 }
 .lp .btn-sell:hover {
   background: #e6e9f0;
-  transform: translateY(-1px);
 }
 .lp .note {
   font-size: 12px;
@@ -918,9 +884,9 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 22px 4px;
-  font-size: 17px;
-  font-weight: 600;
+  padding: 18px 4px;
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
   letter-spacing: -0.01em;
 }
@@ -946,19 +912,14 @@
 }
 .lp .faq details[open] .pm {
   transform: rotate(45deg);
-  background: var(--accent);
-  color: var(--accent-fg);
 }
 .lp .faq summary:hover .pm {
   background: var(--surface-2);
 }
-.lp .faq details[open] summary:hover .pm {
-  background: var(--accent);
-}
 .lp .faq .a {
   padding: 0 60px 22px 4px;
   color: var(--muted);
-  font-size: 15.5px;
+  font-size: 15px;
   line-height: 1.6;
 }
 .lp .faq .a p {
@@ -967,8 +928,8 @@
 
 /* ---------- about / seo ---------- */
 .lp .about {
-  border-radius: 22px;
-  background: linear-gradient(180deg, var(--surface), #171d2b);
+  border-radius: 16px;
+  background: var(--surface);
   border: 1px solid var(--border);
   padding: 48px;
 }
@@ -1026,11 +987,12 @@
 .lp .final {
   position: relative;
   margin-top: 88px;
-  border-radius: 24px;
+  border-radius: 16px;
   padding: 56px;
   overflow: hidden;
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg);
   isolation: isolate;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
@@ -1041,7 +1003,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: repeating-linear-gradient(104deg, transparent 0 30px, rgb(13 17 27/0.06) 30px 44px);
+  background: none;
   z-index: -1;
 }
 .lp .final h2 {
@@ -1050,18 +1012,17 @@
 .lp .final p {
   margin: 10px 0 0;
   font-size: 17px;
-  opacity: 0.8;
+  color: var(--muted);
 }
 .lp .final .btn {
-  background: var(--accent-fg);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-fg);
   height: 56px;
   padding: 0 28px;
   font-size: 16px;
 }
 .lp .final .btn:hover {
-  background: #1d2434;
-  transform: translateY(-1px);
+  background: var(--accent-hover);
 }
 .lp .final-imgs {
   display: flex;
@@ -1080,7 +1041,7 @@
   margin-top: 88px;
   border-top: 1px solid var(--border);
   padding: 56px 0 40px;
-  background: var(--bg-2);
+  background: transparent;
 }
 .lp .foot {
   display: grid;
@@ -1428,7 +1389,7 @@
     grid-template-columns: 1fr;
     padding: 32px 22px;
     margin-top: 64px;
-    border-radius: 20px;
+    border-radius: 16px;
   }
   .lp .final .btn {
     width: 100%;
