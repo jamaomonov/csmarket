@@ -34,6 +34,10 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
   sale's creation from `fx_snapshots`), the dashboard's `sales_pnl` and «Сверка»;
   `admin_recon_routes.py` — `GET /admin/sales/reconciliation` (spec 2026-10-13-sales-pnl).
 - `cards.py`, `views.py`, `schemas.py`, `routes.py`, `cards_routes.py` — the seller's API.
+  A card number is 16 digits that pass Luhn and start in its type's range: Uzcard 8600 / 5614,
+  Humo 9860, Uzum Visa 4; Uzcard and Humo also accept the co-badged Visa (4), Mastercard (5)
+  and UnionPay (6) ranges, so a right co-badged number is never refused (`web/src/lib/sell.ts`
+  checks the same).
   `add_card` returns the user's live card with the same number instead of a second row (the
   ≤ 3 live cards decrypted and compared under the user lock), so retrying a refused card sale
   never fills the `cards_limit`.

@@ -39,10 +39,14 @@ log = get_logger("csmarket.sales.cards")
 
 MAX_LIVE_CARDS = 3
 _LENGTH = 16
-#: The first digits of each card type we pay to (Uzcard, Humo, Uzum Visa).
+#: The first digits of each card type we pay to (Uzcard, Humo, Uzum Visa). Besides their own
+#: ranges (Uzcard 8600 and its NFC 5614, Humo 9860) both issue co-badged cards — Visa (4),
+#: Mastercard (5), UnionPay (6) — which a right number must not be refused for (owner,
+#: 2026-10-15). Luhn still catches a typo.
+_CO_BADGED = ("4", "5", "6")
 _PREFIXES: dict[str, tuple[str, ...]] = {
-    "uzcard": ("8600", "5614"),
-    "humo": ("9860",),
+    "uzcard": ("8600", *_CO_BADGED),
+    "humo": ("9860", *_CO_BADGED),
     "uzum_visa": ("4",),
 }
 
