@@ -1,10 +1,27 @@
 "use client";
 
-import { Chip, inputClass, selectClass, cn } from "@csmarket/ui";
-import { CheckCheck, RefreshCw, Search, X } from "lucide-react";
+import { Chip, inputClass, cn } from "@csmarket/ui";
+import {
+  ArrowDownAZ,
+  ArrowDownWideNarrow,
+  ArrowUpNarrowWide,
+  CheckCheck,
+  RefreshCw,
+  Search,
+  X,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { SortMenu } from "@/components/SortMenu";
+
 export type SellSort = "expensive" | "cheap" | "name";
+
+const SELL_SORTS = ["expensive", "cheap", "name"] as const satisfies readonly SellSort[];
+const SORT_ICONS = {
+  expensive: ArrowDownWideNarrow,
+  cheap: ArrowUpNarrowWide,
+  name: ArrowDownAZ,
+} as const;
 
 interface SellToolbarProps {
   query: string;
@@ -45,20 +62,17 @@ export function SellToolbar(p: SellToolbarProps) {
           />
         </label>
         <div className="flex min-w-0 gap-2">
-          <select
-            aria-label={t("sortLabel")}
+          <SortMenu
+            label={t("sortLabel")}
+            options={SELL_SORTS.map((s) => ({
+              value: s,
+              label: t(`sort.${s}`),
+              icon: SORT_ICONS[s],
+            }))}
             value={p.sort}
-            onChange={(e) => {
-              p.onSort(e.target.value as SellSort); // one of the three options below
-            }}
-            className={cn(selectClass, "min-w-0 flex-1 sm:w-48 sm:flex-none")}
-          >
-            {(["expensive", "cheap", "name"] as const).map((s) => (
-              <option key={s} value={s}>
-                {t(`sort.${s}`)}
-              </option>
-            ))}
-          </select>
+            onPick={p.onSort}
+            className="min-w-0 flex-1 sm:w-52 sm:flex-none"
+          />
           <button
             type="button"
             onClick={p.onToggleAll}
