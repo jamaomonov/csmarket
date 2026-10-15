@@ -29,7 +29,7 @@ export function SellToolbar(p: SellToolbarProps) {
     skins.has(`chipLabel.${c}`) ? skins(`chipLabel.${c}`) : skins(`category.${c}`);
   return (
     <div className="flex flex-col gap-3">
-      <div className="bg-surface border-border flex flex-col gap-2 rounded-xl border p-3 sm:flex-row">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <label className="relative flex-1">
           <Search
             className="text-fg-dim absolute left-3 top-1/2 size-4 -translate-y-1/2"
@@ -62,7 +62,7 @@ export function SellToolbar(p: SellToolbarProps) {
           <button
             type="button"
             onClick={p.onToggleAll}
-            className="bg-surface-2 hover:bg-border-strong flex shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium"
+            className="border-border-strong bg-surface hover:bg-surface-hover flex h-10 shrink-0 items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors"
           >
             {p.allChosen ? (
               <X className="size-4" aria-hidden />
@@ -77,7 +77,7 @@ export function SellToolbar(p: SellToolbarProps) {
             title={t("refresh")}
             onClick={p.onRefresh}
             disabled={p.refreshing}
-            className="bg-surface-2 hover:bg-border-strong grid size-10 shrink-0 place-items-center rounded-lg disabled:opacity-60"
+            className="border-border-strong bg-surface hover:bg-surface-hover grid size-10 shrink-0 place-items-center rounded-lg border transition-colors disabled:opacity-60"
           >
             <RefreshCw className={cn("size-4", p.refreshing && "animate-spin")} aria-hidden />
           </button>

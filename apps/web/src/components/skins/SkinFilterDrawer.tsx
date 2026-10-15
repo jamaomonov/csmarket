@@ -64,7 +64,7 @@ export function SkinFilterDrawer({ count, children }: { count: number; children:
         onClick={() => {
           setOpen(true);
         }}
-        className="bg-surface-2 text-body flex h-10 shrink-0 items-center gap-2 rounded-md px-4 font-medium lg:hidden"
+        className="border-border-strong bg-surface hover:bg-surface-hover text-body flex h-10 shrink-0 items-center gap-2 rounded-md border px-4 font-medium transition-colors lg:hidden"
         aria-label={count > 0 ? `${t("filters")}: ${String(count)}` : t("filters")}
       >
         <SlidersHorizontal className="h-4 w-4" aria-hidden />
