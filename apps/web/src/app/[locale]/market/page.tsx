@@ -23,6 +23,7 @@ import { SkinGridMore } from "@/components/skins/SkinGridMore";
 import { SkinLandingLinks } from "@/components/skins/SkinLandingLinks";
 import { SkinSearch } from "@/components/skins/SkinSearch";
 import { SkinSort } from "@/components/skins/SkinSort";
+import { StickyFilters } from "@/components/skins/StickyFilters";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
 import { MARKET } from "@/lib/paths";
@@ -116,13 +117,13 @@ export default async function HomePage({ params, searchParams }: Props) {
         <div className="lg:flex lg:gap-6">
           {facets && (
             <aside className="hidden lg:block lg:w-[244px] lg:shrink-0">
-              <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pb-4 [scrollbar-width:thin]">
+              <StickyFilters>
                 <p className="text-fg-muted text-label mb-1 flex items-center gap-2 font-semibold uppercase tracking-wider">
                   <SlidersHorizontal className="size-3.5" aria-hidden />
                   {t("filters")}
                 </p>
                 <SkinFilters query={query} facets={facets} />
-              </div>
+              </StickyFilters>
             </aside>
           )}
           <section className="min-w-0 flex-1">
