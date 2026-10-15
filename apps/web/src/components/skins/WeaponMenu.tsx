@@ -2,10 +2,9 @@
 
 import { Dropdown, type DropdownEntry } from "@csmarket/ui";
 import { skinQueryString, weaponParam, weaponsOf } from "@csmarket/utils/skins";
-import { ChevronDown } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { type ReactNode, useEffect, useRef, useState, useTransition } from "react";
 
 import type { SkinCategory, SkinQuery, SkinQueryPatch, WeaponFacet } from "@csmarket/utils/skins";
 
@@ -15,10 +14,11 @@ import { fetchSkinFacets } from "@/lib/skins";
 
 interface WeaponMenuProps {
   category: SkinCategory;
-  label: string;
   query: SkinQuery;
   /** The models already known (from the page's facets): no request on open. */
   initial?: WeaponFacet[];
+  /** The chip's own content (icon, name, ▾): the whole chip opens the menu. */
+  trigger: ReactNode;
 }
 
 /** A model's picture on a red glow (the Covert grade's colour), or the glow alone. */
@@ -43,11 +43,11 @@ function ModelPicture({ model }: { model: WeaponFacet }) {
 }
 
 /**
- * The ▾ beside a weapon category chip: «Выбрать все» and the category's models, each with
+ * A weapon category chip as a menu (the whole chip opens it): «Выбрать все» and the category's models, each with
  * a picture and a box. Ticking keeps the menu open and moves the grid at once; models of
  * several categories can be ticked together (the query then names no category).
  */
-export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps) {
+export function WeaponMenu({ category, query, initial, trigger }: WeaponMenuProps) {
   const t = useTranslations("web.skins");
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -133,9 +133,8 @@ export function WeaponMenu({ category, label, query, initial }: WeaponMenuProps)
 
   return (
     <Dropdown
-      triggerLabel={t("models", { category: label })}
-      triggerClassName="h-9 rounded-l-none bg-transparent py-0 pl-1 pr-2.5 text-inherit"
-      label={<ChevronDown className="size-3.5" aria-hidden />}
+      triggerClassName="h-9 w-full gap-2 bg-transparent py-0 pl-2.5 pr-2.5 text-inherit lg:justify-center"
+      label={trigger}
       items={items}
       loading={models === null && !failed}
       status={failed ? t("modelsFailed") : undefined}

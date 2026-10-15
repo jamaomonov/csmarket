@@ -1,5 +1,6 @@
 import { chipVariants, cn } from "@csmarket/ui";
-import { SKIN_CATEGORIES, skinQueryString, weaponParam, weaponsOf } from "@csmarket/utils/skins";
+import { SKIN_CATEGORIES, weaponsOf } from "@csmarket/utils/skins";
+import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { OtherCategoriesMenu } from "./OtherCategoriesMenu";
@@ -7,10 +8,7 @@ import { ScrollActiveIntoView } from "./ScrollActiveIntoView";
 import { SkinCategoryIcon } from "./SkinCategoryIcon";
 import { WeaponMenu } from "./WeaponMenu";
 
-import type { SkinCategory, SkinFacets, SkinQuery, SkinQueryPatch } from "@csmarket/utils/skins";
-
-import { Link } from "@/i18n/navigation";
-import { MARKET } from "@/lib/paths";
+import type { SkinCategory, SkinFacets, SkinQuery } from "@csmarket/utils/skins";
 
 const ORDER: SkinCategory[] = [
   "knives",
@@ -59,7 +57,6 @@ export function SkinCategoryBar({ query, facets }: { query: SkinQuery; facets: S
   const weapons = inStock.filter((c) => WITH_MODELS.has(c));
   const others = inStock.filter((c) => !WITH_MODELS.has(c));
   const activeOther = others.find((c) => c === query.category);
-  const href = (patch: SkinQueryPatch) => MARKET + skinQueryString(query, patch);
   const picked = weaponsOf(query);
   /** The page's facets know a category's models when they are unscoped or scoped to it. */
   const models = (c: SkinCategory) => {
@@ -82,31 +79,26 @@ export function SkinCategoryBar({ query, facets }: { query: SkinQuery; facets: S
         const active = query.category === c || mine.length > 0;
         const label = t(`category.${c}`);
         const shown = SHORT.has(c) ? t(`chipLabel.${c}`) : label;
-        // A chosen chip clears itself: its category, or only its own models.
-        const target: SkinQueryPatch = active
-          ? {
-              category: undefined,
-              weapon: weaponParam(picked.filter((w) => !mine.includes(w))),
-            }
-          : { category: c, weapon: undefined };
         const known = models(c);
         const named = mine.length === 1 ? mine[0] : mine.length > 1 ? String(mine.length) : null;
         return (
-          <span key={c} className={cn(chip(active), "gap-0 p-0", FILL)}>
-            <Link
-              href={href(target)}
-              className="focus-visible:ring-accent focus-visible:ring-offset-bg flex items-center gap-2 rounded-md py-2 pl-2.5 pr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 lg:flex-1 lg:justify-center"
-              aria-current={active ? "page" : undefined}
-              {...(shown !== label ? { title: label } : {})}
-            >
-              <SkinCategoryIcon category={c} size="sm" />
-              {named ? `${shown} · ${named}` : shown}
-            </Link>
+          <span
+            key={c}
+            className={cn(chip(active), "gap-0 p-0", FILL)}
+            {...(active ? { "data-active": "" } : {})}
+            {...(shown !== label ? { title: label } : {})}
+          >
             <WeaponMenu
               category={c}
-              label={label}
               query={query}
               {...(known ? { initial: known } : {})}
+              trigger={
+                <>
+                  <SkinCategoryIcon category={c} size="sm" />
+                  {named ? `${shown} · ${named}` : shown}
+                  <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+                </>
+              }
             />
           </span>
         );

@@ -23,7 +23,10 @@ vi.mock("./OtherCategoriesMenu", () => ({
   ),
 }));
 vi.mock("./WeaponMenu", () => ({
-  WeaponMenu: ({ label }: { label: string }) => <button type="button">{`menu:${label}`}</button>,
+  // The real one is a Dropdown whose trigger is the whole chip (WeaponMenu.test.tsx).
+  WeaponMenu: ({ trigger }: { trigger: React.ReactNode }) => (
+    <button type="button">{trigger}</button>
+  ),
 }));
 
 const facets: SkinFacets = {
@@ -54,59 +57,41 @@ function bar(query: SkinQuery) {
   );
 }
 
-it("chips carry silhouettes, knives first, weapon categories get a model menu, no «Все»", () => {
+/** The chip (the span around a weapon category's menu) whose button reads `name`. */
+const chipOf = (name: RegExp | string) => screen.getByRole("button", { name }).parentElement;
+
+it("chips carry silhouettes, knives first, each weapon category is one menu button, no «Все»", () => {
   bar({ sort: "-price" });
-  const links = screen.getAllByRole("link").map((a) => a.textContent);
-  expect(links).toEqual(["Ножи", "Винтовки", "П-пулемёты", "Тяжёлое"]);
-  expect(screen.getByRole("button", { name: "menu:Ножи" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "menu:Винтовки" })).toBeInTheDocument();
+  const buttons = screen
+    .getAllByRole("button")
+    .map((b) => b.textContent)
+    .filter((t) => !t.startsWith("other:"));
+  expect(buttons).toEqual(["Ножи", "Винтовки", "П-пулемёты", "Тяжёлое"]);
+  expect(screen.queryAllByRole("link")).toHaveLength(0);
   expect(document.querySelectorAll("[data-skin-icon]").length).toBeGreaterThanOrEqual(3);
-  expect(screen.queryByRole("link", { name: "Все" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Все" })).toBeNull();
 });
 
-it("the chosen category's chip clears it", () => {
+it("the chosen category's chip is marked active", () => {
   bar({ sort: "-price", category: "rifles" });
-  const chip = screen.getByRole("link", { name: "Винтовки" });
-  expect(chip).toHaveAttribute("aria-current", "page");
-  expect(chip).toHaveAttribute("href", "/market");
+  expect(chipOf("Винтовки")).toHaveAttribute("data-active");
+  expect(chipOf("Ножи")).not.toHaveAttribute("data-active");
 });
 
-it("a chosen weapon shows on its chip; the chip clears the models", () => {
+it("a chosen weapon shows on its chip", () => {
   bar({ sort: "-price", category: "rifles", weapon: "AK-47" });
-  const chip = screen.getByRole("link", { name: /Винтовки · AK-47/ });
-  expect(chip).toHaveAttribute("aria-current", "page");
-  expect(chip).toHaveAttribute("href", "/market");
+  expect(chipOf(/Винтовки · AK-47/)).toHaveAttribute("data-active");
 });
 
 it("several models across categories light each chip with its own", () => {
   bar({ sort: "-price", weapon: "AK-47,AWP,MP9" });
-  expect(screen.getByRole("link", { name: /Винтовки · 2/ })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  // Clearing the rifles keeps the other category's model.
-  expect(screen.getByRole("link", { name: /Винтовки · 2/ })).toHaveAttribute(
-    "href",
-    "/market?weapon=MP9",
-  );
-  expect(screen.getByRole("link", { name: /П-пулемёты · MP9/ })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  expect(chipOf(/Винтовки · 2/)).toHaveAttribute("data-active");
+  expect(chipOf(/П-пулемёты · MP9/)).toHaveAttribute("data-active");
 });
 
-it("an unknown model stays clearable from the category chip", () => {
+it("an unknown model still shows on the chosen category's chip", () => {
   bar({ sort: "-price", category: "rifles", weapon: "Foo" });
-  const chip = screen.getByRole("link", { name: /Foo/ });
-  expect(chip).toHaveAttribute("aria-current", "page");
-  expect(chip.getAttribute("href")).not.toContain("weapon=");
-});
-
-it("the active chip's link has an offset focus ring (visible on green)", () => {
-  bar({ sort: "-price", category: "rifles" });
-  const chip = screen.getByRole("link", { name: "Винтовки" });
-  expect(chip.className).toContain("focus-visible:ring-offset-2");
-  expect(chip.className).toContain("focus-visible:ring-offset-bg");
+  expect(chipOf(/Foo/)).toHaveAttribute("data-active");
 });
 
 it("agents, cases, keys and the rest collapse into one «Другое» menu after the weapons", () => {
@@ -115,7 +100,7 @@ it("agents, cases, keys and the rest collapse into one «Другое» menu aft
   expect(
     screen.getByRole("button", { name: "other:agents,cases,music-kits:" }),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: "Кейсы" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Кейсы" })).toBeNull();
   bar({ sort: "-price", category: "cases" });
   const chosen = screen.getByRole("button", { name: "other:agents,cases,music-kits:cases" });
   // The row scrolls it into view on a phone.
@@ -124,7 +109,7 @@ it("agents, cases, keys and the rest collapse into one «Другое» menu aft
 
 it("one row: chips never wrap, inactive ones are flat inside the panel", () => {
   bar({ sort: "-price", category: "rifles" });
-  const knives = screen.getByRole("link", { name: "Ножи" }).parentElement;
+  const knives = chipOf("Ножи");
   const row = knives?.parentElement;
   expect(row?.className.split(" ")).not.toContain("lg:flex-wrap");
   expect(row?.className.split(" ")).toContain("overflow-x-auto");
@@ -134,8 +119,7 @@ it("one row: chips never wrap, inactive ones are flat inside the panel", () => {
 
 it("on a wide screen the chips share the panel's width, none left over at the end", () => {
   bar({ sort: "-price" });
-  const knives = screen.getByRole("link", { name: "Ножи" }).parentElement;
-  expect(knives?.className.split(" ")).toContain("lg:flex-1");
+  expect(chipOf("Ножи")?.className.split(" ")).toContain("lg:flex-1");
   const other = screen.getByRole("button", { name: /other:/ }).parentElement;
   expect(other?.className.split(" ")).toContain("lg:flex-1");
 });
