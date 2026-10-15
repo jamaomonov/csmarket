@@ -4,7 +4,7 @@ import uz from "@csmarket/i18n/locales/uz/web.json";
 import { createTranslator } from "next-intl";
 import { describe, expect, it, vi } from "vitest";
 
-import { categoryMd, homeMd, itemMd, marketMd } from "./agent-md-pages";
+import { categoryMd, homeMd, itemMd, marketMd, sellMd } from "./agent-md-pages";
 
 import type { SkinDetail } from "@csmarket/utils/skins";
 
@@ -111,5 +111,16 @@ describe("Markdown twins", () => {
     expect(md.startsWith("# ")).toBe(true);
     expect(md).toContain("https://csmarket.uz/uz/market");
     expect(md).toContain("### ");
+  });
+
+  it("selling: the steps, where the money goes and the FAQ — no percents or fees (owner)", async () => {
+    const md = await sellMd("ru");
+    expect(md).toContain("# Продать скины КС2 (CS2) за сумы в Узбекистане");
+    expect(md).toContain("1. Войдите через Steam");
+    expect(md).toContain("Uzcard, Humo или Uzum Visa");
+    expect(md).toContain("(https://csmarket.uz/sell)");
+    expect(md).toContain("(https://csmarket.uz/legal/sell)");
+    expect(md).toContain("### Как продать скины КС2 (CS2) в Узбекистане?");
+    expect(md).not.toMatch(/%|комисс/i);
   });
 });

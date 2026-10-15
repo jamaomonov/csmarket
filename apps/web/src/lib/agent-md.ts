@@ -37,7 +37,9 @@ export interface MdTarget {
   segments: string[];
 }
 
-const KINDS = new Set(["market", "category", "weapon", "color", "item"]);
+const KINDS = new Set(["market", "sell", "category", "weapon", "color", "item"]);
+/** Pages that are one page, not a family with a slug. */
+const SINGLE = new Set(["market", "sell"]);
 
 /** The page a path names, when it has a Markdown twin; `null` otherwise. */
 export function mdTarget(pathname: string): MdTarget | null {
@@ -50,7 +52,7 @@ export function mdTarget(pathname: string): MdTarget | null {
   if (rest.length > 0) return null;
   if (kind === undefined) return { locale, segments };
   if (!KINDS.has(kind)) return null;
-  if (kind === "market" ? slug !== undefined : slug === undefined) return null;
+  if (SINGLE.has(kind) ? slug !== undefined : slug === undefined) return null;
   return { locale, segments };
 }
 

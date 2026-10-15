@@ -54,6 +54,7 @@ describe("GET /skins-sitemap/<n>.xml", () => {
     expect(body).toContain("<loc>https://csmarket.uz/pay/click</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/uz/pay/uzum</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/cheap</loc>");
+    expect(body).toContain("<loc>https://csmarket.uz/sell</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/legal</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/en/legal/terms</loc>");
     expect(body).toContain("<loc>https://csmarket.uz/uz/legal/imprint</loc>");

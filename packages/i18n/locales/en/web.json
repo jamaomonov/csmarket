@@ -584,7 +584,48 @@
       "generic": "That did not work. Try again."
     },
     "continue": "Continue",
-    "close": "Close"
+    "close": "Close",
+    "seo": {
+      "title": "Sell CS2 skins for soʻm in Uzbekistan — to a card or the balance",
+      "description": "Sell CS2 skins from your Steam inventory for Uzbek soʻm. The price shows at once; the money goes to the csmarket balance with a bonus or to a Uzcard, Humo or Uzum Visa card. Sign in with Steam only."
+    },
+    "guide": {
+      "title": "How to sell CS2 skins in Uzbekistan",
+      "steps": [
+        "Sign in with Steam and add your trade link — we show your inventory through it.",
+        "Pick skins: each price and the total in soʻm show at once.",
+        "Choose where the money goes: the csmarket balance or a Uzcard, Humo or Uzum Visa card.",
+        "Accept our trade offer in Steam. The money comes in 7 days, when Steam’s trade protection ends."
+      ],
+      "payoutTitle": "Where the money goes",
+      "terms": "Buy-back terms",
+      "faqTitle": "Questions about selling skins",
+      "faq": [
+        {
+          "q": "How do I sell CS2 skins in Uzbekistan?",
+          "a": "Sign in on csmarket.uz with Steam, add your trade link and pick skins from your inventory. The price in soʻm shows at once. Accept the trade offer in Steam — the money goes to the csmarket balance or to a Uzcard, Humo or Uzum Visa card."
+        },
+        {
+          "q": "How do I get paid for skins to a Uzcard or Humo card?",
+          "a": "When selling, choose a card and enter its number. The transfer reaches the card within 12 hours after Steam’s trade protection ends, about 7 days after the trade."
+        },
+        {
+          "q": "When does the money for sold skins arrive?",
+          "a": "7 days after the trade: that is how long Steam’s trade protection lasts. The exact date shows on the sale page. If the trade is reversed in Steam in that time, the sale does not happen."
+        },
+        {
+          "q": "Which skins can I sell?",
+          "a": "We do not buy every item. After signing in with Steam, the sell page shows the skins from your inventory that can be sold now, each with its price. The minimum sale sum is shown there too."
+        },
+        {
+          "q": "Do I need my Steam password to sell skins?",
+          "a": "No. Sign-in is only through Steam’s official page; we never ask for a login, password or Steam Guard codes. You accept the trade yourself in the Steam app."
+        }
+      ],
+      "balancePlain": "To the csmarket balance — with a bonus on the sum.",
+      "cardPlain": "To a Uzcard, Humo or Uzum Visa card. Transferred within 12 hours after Steam’s trade protection ends.",
+      "open": "Sell skins"
+    }
   },
   "sales": {
     "number": "Sale #{number}",

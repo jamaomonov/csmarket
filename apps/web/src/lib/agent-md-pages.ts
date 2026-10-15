@@ -21,12 +21,15 @@ import {
   CHEAP,
   colorPath,
   itemPath,
+  legalPath,
   MARKET,
   PAY_METHODS,
   PAY_NAMES,
   payPath,
+  SELL,
   weaponPath,
 } from "@/lib/paths";
+import { sellFaq } from "@/lib/sell-seo";
 import { localeUrl } from "@/lib/seo";
 import { isSkinColor } from "@/lib/skin-colors";
 import { isSkinCategory, weaponSlug } from "@/lib/skin-landing";
@@ -208,5 +211,22 @@ export async function homeMd(locale: string): Promise<string> {
       t("faq.title"),
       faq.map((f) => ({ question: f.q, answer: f.a })),
     ),
+  ]);
+}
+
+/**
+ * `/sell` for an assistant: how to sell CS2 skins in Uzbekistan, where the money goes and the
+ * questions — no percents (owner, 2026-10-15: the bonus and fees move; the page shows them).
+ */
+export async function sellMd(locale: string): Promise<string> {
+  const t = await getTranslations({ locale, namespace: "web.sell" });
+  const steps = t.raw("guide.steps") as string[]; // a string array in every locale (the parity test)
+  return mdDoc([
+    `# ${mdText(t("seo.title"))}`,
+    mdText(t("seo.description")),
+    `## ${mdText(t("guide.title"))}\n\n${steps.map((s, i) => `${String(i + 1)}. ${mdText(s)}`).join("\n")}`,
+    `## ${mdText(t("guide.payoutTitle"))}\n\n- ${mdText(t("guide.balancePlain"))}\n- ${mdText(t("guide.cardPlain"))}`,
+    `- ${mdLink(t("guide.open"), localeUrl(locale, SELL))}\n- ${mdLink(t("guide.terms"), localeUrl(locale, legalPath("sell")))}`,
+    mdFaq(t("guide.faqTitle"), sellFaq(t.raw("guide.faq"))),
   ]);
 }

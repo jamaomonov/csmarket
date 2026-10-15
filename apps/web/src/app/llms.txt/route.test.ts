@@ -42,6 +42,15 @@ test("tells an assistant how buying, refunds and the terms work", async () => {
   expect(body).toContain("[Public offer](https://csmarket.uz/legal/terms)");
 });
 
+test("tells an assistant how selling works, without percents or fees (owner)", async () => {
+  const body = await (await GET()).text();
+  const selling = body.slice(body.indexOf("## Selling skins"), body.indexOf("## Refunds"));
+  expect(selling).toContain("[Sell CS2 skins for soʻm](https://csmarket.uz/sell)");
+  expect(selling).toContain("Uzcard, Humo or Uzum Visa");
+  expect(selling).toContain("7 days");
+  expect(selling).not.toMatch(/%|fee|commission/i);
+});
+
 test("an API outage still answers, without numbers", async () => {
   facets.current = null;
   const body = await (await GET()).text();

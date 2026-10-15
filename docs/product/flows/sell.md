@@ -8,7 +8,10 @@ protection of the trade is over. Design: ADR-0016; operations:
 
 ## What the seller sees
 
-1. **`/sell`** while selling is on (else «Скоро»): signed out → «Войдите через Steam»; no
+1. **`/sell`** while selling is on (else «Скоро», `noindex`) is indexed and ends, for everyone,
+   in a server-rendered «Как продать скины КС2 (CS2) в Узбекистане»: four steps, where the money
+   goes, the buy-back terms and five questions (FAQPage JSON-LD) — no percents or fees. Above
+   it the app: signed out → «Войдите через Steam»; no
    trade link → the trade-link form; else the items we buy now, priced in soʻm, dearest
    first, and «Показаны предметы, которые можно продать сейчас», and a «Мои продажи» link. A
    Steam refusal of the account (private profile, trade ban, …) is said in plain words, with

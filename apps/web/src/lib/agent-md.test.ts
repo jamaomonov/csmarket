@@ -27,10 +27,18 @@ describe("mdTarget", () => {
       segments: ["item", "awp-asiimov-field-tested"],
     });
     expect(mdTarget("/market")).toEqual({ locale: "ru", segments: ["market"] });
+    expect(mdTarget("/uz/sell")).toEqual({ locale: "uz", segments: ["sell"] });
   });
 
   it("refuses pages without a twin", () => {
-    for (const path of ["/account", "/item", "/market/x", "/item/a/b", "/md/ru/market"]) {
+    for (const path of [
+      "/account",
+      "/item",
+      "/market/x",
+      "/sell/x",
+      "/item/a/b",
+      "/md/ru/market",
+    ]) {
       expect(mdTarget(path)).toBeNull();
     }
   });

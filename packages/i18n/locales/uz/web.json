@@ -584,7 +584,48 @@
       "generic": "Boʻlmadi. Yana urinib koʻring."
     },
     "continue": "Davom etish",
-    "close": "Yopish"
+    "close": "Yopish",
+    "seo": {
+      "title": "CS2 skinlarini Oʻzbekistonda soʻmga sotish — kartaga yoki balansga",
+      "description": "Steam inventaringizdagi CS2 skinlarini soʻmga soting. Narx darhol koʻrinadi, pul csmarket balansiga bonus bilan yoki Uzcard, Humo, Uzum Visa kartasiga keladi. Kirish faqat Steam orqali."
+    },
+    "guide": {
+      "title": "Oʻzbekistonda CS2 skinlarini qanday sotish mumkin",
+      "steps": [
+        "Steam orqali kiring va almashuv havolasini qoʻshing — u orqali inventaringizni koʻrsatamiz.",
+        "Skinlarni tanlang: har birining narxi va umumiy summa soʻmda darhol koʻrinadi.",
+        "Pulni qayerga olishni tanlang: csmarket balansiga yoki Uzcard, Humo, Uzum Visa kartasiga.",
+        "Steam’dagi almashuv taklifimizni qabul qiling. Pul 7 kundan keyin, Steam almashuv himoyasi tugagach keladi."
+      ],
+      "payoutTitle": "Pul qayerga keladi",
+      "terms": "Sotib olish shartlari",
+      "faqTitle": "Skin sotish boʻyicha savollar",
+      "faq": [
+        {
+          "q": "Oʻzbekistonda CS2 skinlarini qanday sotish mumkin?",
+          "a": "csmarket.uz saytiga Steam orqali kiring, almashuv havolasini qoʻshing va inventaringizdan skinlarni tanlang. Narx soʻmda darhol koʻrinadi. Steam’dagi almashuv taklifini qabul qiling — pul csmarket balansiga yoki Uzcard, Humo, Uzum Visa kartasiga keladi."
+        },
+        {
+          "q": "Skinlar uchun pulni Uzcard yoki Humo kartasiga qanday olish mumkin?",
+          "a": "Sotishda kartani tanlang va raqamini kiriting. Kartaga oʻtkazma Steam almashuv himoyasi tugagandan keyin 12 soat ichida keladi, yaʼni almashuvdan taxminan 7 kun oʻtib."
+        },
+        {
+          "q": "Sotilgan skinlar uchun pul qachon keladi?",
+          "a": "Almashuvdan 7 kun oʻtib: Steam almashuv himoyasi shuncha davom etadi. Aniq sana sotish sahifasida koʻrinadi. Agar shu vaqt ichida almashuv Steam’da bekor qilinsa, sotuv amalga oshmaydi."
+        },
+        {
+          "q": "Qaysi skinlarni sotish mumkin?",
+          "a": "Biz hamma buyumlarni sotib olmaymiz. Steam orqali kirgandan soʻng sotish sahifasida inventaringizdagi hozir sotish mumkin boʻlgan skinlar va har birining narxi koʻrinadi. Minimal sotish summasi ham u yerda koʻrsatilgan."
+        },
+        {
+          "q": "Skinlarni sotish uchun Steam paroli kerakmi?",
+          "a": "Yoʻq. Kirish faqat Steam’ning rasmiy sahifasi orqali, biz login, parol yoki Steam Guard kodlarini soʻramaymiz. Almashuvni Steam ilovasida oʻzingiz qabul qilasiz."
+        }
+      ],
+      "balancePlain": "csmarket balansiga — summaga bonus bilan.",
+      "cardPlain": "Uzcard, Humo yoki Uzum Visa kartasiga. Oʻtkazma Steam almashuv himoyasi tugagandan keyin 12 soat ichida.",
+      "open": "Skinlarni sotish"
+    }
   },
   "sales": {
     "number": "#{number} sotuv",

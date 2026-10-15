@@ -40,7 +40,9 @@ switch says. Config: the `INDEXING GATE` block in `infra/caddy/Caddyfile.prod`.
 - `/llms.txt` — the shop for language models, with live category counts; the partner API has
   its own at `docs.csmarket.uz/llms.txt`. It is served (with `X-Robots-Tag: noindex`) while
   indexing is closed.
-- `/sell`, `/steam`, `/reviews` are `noindex` on purpose and stay out of the sitemaps.
+- `/sell` is indexed (in `landings.xml`) while selling is on, with a server-rendered «how to sell»
+  block and FAQPage JSON-LD; `noindex` while it is «Скоро». `/steam`, `/reviews` are `noindex` on
+  purpose and stay out of the sitemaps.
 - Before opening: add csmarket.uz to Google Search Console and Yandex Webmaster (region
   Uzbekistan) and submit `https://csmarket.uz/sitemap.xml`.
 
@@ -96,9 +98,12 @@ consoles' removal tools.
   PerplexityBot, …) welcome with `Content-Signal: search=yes, ai-input=yes, ai-train=no`.
 - Out of the index on purpose (`noindex, follow`): filtered and searched `/market` views, item pages
   with nothing in stock (back once stocked), category and weapon pages with fewer than 10 items
-  (`MIN_LANDING_ITEMS`, also left out of `landings.xml`), `/sell`, `/steam`, `/reviews`.
-- `/llms.txt`: the shop, sections with live counts, buying by payment method, how delivery and
-  refunds work (as the terms say), the legal documents.
+  (`MIN_LANDING_ITEMS`, also left out of `landings.xml`), `/sell` while it is «Скоро», `/steam`,
+  `/reviews`.
+- `/llms.txt`: the shop, sections with live counts, buying by payment method, selling skins, how
+  delivery and refunds work (as the terms say), the legal documents. `/sell` has a Markdown twin
+  too. Neither names the sale bonus or the card fees (owner, 2026-10-15): they move, and an
+  assistant would quote a stale number; the sale form shows them.
 - **Markdown for agents** (2026-10-13): a request that asks for `text/markdown` above `text/html`
   (`Accept: text/markdown`) to the home page, `/market`, a category, a weapon or an item page —
   any locale — gets the page's Markdown twin at the same URL (`middleware.ts` → `app/md`,
