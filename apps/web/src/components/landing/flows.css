@@ -50,7 +50,7 @@
 .lp .fl-pay,
 .lp .fl-offer {
   border-radius: 14px;
-  background: var(--bg-2);
+  background: var(--inset);
   border: 1px solid var(--border);
 }
 .lp .fl-skin {
@@ -230,7 +230,7 @@
   gap: 2px;
   padding: 12px 10px 12px;
   border-radius: 14px;
-  background: var(--bg-2);
+  background: var(--inset);
   border: 1px solid var(--border);
   isolation: isolate;
   overflow: hidden;
@@ -304,7 +304,7 @@
   gap: 14px;
   padding: 16px;
   border-radius: 14px;
-  background: var(--bg-2);
+  background: var(--inset);
   border: 1px solid var(--border);
 }
 .lp .sv-total {
@@ -364,9 +364,7 @@
   color: var(--accent);
 }
 .lp .sv-opt.on {
-  box-shadow:
-    0 0 0 2px var(--bg-2),
-    0 0 0 4px var(--info);
+  box-shadow: 0 0 0 2px var(--info);
 }
 .lp .sv-hint {
   margin: 0 0 20px;

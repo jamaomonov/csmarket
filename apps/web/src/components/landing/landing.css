@@ -4,6 +4,8 @@
   /* The site's tokens (packages/config-tailwind/tokens.css), under the landing's short names. */
   --bg: var(--color-bg);
   --bg-2: var(--color-bg);
+  /* A box inside a panel: a faint lift over it, never the page's opaque black. */
+  --inset: rgb(255 255 255 / 0.03);
   --surface: var(--color-surface);
   --surface-2: var(--color-surface-2);
   --surface-hover: var(--color-surface-hover);
@@ -1039,7 +1041,7 @@
   margin-top: 88px;
   border-top: 1px solid var(--border);
   padding: 56px 0 40px;
-  background: var(--bg-2);
+  background: transparent;
 }
 .lp .foot {
   display: grid;

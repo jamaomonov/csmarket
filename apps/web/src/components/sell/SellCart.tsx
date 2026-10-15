@@ -228,7 +228,7 @@ export function SellCart(p: SellCartProps) {
             aria-invalid={wrongCard}
             {...(wrongCard ? { "aria-describedby": cardHint } : {})}
             className={cn(
-              "bg-bg num h-12 w-full rounded-lg border px-4 text-lg tracking-wider outline-none",
+              "num h-12 w-full rounded-lg border bg-black/20 px-4 text-lg tracking-wider outline-none",
               wrongCard ? "border-danger" : "border-border focus:border-accent",
             )}
           />

@@ -28,7 +28,7 @@ export function TradeSteps({ steps }: { steps: TradeStep[] }) {
             className={cn(
               "absolute left-0 top-0 flex size-5 items-center justify-center rounded-full border-2",
               s.state === "done" && "border-accent bg-accent text-accent-fg",
-              s.state === "now" && "border-accent bg-bg ring-accent/15 ring-4",
+              s.state === "now" && "border-accent bg-surface-solid ring-accent/15 ring-4",
               s.state === "todo" && "border-border-strong bg-surface-2",
             )}
           >
