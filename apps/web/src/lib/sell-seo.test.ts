@@ -6,8 +6,8 @@ import { sellFaq } from "./sell-seo";
 describe("sell SEO copy", () => {
   it("reads the catalogue's questions and drops malformed ones", () => {
     const faq = sellFaq(ru.sell.guide.faq);
-    expect(faq.length).toBe(5);
-    expect(faq[0]?.question).toBe("Как продать скины КС2 (CS2) в Узбекистане?");
+    expect(faq.length).toBe(8);
+    expect(faq[0]?.question).toBe("Где продать скины и вывести деньги на карту в Узбекистане?");
     expect(sellFaq([{ q: "x" }, null, "y", { q: "a", a: "b" }])).toEqual([
       { question: "a", answer: "b" },
     ]);

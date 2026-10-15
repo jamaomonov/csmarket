@@ -115,7 +115,7 @@ describe("Markdown twins", () => {
 
   it("selling: the steps, where the money goes and the FAQ — no percents or fees (owner)", async () => {
     const md = await sellMd("ru");
-    expect(md).toContain("# Продать скины КС2 (CS2) за сумы в Узбекистане");
+    expect(md).toContain("# Продать скины КС2 (CS2, КС ГО) и вывести деньги на карту");
     expect(md).toContain("1. Войдите через Steam");
     expect(md).toContain("Uzcard, Humo или Uzum Visa");
     expect(md).toContain("(https://csmarket.uz/sell)");

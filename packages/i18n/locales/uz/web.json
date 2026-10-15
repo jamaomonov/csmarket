@@ -499,7 +499,7 @@
     "topUp": "Toʻldirish"
   },
   "sell": {
-    "title": "CS2 skinlaringizni soting",
+    "title": "Skin sotish — CS2 skinlarini soʻmga soting",
     "mySales": "Mening sotuvlarim",
     "search": "Nomi boʻyicha qidirish",
     "sortLabel": "Saralash",
@@ -586,11 +586,11 @@
     "continue": "Davom etish",
     "close": "Yopish",
     "seo": {
-      "title": "CS2 skinlarini Oʻzbekistonda soʻmga sotish — kartaga yoki balansga",
-      "description": "Steam inventaringizdagi CS2 skinlarini soʻmga soting. Narx darhol koʻrinadi, pul csmarket balansiga bonus bilan yoki Uzcard, Humo, Uzum Visa kartasiga keladi. Kirish faqat Steam orqali."
+      "title": "Skin sotish — CS2 (CS:GO) skinlarini sotib, pulni Uzcard, Humo kartasiga chiqarish",
+      "description": "CS2 (CS:GO) skinlarini Steam inventaringizdan haqiqiy pulga — soʻmga soting va Uzcard, Humo, Uzum Visa kartasiga yoki csmarket balansiga chiqaring. Narx darhol koʻrinadi, kirish faqat Steam orqali."
     },
     "guide": {
-      "title": "Oʻzbekistonda CS2 skinlarini qanday sotish mumkin",
+      "title": "Skin sotish: CS2 skinlarini qanday sotib, pulni kartaga chiqarish mumkin",
       "steps": [
         "Steam orqali kiring va almashuv havolasini qoʻshing — u orqali inventaringizni koʻrsatamiz.",
         "Skinlarni tanlang: har birining narxi va umumiy summa soʻmda darhol koʻrinadi.",
@@ -602,8 +602,16 @@
       "faqTitle": "Skin sotish boʻyicha savollar",
       "faq": [
         {
+          "q": "Oʻzbekistonda skin sotish va pulni kartaga chiqarish qayerda mumkin?",
+          "a": "csmarket.uz saytida: Steam inventaringizdagi CS2 (CS:GO) skinlarini soting, pulni esa Uzcard, Humo yoki Uzum Visa kartasiga yoki csmarket balansiga chiqaring. Soʻmdagi narx sotishdan oldin koʻrinadi."
+        },
+        {
           "q": "Oʻzbekistonda CS2 skinlarini qanday sotish mumkin?",
           "a": "csmarket.uz saytiga Steam orqali kiring, almashuv havolasini qoʻshing va inventaringizdan skinlarni tanlang. Narx soʻmda darhol koʻrinadi. Steam’dagi almashuv taklifini qabul qiling — pul csmarket balansiga yoki Uzcard, Humo, Uzum Visa kartasiga keladi."
+        },
+        {
+          "q": "Skinlarni haqiqiy pulga qanday aylantirish mumkin?",
+          "a": "Skinlarni csmarket.uz saytida soting: Steam orqali kiring, buyumlarni tanlang va almashuv taklifini qabul qiling. 7 kundan keyin, Steam almashuv himoyasi tugagach, pul csmarket balansiga yoki kartangizga keladi."
         },
         {
           "q": "Skinlar uchun pulni Uzcard yoki Humo kartasiga qanday olish mumkin?",
@@ -612,6 +620,10 @@
         {
           "q": "Sotilgan skinlar uchun pul qachon keladi?",
           "a": "Almashuvdan 7 kun oʻtib: Steam almashuv himoyasi shuncha davom etadi. Aniq sana sotish sahifasida koʻrinadi. Agar shu vaqt ichida almashuv Steam’da bekor qilinsa, sotuv amalga oshmaydi."
+        },
+        {
+          "q": "CS2 (CS:GO) pichoq yoki qoʻlqopini haqiqiy pulga qanday sotish mumkin?",
+          "a": "Har qanday skin kabi: csmarket.uz saytiga Steam orqali kiring, inventardan pichoq yoki qoʻlqopni tanlang — soʻmdagi narx darhol koʻrinadi — va Steam’da almashuvni qabul qiling. Pul balansga yoki Uzcard, Humo, Uzum Visa kartasiga keladi."
         },
         {
           "q": "Qaysi skinlarni sotish mumkin?",
@@ -858,7 +870,7 @@
           "a": "Steam → Inventar → Almashuv takliflari → «Kim menga almashuv taklifini yubora oladi?». Havolani nusxalang va csmarket profilingizga qoʻying."
         },
         {
-          "q": "CS2 skinlarini soʻmga qanday sotish mumkin?",
+          "q": "Skin sotish: CS2 skinlarini sotib, pulni kartaga qanday chiqarish mumkin?",
           "a": "«Skin sotish» sahifasini oching, inventardan buyumlarni tanlang va almashuvni yuboring. Pul sayt balansiga yoki Uzcard, Humo yoxud Uzum Visa kartasiga keladi."
         },
         {

@@ -499,7 +499,7 @@
     "topUp": "Top up"
   },
   "sell": {
-    "title": "Sell your CS2 skins",
+    "title": "Sell CS2 (CS:GO) skins for real money",
     "mySales": "My sales",
     "search": "Search by name",
     "sortLabel": "Sort",
@@ -586,11 +586,11 @@
     "continue": "Continue",
     "close": "Close",
     "seo": {
-      "title": "Sell CS2 skins for soʻm in Uzbekistan — to a card or the balance",
-      "description": "Sell CS2 skins from your Steam inventory for Uzbek soʻm. The price shows at once; the money goes to the csmarket balance with a bonus or to a Uzcard, Humo or Uzum Visa card. Sign in with Steam only."
+      "title": "Sell CS2 (CS:GO) skins and cash out to a Uzcard or Humo card",
+      "description": "Sell CS2 (CS:GO) skins from your Steam inventory for real money in Uzbek soʻm and cash out to a Uzcard, Humo or Uzum Visa card or the csmarket balance. The price shows at once; sign in with Steam only."
     },
     "guide": {
-      "title": "How to sell CS2 skins in Uzbekistan",
+      "title": "How to sell CS2 (CS:GO) skins and cash out to a card",
       "steps": [
         "Sign in with Steam and add your trade link — we show your inventory through it.",
         "Pick skins: each price and the total in soʻm show at once.",
@@ -602,8 +602,16 @@
       "faqTitle": "Questions about selling skins",
       "faq": [
         {
+          "q": "Where can I sell skins and cash out to a card in Uzbekistan?",
+          "a": "On csmarket.uz: sell CS2 (CS:GO) skins from your Steam inventory and cash out to a Uzcard, Humo or Uzum Visa card or the csmarket balance. The price in soʻm shows before you sell."
+        },
+        {
           "q": "How do I sell CS2 skins in Uzbekistan?",
           "a": "Sign in on csmarket.uz with Steam, add your trade link and pick skins from your inventory. The price in soʻm shows at once. Accept the trade offer in Steam — the money goes to the csmarket balance or to a Uzcard, Humo or Uzum Visa card."
+        },
+        {
+          "q": "How do I turn skins into real money?",
+          "a": "Sell them on csmarket.uz: sign in with Steam, pick items and accept the trade offer. In 7 days, when Steam’s trade protection ends, the money reaches the csmarket balance or your card."
         },
         {
           "q": "How do I get paid for skins to a Uzcard or Humo card?",
@@ -612,6 +620,10 @@
         {
           "q": "When does the money for sold skins arrive?",
           "a": "7 days after the trade: that is how long Steam’s trade protection lasts. The exact date shows on the sale page. If the trade is reversed in Steam in that time, the sale does not happen."
+        },
+        {
+          "q": "How do I sell a CS2 (CS:GO) knife or gloves for real money?",
+          "a": "Like any skin: sign in on csmarket.uz with Steam, pick the knife or gloves in your inventory — the price in soʻm shows at once — and accept the trade in Steam. The money goes to the balance or a Uzcard, Humo or Uzum Visa card."
         },
         {
           "q": "Which skins can I sell?",
@@ -858,7 +870,7 @@
           "a": "Steam → Inventory → Trade offers → “Who can send me trade offers?”. Copy the link and paste it in your csmarket profile."
         },
         {
-          "q": "How do I sell CS2 skins for soʻm?",
+          "q": "How do I sell CS2 skins and cash out to a card?",
           "a": "Open “Sell skins”, pick items from your inventory and send the trade. The money goes to your site balance or to a Uzcard, Humo or Uzum Visa card."
         },
         {

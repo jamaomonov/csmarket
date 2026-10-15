@@ -45,7 +45,9 @@ test("tells an assistant how buying, refunds and the terms work", async () => {
 test("tells an assistant how selling works, without percents or fees (owner)", async () => {
   const body = await (await GET()).text();
   const selling = body.slice(body.indexOf("## Selling skins"), body.indexOf("## Refunds"));
-  expect(selling).toContain("[Sell CS2 skins for soʻm](https://csmarket.uz/sell)");
+  expect(selling).toContain(
+    "[Sell CS2 (CS:GO) skins and cash out to a card](https://csmarket.uz/sell)",
+  );
   expect(selling).toContain("Uzcard, Humo or Uzum Visa");
   expect(selling).toContain("7 days");
   expect(selling).not.toMatch(/%|fee|commission/i);
