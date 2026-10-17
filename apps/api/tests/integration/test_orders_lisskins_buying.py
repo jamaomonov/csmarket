@@ -181,6 +181,9 @@ async def test_a_sold_lot_is_refunded_never_replaced(
     row = await _order(db_session, order)
     assert (row.status, row.failure_reason) == ("failed", "sold_out")
     assert await user_balance(db_session, order.user_id) == PRICE
+    db_session.expire_all()
+    assert await db_session.get(LisskinsOffer, 5) is None  # out of the offers at once
+    assert await db_session.get(LisskinsOffer, 6) is not None
 
 
 @pytest.mark.parametrize(

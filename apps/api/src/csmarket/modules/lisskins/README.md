@@ -91,6 +91,8 @@ types, `BUY_LINK_ERRORS`, `TRADE_LINK_ERRORS`, `INFO_MAX_IDS`), the export (`rea
   `lisskins_offers` as source-neutral `skins.Offer` (`ls:<id>`, float, seed, stickers, inspect
   link, `asset_id`); none when off or stale. No external call. Sticker images are filtered to
   Steam's CDN on the way out (`skins.images.steam_image_only`); the name stays.
+  `forget_lot(db, lot_id)` drops a lot a live check or a buy found sold (2026-10-17): out of
+  every offer list at once, back with the next snapshot if still listed. Callers commit.
 - **`availability.py`** — checkout's live look at the chosen `ls:` lot (ADR-0012, AGENTS §11):
   `recheck_chosen` asks `check-availability` once (4 s, `lisskins_check_timeout_seconds`),
   within `BUDGET_PER_MINUTE` (100) calls a minute for the whole API (Redis

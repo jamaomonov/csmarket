@@ -48,7 +48,7 @@ from csmarket.modules.skinslink.models import (
     SkinslinkPurchase,
     SkinslinkState,
 )
-from csmarket.modules.skinslink.offers import offers_for
+from csmarket.modules.skinslink.offers import forget_item, offers_for
 from csmarket.modules.skinslink.rollup import rollup
 
 __all__ = [
@@ -84,6 +84,7 @@ __all__ = [
     "client_for",
     "deposit_client_for",
     "enqueue_check",
+    "forget_item",
     "mirror_age",
     "mirror_fresh",
     "offers_for",

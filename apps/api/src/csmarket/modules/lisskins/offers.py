@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import Settings
@@ -59,4 +59,13 @@ async def offers_for(
     ]
 
 
-__all__ = ["offers_for"]
+async def forget_lot(db: AsyncSession, lot_id: int) -> None:
+    """Drop a lot LIS-SKINS called sold from the snapshot at once; flush, never commit.
+
+    Not a ban: the next snapshot (≤ 5 min) brings the lot back if it is still for sale — at
+    a new price too — so a mistaken «sold» hides it for one snapshot at most.
+    """
+    await db.execute(delete(LisskinsOffer).where(LisskinsOffer.id == lot_id))
+
+
+__all__ = ["forget_lot", "offers_for"]

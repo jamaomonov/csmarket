@@ -20,14 +20,24 @@ from csmarket.core.config import Settings, get_settings
 from csmarket.core.errors import NotFoundError
 from csmarket.core.money import wire_usd
 from csmarket.core.redis import get_redis
-from csmarket.modules.lisskins.api import AvailabilityClient, availability_client, snapshot_fresh
+from csmarket.modules.lisskins.api import (
+    AvailabilityClient,
+    availability_client,
+    forget_lot,
+    snapshot_fresh,
+)
 from csmarket.modules.public_api.auth import ApiCaller, api_caller
 from csmarket.modules.public_api.limits import enforce
 from csmarket.modules.public_api.metering import MeteredRoute
 from csmarket.modules.public_api.offer_check import live_quote
 from csmarket.modules.public_api.offers import api_offers, open_offer_id
 from csmarket.modules.public_api.schemas import OfferCheckOut
-from csmarket.modules.skins.api import enabled_categories, get_item_by_id, load_rules
+from csmarket.modules.skins.api import (
+    enabled_categories,
+    get_item_by_id,
+    load_rules,
+    parse_offer_id,
+)
 from csmarket.modules.skinslink.api import mirror_age, mirror_fresh
 
 router = APIRouter(prefix="/public", tags=["public-api"], route_class=MeteredRoute)
@@ -64,10 +74,12 @@ async def check_offer(
     db: Annotated[AsyncSession, Depends(db_session)],
     availability: Annotated[AvailabilityClient, Depends(availability_client)],
 ) -> JSONResponse:
-    """Whether the offer is still for sale and its price for your tariff, asked live.
+    """Whether the offer is still for sale and its price for your tariff, checked now.
 
-    Call it right before you take your buyer's money. ``gone``: the offer was sold, pick
-    another one. ``unconfirmed``: the market did not answer in time; ``price_usd`` is the last
+    Call it right before you take your buyer's money and pass ``price_usd`` as
+    ``max_price_usd``. Most offers are asked from the market live; the rest come from our copy
+    of it, at most 30 s old. ``gone``: the offer was sold (it leaves the offer list at once),
+    pick another one. ``unconfirmed``: the market did not answer in time; ``price_usd`` is the last
     known price and ``POST /orders`` checks again. A sold offer is never replaced by another.
     Not cached; counts against the key's ``check`` limit.
     """
@@ -102,6 +114,9 @@ async def check_offer(
         client=availability if settings.lisskins_active else None,
         mirror_age=age,
     )
+    if status == "gone":  # out of the offers now, back with the next snapshot if listed
+        await forget_lot(db, int(parse_offer_id(internal)[1]))
+        await db.commit()
     if quoted is None:
         return JSONResponse({"offer_id": offer_id, "status": status, "price_usd": None})
     out: dict[str, Any] = {

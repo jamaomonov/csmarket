@@ -155,6 +155,12 @@ async def test_a_sold_lot_is_gone(
     r = await integration_client.get(_url(item, offer), headers=_h(token))
     assert r.status_code == 200, r.text
     assert r.json() == {"offer_id": offer, "status": "gone", "price_usd": None}
+    db_session.expire_all()
+    assert await db_session.get(LisskinsOffer, LOT) is None  # out of the offer list at once
+    listed = await integration_client.get(
+        f"/api/v1/public/catalog/{item.id}/offers", headers=_h(token)
+    )
+    assert offer not in listed.text
 
 
 async def test_a_moved_price_is_re_quoted(

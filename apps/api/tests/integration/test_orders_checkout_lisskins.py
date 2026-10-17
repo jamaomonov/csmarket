@@ -193,6 +193,8 @@ async def test_a_sold_lot_is_offer_gone_with_the_next_offer(
     assert r.status_code == 409, r.text
     assert r.json()["code"] == "offer_gone"
     assert r.json()["next_offer"]["listing_id"] == "sl:380"
+    db_session.expire_all()
+    assert await db_session.get(LisskinsOffer, LOT) is None  # out of the offers at once
 
 
 async def test_a_failed_check_accepts_the_snapshot_price_and_opens_the_breaker(

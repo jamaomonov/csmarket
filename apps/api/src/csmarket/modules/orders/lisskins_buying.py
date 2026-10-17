@@ -47,6 +47,7 @@ from csmarket.modules.lisskins.api import (
     LisskinsPurchase,
     LisskinsRateLimitedError,
     LisskinsUnavailableError,
+    forget_lot,
     remember_rejection,
 )
 from csmarket.modules.orders.buy_lease import BUY_LEASE, discard, release, release_fresh, take_lease
@@ -211,7 +212,11 @@ async def _leased(
     log.info("orders.lisskins_buy.refused", number=run.snap.number, code=run.refusal)
     # Never another lot (ADR-0013); «sold out» only when the lot is gone or dearer.
     reason = "sold_out" if run.refusal in BUY_SOLD_ERRORS else "source_refused"
-    return await refund(db, run.snap, reason, error=run.refusal)
+    outcome = await refund(db, run.snap, reason, error=run.refusal)
+    if reason == "sold_out":  # out of the offers now, back with the next snapshot if listed
+        await forget_lot(db, run.snap.skin_id)
+        await db.commit()
+    return outcome
 
 
 async def _buy_once(  # noqa: PLR0911 -- one return per row of the spec's table

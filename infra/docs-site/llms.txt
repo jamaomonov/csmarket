@@ -171,9 +171,17 @@ curl -s https://api.csmarket.uz/api/v1/public/catalog/4f1c…/offers/Zm9v… \
 | `gone`        | the offer was sold: tell your customer and offer another one; `price_usd` is null |
 | `unconfirmed` | not confirmed right now; `price_usd` is the last known price (or null)            |
 
-It is asked live, never cached, and counts against your **check** limit. `POST /orders` checks
-the offer again: if it is sold in the seconds between, the purchase answers
-`409 offer_gone` and nothing is charged. We never buy a different offer in its place — offers
+It is never cached and counts against your **check** limit. Most offers are asked from the
+market live; for the rest, our copy of the market is at most 30 seconds old, so an offer sold
+a moment ago can still answer `available`. `POST /orders` checks the offer again: if it is
+sold in the seconds between, the purchase answers `409 offer_gone` and nothing is charged. If
+it is sold after the purchase is accepted, the order fails with `sold_out` within seconds and
+the money goes back to your balance (see `GET /orders/{id}` or the webhook). A sold offer
+leaves `GET /catalog/{item_id}/offers` at once.
+
+Pass the `price_usd` from the check as `max_price_usd`. A `409` is not always a sold offer —
+read its `code`: `offer_gone` (sold), `price_above_max` (dearer than your cap now; the answer
+carries the current `price_usd`), `trade_link_rejected`, `buying_disabled`. We never buy a different offer in its place — offers
 of one skin differ in float, pattern and stickers. If a market refused your customer's trade
 link in the last day, `POST /orders` answers `409 trade_link_rejected` for that market's offers
 and `POST /tradelink/check` answers `rejected_by_market`: ask for a new trade link. A forged or foreign `offer_id` is

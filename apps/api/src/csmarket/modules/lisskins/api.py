@@ -52,6 +52,7 @@ from csmarket.modules.lisskins.models import (
     LisskinsState,
 )
 from csmarket.modules.lisskins.offers import (
+    forget_lot,
     offers_for,
 )
 from csmarket.modules.lisskins.rejected_links import is_rejected, remember_rejection
@@ -108,6 +109,7 @@ __all__ = [
     "availability_client",
     "cached_balance",
     "client_for",
+    "forget_lot",
     "is_rejected",
     "live_price",
     "load_index",

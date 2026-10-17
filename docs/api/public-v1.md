@@ -145,7 +145,9 @@ Ask right before you take your buyer's money (ADR-0017, 2026-10-10). Not cached;
   its stock is not fresh enough; `price_usd` is the last known price (`null` when the offer is
   not in our current copy). Internally: a LIS-SKINS lot is asked `check-availability` live; a
   Skinslink offer is `available` only from a mirror synced within 30 s; a lot missing from a
-  stale source is `unconfirmed`, never `gone`.
+  stale source is `unconfirmed`, never `gone`. A lot or offer a check or a purchase finds sold
+  leaves our copy at once (it is back with the next snapshot or catalogue event if still for
+  sale), so it leaves `GET /catalog/{item_id}/offers` too.
 - `retail_price_usd` is added on `cost` (not when `gone`).
 - 404 `item_not_found`; 404 `offer_not_found` for a forged or foreign `offer_id`.
 

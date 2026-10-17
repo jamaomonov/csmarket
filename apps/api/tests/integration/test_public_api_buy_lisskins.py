@@ -157,6 +157,26 @@ async def test_a_sold_named_lot_is_offer_gone_and_nothing_is_debited(
     assert fake.calls == [[LOT]]
     assert await _orders(db_session) == 0
     assert await user_usd_balance(db_session, user.id) == Decimal(FUNDS)
+    db_session.expire_all()
+    assert await db_session.get(LisskinsOffer, LOT) is None  # out of the offers at once
+
+
+async def test_a_named_lot_is_capped_at_its_live_price(
+    integration_client: AsyncClient, customer_headers: Headers, db_session: AsyncSession, live: Live
+) -> None:
+    """The check quoted $3.800 live and the partner caps there: the snapshot's $4.000 is
+    stale, so the lot is bought (2026-10-17: two such orders were refused)."""
+    item = await _item(db_session)
+    user, token = await _token(db_session, customer_headers)
+    live(Availability(available={LOT: Decimal("3.8")}, unavailable=frozenset()))
+    r = await integration_client.post(
+        ORDERS,
+        json=_body(item, offer_id=await _lot_id(db_session, item), max_price_usd="3.8"),
+        headers=_h(token),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["price_usd"] == "3.800"
+    assert await user_usd_balance(db_session, user.id) == Decimal(FUNDS - 3_800)
 
 
 async def test_cheapest_within_max_skips_a_sold_lot(

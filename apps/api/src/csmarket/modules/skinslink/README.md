@@ -92,6 +92,8 @@ worker and the scheduler import only this.
 - **`offers.py`** — `offers_for(db, skin_item_id, …)`: the item's Skinslink offers from the
   mirror as source-neutral `skins.Offer` (`sl:<asset id>`, no stickers); none when off or
   stale. No external call.
+  `forget_item(db, item_id)` drops an offer a buy found sold (2026-10-17): out of every offer
+  list at once, back with its next catalogue event or full load if still listed. Callers commit.
 - **`webhook.py`, `routes.py`** — `POST /api/v1/skinslink/webhook` (not in the OpenAPI schema;
   on `bootstrap._exempt_self_authenticating_routes`; no `Idempotency-Key`). Body ≤ 4 KiB;
   `sign == base64(sha256(str(id) + secret))` checked in constant time (403 `bad_signature`

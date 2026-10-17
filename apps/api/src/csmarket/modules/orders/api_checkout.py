@@ -33,7 +33,7 @@ from csmarket.core.logging import get_logger
 from csmarket.core.money import wire_usd
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import FxSnapshot
-from csmarket.modules.lisskins.api import AvailabilityClient, is_rejected
+from csmarket.modules.lisskins.api import AvailabilityClient, forget_lot, is_rejected
 from csmarket.modules.orders.checkout import RateUnavailableError, float_of
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.paid import mark_paid
@@ -50,6 +50,7 @@ from csmarket.modules.skins.api import (
     enabled_categories,
     get_item_by_id,
     load_rules,
+    parse_offer_id,
 )
 from csmarket.modules.users.api import parse_tradelink
 from csmarket.modules.wallet.api import USD_WALLET, InsufficientBalanceError, debit_purchase_usd
@@ -115,6 +116,15 @@ def choose(priced: list[PricedOffer], body: ApiOrderIn, item_id: str) -> PricedO
     return cheapest
 
 
+def _named_lot(priced: list[PricedOffer], body: ApiOrderIn, item_id: str) -> PricedOffer | None:
+    """The LIS-SKINS lot ``offer_id`` names, whatever its snapshot price; ``None`` otherwise."""
+    if body.offer_id is None:
+        return None
+    internal = open_offer_id(body.offer_id, item_id)
+    named = next((p for p in priced if internal and p.offer.offer_id == internal), None)
+    return named if named is not None and named.offer.source == "lisskins" else None
+
+
 def _without_lisskins(
     priced: list[PricedOffer], body: ApiOrderIn, item_id: str
 ) -> list[PricedOffer]:
@@ -161,7 +171,10 @@ async def _confirm_live(
     Raises:
         ConflictError: ``offer_gone`` or ``price_above_max``.
     """
-    chosen = choose(priced, body, item.id)
+    live = client is not None and redis is not None
+    # A named lot is held to the cap at its live price, not the snapshot's: the offer check
+    # quoted the live one, and a partner caps at what it was quoted.
+    chosen = (_named_lot(priced, body, item.id) if live else None) or choose(priced, body, item.id)
     if client is None or redis is None or chosen.offer.source != "lisskins":
         return chosen
     rules = await load_rules(db)
@@ -174,6 +187,10 @@ async def _confirm_live(
             chosen, item=item, rules=rules, profile=profile, redis=redis, client=client
         )
         if status == "gone" or quoted is None:
+            # Out of the offers now (back with the next snapshot if listed); committed
+            # before ``choose`` may refuse, which rolls the request back.
+            await forget_lot(db, int(parse_offer_id(chosen.offer.offer_id)[1]))
+            await db.commit()
             remaining = [p for p in remaining if p is not chosen]
             chosen = choose(remaining, body, item.id)
             if chosen.offer.source != "lisskins":

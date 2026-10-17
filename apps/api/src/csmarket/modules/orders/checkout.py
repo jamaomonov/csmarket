@@ -35,7 +35,7 @@ from csmarket.core.errors import ConflictError, UpstreamUnavailableError, Valida
 from csmarket.core.logging import get_logger
 from csmarket.core.numbers import allocate, order_number
 from csmarket.modules.fx.api import UsdUzs, current_usd_uzs
-from csmarket.modules.lisskins.api import AvailabilityClient, recheck_chosen
+from csmarket.modules.lisskins.api import AvailabilityClient, forget_lot, recheck_chosen
 from csmarket.modules.lisskins.api import offers_for as lisskins_offers
 from csmarket.modules.orders.models import Order
 from csmarket.modules.orders.schemas import OrderCreateIn
@@ -53,6 +53,7 @@ from csmarket.modules.skins.api import (
     listings_for,
     load_rules,
     merge_offers,
+    parse_offer_id,
     quote,
     to_uzs,
 )
@@ -331,9 +332,13 @@ async def create_order(
         )
     offers = merge_offers([from_listing(r) for r in rows], q.extra)
     if availability is not None:  # one call, only for a chosen LIS-SKINS lot; no session held
+        listed = len(offers)
         offers = await recheck_chosen(
             offers, str(body.listing_id), redis=redis, client=availability
         )
+        if len(offers) < listed:  # the lot was sold: out of the offers until it is listed again
+            await forget_lot(db, int(parse_offer_id(str(body.listing_id))[1]))
+            await db.commit()
     priced = [(o, _price(o.price_units, q.snap, q.rules, q.rate.rate)) for o in offers]
     row, usd, uzs = _choose(priced, body, settings)
     order = _build(q, row, usd, uzs, key=idempotency_key, settings=settings)

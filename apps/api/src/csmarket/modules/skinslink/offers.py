@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import Settings
@@ -85,4 +85,13 @@ def _shown(
     return shown
 
 
-__all__ = ["offers_for"]
+async def forget_item(db: AsyncSession, item_id: str) -> None:
+    """Drop an offer Skinslink called sold from the mirror at once; flush, never commit.
+
+    Not a ban: an offer still for sale comes back with its next catalogue event (a new
+    price is one) or the next full load.
+    """
+    await db.execute(delete(SkinslinkItem).where(SkinslinkItem.id == item_id))
+
+
+__all__ = ["forget_item", "offers_for"]

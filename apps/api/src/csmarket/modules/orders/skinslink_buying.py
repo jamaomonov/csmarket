@@ -58,6 +58,7 @@ from csmarket.modules.skinslink.api import (
     SkinslinkPurchaseClient,
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
+    forget_item,
 )
 from csmarket.modules.users.api import TradeLink, parse_tradelink
 
@@ -200,7 +201,12 @@ async def _leased(
         return settled
     log.info("orders.skinslink_buy.refused", number=run.snap.number, code=run.refusal)
     # Never another offer (ADR-0013); «sold out» only when the offer itself is gone.
-    return await refund(db, run.snap, failure_reason(run.refusal))
+    reason = failure_reason(run.refusal)
+    outcome = await refund(db, run.snap, reason)
+    if reason == "sold_out":  # out of the offers now, back with its next catalogue event
+        await forget_item(db, run.snap.asset_id)
+        await db.commit()
+    return outcome
 
 
 async def _purchase_once(  # noqa: PLR0911 -- one return per outcome reads as the table
