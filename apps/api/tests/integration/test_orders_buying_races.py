@@ -221,7 +221,9 @@ async def test_a_timeout_after_a_successful_answer_is_unconfirmed_never_rebought
     settings: Settings,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(milliseconds=200))
+    """The budget outlasts everything before the buy (lease, read, lookup) on a loaded CI
+    runner and ends inside the 5 s record: 1 s of budget (200 ms lost the race, 2026-10-17)."""
+    monkeypatch.setattr(buying, "ATTEMPT_BUDGET", timedelta(seconds=1))
     record = buy_writes.record_bought
 
     async def slow_record(*args: Any, **kwargs: Any) -> str:
