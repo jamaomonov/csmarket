@@ -66,6 +66,14 @@ describe("AnalyticsPage — Бизнес", () => {
     expect(screen.getByTestId("day-chart")).toBeInTheDocument();
   });
 
+  it("never reads a failed losses request as «none»", async () => {
+    api.getLosses.mockRejectedValue(new Error("down"));
+    renderPage();
+    const losses = await screen.findByRole("region", { name: "Продано в минус" });
+    expect(await within(losses).findByRole("alert")).toHaveTextContent("Не удалось загрузить");
+    expect(within(losses).queryByText("Нет — так и должно быть.")).toBeNull();
+  });
+
   it("links a loss to its order", async () => {
     api.getLosses.mockResolvedValue({
       items: [

@@ -11,9 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.analytics.blocks import TOP
 from csmarket.modules.analytics.fmt import dec, som
-from csmarket.modules.analytics.lines import order_lines
+from csmarket.modules.analytics.lines import order_lines, revenue_uzs_sql
 from csmarket.modules.analytics.schemas import BuyerOut, BuyersOut, CountOut, KeyCount, RefundsOut
 from csmarket.modules.analytics.window import Channel, Window
+from csmarket.modules.fx.api import FxSnapshot
 from csmarket.modules.orders.api import Order
 from csmarket.modules.users.api import User
 
@@ -78,6 +79,7 @@ async def buyers(db: AsyncSession, w: Window, channel: Channel) -> BuyersOut:
 
 async def refunds_block(db: AsyncSession, w: Window, channel: Channel) -> RefundsOut:
     """Orders refunded in the window (their refund day), by market and by reason."""
+    revenue = revenue_uzs_sql()
     where = [Order.refunded_at >= w.start, Order.refunded_at < w.end]
     if channel != "all":
         where.append(Order.channel == channel)
@@ -85,7 +87,10 @@ async def refunds_block(db: AsyncSession, w: Window, channel: Channel) -> Refund
     async def grouped(column: object) -> list[KeyCount]:
         key = func.coalesce(column, literal("other")).label("key")
         rows = await db.execute(
-            select(key, func.count(), func.sum(Order.price_uzs))
+            select(key, func.count(), func.sum(revenue))
+            .select_from(Order)
+            .select_from(Order)
+            .join(FxSnapshot, FxSnapshot.id == Order.fx_snapshot_id)
             .where(*where)
             .group_by("key")
             .order_by(func.count().desc(), "key")
@@ -93,7 +98,13 @@ async def refunds_block(db: AsyncSession, w: Window, channel: Channel) -> Refund
         return [KeyCount(key=str(k), count=int(n), amount_uzs=som(dec(a))) for k, n, a in rows]
 
     n, amount = (
-        await db.execute(select(func.count(), func.sum(Order.price_uzs)).where(*where))
+        await db.execute(
+            select(func.count(), func.sum(revenue))
+            .select_from(Order)
+            .select_from(Order)
+            .join(FxSnapshot, FxSnapshot.id == Order.fx_snapshot_id)
+            .where(*where)
+        )
     ).one()
     return RefundsOut(
         count=int(n),

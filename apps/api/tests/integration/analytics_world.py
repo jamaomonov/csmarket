@@ -9,10 +9,13 @@ half away from zero.
 | B     | Skinslink | trade_sent    | Oct 10 09:00     | 130 000    | 9 (agreed)   | 113 855   | 16 145 ✈    |
 | C     | LIS-SKINS | delivered     | Oct 9 23:59      | 100 000    | 8.4 (charged)| 106 264   | −6 264      |
 | D     | Waxpeer   | refunded 10th | Oct 9 11:00      | 90 000     | —            | —         | not counted |
-| E     | API key   | delivered     | Oct 9 12:00      | 50 000     | 3.5 (agreed) | 44 277    | 5 723       |
+| E     | API key   | delivered     | Oct 9 12:00      | $4 → 50 602| 3.5 (agreed) | 44 277    | 6 325       |
+| F     | Waxpeer   | failed (held) | Oct 9 13:00      | 70 000     | —            | —         | not counted |
 
 C's buyer also bought on Sep 1 (returning); A and D share a buyer; new buyers: A's, B's, E's.
-A buy-back sale was credited on Oct 9 (site only).
+A buy-back sale was credited on Oct 9 (site only). An API order stores ``price_uzs = 0`` (its
+price is ``price_usd``): its soʻm revenue is ``price_usd`` at its own rate, 4 × 12 650.5. F failed
+and waits for an admin's refund: not counted, not «в пути».
 """
 
 from __future__ import annotations
@@ -20,6 +23,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from csmarket.modules.orders.models import Order
 from csmarket.modules.public_api import keys
@@ -52,8 +56,8 @@ class World:
     e_owner: User
 
 
-PROFIT = {"a": 36_145, "b": 16_145, "c": -6_264, "e": 5_723}
-REVENUE = 150_000 + 130_000 + 100_000 + 50_000
+PROFIT = {"a": 36_145, "b": 16_145, "c": -6_264, "e": 6_325}
+REVENUE = 150_000 + 130_000 + 100_000 + 50_602
 
 
 def _money(price_uzs: int, price_usd: str, cost_usd: str) -> dict[str, object]:
@@ -115,7 +119,17 @@ async def build_world(db: AsyncSession) -> World:
         paid_at=utc(10, 9, 7),
         channel="api",
         api_key_id=key.id,
-        **_money(50_000, "4", "3.5"),
+        client_order_id=f"c-{uuid4()}",
+        pricing_profile="retail",
+        **_money(0, "4", "3.5"),
+    )
+    await make_order(
+        db,
+        user=await make_user(db),
+        status="failed",
+        paid_with="payme",
+        paid_at=utc(10, 9, 8),
+        **_money(70_000, "5.5", "5"),
     )
     await make_sale(db, status="credited", credited_at=utc(10, 9, 8), amount_usd=Decimal("10"))
     return World(a=a, b=b, c=c, d=d, e=e, a_buyer=a_buyer, c_buyer=c_buyer, e_owner=e_owner)

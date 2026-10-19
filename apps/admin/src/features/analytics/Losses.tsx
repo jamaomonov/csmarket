@@ -20,6 +20,10 @@ export function Losses({ span, channel }: { span: Span; channel: Channel }) {
     <Section title="Продано в минус">
       {q.isPending ? (
         <p className="text-fg-muted text-sm">Загрузка…</p>
+      ) : q.isError ? (
+        <p role="alert" className="text-danger text-sm">
+          Не удалось загрузить — обновите страницу.
+        </p>
       ) : items.length === 0 ? (
         <p className="text-fg-muted text-sm">Нет — так и должно быть.</p>
       ) : (

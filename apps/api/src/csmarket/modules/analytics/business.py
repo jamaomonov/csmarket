@@ -15,9 +15,10 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.analytics.fmt import ZERO, dec, percent, som, usd
-from csmarket.modules.analytics.lines import order_lines
+from csmarket.modules.analytics.lines import order_lines, revenue_uzs_sql
 from csmarket.modules.analytics.schemas import DayOut, Money, Totals
 from csmarket.modules.analytics.window import Channel, Window
+from csmarket.modules.fx.api import FxSnapshot
 from csmarket.modules.orders.api import Order
 from csmarket.modules.sales.api import SalesPnl, sales_pnl_between
 
@@ -75,8 +76,11 @@ async def orders_by_day(db: AsyncSession, w: Window, channel: Channel) -> dict[d
 
 async def refunds(db: AsyncSession, w: Window, channel: Channel) -> tuple[int, Decimal]:
     """Orders refunded in the window (their refund day) and their price, soʻm."""
-    stmt = select(func.count(), func.sum(Order.price_uzs)).where(
-        Order.refunded_at >= w.start, Order.refunded_at < w.end
+    stmt = (
+        select(func.count(), func.sum(revenue_uzs_sql()))
+        .select_from(Order)
+        .join(FxSnapshot, FxSnapshot.id == Order.fx_snapshot_id)
+        .where(Order.refunded_at >= w.start, Order.refunded_at < w.end)
     )
     if channel != "all":
         stmt = stmt.where(Order.channel == channel)
@@ -85,7 +89,8 @@ async def refunds(db: AsyncSession, w: Window, channel: Channel) -> tuple[int, D
 
 
 async def new_buyers(db: AsyncSession, w: Window, channel: Channel) -> int:
-    """Users whose first paid order ever is in the window (of ``channel`` when filtered)."""
+    """Buyers of the window's counted orders whose first paid order ever is in the window (the
+    same set as the «Покупатели» block's new ones)."""
     first = (
         select(Order.user_id, func.min(Order.paid_at).label("first"))
         .where(Order.paid_at.is_not(None))
@@ -97,9 +102,8 @@ async def new_buyers(db: AsyncSession, w: Window, channel: Channel) -> int:
         .select_from(first)
         .where(first.c.first >= w.start, first.c.first < w.end)
     )
-    if channel != "all":
-        lines = order_lines(w, channel)
-        stmt = stmt.where(first.c.user_id.in_(select(lines.c.user_id)))
+    lines = order_lines(w, channel)
+    stmt = stmt.where(first.c.user_id.in_(select(lines.c.user_id)))
     return int(await db.scalar(stmt) or 0)
 
 
