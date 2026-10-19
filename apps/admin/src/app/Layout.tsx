@@ -13,7 +13,7 @@ import { useAuthStore } from "@/features/auth/authStore";
 import { getDashboard } from "@/features/dashboard/api";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 
-type Counter = "attention" | "toPay";
+type Counter = "attention" | "toPay" | "salesAttention";
 
 interface NavLinkItem {
   to: string;
@@ -37,7 +37,7 @@ const NAV: NavEntry[] = [
     label: "Выкуп",
     items: [
       { to: "/payouts", label: "Заявки на выплату", counter: "toPay" },
-      { to: "/sales", label: "Продажи" },
+      { to: "/sales", label: "Продажи", counter: "salesAttention" },
       { to: "/sales/reconciliation", label: "Сверка" },
       { to: "/sale-blocks", label: "Запрет выкупа" },
     ],
@@ -59,6 +59,7 @@ const NAV: NavEntry[] = [
 const COUNTER_LABEL: Record<Counter, string> = {
   attention: "ждут внимания",
   toPay: "к выплате",
+  salesAttention: "продажи ждут проверки",
 };
 
 const isMenu = (e: NavEntry): e is NavMenu => "items" in e;
@@ -78,6 +79,7 @@ function useCounters(): Record<Counter, number> {
   return {
     attention: query.data?.attention ?? 0,
     toPay: query.data?.payouts.to_pay_count ?? 0,
+    salesAttention: query.data?.payouts.sales_attention ?? 0,
   };
 }
 
@@ -111,7 +113,10 @@ function TopMenu({
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const active = menu.items.some((i) => isCurrent(i, pathname));
-  const counted = menu.items.find((i) => i.counter !== undefined)?.counter;
+  // The closed menu shows the first of its counters that has something waiting.
+  const counted =
+    menu.items.find((i) => i.counter !== undefined && counters[i.counter] > 0)?.counter ??
+    menu.items.find((i) => i.counter !== undefined)?.counter;
 
   useEffect(() => {
     setOpen(false);
@@ -213,7 +218,7 @@ function MobileSheet({
             type="button"
             onClick={onClose}
             aria-label="Закрыть"
-            className="text-fg-muted hover:bg-surface-2 rounded-md p-1"
+            className="text-fg-muted hover:bg-surface-2 grid size-10 place-items-center rounded-md"
           >
             <X className="size-4" />
           </button>
@@ -252,7 +257,7 @@ export function Layout() {
     };
   }, [sheetOpen]);
 
-  const waiting = counters.attention + counters.toPay;
+  const waiting = counters.attention + counters.toPay + counters.salesAttention;
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -267,7 +272,7 @@ export function Layout() {
           onClick={() => {
             setSheetOpen(true);
           }}
-          className="text-fg-muted hover:bg-surface-2 relative rounded-md p-1.5 lg:hidden"
+          className="text-fg-muted hover:bg-surface-2 relative grid size-10 place-items-center rounded-md lg:hidden"
           aria-label="Открыть меню"
         >
           <Menu className="size-5" />

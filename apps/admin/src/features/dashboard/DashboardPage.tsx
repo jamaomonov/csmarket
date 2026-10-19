@@ -27,7 +27,13 @@ function Now({ data }: { data: DashboardOut }) {
   return (
     <section aria-label="Сделать сейчас" className="space-y-2">
       <h2 className="text-fg-muted text-xs font-medium uppercase tracking-wider">Сделать сейчас</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div
+        className={`grid grid-cols-1 gap-3 ${
+          (data.payouts.sales_attention ?? 0) > 0
+            ? "sm:grid-cols-2 lg:grid-cols-4"
+            : "sm:grid-cols-3"
+        }`}
+      >
         <Tile title="Требуют внимания" to="/trades?view=attention" alert={data.attention > 0}>
           <span className={data.attention > 0 ? "text-danger" : ""}>{data.attention}</span>
         </Tile>
