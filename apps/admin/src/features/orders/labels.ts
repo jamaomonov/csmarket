@@ -1,6 +1,7 @@
 /** Operator-facing Russian labels for the order page and the order rows. Unknown codes show raw. */
 import { type AttentionReason, type FailureReason, type OrderStatus } from "./kinds";
 
+import { type Tone } from "@/components/StatusChip";
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 
@@ -16,15 +17,16 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 /** Tailwind classes of the status chip. */
-export const STATUS_CHIP: Record<OrderStatus, string> = {
-  pending: "bg-surface-2 text-fg-muted",
-  paid: "bg-warning/15 text-warning",
-  buying: "bg-warning/15 text-warning",
-  trade_sent: "bg-warning/15 text-warning",
-  delivered: "bg-success/15 text-success",
-  cancelled: "bg-surface-2 text-fg-muted",
-  failed: "bg-danger/15 text-danger",
-  returned: "bg-danger/15 text-danger",
+/** One tone per state (refunds neutral: the money went back, the case is closed). */
+export const STATUS_TONE: Record<OrderStatus, Tone> = {
+  pending: "muted",
+  paid: "progress",
+  buying: "progress",
+  trade_sent: "progress",
+  delivered: "success",
+  cancelled: "muted",
+  failed: "danger",
+  returned: "neutral",
 };
 
 export const ATTENTION_LABELS: Record<AttentionReason, string> = {

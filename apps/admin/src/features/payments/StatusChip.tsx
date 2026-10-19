@@ -1,13 +1,12 @@
 import { type PaymentStatus } from "./kinds";
-import { STATUS_CHIP, STATUS_LABELS } from "./labels";
+import { STATUS_LABELS, STATUS_TONE } from "./labels";
+
+import { StatusChip as Chip } from "@/components/StatusChip";
 
 export function StatusChip({ status }: { status: PaymentStatus }) {
   return (
-    <span
-      data-testid="payment-status"
-      className={`whitespace-nowrap rounded px-2 py-0.5 text-xs ${STATUS_CHIP[status]}`}
-    >
+    <Chip tone={STATUS_TONE[status]} testId="payment-status">
       {STATUS_LABELS[status]}
-    </span>
+    </Chip>
   );
 }

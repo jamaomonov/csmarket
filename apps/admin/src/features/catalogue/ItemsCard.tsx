@@ -7,6 +7,7 @@ import { useState } from "react";
 import { type AdminSkinItem, findItems, setHidden } from "./api";
 import { ColorEditor } from "./ColorEditor";
 
+import { StatusChip } from "@/components/StatusChip";
 import { ApiError, formatApiError } from "@/lib/api";
 import { useDebounced } from "@/lib/useDebounced";
 
@@ -43,14 +44,14 @@ function ItemRow({ item, pending, onToggle }: ItemRowProps) {
         <div className="text-fg-muted text-sm">
           {item.category ?? "—"}
           {item.price_usd ? ` · $${item.price_usd}` : ""}
-          {item.hidden ? " · скрыт" : ""}
         </div>
         <ColorEditor item={item} />
       </div>
-      <span
-        className={`rounded px-2 py-0.5 text-xs ${item.active ? "bg-success text-success-fg" : "bg-surface-2 text-fg-muted"}`}
-      >
-        {item.active ? "в продаже" : "нет предложений"}
+      <span className="flex shrink-0 flex-col items-end gap-1">
+        <StatusChip tone={item.active ? "success" : "muted"}>
+          {item.active ? "в продаже" : "нет предложений"}
+        </StatusChip>
+        {item.hidden ? <StatusChip tone="danger">скрыт</StatusChip> : null}
       </span>
       <Button
         variant="secondary"

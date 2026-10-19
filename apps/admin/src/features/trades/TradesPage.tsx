@@ -74,6 +74,8 @@ export function TradesPage() {
     },
     initialPageParam: null,
     getNextPageParam: (last) => last.next_cursor,
+    // The work queues re-read on their own; the history views do not need to.
+    refetchInterval: view === "attention" || view === "active" ? 30_000 : false,
   });
   const rows = list.data?.pages.flatMap((p) => p.items) ?? [];
   // The counts ride on every page; keep the last ones so the badges do not blink on a tab switch.

@@ -1,6 +1,8 @@
 /** Operator-facing Russian labels of the «Обмены» table. */
 import { type TradeRowState, type TradeSource, type TradeView } from "./kinds";
 
+import { type Tone } from "@/components/StatusChip";
+
 export const TRADE_VIEW_LABELS: Record<TradeView, string> = {
   all: "Все",
   active: "В пути",
@@ -21,15 +23,16 @@ export const STATE_LABELS: Record<TradeRowState, string> = {
 };
 
 /** Tailwind classes of the state chip. */
-export const STATE_CHIP: Record<TradeRowState, string> = {
-  pending: "bg-surface-2 text-fg-muted",
-  buying: "bg-warning/15 text-warning",
-  sent: "bg-warning/15 text-warning",
-  hold: "bg-info/15 text-info",
-  delivered: "bg-success/15 text-success",
-  refunded: "bg-surface-2 text-fg",
-  cancelled: "bg-surface-2 text-fg-muted",
-  failed_held: "bg-danger/15 text-danger",
+/** One tone per state (refunds neutral: the money went back, the case is closed). */
+export const STATE_TONE: Record<TradeRowState, Tone> = {
+  pending: "muted",
+  buying: "progress",
+  sent: "progress",
+  hold: "info",
+  delivered: "success",
+  refunded: "neutral",
+  cancelled: "muted",
+  failed_held: "danger",
 };
 
 export const SOURCE_LABELS: Record<TradeSource, string> = {

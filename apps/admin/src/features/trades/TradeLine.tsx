@@ -4,12 +4,13 @@ import { type MouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminTradeRow } from "./api";
-import { SOURCE_LABELS, STATE_CHIP, STATE_LABELS } from "./labels";
+import { SOURCE_LABELS, STATE_LABELS, STATE_TONE } from "./labels";
 import { ago, clockTime, shortDate, shortDateTime, timeLeft } from "./time";
 import { TradeExpand } from "./TradeExpand";
 import { ATTENTION_LABELS, FAILURE_LABELS } from "../orders/labels";
 import { AttentionBadge } from "../orders/StatusChip";
 
+import { StatusChip } from "@/components/StatusChip";
 import { providerLabel } from "@/features/users/labels";
 import { formatSum } from "@/lib/format";
 
@@ -72,14 +73,14 @@ export function StateCell({ row }: { row: AdminTradeRow }) {
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1">
-        <span
-          data-testid="trade-state"
-          title={row.source_status === null ? undefined : `Площадка: ${row.source_status}`}
-          className={`whitespace-nowrap rounded px-2 py-0.5 text-xs ${STATE_CHIP[row.trade_state]}`}
+        <StatusChip
+          tone={STATE_TONE[row.trade_state]}
+          testId="trade-state"
+          {...(row.source_status === null ? {} : { title: `Площадка: ${row.source_status}` })}
         >
           {STATE_LABELS[row.trade_state]}
           {reason}
-        </span>
+        </StatusChip>
         <AttentionBadge reason={row.attention_reason} />
       </div>
       {row.attention_reason !== null && (

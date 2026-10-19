@@ -2,6 +2,7 @@
 import { type KassaTxn } from "./api";
 import { type PaymentPurpose, type PaymentStatus } from "./kinds";
 
+import { type Tone } from "@/components/StatusChip";
 import { formatSum } from "@/lib/format";
 
 export const STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -19,13 +20,14 @@ export const PURPOSE_LABELS: Record<PaymentPurpose, string> = {
 };
 
 /** Tailwind classes of the status chip. */
-export const STATUS_CHIP: Record<PaymentStatus, string> = {
-  created: "bg-surface-2 text-fg-muted",
-  pending: "bg-warning/15 text-warning",
-  succeeded: "bg-success/15 text-success",
-  failed: "bg-danger/15 text-danger",
-  cancelled: "bg-surface-2 text-fg-muted",
-  refunded: "bg-surface-2 text-fg",
+/** One tone per state (refunds neutral: the money went back, the case is closed). */
+export const STATUS_TONE: Record<PaymentStatus, Tone> = {
+  created: "muted",
+  pending: "progress",
+  succeeded: "success",
+  failed: "danger",
+  cancelled: "muted",
+  refunded: "neutral",
 };
 
 const KASSA_STATUSES: Record<string, string> = {

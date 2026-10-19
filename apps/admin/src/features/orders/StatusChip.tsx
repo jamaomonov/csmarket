@@ -1,6 +1,7 @@
 import { type AttentionReason, type OrderStatus } from "./kinds";
-import { ATTENTION_LABELS, STATUS_CHIP, STATUS_LABELS } from "./labels";
+import { ATTENTION_LABELS, STATUS_LABELS, STATUS_TONE } from "./labels";
 
+import { StatusChip } from "@/components/StatusChip";
 import { formatDateTime } from "@/lib/format";
 
 interface OrderStatusChipProps {
@@ -32,12 +33,9 @@ export function OrderStatusChip({
     );
   }
   return (
-    <span
-      data-testid="order-status"
-      className={`whitespace-nowrap rounded px-2 py-0.5 text-xs ${STATUS_CHIP[status]}`}
-    >
+    <StatusChip tone={STATUS_TONE[status]} testId="order-status">
       {STATUS_LABELS[status]}
-    </span>
+    </StatusChip>
   );
 }
 
