@@ -44,6 +44,7 @@ const NAV: NavEntry[] = [
   },
   { to: "/users", label: "Пользователи", also: ["/api-keys"] },
   { to: "/payments", label: "Платежи" },
+  { to: "/p2p", label: "P2P" },
   {
     label: "Настройки",
     items: [
