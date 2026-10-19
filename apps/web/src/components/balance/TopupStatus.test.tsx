@@ -318,4 +318,28 @@ describe("TopupStatus", () => {
     expect(await screen.findByText("9860 0000 0000 4321")).toBeInTheDocument();
     expect(assign).not.toHaveBeenCalled();
   });
+
+  it("turns a P2P transfer into «пополнен» by itself once the money arrives", async () => {
+    const pending = topup({
+      provider: "p2p",
+      intent_url: null,
+      awaiting_kassa: true,
+      p2p: {
+        card_number: "9860000000004321",
+        holder: "TEST HOLDER",
+        amount_uzs: "10000",
+        expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+        status: "pending",
+      },
+    });
+    api.getTopup
+      .mockResolvedValueOnce(pending)
+      .mockResolvedValue(topup({ ...pending, status: "succeeded", p2p: null, awaiting_kassa: false }));
+    view();
+    expect(await screen.findByText("9860 0000 0000 4321")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /Баланс пополнен/ }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+  });
 });
+
