@@ -1,8 +1,8 @@
 """Wire shapes for ``/api/v1/admin/users`` (the admin SPA's users and wallet pages).
 
 Amounts are whole soʻm as digit strings (``core.money.wire_uzs``); an entry's amount is
-signed (``+50000`` / ``-10000``), like the customer's history. The trade link is never
-sent whole: ``trade_link_masked`` keeps ``partner`` and the token's last 2 characters.
+signed (``+50000`` / ``-10000``), like the customer's history. The trade link is sent whole
+(``trade_link``): an admin copies it (owner, 2026-10-19).
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_vali
 
 from csmarket.core.money import wire_usd, wire_uzs
 from csmarket.modules.admin.orders_schemas import AdminOrderRow
-from csmarket.modules.users.api import User, mask_trade_link
+from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import (
     ADMIN_ADJUST_MAX,
     ADMIN_ADJUST_USD_MAX,
@@ -75,8 +75,8 @@ class AdminUserDetail(BaseModel):
     banned_at: datetime | None
     ban_reason: str | None
     created_at: datetime
-    #: ``…?partner=<id>&token=••••<last 2>``; ``null`` when none is saved.
-    trade_link_masked: str | None
+    #: The whole link, for an admin to copy (owner, 2026-10-19); ``null`` when none is saved.
+    trade_link: str | None
     trade_link_verdict: Literal["ok", "warn", "bad"] | None
     trade_link_reason: Literal["invalid", "private", "trade_ban", "hold", "unavailable"] | None
     trade_link_checked_at: datetime | None
@@ -95,7 +95,7 @@ class AdminUserDetail(BaseModel):
             banned_at=user.banned_at,
             ban_reason=user.ban_reason,
             created_at=user.created_at,
-            trade_link_masked=mask_trade_link(user.trade_link),
+            trade_link=user.trade_link,
             trade_link_verdict=user.trade_link_verdict,  # type: ignore[arg-type]  # DB check
             trade_link_reason=user.trade_link_reason,  # type: ignore[arg-type]  # DB check
             trade_link_checked_at=user.trade_link_checked_at,

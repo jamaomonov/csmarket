@@ -2,8 +2,8 @@
 API-key cards' order rows); the «Обмены» table's are ``trades_schemas``.
 
 Soʻm are whole digits (``core.money.wire_uzs``); USD are decimal strings with six places;
-Waxpeer units are integers (1000 = $1). The buyer's trade link never leaves whole:
-``trade_link_masked`` keeps ``partner`` and the token's last 2 characters.
+Waxpeer units are integers (1000 = $1). The buyer's trade link leaves whole (``trade_link``,
+for an admin to copy; owner, 2026-10-19); an erased one is the masked text it was stored as.
 """
 
 from __future__ import annotations
@@ -119,8 +119,8 @@ class AdminOrderFull(BaseModel):
     api_key_id: str | None
     client_order_id: str | None
     pricing_profile: str | None
-    #: ``…?partner=<id>&token=••••<last 2>``.
-    trade_link_masked: str | None
+    #: The whole link (an erased order's is stored masked).
+    trade_link: str | None
     paid_with: str | None
     created_at: datetime
     updated_at: datetime

@@ -96,8 +96,8 @@ All under `/api/v1/admin/users`, `require_admin` on the router (401 / 403 as abo
   in a text parameter, so it is a 422, not a 500). The balance is a correlated subquery
   (`wallet.user_balance_column`): one statement per page, whatever its size.
 - **Card:** the profile, the balance, the latest 20 ledger lines (`wallet.entries_for_admin`,
-  with `actor` and `reason`) and the latest 20 top-ups. The trade link leaves only masked
-  (`users.mask_trade_link`): `partner` kept, the token `••••` + its last 2 characters.
+  with `actor` and `reason`) and the latest 20 top-ups. The trade link leaves whole
+  (`trade_link`, owner 2026-10-19: an admin copies it).
 - **Ban:** refuses oneself (`409 ban_self`), an admin (`409 ban_admin` — revoke the role
   first) and a banned account (`409 already_banned`); sets `banned_at`/`ban_reason` and calls
   `auth.revoke_all_sessions` (every refresh row revoked with reason `admin`, its `sid`
@@ -157,13 +157,13 @@ The writes are `orders`' own: `orders.admin_actions` (exported by `orders.api`).
 rarity_color, float_value}`, `price_uzs`, `price_usd`, `cost_usd` (what the market
   charged, else the checkout cost), `margin_usd`, `margin_pct` (of the price, one decimal),
   `paid_with`, `buyer {id, display_name, avatar_url}`, `steam_offer_id` / `offer_url`,
-  `trade_link_masked`, `trade_state`, `protected_until`, `failure_reason`,
+  `trade_link` (whole), `trade_state`, `protected_until`, `failure_reason`,
   `attention_reason`, `source_status` (Waxpeer's code as digits, else the purchase's word).
   `trade_state` is `orders.row_state` (`orders/trade_row.py`): `pending`, `buying`, `sent`,
   `hold`, `delivered`, `refunded`, `cancelled`, `failed_held`; its SQL twins filter the tabs,
   so a tab holds what its rows say (`test_admin_trades.py`).
-- **Order page:** every `orders` column except `trade_link` (`trade_link_masked` instead) and
-  `idempotency_key`,
+- **Order page:** every `orders` column except `idempotency_key` (`trade_link` whole; an
+  erased one is the masked text it is stored as),
   `cost_usd` / `price_usd` (6 decimals), `fx_rate` (the snapshot's rate), `margin_usd` =
   `price_usd` − what Waxpeer charged (`bought_units` / 1000), else − `cost_usd`; the buyer
   `{id, display_name}`; the trade (every column an operator needs, `offer_url` built from

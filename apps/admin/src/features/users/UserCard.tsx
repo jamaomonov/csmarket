@@ -30,6 +30,7 @@ import { MoreMenu } from "@/components/MoreMenu";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { StatusChip } from "@/components/StatusChip";
+import { TradeLinkValue } from "@/components/SteamLinks";
 import { Tabs } from "@/components/Tabs";
 import { ApiError } from "@/lib/api";
 import {
@@ -78,7 +79,9 @@ function Profile({ card }: { card: AdminUserCard }) {
       <Row label="Язык">{localeLabel(u.locale)}</Row>
       <Row label="Роль">{roleLabel(u.roles)}</Row>
       <Row label="Регистрация">{formatDateTime(u.created_at)}</Row>
-      <Row label="Трейд-ссылка">{u.trade_link_masked ?? "не указана"}</Row>
+      <Row label="Трейд-ссылка">
+        <TradeLinkValue link={u.trade_link} />
+      </Row>
       <Row label="Проверка ссылки">
         {tradeVerdictText(u)}
         {u.trade_link_checked_at && (

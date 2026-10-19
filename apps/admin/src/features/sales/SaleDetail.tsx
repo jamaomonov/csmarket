@@ -17,6 +17,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { StatusChip } from "@/components/StatusChip";
+import { SteamOfferValue } from "@/components/SteamLinks";
 import { UserCell } from "@/components/UserCell";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText } from "@/features/users/labels";
@@ -129,7 +130,9 @@ export function SaleDetail() {
                   </Row>
                 ) : null}
                 <Row label="Обмен Skinslink">{s.trade_id ?? "—"}</Row>
-                <Row label="Оффер Steam">{s.trade_offer_id ?? "—"}</Row>
+                <Row label="Оффер Steam">
+                  <SteamOfferValue offerId={s.trade_offer_id} />
+                </Row>
                 <Row label="Бот">{s.bot_name ?? "—"}</Row>
                 <Row label="Причина закрытия">{s.fail_reason ?? "—"}</Row>
               </dl>

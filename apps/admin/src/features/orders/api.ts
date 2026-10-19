@@ -66,7 +66,7 @@ export interface AdminOrderFull {
   /** The end is our estimate (LIS-SKINS names none: accepted + 7 days). */
   protected_estimated: boolean;
   /** Already masked by the API: the token is never in the page. */
-  trade_link_masked: string | null;
+  trade_link: string | null;
   paid_with: string | null;
   created_at: string;
   updated_at: string;

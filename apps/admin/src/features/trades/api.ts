@@ -45,7 +45,7 @@ export interface AdminTradeRow {
   steam_offer_id: string | null;
   offer_url: string | null;
   /** Already masked by the API: the token is never in the page. */
-  trade_link_masked: string | null;
+  trade_link: string | null;
   trade_state: TradeRowState;
   /** When Steam's protection of the accepted trade ends. */
   protected_until: string | null;

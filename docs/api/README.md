@@ -304,7 +304,7 @@ roles, banned_at, created_at, balance_uzs}], next_cursor}` — newest first; `q`
   is 422 `cursor`. Free-text admin filters (`q` here and on payments; `action`,
   `target_type`, `target_id` on audit) refuse a NUL byte with 422.
 - `GET /admin/users/{id}` → `AdminUserCard {user: {id, steam_id, display_name, avatar_url,
-email, locale, roles, banned_at, ban_reason, created_at, trade_link_masked,
+email, locale, roles, banned_at, ban_reason, created_at, trade_link,
 trade_link_verdict, trade_link_reason, trade_link_checked_at, usd_wallet_enabled}, balance_uzs,
 balance_usd (string), entries: [{id, kind, currency, amount_uzs, amount_usd, created_at,
 reference_number, actor, reason}], usd_entries (the same shape, dollar lines), topups: [{number,
@@ -340,7 +340,7 @@ attention_reason}], next_cursor}`. `q` (≤ 100 chars) = a number prefix (any ca
   of every source (the «Обмены» table); `q` also matches a Steam trade offer id exactly; the
   counts ignore `q`. Row fields: `apps/api/src/csmarket/modules/admin/README.md`.
 - `GET /admin/orders/{number}` → `AdminOrderDetail {order: {every orders column but
-trade_link and idempotency_key, trade_link_masked, fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
+idempotency_key (trade_link whole), fx_rate, margin_usd}, user, trade: AdminTradeOut | null,
 skinslink: AdminSkinslinkPurchaseOut | null, lisskins: AdminLisskinsPurchaseOut | null, payments: [{id, provider, status, amount_uzs, created_at}], can_refund, can_retry}`.
   The order's `source` is `waxpeer`, `skinslink` (ADR-0010) or `lisskins` (ADR-0012); a
   Skinslink order has `skinslink` (its purchase) and no `trade`, a LIS-SKINS order has

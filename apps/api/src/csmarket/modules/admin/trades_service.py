@@ -45,7 +45,7 @@ from csmarket.modules.orders.api import (
 from csmarket.modules.public_api.api import ApiKey
 from csmarket.modules.skins.api import SkinItem, steam_image
 from csmarket.modules.skinslink.api import SkinslinkPurchase
-from csmarket.modules.users.api import User, mask_trade_link
+from csmarket.modules.users.api import User
 
 _Owner = aliased(User, name="api_owner")
 _PCT = Decimal("0.1")
@@ -103,13 +103,6 @@ def _source_status(trade: SkinTrade | None, bought: PurchaseRow | None) -> str |
     return str(trade.status)
 
 
-def _masked(order: Order) -> str | None:
-    # An erased link is stored masked already (and would not parse again).
-    if order.trade_link_erased_at is not None:
-        return order.trade_link
-    return mask_trade_link(order.trade_link)
-
-
 # Any: one row of :func:`_rows`.
 def _row(found: Any, at: datetime, image_host: str) -> AdminTradeRow:
     order, trade, sl, ls, name, avatar, image, rarity, owner = found
@@ -143,7 +136,7 @@ def _row(found: Any, at: datetime, image_host: str) -> AdminTradeRow:
             "buyer": {"id": order.user_id, "display_name": name, "avatar_url": avatar},
             "steam_offer_id": offer,
             "offer_url": f"https://steamcommunity.com/tradeoffer/{offer}/" if offer else None,
-            "trade_link_masked": _masked(order),
+            "trade_link": order.trade_link,
             "trade_state": row_state(order, trade, bought, at),
             "protected_until": protection_end(order, trade, bought),
             "protected_estimated": protection_is_estimate(bought),

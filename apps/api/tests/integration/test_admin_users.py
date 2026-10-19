@@ -260,11 +260,9 @@ async def test_card_shows_the_profile_balance_entries_and_topups_with_a_masked_l
     r = await integration_client.get(f"{BASE}/{user.id}", headers=h)
     assert r.status_code == 200, r.text
     card = r.json()
-    assert "QwErTy" not in r.text
-    assert card["user"]["trade_link_masked"] == (
-        "https://steamcommunity.com/tradeoffer/new/?partner=39734280&token=••••7z"
-    )
-    assert "trade_link" not in card["user"]
+    # Whole, for an admin to copy (owner, 2026-10-19).
+    assert card["user"]["trade_link"] == FAKE_LINK
+    assert "trade_link_masked" not in card["user"]
     assert card["user"]["display_name"] == "Carol"
     assert card["user"]["trade_link_verdict"] == "ok"
     assert card["balance_uzs"] == "12000"

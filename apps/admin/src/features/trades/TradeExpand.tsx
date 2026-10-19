@@ -9,6 +9,7 @@ import { type AdminOrderDetail, getOrder } from "../orders/api";
 import { detailKey } from "../orders/keys";
 import { FAILURE_LABELS, waxpeerStatusLabel } from "../orders/labels";
 
+import { TradeLinkValue } from "@/components/SteamLinks";
 import { errorText } from "@/features/users/labels";
 import { formatDateTime } from "@/lib/format";
 
@@ -102,9 +103,9 @@ export function TradeExpand({ row }: { row: AdminTradeRow }) {
                 </div>
               ))}
             </dl>
-            {row.trade_link_masked !== null && (
-              <p className="text-fg-muted mt-2 break-all text-xs">
-                Трейд-ссылка: <span className="font-mono">{row.trade_link_masked}</span>
+            {row.trade_link !== null && (
+              <p className="text-fg-muted mt-2 text-xs">
+                Трейд-ссылка: <TradeLinkValue link={row.trade_link} />
               </p>
             )}
           </div>

@@ -1,9 +1,10 @@
 /** «Обмен»: the order's Waxpeer trade — status, Steam offer, deadlines, seller, ids to copy. */
-import { type ReactNode, useState } from "react";
+import { type ReactNode } from "react";
 
 import { type AdminTradeOut } from "./api";
 import { ATTENTION_LABELS, waxpeerStatusLabel } from "./labels";
 
+import { CopyButton } from "@/components/CopyButton";
 import { formatDateTime } from "@/lib/format";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -17,31 +18,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 function when(iso: string | null): string {
   return iso === null ? "—" : formatDateTime(iso);
-}
-
-function CopyButton({ value, label }: { value: string; label: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = () => {
-    // A blocked clipboard (insecure context, denied permission) just leaves the button idle.
-    navigator.clipboard.writeText(value).then(
-      () => {
-        setCopied(true);
-      },
-      () => {
-        setCopied(false);
-      },
-    );
-  };
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={copy}
-      className="text-accent ml-2 text-xs hover:underline"
-    >
-      {copied ? "Скопировано" : "Копировать"}
-    </button>
-  );
 }
 
 /** The seller's public name and level, when the stored object has them as scalars. */

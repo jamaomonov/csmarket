@@ -87,11 +87,12 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   leaves the API only masked in admin. The customer's `/wallet/entries` carries no actor and no
   reason; an admin's adjustment reason is operator text visible to admins only (card and audit
   log), and the runbook asks for no personal data in it (`docs/runbooks/wallet.md`). The
-  admin card shows the trade link masked. Metric `csmarket_kassa_rejections_total` is labelled
+  admin card shows the trade link whole (owner, 2026-10-19: admins copy it to check or resend a
+  trade; the admin API is admin-only and never logs it). Metric `csmarket_kassa_rejections_total` is labelled
   by kassa and reason only.
-- **Admin orders API (M4a):** the order page shows the order's trade-link snapshot only
-  masked (`trade_link_masked`, `users.mask_trade_link`), never `orders.trade_link`; the list
-  rows carry no link at all. The order actions' audit payloads are an attention reason or an
+- **Admin orders API (M4a):** the order page and the «Обмены» row show the order's trade-link
+  snapshot whole (`trade_link`; owner, 2026-10-19 — earlier masked), an erased one as the
+  masked text it is stored as; the orders list rows carry no link at all. The order actions' audit payloads are an attention reason or an
   amount (`orders.trade.resolve` `{reason}`, `orders.buy.retry` `{reason}`, `orders.refund`
   `{amount_uzs}`), target the order number; the operator's resolve note lives only in
   `skin_trades.resolved_note` (admin views only; operator text, no personal data in it).

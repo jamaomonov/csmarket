@@ -15,6 +15,7 @@ import { TradeBlock } from "./TradeBlock";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { TradeLinkValue } from "@/components/SteamLinks";
 import { UserCell } from "@/components/UserCell";
 import { StatusChip as PaymentStatusChip } from "@/features/payments/StatusChip";
 import { errorText, providerLabel } from "@/features/users/labels";
@@ -66,7 +67,7 @@ function OrderFields({ detail }: { detail: AdminOrderDetail }) {
           {order.offer_id !== null && <span className="text-fg-muted"> · {order.offer_id}</span>}
         </Row>
         <Row label="Трейд-ссылка">
-          <span className="break-all">{order.trade_link_masked ?? "не указана"}</span>
+          <TradeLinkValue link={order.trade_link} />
         </Row>
       </dl>
     </Section>

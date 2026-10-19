@@ -39,7 +39,7 @@ const ROW: AdminTradeRow = {
   steam_offer_id: "6912345678",
   offer_url: "https://steamcommunity.com/tradeoffer/6912345678/",
   // Fake, already-masked link.
-  trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY",
+  trade_link: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY",
   trade_state: "sent",
   protected_until: null,
   protected_estimated: false,

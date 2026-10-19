@@ -53,7 +53,7 @@ from csmarket.modules.orders.api import (
 from csmarket.modules.payments.api import Payment
 from csmarket.modules.skins.api import SkinItem
 from csmarket.modules.skinslink.api import SkinslinkPurchase
-from csmarket.modules.users.api import User, mask_trade_link
+from csmarket.modules.users.api import User
 
 #: Orders with their trade, purchases (``None`` on the outer joins) and the buyer's name.
 type _Rows = Select[
@@ -171,10 +171,8 @@ def _order_full(
             "margin_usd": usd(order.price_usd - charged),
             "protected_until": protection_end(order, trade, purchase),
             "protected_estimated": protection_is_estimate(purchase),
-            # An erased link is stored masked already (and would not parse again).
-            "trade_link_masked": order.trade_link
-            if order.trade_link_erased_at is not None
-            else mask_trade_link(order.trade_link),
+            # An erased link is stored masked already.
+            "trade_link": order.trade_link,
         }
     )
 

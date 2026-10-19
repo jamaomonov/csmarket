@@ -1043,7 +1043,7 @@
             "title": "Status",
             "type": "string"
           },
-          "trade_link_masked": {
+          "trade_link": {
             "anyOf": [
               {
                 "type": "string"
@@ -1052,7 +1052,7 @@
                 "type": "null"
               }
             ],
-            "title": "Trade Link Masked"
+            "title": "Trade Link"
           },
           "trade_sent_at": {
             "anyOf": [
@@ -1102,7 +1102,7 @@
           "api_key_id",
           "client_order_id",
           "pricing_profile",
-          "trade_link_masked",
+          "trade_link",
           "paid_with",
           "created_at",
           "updated_at",
@@ -3311,7 +3311,7 @@
             ],
             "title": "Steam Offer Id"
           },
-          "trade_link_masked": {
+          "trade_link": {
             "anyOf": [
               {
                 "type": "string"
@@ -3320,7 +3320,7 @@
                 "type": "null"
               }
             ],
-            "title": "Trade Link Masked"
+            "title": "Trade Link"
           },
           "trade_state": {
             "enum": [
@@ -3354,7 +3354,7 @@
           "buyer",
           "steam_offer_id",
           "offer_url",
-          "trade_link_masked",
+          "trade_link",
           "trade_state",
           "protected_until",
           "failure_reason",
@@ -3588,6 +3588,17 @@
             "title": "Steam Id",
             "type": "string"
           },
+          "trade_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          },
           "trade_link_checked_at": {
             "anyOf": [
               {
@@ -3599,17 +3610,6 @@
               }
             ],
             "title": "Trade Link Checked At"
-          },
-          "trade_link_masked": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trade Link Masked"
           },
           "trade_link_reason": {
             "anyOf": [
@@ -3657,7 +3657,7 @@
           "banned_at",
           "ban_reason",
           "created_at",
-          "trade_link_masked",
+          "trade_link",
           "trade_link_verdict",
           "trade_link_reason",
           "trade_link_checked_at"

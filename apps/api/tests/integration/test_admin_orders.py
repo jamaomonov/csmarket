@@ -330,23 +330,18 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
 
     r = await integration_client.get(f"/api/v1/admin/orders/{order.number}", headers=h)
     assert r.status_code == 200, r.text
-    assert "ZxCvBn9q" not in r.text
     body = r.json()
     o = body["order"]
     assert set(o) == {c.key for c in Order.__table__.columns} - {
-        "trade_link",
         "idempotency_key",
         "trade_link_erased_at",
     } | {
-        "trade_link_masked",
         "fx_rate",
         "margin_usd",
         "protected_until",
         "protected_estimated",
     }
-    assert o["trade_link_masked"] == (
-        "https://steamcommunity.com/tradeoffer/new/?partner=39734281&token=••••9q"
-    )
+    assert o["trade_link"] == LINK  # whole, for an admin to copy (owner, 2026-10-19)
     assert (o["number"], o["status"], o["user_id"]) == (order.number, "trade_sent", buyer.id)
     assert (o["cost_usd"], o["price_usd"], o["price_uzs"]) == ("12.345000", "13.580000", "171800")
     # Margin against what Waxpeer charged (12 000 units = $12), not the checkout cost.

@@ -154,7 +154,7 @@ describe("OrderDetail", () => {
     expect(await screen.findByRole("button", { name: "Разобрано" })).toBeInTheDocument();
   });
 
-  it("renders the trade block and never a trade-link token", async () => {
+  it("renders the trade block and the whole trade link", async () => {
     renderDetail();
     const trade = await screen.findByRole("region", { name: "Обмен" });
     expect(within(trade).getByText("4 — предложение отправлено")).toBeInTheDocument();
@@ -166,10 +166,9 @@ describe("OrderDetail", () => {
     expect(within(trade).getByText("6f1c2a52-0000-4000-8000-000000000001")).toBeInTheDocument();
     expect(within(trade).getByText(/SellerName/)).toBeInTheDocument();
     expect(within(trade).getByText("seller_cancelled")).toBeInTheDocument();
-    // Whatever token text is on the page is the masked one.
-    const text = document.body.textContent;
-    expect(text).toContain("token=••••XY");
-    expect(text).not.toMatch(/token=(?!••••)/);
+    // Whole, for an admin to copy (owner, 2026-10-19).
+    const link = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY";
+    expect(screen.getByRole("link", { name: link })).toHaveAttribute("href", link);
   });
 
   it("copies the project id and the Waxpeer id", async () => {

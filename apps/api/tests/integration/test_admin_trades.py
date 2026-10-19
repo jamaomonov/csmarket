@@ -246,7 +246,6 @@ async def test_row_shape_money_item_buyer_offer_and_masked_link(
     )
     body = await _page(integration_client, h)
     row = body["items"][0]
-    assert "ZxCvBn9q" not in str(body)
     assert row["number"] == order.number
     assert (row["status"], row["source"], row["channel"], row["api_owner"]) == (
         "trade_sent",
@@ -275,9 +274,7 @@ async def test_row_shape_money_item_buyer_offer_and_masked_link(
         "7700112233",
         "https://steamcommunity.com/tradeoffer/7700112233/",
     )
-    assert row["trade_link_masked"] == (
-        "https://steamcommunity.com/tradeoffer/new/?partner=39734281&token=••••9q"
-    )
+    assert row["trade_link"] == LINK  # whole, for an admin to copy (owner, 2026-10-19)
 
 
 async def test_an_api_order_names_the_key_owner(

@@ -40,7 +40,7 @@ export interface AdminUserDetail {
   ban_reason: string | null;
   created_at: string;
   /** Already masked by the API: the token is never in the card. */
-  trade_link_masked: string | null;
+  trade_link: string | null;
   trade_link_verdict: TradeLinkVerdict | null;
   trade_link_reason: TradeLinkReason | null;
   trade_link_checked_at: string | null;

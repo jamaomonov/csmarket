@@ -22,7 +22,7 @@ export const CARD: AdminUserCard = {
     banned_at: null,
     ban_reason: null,
     created_at: "2026-09-01T10:00:00Z",
-    trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••zz",
+    trade_link: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdzz",
     trade_link_verdict: "warn",
     trade_link_reason: "hold",
     trade_link_checked_at: "2026-09-30T10:00:00Z",

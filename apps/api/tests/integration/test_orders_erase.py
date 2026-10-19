@@ -112,7 +112,7 @@ async def test_the_admin_sees_the_stored_masked_link(
         f"/api/v1/admin/orders/{order.number}", headers=await admin_headers()
     )
     assert r.status_code == 200, r.text
-    assert r.json()["order"]["trade_link_masked"] == MASKED
+    assert r.json()["order"]["trade_link"] == MASKED
     assert TOKEN not in r.text
 
 

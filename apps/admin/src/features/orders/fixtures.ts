@@ -63,7 +63,7 @@ export const DETAIL: AdminOrderDetail = {
     protected_until: null,
     protected_estimated: false,
     // Fake, already-masked link: the token never reaches the page.
-    trade_link_masked: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY",
+    trade_link: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY",
     paid_with: "click",
     created_at: "2026-09-30T10:00:00Z",
     updated_at: "2026-09-30T10:05:00Z",

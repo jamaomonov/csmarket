@@ -1,8 +1,8 @@
 """Wire shapes for ``/api/v1/admin/trades`` — the admin «Обмены» table: every order is a
 row (a trade), whatever its source (Waxpeer, Skinslink, LIS-SKINS) and channel.
 
-Soʻm are whole digits; USD are decimal strings with six places. The buyer's trade link never
-leaves whole (``trade_link_masked``), and no Steam id appears.
+Soʻm are whole digits; USD are decimal strings with six places. The buyer's trade link leaves
+whole (``trade_link``, for an admin to copy; owner, 2026-10-19), and no Steam id appears.
 """
 
 from __future__ import annotations
@@ -70,8 +70,8 @@ class AdminTradeRow(BaseModel):
     #: Steam's trade offer id, whichever market sent it; ``null`` until known.
     steam_offer_id: str | None
     offer_url: str | None
-    #: ``…?partner=<id>&token=••••<last 2>``.
-    trade_link_masked: str | None
+    #: The whole link (an erased order's is stored masked).
+    trade_link: str | None
     #: The trade in one vocabulary for every source (``orders.trade_row``).
     trade_state: TradeRowState
     #: When Steam's protection of the accepted trade ends; ``null`` when none runs.
