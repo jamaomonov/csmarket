@@ -9,8 +9,9 @@ from decimal import Decimal
 import pytest
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.notifications.models import EmailOutbox
-from csmarket.modules.sales.models import PayoutRequest, Sale
+from csmarket.modules.sales.models import PayoutRequest, Sale, SaleItem
 from csmarket.modules.sales.payouts import cancel_request
+from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import user_balance
 from httpx import AsyncClient
 from sqlalchemy import select, text
@@ -27,6 +28,10 @@ BASE = "/api/v1/admin/sales/payouts"
 
 def _key(n: int) -> dict[str, str]:
     return {"Idempotency-Key": f"test-admin-payout-{n:06d}"}
+
+
+AVATAR = "https://avatars.steamstatic.com/a_full.jpg"
+IMAGE = "https://community.cloudflare.steamstatic.com/economy/image/abc"
 
 
 async def _payable(db: AsyncSession) -> PayoutRequest:
@@ -202,10 +207,19 @@ async def test_the_page_shows_the_breakdown_items_and_history(
 ) -> None:
     headers = await admin_headers()
     request = await _payable(db_session)
+    seller = await db_session.get(User, request.user_id)
+    assert seller is not None
+    seller.avatar_url = AVATAR
+    item = await db_session.scalar(select(SaleItem).where(SaleItem.asset_id == "100"))
+    assert item is not None
+    item.image_url = IMAGE
+    await db_session.commit()
     body = (await integration_client.get(f"{BASE}/{request.id}", headers=headers)).json()
     sale = body["sale"]
     assert (sale["items_uzs"], sale["fee_uzs"], sale["payout_uzs"]) == ("155200", "7800", "147400")
     assert [i["asset_id"] for i in sale["items"]] == ["100", "101"]
+    assert [i["image_url"] for i in sale["items"]] == [IMAGE, None]
+    assert body["request"]["user"]["avatar_url"] == AVATAR
     assert [s["number"] for s in body["history_sales"]] == [sale["number"]]
     assert body["history_payouts"] == []  # the request itself is the page, not its history
     assert body["can_decide"] is True

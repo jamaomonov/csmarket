@@ -55,17 +55,22 @@ from csmarket.modules.skinslink.api import SkinslinkPurchase
 from csmarket.modules.users.api import User, mask_trade_link
 
 #: Orders with their trade, purchases (``None`` on the outer joins) and the buyer's name.
-type _Rows = Select[Order, SkinTrade, SkinslinkPurchase, LisskinsPurchase, str | None]
+type _Rows = Select[Order, SkinTrade, SkinslinkPurchase, LisskinsPurchase, str | None, str | None]
 #: Orders on a user's card.
 CARD_ORDERS = 20
 
 
 def _rows() -> _Rows:
-    """Orders with their trade, purchases and buyer's name, newest first (keyset-ready)."""
+    """Orders with their trade, purchases, buyer's name and avatar, newest first (keyset-ready)."""
     return with_sources(
-        select(Order, SkinTrade, SkinslinkPurchase, LisskinsPurchase, User.display_name).join(
-            User, User.id == Order.user_id
-        )
+        select(
+            Order,
+            SkinTrade,
+            SkinslinkPurchase,
+            LisskinsPurchase,
+            User.display_name,
+            User.avatar_url,
+        ).join(User, User.id == Order.user_id)
     )
 
 
@@ -74,6 +79,7 @@ def order_row(
     trade: SkinTrade | None,
     bought: PurchaseRow | None,
     display_name: str | None,
+    avatar_url: str | None = None,
 ) -> AdminOrderRow:
     """One list line."""
     return AdminOrderRow.model_validate(
@@ -84,7 +90,9 @@ def order_row(
             "phase": order.phase or None,
             "price_uzs": wire_uzs(order.price_uzs),
             "paid_with": order.paid_with,
-            "user": AdminOrderUser(id=order.user_id, display_name=display_name),
+            "user": AdminOrderUser(
+                id=order.user_id, display_name=display_name, avatar_url=avatar_url
+            ),
             "created_at": order.created_at,
             "attention_reason": open_attention(trade, bought),
             "protected_until": protection_end(order, trade, bought),
@@ -95,7 +103,7 @@ def order_row(
 
 # Any: the rows of :func:`_rows` (an outer join leaves the trade and purchases ``None``).
 def _row_list(page: list[Any]) -> list[AdminOrderRow]:
-    return [order_row(o, t, joined_purchase(sl, ls), n) for o, t, sl, ls, n in page]
+    return [order_row(o, t, joined_purchase(sl, ls), n, a) for o, t, sl, ls, n, a in page]
 
 
 async def list_orders(
@@ -212,7 +220,7 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
         raise NotFoundError("order not found")
     found = (
         await db.execute(
-            select(Order, User.display_name, FxSnapshot.usd_uzs)
+            select(Order, User.display_name, User.avatar_url, FxSnapshot.usd_uzs)
             .join(User, User.id == Order.user_id)
             .join(FxSnapshot, FxSnapshot.id == Order.fx_snapshot_id)
             .where(Order.number == number)
@@ -220,7 +228,7 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
     ).one_or_none()
     if found is None:
         raise NotFoundError("order not found")
-    order, display_name, fx_rate = found
+    order, display_name, avatar_url, fx_rate = found
     trade = await db.scalar(select(SkinTrade).where(SkinTrade.order_id == order.id))
     purchase = await purchase_of(db, order, lock=False)
     payments = await db.scalars(
@@ -228,7 +236,7 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
     )
     return AdminOrderDetail(
         order=_order_full(order, trade, purchase, Decimal(fx_rate)),
-        user=AdminOrderUser(id=order.user_id, display_name=display_name),
+        user=AdminOrderUser(id=order.user_id, display_name=display_name, avatar_url=avatar_url),
         trade=_trade_out(trade) if trade is not None else None,
         skinslink=_purchase_out(purchase) if isinstance(purchase, SkinslinkPurchase) else None,
         lisskins=_lisskins_out(purchase) if isinstance(purchase, LisskinsPurchase) else None,

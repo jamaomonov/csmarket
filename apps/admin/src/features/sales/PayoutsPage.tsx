@@ -26,6 +26,7 @@ import { FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
+import { UserCell } from "@/components/UserCell";
 import { errorText } from "@/features/users/labels";
 import { formatDateTime, formatSum } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
@@ -193,9 +194,7 @@ export function PayoutsPage() {
             header: "Пользователь",
             cell: (r) => (
               <>
-                <Link to={`/users/${r.user.id}`} className="hover:underline">
-                  {r.user.display_name ?? "Без имени"}
-                </Link>
+                <UserCell id={r.user.id} name={r.user.display_name} avatarUrl={r.user.avatar_url} />
                 <Flags row={r} />
               </>
             ),

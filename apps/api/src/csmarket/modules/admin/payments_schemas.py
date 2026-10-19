@@ -24,6 +24,8 @@ class AdminPaymentUser(BaseModel):
 
     id: str
     display_name: str | None
+    #: The Steam avatar; ``null`` when Steam gave none.
+    avatar_url: str | None = None
 
 
 class AdminPaymentRow(BaseModel):

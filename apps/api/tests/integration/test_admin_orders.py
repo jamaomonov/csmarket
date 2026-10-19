@@ -29,6 +29,8 @@ Headers = Callable[[], Awaitable[dict[str, str]]]
 LINK = "https://steamcommunity.com/tradeoffer/new/?partner=39734281&token=ZxCvBn9q"
 PRICE = Decimal(171_800)
 
+AVATAR = "https://avatars.steamstatic.com/a_full.jpg"
+
 
 def _key() -> dict[str, str]:
     return {"Idempotency-Key": f"admin-orders-{uuid.uuid4()}"}
@@ -37,6 +39,7 @@ def _key() -> dict[str, str]:
 async def _named(db: AsyncSession, name: str) -> User:
     user = await make_user(db)
     user.display_name = name
+    user.avatar_url = AVATAR
     await db.commit()
     return user
 
@@ -148,7 +151,7 @@ async def test_list_row_shape_newest_first_and_masked_nothing(
         "phase": None,
         "price_uzs": "171800",
         "paid_with": "payme",
-        "user": {"id": buyer.id, "display_name": "Dana"},
+        "user": {"id": buyer.id, "display_name": "Dana", "avatar_url": AVATAR},
         "created_at": body["items"][0]["created_at"],
         "attention_reason": "buy_unconfirmed",
         "protected_until": None,
@@ -348,7 +351,7 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
     # Margin against what Waxpeer charged (12 000 units = $12), not the checkout cost.
     assert o["margin_usd"] == "1.580000"
     assert o["fx_rate"] == "12650.5000"
-    assert body["user"] == {"id": buyer.id, "display_name": "Erin"}
+    assert body["user"] == {"id": buyer.id, "display_name": "Erin", "avatar_url": AVATAR}
     t = body["trade"]
     assert (t["project_id"], t["waxpeer_id"], t["status"]) == (order.id, 60_000_001, 4)
     assert t["offer_url"] == "https://steamcommunity.com/tradeoffer/7700112233/"

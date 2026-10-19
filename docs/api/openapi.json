@@ -1311,6 +1311,17 @@
       "AdminOrderUser": {
         "description": "Who placed the order.",
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -1600,6 +1611,17 @@
       "AdminPaymentUser": {
         "description": "Who the payment belongs to.",
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "display_name": {
             "anyOf": [
               {
@@ -1712,6 +1734,17 @@
           "asset_id": {
             "title": "Asset Id",
             "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
           },
           "name": {
             "title": "Name",
@@ -3607,6 +3640,17 @@
       "AdminUserOut": {
         "description": "A user as the admin lists name them.",
         "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
           "display_name": {
             "anyOf": [
               {

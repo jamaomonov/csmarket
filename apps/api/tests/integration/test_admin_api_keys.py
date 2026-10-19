@@ -144,7 +144,7 @@ async def test_list_shows_orders_and_sums(
     assert r.status_code == 200, r.text
     [row] = r.json()["items"]
     assert row["id"] == key.id
-    assert row["user"] == {"id": user.id, "display_name": "Acme Reseller"}
+    assert row["user"] == {"id": user.id, "display_name": "Acme Reseller", "avatar_url": None}
     assert row["pricing_profile"] == "retail"
     assert row["orders"] == 3
     assert row["revenue_usd"] == "30.500"

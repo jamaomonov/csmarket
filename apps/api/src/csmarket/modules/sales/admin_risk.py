@@ -171,14 +171,17 @@ async def _shared_users(db: AsyncSession, user_id: str, fp: str | None) -> list[
     if fp is None:
         return []
     rows = await db.execute(
-        select(User.id, User.display_name)
+        select(User.id, User.display_name, User.avatar_url)
         .join(PayoutCard, PayoutCard.user_id == User.id)
         .where(PayoutCard.number_fp == fp, User.id != user_id)
-        .group_by(User.id, User.display_name)
+        .group_by(User.id, User.display_name, User.avatar_url)
         .order_by(func.max(PayoutCard.created_at).desc())
         .limit(SHARED_LIMIT)
     )
-    return [AdminUserOut(id=uid, display_name=name) for uid, name in rows.all()]
+    return [
+        AdminUserOut(id=uid, display_name=name, avatar_url=avatar)
+        for uid, name, avatar in rows.all()
+    ]
 
 
 async def payout_risk(db: AsyncSession, request: PayoutRequest, card: PayoutCard) -> PayoutRiskOut:

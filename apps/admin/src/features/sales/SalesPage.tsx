@@ -131,7 +131,9 @@ export function SalesPage() {
           {
             key: "user",
             header: "Пользователь",
-            cell: (s) => <UserCell id={s.user.id} name={s.user.display_name} />,
+            cell: (s) => (
+              <UserCell id={s.user.id} name={s.user.display_name} avatarUrl={s.user.avatar_url} />
+            ),
           },
           {
             key: "quoted",

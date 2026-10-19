@@ -51,8 +51,13 @@ async def users_by_id(db: AsyncSession, ids: Iterable[str]) -> dict[str, AdminUs
     wanted = set(ids)
     if not wanted:
         return {}
-    rows = await db.execute(select(User.id, User.display_name).where(User.id.in_(wanted)))
-    return {uid: AdminUserOut(id=uid, display_name=name) for uid, name in rows.all()}
+    rows = await db.execute(
+        select(User.id, User.display_name, User.avatar_url).where(User.id.in_(wanted))
+    )
+    return {
+        uid: AdminUserOut(id=uid, display_name=name, avatar_url=avatar)
+        for uid, name, avatar in rows.all()
+    }
 
 
 def user_of(users: dict[str, AdminUserOut], uid: str) -> AdminUserOut:
@@ -149,6 +154,7 @@ async def sale_admin_out(db: AsyncSession, sale: Sale) -> AdminSaleOut:
             AdminSaleItemOut(
                 asset_id=i.asset_id,
                 name=i.name,
+                image_url=i.image_url,
                 price_usd=plain(i.price_usd),
                 price_uzs=wire_uzs(i.price_uzs),
             )

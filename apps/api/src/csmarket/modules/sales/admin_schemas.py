@@ -28,6 +28,8 @@ class AdminUserOut(BaseModel):
 
     id: str
     display_name: str | None
+    #: The Steam avatar; ``null`` when Steam gave none.
+    avatar_url: str | None = None
 
 
 class PayoutRowOut(BaseModel):
@@ -115,6 +117,7 @@ class AdminSaleItemOut(BaseModel):
 
     asset_id: str
     name: str
+    image_url: str | None = None
     #: Skinslink's price.
     price_usd: str
     #: Ours.

@@ -15,6 +15,7 @@ import { TradeBlock } from "./TradeBlock";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { UserCell } from "@/components/UserCell";
 import { StatusChip as PaymentStatusChip } from "@/features/payments/StatusChip";
 import { errorText, providerLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
@@ -58,9 +59,7 @@ function OrderFields({ detail }: { detail: AdminOrderDetail }) {
           {order.phase !== null && <span className="text-fg-muted"> · {order.phase}</span>}
         </Row>
         <Row label="Пользователь">
-          <Link to={`/users/${user.id}`} className="hover:underline">
-            {user.display_name ?? "Без имени"}
-          </Link>
+          <UserCell id={user.id} name={user.display_name} avatarUrl={user.avatar_url} />
         </Row>
         <Row label="Источник">
           {SOURCE_LABELS[order.source]}

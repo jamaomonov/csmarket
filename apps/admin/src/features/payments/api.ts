@@ -9,6 +9,7 @@ const BASE = "/api/v1/admin/payments";
 export interface PaymentUser {
   id: string;
   display_name: string | null;
+  avatar_url?: string | null;
 }
 
 export interface AdminPaymentRow {

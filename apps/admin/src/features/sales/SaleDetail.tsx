@@ -17,6 +17,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { StatusChip } from "@/components/StatusChip";
+import { UserCell } from "@/components/UserCell";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -111,9 +112,11 @@ export function SaleDetail() {
             <Section title="Продажа">
               <dl>
                 <Row label="Пользователь">
-                  <Link to={`/users/${s.user.id}`} className="hover:underline">
-                    {s.user.display_name ?? "Без имени"}
-                  </Link>
+                  <UserCell
+                    id={s.user.id}
+                    name={s.user.display_name}
+                    avatarUrl={s.user.avatar_url}
+                  />
                 </Row>
                 <Row label="Куда">
                   {s.payout_to === "card" ? cardLabel(s.card_type, s.card_masked) : "баланс"}

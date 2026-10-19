@@ -21,6 +21,7 @@ import { StatusChip } from "./StatusChip";
 
 import { PageHeader } from "@/components/PageHeader";
 import { DetailGrid } from "@/components/Section";
+import { UserCell } from "@/components/UserCell";
 import { OrderStatusChip } from "@/features/orders/StatusChip";
 import { errorText, providerLabel, topupStatusLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
@@ -179,9 +180,11 @@ function Body({ detail }: { detail: AdminPaymentDetail }) {
                 <StatusChip status={payment.status} />
               </Field>
               <Field label="Пользователь">
-                <Link to={`/users/${payment.user.id}`} className="hover:underline">
-                  {payment.user.display_name ?? "Без имени"}
-                </Link>
+                <UserCell
+                  id={payment.user.id}
+                  name={payment.user.display_name}
+                  avatarUrl={payment.user.avatar_url}
+                />
               </Field>
               <Field label="Создан">{formatDateTime(payment.created_at)}</Field>
               <Field label="Оплачен">{when(payment.succeeded_at)}</Field>

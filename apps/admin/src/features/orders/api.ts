@@ -9,6 +9,7 @@ const BASE = "/api/v1/admin/orders";
 export interface OrderUser {
   id: string;
   display_name: string | null;
+  avatar_url?: string | null;
 }
 
 export interface AdminOrderRow {

@@ -32,7 +32,9 @@ def _like_escape(needle: str) -> str:
     return needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _row_fields(payment: Payment, display_name: str | None) -> dict[str, object]:
+def _row_fields(
+    payment: Payment, display_name: str | None, avatar_url: str | None
+) -> dict[str, object]:
     return {
         "id": payment.id,
         "number": payment.number,
@@ -43,7 +45,9 @@ def _row_fields(payment: Payment, display_name: str | None) -> dict[str, object]
         "status": payment.status,
         "created_at": payment.created_at,
         "succeeded_at": payment.succeeded_at,
-        "user": AdminPaymentUser(id=payment.user_id, display_name=display_name),
+        "user": AdminPaymentUser(
+            id=payment.user_id, display_name=display_name, avatar_url=avatar_url
+        ),
     }
 
 
@@ -63,7 +67,7 @@ async def list_payments(
     and ``_`` literal. Filters combine with AND.
     """
     stmt = (
-        select(Payment, User.display_name)
+        select(Payment, User.display_name, User.avatar_url)
         .join(User, User.id == Payment.user_id)
         .order_by(Payment.created_at.desc(), Payment.id.desc())
         .limit(limit + 1)
@@ -83,7 +87,7 @@ async def list_payments(
         )
     rows = list((await db.execute(stmt)).all())
     page, more = rows[:limit], len(rows) > limit
-    items = [AdminPaymentRow.model_validate(_row_fields(p, name)) for p, name in page]
+    items = [AdminPaymentRow.model_validate(_row_fields(p, n, a)) for p, n, a in page]
     last = page[-1][0] if more else None
     return items, (encode_cursor(last.created_at, last.id) if last is not None else None)
 
@@ -100,14 +104,14 @@ async def payment_detail(db: AsyncSession, payment_id: str) -> AdminPaymentDetai
         raise NotFoundError("payment not found") from exc
     found = (
         await db.execute(
-            select(Payment, User.display_name)
+            select(Payment, User.display_name, User.avatar_url)
             .join(User, User.id == Payment.user_id)
             .where(Payment.id == payment_id)
         )
     ).one_or_none()
     if found is None:
         raise NotFoundError("payment not found")
-    payment, display_name = found
+    payment, display_name, avatar_url = found
     topup = await db.get(WalletTopup, payment.topup_id) if payment.topup_id is not None else None
     order = await db.get(Order, payment.order_id) if payment.order_id is not None else None
     metadata = {
@@ -118,7 +122,7 @@ async def payment_detail(db: AsyncSession, payment_id: str) -> AdminPaymentDetai
     return AdminPaymentDetail(
         payment=AdminPaymentFull.model_validate(
             {
-                **_row_fields(payment, display_name),
+                **_row_fields(payment, display_name, avatar_url),
                 "provider_ref": payment.provider_ref,
                 "metadata": metadata,
             }

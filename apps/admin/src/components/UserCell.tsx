@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 interface UserCellProps {
   id: string;
   name: string | null;
-  avatarUrl?: string | null;
+  avatarUrl?: string | null | undefined;
   sub?: ReactNode;
 }
 

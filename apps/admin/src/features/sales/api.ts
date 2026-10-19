@@ -32,11 +32,13 @@ export const ATTENTION_FILTERS: readonly AttentionFilter[] = ["open", "resolved"
 export interface AdminUser {
   id: string;
   display_name: string | null;
+  avatar_url?: string | null;
 }
 
 export interface AdminSaleItem {
   asset_id: string;
   name: string;
+  image_url?: string | null;
   price_usd: string;
   price_uzs: string;
 }

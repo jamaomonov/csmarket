@@ -306,7 +306,7 @@ async def test_card_lists_the_latest_20_orders_newest_first(
     assert "QwErTy" not in r.text
     orders = r.json()["orders"]
     assert [o["number"] for o in orders] == numbers[::-1][:20]
-    assert orders[0]["user"] == {"id": user.id, "display_name": "Frank"}
+    assert orders[0]["user"] == {"id": user.id, "display_name": "Frank", "avatar_url": None}
     assert orders[0]["attention_reason"] == "buy_unconfirmed"
     assert orders[1]["attention_reason"] is None
 

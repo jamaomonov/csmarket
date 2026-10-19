@@ -6,7 +6,6 @@
 import { Button } from "@csmarket/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 
 import { setSellBlock } from "./api";
 import { payoutKey, SELL_BLOCKS_KEY } from "./keys";
@@ -15,6 +14,7 @@ import { type PayoutDetail as Detail, type PayoutRisk } from "./payoutsApi";
 
 import { Money } from "@/components/Money";
 import { Row, Section } from "@/components/Section";
+import { UserCell } from "@/components/UserCell";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
 
@@ -174,9 +174,7 @@ export function RiskBlock({ detail }: { detail: Detail }) {
             <ul className={danger}>
               {risk.shared_card_users.map((u) => (
                 <li key={u.id}>
-                  <Link to={`/users/${u.id}`} className="hover:underline">
-                    {u.display_name ?? "Без имени"}
-                  </Link>
+                  <UserCell id={u.id} name={u.display_name} avatarUrl={u.avatar_url} />
                 </li>
               ))}
             </ul>

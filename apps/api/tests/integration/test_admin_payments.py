@@ -29,6 +29,8 @@ T0 = datetime(2026, 9, 30, 10, 0, tzinfo=UTC)
 #: Payer's phone as Uzum may send it — it must never reach an admin response.
 FULL_PHONE = "998901234567"
 
+AVATAR = "https://avatars.steamstatic.com/a_full.jpg"
+
 
 async def _topup(
     db: AsyncSession, user: User, number: str, *, status: str = "pending", amount: int = 50000
@@ -81,6 +83,7 @@ async def _payment(
 async def _named_user(db: AsyncSession, name: str) -> User:
     user = await make_user(db)
     user.display_name = name
+    user.avatar_url = AVATAR
     await db.commit()
     return user
 
@@ -129,7 +132,7 @@ async def test_list_row_shape_and_newest_first(
         "status": "succeeded",
         "created_at": "2026-09-30T10:05:00Z",
         "succeeded_at": "2026-09-30T10:06:00Z",
-        "user": {"id": alice.id, "display_name": "Alice"},
+        "user": {"id": alice.id, "display_name": "Alice", "avatar_url": AVATAR},
     }
     assert body["items"][1]["succeeded_at"] is None
 
@@ -292,7 +295,7 @@ async def test_detail_without_a_kassa_row(
     assert body["order"] is None
     assert body["payment"]["id"] == payment.id
     assert body["payment"]["provider_ref"] == "mock:T7KQ4M2X"
-    assert body["payment"]["user"] == {"id": user.id, "display_name": "Alice"}
+    assert body["payment"]["user"] == {"id": user.id, "display_name": "Alice", "avatar_url": AVATAR}
     # Metadata keeps scalars only.
     assert body["payment"]["metadata"] == {"settle_event_id": "mock:T7KQ4M2X", "n": 3}
     assert body["topup"] == {

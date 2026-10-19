@@ -150,7 +150,9 @@ export function PaymentsPage() {
             {
               key: "user",
               header: "Пользователь",
-              cell: (p) => <UserCell id={p.user.id} name={p.user.display_name} />,
+              cell: (p) => (
+                <UserCell id={p.user.id} name={p.user.display_name} avatarUrl={p.user.avatar_url} />
+              ),
             },
             {
               key: "created",
