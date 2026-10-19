@@ -3,6 +3,7 @@
 import { SessionApiError } from "@csmarket/api-client";
 import { Button, cn } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
@@ -18,7 +19,8 @@ import type { Locale } from "@csmarket/i18n";
 
 import { PayConsent } from "@/components/legal/PayConsent";
 import { ChargeLines } from "@/components/skins/ChargeLines";
-import { offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
+import { firstOpen, isOpen, offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
+import { PROVIDERS_KEY } from "@/components/skins/usePayMethods";
 import { useRouter } from "@/i18n/navigation";
 import {
   amountValue,
@@ -39,7 +41,7 @@ import {
 } from "@/lib/balance";
 import { kassaCharge } from "@/lib/kassa-fee";
 
-type FormError = "badAmount" | "failed";
+type FormError = "badAmount" | "failed" | "methodUnavailable";
 
 /**
  * The field's length, separators included. Past ~16 digits `Number()` rounds and the
@@ -62,6 +64,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
   const t = useTranslations("web.balance");
   const d = useTranslations("web.deposit");
   const router = useRouter();
+  const qc = useQueryClient();
   const fieldId = useId();
   const rangeId = useId();
   const [amount, setAmount] = useState("");
@@ -91,8 +94,8 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
     el.setSelectionRange(at, at);
   });
 
-  const offered = offeredKassas(providers);
-  const method = offered.find((p) => p.slug === chosen)?.slug ?? offered[0]?.slug ?? null;
+  const offered = offeredKassas(providers, true);
+  const method = offered.find((p) => p.slug === chosen && isOpen(p))?.slug ?? firstOpen(offered);
   const typed = amountValue(amount);
   const charge = typed > 0 ? kassaCharge(typed, providers, method) : null;
   const bounds = { min: formatUzs(locale, TOPUP_MIN), max: formatUzs(locale, TOPUP_MAX) };
@@ -123,7 +126,13 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
       });
     } catch (err) {
       const code = err instanceof SessionApiError ? err.code : undefined;
-      setError(code === "topup_amount" ? "badAmount" : "failed");
+      if (code === "provider_maintenance" || code === "provider_disabled") {
+        // The kassa was switched meanwhile: re-read the tiles so it greys or goes.
+        void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
+        setError("methodUnavailable");
+      } else {
+        setError(code === "topup_amount" ? "badAmount" : "failed");
+      }
     } finally {
       inFlight.current = false;
       setBusy(false);
@@ -153,7 +162,13 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
             setChosen(slug);
             setError(null);
           }}
-          labels={{ legend: t("methodLabel"), test: t("methodTest"), none: t("methodNone") }}
+          labels={{
+            legend: t("methodLabel"),
+            test: t("methodTest"),
+            none: t("methodNone"),
+            maintenance: t("methodMaintenance"),
+          }}
+          forTopup
         />
       </div>
 
@@ -229,7 +244,11 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
 
         {error ? (
           <p role="alert" className="text-danger text-sm">
-            {error === "badAmount" ? t("badAmount", bounds) : t("failed")}
+            {error === "badAmount"
+              ? t("badAmount", bounds)
+              : error === "methodUnavailable"
+                ? t("methodUnavailable")
+                : t("failed")}
           </p>
         ) : null}
 

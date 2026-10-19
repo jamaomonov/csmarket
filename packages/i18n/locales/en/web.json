@@ -177,7 +177,9 @@
       "failed": "Could not convert. Please try again.",
       "done": "Converted.",
       "historyTitle": "USD wallet history"
-    }
+    },
+    "methodMaintenance": "Under maintenance",
+    "methodUnavailable": "This payment method is unavailable right now — choose another."
   },
   "skins": {
     "meta": {
@@ -400,7 +402,9 @@
       "text": "Sign in with Steam — no sign-up, no passwords. The skin arrives in your Steam account.",
       "cta": "Sign in with Steam",
       "close": "Close"
-    }
+    },
+    "methodMaintenance": "Under maintenance",
+    "methodUnavailable": "This payment method is unavailable right now — choose another."
   },
   "orders": {
     "title": "Trades",

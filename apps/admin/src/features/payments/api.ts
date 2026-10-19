@@ -101,10 +101,14 @@ export function getPayment(id: string): Promise<AdminPaymentDetail> {
 }
 
 /** «Настройки оплаты»: the percent each kassa adds on top (decimals as strings). */
+export type KassaStatus = "on" | "maintenance" | "off";
+
 export interface KassaFees {
   click: string;
   payme: string;
   uzum: string;
+  /** A kassa's switch; a missing key is `on` (`off` for `p2p`). */
+  statuses: Record<string, KassaStatus>;
 }
 
 export interface FeeSettingsOut {

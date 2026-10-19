@@ -78,6 +78,10 @@ export interface Provider {
   slug: string;
   /** The percent the buyer pays on top through this kassa (`"1.5"`); `"0"` for none. */
   fee_pct: string;
+  /** `maintenance`: shown greyed, not payable (an API from before the switch omits it). */
+  status?: "on" | "maintenance";
+  /** Balance top-ups only (P2P): never offered at checkout. */
+  topup_only?: boolean;
 }
 
 /** `UsdWalletOut`: the USD wallet, present once an admin switched it on. */

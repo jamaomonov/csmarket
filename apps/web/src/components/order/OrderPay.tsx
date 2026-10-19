@@ -1,5 +1,6 @@
 "use client";
 
+import { SessionApiError } from "@csmarket/api-client";
 import { Button } from "@csmarket/ui";
 import { formatUzs } from "@csmarket/utils";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,7 +12,7 @@ import type { Locale } from "@csmarket/i18n";
 import { PayConsent } from "@/components/legal/PayConsent";
 import { ChargeLines } from "@/components/skins/ChargeLines";
 import { PaymentPicker } from "@/components/skins/PaymentPicker";
-import { usePayMethods } from "@/components/skins/usePayMethods";
+import { PROVIDERS_KEY, usePayMethods } from "@/components/skins/usePayMethods";
 import { BALANCE_KEY } from "@/lib/balance";
 import { kassaCharge } from "@/lib/kassa-fee";
 import { mintPayKey } from "@/lib/order-key";
@@ -54,6 +55,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   const waiting = initial === null && balancePending;
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
   // `busy` disables the button from the next render; this blocks a click that lands first.
   const inFlight = useRef(false);
   const test = provider === "mock";
@@ -81,6 +83,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
     inFlight.current = true;
     setBusy(true);
     setFailed(false);
+    setUnavailable(false);
     let leaving = false;
     try {
       leaving = await run(provider);
@@ -91,6 +94,13 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
       } else if (err instanceof OrderNotPayableError) {
         // Paid or expired meanwhile: the order, read again, says which.
         onPaid();
+      } else if (
+        err instanceof SessionApiError &&
+        (err.code === "provider_maintenance" || err.code === "provider_disabled")
+      ) {
+        // The kassa was switched meanwhile: re-read the tiles so it greys or goes.
+        void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
+        setUnavailable(true);
       } else {
         setFailed(true);
       }
@@ -114,13 +124,14 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
           legend: buy("methodTitle"),
           test: buy("methodTest"),
           none: buy("methodNone"),
+          maintenance: buy("methodMaintenance"),
         }}
         {...(wallet ? { wallet } : {})}
       />
       <ChargeLines locale={locale} base={Number(order.price_uzs)} charge={charge} kind="order" />
-      {failed ? (
+      {failed || unavailable ? (
         <p role="alert" className="text-danger text-sm">
-          {common("errors.generic")}
+          {unavailable ? buy("methodUnavailable") : common("errors.generic")}
         </p>
       ) : null}
       <Button

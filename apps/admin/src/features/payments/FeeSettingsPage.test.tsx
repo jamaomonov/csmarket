@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,7 +11,7 @@ const api = vi.hoisted(() => ({ getFeeSettings: vi.fn(), saveFeeSettings: vi.fn(
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<object>()), ...api }));
 
 const SAVED = {
-  settings: { click: "1", payme: "0", uzum: "0" },
+  settings: { click: "1", payme: "0", uzum: "0", statuses: {} },
   updated_at: "2026-10-14T10:00:00.123456Z",
   updated_by: { id: "u1", display_name: "Owner" },
 };
@@ -48,9 +48,27 @@ describe("FeeSettingsPage", () => {
       string | null,
       string,
     ];
-    expect(doc).toEqual({ click: "1", payme: "1.5", uzum: "0" });
+    expect(doc).toEqual({ click: "1", payme: "1.5", uzum: "0", statuses: {} });
     expect(version).toBe("2026-10-14T10:00:00.123456Z");
     expect(key).toMatch(/^admin-fee-settings-/);
+  });
+
+  it("switches a kassa to maintenance and P2P on, saved with the fees", async () => {
+    renderPage();
+    const payme = await screen.findByRole("tablist", { name: "Payme: состояние" });
+    fireEvent.click(within(payme).getByRole("tab", { name: "Тех. работы" }));
+    const p2p = screen.getByRole("tablist", { name: "Перевод на карту (P2P): состояние" });
+    expect(within(p2p).getByRole("tab", { name: "Выключен" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    fireEvent.click(within(p2p).getByRole("tab", { name: "Работает" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(api.saveFeeSettings).toHaveBeenCalledOnce();
+    });
+    const [doc] = api.saveFeeSettings.mock.calls[0] as [{ statuses: Record<string, string> }];
+    expect(doc.statuses).toEqual({ payme: "maintenance", p2p: "on" });
   });
 
   it("refuses a rate that is not 0–10 before sending it", async () => {

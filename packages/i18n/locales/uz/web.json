@@ -177,7 +177,9 @@
       "failed": "Oʻtkazib boʻlmadi. Qayta urinib koʻring.",
       "done": "Oʻtkazildi.",
       "historyTitle": "USD hamyon tarixi"
-    }
+    },
+    "methodMaintenance": "Texnik ishlar",
+    "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang."
   },
   "skins": {
     "meta": {
@@ -400,7 +402,9 @@
       "text": "Steam orqali kirish — roʻyxatdan oʻtish va parolsiz. Skin Steam akkauntingizga keladi.",
       "cta": "Steam orqali kirish",
       "close": "Yopish"
-    }
+    },
+    "methodMaintenance": "Texnik ishlar",
+    "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang."
   },
   "orders": {
     "title": "Almashuvlar",

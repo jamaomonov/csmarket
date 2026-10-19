@@ -2,6 +2,7 @@
 import { SessionApiError } from "@csmarket/api-client";
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -45,9 +46,11 @@ function setup(
   ],
 ) {
   render(
-    <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-      <TopupForm locale="ru" providers={providers} />
-    </NextIntlClientProvider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
+        <TopupForm locale="ru" providers={providers} />
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
   );
 }
 
@@ -239,5 +242,17 @@ describe("TopupForm", () => {
     expect(screen.getByText("Пополнение сейчас недоступно.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
     expect(submit()).toBeDisabled();
+  });
+
+  it("says the kassa is unavailable when it was switched meanwhile", async () => {
+    mocks.createTopup.mockRejectedValue(
+      new SessionApiError(409, "Conflict", { code: "provider_maintenance" }),
+    );
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
+    fireEvent.click(submit());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Эта касса сейчас недоступна — выберите другую.",
+    );
   });
 });

@@ -8,10 +8,11 @@ import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getFeeSettings, saveFeeSettings, type KassaFees } from "./api";
+import { getFeeSettings, saveFeeSettings, type KassaFees, type KassaStatus } from "./api";
 
 import { PageHeader } from "@/components/PageHeader";
 import { SavedNotice } from "@/components/SavedNotice";
+import { Tabs } from "@/components/Tabs";
 import { payoutErrorText } from "@/features/sales/labels";
 import { NumberField } from "@/features/sales/SettingsParts";
 import { errorText } from "@/features/users/labels";
@@ -19,12 +20,31 @@ import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
 
 const KEY = ["admin", "payments", "settings"] as const;
-const KASSAS: readonly { key: keyof KassaFees; label: string }[] = [
+type RateKey = Exclude<keyof KassaFees, "statuses">;
+
+const KASSAS: readonly { key: RateKey; label: string }[] = [
   { key: "click", label: "Комиссия Click, %" },
   { key: "payme", label: "Комиссия Payme, %" },
   { key: "uzum", label: "Комиссия Uzum, %" },
 ];
 const RATE = /^\d{1,2}(\.\d{1,2})?$/;
+
+/** Every kassa with a switch (P2P has no fee: a card transfer costs the buyer nothing). */
+const SWITCHED: readonly { slug: string; label: string }[] = [
+  { slug: "click", label: "Click" },
+  { slug: "payme", label: "Payme" },
+  { slug: "uzum", label: "Uzum" },
+  { slug: "p2p", label: "Перевод на карту (P2P)" },
+];
+const STATUS_ITEMS: { key: KassaStatus; label: string }[] = [
+  { key: "on", label: "Работает" },
+  { key: "maintenance", label: "Тех. работы" },
+  { key: "off", label: "Выключен" },
+];
+
+function statusOf(doc: KassaFees, slug: string): KassaStatus {
+  return doc.statuses[slug] ?? (slug === "p2p" ? "off" : "on");
+}
 
 function valid(doc: KassaFees): boolean {
   return KASSAS.every(({ key }) => RATE.test(doc[key]) && Number(doc[key]) <= 10);
@@ -85,6 +105,29 @@ export function FeeSettingsPage() {
                 setDraft({ ...doc, [k]: v });
               }}
             />
+          ))}
+        </div>
+      </section>
+      <section className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-4">
+        <h2 className="font-semibold">Состояние касс</h2>
+        <p className="text-fg-muted text-sm">
+          «Тех. работы» — касса видна на сайте, но не нажимается. «Выключен» — её не видно. Начатые
+          оплаты в обоих случаях доходят до конца.
+        </p>
+        <div className="flex flex-col gap-3">
+          {SWITCHED.map(({ slug, label }) => (
+            <div key={slug} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-sm font-medium">{label}</span>
+              <Tabs<KassaStatus>
+                label={`${label}: состояние`}
+                variant="segmented"
+                value={statusOf(doc, slug)}
+                onChange={(next) => {
+                  setDraft({ ...doc, statuses: { ...doc.statuses, [slug]: next } });
+                }}
+                items={STATUS_ITEMS}
+              />
+            </div>
           ))}
         </div>
       </section>
