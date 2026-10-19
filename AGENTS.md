@@ -58,6 +58,7 @@
   (`CSMARKET_SKINSLINK_ENABLED=false`). Enabling needs the owner's rotated key and secret in
   the server's `secrets/api.env`, the webhook URL set in the Skinslink cabinet and the VPS IP
   whitelisted there (`docs/runbooks/skinslink.md`).
+- **Admin analytics** (spec `2026-10-19-analytics-design.md`, plan `2026-10-19-analytics.md`, ADR-0020 recharts): the «Аналитика» page — gross profit by day and period at each order's market charge and CBU rate, a calendar, breakdowns — built on branch `analytics`, not merged.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum

@@ -1,8 +1,8 @@
 """The admin dashboard's numbers (M4b rulings R9, R10).
 
 - a **sale** is an order paid in the window and not refunded; revenue = Σ ``price_uzs`` /
-  Σ ``price_usd``; cost = Σ ``COALESCE(bought_units / 1000, cost_usd)`` (what the buy
-  really cost, else what checkout agreed); margin = revenue − cost, and its percent of
+  Σ ``price_usd``; cost = Σ what the market charged (``costing.spent_usd_sql``: Waxpeer,
+  Skinslink or LIS-SKINS, else what checkout agreed); margin = revenue − cost, and its percent of
   revenue;
 - **refunds** = orders refunded in the window (by ``refunded_at``), count and Σ ``price_uzs``;
 - **in flight** = the «Обмены» «В пути» tab's set now (``ACTIVE_SQL``: paid / buying / sent and not yet accepted, not refunded); **attention** = open attentions now;
@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.modules.lisskins.api import LisskinsPurchase
 from csmarket.modules.lisskins.api import cached_balance as lisskins_cached_balance
+from csmarket.modules.orders.costing import spent_usd_sql
 from csmarket.modules.orders.health import cached_balance
 from csmarket.modules.orders.models import Order, SkinTrade
 from csmarket.modules.orders.trade_row import ACTIVE_SQL
@@ -106,7 +107,7 @@ async def _by_day(
 ) -> dict[date, tuple[int, Decimal, Decimal, Decimal]]:
     """Per Tashkent day: sales count, Σ soʻm, Σ USD, Σ cost."""
     day = cast(func.timezone("Asia/Tashkent", Order.paid_at), Date)
-    cost = func.coalesce(SkinTrade.bought_units / Decimal(1000), Order.cost_usd)
+    cost = spent_usd_sql()
     rows = await db.execute(
         select(
             day,
@@ -117,6 +118,8 @@ async def _by_day(
         )
         .select_from(Order)
         .outerjoin(SkinTrade, SkinTrade.order_id == Order.id)
+        .outerjoin(SkinslinkPurchase, SkinslinkPurchase.order_id == Order.id)
+        .outerjoin(LisskinsPurchase, LisskinsPurchase.order_id == Order.id)
         .where(Order.paid_at >= since, Order.paid_at <= at, Order.refunded_at.is_(None))
         .group_by(day)
     )

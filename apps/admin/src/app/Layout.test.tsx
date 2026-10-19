@@ -38,7 +38,7 @@ describe("Layout", () => {
       within(nav)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["Дашборд", "Обмены", "Пользователи", "Платежи"]);
+    ).toEqual(["Дашборд", "Аналитика", "Обмены", "Пользователи", "Платежи"]);
     expect(within(nav).getByRole("button", { name: /Выкуп/ })).toBeInTheDocument();
     expect(within(nav).getByRole("button", { name: /Настройки/ })).toBeInTheDocument();
     expect(screen.queryByText("API-ключи")).toBeNull();

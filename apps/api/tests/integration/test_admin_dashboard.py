@@ -216,3 +216,16 @@ async def test_the_dashboard_counts_the_payouts_to_pay(
         "to_pay_uzs": "310400",
         "sales_attention": 0,
     }
+
+
+async def test_the_margin_uses_what_skinslink_and_lisskins_really_charged(
+    integration_client: AsyncClient, db_session: AsyncSession, headers: dict[str, str]
+) -> None:
+    paid = NOW - timedelta(hours=1)
+    # Checkout agreed $9 each; the markets charged $8.5 (Skinslink) and $8 (LIS-SKINS).
+    agreed = {"paid_at": paid, "price_usd": Decimal("10"), "cost_usd": Decimal("9")}
+    await make_skinslink_order(db_session, status="delivered", amount_units=8_500, order=agreed)
+    await make_lisskins_order(db_session, status="delivered", amount_units=8_000, order=agreed)
+    body = await _get(integration_client, headers, 1)
+    assert Decimal(body["sales"]["cost_usd"]) == Decimal("16.5")
+    assert Decimal(body["sales"]["margin_usd"]) == Decimal("3.5")

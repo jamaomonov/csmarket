@@ -26,7 +26,8 @@ from csmarket.modules.orders.admin_refund_sources import (
 )
 from csmarket.modules.orders.api_checkout import create_api_order
 from csmarket.modules.orders.buying import attempt_buy, drain_paid
-from csmarket.modules.orders.dashboard import Dashboard, Days, window_start
+from csmarket.modules.orders.costing import spent, spent_usd_sql
+from csmarket.modules.orders.dashboard import TASHKENT, Dashboard, Days, window_start
 from csmarket.modules.orders.dashboard import summary as dashboard_summary
 from csmarket.modules.orders.erase import erase_old_trade_links, erase_old_verify_addresses
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
@@ -94,6 +95,7 @@ __all__ = [
     "ORDERS_CHANNEL",
     "ORDER_STATUSES",
     "RETRYABLE",
+    "TASHKENT",
     "TERMINAL",
     "TRANSITIONS",
     "WEBHOOKS_CHANNEL",
@@ -157,6 +159,8 @@ __all__ = [
     "retry_buy",
     "row_state",
     "skin_trade_out",
+    "spent",
+    "spent_usd_sql",
     "trade_state",
     "watch_protected",
     "window_start",
