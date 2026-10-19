@@ -71,9 +71,11 @@ export async function relay(request, env, ctx, fetcher = fetch) {
     console.log(JSON.stringify({ event: "relay.yupay_retry" }));
     return new Response("retry", { status: 502 });
   }
-  if (env.CSMARKET_QUEUE) {
+  try {
+    if (!env.CSMARKET_QUEUE) throw new Error("no queue bound");
     await env.CSMARKET_QUEUE.send({ body });
-  } else {
+  } catch {
+    // YuPay already took it: never make Telegram resend for csmarket's sake.
     ctx.waitUntil(backgroundToCsmarket(env, body, fetcher));
   }
   return new Response("ok");

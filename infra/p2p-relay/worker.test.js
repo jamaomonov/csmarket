@@ -59,6 +59,20 @@ describe("relay", () => {
     expect(csmarketCalls).toHaveLength(4);
   });
 
+  it("falls back to background retries when the queue refuses", async () => {
+    const f = fetcher({});
+    const queue = {
+      send: vi.fn(async () => {
+        throw new Error("queue down");
+      }),
+    };
+    const c = ctx();
+    const res = await relay(request(), { ...ENV, CSMARKET_QUEUE: queue }, c, f);
+    expect(res.status).toBe(200);
+    await Promise.all(c.waits);
+    expect(f.mock.calls.map(([url]) => url)).toEqual([ENV.YUPAY_URL, ENV.CSMARKET_URL]);
+  });
+
   it("the queue consumer retries a csmarket failure and acks a success", async () => {
     const ok = { body: { body: BODY }, ack: vi.fn(), retry: vi.fn() };
     const bad = { body: { body: BODY }, ack: vi.fn(), retry: vi.fn() };
