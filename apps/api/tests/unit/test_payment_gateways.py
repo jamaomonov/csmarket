@@ -39,21 +39,22 @@ def test_mock_is_never_offered_in_prod() -> None:
 
 @pytest.mark.usefixtures("prod")
 def test_prod_offers_exactly_the_configured_kassas(monkeypatch: pytest.MonkeyPatch) -> None:
-    assert available_providers() == []
+    # P2P needs no credentials (its kassa switch decides whether it is offered).
+    assert available_providers() == ["p2p"]
     monkeypatch.setenv("CSMARKET_CLICK_MERCHANT_ID", "5000")
     monkeypatch.setenv("CSMARKET_CLICK_SERVICE_ID", "108149")
     monkeypatch.setenv("CSMARKET_CLICK_SECRET_KEY", "fake-click-secret")
     get_settings.cache_clear()
-    assert available_providers() == ["click"]
+    assert available_providers() == ["click", "p2p"]
     monkeypatch.setenv("CSMARKET_PAYME_MERCHANT_ID", "6a1faaca155c8e168e2a0000")
     monkeypatch.setenv("CSMARKET_PAYME_KEY", "fake-payme-key")
     get_settings.cache_clear()
-    assert available_providers() == ["click", "payme"]
+    assert available_providers() == ["click", "payme", "p2p"]
     monkeypatch.setenv("CSMARKET_UZUM_SERVICE_ID", "101202")
     monkeypatch.setenv("CSMARKET_UZUM_LOGIN", "fake-uzum-login")
     monkeypatch.setenv("CSMARKET_UZUM_PASSWORD", "fake-uzum-password")
     get_settings.cache_clear()
-    assert available_providers() == ["click", "payme", "uzum"]
+    assert available_providers() == ["click", "payme", "uzum", "p2p"]
 
 
 def test_an_unknown_provider_is_not_found() -> None:
