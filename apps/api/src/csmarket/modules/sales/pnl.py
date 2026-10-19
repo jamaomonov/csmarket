@@ -59,6 +59,8 @@ class SalePnl(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     income_usd: Decimal = _ZERO
+    #: ``income_usd`` at the sale's CBU rate, whole soʻm.
+    income_uzs: Decimal = _ZERO
     #: Paid card transfers, the bank's charge included.
     to_cards_uzs: Decimal = _ZERO
     #: Payouts to the balance (bonus included) and rejected card requests.
@@ -116,8 +118,10 @@ def sale_pnl(row: PnlRow, bank_fee_pct: Decimal) -> SalePnl:
         + lines.get("to_pay_uzs", _ZERO)
     )
     rate = row.cbu_rate or row.rate
+    income = _income(row)
     return SalePnl(
-        income_usd=_income(row),
+        income_usd=income,
+        income_uzs=(income * rate).quantize(Decimal(1)),
         cost_uzs=cost,
         cost_usd=(cost / rate).quantize(_USD),
         **lines,

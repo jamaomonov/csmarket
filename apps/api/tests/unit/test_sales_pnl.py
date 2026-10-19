@@ -108,3 +108,12 @@ def test_flags() -> None:
     assert flag(_row(status="hold", amount_usd=None)) is None
     assert flag(_row(attention_reason="late_deposit")) == "reverted"
     assert flag(_row(attention_reason="rolled_back", amount_usd=D(5))) == "reverted"
+
+
+def test_income_in_som_is_the_credit_at_the_cbu_rate() -> None:
+    p = sale_pnl(_row(cbu_rate=D("12650.5")), PCT)
+    assert p.income_uzs == D(126_505)
+
+
+def test_a_rollback_brings_no_income_in_som_either() -> None:
+    assert sale_pnl(_row(attention_reason="rolled_back"), PCT).income_uzs == 0

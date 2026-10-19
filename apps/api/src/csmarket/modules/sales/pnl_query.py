@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.modules.fx.api import FxSnapshot
-from csmarket.modules.orders.api import Days, window_start
+from csmarket.modules.orders.api import TASHKENT, Days, window_start
 from csmarket.modules.sales.models import PayoutRequest, Sale
 from csmarket.modules.sales.pnl import PnlRow, ReconFlag, SalePnl, flag, sale_pnl
 from csmarket.modules.sales.settings_store import read_sale_settings
@@ -40,6 +40,8 @@ class PnlDay(_Frozen):
     count: int
     income_usd: Decimal
     profit_usd: Decimal
+    #: Income at the CBU rate minus the soʻm costs.
+    profit_uzs: Decimal = _ZERO
 
 
 class SalesPnl(_Frozen):
@@ -47,6 +49,7 @@ class SalesPnl(_Frozen):
 
     count: int
     income_usd: Decimal
+    income_uzs: Decimal
     to_cards_uzs: Decimal
     to_balances_uzs: Decimal
     to_pay_uzs: Decimal
@@ -57,6 +60,8 @@ class SalesPnl(_Frozen):
     profit_usd: Decimal
     #: Profit as a percent of income, one decimal; 0 without income.
     profit_percent: Decimal
+    #: ``income_uzs − cost_uzs``.
+    profit_uzs: Decimal
     by_day: list[PnlDay]
 
 
@@ -110,6 +115,7 @@ def _row(sale: Sale, request: PayoutRequest | None, cbu: Decimal | None) -> PnlR
 def _total(lines: list[SalePnl]) -> dict[str, Decimal]:
     keys = (
         "income_usd",
+        "income_uzs",
         "to_cards_uzs",
         "to_balances_uzs",
         "to_pay_uzs",
@@ -121,26 +127,38 @@ def _total(lines: list[SalePnl]) -> dict[str, Decimal]:
     return {k: sum((getattr(p, k) for p in lines), _ZERO) for k in keys}
 
 
-async def sales_pnl(db: AsyncSession, *, days: Days, at: datetime) -> SalesPnl:
-    """The skin-sales P&L of the ``days`` Tashkent days ending at ``at``. Reads only."""
-    since = window_start(at, days)
+async def sales_pnl_between(db: AsyncSession, *, since: datetime, until: datetime) -> SalesPnl:
+    """The skin-sales P&L of ``[since, until)``, one row per Tashkent day. Reads only."""
     pct = (await read_sale_settings(db)).bank_fee_pct
     day_of = cast(func.timezone("Asia/Tashkent", DONE_AT), Date)
     stmt = (
         select(Sale, PayoutRequest, _cbu_rate(), day_of)
         .outerjoin(PayoutRequest, PayoutRequest.sale_id == Sale.id)
-        .where(DONE_AT.between(since, at))
+        .where(since <= DONE_AT, until > DONE_AT)
     )
     per_day: dict[date, list[SalePnl]] = {}
     for sale, request, cbu, day in (await db.execute(stmt)).all():
         per_day.setdefault(day, []).append(sale_pnl(_row(sale, request, cbu), pct))
+    first = since.astimezone(TASHKENT).date()
+    last = (until - timedelta(microseconds=1)).astimezone(TASHKENT).date()
+    return _summed(per_day, first, (last - first).days + 1)
+
+
+async def sales_pnl(db: AsyncSession, *, days: Days, at: datetime) -> SalesPnl:
+    """The skin-sales P&L of the ``days`` Tashkent days ending at ``at``. Reads only."""
+    return await sales_pnl_between(
+        db, since=window_start(at, days), until=at + timedelta(microseconds=1)
+    )
+
+
+def _summed(per_day: dict[date, list[SalePnl]], first: date, days: int) -> SalesPnl:
     every = [p for lines in per_day.values() for p in lines]
     total = _total(every)
     profit = total["income_usd"] - total["cost_usd"]
     income = total["income_usd"]
     by_day = []
     for n in range(days):
-        day = since.date() + timedelta(days=n)
+        day = first + timedelta(days=n)
         t = _total(per_day.get(day, []))
         by_day.append(
             PnlDay(
@@ -148,12 +166,14 @@ async def sales_pnl(db: AsyncSession, *, days: Days, at: datetime) -> SalesPnl:
                 count=len(per_day.get(day, [])),
                 income_usd=t["income_usd"],
                 profit_usd=t["income_usd"] - t["cost_usd"],
+                profit_uzs=t["income_uzs"] - t["cost_uzs"],
             )
         )
     return SalesPnl(
         count=len(every),
         profit_usd=profit,
         profit_percent=(profit / income * 100).quantize(_PERCENT) if income else _ZERO,
+        profit_uzs=total["income_uzs"] - total["cost_uzs"],
         by_day=by_day,
         **total,
     )
