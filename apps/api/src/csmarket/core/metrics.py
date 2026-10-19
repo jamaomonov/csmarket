@@ -869,6 +869,46 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
         record_steam_web_api_call(endpoint=endpoint, consumer=consumer, outcome=outcome)
 
 
+#: What a P2P notification turned into (``p2p.intake``).
+P2PResult = Literal["dropped", "duplicate", "matched", "unmatched", "ignored"]
+#: A P2P condition for an operator (``P2PUnparsed``, ``P2PChainBreak``, ``P2PAmbiguousCard``).
+P2PAlert = Literal["unparsed", "chain_break", "ambiguous_card"]
+
+P2P_NOTIFICATIONS = Counter(
+    "csmarket_p2p_notifications_total",
+    "HUMO notifications the P2P webhook received, by outcome.",
+    ("result",),
+)
+P2P_ALERTS = Counter(
+    "csmarket_p2p_alerts_total",
+    "P2P conditions an operator must look at (alerts P2PUnparsed, P2PChainBreak, P2PAmbiguousCard).",
+    ("kind",),
+)
+P2P_EXPIRED = Counter(
+    "csmarket_p2p_requests_expired_total",
+    "P2P top-up requests that expired without a transfer (the sweep).",
+)
+P2P_LAST_NOTIFICATION = Gauge(
+    "csmarket_p2p_last_notification_timestamp_seconds",
+    "Unix time of the last HUMO notification (the sweep reads it from the settings row).",
+)
+
+
+def record_p2p_notification(result: P2PResult, alerts: list[P2PAlert]) -> None:
+    """One webhook outcome and its alerts."""
+    P2P_NOTIFICATIONS.labels(result=result).inc()
+    for kind in alerts:
+        P2P_ALERTS.labels(kind=kind).inc()
+
+
+def record_p2p_sweep(expired: int, last_notification_at: float | None) -> None:
+    """One sweep: requests expired, and when the last notification arrived."""
+    if expired:
+        P2P_EXPIRED.inc(expired)
+    if last_notification_at is not None:
+        P2P_LAST_NOTIFICATION.set(last_notification_at)
+
+
 __all__ = [
     "API_WEBHOOKS",
     "EMAILS",
@@ -922,6 +962,8 @@ __all__ = [
     "record_lisskins_call",
     "record_order_buy",
     "record_order_refund",
+    "record_p2p_notification",
+    "record_p2p_sweep",
     "record_public_order",
     "record_public_request",
     "record_skinslink_call",

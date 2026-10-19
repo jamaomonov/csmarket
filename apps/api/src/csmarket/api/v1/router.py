@@ -25,6 +25,7 @@ from csmarket.modules.notifications.routes_dev import router as notifications_de
 from csmarket.modules.orders.dev_routes import router as orders_dev_router
 from csmarket.modules.orders.routes import me_router as my_orders_router
 from csmarket.modules.orders.routes import router as orders_router
+from csmarket.modules.p2p.routes import router as p2p_webhook_router
 from csmarket.modules.payme.routes import router as payme_router
 from csmarket.modules.payments.dev_routes import router as payments_dev_router
 from csmarket.modules.payments.routes import router as payments_router
@@ -79,6 +80,7 @@ router.include_router(orders_router)
 router.include_router(my_orders_router)
 router.include_router(orders_dev_router)
 router.include_router(payme_router)
+router.include_router(p2p_webhook_router)
 router.include_router(payments_dev_router)
 router.include_router(payments_router)
 router.include_router(payout_cards_router)

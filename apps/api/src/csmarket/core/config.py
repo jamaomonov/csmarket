@@ -341,6 +341,11 @@ class Settings(BaseSettings):
         default="", description="Click SECRET_KEY of the service (signs every webhook)."
     )
     click_pay_url: str = Field(default="https://my.click.uz/services/pay")
+    p2p_webhook_secret: str = Field(
+        default="",
+        description="The relay's secret for csmarket (X-Telegram-Bot-Api-Secret-Token). Empty →"
+        " the P2P webhook refuses everything.",
+    )
     payme_merchant_id: str = Field(
         default="", description="Payme cabinet merchant id. Empty → Payme unavailable."
     )
