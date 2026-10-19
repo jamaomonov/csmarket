@@ -20,6 +20,7 @@ from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.lisskins import models as _lisskins_models  # noqa: F401
 from csmarket.modules.notifications import models as _notifications_models  # noqa: F401
 from csmarket.modules.orders import models as _orders_models  # noqa: F401
+from csmarket.modules.p2p import models as _p2p_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
@@ -39,6 +40,7 @@ from csmarket_scheduler.jobs import (
     orders_erase,
     orders_expiry,
     orders_health,
+    p2p_sweep,
     payme_timeout,
     public_feed,
     purge_refresh_tokens,
@@ -93,6 +95,7 @@ def build_scheduler() -> AsyncIOScheduler:
     trades_audit.register(scheduler)
     orders_health.register(scheduler)
     orders_erase.register(scheduler)
+    p2p_sweep.register(scheduler)
     return scheduler
 
 

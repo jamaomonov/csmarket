@@ -38,11 +38,13 @@ from csmarket.modules.orders.paid import mark_paid
 from csmarket.modules.orders.schemas import OrderOut, OrderPayOut
 from csmarket.modules.orders.service import get_owned
 from csmarket.modules.payments.api import (
+    TOPUP_ONLY,
     Payable,
     Payment,
     available_providers,
     charge_of,
     ensure_attempt,
+    ensure_open,
     get_gateway,
     mark_pending,
     resolve,
@@ -140,8 +142,9 @@ async def _open_in_kassa(db: AsyncSession, payable: Payable, *, provider: str, l
     Raises:
         ValidationError: ``code="order_provider"`` — the kassa is not available here.
     """
-    if provider not in available_providers():
+    if provider not in available_providers() or provider in TOPUP_ONLY:
         raise ValidationError("payment provider not available", code="order_provider")
+    await ensure_open(db, provider)
     payment = await ensure_attempt(db, payable=payable, provider=provider)
     return get_gateway(provider).intent_url(
         payable=payable, charge_uzs=charge_of(payment), locale=locale

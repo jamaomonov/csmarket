@@ -2,7 +2,8 @@
 
 import { SessionApiError } from "@csmarket/api-client";
 import { Button, cn } from "@csmarket/ui";
-import { formatUzs } from "@csmarket/utils";
+import { assertNever, formatUzs } from "@csmarket/utils";
+import { useQueryClient } from "@tanstack/react-query";
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import {
@@ -18,7 +19,8 @@ import type { Locale } from "@csmarket/i18n";
 
 import { PayConsent } from "@/components/legal/PayConsent";
 import { ChargeLines } from "@/components/skins/ChargeLines";
-import { offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
+import { firstOpen, isOpen, offeredKassas, PaymentPicker } from "@/components/skins/PaymentPicker";
+import { PROVIDERS_KEY } from "@/components/skins/usePayMethods";
 import { useRouter } from "@/i18n/navigation";
 import {
   amountValue,
@@ -39,7 +41,22 @@ import {
 } from "@/lib/balance";
 import { kassaCharge } from "@/lib/kassa-fee";
 
-type FormError = "badAmount" | "failed";
+type FormError =
+  | "badAmount"
+  | "failed"
+  | "methodUnavailable"
+  | "p2pAmount"
+  | "p2pDailyLimit"
+  | "p2pOpenRequest"
+  | "p2pUnavailable";
+
+/** The API's P2P refusals (spec 2026-10-19-p2p-topup), each with its own sentence. */
+const P2P_ERRORS: Readonly<Record<string, FormError>> = {
+  p2p_amount: "p2pAmount",
+  p2p_daily_limit: "p2pDailyLimit",
+  p2p_open_request: "p2pOpenRequest",
+  p2p_unavailable: "p2pUnavailable",
+};
 
 /**
  * The field's length, separators included. Past ~16 digits `Number()` rounds and the
@@ -62,6 +79,8 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
   const t = useTranslations("web.balance");
   const d = useTranslations("web.deposit");
   const router = useRouter();
+  const qc = useQueryClient();
+  const [p2pRange, setP2pRange] = useState({ min: 10_000, max: 5_000_000 });
   const fieldId = useId();
   const rangeId = useId();
   const [amount, setAmount] = useState("");
@@ -91,8 +110,8 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
     el.setSelectionRange(at, at);
   });
 
-  const offered = offeredKassas(providers);
-  const method = offered.find((p) => p.slug === chosen)?.slug ?? offered[0]?.slug ?? null;
+  const offered = offeredKassas(providers, true);
+  const method = offered.find((p) => p.slug === chosen && isOpen(p))?.slug ?? firstOpen(offered);
   const typed = amountValue(amount);
   const charge = typed > 0 ? kassaCharge(typed, providers, method) : null;
   const bounds = { min: formatUzs(locale, TOPUP_MIN), max: formatUzs(locale, TOPUP_MAX) };
@@ -123,12 +142,49 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
       });
     } catch (err) {
       const code = err instanceof SessionApiError ? err.code : undefined;
-      setError(code === "topup_amount" ? "badAmount" : "failed");
+      if (code === "provider_maintenance" || code === "provider_disabled") {
+        // The kassa was switched meanwhile: re-read the tiles so it greys or goes.
+        void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
+        setError("methodUnavailable");
+      } else if (code !== undefined && code in P2P_ERRORS) {
+        // The API names its current range (the admin may change it).
+        const extra = err instanceof SessionApiError ? err.body : null;
+        if (extra && typeof extra === "object" && "min" in extra && "max" in extra) {
+          setP2pRange({ min: Number(extra.min), max: Number(extra.max) });
+        }
+        setError(P2P_ERRORS[code] ?? "failed");
+      } else {
+        setError(code === "topup_amount" ? "badAmount" : "failed");
+      }
     } finally {
       inFlight.current = false;
       setBusy(false);
     }
   }
+
+  const formErrorText = (e: FormError): string => {
+    switch (e) {
+      case "badAmount":
+        return t("badAmount", bounds);
+      case "methodUnavailable":
+        return t("methodUnavailable");
+      case "p2pAmount":
+        return t("p2p.badAmount", {
+          min: formatUzs(locale, p2pRange.min),
+          max: formatUzs(locale, p2pRange.max),
+        });
+      case "p2pDailyLimit":
+        return t("p2p.dailyLimit");
+      case "p2pOpenRequest":
+        return t("p2p.openRequest");
+      case "p2pUnavailable":
+        return t("p2p.unavailable");
+      case "failed":
+        return t("failed");
+      default:
+        return assertNever(e);
+    }
+  };
 
   const panel = "bg-surface border-border border flex flex-col gap-5 rounded-xl p-5 sm:p-6";
   return (
@@ -153,7 +209,14 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
             setChosen(slug);
             setError(null);
           }}
-          labels={{ legend: t("methodLabel"), test: t("methodTest"), none: t("methodNone") }}
+          labels={{
+            legend: t("methodLabel"),
+            test: t("methodTest"),
+            none: t("methodNone"),
+            maintenance: t("methodMaintenance"),
+            p2p: t("methodP2P"),
+          }}
+          forTopup
         />
       </div>
 
@@ -229,7 +292,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
 
         {error ? (
           <p role="alert" className="text-danger text-sm">
-            {error === "badAmount" ? t("badAmount", bounds) : t("failed")}
+            {formErrorText(error)}
           </p>
         ) : null}
 

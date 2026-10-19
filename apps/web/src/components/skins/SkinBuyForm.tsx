@@ -190,7 +190,12 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
         providers={kassas}
         method={chosen}
         onPick={pick}
-        labels={{ legend: t("methodTitle"), test: t("methodTest"), none: t("methodNone") }}
+        labels={{
+          legend: t("methodTitle"),
+          test: t("methodTest"),
+          none: t("methodNone"),
+          maintenance: t("methodMaintenance"),
+        }}
         {...(wallet ? { wallet } : {})}
       />
       {price !== null && (

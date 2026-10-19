@@ -13,7 +13,7 @@ the pre-check and on the race path where two requests with one key both missed i
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from sqlalchemy import select
@@ -31,12 +31,31 @@ from csmarket.modules.payments.gateways import PaymentGateway, available_provide
 from csmarket.modules.payments.hooks import cancel_pending, ensure_attempt, mark_pending, settle
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable, resolve
+from csmarket.modules.payments.switches import ensure_open
 from csmarket.modules.wallet.api import WALLET
 
 log = get_logger("csmarket.payments.topups")
 
 #: Attempt statuses that mean a kassa took the top-up up: the sweep leaves it alone (R8).
 _HELD = ("pending", "succeeded")
+
+
+#: The card-transfer kassa (spec 2026-10-19-p2p-topup).
+P2P = "p2p"
+#: How far a P2P top-up's amount may sit above the typed one (``p2p.card_choice.MAX_BUMP``).
+_P2P_MAX_BUMP = 99
+
+
+@dataclass(frozen=True)
+class P2PTransfer:
+    """Where and how much to transfer for a P2P top-up."""
+
+    card_number: str
+    holder: str
+    amount_uzs: int
+    expires_at: datetime
+    #: The request's own status: ``pending``, ``paid``, ``expired`` or ``cancelled``.
+    status: str
 
 
 @dataclass(frozen=True)
@@ -53,6 +72,8 @@ class TopupView:
     awaiting_kassa: bool = False
     #: The kassa fee on top, frozen on the first attempt (spec 2026-10-14-kassa-fee).
     fee_uzs: Decimal = Decimal(0)
+    #: A P2P top-up's transfer details (spec 2026-10-19-p2p-topup); ``None`` otherwise.
+    p2p: P2PTransfer | None = None
 
 
 def _check_amount(amount: Decimal) -> None:
@@ -76,9 +97,23 @@ def _gateway(provider: str) -> PaymentGateway:
     return gateway
 
 
+def kassa_for_new_topup(provider: str) -> PaymentGateway | None:
+    """The kassa a new top-up opens in; ``None`` for P2P (no kassa page: the card and the
+    amount come with the top-up).
+
+    Raises:
+        ValidationError: ``topup_provider`` — the balance, or a kassa not available here.
+    """
+    if provider == P2P:
+        if P2P not in available_providers():
+            raise ValidationError("payment provider not available", code="topup_provider")
+        return None
+    return _gateway(provider)
+
+
 def _gateway_or_none(provider: str) -> PaymentGateway | None:
     """``provider``'s gateway while it is available; else ``None`` (also for ``wallet``)."""
-    if provider == WALLET or provider not in available_providers():
+    if provider in (WALLET, P2P) or provider not in available_providers():
         return None
     return get_gateway(provider)
 
@@ -121,7 +156,10 @@ def _assert_replay_matches(
         ConflictError: ``idempotency_mismatch`` — the key opened a top-up for another
             amount or another kassa.
     """
-    same = existing.amount_uzs == amount and (first is None or first.provider == provider)
+    # A P2P top-up holds the typed amount or up to +99 soʻm of it (spec 2026-10-19-p2p-topup).
+    bump = existing.amount_uzs - amount
+    same_amount = bump == 0 or (provider == P2P and 0 <= bump <= _P2P_MAX_BUMP)
+    same = same_amount and (first is None or first.provider == provider)
     if not same:
         raise ConflictError(
             "Idempotency-Key was already used for a different top-up",
@@ -175,7 +213,8 @@ async def create_topup(
     if existing is not None:
         return await _replay(db, existing, amount=amount_uzs, provider=provider, locale=locale)
     _check_amount(amount_uzs)
-    gateway = _gateway(provider)
+    gateway = kassa_for_new_topup(provider)
+    await ensure_open(db, provider)
     topup = WalletTopup(
         id=new_id(),
         number=await allocate(db, WalletTopup.number, topup_number),
@@ -198,10 +237,44 @@ async def create_topup(
         return await _replay(db, winner, amount=amount_uzs, provider=provider, locale=locale)
     payable = await resolve(db, topup.number, lock=True)
     payment = await ensure_attempt(db, payable=payable, provider=provider)
+    if provider == P2P:
+        # Late import: ``p2p`` builds on ``payments`` (it settles through its hooks); this is
+        # the one call back into it, at request time (spec 2026-10-19-p2p-topup, ADR-0021).
+        from csmarket.modules.p2p.api import reserve_topup
+
+        await reserve_topup(db, topup=topup, payment=payment, at=now())
+        log.info("payments.topup.created", number=topup.number, provider=provider)
+        return topup, payment, None
     log.info(
         "payments.topup.created", number=topup.number, provider=provider, amount=str(amount_uzs)
     )
     return topup, payment, await _intent(db, gateway, payable, locale)
+
+
+async def credit_received_transfer(
+    db: AsyncSession, *, user_id: str, amount_uzs: Decimal, provider: str, event_id: str
+) -> WalletTopup:
+    """Book money that already arrived outside any open top-up (an admin crediting an unmatched
+    P2P transfer, spec 2026-10-19-p2p-topup): a new top-up for ``user_id`` and its attempt in
+    ``provider``, settled at once through :func:`.hooks.settle`. Flushes, never commits; the
+    kassa switch is not consulted (the money is in).
+    """
+    topup = WalletTopup(
+        id=new_id(),
+        number=await allocate(db, WalletTopup.number, topup_number),
+        user_id=user_id,
+        amount_uzs=amount_uzs,
+        status="pending",
+        idempotency_key=f"credit:{event_id}",
+        expires_at=now() + timedelta(minutes=get_settings().topup_expiry_minutes),
+    )
+    db.add(topup)
+    await db.flush()
+    payable = await resolve(db, topup.number, lock=True)
+    payment = await ensure_attempt(db, payable=payable, provider=provider)
+    await settle(db, payment=payment, event_id=event_id)
+    log.info("payments.topup.credited_by_hand", number=topup.number, provider=provider)
+    return topup
 
 
 async def owned_topup(db: AsyncSession, *, user_id: str, number: str) -> WalletTopup | None:
@@ -225,13 +298,38 @@ async def topup_view(db: AsyncSession, topup: WalletTopup, *, locale: str) -> To
     first = await _first_attempt(db, topup.id)
     payable = await resolve(db, topup.number)
     current = payable.topup or topup
-    gateway = _gateway_or_none(first.provider) if first is not None else None
+    provider = first.provider if first is not None else None
+    if provider == P2P:
+        return TopupView(
+            topup=current,
+            provider=provider,
+            intent_url=None,
+            awaiting_kassa=await awaiting_kassa(db, current),
+            p2p=await _p2p_transfer(db, current),
+        )
+    gateway = _gateway_or_none(provider) if provider is not None else None
     return TopupView(
         topup=current,
-        provider=first.provider if first is not None else None,
+        provider=provider,
         intent_url=await _intent(db, gateway, payable, locale),
         awaiting_kassa=await awaiting_kassa(db, current),
         fee_uzs=first.fee_uzs if first is not None else Decimal(0),
+    )
+
+
+async def _p2p_transfer(db: AsyncSession, topup: WalletTopup) -> P2PTransfer | None:
+    """The card and exact amount of a P2P top-up, while the transfer is still awaited."""
+    from csmarket.modules.p2p.api import details  # late import, see :func:`create_topup`
+
+    found = await details(db, topup.id)
+    if found is None or topup.status != "pending" or found.status != "pending":
+        return None
+    return P2PTransfer(
+        card_number=found.card_number,
+        holder=found.holder,
+        amount_uzs=found.amount_uzs,
+        expires_at=found.expires_at,
+        status=found.status,
     )
 
 

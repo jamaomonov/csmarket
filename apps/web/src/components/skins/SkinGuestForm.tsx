@@ -7,7 +7,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ChargeLines } from "./ChargeLines";
-import { offeredKassas, PaymentPicker } from "./PaymentPicker";
+import { firstOpen, isOpen, offeredKassas, PaymentPicker } from "./PaymentPicker";
 import { PROVIDERS_KEY } from "./usePayMethods";
 
 import type { SkinListing } from "@csmarket/utils/skins";
@@ -34,7 +34,7 @@ export function SkinGuestForm({ locale, offer }: SkinGuestFormProps) {
   const [method, setMethod] = useState<string | null>(null);
   const [asking, setAsking] = useState(false);
   const offered = offeredKassas(kassas);
-  const chosen = offered.find((p) => p.slug === method)?.slug ?? offered[0]?.slug ?? null;
+  const chosen = offered.find((p) => p.slug === method && isOpen(p))?.slug ?? firstOpen(offered);
   const price = offer.price_uzs;
   const charge = price !== null ? kassaCharge(Number(price), kassas, chosen) : null;
 
@@ -45,7 +45,12 @@ export function SkinGuestForm({ locale, offer }: SkinGuestFormProps) {
         providers={kassas}
         method={chosen}
         onPick={setMethod}
-        labels={{ legend: t("methodTitle"), test: t("methodTest"), none: t("methodNone") }}
+        labels={{
+          legend: t("methodTitle"),
+          test: t("methodTest"),
+          none: t("methodNone"),
+          maintenance: t("methodMaintenance"),
+        }}
       />
       {price !== null && (
         <ChargeLines locale={locale} base={Number(price)} charge={charge} kind="order" />

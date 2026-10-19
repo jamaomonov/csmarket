@@ -17,7 +17,7 @@ from csmarket.core.errors import NotFoundError
 from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_key
 from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.payments.fees import DEFAULT_KASSA_FEES, plain_pct, read_kassa_fees
-from csmarket.modules.payments.gateways import available_providers
+from csmarket.modules.payments.gateways import TOPUP_ONLY, available_providers
 from csmarket.modules.payments.schemas import (
     Locale,
     ProviderOut,
@@ -26,6 +26,7 @@ from csmarket.modules.payments.schemas import (
     TopupOut,
 )
 from csmarket.modules.payments.topups import (
+    P2P,
     TopupView,
     awaiting_kassa,
     create_topup,
@@ -41,11 +42,22 @@ wallet_router = APIRouter(prefix="/wallet", tags=["wallet"])
 @router.get("/providers", response_model=ProvidersOut, summary="Kassas available now")
 async def list_providers(db: Annotated[AsyncSession, Depends(db_session)]) -> ProvidersOut:
     """Anonymous: the storefront shows these tiles, each with the percent the buyer pays on
-    top (spec 2026-10-14-kassa-fee)."""
+    top (spec 2026-10-14-kassa-fee) and its switch: a ``maintenance`` kassa is shown greyed, an
+    ``off`` one is left out (spec 2026-10-19-p2p-topup). ``topup_only`` kassas (P2P) are never
+    offered at checkout."""
     slugs = available_providers()
     fees = await read_kassa_fees(db) if slugs else DEFAULT_KASSA_FEES
     return ProvidersOut(
-        providers=[ProviderOut(slug=slug, fee_pct=plain_pct(fees.pct(slug))) for slug in slugs]
+        providers=[
+            ProviderOut(
+                slug=slug,
+                fee_pct=plain_pct(fees.pct(slug)),
+                status=status,
+                topup_only=slug in TOPUP_ONLY,
+            )
+            for slug in slugs
+            if (status := fees.status(slug)) != "off"
+        ]
     )
 
 
@@ -75,6 +87,9 @@ async def post_topup(
         idempotency_key=key,
         locale=body.locale,
     )
+    if payment.provider == P2P:
+        # The card and the exact amount to transfer (spec 2026-10-19-p2p-topup).
+        return TopupOut.of(await topup_view(db, topup, locale=body.locale))
     view = TopupView(
         topup=topup,
         provider=payment.provider,

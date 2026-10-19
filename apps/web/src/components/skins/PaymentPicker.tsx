@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@csmarket/ui";
-import { Wallet } from "lucide-react";
+import { CreditCard, Wallet } from "lucide-react";
 
 import type { Provider } from "@/lib/balance";
 import type { ReactNode } from "react";
@@ -34,13 +34,29 @@ function kassaIcon(slug: string): string | null {
 }
 
 /** The tile's name for a kassa slug; `null` for one this storefront does not offer. */
-export function kassaLabel(slug: string, testLabel: string): string | null {
+export function kassaLabel(slug: string, testLabel: string, p2pLabel = ""): string | null {
+  if (slug === "p2p") return p2pLabel;
   return slug === "mock" ? testLabel : (KASSA_NAMES[slug] ?? null);
 }
 
 /** The kassas worth a tile, in the API's order. */
-export function offeredKassas(providers: readonly Provider[] | undefined): Provider[] {
-  return (providers ?? []).filter((p) => kassaLabel(p.slug, "") !== null);
+export function offeredKassas(
+  providers: readonly Provider[] | undefined,
+  forTopup = false,
+): Provider[] {
+  return (providers ?? []).filter(
+    (p) => kassaLabel(p.slug, "") !== null && (forTopup || p.topup_only !== true),
+  );
+}
+
+/** A tile that can be paid through now (not under maintenance). */
+export function isOpen(p: Provider): boolean {
+  return p.status !== "maintenance";
+}
+
+/** The first kassa that can be paid through — the default choice. */
+export function firstOpen(offered: readonly Provider[]): string | null {
+  return offered.find(isOpen)?.slug ?? null;
 }
 
 /** The balance as a payment method (the buy panel's; top-ups have none). */
@@ -60,12 +76,14 @@ export interface PaymentPickerProps {
   /** The selected method — a kassa slug or `wallet` — or `null` for none. */
   method: string | null;
   onPick: (method: string) => void;
-  labels: { legend: string; test: string; none: string };
+  labels: { legend: string; test: string; none: string; maintenance: string; p2p?: string };
   wallet?: WalletOption;
   /** `lg`: big tiles, three to a row (the deposit page). Default `md`. */
   size?: "md" | "lg";
   /** Formats a kassa's percent («1,5 %»). */
   locale: string;
+  /** The deposit page: offer the top-up-only kassas (P2P) too. */
+  forTopup?: boolean;
 }
 
 const TILE = "rounded-md border px-3 text-sm font-semibold";
@@ -81,8 +99,9 @@ export function PaymentPicker({
   wallet,
   size = "md",
   locale,
+  forTopup = false,
 }: PaymentPickerProps) {
-  const offered = offeredKassas(providers);
+  const offered = offeredKassas(providers, forTopup);
   const noKassa = providers !== undefined && offered.length === 0;
   return (
     <fieldset>
@@ -140,16 +159,23 @@ export function PaymentPicker({
               key={p.slug}
               type="button"
               aria-pressed={p.slug === method}
+              disabled={!isOpen(p)}
               onClick={() => {
                 onPick(p.slug);
               }}
               className={cn(
                 TILE,
-                "flex items-center justify-center gap-2",
+                "flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50",
                 size === "lg" ? "h-20 gap-3 rounded-lg text-lg font-bold" : "h-12",
-                tileState(p.slug === method),
+                tileState(p.slug === method && isOpen(p)),
               )}
             >
+              {p.slug === "p2p" && (
+                <CreditCard
+                  className={size === "lg" ? "text-accent size-8" : "text-accent size-6"}
+                  aria-hidden
+                />
+              )}
               {kassaIcon(p.slug) !== null && (
                 // eslint-disable-next-line @next/next/no-img-element -- static brand logos from /public
                 <img
@@ -161,11 +187,15 @@ export function PaymentPicker({
                 />
               )}
               <span className="flex flex-col items-start leading-tight">
-                {kassaLabel(p.slug, labels.test)}
-                {Number(p.fee_pct) > 0 && (
-                  <span className="text-fg-dim text-label font-normal">
-                    {percent(p.fee_pct, locale)}
-                  </span>
+                {kassaLabel(p.slug, labels.test, labels.p2p)}
+                {!isOpen(p) ? (
+                  <span className="text-fg-muted text-label font-normal">{labels.maintenance}</span>
+                ) : (
+                  Number(p.fee_pct) > 0 && (
+                    <span className="text-fg-dim text-label font-normal">
+                      {percent(p.fee_pct, locale)}
+                    </span>
+                  )
                 )}
               </span>
             </button>

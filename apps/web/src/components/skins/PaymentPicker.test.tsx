@@ -8,6 +8,7 @@ const LABELS = {
   legend: "Способ оплаты",
   test: "Тестовая оплата",
   none: "Оплата сейчас недоступна.",
+  maintenance: "Технические работы",
 };
 
 function setup(over: Partial<PaymentPickerProps> = {}) {
@@ -97,5 +98,29 @@ describe("PaymentPicker", () => {
     expect(screen.getByRole("button", { name: /Баланс/ })).toBeDisabled();
     expect(screen.getByRole("link", { name: "Пополнить" })).toBeInTheDocument();
     expect(screen.getByText("Оплата сейчас недоступна.")).toBeInTheDocument();
+  });
+
+  it("greys a kassa under maintenance, says so, and never picks it", () => {
+    const onPick = setup({
+      providers: [
+        { slug: "click", fee_pct: "0", status: "maintenance" },
+        { slug: "payme", fee_pct: "0" },
+      ],
+      method: "payme",
+    });
+    const click = screen.getByRole("button", { name: /Click/ });
+    expect(click).toBeDisabled();
+    expect(click).toHaveTextContent("Технические работы");
+    fireEvent.click(click);
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("offers a top-up-only kassa on the deposit page only", () => {
+    const providers = [
+      { slug: "click", fee_pct: "0" },
+      { slug: "mock", fee_pct: "0", topup_only: true },
+    ];
+    setup({ providers });
+    expect(screen.queryByRole("button", { name: "Тестовая оплата" })).not.toBeInTheDocument();
   });
 });

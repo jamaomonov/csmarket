@@ -1,0 +1,25 @@
+# Copy to wrangler.toml (git-ignored) and deploy with `npx wrangler deploy`.
+name = "csmarket-p2p-relay"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# csmarket's copy of every update goes through a queue, so csmarket being down never stops
+# YuPay (YuPay is answered synchronously). Create once:
+#   npx wrangler queues create csmarket-p2p
+#   npx wrangler queues create csmarket-p2p-dlq
+# Without these two blocks the Worker falls back to a few background retries.
+[[queues.producers]]
+binding = "CSMARKET_QUEUE"
+queue = "csmarket-p2p"
+
+[[queues.consumers]]
+queue = "csmarket-p2p"
+max_retries = 100              # ~50 min of retries at 30 s; then the dead-letter queue
+dead_letter_queue = "csmarket-p2p-dlq"
+
+# Secrets — never in this file:
+#   npx wrangler secret put RELAY_SECRET      # what Telegram sends (setWebhook secret_token)
+#   npx wrangler secret put YUPAY_URL         # https://api.yupay.uz/api/v1/webhooks/telegram/p2p
+#   npx wrangler secret put YUPAY_SECRET      # YuPay's P2P_WEBHOOK_SECRET
+#   npx wrangler secret put CSMARKET_URL      # https://api.csmarket.uz/api/v1/webhooks/telegram/p2p
+#   npx wrangler secret put CSMARKET_SECRET   # csmarket's CSMARKET_P2P_WEBHOOK_SECRET

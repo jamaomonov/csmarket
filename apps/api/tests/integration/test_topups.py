@@ -428,7 +428,10 @@ async def test_providers_endpoint_lists_mock_in_dev_only(
 ) -> None:
     r = await integration_client.get("/api/v1/payments/providers")
     assert r.status_code == 200
-    assert r.json() == {"providers": [{"slug": "mock", "fee_pct": "0"}]}
+    # P2P starts switched off, so only the dev kassa is listed.
+    assert r.json() == {
+        "providers": [{"slug": "mock", "fee_pct": "0", "status": "on", "topup_only": False}]
+    }
     from csmarket.bootstrap import create_app
 
     monkeypatch.setenv("CSMARKET_ENVIRONMENT", "prod")

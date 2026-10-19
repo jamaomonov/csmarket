@@ -22,6 +22,17 @@ export const QUICK_AMOUNTS: readonly number[] = [50_000, 100_000, 250_000, 500_0
 export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed";
 
 /** `TopupOut`. */
+/** A P2P top-up's transfer (spec 2026-10-19-p2p-topup): where and exactly how much. */
+export interface P2PTransferInfo {
+  /** The full card number, digits only. */
+  card_number: string;
+  holder: string;
+  /** Whole soʻm as digits: transfer exactly this. */
+  amount_uzs: string;
+  expires_at: string;
+  status: "pending" | "paid" | "expired" | "cancelled";
+}
+
 export interface Topup {
   /** `T…`, the number the customer and the kassa see. */
   number: string;
@@ -37,6 +48,8 @@ export interface Topup {
    * pending top-up without `intent_url` is being checked, not expired.
    */
   awaiting_kassa: boolean;
+  /** A P2P top-up awaiting its transfer; absent for the kassas. */
+  p2p?: P2PTransferInfo | null;
 }
 
 export type EntryKind =
@@ -78,6 +91,10 @@ export interface Provider {
   slug: string;
   /** The percent the buyer pays on top through this kassa (`"1.5"`); `"0"` for none. */
   fee_pct: string;
+  /** `maintenance`: shown greyed, not payable (an API from before the switch omits it). */
+  status?: "on" | "maintenance";
+  /** Balance top-ups only (P2P): never offered at checkout. */
+  topup_only?: boolean;
 }
 
 /** `UsdWalletOut`: the USD wallet, present once an admin switched it on. */

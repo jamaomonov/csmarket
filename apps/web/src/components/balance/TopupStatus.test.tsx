@@ -297,4 +297,25 @@ describe("TopupStatus", () => {
     await tick(3_000);
     expect(api.getTopup).toHaveBeenCalledTimes(43);
   });
+
+  it("shows the card transfer for a P2P top-up instead of a kassa", async () => {
+    at("");
+    api.getTopup.mockResolvedValue(
+      topup({
+        provider: "p2p",
+        intent_url: null,
+        awaiting_kassa: true,
+        p2p: {
+          card_number: "9860000000004321",
+          holder: "TEST HOLDER",
+          amount_uzs: "100037",
+          expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+          status: "pending",
+        },
+      }),
+    );
+    view();
+    expect(await screen.findByText("9860 0000 0000 4321")).toBeInTheDocument();
+    expect(assign).not.toHaveBeenCalled();
+  });
 });

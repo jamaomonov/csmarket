@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { offeredKassas, type WalletOption } from "./PaymentPicker";
+import { firstOpen, isOpen, offeredKassas, type WalletOption } from "./PaymentPicker";
 
 import type { Provider } from "@/lib/balance";
 
@@ -59,14 +59,14 @@ export function usePayMethods(
   const markPicked = usePreferBalance(
     covers && initial === null,
     setMethod,
-    offered[0]?.slug ?? "",
+    firstOpen(offered) ?? "",
   );
   const chosen =
     method === WALLET
       ? covers
         ? WALLET
         : null
-      : (offered.find((p) => p.slug === method)?.slug ?? offered[0]?.slug ?? null);
+      : (offered.find((p) => p.slug === method && isOpen(p))?.slug ?? firstOpen(offered));
   const provider = chosen !== null && isPayProvider(chosen) ? chosen : null;
 
   const wallet: WalletOption | undefined = balance.isError
