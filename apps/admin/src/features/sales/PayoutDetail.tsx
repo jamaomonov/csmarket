@@ -8,12 +8,13 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { payoutKey } from "./keys";
-import { PAYOUT_LABELS, SALE_LABELS } from "./labels";
+import { PAYOUT_LABELS } from "./labels";
 import { ItemList } from "./Parts";
 import { PayBlock } from "./PayBlock";
 import { PayoutActions } from "./PayoutActions";
 import { getPayout, type PayoutDetail as Detail } from "./payoutsApi";
 import { RiskBlock } from "./RiskBlock";
+import { PayoutStatusChip, SaleStatusChip } from "./StatusChips";
 
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
@@ -73,7 +74,7 @@ function History({ d }: { d: Detail }) {
                 <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
                   {h.sale_number}
                 </Link>
-                <span>{PAYOUT_LABELS[h.status]}</span>
+                <PayoutStatusChip status={h.status} />
                 <Money uzs={h.amount_uzs} />
               </li>
             ))}
@@ -89,7 +90,7 @@ function History({ d }: { d: Detail }) {
                 <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
                   {h.number}
                 </Link>
-                <span>{SALE_LABELS[h.status]}</span>
+                <SaleStatusChip status={h.status} />
                 <Money uzs={h.payout_uzs} />
               </li>
             ))}

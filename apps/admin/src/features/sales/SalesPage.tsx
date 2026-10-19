@@ -10,6 +10,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ATTENTION_FILTERS, type AdminSalesPage, listSales, SALE_STATUSES } from "./api";
 import { SALES_LIST_KEY } from "./keys";
 import { ATTENTION_FILTER_LABELS, ATTENTION_LABELS, SALE_LABELS } from "./labels";
+import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
@@ -118,7 +119,7 @@ export function SalesPage() {
             header: "Статус",
             cell: (s) => (
               <>
-                {SALE_LABELS[s.status]}
+                <SaleStatusChip status={s.status} />
                 {s.attention_reason ? (
                   <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
                     {ATTENTION_LABELS[s.attention_reason]}
@@ -170,7 +171,7 @@ export function SalesPage() {
               <Money uzs={s.payout_uzs} />
             </div>
             <div className="flex flex-wrap gap-2">
-              <span>{SALE_LABELS[s.status]}</span>
+              <SaleStatusChip status={s.status} />
               <span className="text-fg-muted">{s.user.display_name ?? "Без имени"}</span>
               <span className="text-fg-dim ml-auto text-xs">{formatDateTime(s.created_at)}</span>
             </div>

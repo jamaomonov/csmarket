@@ -8,7 +8,6 @@ import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { SALE_LABELS } from "./labels";
 import {
   FLAG_LABELS,
   getReconciliation,
@@ -16,6 +15,7 @@ import {
   type ReconDays,
   type ReconPage,
 } from "./reconApi";
+import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar } from "@/components/Filters";
@@ -123,7 +123,7 @@ export function ReconciliationPage() {
             header: "Статус",
             cell: (r) => (
               <>
-                {SALE_LABELS[r.status]}
+                <SaleStatusChip status={r.status} />
                 {r.flag && <div className="text-danger text-xs">{FLAG_LABELS[r.flag]}</div>}
               </>
             ),

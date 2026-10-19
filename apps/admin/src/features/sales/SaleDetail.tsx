@@ -10,13 +10,14 @@ import { Link, useParams } from "react-router-dom";
 
 import { type AdminSale, getSale, resolveSale } from "./api";
 import { SALES_LIST_KEY, saleKey } from "./keys";
-import { ATTENTION_LABELS, cardLabel, PAYOUT_LABELS, payoutErrorText, SALE_LABELS } from "./labels";
+import { ATTENTION_LABELS, cardLabel, payoutErrorText } from "./labels";
 import { ItemList } from "./Parts";
+import { SaleStatusChip } from "./StatusChips";
+import { PayoutStatusChip } from "./StatusChips";
 
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
-import { StatusChip } from "@/components/StatusChip";
 import { SteamOfferValue } from "@/components/SteamLinks";
 import { UserCell } from "@/components/UserCell";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
@@ -100,11 +101,7 @@ export function SaleDetail() {
       <PageHeader
         back={{ to: "/sales", label: "Продажи" }}
         title={<span className="font-mono">{s.number}</span>}
-        badges={
-          <StatusChip tone={s.attention_open ? "danger" : "neutral"}>
-            {SALE_LABELS[s.status]}
-          </StatusChip>
-        }
+        badges={<SaleStatusChip status={s.status} danger={s.attention_open} />}
       />
       <Attention sale={s} />
       <DetailGrid
@@ -125,7 +122,7 @@ export function SaleDetail() {
                 {s.payout ? (
                   <Row label="Выплата на карту">
                     <Link to={`/payouts/${s.payout.id}`} className="hover:underline">
-                      {PAYOUT_LABELS[s.payout.status]}
+                      <PayoutStatusChip status={s.payout.status} />
                     </Link>
                   </Row>
                 ) : null}

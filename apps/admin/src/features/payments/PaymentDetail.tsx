@@ -23,7 +23,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { DetailGrid } from "@/components/Section";
 import { UserCell } from "@/components/UserCell";
 import { OrderStatusChip } from "@/features/orders/StatusChip";
-import { errorText, providerLabel, topupStatusLabel } from "@/features/users/labels";
+import { errorText, providerLabel } from "@/features/users/labels";
+import { TopupStatusChip } from "@/features/users/TopupStatusChip";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSum } from "@/lib/format";
 
@@ -49,7 +50,9 @@ function TopupBlock({ topup }: { topup: PaymentTopup }) {
           <span className="font-mono">{topup.number}</span>
         </Field>
         <Field label="Сумма">{formatSum(topup.amount_uzs)}</Field>
-        <Field label="Статус">{topupStatusLabel(topup.status)}</Field>
+        <Field label="Статус">
+          <TopupStatusChip status={topup.status} />
+        </Field>
         <Field label="Действует до">{when(topup.expires_at)}</Field>
         <Field label="Зачислено">{when(topup.succeeded_at)}</Field>
       </dl>

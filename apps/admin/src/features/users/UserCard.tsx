@@ -13,9 +13,9 @@ import {
   localeLabel,
   providerLabel,
   roleLabel,
-  topupStatusLabel,
   tradeVerdictText,
 } from "./labels";
+import { TopupStatusChip } from "./TopupStatusChip";
 import { UsdSwitchDialog } from "./UsdSwitchDialog";
 import { useIdempotencyKey } from "./useIdempotencyKey";
 import { ApiKeyPanel } from "../apiKeys/ApiKeyCard";
@@ -151,7 +151,7 @@ function Topups({ topups }: { topups: AdminTopup[] }) {
             align: "right",
             cell: (t) => <Money uzs={t.amount_uzs} />,
           },
-          { key: "status", header: "Статус", cell: (t) => topupStatusLabel(t.status) },
+          { key: "status", header: "Статус", cell: (t) => <TopupStatusChip status={t.status} /> },
           { key: "kassa", header: "Касса", cell: (t) => providerLabel(t.provider) },
           {
             key: "created",

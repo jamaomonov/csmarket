@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminUserSale, getUserSales } from "./api";
-import { SALE_LABELS } from "./labels";
+import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
@@ -74,7 +74,7 @@ export function UserSales({ userId }: { userId: string }) {
             header: "Куда",
             cell: (s) => (s.payout_to === "card" ? "карта" : "баланс"),
           },
-          { key: "status", header: "Статус", cell: (s) => SALE_LABELS[s.status] },
+          { key: "status", header: "Статус", cell: (s) => <SaleStatusChip status={s.status} /> },
           {
             key: "created",
             header: "Создана",
@@ -93,7 +93,7 @@ export function UserSales({ userId }: { userId: string }) {
             </div>
             <Skins sale={s} />
             <div className="flex flex-wrap gap-2">
-              <span>{SALE_LABELS[s.status]}</span>
+              <SaleStatusChip status={s.status} />
               <span className="text-fg-muted">{s.payout_to === "card" ? "карта" : "баланс"}</span>
               <span className="text-fg-dim ml-auto text-xs">{formatDateTime(s.created_at)}</span>
             </div>

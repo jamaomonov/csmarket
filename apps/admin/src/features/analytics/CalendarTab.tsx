@@ -182,9 +182,10 @@ function DayCell({ day, tone, share, selected, narrow, onPick }: DayCellProps) {
   const profit = profitOf(day);
   const background =
     tone === "loss"
-      ? "color-mix(in oklab, var(--color-danger) 25%, transparent)"
+      ? "color-mix(in oklab, var(--color-danger) 18%, transparent)"
       : tone === "profit"
-        ? `color-mix(in oklab, var(--color-accent) ${String(Math.round(15 + share * 60))}%, transparent)`
+        ? // Kept faint (10–32 %) so the day's figures stay readable on it at any profit.
+          `color-mix(in oklab, var(--color-accent) ${String(Math.round(10 + share * 22))}%, transparent)`
         : undefined;
   return (
     <button
@@ -203,7 +204,9 @@ function DayCell({ day, tone, share, selected, narrow, onPick }: DayCellProps) {
       <span className="font-medium">{n}</span>
       {tone !== "empty" && (
         <>
-          <span className={`font-semibold ${tone === "loss" ? "text-danger" : ""}`}>
+          <span
+            className={`font-semibold ${tone === "loss" ? "text-danger" : profit > 0 ? "text-success" : ""}`}
+          >
             {som(profit)}
           </span>
           {!narrow && <span className="text-fg-muted">{som(day.revenue_uzs)}</span>}
