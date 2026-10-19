@@ -159,6 +159,15 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   idempotency replay, never in a letter, a log (`card_number`, `number_enc`, `new_card`, `pan`
   are redacted keys), a metric or an admin list. `NewCardIn.number` and the service's draft
   are `repr=False`. A 422 for a bad number never echoes it (`card_invalid`).
+- **P2P card number** (spec 2026-10-19-p2p-topup) — `p2p_cards.pan_ciphertext` + `pan_nonce`:
+  the owner's receiving card, sealed with `core.crypto` (purpose `p2p_card_pan`); the admin sees
+  `•••• last4` only; the full number goes only to a signed-in buyer with an open request
+  (`TopupOut.p2p`). Never in an audit payload, a replay row or a log (the add-card replay key
+  keeps the last four).
+- **P2P notifications** — `p2p_incoming.raw_text` / `source_text`: the bank's message for the
+  owner's card (amount, masked card, the payer bank's label, balance). Admin views only; never
+  logged (logs carry the amount and last4 at most). Telegram user ids (the owner's, the HUMO
+  bot's) live in `p2p_settings`, never in logs or audits.
 - **Card fingerprint** (2026-10-12, migration 0033) — `payout_cards.number_fp`: HMAC-SHA256
   of the 16 digits under a key HKDF-derived from `CSMARKET_APP_ENC_KEY` with the purpose
   `csmarket:payout-card-fp:v1` (`sales.cards.card_fingerprint`). It finds the same card on

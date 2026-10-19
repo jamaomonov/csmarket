@@ -84,7 +84,7 @@ function AddCard() {
       </div>
       <p className="text-fg-muted mt-2 text-sm">
         Номер вводится один раз и хранится зашифрованным. Последние 4 цифры не должны совпадать с
-        картами YuPay — сверьте их в сессии YuPay.
+        картами второго проекта на том же боте — сверьте их там.
       </p>
       {add.isError && (
         <p role="alert" className="text-danger mt-2 text-sm">
