@@ -20,7 +20,7 @@ def test_off_by_default() -> None:
     s = _make()
     assert s.sales_enabled is False
     assert s.sales_active is False
-    assert (s.sales_inventory_timeout_seconds, s.sales_deposit_timeout_seconds) == (6.0, 10.0)
+    assert (s.sales_inventory_timeout_seconds, s.sales_deposit_timeout_seconds) == (15.0, 10.0)
     assert s.auth_ip_guard_bucket_max["sell-inventory"] == 60
     assert s.auth_ip_guard_bucket_max["sell-create"] == 60
 

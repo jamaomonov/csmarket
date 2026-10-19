@@ -178,7 +178,3 @@ def test_an_unreported_app_error_never_reaches_sentry() -> None:
     assert _before_send(event, {"exc_info": (type(quiet), quiet, None)}) is None
     loud = UpstreamUnavailableError("waxpeer down")
     assert _before_send(event, {"exc_info": (type(loud), loud, None)}) == event
-
-
-def test_the_sell_inventory_waits_fifteen_seconds() -> None:
-    assert Settings().sales_inventory_timeout_seconds == 15.0
