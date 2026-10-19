@@ -94,3 +94,7 @@ test-results/
 
 # Deploy stamps of the monitoring config last started on the server (deploy.yml).
 .deploy-*.sha
+
+# The P2P relay's local Cloudflare config (secrets go through wrangler, never here).
+infra/p2p-relay/wrangler.toml
+infra/p2p-relay/.wrangler/

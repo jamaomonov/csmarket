@@ -1,0 +1,11 @@
+# Copy to wrangler.toml (git-ignored) and deploy with `npx wrangler deploy`.
+name = "csmarket-p2p-relay"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Secrets — never in this file:
+#   npx wrangler secret put RELAY_SECRET      # what Telegram sends (setWebhook secret_token)
+#   npx wrangler secret put YUPAY_URL         # https://api.yupay.uz/api/v1/webhooks/telegram/p2p
+#   npx wrangler secret put YUPAY_SECRET      # YuPay's P2P_WEBHOOK_SECRET
+#   npx wrangler secret put CSMARKET_URL      # https://api.csmarket.uz/api/v1/webhooks/telegram/p2p
+#   npx wrangler secret put CSMARKET_SECRET   # csmarket's CSMARKET_P2P_WEBHOOK_SECRET
