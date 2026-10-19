@@ -40,6 +40,7 @@ from csmarket_scheduler.jobs import (
     orders_erase,
     orders_expiry,
     orders_health,
+    p2p_sweep,
     payme_timeout,
     public_feed,
     purge_refresh_tokens,
@@ -94,6 +95,7 @@ def build_scheduler() -> AsyncIOScheduler:
     trades_audit.register(scheduler)
     orders_health.register(scheduler)
     orders_erase.register(scheduler)
+    p2p_sweep.register(scheduler)
     return scheduler
 
 

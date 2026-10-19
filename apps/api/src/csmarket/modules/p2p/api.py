@@ -3,7 +3,13 @@
 from __future__ import annotations
 
 from csmarket.modules.p2p.models import P2PCard, P2PIncoming, P2PReservation, P2PSettings
-from csmarket.modules.p2p.reservations import P2PDetails, details, reserve_topup, sweep
+from csmarket.modules.p2p.reservations import (
+    P2PDetails,
+    details,
+    reserve_topup,
+    sweep,
+    sweep_tick,
+)
 
 __all__ = [
     "P2PCard",
@@ -14,4 +20,5 @@ __all__ = [
     "details",
     "reserve_topup",
     "sweep",
+    "sweep_tick",
 ]

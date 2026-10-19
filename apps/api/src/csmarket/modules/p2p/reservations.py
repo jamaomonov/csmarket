@@ -223,6 +223,13 @@ async def sweep(db: AsyncSession, *, at: datetime) -> SweepResult:
     return SweepResult(expired=expired, released=len(done))
 
 
+async def sweep_tick(db: AsyncSession, *, at: datetime) -> tuple[SweepResult, datetime | None]:
+    """One scheduler tick: :func:`sweep`, and when the last HUMO notification arrived (the
+    ``P2PSilence`` alert's input)."""
+    result = await sweep(db, at=at)
+    return result, (await load_settings(db)).last_received_at
+
+
 __all__ = [
     "QUARANTINE",
     "RESERVATION_TTL",
@@ -231,4 +238,5 @@ __all__ = [
     "details",
     "reserve_topup",
     "sweep",
+    "sweep_tick",
 ]
