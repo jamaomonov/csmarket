@@ -8,7 +8,6 @@ import { calendarKey } from "./keys";
 import { som } from "./labels";
 import { shiftMonth, type Span } from "./period";
 
-
 import { useNarrow } from "@/lib/useNarrow";
 
 const MONTHS = [
