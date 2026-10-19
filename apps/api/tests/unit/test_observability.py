@@ -165,3 +165,20 @@ def test_before_send_strips_urls_from_exception_values() -> None:
     assert "FAKEKEY123" not in value
     assert "FAKETOKEN9" not in value
     assert "https://api.example.invalid/x" in value
+
+
+def test_an_unreported_app_error_never_reaches_sentry() -> None:
+    """A known upstream outage (``report = False``) is a 503 and a warning, not an error."""
+    from csmarket.core.errors import UpstreamUnavailableError
+    from csmarket.core.observability import _before_send
+    from csmarket.modules.sales.inventory import unavailable
+
+    quiet = unavailable()
+    event: Any = {"exception": {"values": [{"type": "SalesUnavailableError"}]}}
+    assert _before_send(event, {"exc_info": (type(quiet), quiet, None)}) is None
+    loud = UpstreamUnavailableError("waxpeer down")
+    assert _before_send(event, {"exc_info": (type(loud), loud, None)}) == event
+
+
+def test_the_sell_inventory_waits_fifteen_seconds() -> None:
+    assert Settings().sales_inventory_timeout_seconds == 15.0

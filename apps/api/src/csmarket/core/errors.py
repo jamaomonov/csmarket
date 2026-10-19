@@ -14,6 +14,9 @@ class AppError(Exception):
     status_code: int = 500
     type_uri: str = "https://csmarket.uz/errors/internal"
     title: str = "Internal error"
+    #: ``False``: an expected 5xx (a known upstream outage, logged where it happens) that
+    #: Sentry drops (``core.observability._before_send``).
+    report: bool = True
 
     def __init__(self, detail: str | None = None, **extra: Any) -> None:
         super().__init__(detail or self.title)

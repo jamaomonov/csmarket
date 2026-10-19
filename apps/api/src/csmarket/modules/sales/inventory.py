@@ -6,9 +6,10 @@ same :data:`CACHE_TTL` per user and trade link (:func:`cache_key`): ``POST /sell
 from this copy, never from the browser. Soʻm prices are computed on every read (the settings
 and the rate may move); an item that prices to 0 soʻm is left out.
 
-The call is the ADR-0016 carve-out (AGENTS §11): advisory, a 6 s timeout, no database
-connection held across it, a :data:`BREAKER_TTL` breaker after an outage or a 403 (a 429 is
-only the caller's 503), and the route's own ``ip_guard`` bucket. ``inventory_reload`` is
+The call is the ADR-0016 carve-out (AGENTS §11): advisory, a 15 s timeout, no database
+connection held across it, a :data:`BREAKER_TTL` breaker after :data:`BREAKER_AFTER` outages or
+403s in a row (one slow inventory is only its caller's 503, and so is a 429), and the route's
+own ``ip_guard`` bucket. ``inventory_reload`` is
 asked once more; a Steam account refusal is 409 ``steam_refused`` with Skinslink's code as
 ``reason``.
 """
@@ -57,12 +58,20 @@ log = get_logger("csmarket.sales.inventory")
 CACHE_TTL = 300
 BREAKER_KEY = "sales:inventory:breaker"
 BREAKER_TTL = 120
+#: Failures in a row (none answered between them) that open the breaker, counted in
+#: :data:`FAILURES_KEY` for :data:`BREAKER_TTL` seconds.
+BREAKER_AFTER = 3
+FAILURES_KEY = "sales:inventory:failures"
 
 
 class SalesUnavailableError(UpstreamUnavailableError):
-    """Skinslink could not be asked (an outage, a 403, the breaker open)."""
+    """Skinslink could not be asked (an outage, a 403, the breaker open).
+
+    Expected and already logged as a warning: never an error in Sentry.
+    """
 
     status_code = 503
+    report = False
     type_uri = "https://csmarket.uz/errors/sales-unavailable"
     title = "Selling unavailable"
 
@@ -161,10 +170,27 @@ async def _breaker_open(redis: Redis) -> bool:
     return False
 
 
-async def _open_breaker(redis: Redis, error: Exception) -> None:
+async def _failed(redis: Redis, error: Exception) -> None:
+    """Count one outage; the :data:`BREAKER_AFTER`-th in a row opens the breaker."""
+    failures = 0
+    with contextlib.suppress(RedisError):
+        async with redis.pipeline(transaction=True) as pipe:
+            pipe.incr(FAILURES_KEY)
+            pipe.expire(FAILURES_KEY, BREAKER_TTL)
+            failures = int((await pipe.execute())[0])
+    if failures < BREAKER_AFTER:
+        log.warning("sales.inventory.failed", error=type(error).__name__, failures=failures)
+        return
     log.warning("sales.inventory.breaker_open", error=type(error).__name__)
     with contextlib.suppress(RedisError):
         await redis.set(BREAKER_KEY, "1", ex=BREAKER_TTL)
+        await redis.delete(FAILURES_KEY)
+
+
+async def _answered(redis: Redis) -> None:
+    """Skinslink answered: the outage count starts over."""
+    with contextlib.suppress(RedisError):
+        await redis.delete(FAILURES_KEY)
 
 
 async def _ask(client: DepositClient, link: TradeLink) -> Inventory:
@@ -193,7 +219,7 @@ async def fetch_snapshot(
     try:
         inventory = await _ask(client, link)
     except SkinslinkForbiddenError as exc:
-        await _open_breaker(redis, exc)
+        await _failed(redis, exc)
         raise unavailable() from None
     except SkinslinkError as exc:
         if exc.code in STEAM_ACCOUNT_CODES:
@@ -207,8 +233,9 @@ async def fetch_snapshot(
         log.warning("sales.inventory.rate_limited")
         raise unavailable() from None
     except SkinslinkUnavailableError as exc:
-        await _open_breaker(redis, exc)
+        await _failed(redis, exc)
         raise unavailable() from None
+    await _answered(redis)
     snap = Snapshot(items=tuple(inventory.items), max_items=inventory.max_items, fetched_at=now())
     await _keep(redis, user_id, link.url, snap)
     return snap

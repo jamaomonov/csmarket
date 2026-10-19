@@ -182,7 +182,7 @@ class Settings(BaseSettings):
         description="Let users sell skins (the admin's «Выкуп включён» must be on too).",
     )
     sales_inventory_timeout_seconds: float = Field(
-        default=6.0, gt=0, description="Skinslink inventory on GET /sell/inventory (ADR-0016)."
+        default=15.0, gt=0, description="Skinslink inventory on GET /sell/inventory (ADR-0016)."
     )
     sales_deposit_timeout_seconds: float = Field(
         default=10.0, gt=0, description="Skinslink create-deposit on POST /sell (ADR-0016)."

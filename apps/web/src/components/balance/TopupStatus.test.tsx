@@ -334,7 +334,9 @@ describe("TopupStatus", () => {
     });
     api.getTopup
       .mockResolvedValueOnce(pending)
-      .mockResolvedValue(topup({ ...pending, status: "succeeded", p2p: null, awaiting_kassa: false }));
+      .mockResolvedValue(
+        topup({ ...pending, status: "succeeded", p2p: null, awaiting_kassa: false }),
+      );
     view();
     expect(await screen.findByText("9860 0000 0000 4321")).toBeInTheDocument();
     expect(
@@ -342,4 +344,3 @@ describe("TopupStatus", () => {
     ).toBeInTheDocument();
   });
 });
-

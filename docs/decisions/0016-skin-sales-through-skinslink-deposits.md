@@ -41,7 +41,7 @@ reversals) Skinslink's, and its `min_prices` lets us fix the payout when the sal
   credits us at least that or refuses the deposit (`item_specified_price_not_found` →
   `prices_changed`).
 - **Two new AGENTS §11 carve-outs.** `GET /sell/inventory` calls Skinslink `inventory` on a
-  cache miss (6 s timeout, 120 s breaker, its own `ip_guard` bucket, no DB connection held);
+  cache miss (15 s timeout, a 120 s breaker after 3 failures in a row, its own `ip_guard` bucket, no DB connection held);
   `POST /sell` stores and commits the sale, then calls `create-deposit` once (10 s; a timeout
   leaves the sale `creating` for the poll, which asks `deposit/status`).
 - **One status machine.** `sales.status.apply_deposit` moves a sale under its row lock; the

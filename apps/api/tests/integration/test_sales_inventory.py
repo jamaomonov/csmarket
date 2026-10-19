@@ -180,7 +180,27 @@ async def test_a_steam_refusal_is_409_with_its_reason(
     )
 
 
-async def test_an_outage_opens_the_breaker(
+async def test_two_outages_keep_selling_open_the_third_opens_the_breaker(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,  # noqa: F811 -- the imported fixture
+    fake: FakeDepositClient,
+) -> None:
+    """One slow inventory (a big one, a new user) must not close selling for everyone."""
+    headers = await ready_seller(db_session, customer_headers)
+    fake.inventories.clear()
+    fake.inventories.append(SkinslinkUnavailableError("down"))
+    for _ in range(3):
+        r = await integration_client.get(f"{URL}?refresh=1", headers=headers)
+        assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
+    assert fake.inventory_calls == 3  # the first two left the breaker shut
+    r = await integration_client.get(f"{URL}?refresh=1", headers=headers)
+    assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
+    assert fake.inventory_calls == 3  # the third opened it: the fourth never reached Skinslink
+
+
+async def test_a_success_starts_the_failure_count_over(
     db_session: AsyncSession,
     integration_client: AsyncClient,
     customer_headers: Headers,
@@ -189,11 +209,14 @@ async def test_an_outage_opens_the_breaker(
 ) -> None:
     headers = await ready_seller(db_session, customer_headers)
     fake.inventories.clear()
-    fake.inventories.append(SkinslinkUnavailableError("down"))
-    for _ in range(2):
-        r = await integration_client.get(f"{URL}?refresh=1", headers=headers)
-        assert (r.status_code, r.json()["code"]) == (503, "sales_unavailable")
-    assert fake.inventory_calls == 1  # the second read never reached Skinslink
+    down = SkinslinkUnavailableError("down")
+    fake.inventories.extend([down, down, INVENTORY, down, down, INVENTORY])
+    codes = [
+        (await integration_client.get(f"{URL}?refresh=1", headers=headers)).status_code
+        for _ in range(6)
+    ]
+    assert codes == [503, 503, 200, 503, 503, 200]
+    assert fake.inventory_calls == 6
 
 
 async def test_a_rate_limit_answers_503_without_closing_selling_for_everyone(

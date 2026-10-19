@@ -1,6 +1,6 @@
 """The Skinslink deposit client, as FastAPI dependencies — one per route's timeout.
 
-``GET /sell/inventory`` waits :attr:`Settings.sales_inventory_timeout_seconds` (6 s),
+``GET /sell/inventory`` waits :attr:`Settings.sales_inventory_timeout_seconds` (15 s),
 ``POST /sell`` :attr:`Settings.sales_deposit_timeout_seconds` (10 s): ADR-0016. Tests
 override both with a fake.
 """

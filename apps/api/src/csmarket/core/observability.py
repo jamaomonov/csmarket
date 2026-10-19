@@ -75,9 +75,18 @@ def _before_breadcrumb(crumb: Breadcrumb, _hint: BreadcrumbHint) -> Breadcrumb |
     return crumb
 
 
-def _before_send(event: Event, _hint: Hint) -> Event | None:
+def _is_unreported(hint: Hint) -> bool:
+    """Is this an :class:`AppError` marked ``report = False`` (an expected upstream outage)?"""
+    from csmarket.core.errors import AppError
+
+    exc_info = hint.get("exc_info")
+    exc = exc_info[1] if isinstance(exc_info, tuple) and len(exc_info) > 1 else None
+    return isinstance(exc, AppError) and not exc.report
+
+
+def _before_send(event: Event, hint: Hint) -> Event | None:
     """Drop deploy-time APScheduler noise; strip bodies and query strings from the rest."""
-    if _is_shutdown_cancellation(event):
+    if _is_shutdown_cancellation(event) or _is_unreported(hint):
         return None
     request = event.get("request")
     if isinstance(request, dict):
