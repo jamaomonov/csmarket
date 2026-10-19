@@ -177,6 +177,11 @@ class Sale(Base):
         ),
         Index("ix_sales_created_at", "created_at"),
         Index(
+            "ix_sales_credited_at",
+            "credited_at",
+            postgresql_where=text("credited_at IS NOT NULL"),
+        ),
+        Index(
             "ix_sales_attention_open",
             "attention_reason",
             postgresql_where=text("attention_reason IS NOT NULL AND resolved_at IS NULL"),
