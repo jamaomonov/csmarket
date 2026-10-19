@@ -15,7 +15,9 @@ import { Row, Section } from "@/components/Section";
 import { SkinThumb } from "@/components/SkinThumb";
 import { UserCell } from "@/components/UserCell";
 
-interface B { data: BusinessOut }
+interface B {
+  data: BusinessOut;
+}
 
 export function Sources({ data }: B) {
   return (
