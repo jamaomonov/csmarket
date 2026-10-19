@@ -43,6 +43,7 @@ from csmarket.modules.payments.switches import ensure_open
 from csmarket.modules.payments.topups import (
     TopupView,
     create_topup,
+    credit_received_transfer,
     expire_stale,
     owned_topup,
     topup_view,
@@ -71,6 +72,7 @@ __all__ = [
     "cancel_pending",
     "charge_of",
     "create_topup",
+    "credit_received_transfer",
     "ensure_attempt",
     "ensure_open",
     "expire_stale",

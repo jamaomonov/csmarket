@@ -4663,56 +4663,141 @@
         "title": "CardFees",
         "type": "object"
       },
-      "CardOut": {
-        "description": "A saved card: its type and last four digits, never the number.",
+      "CardIn": {
+        "additionalProperties": false,
+        "description": "A new card: the full number once.",
         "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "last4": {
-            "title": "Last4",
-            "type": "string"
-          },
-          "type": {
-            "enum": [
-              "uzcard",
-              "humo",
-              "uzum_visa"
+          "daily_limit_uzs": {
+            "anyOf": [
+              {
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Type",
+            "title": "Daily Limit Uzs"
+          },
+          "holder_name": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Holder Name",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "max_amount_uzs": {
+            "default": 5000000,
+            "minimum": 1000.0,
+            "title": "Max Amount Uzs",
+            "type": "integer"
+          },
+          "min_amount_uzs": {
+            "default": 10000,
+            "minimum": 1000.0,
+            "title": "Min Amount Uzs",
+            "type": "integer"
+          },
+          "network": {
+            "default": "humo",
+            "enum": [
+              "humo",
+              "uzcard"
+            ],
+            "title": "Network",
+            "type": "string"
+          },
+          "pan": {
+            "maxLength": 32,
+            "minLength": 16,
+            "title": "Pan",
             "type": "string"
           }
         },
         "required": [
-          "id",
-          "type",
-          "last4",
-          "created_at"
+          "label",
+          "pan",
+          "holder_name"
         ],
-        "title": "CardOut",
+        "title": "CardIn",
         "type": "object"
       },
-      "CardsOut": {
-        "description": "The user's live cards, oldest first.",
+      "CardPatch": {
+        "additionalProperties": false,
+        "description": "Change a card: on / off and its limits.",
         "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/CardOut"
-            },
-            "title": "Items",
-            "type": "array"
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "daily_limit_uzs": {
+            "anyOf": [
+              {
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Limit Uzs"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "max_amount_uzs": {
+            "anyOf": [
+              {
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount Uzs"
+          },
+          "min_amount_uzs": {
+            "anyOf": [
+              {
+                "minimum": 1000.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Amount Uzs"
+          },
+          "no_daily_limit": {
+            "default": false,
+            "title": "No Daily Limit",
+            "type": "boolean"
           }
         },
-        "required": [
-          "items"
-        ],
-        "title": "CardsOut",
+        "title": "CardPatch",
         "type": "object"
       },
       "CatalogItemOut": {
@@ -5056,6 +5141,48 @@
         "title": "CountOut",
         "type": "object"
       },
+      "CreditIn": {
+        "additionalProperties": false,
+        "description": "Book an unmatched transfer for a user.",
+        "properties": {
+          "note": {
+            "maxLength": 300,
+            "minLength": 4,
+            "title": "Note",
+            "type": "string"
+          },
+          "user_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "note"
+        ],
+        "title": "CreditIn",
+        "type": "object"
+      },
+      "CreditOut": {
+        "description": "The booked transfer.",
+        "properties": {
+          "incoming": {
+            "$ref": "#/components/schemas/IncomingOut"
+          },
+          "topup_number": {
+            "title": "Topup Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incoming",
+          "topup_number"
+        ],
+        "title": "CreditOut",
+        "type": "object"
+      },
       "DashboardOut": {
         "description": "Sales, margin and refunds for today / 7 / 30 Tashkent days, plus what needs a look.",
         "properties": {
@@ -5335,6 +5462,165 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IncomingOut": {
+        "description": "One HUMO notification and what it turned into.",
+        "properties": {
+          "amount_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Uzs"
+          },
+          "balance_after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Balance After"
+          },
+          "bank_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Time"
+          },
+          "can_credit": {
+            "title": "Can Credit",
+            "type": "boolean"
+          },
+          "card_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Card Last4"
+          },
+          "chain_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chain Ok"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "credit",
+              "debit",
+              "unparsed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "received_at": {
+            "format": "date-time",
+            "title": "Received At",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "matched",
+              "unmatched",
+              "ignored"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "amount_uzs",
+          "card_last4",
+          "source_text",
+          "bank_time",
+          "balance_after",
+          "chain_ok",
+          "result",
+          "number",
+          "received_at",
+          "can_credit"
+        ],
+        "title": "IncomingOut",
+        "type": "object"
+      },
+      "IncomingPage": {
+        "description": "A page of the journal, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IncomingOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "IncomingPage",
         "type": "object"
       },
       "InventoryOut": {
@@ -7990,6 +8276,137 @@
         "title": "RejectIn",
         "type": "object"
       },
+      "RequestOut": {
+        "description": "One top-up request.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "card_masked": {
+            "title": "Card Masked",
+            "type": "string"
+          },
+          "closed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "expired",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/RequestUser"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "amount_uzs",
+          "card_masked",
+          "user",
+          "created_at",
+          "expires_at",
+          "closed_at"
+        ],
+        "title": "RequestOut",
+        "type": "object"
+      },
+      "RequestUser": {
+        "description": "Who asked for the transfer.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "avatar_url"
+        ],
+        "title": "RequestUser",
+        "type": "object"
+      },
+      "RequestsPage": {
+        "description": "A page of requests, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RequestOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "RequestsPage",
+        "type": "object"
+      },
       "ResolveIn": {
         "description": "\u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043e\u00bb with an optional note.",
         "properties": {
@@ -9032,6 +9449,147 @@
           "display_name"
         ],
         "title": "SettingsAuthorOut",
+        "type": "object"
+      },
+      "SettingsIn": {
+        "additionalProperties": false,
+        "description": "The trusted Telegram ids and the buyer's limits.",
+        "properties": {
+          "daily_amount_uzs": {
+            "minimum": 1000.0,
+            "title": "Daily Amount Uzs",
+            "type": "integer"
+          },
+          "daily_count": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Daily Count",
+            "type": "integer"
+          },
+          "humo_bot_user_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Humo Bot User Id"
+          },
+          "max_amount_uzs": {
+            "minimum": 1000.0,
+            "title": "Max Amount Uzs",
+            "type": "integer"
+          },
+          "min_amount_uzs": {
+            "minimum": 1000.0,
+            "title": "Min Amount Uzs",
+            "type": "integer"
+          },
+          "owner_telegram_user_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Telegram User Id"
+          }
+        },
+        "required": [
+          "min_amount_uzs",
+          "max_amount_uzs",
+          "daily_count",
+          "daily_amount_uzs"
+        ],
+        "title": "SettingsIn",
+        "type": "object"
+      },
+      "SettingsOut": {
+        "description": "The settings and the connection's state.",
+        "properties": {
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "daily_amount_uzs": {
+            "minimum": 1000.0,
+            "title": "Daily Amount Uzs",
+            "type": "integer"
+          },
+          "daily_count": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Daily Count",
+            "type": "integer"
+          },
+          "humo_bot_user_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Humo Bot User Id"
+          },
+          "last_received_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Received At"
+          },
+          "max_amount_uzs": {
+            "minimum": 1000.0,
+            "title": "Max Amount Uzs",
+            "type": "integer"
+          },
+          "min_amount_uzs": {
+            "minimum": 1000.0,
+            "title": "Min Amount Uzs",
+            "type": "integer"
+          },
+          "owner_telegram_user_id": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Telegram User Id"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "min_amount_uzs",
+          "max_amount_uzs",
+          "daily_count",
+          "daily_amount_uzs",
+          "connected",
+          "last_received_at",
+          "updated_at"
+        ],
+        "title": "SettingsOut",
         "type": "object"
       },
       "SkinCrateOut": {
@@ -10947,6 +11505,99 @@
         "title": "RefundsOut",
         "type": "object"
       },
+      "csmarket__modules__p2p__schemas__CardOut": {
+        "description": "A card as the admin sees it: masked.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "daily_limit_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Limit Uzs"
+          },
+          "holder_name": {
+            "title": "Holder Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "masked": {
+            "title": "Masked",
+            "type": "string"
+          },
+          "max_amount_uzs": {
+            "title": "Max Amount Uzs",
+            "type": "string"
+          },
+          "min_amount_uzs": {
+            "title": "Min Amount Uzs",
+            "type": "string"
+          },
+          "network": {
+            "enum": [
+              "humo",
+              "uzcard"
+            ],
+            "title": "Network",
+            "type": "string"
+          },
+          "today_uzs": {
+            "title": "Today Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "masked",
+          "holder_name",
+          "network",
+          "active",
+          "min_amount_uzs",
+          "max_amount_uzs",
+          "daily_limit_uzs",
+          "today_uzs",
+          "created_at"
+        ],
+        "title": "CardOut",
+        "type": "object"
+      },
+      "csmarket__modules__p2p__schemas__CardsOut": {
+        "description": "Every card, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/csmarket__modules__p2p__schemas__CardOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CardsOut",
+        "type": "object"
+      },
       "csmarket__modules__public_api__schemas__MeOut": {
         "description": "The caller's balance, wallet switch, key and limits.",
         "properties": {
@@ -10972,6 +11623,58 @@
           "limits"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "csmarket__modules__sales__schemas__CardOut": {
+        "description": "A saved card: its type and last four digits, never the number.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "last4": {
+            "title": "Last4",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "uzcard",
+              "humo",
+              "uzum_visa"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "last4",
+          "created_at"
+        ],
+        "title": "CardOut",
+        "type": "object"
+      },
+      "csmarket__modules__sales__schemas__CardsOut": {
+        "description": "The user's live cards, oldest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/csmarket__modules__sales__schemas__CardOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CardsOut",
         "type": "object"
       },
       "csmarket__modules__users__schemas__MeOut": {
@@ -12471,6 +13174,596 @@
           }
         },
         "summary": "Retry the order's buy",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/p2p/cards": {
+      "get": {
+        "description": "Every card, masked, newest first, with today's received sum.",
+        "operationId": "get_cards_api_v1_admin_p2p_cards_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__p2p__schemas__CardsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "P2P cards",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "The full number once; it is sealed and never shown again. Audited ``p2p.card.add``.",
+        "operationId": "post_card_api_v1_admin_p2p_cards_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__p2p__schemas__CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`p2p_last4_taken` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add a P2P card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/p2p/cards/{card_id}": {
+      "patch": {
+        "description": "Switch a card on or off, rename it, change its limits. Audited ``p2p.card.update``.",
+        "operationId": "patch_card_api_v1_admin_p2p_cards__card_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "card_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Card Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CardPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__p2p__schemas__CardOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change a P2P card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/p2p/incoming": {
+      "get": {
+        "description": "Every HUMO notification newest first; ``amount`` is whole so\u02bbm.",
+        "operationId": "get_incoming_api_v1_admin_p2p_incoming_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "amount",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Amount"
+            }
+          },
+          {
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "matched",
+                    "unmatched",
+                    "ignored"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Result"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IncomingPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "P2P journal",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/p2p/incoming/{incoming_id}/credit": {
+      "post": {
+        "description": "\u00ab\u0417\u0430\u0447\u0438\u0441\u043b\u0438\u0442\u044c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044e\u00bb: a new top-up for the user, settled at once with the\ntransfer's amount. Refused while a request of that card and amount still holds it.\nAudited ``p2p.incoming.credit`` (the note too).",
+        "operationId": "post_credit_api_v1_admin_p2p_incoming__incoming_id__credit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "incoming_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Incoming Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`p2p_already_credited`, `p2p_not_creditable`, `p2p_quarantine` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book an unmatched transfer for a user",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/p2p/requests": {
+      "get": {
+        "description": "Top-up requests newest first, with the buyer and the masked card.",
+        "operationId": "get_requests_api_v1_admin_p2p_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "paid",
+                    "expired",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "P2P requests",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/p2p/settings": {
+      "get": {
+        "description": "The trusted Telegram ids, the limits, the connection's state.",
+        "operationId": "get_settings_view_api_v1_admin_p2p_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "P2P settings",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Replace the editable settings. Audited ``p2p.settings.save``.",
+        "operationId": "put_settings_api_v1_admin_p2p_settings_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save the P2P settings",
         "tags": [
           "admin"
         ]
@@ -17196,7 +18489,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CardsOut"
+                  "$ref": "#/components/schemas/csmarket__modules__sales__schemas__CardsOut"
                 }
               }
             },

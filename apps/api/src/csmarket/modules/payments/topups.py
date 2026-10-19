@@ -237,6 +237,32 @@ async def create_topup(
     return topup, payment, await _intent(db, gateway, payable, locale)
 
 
+async def credit_received_transfer(
+    db: AsyncSession, *, user_id: str, amount_uzs: Decimal, provider: str, event_id: str
+) -> WalletTopup:
+    """Book money that already arrived outside any open top-up (an admin crediting an unmatched
+    P2P transfer, spec 2026-10-19-p2p-topup): a new top-up for ``user_id`` and its attempt in
+    ``provider``, settled at once through :func:`.hooks.settle`. Flushes, never commits; the
+    kassa switch is not consulted (the money is in).
+    """
+    topup = WalletTopup(
+        id=new_id(),
+        number=await allocate(db, WalletTopup.number, topup_number),
+        user_id=user_id,
+        amount_uzs=amount_uzs,
+        status="pending",
+        idempotency_key=f"credit:{event_id}",
+        expires_at=now() + timedelta(minutes=get_settings().topup_expiry_minutes),
+    )
+    db.add(topup)
+    await db.flush()
+    payable = await resolve(db, topup.number, lock=True)
+    payment = await ensure_attempt(db, payable=payable, provider=provider)
+    await settle(db, payment=payment, event_id=event_id)
+    log.info("payments.topup.credited_by_hand", number=topup.number, provider=provider)
+    return topup
+
+
 async def owned_topup(db: AsyncSession, *, user_id: str, number: str) -> WalletTopup | None:
     """``user_id``'s top-up ``number``; ``None`` when malformed, unknown or someone else's."""
     if not is_topup_number(number):
