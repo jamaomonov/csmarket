@@ -14,7 +14,9 @@ account page.
    - **bad** — the link is invalid, the inventory is private, trading is banned, or Steam holds
      trades on the account (a hold is refused: the customer is told to turn on Steam Guard in the
      mobile app, and the link cannot be used to buy until the hold is gone) — it says which;
-   - **no verdict** — the check was unavailable right now. The link stays saved.
+   - **no verdict** — the check was unavailable right now, or Waxpeer answered in words we do
+     not know yet (logged as `users.tradelink.unread`). The link stays saved and buying is not
+     blocked.
 4. They can run the check again at any time. A repeat within 10 minutes answers at once.
 
 ## Sequence

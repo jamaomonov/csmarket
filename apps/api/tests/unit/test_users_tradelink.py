@@ -218,6 +218,8 @@ async def test_a_cached_hold_verdict_is_bad_too(redis) -> None:
         ("Steam user not found", "not_found"),
         ("Profile does not exist", "not_found"),
         ("Inventory is private", "private"),
+        # Waxpeer's real answer for a hidden inventory (prod, 2026-10-20).
+        ("Please set your steam inventory public", "private"),
         ("Invalid tradelink", "invalid"),
         ("Bad trade url", "invalid"),
         # WAX-04: text that does not name the link is not a verdict on it.
@@ -294,3 +296,14 @@ async def test_one_links_failure_never_opens_the_breaker(redis, exc: Exception) 
 
 def _is_waxpeer(exc: Exception) -> bool:
     return type(exc).__module__.startswith("csmarket")
+
+
+def test_an_unknown_refusal_is_logged_without_the_link() -> None:
+    """The text of a refusal we cannot read is logged, minus anything that names a person."""
+    from csmarket.modules.users.tradelink import _scrubbed
+
+    link = "https://steamcommunity.com/tradeoffer/new/?partner=123456789&token=AbC-d1"
+    out = _scrubbed(f"Odd: {link} 76561198000000001")
+    for secret in ("AbC-d1", "123456789", "76561198000000001"):
+        assert secret not in out
+    assert out.startswith("Odd:")

@@ -22,6 +22,7 @@ _LINK_PHRASES = ("tradelink", "trade link", "trade url")
 _ACCOUNT_HINTS = (
     "inventory is private",
     "private inventory",
+    "inventory public",
     "trade ban",
     "cannot trade",
     "can't trade",

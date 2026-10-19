@@ -150,7 +150,8 @@ def _reason_for(info: str) -> Reason | None:
     text = info.lower()
     if any(hint in text for hint in SERVICE_HINTS):
         return None
-    if "private" in text:
+    # «Inventory is private», «Please set your steam inventory public».
+    if "private" in text or "public" in text:
         return "private"
     if "ban" in text:
         return "trade_ban"
@@ -163,6 +164,16 @@ def _reason_for(info: str) -> Reason | None:
 
 class _NoVerdictError(Exception):
     """Waxpeer refused with text that does not name the link."""
+
+
+_URL = re.compile(r"https?://\S+")
+_LONG_NUMBER = re.compile(r"\d{6,}")
+
+
+def _scrubbed(info: str) -> str:
+    """Waxpeer's refusal fit for a log: no URL (a link carries its token), no Steam or partner
+    id, at most 120 characters — so a phrase we cannot read yet can be learned."""
+    return _LONG_NUMBER.sub("<n>", _URL.sub("<url>", info))[:120]
 
 
 def _is_outage(exc: Exception) -> bool:
@@ -187,6 +198,7 @@ async def _run(link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker)
     if info:
         reason = _reason_for(info)
         if reason is None:
+            log.warning("users.tradelink.unread", text=_scrubbed(info))
             raise _NoVerdictError
         return CheckResult(verdict="bad", reason=reason)
     days = await hold.trade_hold_days(link.steam_id, link.token)

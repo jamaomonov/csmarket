@@ -48,7 +48,9 @@ Steam is the only identity; roles (`admin`) live in `users.roles`.
   - The check asks Waxpeer `check-tradelink` (reason text → `private`, `trade_ban`,
     `not_found` or `invalid`, verdict `bad` — only text that names the link: a refusal about
     the key or the service, or a phrase we do not know, is `unavailable` and never stored as
-    `bad`), then Steam `GetTradeHoldDurations` (non-zero hold → `bad`,
+    `bad`; an unknown phrase is logged scrubbed as `users.tradelink.unread` so it can be
+    learned. A hidden inventory comes as «Inventory is private» or «Please set your steam
+    inventory public», both `private`), then Steam `GetTradeHoldDurations` (non-zero hold → `bad`,
     `hold`: a hold is refused, owner 2026-10-01; `warn` stays in the schema and the DB check
     but nothing produces it). No Steam key → the hold check is skipped (ruling P10).
   - Any upstream failure or a missing Waxpeer key → verdict `null`, reason `unavailable`,

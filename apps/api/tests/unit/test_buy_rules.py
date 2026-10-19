@@ -15,6 +15,7 @@ from csmarket.modules.skins.api import WaxpeerError
         "Bad trade link",
         "trade url is broken",
         "Your inventory is private",
+        "Please set your steam inventory public",
         "Buyer has a trade ban",
         "partner cannot trade",
     ],
