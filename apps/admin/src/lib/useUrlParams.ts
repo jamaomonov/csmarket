@@ -7,18 +7,22 @@ export interface UrlParams {
   get: (key: string) => string;
   /** Set `key` (an empty value removes it), replacing the history entry. */
   set: (key: string, value: string) => void;
+  /** Set several keys in one history entry (an empty value removes its key). */
+  setAll: (values: Record<string, string>) => void;
 }
 
 export function useUrlParams(): UrlParams {
   const [params, setParams] = useSearchParams();
   const get = useCallback((key: string): string => params.get(key) ?? "", [params]);
-  const set = useCallback(
-    (key: string, value: string): void => {
+  const setAll = useCallback(
+    (values: Record<string, string>): void => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          if (value === "") next.delete(key);
-          else next.set(key, value);
+          for (const [key, value] of Object.entries(values)) {
+            if (value === "") next.delete(key);
+            else next.set(key, value);
+          }
           return next;
         },
         { replace: true },
@@ -26,5 +30,11 @@ export function useUrlParams(): UrlParams {
     },
     [setParams],
   );
-  return { get, set };
+  const set = useCallback(
+    (key: string, value: string): void => {
+      setAll({ [key]: value });
+    },
+    [setAll],
+  );
+  return { get, set, setAll };
 }
