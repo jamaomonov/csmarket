@@ -132,6 +132,17 @@ describe("SellView", () => {
     expect(screen.getByText(/Добавьте ссылку на обмен/)).toBeInTheDocument();
   });
 
+  it("shows the inventory's own layout, empty, while it loads", () => {
+    api.apiGet.mockImplementation((path: string) =>
+      path === "/api/v1/sell/inventory" ? new Promise(() => undefined) : Promise.resolve([]),
+    );
+    view();
+    const loading = screen.getByRole("status", { name: "Загружаем ваш инвентарь…" });
+    expect(loading).toHaveAttribute("aria-busy", "true");
+    expect(loading.querySelectorAll("[data-skeleton-card]")).toHaveLength(8);
+    expect(loading.querySelector("[data-skeleton-cart]")).not.toBeNull();
+  });
+
   it("lists the items we buy, dearest first, and says what is shown", async () => {
     view();
     const names = await screen.findAllByText(/Redline|Sand Dune/);

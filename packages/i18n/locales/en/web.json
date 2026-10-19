@@ -641,7 +641,8 @@
       "balancePlain": "To the csmarket balance — with a bonus on the sum.",
       "cardPlain": "To a Uzcard, Humo or Uzum Visa card. Transferred within 12 hours after Steam’s trade protection ends.",
       "open": "Sell skins"
-    }
+    },
+    "loading": "Loading your inventory…"
   },
   "sales": {
     "number": "Sale #{number}",

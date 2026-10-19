@@ -641,7 +641,8 @@
       "balancePlain": "csmarket balansiga — summaga bonus bilan.",
       "cardPlain": "Uzcard, Humo yoki Uzum Visa kartasiga. Oʻtkazma Steam almashuv himoyasi tugagandan keyin 12 soat ichida.",
       "open": "Skinlarni sotish"
-    }
+    },
+    "loading": "Inventaringiz yuklanmoqda…"
   },
   "sales": {
     "number": "#{number} sotuv",

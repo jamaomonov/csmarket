@@ -10,6 +10,7 @@ import { useMemo, useState } from "react";
 import { InventoryRefusal } from "./InventoryRefusal";
 import { SellCart } from "./SellCart";
 import { SellItemCard } from "./SellItemCard";
+import { SellSkeleton } from "./SellSkeleton";
 import { SellToolbar, type SellSort } from "./SellToolbar";
 
 import { TradeLinkForm } from "@/components/account/TradeLinkForm";
@@ -116,7 +117,7 @@ export function SellView({ locale, config }: SellViewProps) {
 
   let body;
   if (status === "loading" || (ready && inventory.isPending)) {
-    body = <div aria-busy className="bg-surface h-96 animate-pulse rounded-xl" />;
+    body = <SellSkeleton />;
   } else if (status !== "signed_in" || !user) {
     body = (
       <div className="bg-surface border-border flex flex-col items-start gap-4 rounded-xl border p-6">
