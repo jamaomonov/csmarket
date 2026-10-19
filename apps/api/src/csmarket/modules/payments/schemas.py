@@ -19,6 +19,11 @@ class ProviderOut(BaseModel):
     slug: str
     #: The percent the buyer pays on top through this kassa, e.g. ``"1.5"``; ``"0"`` for none.
     fee_pct: str
+    #: ``on`` or ``maintenance`` (show the tile greyed, «Технические работы»); an ``off``
+    #: kassa is not listed.
+    status: Literal["on", "maintenance"] = "on"
+    #: Balance top-ups only (P2P): never offered at checkout.
+    topup_only: bool = False
 
 
 class ProvidersOut(BaseModel):

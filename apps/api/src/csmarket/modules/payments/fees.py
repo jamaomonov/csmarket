@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from decimal import ROUND_CEILING, Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import select
@@ -26,14 +27,28 @@ from csmarket.modules.payments.payable import Payable
 log = get_logger("csmarket.payments.fees")
 
 
+KassaStatus = Literal["on", "maintenance", "off"]
+#: Kassas that start switched off until the owner turns them on (spec 2026-10-19-p2p-topup).
+_OFF_BY_DEFAULT = frozenset({"p2p"})
+
+
 class KassaFees(BaseModel):
-    """The whole document, as stored in ``payment_settings.settings``: percent per kassa."""
+    """The whole document, as stored in ``payment_settings.settings``: percent per kassa and
+    each kassa's switch."""
 
     model_config = ConfigDict(frozen=True)
 
     click: Decimal = Field(default=Decimal(0), ge=0, le=10, max_digits=4, decimal_places=2)
     payme: Decimal = Field(default=Decimal(0), ge=0, le=10, max_digits=4, decimal_places=2)
     uzum: Decimal = Field(default=Decimal(0), ge=0, le=10, max_digits=4, decimal_places=2)
+
+    #: A kassa's switch; a missing key is ``on`` (``off`` for :data:`_OFF_BY_DEFAULT`).
+    statuses: dict[str, KassaStatus] = Field(default_factory=dict)
+
+    def status(self, provider: str) -> KassaStatus:
+        """``provider``'s switch: ``on``, ``maintenance`` (shown, not payable) or ``off``."""
+        default: KassaStatus = "off" if provider in _OFF_BY_DEFAULT else "on"
+        return self.statuses.get(provider, default)
 
     def pct(self, provider: str) -> Decimal:
         """The percent of ``provider``; 0 for the balance, ``mock`` and anything else."""

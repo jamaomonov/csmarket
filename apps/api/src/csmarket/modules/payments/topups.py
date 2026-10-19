@@ -31,6 +31,7 @@ from csmarket.modules.payments.gateways import PaymentGateway, available_provide
 from csmarket.modules.payments.hooks import cancel_pending, ensure_attempt, mark_pending, settle
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable, resolve
+from csmarket.modules.payments.switches import ensure_open
 from csmarket.modules.wallet.api import WALLET
 
 log = get_logger("csmarket.payments.topups")
@@ -176,6 +177,7 @@ async def create_topup(
         return await _replay(db, existing, amount=amount_uzs, provider=provider, locale=locale)
     _check_amount(amount_uzs)
     gateway = _gateway(provider)
+    await ensure_open(db, provider)
     topup = WalletTopup(
         id=new_id(),
         number=await allocate(db, WalletTopup.number, topup_number),

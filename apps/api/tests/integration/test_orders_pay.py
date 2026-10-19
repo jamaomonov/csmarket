@@ -30,6 +30,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.conftest import CUSTOMER_STEAM_ID, dev_login_headers
+from tests.integration.kassa_fee_factory import set_fees
 from tests.integration.orders_factory import listen_orders, make_order
 from tests.integration.payments_factory import make_user
 
@@ -636,3 +637,16 @@ async def test_dev_pay_is_404_when_dev_login_is_off(
     finally:
         monkeypatch.undo()
         cfg.get_settings.cache_clear()
+
+
+async def test_an_order_is_refused_in_a_kassa_under_maintenance_or_p2p(
+    integration_client: AsyncClient,
+    headers: dict[str, str],
+    db_session: AsyncSession,
+    pending_order: Order,
+) -> None:
+    await set_fees(db_session, statuses={"mock": "maintenance"})
+    r = await _pay(integration_client, headers, pending_order.number, provider="mock")
+    assert (r.status_code, r.json()["code"]) == (409, "provider_maintenance")
+    r = await _pay(integration_client, headers, pending_order.number, provider="p2p")
+    assert (r.status_code, r.json()["code"]) == (422, "order_provider")

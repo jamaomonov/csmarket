@@ -5476,7 +5476,7 @@
         "type": "object"
       },
       "KassaFees-Input": {
-        "description": "The whole document, as stored in ``payment_settings.settings``: percent per kassa.",
+        "description": "The whole document, as stored in ``payment_settings.settings``: percent per kassa and\neach kassa's switch.",
         "properties": {
           "click": {
             "anyOf": [
@@ -5508,6 +5508,18 @@
             "default": "0",
             "title": "Payme"
           },
+          "statuses": {
+            "additionalProperties": {
+              "enum": [
+                "on",
+                "maintenance",
+                "off"
+              ],
+              "type": "string"
+            },
+            "title": "Statuses",
+            "type": "object"
+          },
           "uzum": {
             "anyOf": [
               {
@@ -5528,7 +5540,7 @@
         "type": "object"
       },
       "KassaFees-Output": {
-        "description": "The whole document, as stored in ``payment_settings.settings``: percent per kassa.",
+        "description": "The whole document, as stored in ``payment_settings.settings``: percent per kassa and\neach kassa's switch.",
         "properties": {
           "click": {
             "default": "0",
@@ -5541,6 +5553,18 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,2}|(?=[\\d.]{1,5}0*$)\\d{0,2}\\.\\d{0,2}0*$)",
             "title": "Payme",
             "type": "string"
+          },
+          "statuses": {
+            "additionalProperties": {
+              "enum": [
+                "on",
+                "maintenance",
+                "off"
+              ],
+              "type": "string"
+            },
+            "title": "Statuses",
+            "type": "object"
           },
           "uzum": {
             "default": "0",
@@ -7483,6 +7507,20 @@
           "slug": {
             "title": "Slug",
             "type": "string"
+          },
+          "status": {
+            "default": "on",
+            "enum": [
+              "on",
+              "maintenance"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "topup_only": {
+            "default": false,
+            "title": "Topup Only",
+            "type": "boolean"
           }
         },
         "required": [
@@ -16960,7 +16998,7 @@
     },
     "/api/v1/payments/providers": {
       "get": {
-        "description": "Anonymous: the storefront shows these tiles, each with the percent the buyer pays on\ntop (spec 2026-10-14-kassa-fee).",
+        "description": "Anonymous: the storefront shows these tiles, each with the percent the buyer pays on\ntop (spec 2026-10-14-kassa-fee) and its switch: a ``maintenance`` kassa is shown greyed, an\n``off`` one is left out (spec 2026-10-19-p2p-topup). ``topup_only`` kassas (P2P) are never\noffered at checkout.",
         "operationId": "list_providers_api_v1_payments_providers_get",
         "responses": {
           "200": {

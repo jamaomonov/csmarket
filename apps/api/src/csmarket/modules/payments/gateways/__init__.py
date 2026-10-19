@@ -12,6 +12,9 @@ from functools import cache
 from csmarket.core.errors import NotFoundError
 from csmarket.modules.payments.gateways.base import PaymentGateway, return_url
 
+#: Kassas that only take balance top-ups, never an order (P2P, spec 2026-10-19-p2p-topup).
+TOPUP_ONLY = frozenset({"p2p"})
+
 #: The order the storefront offers providers in.
 _ORDER = ("click", "payme", "uzum", "mock")
 

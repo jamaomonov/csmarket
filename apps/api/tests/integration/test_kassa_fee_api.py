@@ -37,7 +37,7 @@ async def test_admin_reads_and_saves_the_fees_with_audit(
     h = await admin_headers()
     empty = (await integration_client.get(URL, headers=h)).json()
     assert empty["updated_at"] is None
-    assert empty["settings"] == {"click": "0", "payme": "0", "uzum": "0"}
+    assert empty["settings"] == {"click": "0", "payme": "0", "uzum": "0", "statuses": {}}
     r = await integration_client.put(
         URL,
         json={"click": "1", "payme": "1.5", "uzum": "2"},
