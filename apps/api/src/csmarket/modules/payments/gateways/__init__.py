@@ -16,7 +16,7 @@ from csmarket.modules.payments.gateways.base import PaymentGateway, return_url
 TOPUP_ONLY = frozenset({"p2p"})
 
 #: The order the storefront offers providers in.
-_ORDER = ("click", "payme", "uzum", "mock")
+_ORDER = ("click", "payme", "uzum", "p2p", "mock")
 
 
 @cache
@@ -24,6 +24,7 @@ def registry() -> dict[str, PaymentGateway]:
     """Every gateway this build knows, by provider slug (available or not)."""
     from csmarket.modules.payments.gateways.click import ClickGateway
     from csmarket.modules.payments.gateways.mock import MockGateway
+    from csmarket.modules.payments.gateways.p2p import P2PGateway
     from csmarket.modules.payments.gateways.payme import PaymeGateway
     from csmarket.modules.payments.gateways.uzum import UzumGateway
 
@@ -32,6 +33,7 @@ def registry() -> dict[str, PaymentGateway]:
         PaymeGateway(),
         UzumGateway(),
         MockGateway(),
+        P2PGateway(),
     ]
     return {gateway.provider: gateway for gateway in gateways}
 

@@ -44,6 +44,17 @@ class TopupIn(BaseModel):
     locale: Locale
 
 
+class P2PTransferOut(BaseModel):
+    """A P2P top-up's transfer: the full card, its holder, the exact amount and the deadline."""
+
+    card_number: str
+    holder: str
+    #: Whole soʻm as digits: transfer exactly this.
+    amount_uzs: str
+    expires_at: datetime
+    status: Literal["pending", "paid", "expired", "cancelled"]
+
+
 class TopupOut(BaseModel):
     """A top-up as its owner sees it."""
 
@@ -63,6 +74,8 @@ class TopupOut(BaseModel):
     #: ``pending`` while a kassa holds an attempt: it may still settle after ``expires_at``,
     #: so a ``pending`` top-up without ``intent_url`` is "being checked", not "expired".
     awaiting_kassa: bool
+    #: A P2P top-up awaiting its transfer: where and how much (``null`` otherwise).
+    p2p: P2PTransferOut | None = None
 
     @classmethod
     def of(cls, view: TopupView) -> TopupOut:
@@ -78,7 +91,16 @@ class TopupOut(BaseModel):
             expires_at=t.expires_at,
             intent_url=view.intent_url,
             awaiting_kassa=view.awaiting_kassa,
+            p2p=None
+            if view.p2p is None
+            else P2PTransferOut(
+                card_number=view.p2p.card_number,
+                holder=view.p2p.holder,
+                amount_uzs=str(view.p2p.amount_uzs),
+                expires_at=view.p2p.expires_at,
+                status=view.p2p.status,  # type: ignore[arg-type]  # the reservations' check
+            ),
         )
 
 
-__all__ = ["Locale", "ProviderOut", "ProvidersOut", "TopupIn", "TopupOut"]
+__all__ = ["Locale", "P2PTransferOut", "ProviderOut", "ProvidersOut", "TopupIn", "TopupOut"]

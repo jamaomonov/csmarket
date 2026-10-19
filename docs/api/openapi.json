@@ -6445,6 +6445,47 @@
         "title": "OrdersPage",
         "type": "object"
       },
+      "P2PTransferOut": {
+        "description": "A P2P top-up's transfer: the full card, its holder, the exact amount and the deadline.",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "card_number": {
+            "title": "Card Number",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "holder": {
+            "title": "Holder",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "paid",
+              "expired",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "card_number",
+          "holder",
+          "amount_uzs",
+          "expires_at",
+          "status"
+        ],
+        "title": "P2PTransferOut",
+        "type": "object"
+      },
       "PaidIn": {
         "description": "\u00ab\u0412\u044b\u043f\u043b\u0430\u0447\u0435\u043d\u043e\u00bb with an optional note; ``override_reason`` pays a banned account or a\nfrozen wallet anyway (audited).",
         "properties": {
@@ -10233,6 +10274,16 @@
           "number": {
             "title": "Number",
             "type": "string"
+          },
+          "p2p": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/P2PTransferOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "provider": {
             "anyOf": [

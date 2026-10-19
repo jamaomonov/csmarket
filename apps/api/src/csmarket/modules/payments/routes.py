@@ -26,6 +26,7 @@ from csmarket.modules.payments.schemas import (
     TopupOut,
 )
 from csmarket.modules.payments.topups import (
+    P2P,
     TopupView,
     awaiting_kassa,
     create_topup,
@@ -86,6 +87,9 @@ async def post_topup(
         idempotency_key=key,
         locale=body.locale,
     )
+    if payment.provider == P2P:
+        # The card and the exact amount to transfer (spec 2026-10-19-p2p-topup).
+        return TopupOut.of(await topup_view(db, topup, locale=body.locale))
     view = TopupView(
         topup=topup,
         provider=payment.provider,
