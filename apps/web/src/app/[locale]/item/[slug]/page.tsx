@@ -203,25 +203,12 @@ export default async function SkinPage({ params }: Props) {
     </>
   );
 
-  const rarityTint =
-    item.rarity_color && /^#[0-9a-f]{6}$/i.test(item.rarity_color)
-      ? `radial-gradient(ellipse 60% 100% at 50% 0, ${item.rarity_color}33, transparent 70%)`
-      : null;
-
   return (
     <>
       <main
         id="main-content"
         className="relative isolate mx-auto max-w-[1320px] px-4 pb-10 pt-6 sm:px-6"
       >
-        {rarityTint && (
-          // The skin's rarity colours the top of its page: Covert red, Classified pink…
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 -top-16 -z-10 h-[640px]"
-            style={{ background: rarityTint }}
-          />
-        )}
         {productLd && <JsonLd data={productLd} />}
         <JsonLd data={breadcrumbLd} />
         <nav
