@@ -82,6 +82,18 @@ credit is credited by hand (§3). Telegram keeps undelivered updates for 24 h on
 `P2PAmbiguousCard`: two **active** cards end in the same four digits; nothing to them is
 credited automatically. Deactivate one; credit the stuck transfers by hand.
 
+### settle-refused
+
+`P2PSettleRefused`: a transfer matched a request, but its top-up had already been settled
+another way (paid through a kassa meanwhile). The transfer is on the journal as `unmatched`:
+credit it by hand to that buyer (§3) after checking their balance history, or return it.
+
+### inactive card
+
+A card switched off while a request on it is open: the buyer's on-time transfer lands
+`unmatched` (only active cards match). Wait for open requests to close before switching a card
+off, or credit such transfers by hand.
+
 ### silence
 
 `P2PSilence`: requests expire and no HUMO message arrived for an hour. Check in order:

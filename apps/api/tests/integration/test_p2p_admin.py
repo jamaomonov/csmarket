@@ -149,3 +149,33 @@ async def test_p2p_admin_is_admin_only(
         assert (await integration_client.get(f"{BASE}/{path}", headers=h)).status_code == 403
     assert PAN  # the factory's number is never in an admin answer (tested above)
     assert await db_session.scalar(select(P2PIncoming.id)) is None
+
+
+async def test_no_manual_credit_inside_a_paid_request_s_quarantine(
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    customer_headers: Headers,
+    db_session: AsyncSession,
+) -> None:
+    await p2p_on(db_session)
+    await make_card(db_session)
+    r = await integration_client.post(
+        "/api/v1/wallet/topups",
+        json={"amount_uzs": 70_000, "provider": "p2p", "locale": "ru"},
+        headers=_key(await customer_headers()),
+    )
+    assert r.status_code == 201, r.text
+    from csmarket.modules.p2p.models import P2PReservation
+
+    request = await db_session.scalar(select(P2PReservation))
+    assert request is not None
+    request.status = "paid"  # paid, its amount still quarantined (holds_amount)
+    await db_session.commit()
+    row = await _unmatched(db_session, amount="70000")  # a second notice of the same transfer
+    buyer = await make_user(db_session)
+    held = await integration_client.post(
+        f"{BASE}/incoming/{row.id}/credit",
+        json={"user_id": buyer.id, "note": "чек от покупателя"},
+        headers=_key(await admin_headers()),
+    )
+    assert (held.status_code, held.json()["code"]) == (409, "p2p_quarantine")

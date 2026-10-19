@@ -28,6 +28,15 @@ groups:
           summary: "P2P: two active cards share their last four digits"
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/p2p.md#ambiguous-card"
 
+      # A transfer matched a request whose top-up was already settled another way: it is on the
+      # journal as unmatched money to resolve by hand.
+      - alert: P2PSettleRefused
+        expr: increase(csmarket_p2p_alerts_total{job="api",kind="settle_refused"}[10m]) > 0
+        labels: { severity: page }
+        annotations:
+          summary: "P2P: a matched transfer could not settle its top-up"
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/p2p.md#settle-refused"
+
       # Buyers asked for transfers that never came, and no HUMO message at all arrived in an
       # hour: the bot, its Business connection or the relay is likely down.
       - alert: P2PSilence

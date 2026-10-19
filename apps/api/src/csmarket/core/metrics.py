@@ -872,7 +872,7 @@ def steam_web_api_call(*, endpoint: SteamApiEndpoint, consumer: SteamApiConsumer
 #: What a P2P notification turned into (``p2p.intake``).
 P2PResult = Literal["dropped", "duplicate", "matched", "unmatched", "ignored"]
 #: A P2P condition for an operator (``P2PUnparsed``, ``P2PChainBreak``, ``P2PAmbiguousCard``).
-P2PAlert = Literal["unparsed", "chain_break", "ambiguous_card"]
+P2PAlert = Literal["unparsed", "chain_break", "ambiguous_card", "settle_refused"]
 
 P2P_NOTIFICATIONS = Counter(
     "csmarket_p2p_notifications_total",

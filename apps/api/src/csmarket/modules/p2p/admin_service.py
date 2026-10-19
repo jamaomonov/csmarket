@@ -129,8 +129,9 @@ async def _blocking_request(db: AsyncSession, row: P2PIncoming) -> bool:
         .where(
             P2PCard.pan_last4 == row.card_last4,
             P2PReservation.amount_uzs == int(row.amount_uzs),
+            # Pending, or closed but quarantined — paid included: a second notification of a
+            # paid transfer must not be credited by hand inside the quarantine.
             P2PReservation.holds_amount.is_(True),
-            P2PReservation.status != "paid",
         )
     )
     return found is not None

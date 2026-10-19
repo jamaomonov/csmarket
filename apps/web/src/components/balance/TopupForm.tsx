@@ -41,10 +41,6 @@ import {
 } from "@/lib/balance";
 import { kassaCharge } from "@/lib/kassa-fee";
 
-/** The P2P range the API applies by default (its settings may differ; the API decides). */
-const P2P_MIN = 10_000;
-const P2P_MAX = 5_000_000;
-
 type FormError =
   | "badAmount"
   | "failed"
@@ -84,6 +80,7 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
   const d = useTranslations("web.deposit");
   const router = useRouter();
   const qc = useQueryClient();
+  const [p2pRange, setP2pRange] = useState({ min: 10_000, max: 5_000_000 });
   const fieldId = useId();
   const rangeId = useId();
   const [amount, setAmount] = useState("");
@@ -150,6 +147,11 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
         void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
         setError("methodUnavailable");
       } else if (code !== undefined && code in P2P_ERRORS) {
+        // The API names its current range (the admin may change it).
+        const extra = err instanceof SessionApiError ? err.body : null;
+        if (extra && typeof extra === "object" && "min" in extra && "max" in extra) {
+          setP2pRange({ min: Number(extra.min), max: Number(extra.max) });
+        }
         setError(P2P_ERRORS[code] ?? "failed");
       } else {
         setError(code === "topup_amount" ? "badAmount" : "failed");
@@ -168,8 +170,8 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
         return t("methodUnavailable");
       case "p2pAmount":
         return t("p2p.badAmount", {
-          min: formatUzs(locale, P2P_MIN),
-          max: formatUzs(locale, P2P_MAX),
+          min: formatUzs(locale, p2pRange.min),
+          max: formatUzs(locale, p2pRange.max),
         });
       case "p2pDailyLimit":
         return t("p2p.dailyLimit");

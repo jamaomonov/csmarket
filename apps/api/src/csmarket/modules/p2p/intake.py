@@ -26,12 +26,17 @@ from csmarket.modules.p2p.models import P2PCard, P2PIncoming, P2PReservation, P2
 from csmarket.modules.p2p.parsing import ParsedNotification, parse_humo
 from csmarket.modules.p2p.reservations import QUARANTINE
 from csmarket.modules.p2p.settings import load_settings
-from csmarket.modules.payments.api import Payment, settle
+from csmarket.modules.payments.api import (
+    AlreadyPaidError,
+    InvalidTransitionError,
+    Payment,
+    settle,
+)
 
 log = get_logger("csmarket.p2p.intake")
 
 Status = Literal["dropped", "duplicate", "matched", "unmatched", "ignored"]
-Alert = Literal["unparsed", "chain_break", "ambiguous_card"]
+Alert = Literal["unparsed", "chain_break", "ambiguous_card", "settle_refused"]
 _MESSAGE_KEY = "uq_p2p_incoming_message"
 
 
@@ -159,7 +164,16 @@ async def _credit(
         row.result, result.status = "unmatched", "unmatched"
         log.info("p2p.unmatched", amount=str(parsed.amount), card_last4=parsed.card_last4)
         return
-    await settle(db, payment=payment, event_id=f"p2p:{row.id}")
+    try:
+        async with db.begin_nested():
+            await settle(db, payment=payment, event_id=f"p2p:{row.id}")
+    except (AlreadyPaidError, InvalidTransitionError):
+        # The top-up was settled another way meanwhile: keep the transfer on the journal as
+        # money to resolve by hand, never lose it in a rollback.
+        row.result, result.status = "unmatched", "unmatched"
+        result.alerts.append("settle_refused")
+        log.warning("p2p.settle_refused", number=request.number)
+        return
     # The amount stays held for the quarantine: a payer's accidental second transfer must land
     # unmatched, not pay whoever asks for the same sum next.
     request.status = "paid"

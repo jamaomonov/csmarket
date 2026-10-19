@@ -97,6 +97,20 @@ def _gateway(provider: str) -> PaymentGateway:
     return gateway
 
 
+def kassa_for_new_topup(provider: str) -> PaymentGateway | None:
+    """The kassa a new top-up opens in; ``None`` for P2P (no kassa page: the card and the
+    amount come with the top-up).
+
+    Raises:
+        ValidationError: ``topup_provider`` — the balance, or a kassa not available here.
+    """
+    if provider == P2P:
+        if P2P not in available_providers():
+            raise ValidationError("payment provider not available", code="topup_provider")
+        return None
+    return _gateway(provider)
+
+
 def _gateway_or_none(provider: str) -> PaymentGateway | None:
     """``provider``'s gateway while it is available; else ``None`` (also for ``wallet``)."""
     if provider in (WALLET, P2P) or provider not in available_providers():
@@ -199,7 +213,7 @@ async def create_topup(
     if existing is not None:
         return await _replay(db, existing, amount=amount_uzs, provider=provider, locale=locale)
     _check_amount(amount_uzs)
-    gateway = _gateway(provider)
+    gateway = kassa_for_new_topup(provider)
     await ensure_open(db, provider)
     topup = WalletTopup(
         id=new_id(),
@@ -308,7 +322,7 @@ async def _p2p_transfer(db: AsyncSession, topup: WalletTopup) -> P2PTransfer | N
     from csmarket.modules.p2p.api import details  # late import, see :func:`create_topup`
 
     found = await details(db, topup.id)
-    if found is None or topup.status != "pending":
+    if found is None or topup.status != "pending" or found.status != "pending":
         return None
     return P2PTransfer(
         card_number=found.card_number,

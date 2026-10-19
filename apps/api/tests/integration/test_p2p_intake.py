@@ -217,3 +217,18 @@ async def test_the_owner_s_connection_is_pinned_from_a_business_connection_updat
     assert (await _post(integration_client, update)).status_code == 200
     db_session.expire_all()
     assert (await load_settings(db_session)).business_connection_id == "conn-new"
+
+
+async def test_a_transfer_whose_top_up_was_paid_another_way_stays_on_the_journal(
+    integration_client: AsyncClient, db_session: AsyncSession, customer_headers: Headers
+) -> None:
+    await _world(db_session)
+    t = await _request(integration_client, await customer_headers())
+    topup = await _topup(db_session, t["number"])
+    topup.status = "succeeded"  # paid through a kassa meanwhile (as settle would leave it)
+    await db_session.commit()
+    r = await _post(integration_client, _update(_text("100.000,00")))
+    assert r.status_code == 200, r.text
+    row = await db_session.scalar(select(P2PIncoming))
+    assert row is not None
+    assert row.result == "unmatched"  # money to resolve by hand, never lost

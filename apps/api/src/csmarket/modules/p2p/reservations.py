@@ -37,6 +37,7 @@ log = get_logger("csmarket.p2p.reservations")
 RESERVATION_TTL: Final = timedelta(minutes=10)
 QUARANTINE: Final = timedelta(minutes=10)
 _OPEN_AMOUNT_INDEX: Final = "uq_p2p_reservations_open_amount"
+_ONE_PENDING_INDEX: Final = "uq_p2p_reservations_one_pending"
 
 
 @dataclass(frozen=True)
@@ -127,8 +128,13 @@ async def _hold(
                     db.add(row)
                     await db.flush()
             except IntegrityError as exc:
-                if violated_constraint(exc, (_OPEN_AMOUNT_INDEX,)) == _OPEN_AMOUNT_INDEX:
+                hit = violated_constraint(exc, (_OPEN_AMOUNT_INDEX, _ONE_PENDING_INDEX))
+                if hit == _OPEN_AMOUNT_INDEX:
                     continue
+                if hit == _ONE_PENDING_INDEX:
+                    raise ConflictError(
+                        "a transfer request is already waiting", code="p2p_open_request"
+                    ) from exc
                 raise
             log.info("p2p.reserved", number=row.number, amount_uzs=row.amount_uzs)
             return row

@@ -48,7 +48,9 @@ export async function relay(request, env, fetcher = fetch) {
     return new Response("forbidden", { status: 401 });
   }
   const body = await request.text();
-  if (body.length > MAX_BODY) return new Response("too large", { status: 413 });
+  if (new TextEncoder().encode(body).length > MAX_BODY) {
+    return new Response("too large", { status: 413 });
+  }
   const [yupay, csmarket] = await Promise.all([
     deliver(fetcher, env.YUPAY_URL, env.YUPAY_SECRET, body),
     deliver(fetcher, env.CSMARKET_URL, env.CSMARKET_SECRET, body),

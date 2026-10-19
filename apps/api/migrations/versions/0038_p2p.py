@@ -134,6 +134,8 @@ def upgrade() -> None:
             name="limits",
         ),
     )
+    # Seed row 1 so the webhook and the sweep never race to create it.
+    op.execute("INSERT INTO p2p_settings (id) VALUES (1)")
 
 
 def downgrade() -> None:
