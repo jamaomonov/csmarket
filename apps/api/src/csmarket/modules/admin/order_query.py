@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.modules.lisskins.api import LisskinsPurchase
-from csmarket.modules.orders.api import Order, PurchaseRow, SkinTrade
+from csmarket.modules.orders.api import Order, PurchaseRow, SkinTrade, spent
 from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 #: The longest ``q`` still tried as a number prefix (an order number is 8 characters).
@@ -87,15 +87,6 @@ def joined_purchase(
 def usd(value: Decimal) -> str:
     """USD with six places."""
     return f"{value.quantize(_USD):f}"
-
-
-def spent(order: Order, trade: SkinTrade | None, bought: PurchaseRow | None) -> Decimal:
-    """What the market charged, USD; the agreed cost until it says."""
-    if trade is not None and trade.bought_units is not None:
-        return Decimal(trade.bought_units) / 1000
-    if bought is not None and bought.amount_units is not None:
-        return Decimal(bought.amount_units) / 1000
-    return order.cost_usd
 
 
 __all__ = [

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 from csmarket.core import clock
 from csmarket.modules.orders.models import Order
@@ -22,25 +23,28 @@ async def make_skinslink_order(
     *,
     status: str = "trade_sent",
     purchase_status: str | None = "active",
+    order: dict[str, object] | None = None,
     **purchase: object,
 ) -> tuple[Order, SkinslinkPurchase]:
     """A kassa-paid Skinslink order in ``status`` and its purchase in ``purchase_status``
-    (``purchase`` overrides any other column)."""
-    order = await make_order(
-        db,
-        status=status,
-        paid_with="payme",
-        paid_at=clock.now(),
-        price_uzs=PRICE,
-        source="skinslink",
-        offer_id="sl:100",
-        listing_id=None,
-    )
+    (``order`` / ``purchase`` override any column)."""
+    # Any: column values of any type, as ``make_order`` takes them.
+    fields: dict[str, Any] = {
+        "status": status,
+        "paid_with": "payme",
+        "paid_at": clock.now(),
+        "price_uzs": PRICE,
+        "source": "skinslink",
+        "offer_id": "sl:100",
+        "listing_id": None,
+        **(order or {}),
+    }
+    order_row = await make_order(db, **fields)
     values: dict[str, object] = {
-        "order_id": order.id,
-        "merchant_tx_id": order.id,
+        "order_id": order_row.id,
+        "merchant_tx_id": order_row.id,
         "asset_id": "100",
-        "paid_units": order.cost_units,
+        "paid_units": order_row.cost_units,
         "purchase_id": PURCHASE_ID,
         "status": purchase_status,
         "offer_id": OFFER,
@@ -50,4 +54,4 @@ async def make_skinslink_order(
     row = SkinslinkPurchase(**values)
     db.add(row)
     await db.commit()
-    return order, row
+    return order_row, row
