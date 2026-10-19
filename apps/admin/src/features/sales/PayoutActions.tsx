@@ -110,7 +110,8 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
   if (!detail.can_decide && undoUntil === null) return null;
   return (
     <section className="flex flex-col gap-3" aria-label="Решение">
-      <div className="flex flex-wrap gap-2">
+      {/* On a phone the decision stays at the bottom of the screen while the card scrolls. */}
+      <div className="bg-bg/95 border-border sticky bottom-0 z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none">
         {detail.can_decide ? (
           <>
             <Button
@@ -198,6 +199,7 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
           </label>
           <div className="flex flex-wrap gap-2">
             <Button
+              variant={panel === "paid" ? "primary" : "danger"}
               disabled={blocked}
               onClick={() => {
                 act.mutate(panel);

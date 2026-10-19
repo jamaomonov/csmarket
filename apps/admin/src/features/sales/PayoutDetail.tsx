@@ -8,7 +8,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { payoutKey } from "./keys";
-import { PAYOUT_LABELS } from "./labels";
 import { ItemList } from "./Parts";
 import { PayBlock } from "./PayBlock";
 import { PayoutActions } from "./PayoutActions";
@@ -20,6 +19,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
+import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 
 const at = (iso: string | null | undefined): string => (iso ? formatDateTime(iso) : "—");
@@ -101,17 +101,37 @@ function History({ d }: { d: Detail }) {
   );
 }
 
+const REFRESH_MS = 15_000;
+
 export function PayoutDetail() {
   const { id = "" } = useParams();
-  const detail = useQuery({ queryKey: payoutKey(id), queryFn: () => getPayout(id) });
-  if (detail.isError) {
+  // Re-read like the queue does: another operator's claim or decision shows within 15 s.
+  const detail = useQuery({
+    queryKey: payoutKey(id),
+    queryFn: () => getPayout(id),
+    refetchInterval: REFRESH_MS,
+    retry: (count, err) => !(err instanceof ApiError && err.status === 404) && count < 2,
+  });
+  const back = { to: "/payouts", label: "Заявки на выплату" };
+  if (!detail.data && detail.isError) {
+    const missing = detail.error instanceof ApiError && detail.error.status === 404;
     return (
-      <p role="alert" className="text-danger">
-        {errorText(detail.error)}
-      </p>
+      <div className="space-y-4">
+        <PageHeader back={back} title="Выплата" />
+        <p role="alert" className={missing ? "text-fg-muted" : "text-danger"}>
+          {missing ? "Заявка не найдена." : errorText(detail.error)}
+        </p>
+      </div>
     );
   }
-  if (!detail.data) return <p className="text-fg-muted">Загрузка…</p>;
+  if (!detail.data) {
+    return (
+      <div className="space-y-4">
+        <PageHeader back={back} title="Выплата" />
+        <div aria-busy className="bg-surface h-64 animate-pulse rounded-lg" />
+      </div>
+    );
+  }
   const d = detail.data;
   const s = d.sale;
   const refresh = () => void detail.refetch();
@@ -119,7 +139,7 @@ export function PayoutDetail() {
   return (
     <div className="space-y-4">
       <PageHeader
-        back={{ to: "/payouts", label: "Заявки на выплату" }}
+        back={back}
         title={
           <>
             Выплата по продаже{" "}
@@ -128,7 +148,8 @@ export function PayoutDetail() {
             </Link>
           </>
         }
-        meta={`${PAYOUT_LABELS[d.request.status]} · ${d.request.user.display_name ?? "Без имени"}`}
+        meta={d.request.user.display_name ?? "Без имени"}
+        badges={<PayoutStatusChip status={d.request.status} />}
       />
       {blocked ? (
         <Banner>

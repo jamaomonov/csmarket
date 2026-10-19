@@ -175,6 +175,12 @@ export function SalesPage() {
               <span className="text-fg-muted">{s.user.display_name ?? "Без имени"}</span>
               <span className="text-fg-dim ml-auto text-xs">{formatDateTime(s.created_at)}</span>
             </div>
+            {s.attention_reason ? (
+              <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
+                {ATTENTION_LABELS[s.attention_reason]}
+                {s.attention_open ? "" : " · проверено"}
+              </div>
+            ) : null}
           </div>
         )}
         footer={

@@ -22,12 +22,22 @@ import { formatDateTime } from "@/lib/format";
 
 const REVEAL_MS = 60_000;
 
+const COPY_SHOWN_MS = 3_000;
+
 function CopyButton({ text, label }: { text: string; label: string }) {
   const [state, setState] = useState<"idle" | "ok" | "failed">("idle");
+  useEffect(() => {
+    if (state === "idle") return;
+    const t = setTimeout(() => {
+      setState("idle");
+    }, COPY_SHOWN_MS);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [state]);
   return (
     <Button
       variant="secondary"
-      size="sm"
       onClick={() => {
         void copyText(text).then((ok) => {
           setState(ok ? "ok" : "failed");
@@ -87,7 +97,6 @@ function ClaimBar({ detail }: { detail: Detail }) {
           </span>
           <Button
             variant="secondary"
-            size="sm"
             disabled={release.isPending}
             onClick={() => {
               release.mutate();
@@ -104,7 +113,6 @@ function ClaimBar({ detail }: { detail: Detail }) {
           </span>
           <Button
             variant="secondary"
-            size="sm"
             disabled={claim.isPending}
             onClick={() => {
               claim.mutate(true);
