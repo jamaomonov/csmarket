@@ -50,6 +50,8 @@ class AdminOrderRow(BaseModel):
     status: OrderStatusOut
     #: The skin's market name (English, as in Steam).
     name: str
+    #: The catalogue's picture of the skin; ``null`` when it has none.
+    image_url: str | None = None
     phase: str | None
     #: Whole soʻm, digits.
     price_uzs: str

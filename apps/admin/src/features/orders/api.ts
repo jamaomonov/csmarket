@@ -17,6 +17,8 @@ export interface AdminOrderRow {
   status: OrderStatus;
   /** The skin's market name (English). */
   name: string;
+  /** The catalogue's picture; `null` when it has none. */
+  image_url?: string | null;
   phase: string | null;
   /** Whole soʻm as a digit string. */
   price_uzs: string;

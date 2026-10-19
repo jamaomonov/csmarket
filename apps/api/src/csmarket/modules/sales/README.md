@@ -109,6 +109,11 @@ audited `sales.attention.resolve`); `POST /payouts/{id}/cancel` («Отмени�
 `GET|PUT /blocks/{user_id}` (audited `sales.user.block` / `unblock`). The dashboard's
 `payouts.sales_attention` counts the open attentions.
 
+The user page (`admin_user_sales.py`): `GET /users/{user_id}` — the user's latest 20 sales with
+the skins of each (name, picture) and `sold_count` / `sold_uzs`, the sales that reached us
+(`hold` onwards, never `reverted`). The admin user card adds `bought_count` / `bought_uzs`
+(delivered orders) itself; every account can both buy and sell.
+
 Paying from a phone (admin review 2026-10-12, `docs/runbooks/sales.md`):
 
 - **Claim.** `POST /payouts/{id}/claim {takeover}` («Беру в работу») leases a `to_pay` request

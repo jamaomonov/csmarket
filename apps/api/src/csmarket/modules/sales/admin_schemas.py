@@ -140,6 +140,29 @@ class AdminSaleRowOut(BaseModel):
     created_at: datetime
 
 
+class AdminSaleSkinOut(BaseModel):
+    """A skin of a sale in a list: its name and picture."""
+
+    name: str
+    image_url: str | None
+
+
+class AdminUserSaleOut(AdminSaleRowOut):
+    """A sale on the user page: the row and the skins it sold."""
+
+    items: list[AdminSaleSkinOut]
+
+
+class AdminUserSalesOut(BaseModel):
+    """The user page's «Продажи»: the totals and the latest sales, newest first."""
+
+    #: Sales whose skins reached us (``hold`` onwards, never ``reverted``).
+    sold_count: int
+    #: Their payouts, whole soʻm.
+    sold_uzs: str
+    items: list[AdminUserSaleOut]
+
+
 class AdminSalesPageOut(BaseModel):
     """One page of sales, the next cursor and how many sales have an open attention."""
 

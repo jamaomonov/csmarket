@@ -79,6 +79,9 @@ export interface AdminUserCard {
   topups: AdminTopup[];
   /** The latest 20 orders, newest first. */
   orders: AdminOrderRow[];
+  /** Delivered orders in all and what they cost, whole soʻm. */
+  bought_count: number;
+  bought_uzs: string;
   usd_wallet_enabled: boolean;
   /** Dollars with three decimals, e.g. `"250.000"`. */
   balance_usd: string;

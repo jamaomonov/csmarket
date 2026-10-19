@@ -33,6 +33,7 @@ from csmarket.modules.sales.admin_sales import (
 from csmarket.modules.sales.admin_schemas import (
     AdminSaleOut,
     AdminSalesPageOut,
+    AdminUserSalesOut,
     AttentionFilter,
     AttentionReasonOut,
     ResolveIn,
@@ -41,6 +42,7 @@ from csmarket.modules.sales.admin_schemas import (
     SellBlockOut,
     SellBlocksOut,
 )
+from csmarket.modules.sales.admin_user_sales import user_sales
 from csmarket.modules.sales.rules import SaleSettings
 from csmarket.modules.sales.schemas import SaleStatusOut
 from csmarket.modules.users.api import User
@@ -134,6 +136,13 @@ async def put_sale_settings(
     await remember(db, scope=scope, key=key, request=request, response=out.model_dump(mode="json"))
     await db.commit()
     return out
+
+
+@router.get("/users/{user_id}", response_model=AdminUserSalesOut, summary="A user's sales")
+async def get_user_sales(user_id: uuid.UUID, db: Db) -> AdminUserSalesOut:
+    """The user page's «Продажи»: the latest 20 sales with their skins, newest first, and
+    how many sales reached us in all (``hold`` onwards) with their payouts."""
+    return await user_sales(db, str(user_id))
 
 
 @router.get("", response_model=AdminSalesPageOut, summary="Sales")

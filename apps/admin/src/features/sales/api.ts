@@ -57,6 +57,18 @@ export interface AdminSaleRow {
   created_at: string;
 }
 
+/** A sale on the user page, with the skins it sold. */
+export interface AdminUserSale extends AdminSaleRow {
+  items: { name: string; image_url: string | null }[];
+}
+
+/** The user page's «Продажи»: the totals of what reached us and the latest 20. */
+export interface AdminUserSales {
+  sold_count: number;
+  sold_uzs: string;
+  items: AdminUserSale[];
+}
+
 export interface AdminSalesPage {
   items: AdminSaleRow[];
   next_cursor: string | null;
@@ -151,6 +163,10 @@ export function listSales(p: ListSalesParams): Promise<AdminSalesPage> {
   if (p.attention) params.set("attention", p.attention);
   if (p.cursor) params.set("cursor", p.cursor);
   return session.apiGet<AdminSalesPage>(`${BASE}?${params.toString()}`);
+}
+
+export function getUserSales(userId: string): Promise<AdminUserSales> {
+  return session.apiGet<AdminUserSales>(`${BASE}/users/${encodeURIComponent(userId)}`);
 }
 
 export function getSale(number: string): Promise<AdminSale> {

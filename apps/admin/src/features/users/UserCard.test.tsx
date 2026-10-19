@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AdminUserCard } from "./api";
-import { CARD, renderCard as renderWith, STEAM_ID } from "./fixtures";
+import { CARD, renderCard as renderWith, STEAM_ID, USER_SALES } from "./fixtures";
 
 import { ApiError } from "@/lib/api";
 
@@ -17,6 +17,11 @@ const api = vi.hoisted(() => ({
   switchUsdWallet: vi.fn(),
 }));
 vi.mock("./api", () => api);
+const salesApi = vi.hoisted(() => ({ getUserSales: vi.fn() }));
+vi.mock("../sales/api", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  ...salesApi,
+}));
 
 function renderCard(seed?: (qc: QueryClient) => void) {
   renderWith(new QueryClient({ defaultOptions: { queries: { retry: false } } }), seed);
@@ -33,6 +38,19 @@ describe("UserCard", () => {
   beforeEach(() => {
     Object.values(api).forEach((f) => f.mockReset());
     api.getUserCard.mockResolvedValue(CARD);
+    salesApi.getUserSales.mockReset();
+    salesApi.getUserSales.mockResolvedValue(USER_SALES);
+  });
+
+  it("shows what the user bought and sold, with the skins of each sale", async () => {
+    renderCard();
+    expect(await screen.findByTestId("user-bought")).toHaveTextContent("3 · 450 000 сум");
+    expect(await screen.findByTestId("user-sold")).toHaveTextContent("1 · 216 300 сум");
+    const sales = await screen.findByRole("region", { name: "Продажи" });
+    expect(within(sales).getByText("SEWNGHNE")).toBeInTheDocument();
+    expect(within(sales).getByText("AK-47 | Ice Coaled (Field-Tested)")).toBeInTheDocument();
+    expect(within(sales).getByText("+ ещё 1")).toBeInTheDocument();
+    expect(salesApi.getUserSales).toHaveBeenCalledWith(CARD.user.id);
   });
 
   it("shows the profile, balance, history and top-ups", async () => {

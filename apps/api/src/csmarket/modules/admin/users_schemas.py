@@ -172,6 +172,9 @@ class AdminUserCard(BaseModel):
     topups: list[AdminTopupOut]
     #: Newest first; open one at ``/admin/orders/{number}``.
     orders: list[AdminOrderRow]
+    #: Delivered orders in all, and what they cost the user (whole soʻm).
+    bought_count: int = 0
+    bought_uzs: str = "0"
     #: The USD wallet is switched on for this user.
     usd_wallet_enabled: bool
     #: Spendable dollars, three decimals (``"250.000"``).

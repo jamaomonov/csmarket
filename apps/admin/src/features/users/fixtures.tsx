@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { type AdminUserCard } from "./api";
 import { UserCard } from "./UserCard";
 import { ORDER_ROW } from "../orders/fixtures";
+import { type AdminUserSales } from "../sales/api";
 
 // Fake IDs and a fake, already-masked trade link; never a real account.
 export const STEAM_ID = "76561190000000001";
@@ -62,10 +63,36 @@ export const CARD: AdminUserCard = {
     },
   ],
   orders: [ORDER_ROW],
+  bought_count: 3,
+  bought_uzs: "450000",
   usd_wallet_enabled: false,
   balance_usd: "0.000",
   api_key_id: null,
   usd_entries: [],
+};
+
+export const USER_SALES: AdminUserSales = {
+  sold_count: 1,
+  sold_uzs: "216300",
+  items: [
+    {
+      number: "SEWNGHNE",
+      status: "hold",
+      user: { id: CARD.user.id, display_name: "Ivan" },
+      payout_to: "card",
+      quoted_usd: "20.1",
+      payout_uzs: "216300",
+      margin_usd: "0.6",
+      attention_reason: null,
+      attention_open: false,
+      created_at: "2026-10-19T05:15:00Z",
+      items: [
+        { name: "AK-47 | Ice Coaled (Field-Tested)", image_url: null },
+        { name: "USP-S | Tropical Breeze (Factory New)", image_url: null },
+        { name: "SSG 08 | Memorial (Factory New)", image_url: null },
+      ],
+    },
+  ],
 };
 
 export function renderCard(qc: QueryClient, seed?: (qc: QueryClient) => void) {

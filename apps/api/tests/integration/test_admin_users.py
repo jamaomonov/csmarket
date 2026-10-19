@@ -11,6 +11,7 @@ import pytest
 from csmarket.core import clock
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.public_api.models import ApiKey
+from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.users.api import set_roles
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import admin_adjust
@@ -309,6 +310,33 @@ async def test_card_lists_the_latest_20_orders_newest_first(
     assert orders[0]["user"] == {"id": user.id, "display_name": "Frank", "avatar_url": None}
     assert orders[0]["attention_reason"] == "buy_unconfirmed"
     assert orders[1]["attention_reason"] is None
+
+
+async def test_card_counts_what_the_user_bought_and_shows_the_skins(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    user = await _named(db_session, "Gina")
+    for minutes, price in ((10, Decimal(100_000)), (9, Decimal(25_500))):
+        await make_order(
+            db_session,
+            user=user,
+            trade_link=FAKE_LINK,
+            status="delivered",
+            price_uzs=price,
+            created_at=clock.now() - timedelta(minutes=minutes),
+        )
+    newest = await make_order(db_session, user=user, trade_link=FAKE_LINK, status="buying")
+    await make_order(db_session, status="delivered")  # someone else's
+    item = await db_session.get(SkinItem, newest.skin_item_id)
+    assert item is not None
+    item.image_url = "https://community.cloudflare.steamstatic.com/economy/image/ak"
+    await db_session.commit()
+
+    card = (await integration_client.get(f"{BASE}/{user.id}", headers=h)).json()
+    assert (card["bought_count"], card["bought_uzs"]) == (2, "125500")
+    assert card["orders"][0]["image_url"] == item.image_url
+    assert card["orders"][1]["image_url"] is None
 
 
 @pytest.mark.parametrize("bad_id", ["00000000-0000-4000-8000-0000000000ff", "not-a-uuid"])

@@ -148,6 +148,7 @@ async def test_list_row_shape_newest_first_and_masked_nothing(
         "number": newer.number,
         "status": "buying",
         "name": "AK-47 | Redline (Field-Tested)",
+        "image_url": None,
         "phase": None,
         "price_uzs": "171800",
         "paid_with": "payme",

@@ -36,6 +36,7 @@ from csmarket.modules.admin.users_schemas import (
     AdminUserRow,
 )
 from csmarket.modules.auth.api import revoke_all_sessions
+from csmarket.modules.orders.api import Order
 from csmarket.modules.payments.api import Payment, WalletTopup
 from csmarket.modules.public_api.api import ApiKey
 from csmarket.modules.users.api import User
@@ -168,6 +169,18 @@ async def _topups(db: AsyncSession, user_id: str) -> list[AdminTopupOut]:
     ]
 
 
+async def _bought(db: AsyncSession, user_id: str) -> dict[str, Any]:
+    """``bought_count`` / ``bought_uzs``: the user's delivered orders and their price."""
+    count, total = (
+        await db.execute(
+            select(func.count(), func.coalesce(func.sum(Order.price_uzs), 0)).where(
+                Order.user_id == user_id, Order.status == "delivered"
+            )
+        )
+    ).one()
+    return {"bought_count": int(count), "bought_uzs": wire_uzs(Decimal(total))}
+
+
 async def user_card(db: AsyncSession, user: User) -> AdminUserCard:
     """The user page: profile, balance, the latest 20 ledger lines, top-ups and orders."""
     entries = await entries_for_admin(db, user.id, limit=CARD_ROWS)
@@ -178,6 +191,7 @@ async def user_card(db: AsyncSession, user: User) -> AdminUserCard:
         entries=[AdminEntryOut.of(e) for e in entries],
         topups=await _topups(db, user.id),
         orders=await recent_orders(db, user.id),
+        **await _bought(db, user.id),
         usd_wallet_enabled=user.usd_wallet_enabled,
         balance_usd=wire_usd(await user_usd_balance(db, user.id)),
         usd_entries=[AdminEntryOut.of(e, "USD") for e in usd_entries],

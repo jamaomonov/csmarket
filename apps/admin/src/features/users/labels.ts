@@ -31,7 +31,7 @@ export function errorText(err: unknown): string {
 }
 
 export function roleLabel(roles: string[]): string {
-  return roles.includes("admin") ? "администратор" : "покупатель";
+  return roles.includes("admin") ? "администратор" : "клиент";
 }
 
 const KINDS: Record<string, string> = {

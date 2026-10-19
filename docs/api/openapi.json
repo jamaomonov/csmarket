@@ -1225,6 +1225,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -2143,6 +2154,32 @@
           "created_at"
         ],
         "title": "AdminSaleRowOut",
+        "type": "object"
+      },
+      "AdminSaleSkinOut": {
+        "description": "A skin of a sale in a list: its name and picture.",
+        "properties": {
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "image_url"
+        ],
+        "title": "AdminSaleSkinOut",
         "type": "object"
       },
       "AdminSalesPageOut": {
@@ -3404,6 +3441,16 @@
             "title": "Balance Uzs",
             "type": "string"
           },
+          "bought_count": {
+            "default": 0,
+            "title": "Bought Count",
+            "type": "integer"
+          },
+          "bought_uzs": {
+            "default": "0",
+            "title": "Bought Uzs",
+            "type": "string"
+          },
           "entries": {
             "items": {
               "$ref": "#/components/schemas/AdminEntryOut"
@@ -3757,6 +3804,125 @@
           "balance_uzs"
         ],
         "title": "AdminUserRow",
+        "type": "object"
+      },
+      "AdminUserSaleOut": {
+        "description": "A sale on the user page: the row and the skins it sold.",
+        "properties": {
+          "attention_open": {
+            "title": "Attention Open",
+            "type": "boolean"
+          },
+          "attention_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rolled_back",
+                  "late_deposit",
+                  "credit_blocked"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attention Reason"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminSaleSkinOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "payout_to": {
+            "enum": [
+              "balance",
+              "card"
+            ],
+            "title": "Payout To",
+            "type": "string"
+          },
+          "payout_uzs": {
+            "title": "Payout Uzs",
+            "type": "string"
+          },
+          "quoted_usd": {
+            "title": "Quoted Usd",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "creating",
+              "offered",
+              "hold",
+              "credited",
+              "payout",
+              "closed",
+              "reverted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/AdminUserOut"
+          }
+        },
+        "required": [
+          "number",
+          "status",
+          "user",
+          "payout_to",
+          "quoted_usd",
+          "payout_uzs",
+          "margin_usd",
+          "attention_reason",
+          "attention_open",
+          "created_at",
+          "items"
+        ],
+        "title": "AdminUserSaleOut",
+        "type": "object"
+      },
+      "AdminUserSalesOut": {
+        "description": "The user page's \u00ab\u041f\u0440\u043e\u0434\u0430\u0436\u0438\u00bb: the totals and the latest sales, newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminUserSaleOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "sold_count": {
+            "title": "Sold Count",
+            "type": "integer"
+          },
+          "sold_uzs": {
+            "title": "Sold Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sold_count",
+          "sold_uzs",
+          "items"
+        ],
+        "title": "AdminUserSalesOut",
         "type": "object"
       },
       "AdminUsersOut": {
@@ -13004,6 +13170,66 @@
           }
         },
         "summary": "Save the sale settings",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/users/{user_id}": {
+      "get": {
+        "description": "The user page's \u00ab\u041f\u0440\u043e\u0434\u0430\u0436\u0438\u00bb: the latest 20 sales with their skins, newest first, and\nhow many sales reached us in all (``hold`` onwards) with their payouts.",
+        "operationId": "get_user_sales_api_v1_admin_sales_users__user_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserSalesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A user's sales",
         "tags": [
           "admin"
         ]

@@ -1,4 +1,4 @@
-/** One account: profile, balance, history and top-ups; block, unblock, change the balance. */
+/** One account: profile, balance, history, orders, sales and top-ups; block, unblock, change the balance. */
 import { Button } from "@csmarket/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
@@ -21,6 +21,7 @@ import { useIdempotencyKey } from "./useIdempotencyKey";
 import { ApiKeyPanel } from "../apiKeys/ApiKeyCard";
 import { type AdminOrderRow } from "../orders/api";
 import { OrdersTable } from "../orders/OrdersTable";
+import { UserSales, useUserSales } from "../sales/UserSales";
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
@@ -202,6 +203,7 @@ function Overview({ card, onUsd }: { card: AdminUserCard; onUsd: () => void }) {
         <History entries={card.usd_entries} id="user-history-usd" title="История USD" />
       )}
       <Orders orders={card.orders} />
+      <UserSales userId={card.user.id} />
       <Topups topups={card.topups} />
     </>
   );
@@ -304,10 +306,12 @@ function CardBody({ card }: { card: AdminUserCard }) {
         <Tile label="Баланс">
           <span data-testid="user-balance">{formatSum(card.balance_uzs)}</span>
         </Tile>
-        <Tile label="USD">
-          <Money usd={card.balance_usd} digits={3} />
+        <Tile label="Куплено">
+          <span data-testid="user-bought">
+            {card.bought_count} · {formatSum(card.bought_uzs)}
+          </span>
         </Tile>
-        <Tile label="Заказов (последние)">{card.orders.length}</Tile>
+        <SoldTile userId={u.id} />
         <Tile label="Пополнений (последние)">{card.topups.length}</Tile>
       </div>
       {notice !== null && (
@@ -368,6 +372,17 @@ function CardBody({ card }: { card: AdminUserCard }) {
         />
       )}
     </section>
+  );
+}
+
+function SoldTile({ userId }: { userId: string }) {
+  const sales = useUserSales(userId);
+  return (
+    <Tile label="Продано">
+      <span data-testid="user-sold">
+        {sales.data ? `${String(sales.data.sold_count)} · ${formatSum(sales.data.sold_uzs)}` : "—"}
+      </span>
+    </Tile>
   );
 }
 

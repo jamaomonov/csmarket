@@ -6,6 +6,7 @@ import { AttentionBadge, OrderStatusChip } from "./StatusChip";
 
 import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
+import { SkinThumb } from "@/components/SkinThumb";
 import { formatDateTime } from "@/lib/format";
 
 export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label: string }) {
@@ -30,7 +31,16 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
             </Link>
           ),
         },
-        { key: "name", header: "Скин", cell: (o) => o.name },
+        {
+          key: "name",
+          header: "Скин",
+          cell: (o) => (
+            <div className="flex items-center gap-2">
+              <SkinThumb url={o.image_url} />
+              <span>{o.name}</span>
+            </div>
+          ),
+        },
         {
           key: "price",
           header: "Цена",
@@ -65,7 +75,10 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
             <span className="font-mono">{o.number}</span>
             <Money uzs={o.price_uzs} />
           </div>
-          <div className="truncate">{o.name}</div>
+          <div className="flex items-center gap-2">
+            <SkinThumb url={o.image_url} />
+            <span className="truncate">{o.name}</span>
+          </div>
           <div className="flex flex-wrap items-center gap-1">
             <OrderStatusChip
               status={o.status}

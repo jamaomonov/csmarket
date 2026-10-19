@@ -51,17 +51,20 @@ from csmarket.modules.orders.api import (
     purchase_of,
 )
 from csmarket.modules.payments.api import Payment
+from csmarket.modules.skins.api import SkinItem
 from csmarket.modules.skinslink.api import SkinslinkPurchase
 from csmarket.modules.users.api import User, mask_trade_link
 
 #: Orders with their trade, purchases (``None`` on the outer joins) and the buyer's name.
-type _Rows = Select[Order, SkinTrade, SkinslinkPurchase, LisskinsPurchase, str | None, str | None]
+type _Rows = Select[
+    Order, SkinTrade, SkinslinkPurchase, LisskinsPurchase, str | None, str | None, str | None
+]
 #: Orders on a user's card.
 CARD_ORDERS = 20
 
 
 def _rows() -> _Rows:
-    """Orders with their trade, purchases, buyer's name and avatar, newest first (keyset-ready)."""
+    """Orders with their trade, purchases, buyer's name and avatar, the skin's picture, newest first (keyset-ready)."""
     return with_sources(
         select(
             Order,
@@ -70,7 +73,10 @@ def _rows() -> _Rows:
             LisskinsPurchase,
             User.display_name,
             User.avatar_url,
-        ).join(User, User.id == Order.user_id)
+            SkinItem.image_url,
+        )
+        .join(User, User.id == Order.user_id)
+        .outerjoin(SkinItem, SkinItem.id == Order.skin_item_id)
     )
 
 
@@ -79,7 +85,9 @@ def order_row(
     trade: SkinTrade | None,
     bought: PurchaseRow | None,
     display_name: str | None,
+    *,
     avatar_url: str | None = None,
+    image_url: str | None = None,
 ) -> AdminOrderRow:
     """One list line."""
     return AdminOrderRow.model_validate(
@@ -87,6 +95,7 @@ def order_row(
             "number": order.number,
             "status": order.status,
             "name": order.market_hash_name,
+            "image_url": image_url,
             "phase": order.phase or None,
             "price_uzs": wire_uzs(order.price_uzs),
             "paid_with": order.paid_with,
@@ -103,7 +112,10 @@ def order_row(
 
 # Any: the rows of :func:`_rows` (an outer join leaves the trade and purchases ``None``).
 def _row_list(page: list[Any]) -> list[AdminOrderRow]:
-    return [order_row(o, t, joined_purchase(sl, ls), n, a) for o, t, sl, ls, n, a in page]
+    return [
+        order_row(o, t, joined_purchase(sl, ls), n, avatar_url=a, image_url=image)
+        for o, t, sl, ls, n, a, image in page
+    ]
 
 
 async def list_orders(
