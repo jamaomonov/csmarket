@@ -169,8 +169,9 @@ async def totals(db: AsyncSession, w: Window, channel: Channel) -> Totals:
 
 
 async def by_day(db: AsyncSession, w: Window, channel: Channel) -> list[DayOut]:
-    """Every day of the window, zeros included, with that day's buy-back profit."""
-    return (await summary(db, w, channel))[1]
+    """Every day of the window, zeros included, with that day's buy-back profit (the
+    calendar: no totals, no refunds, no buyers)."""
+    return _days(w, await orders_by_day(db, w, channel), await buyback(db, w, channel))
 
 
 __all__ = [
