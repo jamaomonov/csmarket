@@ -31,6 +31,7 @@ type NavEntry = NavLinkItem | NavMenu;
 
 const NAV: NavEntry[] = [
   { to: "/", label: "Дашборд", end: true },
+  { to: "/analytics", label: "Аналитика" },
   { to: "/trades", label: "Обмены", also: ["/orders/"], counter: "attention" },
   {
     label: "Выкуп",

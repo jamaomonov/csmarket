@@ -4,6 +4,7 @@
  * «Выкуп»: what buying skins from users earned. Re-read every minute.
  */
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 
 import { type DashboardOut, type Days, getDashboard } from "./api";
 import { DASHBOARD_KEY } from "./keys";
@@ -163,7 +164,14 @@ export function DashboardPage() {
   });
   return (
     <section className="space-y-6">
-      <PageHeader title="Дашборд" />
+      <PageHeader
+        title="Дашборд"
+        actions={
+          <Link to="/analytics" className="text-accent text-sm hover:underline">
+            Аналитика →
+          </Link>
+        }
+      />
       {query.isError && (
         <p role="alert" className="text-danger">
           {query.error instanceof ApiError

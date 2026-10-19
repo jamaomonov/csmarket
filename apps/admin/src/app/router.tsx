@@ -2,6 +2,7 @@
  * Top-level route table. `/login` and the Steam callback are public; everything
  * else sits behind `AuthGuard` (signed-in admin only).
  */
+import { lazy, Suspense } from "react";
 import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { Layout } from "./Layout";
@@ -31,6 +32,11 @@ import { UserCard } from "@/features/users/UserCard";
 import { UsersPage } from "@/features/users/UsersPage";
 import { NotFoundPage } from "@/routes/NotFound";
 
+// recharts lives in this chunk only (ADR 0020): the other pages do not load it.
+const AnalyticsPage = lazy(async () => ({
+  default: (await import("@/features/analytics/AnalyticsPage")).AnalyticsPage,
+}));
+
 export const router = createBrowserRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/auth/steam/callback", element: <SteamCallback /> },
@@ -41,6 +47,14 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { path: "/", element: <DashboardPage /> },
+          {
+            path: "/analytics",
+            element: (
+              <Suspense fallback={<p className="text-fg-muted">Загрузка…</p>}>
+                <AnalyticsPage />
+              </Suspense>
+            ),
+          },
           { path: "/catalogue", element: <CataloguePage /> },
           { path: "/pricing", element: <PricingPage /> },
           { path: "/users", element: <UsersPage /> },
