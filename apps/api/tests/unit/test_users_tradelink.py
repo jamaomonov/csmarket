@@ -220,6 +220,21 @@ async def test_a_cached_hold_verdict_is_bad_too(redis) -> None:
         ("Inventory is private", "private"),
         # Waxpeer's real answer for a hidden inventory (prod, 2026-10-20).
         ("Please set your steam inventory public", "private"),
+        # Every documented ``msg`` of check-tradelink (Waxpeer docs, 2026-10-20).
+        ("Missing partner", "invalid"),
+        ("Missing token", "invalid"),
+        ("Your tradelink is incorect, please update it", "invalid"),
+        ("You're banned for not accepting trades", "trade_ban"),
+        (
+            (
+                "We couldn't validate your trade link, either your inventory is private or you"
+                " can't trade"
+            ),
+            "private",
+        ),
+        ("User has VACBAN or Game Ban", "trade_ban"),
+        # A passing fault on Waxpeer's side: no verdict, the buyer is not blocked.
+        ("There was an error with tradelink,please try again", None),
         ("Invalid tradelink", "invalid"),
         ("Bad trade url", "invalid"),
         # WAX-04: text that does not name the link is not a verdict on it.

@@ -148,7 +148,8 @@ def _reason_for(info: str) -> Reason | None:
     a phrase we do not know — is no verdict at all (WAX-04).
     """
     text = info.lower()
-    if any(hint in text for hint in SERVICE_HINTS):
+    # «There was an error with tradelink, please try again»: Waxpeer's own passing fault.
+    if any(hint in text for hint in SERVICE_HINTS) or "try again" in text:
         return None
     # «Inventory is private», «Please set your steam inventory public».
     if "private" in text or "public" in text:
