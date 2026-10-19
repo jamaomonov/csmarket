@@ -179,7 +179,29 @@
       "historyTitle": "USD hamyon tarixi"
     },
     "methodMaintenance": "Texnik ishlar",
-    "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang."
+    "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang.",
+    "p2p": {
+      "method": "Kartaga o‘tkazma",
+      "title": "Kartaga o‘tkazing",
+      "cardLabel": "Karta raqami",
+      "holderLabel": "Qabul qiluvchi",
+      "amountLabel": "O‘tkaziladigan summa",
+      "exact": "Aynan {amount} o‘tkazing — aks holda to‘lov topilmaydi.",
+      "copyCard": "Karta raqamini nusxalash",
+      "copyAmount": "Summani nusxalash",
+      "copied": "Nusxalandi",
+      "left": "Qoldi",
+      "waiting": "O‘tkazmani kutyapmiz. Balans o‘zi to‘ldiriladi, sahifani yangilash shart emas.",
+      "expiredTitle": "O‘tkazma vaqti tugadi",
+      "expiredNote": "O‘tkazib bo‘ldingizmi? Chek va {number} ariza raqami bilan qo‘llab-quvvatlashga yozing.",
+      "support": "Qo‘llab-quvvatlashga yozish",
+      "newRequest": "Yangi ariza",
+      "badAmount": "Kartaga o‘tkazma — {min} dan {max} gacha.",
+      "dailyLimit": "Bugungi kartaga o‘tkazmalar limiti tugadi. Ertaga urinib ko‘ring yoki boshqa usulni tanlang.",
+      "openRequest": "Sizda o‘tkazma arizasi bor. Uni yakunlang yoki muddati tugashini kuting.",
+      "unavailable": "Hozir bu summadagi o‘tkazmani qabul qila olmaymiz. Boshqa summa yoki usulni tanlang."
+    },
+    "methodP2P": "Kartaga o‘tkazma"
   },
   "skins": {
     "meta": {

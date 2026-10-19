@@ -179,7 +179,29 @@
       "historyTitle": "USD wallet history"
     },
     "methodMaintenance": "Under maintenance",
-    "methodUnavailable": "This payment method is unavailable right now — choose another."
+    "methodUnavailable": "This payment method is unavailable right now — choose another.",
+    "p2p": {
+      "method": "Card transfer",
+      "title": "Transfer to the card",
+      "cardLabel": "Card number",
+      "holderLabel": "Recipient",
+      "amountLabel": "Amount to transfer",
+      "exact": "Transfer exactly {amount} — otherwise the payment will not be found.",
+      "copyCard": "Copy the card number",
+      "copyAmount": "Copy the amount",
+      "copied": "Copied",
+      "left": "Left",
+      "waiting": "Waiting for your transfer. The balance tops up by itself; no need to refresh.",
+      "expiredTitle": "The time for the transfer is over",
+      "expiredNote": "Already transferred? Message support with the receipt and request number {number}.",
+      "support": "Message support",
+      "newRequest": "New request",
+      "badAmount": "Card transfers are from {min} to {max}.",
+      "dailyLimit": "Today's card transfer limit is reached. Try tomorrow or choose another method.",
+      "openRequest": "You already have a transfer request. Finish it or wait until it expires.",
+      "unavailable": "We cannot take a transfer of this amount now. Try another amount or method."
+    },
+    "methodP2P": "Card transfer"
   },
   "skins": {
     "meta": {

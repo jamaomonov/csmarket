@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@csmarket/ui";
-import { Wallet } from "lucide-react";
+import { CreditCard, Wallet } from "lucide-react";
 
 import type { Provider } from "@/lib/balance";
 import type { ReactNode } from "react";
@@ -34,7 +34,8 @@ function kassaIcon(slug: string): string | null {
 }
 
 /** The tile's name for a kassa slug; `null` for one this storefront does not offer. */
-export function kassaLabel(slug: string, testLabel: string): string | null {
+export function kassaLabel(slug: string, testLabel: string, p2pLabel = ""): string | null {
+  if (slug === "p2p") return p2pLabel;
   return slug === "mock" ? testLabel : (KASSA_NAMES[slug] ?? null);
 }
 
@@ -75,7 +76,7 @@ export interface PaymentPickerProps {
   /** The selected method — a kassa slug or `wallet` — or `null` for none. */
   method: string | null;
   onPick: (method: string) => void;
-  labels: { legend: string; test: string; none: string; maintenance: string };
+  labels: { legend: string; test: string; none: string; maintenance: string; p2p?: string };
   wallet?: WalletOption;
   /** `lg`: big tiles, three to a row (the deposit page). Default `md`. */
   size?: "md" | "lg";
@@ -169,6 +170,12 @@ export function PaymentPicker({
                 tileState(p.slug === method && isOpen(p)),
               )}
             >
+              {p.slug === "p2p" && (
+                <CreditCard
+                  className={size === "lg" ? "text-accent size-8" : "text-accent size-6"}
+                  aria-hidden
+                />
+              )}
               {kassaIcon(p.slug) !== null && (
                 // eslint-disable-next-line @next/next/no-img-element -- static brand logos from /public
                 <img
@@ -180,7 +187,7 @@ export function PaymentPicker({
                 />
               )}
               <span className="flex flex-col items-start leading-tight">
-                {kassaLabel(p.slug, labels.test)}
+                {kassaLabel(p.slug, labels.test, labels.p2p)}
                 {!isOpen(p) ? (
                   <span className="text-fg-muted text-label font-normal">{labels.maintenance}</span>
                 ) : (

@@ -255,4 +255,15 @@ describe("TopupForm", () => {
       "Эта касса сейчас недоступна — выберите другую.",
     );
   });
+
+  it("says why a card transfer was refused", async () => {
+    mocks.createTopup.mockRejectedValue(
+      new SessionApiError(409, "Conflict", { code: "p2p_daily_limit" }),
+    );
+    setup([{ slug: "p2p", fee_pct: "0", topup_only: true }]);
+    expect(screen.getByRole("button", { name: /Перевод на карту/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
+    fireEvent.click(submit());
+    expect(await screen.findByRole("alert")).toHaveTextContent(/лимит переводов на карту/);
+  });
 });

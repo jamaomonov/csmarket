@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ENTRIES_KEY } from "./EntriesList";
+import { P2PTransfer } from "./P2PTransfer";
 
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
@@ -53,14 +54,19 @@ const isNotFound = (err: unknown): boolean => err instanceof SessionApiError && 
 interface TopupStatusProps {
   locale: string;
   number: string;
+  /** The Telegram support link for a P2P transfer that ran out of time; empty hides it. */
+  supportUrl?: string;
 }
+
+/** A P2P request lives ten minutes and its quarantine ten more: poll through both. */
+const P2P_MAX_POLLS = 400;
 
 /**
  * A top-up's page: waits for the payment (polling), confirms it, or says it is over.
  * With `?go=1` it opens the kassa once, so on a phone the tab left behind the bank app
  * is this page.
  */
-export function TopupStatus({ locale, number }: TopupStatusProps) {
+export function TopupStatus({ locale, number, supportUrl = "" }: TopupStatusProps) {
   const t = useTranslations("web.balance");
   const nav = useTranslations("web.nav");
   const authT = useTranslations("web.auth");
@@ -81,7 +87,8 @@ export function TopupStatus({ locale, number }: TopupStatusProps) {
       const data = query.state.data;
       if (data && !isOpen(viewOf(data))) return false;
       if (!data && isNotFound(query.state.error)) return false;
-      return polls.count > MAX_POLLS ? false : POLL_MS;
+      const cap = data?.provider === "p2p" ? P2P_MAX_POLLS : MAX_POLLS;
+      return polls.count > cap ? false : POLL_MS;
     },
   });
   const stamp = `${topup.dataUpdatedAt.toString()}:${topup.errorUpdatedAt.toString()}`;
@@ -133,6 +140,16 @@ export function TopupStatus({ locale, number }: TopupStatusProps) {
   const data = topup.data;
   const amount = formatUzs(locale, data.amount_uzs);
   const current = viewOf(data);
+  if (data.provider === "p2p" && data.status === "pending" && data.p2p) {
+    return (
+      <P2PTransfer
+        locale={locale}
+        number={data.number}
+        transfer={data.p2p}
+        supportUrl={supportUrl}
+      />
+    );
+  }
   switch (current) {
     case "succeeded":
       return <Outcome view="succeeded" title={t("topup.done", { amount })} />;
