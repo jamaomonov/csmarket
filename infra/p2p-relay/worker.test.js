@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { relay, same } from "./worker.js";
+import { relay, same, consumeCsmarket } from "./worker.js";
 
 const ENV = {
   RELAY_SECRET: "relay-secret",
@@ -8,6 +8,7 @@ const ENV = {
   YUPAY_SECRET: "yupay-secret",
   CSMARKET_URL: "https://csmarket.example/p2p",
   CSMARKET_SECRET: "csmarket-secret",
+  RELAY_BACKOFF_MS: "0",
 };
 const BODY = JSON.stringify({ update_id: 1, business_message: { message_id: 7 } });
 
@@ -23,35 +24,49 @@ function fetcher(statuses) {
   return vi.fn(async (url) => new Response("", { status: statuses[url] ?? 200 }));
 }
 
+function ctx() {
+  const waits = [];
+  return { waitUntil: (p) => waits.push(p), waits };
+}
+
 describe("relay", () => {
   it("refuses a wrong secret and forwards nothing", async () => {
     const f = fetcher({});
-    const res = await relay(request("nope"), ENV, f);
+    const res = await relay(request("nope"), ENV, ctx(), f);
     expect(res.status).toBe(401);
     expect(f).not.toHaveBeenCalled();
   });
 
-  it("answers 200 only when both projects answered 2xx, each with its own secret", async () => {
+  it("answers Telegram on YuPay's 2xx and queues csmarket's delivery", async () => {
     const f = fetcher({});
-    const res = await relay(request(), ENV, f);
+    const queue = { send: vi.fn(async () => undefined) };
+    const res = await relay(request(), { ...ENV, CSMARKET_QUEUE: queue }, ctx(), f);
     expect(res.status).toBe(200);
-    const calls = f.mock.calls.map(([url, init]) => [
-      url,
-      init.headers["X-Telegram-Bot-Api-Secret-Token"],
-      init.body,
-    ]);
-    expect(calls).toEqual([
-      [ENV.YUPAY_URL, "yupay-secret", BODY],
-      [ENV.CSMARKET_URL, "csmarket-secret", BODY],
-    ]);
+    expect(f).toHaveBeenCalledOnce();
+    expect(f.mock.calls[0][0]).toBe(ENV.YUPAY_URL);
+    expect(f.mock.calls[0][1].headers["X-Telegram-Bot-Api-Secret-Token"]).toBe("yupay-secret");
+    expect(queue.send).toHaveBeenCalledWith({ body: BODY });
   });
 
-  it("asks Telegram to retry when either project failed or threw", async () => {
-    expect((await relay(request(), ENV, fetcher({ [ENV.CSMARKET_URL]: 500 }))).status).toBe(502);
-    const throwing = vi.fn(async () => {
-      throw new Error("down");
-    });
-    expect((await relay(request(), ENV, throwing)).status).toBe(502);
+  it("asks Telegram to retry only when YuPay failed — csmarket down never blocks YuPay", async () => {
+    const down = fetcher({ [ENV.YUPAY_URL]: 500 });
+    expect((await relay(request(), ENV, ctx(), down)).status).toBe(502);
+    const csmarketDown = fetcher({ [ENV.CSMARKET_URL]: 500 });
+    const c = ctx();
+    expect((await relay(request(), ENV, c, csmarketDown)).status).toBe(200);
+    await Promise.all(c.waits); // without a queue: background retries, logged
+    const csmarketCalls = csmarketDown.mock.calls.filter(([url]) => url === ENV.CSMARKET_URL);
+    expect(csmarketCalls).toHaveLength(4);
+  });
+
+  it("the queue consumer retries a csmarket failure and acks a success", async () => {
+    const ok = { body: { body: BODY }, ack: vi.fn(), retry: vi.fn() };
+    const bad = { body: { body: BODY }, ack: vi.fn(), retry: vi.fn() };
+    await consumeCsmarket({ messages: [ok] }, ENV, fetcher({}));
+    await consumeCsmarket({ messages: [bad] }, ENV, fetcher({ [ENV.CSMARKET_URL]: 503 }));
+    expect(ok.ack).toHaveBeenCalledOnce();
+    expect(bad.retry).toHaveBeenCalledOnce();
+    expect(bad.ack).not.toHaveBeenCalled();
   });
 
   it("compares secrets by value", async () => {

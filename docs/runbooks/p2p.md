@@ -97,7 +97,8 @@ off, or credit such transfers by hand.
 ### silence
 
 `P2PSilence`: requests expire and no HUMO message arrived for an hour. Check in order:
-`getWebhookInfo` (last error, `pending_update_count`), the relay's logs (Cloudflare), the
+`getWebhookInfo` (last error, `pending_update_count`), the relay's logs and the queue
+`csmarket-p2p` / its dead-letter queue (Cloudflare), the
 Business connection in Telegram (still on, «HUMO Card» selected, Messages on), Admin → P2P →
 Настройки («последнее уведомление»). Meanwhile switch P2P to «Тех. работы».
 

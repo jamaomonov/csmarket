@@ -116,10 +116,10 @@ expired while no notification arrived for 60 min), `P2PAmbiguousCard`.
 
 - Telegram calls it with the relay's own secret (`setWebhook … secret_token`,
   `allowed_updates=["business_message","business_connection"]`).
-- It forwards the body unchanged to YuPay (header = YuPay's `P2P_WEBHOOK_SECRET`) and to
-  csmarket (header = csmarket's secret), in parallel, and answers Telegram **2xx only when
-  both answered 2xx** — otherwise 502, and Telegram retries (both sides dedupe by message
-  id). So `pending_update_count` still means «not yet delivered to both».
+- It forwards the body unchanged to YuPay (header = YuPay's `P2P_WEBHOOK_SECRET`)
+  synchronously and answers Telegram 2xx exactly when YuPay did (502 otherwise, Telegram
+  retries); csmarket's copy (header = csmarket's secret) goes through a Cloudflare Queue with
+  retries, so csmarket being down never stops YuPay (agreed with the YuPay session).
 - Three secrets, held by the Worker; csmarket never holds YuPay's and vice versa.
 
 Go-live order (with the YuPay session): YuPay deploys its foreign-card filter → csmarket
@@ -154,7 +154,7 @@ pays its reservation, after quarantine unmatched, amounts with tiyin never match
 last4); sweep; manual credit refused while quarantined, done once; kassa switches (maintenance
 listed with status, off hidden, both 409 for new payments, an open payment still settles).
 Admin and storefront: Vitest for the top-up screen, the maintenance tile, the P2P pages.
-The relay: a Worker unit test with both targets mocked (2xx only when both are 2xx).
+The relay: a Worker unit test with both targets mocked (2xx on YuPay's 2xx; csmarket queued and retried).
 
 ## Docs
 

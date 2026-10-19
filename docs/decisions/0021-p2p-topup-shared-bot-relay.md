@@ -23,7 +23,7 @@ YuPay's.
 ## Considered options
 
 1. **A relay** (Cloudflare Worker) that receives the webhook and forwards each update to both
-   projects, answering Telegram 2xx only when both did.
+   projects.
 2. **YuPay forwards** csmarket's updates — a change in YuPay, and csmarket's top-ups stop when
    YuPay is down.
 3. **csmarket forwards** YuPay's — the same dependency, reversed.
@@ -44,9 +44,14 @@ module holds the amount and settles through `payments.settle`. `payments` calls 
 
 ### Consequences
 
-- One more piece of infrastructure (a free-tier Worker) on the path of every notification;
-  its failure stops both projects' P2P (alert `P2PSilence`).
-- `getWebhookInfo.pending_update_count` keeps its meaning ("not delivered to both").
+- One more piece of infrastructure on the path of every notification; its failure stops both
+  projects' P2P (alert `P2PSilence`).
+- **Delivery (agreed with the YuPay session, 2026-10-19):** YuPay is answered synchronously —
+  Telegram gets 2xx exactly when YuPay did, so `pending_update_count` keeps meaning "not yet
+  delivered to YuPay" (its manual-credit rule). csmarket's copy goes through the Cloudflare
+  Queue `csmarket-p2p` (30 s retries for ~50 min, then a dead-letter queue): csmarket being
+  down never stops YuPay's payments. An update csmarket misses past the queue is recovered by
+  hand from the bank statement (runbook, `P2PSilence`).
 - A Telegram reconnect of the bot resets its Business permissions for both projects.
 
 ## Validation

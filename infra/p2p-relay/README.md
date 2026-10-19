@@ -5,10 +5,11 @@ feed two projects. Spec `docs/superpowers/specs/2026-10-19-p2p-topup-design.md`,
 runbook `docs/runbooks/p2p.md`.
 
 - Telegram → the Worker, with the relay's own secret.
-- The Worker → YuPay and → csmarket, the body unchanged, each with that project's secret, in
-  parallel.
-- 200 to Telegram only when **both** answered 2xx; otherwise 502 and Telegram retries (both
-  projects dedupe by message id).
+- The Worker → YuPay synchronously, the body unchanged, with YuPay's secret: Telegram gets 200
+  exactly when YuPay answered 2xx (502 otherwise, and Telegram retries).
+- The Worker → csmarket on its own (agreed with the YuPay session): through the Cloudflare Queue
+  `csmarket-p2p` (retries every 30 s for ~50 min, then `csmarket-p2p-dlq`), so csmarket being
+  down never stops YuPay's payments. Both projects dedupe by message id.
 
 ## Deploy (the owner, once)
 
@@ -16,6 +17,8 @@ runbook `docs/runbooks/p2p.md`.
 cd infra/p2p-relay
 cp wrangler.toml.example wrangler.toml
 npx wrangler login
+npx wrangler queues create csmarket-p2p
+npx wrangler queues create csmarket-p2p-dlq
 npx wrangler secret put RELAY_SECRET     # a new random string
 npx wrangler secret put YUPAY_URL
 npx wrangler secret put YUPAY_SECRET
