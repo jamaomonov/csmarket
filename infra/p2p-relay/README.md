@@ -24,7 +24,7 @@ npx wrangler secret put YUPAY_URL
 npx wrangler secret put YUPAY_SECRET
 npx wrangler secret put CSMARKET_URL
 npx wrangler secret put CSMARKET_SECRET
-npx wrangler deploy                      # prints https://csmarket-p2p-relay.<account>.workers.dev
+npx wrangler deploy                      # prints https://p2p-relay.csmarket.uz
 ```
 
 Then point the bot at it (the bot token is in YuPay's sops; do this in the YuPay session or by
@@ -32,7 +32,7 @@ hand, once YuPay's foreign-card filter is deployed):
 
 ```sh
 curl -s "https://api.telegram.org/bot$TOKEN/setWebhook" \
-  -d url=https://csmarket-p2p-relay.<account>.workers.dev \
+  -d url=https://p2p-relay.csmarket.uz \
   -d secret_token="$RELAY_SECRET" \
   -d 'allowed_updates=["business_message","business_connection"]'
 curl -s "https://api.telegram.org/bot$TOKEN/getWebhookInfo"

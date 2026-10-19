@@ -3,6 +3,9 @@ name = "csmarket-p2p-relay"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 
+# Its own name on the shop's zone (Telegram failed to resolve a fresh *.workers.dev).
+routes = [{ pattern = "p2p-relay.csmarket.uz", custom_domain = true }]
+
 # csmarket's copy of every update goes through a queue, so csmarket being down never stops
 # YuPay (YuPay is answered synchronously). Create once:
 #   npx wrangler queues create csmarket-p2p
