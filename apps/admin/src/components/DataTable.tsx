@@ -118,14 +118,20 @@ export function DataTable<R>({
               key={rowKey(row)}
               className={`border-border bg-surface rounded-lg border p-3 ${
                 attention?.(row) === true ? "border-l-danger border-l-[3px]" : ""
-              } ${onRowClick !== undefined ? "cursor-pointer" : ""}`}
-              onClick={
-                onRowClick === undefined
-                  ? undefined
-                  : () => {
+              } ${onRowClick !== undefined ? "focus-visible:ring-accent hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2" : ""}`}
+              // A tappable card is a link for the keyboard too: Tab reaches it, Enter opens it.
+              {...(onRowClick === undefined
+                ? {}
+                : {
+                    role: "link",
+                    tabIndex: 0,
+                    onClick: () => {
                       onRowClick(row);
-                    }
-              }
+                    },
+                    onKeyDown: (e: React.KeyboardEvent) => {
+                      if (e.key === "Enter") onRowClick(row);
+                    },
+                  })}
             >
               {mobileCard(row)}
             </li>

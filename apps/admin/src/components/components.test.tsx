@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { DataTable } from "./DataTable";
+import { Modal } from "./Modal";
 import { Money, formatMoneyUsd } from "./Money";
 import { StatusChip } from "./StatusChip";
 import { Tabs } from "./Tabs";
@@ -110,5 +111,34 @@ describe("DataTable", () => {
     expect(onRowClick).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("A"));
     expect(onRowClick).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("Modal", () => {
+  it("takes focus, closes on Esc from anywhere, and locks the page behind", () => {
+    const onClose = vi.fn();
+    const { unmount } = render(
+      <Modal title="Причина" onClose={onClose}>
+        <input aria-label="Текст причины" />
+        <button type="button">Ок</button>
+      </Modal>,
+    );
+    expect(screen.getByLabelText("Текст причины")).toHaveFocus();
+    expect(document.body.style.overflow).toBe("hidden");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledOnce();
+    unmount();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("stays open on Esc while busy", () => {
+    const onClose = vi.fn();
+    render(
+      <Modal title="Ждём" onClose={onClose} busy>
+        <button type="button">Ок</button>
+      </Modal>,
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -9,7 +9,8 @@ const TONE_CLASS: Record<Tone, string> = {
   info: "bg-info/15 text-info",
   success: "bg-success/15 text-success",
   danger: "bg-danger/15 text-danger",
-  muted: "bg-surface-2 text-fg-dim",
+  // fg-muted: fg-dim reads only ~4.0:1 on surface-2 (tokens.css).
+  muted: "bg-surface-2 text-fg-muted",
 };
 
 interface StatusChipProps {
