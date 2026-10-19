@@ -15,6 +15,7 @@ import { RulesForm } from "./RulesForm";
 
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { SavedNotice } from "@/components/SavedNotice";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime, formatSum } from "@/lib/format";
 
@@ -47,6 +48,7 @@ export function PricingPage() {
   const [confirming, setConfirming] = useState(false);
   const idem = useIdempotencyKey("pricing");
   const inFlight = useRef(false);
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const save = useMutation({
     mutationFn: (d: RulesDraft) => {
       const rules = toRules(d);
@@ -54,6 +56,7 @@ export function PricingPage() {
     },
     onSuccess: (saved) => {
       idem.reset();
+      setSavedAt(new Date());
       qc.setQueryData(PRICING_KEY, saved);
       setDraft(fromRules(saved.rules));
       setConfirming(false);
@@ -86,6 +89,7 @@ export function PricingPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Цены" meta={<StatusLine data={pricing.data} />} />
+      <SavedNotice at={savedAt} />
       <RulesForm
         draft={current}
         dirty={dirty}

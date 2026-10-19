@@ -15,6 +15,7 @@ import { LimitsSection, NumberField, WARNING_TEXT, withLimits } from "./Settings
 
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { SavedNotice } from "@/components/SavedNotice";
 import { Banner } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -39,11 +40,13 @@ export function SaleSettingsPage() {
   };
   const key = useIdempotencyKey("admin-sale-settings");
   const version = settings.data?.updated_at ?? null;
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const save = useMutation({
     mutationFn: (doc: SaleSettings) =>
       saveSaleSettings(doc, version, key.keyFor(JSON.stringify(doc))),
     onSuccess: (out) => {
       key.reset();
+      setSavedAt(new Date());
       qc.setQueryData(SALE_SETTINGS_KEY, out);
       discard();
       setConfirming(false);
@@ -86,6 +89,7 @@ export function SaleSettingsPage() {
           </>
         }
       />
+      <SavedNotice at={savedAt} />
       {(settings.data.warnings ?? []).map((w) => (
         <Banner key={w}>{WARNING_TEXT[w]}</Banner>
       ))}

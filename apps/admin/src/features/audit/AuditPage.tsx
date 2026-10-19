@@ -19,6 +19,7 @@ import {
   targetTypeLabel,
 } from "./labels";
 
+import { PageHeader } from "@/components/PageHeader";
 import { errorText } from "@/features/users/labels";
 import { formatDateTime } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
@@ -143,7 +144,7 @@ export function AuditPage() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-bold">Журнал</h1>
+      <PageHeader title="Журнал" />
       <div className="flex flex-wrap items-end gap-4">
         <FilterSelect
           label="Действие"

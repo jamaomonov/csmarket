@@ -26,6 +26,7 @@ export function AliasesCard() {
       await refresh();
     },
   });
+  const [asking, setAsking] = useState<string | null>(null);
   const remove = useMutation({
     mutationFn: (name: string) => deleteAlias(name),
     onSuccess: refresh,
@@ -65,16 +66,42 @@ export function AliasesCard() {
                 <td className="py-2">{a.alias}</td>
                 <td className="py-2">{a.text}</td>
                 <td className="py-2 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={remove.isPending}
-                    onClick={() => {
-                      remove.mutate(a.alias);
-                    }}
-                  >
-                    Удалить
-                  </Button>
+                  {/* Two taps: the first asks, the second deletes (no undo on the server). */}
+                  {asking === a.alias ? (
+                    <span className="inline-flex gap-1">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          remove.mutate(a.alias);
+                          setAsking(null);
+                        }}
+                      >
+                        Да, удалить
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setAsking(null);
+                        }}
+                      >
+                        Отмена
+                      </Button>
+                    </span>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={remove.isPending}
+                      onClick={() => {
+                        setAsking(a.alias);
+                      }}
+                    >
+                      Удалить
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}

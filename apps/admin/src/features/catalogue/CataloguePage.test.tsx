@@ -98,10 +98,12 @@ describe("CataloguePage", () => {
     });
   });
 
-  it("deletes an alias", async () => {
+  it("deletes an alias on the second tap only", async () => {
     api.deleteAlias.mockResolvedValue(undefined);
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Удалить" }));
+    expect(api.deleteAlias).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Да, удалить" }));
     await waitFor(() => {
       expect(api.deleteAlias).toHaveBeenCalledWith("ак");
     });

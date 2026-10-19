@@ -3,10 +3,12 @@ import { AliasesCard } from "./AliasesCard";
 import { ItemsCard } from "./ItemsCard";
 import { StatusCard } from "./StatusCard";
 
+import { PageHeader } from "@/components/PageHeader";
+
 export function CataloguePage() {
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-bold">Каталог</h1>
+      <PageHeader title="Каталог" />
       <StatusCard />
       <ItemsCard />
       <AliasesCard />

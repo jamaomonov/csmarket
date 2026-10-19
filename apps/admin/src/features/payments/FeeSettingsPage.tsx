@@ -11,6 +11,7 @@ import { useState } from "react";
 import { getFeeSettings, saveFeeSettings, type KassaFees } from "./api";
 
 import { PageHeader } from "@/components/PageHeader";
+import { SavedNotice } from "@/components/SavedNotice";
 import { payoutErrorText } from "@/features/sales/labels";
 import { NumberField } from "@/features/sales/SettingsParts";
 import { errorText } from "@/features/users/labels";
@@ -36,10 +37,12 @@ export function FeeSettingsPage() {
   const [invalid, setInvalid] = useState(false);
   const key = useIdempotencyKey("admin-fee-settings");
   const version = settings.data?.updated_at ?? null;
+  const [savedAt, setSavedAt] = useState<Date | null>(null);
   const save = useMutation({
     mutationFn: (doc: KassaFees) => saveFeeSettings(doc, version, key.keyFor(JSON.stringify(doc))),
     onSuccess: (out) => {
       key.reset();
+      setSavedAt(new Date());
       qc.setQueryData(KEY, out);
       setDraft(null);
     },
@@ -66,6 +69,7 @@ export function FeeSettingsPage() {
             : "ещё не сохраняли"
         }
       />
+      <SavedNotice at={savedAt} />
       <section className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-4">
         <p className="text-fg-muted text-sm">
           Добавляется к сумме оплаты через эту кассу: и заказа, и пополнения. 0 — без комиссии.
