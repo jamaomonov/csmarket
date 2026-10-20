@@ -208,7 +208,7 @@ is already there). Without a key the API warns at start-up and letters retry, th
    **`DEPLOY_USER`** (`deploy`) and **`DEPLOY_SSH_KEY`** (a private key whose public half is in
    `~deploy/.ssh/authorized_keys` — a dedicated key, not your personal one). The workflow
    also pins the VPS's host key (`fingerprint:` in `deploy.yml`, from
-   `ssh-keyscan -t ed25519 <ip> | ssh-keygen -lf -`): a rebuilt server needs the new value
+   `ssh-keyscan -t ecdsa <ip> | ssh-keygen -lf -` — ECDSA, the type the action negotiates): a rebuilt server needs the new value
    there, or every deploy fails on the host-key check.
 2. **Build images** (`.github/workflows/build.yml`) runs on every push to `main`; run it by
    hand from the Actions tab if it has not. It pushes
