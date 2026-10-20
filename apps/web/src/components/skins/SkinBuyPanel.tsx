@@ -4,7 +4,7 @@ import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
 import { useTranslations } from "next-intl";
 import { useId, type ReactNode } from "react";
 
-import { BuySteps, type BuyStage } from "./BuySteps";
+import { BuySteps, useFirstPurchase, type BuyStage } from "./BuySteps";
 import { SkinBuyForm } from "./SkinBuyForm";
 import { SkinGuestForm } from "./SkinGuestForm";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
@@ -40,6 +40,9 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
   const linkWorks = gate.link !== null && verdictMessage(gate.state)?.tone !== "bad";
   const stage: BuyStage | null =
     status === "loading" || status === "suspended" ? null : !signedIn ? 1 : linkWorks ? 3 : 2;
+
+  // The way to a skin is shown until the first one arrives (owner 2026-10-20).
+  const firstPurchase = useFirstPurchase(signedIn);
 
   let body: ReactNode;
   if (status === "loading" || offers === null) {
@@ -96,7 +99,7 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
         </p>
       )}
       {body}
-      {selected && stage !== null && <BuySteps stage={stage} />}
+      {selected && stage !== null && firstPurchase === true && <BuySteps stage={stage} />}
     </section>
   );
 }

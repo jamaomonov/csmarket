@@ -32,6 +32,7 @@ const m = vi.hoisted(() => {
     check: vi.fn<(body?: unknown) => Promise<unknown>>(),
     balance: vi.fn<() => Promise<unknown>>(),
     providers: vi.fn<() => Promise<unknown>>(),
+    orders: vi.fn<() => Promise<unknown>>(),
   };
 });
 
@@ -46,6 +47,7 @@ vi.mock("@/lib/api", () => ({
     apiGet: (path: string) => {
       if (path === "/api/v1/wallet") return m.balance();
       if (path === "/api/v1/payments/providers") return m.providers();
+      if (path === "/api/v1/me/orders") return m.orders();
       return Promise.reject(new Error(`unexpected GET ${path}`));
     },
   },
@@ -181,6 +183,8 @@ beforeEach(() => {
   for (const f of [m.push, m.refreshMe, m.create, m.pay, m.check, m.balance, m.providers]) {
     f.mockReset();
   }
+  m.orders.mockReset();
+  m.orders.mockResolvedValue({ items: [], next_cursor: null });
   m.refreshMe.mockResolvedValue(undefined);
   vi.mocked(fetchSkinListings).mockResolvedValue({
     degraded: false,
@@ -584,6 +588,23 @@ describe("SkinBuyPanel — buying", () => {
     expect(steps).toHaveTextContent("Принять обмен");
     const now = steps.querySelector('[data-state="now"]');
     expect(now).toHaveTextContent("Оплата");
+  });
+
+  it("hides the steps once the buyer has received a skin", async () => {
+    m.orders.mockResolvedValue({
+      items: [order("AAAA1111", { status: "delivered" })],
+      next_cursor: null,
+    });
+    panel();
+    await buyButton("381 000");
+    await waitFor(() => {
+      expect(m.orders).toHaveBeenCalled();
+    });
+    // Let the answer land: an unknown history hides the steps too, so wait for the known one.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId("buy-steps")).not.toBeInTheDocument();
   });
 
   it("lights the trade link while the link is refused", async () => {
