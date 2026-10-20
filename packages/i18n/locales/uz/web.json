@@ -426,7 +426,14 @@
       "close": "Yopish"
     },
     "methodMaintenance": "Texnik ishlar",
-    "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang."
+    "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang.",
+    "fix": {
+      "openPrivacy": "Maxfiylik sozlamalarini ochish",
+      "openTradeUrl": "Havolani Steamʼdan olish",
+      "editLink": "Profilda oʻzgartirish",
+      "recheck": "Yana tekshirish",
+      "checking": "Tekshirilmoqda…"
+    }
   },
   "orders": {
     "title": "Almashuvlar",

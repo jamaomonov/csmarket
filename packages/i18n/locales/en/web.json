@@ -426,7 +426,14 @@
       "close": "Close"
     },
     "methodMaintenance": "Under maintenance",
-    "methodUnavailable": "This payment method is unavailable right now — choose another."
+    "methodUnavailable": "This payment method is unavailable right now — choose another.",
+    "fix": {
+      "openPrivacy": "Open privacy settings",
+      "openTradeUrl": "Get the link in Steam",
+      "editLink": "Change in profile",
+      "recheck": "Check again",
+      "checking": "Checking…"
+    }
   },
   "orders": {
     "title": "Trades",

@@ -29,7 +29,7 @@ const m = vi.hoisted(() => {
     auth,
     create: vi.fn<(body: unknown, key: string | undefined) => Promise<unknown>>(),
     pay: vi.fn<(path: string, body: unknown, key: string | undefined) => Promise<unknown>>(),
-    check: vi.fn<() => Promise<unknown>>(),
+    check: vi.fn<(body?: unknown) => Promise<unknown>>(),
     balance: vi.fn<() => Promise<unknown>>(),
     providers: vi.fn<() => Promise<unknown>>(),
   };
@@ -40,7 +40,7 @@ vi.mock("@/lib/api", () => ({
     apiPost: (path: string, body: unknown, opts?: Opts) => {
       if (path === "/api/v1/orders") return m.create(body, opts?.idempotencyKey);
       if (path.endsWith("/pay")) return m.pay(path, body, opts?.idempotencyKey);
-      if (path === "/api/v1/me/trade-link/check") return m.check();
+      if (path === "/api/v1/me/trade-link/check") return m.check(body);
       return Promise.reject(new Error(`unexpected POST ${path}`));
     },
     apiGet: (path: string) => {
@@ -76,7 +76,8 @@ const USER: Me = {
   trade_link: LINK,
   trade_link_verdict: "ok",
   trade_link_reason: null,
-  trade_link_checked_at: "2026-10-02T09:00:00Z",
+  // Checked just now: a fresh `ok` is trusted, so no check runs on mount.
+  trade_link_checked_at: new Date().toISOString(),
   roles: [],
   created_at: "2026-10-01T00:00:00Z",
 };
@@ -230,12 +231,44 @@ describe("SkinBuyPanel — who can buy", () => {
     expect(screen.queryByRole("button", { name: /Купить за/ })).not.toBeInTheDocument();
   });
 
-  it("shows why a bad link cannot receive the skin and does not let it buy", async () => {
+  it("shows why a bad link cannot receive the skin, where to fix it, and does not let it buy", async () => {
     signedIn({ trade_link_verdict: "bad", trade_link_reason: "private" });
+    m.check.mockResolvedValue({ trade_link: LINK, verdict: "bad", reason: "private" });
     panel();
     expect(await screen.findByText(/Инвентарь скрыт/)).toBeInTheDocument();
     expect(await buyButton("381 000")).toBeDisabled();
-    expect(m.check).not.toHaveBeenCalled();
+    expect(screen.getByRole("link", { name: "Открыть настройки приватности" })).toHaveAttribute(
+      "href",
+      "https://steamcommunity.com/my/edit/settings",
+    );
+    // A stored «bad» is asked once more on mount: the buyer may have fixed Steam since.
+    await waitFor(() => {
+      expect(m.check).toHaveBeenCalledWith({ fresh: false });
+    });
+  });
+
+  it("«Проверить снова» asks past the cache and lets a fixed link buy", async () => {
+    signedIn({ trade_link_verdict: "bad", trade_link_reason: "private" });
+    m.check.mockResolvedValueOnce({ trade_link: LINK, verdict: "bad", reason: "private" });
+    panel();
+    const again = await screen.findByRole("button", { name: "Проверить снова" });
+    await waitFor(() => {
+      expect(again).toBeEnabled();
+    });
+    m.check.mockResolvedValueOnce({ trade_link: LINK, verdict: "ok", reason: null });
+    fireEvent.click(again);
+    await waitFor(async () => {
+      expect(await buyButton("381 000")).toBeEnabled();
+    });
+    expect(m.check).toHaveBeenLastCalledWith({ fresh: true });
+  });
+
+  it("asks again for an ok older than ten minutes", async () => {
+    signedIn({ trade_link_checked_at: "2026-10-02T09:00:00Z" });
+    m.check.mockResolvedValue({ trade_link: LINK, verdict: "bad", reason: "private" });
+    panel();
+    expect(await screen.findByText(/Инвентарь скрыт/)).toBeInTheDocument();
+    expect(await buyButton("381 000")).toBeDisabled();
   });
 
   it("checks an unchecked link once, then lets it buy", async () => {

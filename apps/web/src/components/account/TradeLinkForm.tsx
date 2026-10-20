@@ -70,10 +70,11 @@ export function TradeLinkForm({ initial, onChange, collapseEmpty = false }: Trad
   const [fresh, setFresh] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function check() {
+  /** `fresh`: «Проверить ещё раз» asks Waxpeer anew, past the 10-minute cache. */
+  async function check(fresh = false) {
     setBusy("checking");
     try {
-      const out = await session.apiPost<TradeLinkOut>("/api/v1/me/trade-link/check", {});
+      const out = await session.apiPost<TradeLinkOut>("/api/v1/me/trade-link/check", { fresh });
       setState({ verdict: out.verdict, reason: out.reason });
     } catch {
       setState({ verdict: null, reason: "unavailable" });
@@ -116,7 +117,7 @@ export function TradeLinkForm({ initial, onChange, collapseEmpty = false }: Trad
     <button
       type="button"
       onClick={() => {
-        void check();
+        void check(true);
       }}
       className="text-accent mt-1.5 block font-semibold underline-offset-2 hover:underline"
     >

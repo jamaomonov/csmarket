@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { Me } from "@/lib/auth";
-import type { CheckState } from "@/lib/trade-link";
 
 import { session } from "@/lib/api";
+import { needsCheck, type CheckState } from "@/lib/trade-link";
 
 interface CheckOut extends CheckState {
   trade_link: string | null;
@@ -20,39 +20,51 @@ export interface TradeLinkGate {
   state: CheckState;
   /** The checkout refused the link: hold that verdict until the profile says otherwise. */
   refuse: (state: CheckState) => void;
+  /** «Проверить снова»: ask Waxpeer anew, past its 10-minute cache. */
+  recheck: () => void;
 }
 
 /**
- * The buyer's trade link, as the buy panel needs it. A link never checked (or whose last
- * check could not reach Steam) is checked once on mount — advisory: an `unavailable`
- * answer still lets the buyer pay, as the checkout does.
+ * The buyer's trade link, as the buy panel needs it. A link that was never checked, whose
+ * check could not reach Steam, that was refused, or whose verdict is over ten minutes old is
+ * checked once on mount — advisory: an `unavailable` answer still lets the buyer pay, as the
+ * checkout does.
  */
 export function useTradeLinkGate(user: Me | null, refreshMe: () => Promise<void>): TradeLinkGate {
   const link = user?.trade_link ?? null;
   const storedVerdict = user?.trade_link_verdict ?? null;
   const storedReason = user?.trade_link_reason ?? null;
+  const checkedAt = user?.trade_link_checked_at ?? null;
   const [own, setOwn] = useState<{ link: string; state: CheckState } | null>(null);
   const [checking, setChecking] = useState(false);
-  // One check per link per mount: re-renders and a refreshed profile never start another.
+  // One automatic check per link per mount: re-renders and a refreshed profile never start another.
   const started = useRef<string | null>(null);
 
+  const run = useCallback(
+    (target: string, fresh: boolean) => {
+      setChecking(true);
+      session
+        .apiPost<CheckOut>("/api/v1/me/trade-link/check", { fresh })
+        .then((out) => {
+          setOwn({ link: target, state: { verdict: out.verdict, reason: out.reason } });
+        })
+        .catch(() => {
+          setOwn({ link: target, state: { verdict: null, reason: "unavailable" } });
+        })
+        .finally(() => {
+          setChecking(false);
+          void refreshMe();
+        });
+    },
+    [refreshMe],
+  );
+
   useEffect(() => {
-    if (link === null || storedVerdict !== null || started.current === link) return;
+    if (link === null || started.current === link) return;
+    if (!needsCheck(storedVerdict, checkedAt, Date.now())) return;
     started.current = link;
-    setChecking(true);
-    session
-      .apiPost<CheckOut>("/api/v1/me/trade-link/check", {})
-      .then((out) => {
-        setOwn({ link, state: { verdict: out.verdict, reason: out.reason } });
-      })
-      .catch(() => {
-        setOwn({ link, state: { verdict: null, reason: "unavailable" } });
-      })
-      .finally(() => {
-        setChecking(false);
-        void refreshMe();
-      });
-  }, [link, storedVerdict, refreshMe]);
+    run(link, false);
+  }, [link, storedVerdict, checkedAt, run]);
 
   const refuse = useCallback(
     (state: CheckState) => {
@@ -61,9 +73,13 @@ export function useTradeLinkGate(user: Me | null, refreshMe: () => Promise<void>
     [link],
   );
 
+  const recheck = useCallback(() => {
+    if (link !== null && !checking) run(link, true);
+  }, [link, checking, run]);
+
   const state =
     own !== null && own.link === link
       ? own.state
       : { verdict: storedVerdict, reason: storedReason };
-  return { link, checking, state, refuse };
+  return { link, checking, state, refuse, recheck };
 }

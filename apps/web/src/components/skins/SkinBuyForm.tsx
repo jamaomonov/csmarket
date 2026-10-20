@@ -9,6 +9,7 @@ import { useRef, useState, useTransition } from "react";
 import { ChargeLines } from "./ChargeLines";
 import { PaymentPicker } from "./PaymentPicker";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
+import { TradeLinkFix } from "./TradeLinkFix";
 import { usePayMethods } from "./usePayMethods";
 
 import type { TradeLinkGate } from "./useTradeLinkGate";
@@ -16,7 +17,7 @@ import type { Locale } from "@csmarket/i18n";
 import type { SkinListing } from "@csmarket/utils/skins";
 
 import { PayConsent } from "@/components/legal/PayConsent";
-import { Link, useRouter } from "@/i18n/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { gaItem, track } from "@/lib/analytics";
 import { BALANCE_KEY } from "@/lib/balance";
 import { kassaCharge } from "@/lib/kassa-fee";
@@ -57,8 +58,6 @@ const cheapestOf = (list: readonly SkinListing[]): SkinListing | null =>
 /** The method picker, the verdict on the link and the button, for a buyer with a link. */
 export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFormProps) {
   const t = useTranslations("web.buy");
-  const tl = useTranslations("web.account.tradeLink.status");
-  const nav = useTranslations("web.nav");
   const router = useRouter();
   const qc = useQueryClient();
   const offers = useSkinOffers();
@@ -176,14 +175,10 @@ export function SkinBuyForm({ slug, locale, offer, gate, refreshMe }: SkinBuyFor
 
   return (
     <div className="flex flex-col gap-4">
-      {gate.checking && <p className="text-fg-muted text-sm">{t("checkingLink")}</p>}
-      {!gate.checking && verdict?.tone === "bad" && (
-        <p className="text-danger text-sm">
-          {tl(verdict.key)}{" "}
-          <Link href="/account" className="underline">
-            {nav("account")}
-          </Link>
-        </p>
+      {verdict?.tone === "bad" ? (
+        <TradeLinkFix reason={verdict.key} checking={gate.checking} onRecheck={gate.recheck} />
+      ) : (
+        gate.checking && <p className="text-fg-muted text-sm">{t("checkingLink")}</p>
       )}
       <PaymentPicker
         locale={locale}

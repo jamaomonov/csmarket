@@ -5,6 +5,36 @@ import type { Me } from "./auth";
 export const STEAM_TRADE_URL_PAGE =
   "https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url";
 
+/** Steam's privacy settings, where a hidden inventory is opened. */
+export const STEAM_PRIVACY_PAGE = "https://steamcommunity.com/my/edit/settings";
+
+/** Under `web.buy.fix`: where the buyer fixes a link Steam refuses, or null (only time helps). */
+export function fixFor(
+  key: string,
+): { href: string; label: "openPrivacy" | "openTradeUrl" } | null {
+  if (key === "private") return { href: STEAM_PRIVACY_PAGE, label: "openPrivacy" };
+  if (key === "invalid") return { href: STEAM_TRADE_URL_PAGE, label: "openTradeUrl" };
+  return null;
+}
+
+/** A verdict older than this is asked again when the buy form opens. */
+export const RECHECK_AFTER_MS = 10 * 60 * 1000;
+
+/**
+ * Should the buy form ask for a new verdict? Never checked, last check unavailable, a `bad`
+ * one (the buyer may have fixed Steam since) or one older than {@link RECHECK_AFTER_MS}.
+ */
+export function needsCheck(
+  verdict: Me["trade_link_verdict"],
+  checkedAt: string | null,
+  now: number,
+): boolean {
+  if (verdict !== "ok") return true;
+  if (checkedAt === null) return true;
+  const at = Date.parse(checkedAt);
+  return Number.isNaN(at) || now - at > RECHECK_AFTER_MS;
+}
+
 export interface CheckState {
   verdict: Me["trade_link_verdict"];
   reason: Me["trade_link_reason"];

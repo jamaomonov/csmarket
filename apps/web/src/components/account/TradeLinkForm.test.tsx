@@ -67,8 +67,17 @@ describe("TradeLinkForm", () => {
     ];
     expect(body.url).toBe(LINK);
     expect(opts.idempotencyKey.length).toBeGreaterThanOrEqual(16);
-    expect(api.apiPost).toHaveBeenCalledWith("/api/v1/me/trade-link/check", {});
+    expect(api.apiPost).toHaveBeenCalledWith("/api/v1/me/trade-link/check", { fresh: false });
     expect(onChange).toHaveBeenCalled();
+  });
+
+  it("«Проверить ещё раз» asks past the 10-minute cache", async () => {
+    api.apiPost.mockResolvedValue({ trade_link: LINK, verdict: null, reason: "unavailable" });
+    setup(LINK);
+    fireEvent.click(screen.getByRole("button", { name: "Проверить ещё раз" }));
+    await waitFor(() => {
+      expect(api.apiPost).toHaveBeenCalledWith("/api/v1/me/trade-link/check", { fresh: true });
+    });
   });
 
   it("shows the API's reason when the link is someone else's", async () => {
