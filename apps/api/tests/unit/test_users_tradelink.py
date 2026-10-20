@@ -322,3 +322,15 @@ def test_an_unknown_refusal_is_logged_without_the_link() -> None:
     for secret in ("AbC-d1", "123456789", "76561198000000001"):
         assert secret not in out
     assert out.startswith("Odd:")
+
+
+async def test_a_fresh_check_asks_again_and_keeps_the_new_answer(redis) -> None:
+    """«Проверить снова» after fixing Steam: the cached «private» must not answer it."""
+    link = parse_tradelink(LINK)
+    first = await check_trade_link(link, waxpeer=_Wax("private"), hold=_Hold(0), redis=redis)
+    assert first.reason == "private"
+    fixed = _Wax()
+    again = await check_trade_link(link, waxpeer=fixed, hold=_Hold(0), redis=redis, fresh=True)
+    assert (again, fixed.calls) == (CheckResult(verdict="ok", reason=None), 1)
+    cached = await check_trade_link(link, waxpeer=_Wax("private"), hold=_Hold(0), redis=redis)
+    assert cached == CheckResult(verdict="ok", reason=None)

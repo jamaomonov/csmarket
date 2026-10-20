@@ -19,7 +19,13 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.users.email_flow import verification_sent_at
 from csmarket.modules.users.models import User
-from csmarket.modules.users.schemas import MeOut, MePatchIn, TradeLinkIn, TradeLinkOut
+from csmarket.modules.users.schemas import (
+    MeOut,
+    MePatchIn,
+    TradeLinkCheckIn,
+    TradeLinkIn,
+    TradeLinkOut,
+)
 from csmarket.modules.users.service import (
     record_trade_link_check,
     save_trade_link,
@@ -114,11 +120,14 @@ async def check_my_trade_link(
     user: Annotated[User, Depends(current_user)],
     db: Annotated[AsyncSession, Depends(db_session)],
     checkers: Annotated[tuple[TradelinkChecker, HoldChecker], Depends(tradelink_checkers)],
+    body: TradeLinkCheckIn | None = None,
 ) -> TradeLinkOut:
     """Advisory check of the saved link (AGENTS §11 carve-out).
 
     Keyless on purpose: it writes only the derived verdict of a link the user already
     saved, and re-running it is the intended use; the 10-minute cache makes a repeat free.
+    ``{"fresh": true}`` («Проверить снова») skips the cache; the ``trade-link-check`` bucket
+    still bounds it.
     """
     await guard_ip(request, bucket="trade-link-check", subject=user.id)
     if not user.trade_link:
@@ -129,7 +138,10 @@ async def check_my_trade_link(
     # keeps ``user`` loaded; the verdict write below opens a fresh transaction.
     await db.commit()
     waxpeer, hold = checkers
-    result = await check_trade_link(link, waxpeer=waxpeer, hold=hold, redis=get_redis())
+    fresh = body is not None and body.fresh
+    result = await check_trade_link(
+        link, waxpeer=waxpeer, hold=hold, redis=get_redis(), fresh=fresh
+    )
     # ``not_found`` exists for the public API; the site's reason set stays as it was.
     reason = "invalid" if result.reason == "not_found" else result.reason
     await record_trade_link_check(db, user, verdict=result.verdict, reason=reason)

@@ -73,6 +73,22 @@ async def test_check_verdict_survives_a_reload(
     assert me["trade_link_checked_at"] is not None
 
 
+async def test_a_fresh_check_skips_the_cache(
+    integration_client: AsyncClient, app_overrides: Callable[..., None]
+) -> None:
+    h = await _auth(integration_client)
+    await integration_client.put("/api/v1/me/trade-link", json={"url": LINK}, headers=h)
+    app_overrides(waxpeer_info="Inventory is private")
+    await integration_client.post("/api/v1/me/trade-link/check", headers=h)
+    app_overrides(waxpeer_info=None)
+    cached = await integration_client.post("/api/v1/me/trade-link/check", headers=h)
+    assert cached.json()["reason"] == "private"
+    fresh = await integration_client.post(
+        "/api/v1/me/trade-link/check", json={"fresh": True}, headers=h
+    )
+    assert (fresh.json()["verdict"], fresh.json()["reason"]) == ("ok", None)
+
+
 async def test_check_without_keys_is_unavailable_but_link_stays(
     integration_client: AsyncClient,
 ) -> None:

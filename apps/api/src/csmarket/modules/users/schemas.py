@@ -67,6 +67,14 @@ class TradeLinkIn(BaseModel):
     url: str = Field(max_length=300)
 
 
+class TradeLinkCheckIn(BaseModel):
+    """``POST /me/trade-link/check``: ``fresh`` asks Waxpeer again past the 10-minute cache."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fresh: bool = False
+
+
 class TradeLinkOut(BaseModel):
     """The saved link and its last check."""
 

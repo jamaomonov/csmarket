@@ -10960,23 +10960,6 @@
         "title": "Totals",
         "type": "object"
       },
-      "TradeLinkCheckIn": {
-        "additionalProperties": false,
-        "description": "A buyer's Steam trade link to check.",
-        "properties": {
-          "trade_link": {
-            "maxLength": 512,
-            "minLength": 1,
-            "title": "Trade Link",
-            "type": "string"
-          }
-        },
-        "required": [
-          "trade_link"
-        ],
-        "title": "TradeLinkCheckIn",
-        "type": "object"
-      },
       "TradeLinkCheckOut": {
         "description": "``unavailable`` means the check could not run: do not block a purchase on it.",
         "properties": {
@@ -11625,6 +11608,23 @@
         "title": "MeOut",
         "type": "object"
       },
+      "csmarket__modules__public_api__schemas__TradeLinkCheckIn": {
+        "additionalProperties": false,
+        "description": "A buyer's Steam trade link to check.",
+        "properties": {
+          "trade_link": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Trade Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trade_link"
+        ],
+        "title": "TradeLinkCheckIn",
+        "type": "object"
+      },
       "csmarket__modules__sales__schemas__CardOut": {
         "description": "A saved card: its type and last four digits, never the number.",
         "properties": {
@@ -11832,6 +11832,19 @@
           "created_at"
         ],
         "title": "MeOut",
+        "type": "object"
+      },
+      "csmarket__modules__users__schemas__TradeLinkCheckIn": {
+        "additionalProperties": false,
+        "description": "``POST /me/trade-link/check``: ``fresh`` asks Waxpeer again past the 10-minute cache.",
+        "properties": {
+          "fresh": {
+            "default": false,
+            "title": "Fresh",
+            "type": "boolean"
+          }
+        },
+        "title": "TradeLinkCheckIn",
         "type": "object"
       }
     }
@@ -17972,7 +17985,7 @@
     },
     "/api/v1/me/trade-link/check": {
       "post": {
-        "description": "Advisory check of the saved link (AGENTS \u00a711 carve-out).\n\nKeyless on purpose: it writes only the derived verdict of a link the user already\nsaved, and re-running it is the intended use; the 10-minute cache makes a repeat free.",
+        "description": "Advisory check of the saved link (AGENTS \u00a711 carve-out).\n\nKeyless on purpose: it writes only the derived verdict of a link the user already\nsaved, and re-running it is the intended use; the 10-minute cache makes a repeat free.\n``{\"fresh\": true}`` (\u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0441\u043d\u043e\u0432\u0430\u00bb) skips the cache; the ``trade-link-check`` bucket\nstill bounds it.",
         "operationId": "check_my_trade_link_api_v1_me_trade_link_check_post",
         "parameters": [
           {
@@ -17992,6 +18005,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/csmarket__modules__users__schemas__TradeLinkCheckIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -19176,7 +19206,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/TradeLinkCheckIn"
+                "$ref": "#/components/schemas/csmarket__modules__public_api__schemas__TradeLinkCheckIn"
               }
             }
           },

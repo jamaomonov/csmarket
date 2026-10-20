@@ -209,17 +209,23 @@ async def _run(link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker)
 
 
 async def check_trade_link(
-    link: TradeLink, *, waxpeer: TradelinkChecker, hold: HoldChecker, redis: Redis
+    link: TradeLink,
+    *,
+    waxpeer: TradelinkChecker,
+    hold: HoldChecker,
+    redis: Redis,
+    fresh: bool = False,
 ) -> CheckResult:
     """The advisory check: 10-minute cache per link, 60-second breaker on an outage.
 
     Any failure answers ``unavailable`` (never cached, never a verdict); only an upstream
-    outage (transport, 5xx, 429) opens the breaker for everyone.
+    outage (transport, 5xx, 429) opens the breaker for everyone. ``fresh`` skips the cached
+    answer (the buyer fixed Steam and asks again) and keeps the new one; the breaker holds.
     """
     unavailable = CheckResult(verdict=None, reason="unavailable")
     key = _cache_key(link)
     with contextlib.suppress(RedisError, ValueError, KeyError, TypeError):
-        cached = await redis.get(key)
+        cached = None if fresh else await redis.get(key)
         if cached is not None:
             data = json.loads(cached)
             return CheckResult(verdict=data["verdict"], reason=data["reason"])

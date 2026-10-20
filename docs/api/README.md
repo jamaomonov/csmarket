@@ -60,7 +60,9 @@ Steam OpenID is the only sign-in (ADR-0004). The flow, in short:
   previous verdict, reason and `checked_at`; re-saving the same link keeps them.
 - `POST /me/trade-link/check` — advisory. `verdict` is `ok`, `warn` or `bad`, or `null`
   when the check was unavailable; `reason` is `invalid`, `private`, `trade_ban`, `hold` or
-  `unavailable`. Cached 10 minutes; 4 s upstream timeouts.
+  `unavailable`. Cached 10 minutes; 4 s upstream timeouts. An optional body
+  `{"fresh": true}` asks again past the cache («Проверить снова» after fixing Steam); the
+  `trade-link-check` `ip_guard` bucket bounds it.
 
 ### Skins catalogue (M2)
 

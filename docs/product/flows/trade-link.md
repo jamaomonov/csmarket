@@ -17,7 +17,8 @@ account page.
    - **no verdict** — the check was unavailable right now, or Waxpeer answered in words we do
      not know yet (logged as `users.tradelink.unread`). The link stays saved and buying is not
      blocked.
-4. They can run the check again at any time. A repeat within 10 minutes answers at once.
+4. They can run the check again at any time. A repeat within 10 minutes answers at once;
+   «Проверить снова» (in the profile and in the buy form) asks Waxpeer anew.
 
 ## Sequence
 
