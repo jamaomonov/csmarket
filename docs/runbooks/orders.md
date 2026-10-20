@@ -232,8 +232,11 @@ reconcile at 240 s, the gauges at 260 s, the protection watch at 280 s.
   side with a clawback adjustment — owner's decision, never automatic.
 - **Low Waxpeer balance refunds.** [`waxpeer.md#balance-low`](./waxpeer.md#balance-low).
 - **Switching buying off.** `CSMARKET_SKINS_BUY_ENABLED=false` in `secrets/api.env`, then
-  `up -d api worker scheduler`: the buy panel disappears and new orders are 409
-  `buying_disabled`. Orders already paid are still bought and their trades followed.
+  `up -d api worker scheduler`: the buy panel disappears, new orders are 409
+  `buying_disabled`, and so is paying an order already open (owner 2026-10-20) — the
+  balance refuses, and a kassa resolves the order as not payable before it takes money; a
+  charge a kassa already holds still settles. Orders already paid are still bought and
+  their trades followed.
 
 ## Logs
 

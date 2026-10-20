@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
+from csmarket.core.config import get_settings
 from csmarket.core.numbers import TOPUP_PREFIX, is_number, is_topup_number
 from csmarket.modules.orders.api import Order
 from csmarket.modules.payments.models import WalletTopup
@@ -67,9 +68,13 @@ def _topup_reason(topup: WalletTopup) -> Reason:
 
 
 def _order_reason(order: Order) -> Reason:
-    """``ok`` for a pending order inside its window; ``expired`` past it or ``cancelled``;
-    ``paid`` for every later status (the money already came)."""
+    """``ok`` for a pending order inside its window; ``expired`` past it, ``cancelled``, or
+    while buying is switched off (owner 2026-10-20: the switch stops open orders too, so a
+    kassa refuses to take money for one); ``paid`` for every later status (the money
+    already came — a charge a kassa already holds still settles)."""
     if order.status == "pending":
+        if not get_settings().skins_buy_enabled:
+            return "expired"
         return "ok" if order.expires_at > now() else "expired"
     if order.status == "cancelled":
         return "expired"

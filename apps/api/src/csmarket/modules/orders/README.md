@@ -124,8 +124,10 @@ replay store (scope `orders.pay:{number}`, the row keeps `{request: {provider, l
 response}`): the same body replays the stored answer, another body is 409
 `idempotency_mismatch`. Looked up under the order lock, so a double-click's second request
 waits for the first and replays it. Then an order that is not payable is 409
-`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), a Waxpeer
-order while `waxpeer_buy_enabled` is off is 409 `buying_disabled` (WAX-02), and:
+`order_not_payable` with `reason` `paid` or `expired` (also a cancelled order), any pending
+order while `skins_buy_enabled` is off and a Waxpeer order while `waxpeer_buy_enabled` is off
+are 409 `buying_disabled` (owner 2026-10-20; WAX-02) — `payments.payable` resolves such an
+order as `expired` for the kassas too, and:
 
 - **`wallet`** — one transaction: `wallet.debit_purchase` (locks the wallet; 409
   `balance_too_low` writes nothing), a `payments` row `purpose="order"`,

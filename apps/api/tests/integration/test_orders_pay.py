@@ -650,3 +650,24 @@ async def test_an_order_is_refused_in_a_kassa_under_maintenance_or_p2p(
     assert (r.status_code, r.json()["code"]) == (409, "provider_maintenance")
     r = await _pay(integration_client, headers, pending_order.number, provider="p2p")
     assert r.status_code == 422  # not a provider an order takes (schema or route)
+
+
+async def test_switching_buying_off_stops_an_open_order(
+    *,
+    integration_client: AsyncClient,
+    headers: dict[str, str],
+    db_session: AsyncSession,
+    buyer: User,
+    pending_order: Order,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Owner 2026-10-20: the buying switch also stops orders already open — neither the
+    balance nor a kassa takes money for one (a kassa resolves it as not payable)."""
+    await credit(db_session, buyer, 500_000)
+    monkeypatch.setenv("CSMARKET_SKINS_BUY_ENABLED", "false")
+    cfg.get_settings.cache_clear()
+    r = await _pay(integration_client, headers, pending_order.number)
+    assert (r.status_code, r.json()["code"]) == (409, "buying_disabled")
+    assert await purchase_count(db_session, pending_order.id) == 0
+    found = await resolve(db_session, pending_order.number)
+    assert (found.payable, found.reason) == (False, "expired")

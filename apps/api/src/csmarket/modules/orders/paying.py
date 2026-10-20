@@ -76,15 +76,19 @@ async def _locked_own(db: AsyncSession, *, user_id: str, number: str) -> tuple[P
 
 
 def _refuse_unless_payable(payable: Payable) -> None:
-    """409 ``order_not_payable`` with ``reason`` ``paid`` or ``expired`` (also cancelled);
-    409 ``buying_disabled`` for a Waxpeer order while Waxpeer buying is off (WAX-02: the
-    money would only come back to the balance)."""
+    """409 ``buying_disabled`` for a pending order while buying is off (owner 2026-10-20:
+    the switch stops open orders too) or a Waxpeer order while Waxpeer buying is off
+    (WAX-02: the money would only come back to the balance); 409 ``order_not_payable``
+    with ``reason`` ``paid`` or ``expired`` (also cancelled)."""
+    order = payable.order
+    settings = get_settings()
+    if order is not None and order.status == "pending" and not settings.skins_buy_enabled:
+        raise ConflictError("buying is switched off", code="buying_disabled")
     if not payable.payable:
         raise ConflictError(
             "this order cannot be paid", code="order_not_payable", reason=payable.reason
         )
-    order = payable.order
-    if order is not None and order.source == "waxpeer" and not get_settings().waxpeer_buy_enabled:
+    if order is not None and order.source == "waxpeer" and not settings.waxpeer_buy_enabled:
         raise ConflictError("buying is switched off", code="buying_disabled")
 
 

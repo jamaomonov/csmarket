@@ -80,6 +80,9 @@ def _apply_migrations(
     overrides = {
         "CSMARKET_DATABASE_URL": url,
         "CSMARKET_REDIS_URL": f"redis://{redis_host}:{redis_port}/0",
+        # Buying is on in these tests unless one switches it off: since review 2026-10-20 the
+        # switch also stops paying orders already open, and most tests pay one.
+        "CSMARKET_SKINS_BUY_ENABLED": "true",
     }
     previous = {k: os.environ.get(k) for k in overrides}
     os.environ.update(overrides)
