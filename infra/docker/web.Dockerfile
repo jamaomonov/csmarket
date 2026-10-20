@@ -39,5 +39,6 @@ COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=node:node /app/apps/web/assets ./apps/web/assets
 USER node
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:3000/ || exit 1
+# 127.0.0.1, not localhost: busybox resolves localhost to ::1 and the server listens on IPv4.
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://127.0.0.1:3000/ || exit 1
 CMD ["node", "apps/web/server.js"]
