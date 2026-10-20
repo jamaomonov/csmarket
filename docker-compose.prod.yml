@@ -70,6 +70,12 @@ services:
       # Per sort, per connection — kept modest.
       - "-c"
       - "work_mem=8MB"
+      # A unique violation would otherwise log «Key (steam_id)=(…)» and the failing
+      # STATEMENT, which promtail ships to Loki for 14 days (AGENTS §10).
+      - "-c"
+      - "log_error_verbosity=terse"
+      - "-c"
+      - "log_min_error_statement=panic"
       - "-c"
       - "maintenance_work_mem=128MB"
       # SSD: the default of 4 biases the planner towards sequential scans.

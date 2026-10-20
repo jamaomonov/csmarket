@@ -7,21 +7,11 @@
     <meta name="robots" content="noindex,nofollow" />
     <title>csmarket admin</title>
     <!--
-      Anti-FOUC: resolve the theme synchronously before any stylesheet or
-      script loads. Sets data-theme on <html> so the first paint already has
-      the right palette. Keep this script tiny and free of imports — every
-      branch must run in a single tick.
+      Anti-FOUC: /theme.js resolves the theme synchronously before any stylesheet or
+      module loads, so the first paint already has the right palette. A file, not an
+      inline script: the admin's CSP allows no inline script (Caddyfile.prod).
     -->
-    <script>
-      (function () {
-        try {
-          var stored = localStorage.getItem("csmarket.admin.theme") || "dark";
-          document.documentElement.setAttribute("data-theme", stored);
-        } catch (e) {
-          document.documentElement.setAttribute("data-theme", "dark");
-        }
-      })();
-    </script>
+    <script src="/theme.js"></script>
   </head>
   <body>
     <div id="root"></div>

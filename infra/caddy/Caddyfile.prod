@@ -133,6 +133,9 @@ csmarket.uz, www.csmarket.uz {
 admin.csmarket.uz {
 	encode zstd gzip
 	import security_headers
+	# No inline script (the theme bootstrap is /theme.js): an XSS in a supplier- or
+	# user-sourced string cannot run, and the admin only talks to the API.
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://api.csmarket.uz wss://api.csmarket.uz; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 	# Never in search, whatever the storefront's gate says.
 	header X-Robots-Tag "noindex, nofollow"
 	import access_log
@@ -142,8 +145,13 @@ admin.csmarket.uz {
 # ---------- api ----------
 api.csmarket.uz {
 	encode zstd gzip
-	header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+	import security_headers
 	header X-Robots-Tag "noindex, nofollow"
+	# Ordinary JSON; the app streams webhook bodies through its own caps. Without this an
+	# origin reached past Cloudflare could post a body as large as the container's memory.
+	request_body {
+		max_size 1MB
+	}
 	# CORS is FastAPI's job (CSMARKET_CORS_ALLOW_ORIGINS); doing it here too
 	# produces two Access-Control-Allow-Origin values and the browser rejects both.
 

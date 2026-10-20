@@ -45,6 +45,9 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
+          # The VPS's ed25519 host key (ssh-keyscan 57.131.198.69 | ssh-keygen -lf -):
+          # without it any host answering the address would be accepted.
+          fingerprint: SHA256:hd6mvFL7qLWPY47nCzjg2zkZy/fSiX5KK8uFnInYrRY
           envs: IMAGE_TAG_INPUT
           script: |
             set -euo pipefail
