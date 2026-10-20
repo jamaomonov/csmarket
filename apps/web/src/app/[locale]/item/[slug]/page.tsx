@@ -230,14 +230,12 @@ export default async function SkinPage({ params }: Props) {
         </nav>
 
         <SkinOffersProvider slug={item.slug}>
-          <section className="grid gap-6 md:grid-cols-2 lg:gap-8">
-            {/* Left: the picture with the cheapest offer on it, then the other wears. Right:
-              name, price and buying, then the facts. On phones the order is the source order:
-              picture → wears → buying → facts. */}
-            {/* Beside the taller buy column the picture stays in view while it scrolls (no
-              empty space under the wears, owner 2026-10-20). Only on screens tall enough to
-              hold the picture and the wears whole; phones stack as before. */}
-            <div className="flex min-w-0 flex-col gap-6 md:self-start md:[@media(min-height:820px)]:sticky md:[@media(min-height:820px)]:top-20">
+          <section className="grid gap-6 md:grid-cols-2 md:grid-rows-[auto_1fr] lg:gap-x-8">
+            {/* Left: the picture with the picked offer on it, the other wears, then the facts.
+              Right: name, price and buying, sticky beside the longer left column (owner
+              2026-10-20) on screens tall enough to hold the card whole. On phones the order
+              is the source order: picture → wears → buying → facts. */}
+            <div className="flex min-w-0 flex-col gap-6 md:col-start-1 md:row-start-1">
               <SkinHero
                 image={item.image_url}
                 name={item.name}
@@ -246,8 +244,8 @@ export default async function SkinPage({ params }: Props) {
               />
               {wears}
             </div>
-            <div className="flex min-w-0 flex-col gap-6">
-              <div className="border-border bg-surface flex flex-col gap-5 rounded-xl border p-5 sm:p-6">
+            <div className="min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
+              <div className="border-border bg-surface flex flex-col gap-5 rounded-xl border p-5 sm:p-6 md:[@media(min-height:860px)]:sticky md:[@media(min-height:860px)]:top-20">
                 <SkinItemTitle
                   name={name}
                   phase={item.phase}
@@ -276,8 +274,8 @@ export default async function SkinPage({ params }: Props) {
                   }}
                 />
               </div>
-              {facts}
             </div>
+            <div className="min-w-0 md:col-start-1 md:row-start-2">{facts}</div>
           </section>
 
           {worn && (
