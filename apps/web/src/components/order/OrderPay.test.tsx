@@ -230,7 +230,10 @@ describe("OrderPay", () => {
       );
     });
     fireEvent.click(await payButton());
-    expect(await screen.findByText(/^Не хватает 380\s000 сум$/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: /^Баланс Не хватает 380\s000 сум$/ }),
+    ).toBeDisabled();
+    expect(screen.getByText(/^−380\s000 сум$/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(onPaid).not.toHaveBeenCalled();
   });

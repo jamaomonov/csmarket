@@ -62,8 +62,10 @@ export function firstOpen(offered: readonly Provider[]): string | null {
 /** The balance as a payment method (the buy panel's; top-ups have none). */
 export interface WalletOption {
   label: string;
-  /** Under the label: the balance, or what is missing; `null` while it loads. */
+  /** Beside the label: the balance, or what is missing («−1 000 сум»); `null` while it loads. */
   detail: string | null;
+  /** The detail in words («Не хватает 1 000 сум») for the tooltip and screen readers. */
+  detailFull?: string;
   /** The balance covers the price: the tile can be picked. */
   covers: boolean;
   /** Beside a short balance: where to top it up. */
@@ -104,41 +106,51 @@ export function PaymentPicker({
   const offered = offeredKassas(providers, forTopup);
   const noKassa = providers !== undefined && offered.length === 0;
   return (
-    <fieldset>
+    // `min-w-0`: a fieldset is as wide as its content by default; the balance line truncates.
+    <fieldset className="min-w-0">
       <legend className="text-fg-muted mb-2 text-sm font-semibold">{labels.legend}</legend>
       {wallet && (
-        <div className="mb-2 flex items-center gap-3">
+        // One row the height of a tile: the balance (or what is missing) and, when short,
+        // «Пополнить» at its end — inside the row's border, outside its button.
+        <div
+          className={cn(
+            "mb-2 flex h-12 items-center rounded-md border",
+            tileState(method === WALLET),
+          )}
+        >
           <button
             type="button"
             aria-pressed={method === WALLET}
             disabled={!wallet.covers}
+            title={wallet.detailFull}
+            aria-label={
+              wallet.detail === null
+                ? wallet.label
+                : `${wallet.label} ${wallet.detailFull ?? wallet.detail}`
+            }
             onClick={() => {
               onPick(WALLET);
             }}
-            className={cn(
-              TILE,
-              "flex min-h-12 flex-1 items-center gap-3 py-2 text-left disabled:cursor-not-allowed disabled:opacity-70",
-              tileState(method === WALLET),
-            )}
+            className="flex h-full min-w-0 flex-1 items-center gap-2.5 px-3 text-left text-sm font-semibold disabled:cursor-not-allowed"
           >
-            <Wallet className="text-accent h-5 w-5 shrink-0" aria-hidden />
-            <span className="min-w-0">
-              <span className="block">{wallet.label}</span>
-              {wallet.detail === null ? (
-                <span className="bg-surface-2 mt-1 block h-3 w-20 animate-pulse rounded" />
-              ) : (
-                <span
-                  className={cn(
-                    "text-small block font-normal tabular-nums",
-                    wallet.covers ? "text-fg-dim" : "text-danger",
-                  )}
-                >
-                  {wallet.detail}
-                </span>
-              )}
-            </span>
+            <Wallet className="text-accent size-5 shrink-0" aria-hidden />
+            <span className="shrink-0">{wallet.label}</span>
+            {wallet.detail === null ? (
+              <span className="bg-surface-2 h-3 w-20 animate-pulse rounded" />
+            ) : (
+              <span
+                className={cn(
+                  "text-small truncate font-normal tabular-nums",
+                  wallet.covers ? "text-fg-dim" : "text-danger",
+                )}
+              >
+                {wallet.detail}
+              </span>
+            )}
           </button>
-          {wallet.action}
+          {wallet.action ? (
+            <span className="flex h-full shrink-0 items-center pr-2.5">{wallet.action}</span>
+          ) : null}
         </div>
       )}
       {providers === undefined ? (
@@ -150,8 +162,11 @@ export function PaymentPicker({
       ) : (
         <div
           className={cn(
-            "grid grid-cols-2 gap-2",
-            size === "lg" ? "sm:grid-cols-3 sm:gap-3" : "sm:grid-cols-4",
+            "grid gap-2",
+            // The buy panel is narrow beside the picture: tiles fill the row, never squeezed.
+            size === "lg"
+              ? "grid-cols-2 sm:grid-cols-3 sm:gap-3"
+              : "grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))]",
           )}
         >
           {offered.map((p) => (
@@ -165,8 +180,10 @@ export function PaymentPicker({
               }}
               className={cn(
                 TILE,
-                "flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50",
-                size === "lg" ? "h-20 gap-3 rounded-lg text-lg font-bold" : "h-12",
+                "flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50",
+                size === "lg"
+                  ? "h-20 justify-center gap-3 rounded-lg text-lg font-bold"
+                  : "h-12 min-w-0 justify-start",
                 tileState(p.slug === method && isOpen(p)),
               )}
             >
@@ -186,7 +203,7 @@ export function PaymentPicker({
                   className={size === "lg" ? "rounded-lg" : "rounded-md"}
                 />
               )}
-              <span className="flex flex-col items-start leading-tight">
+              <span className="flex min-w-0 flex-col items-start leading-tight">
                 {kassaLabel(p.slug, labels.test, labels.p2p)}
                 {!isOpen(p) ? (
                   <span className="text-fg-muted text-label font-normal">{labels.maintenance}</span>

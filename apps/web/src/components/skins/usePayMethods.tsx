@@ -2,6 +2,7 @@
 
 import { formatUzs } from "@csmarket/utils";
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
@@ -78,13 +79,21 @@ export function usePayMethods(
             ? null
             : covers || price === null
               ? formatUzs(locale, funds)
-              : t("balanceShort", { amount: formatUzs(locale, Number(price) - funds) }),
+              : `−${formatUzs(locale, Number(price) - funds)}`,
+        ...(funds !== null && price !== null && !covers
+          ? { detailFull: t("balanceShort", { amount: formatUzs(locale, Number(price) - funds) }) }
+          : {}),
         covers,
         ...(funds !== null && price !== null && !covers
           ? {
               action: (
-                <Link href={DEPOSIT} className="text-accent shrink-0 text-sm font-semibold">
-                  {t("topUp")}
+                <Link
+                  href={DEPOSIT}
+                  aria-label={t("topUp")}
+                  title={t("topUp")}
+                  className="bg-accent text-accent-fg hover:bg-accent-hover focus-visible:ring-accent flex size-7 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2"
+                >
+                  <Plus className="size-4" strokeWidth={3} aria-hidden />
                 </Link>
               ),
             }

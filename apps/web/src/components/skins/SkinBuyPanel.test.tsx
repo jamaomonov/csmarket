@@ -55,8 +55,10 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/lib/auth", () => ({ useAuth: () => m.auth.value }));
 vi.mock("@/i18n/navigation", () => ({
   useRouter: () => ({ push: m.push }),
-  Link: ({ href, children }: { href: string; children: ReactNode }) => (
-    <a href={href}>{children}</a>
+  Link: ({ href, children, ...rest }: { href: string; children: ReactNode }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
 }));
 vi.mock("@/lib/skins", async (importOriginal) => ({
