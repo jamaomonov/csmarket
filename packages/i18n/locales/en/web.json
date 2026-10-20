@@ -529,10 +529,7 @@
   "deposit": {
     "title": "Top up your balance",
     "wallet": "Wallet",
-    "topup": "Top up",
-    "withdraw": "Withdraw",
     "note": "Money on the balance can be spent on skins in the market.",
-    "withdrawSoon": "Withdrawals to a card are coming soon.",
     "total": "You get on the balance",
     "topUp": "Top up"
   },

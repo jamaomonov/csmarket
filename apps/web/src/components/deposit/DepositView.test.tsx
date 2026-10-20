@@ -2,7 +2,7 @@
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -43,24 +43,13 @@ describe("DepositView", () => {
     ]);
   });
 
-  it("the wallet: top-up tab with the kassas and the amount", async () => {
+  it("the wallet: the kassas and the amount, no deposit / withdraw switch", async () => {
     auth.value = { status: "signed_in", user: { id: "u1" }, signInHref: () => "" };
     renderView();
     expect(screen.getByRole("heading", { level: 1, name: "Кошелёк" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Пополнение" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    expect(screen.queryByRole("tab")).toBeNull();
     expect(await screen.findByRole("button", { name: "Payme" })).toBeInTheDocument();
     expect(screen.getByLabelText("Сумма")).toBeInTheDocument();
-  });
-
-  it("the withdraw tab says it is coming and hides the form", () => {
-    auth.value = { status: "signed_in", user: { id: "u1" }, signInHref: () => "" };
-    renderView();
-    fireEvent.click(screen.getByRole("tab", { name: "Вывод" }));
-    expect(screen.getByText("Вывод на карту скоро появится.")).toBeInTheDocument();
-    expect(screen.queryByLabelText("Сумма")).toBeNull();
   });
 
   it("a visitor is asked to sign in", () => {

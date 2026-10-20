@@ -1,30 +1,25 @@
 "use client";
 
 import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
-import { cn } from "@csmarket/ui";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowUpFromLine, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
 
 import { TopupForm } from "@/components/balance/TopupForm";
 import { useAuth } from "@/lib/auth";
 import { getProviders } from "@/lib/balance";
 
-type Tab = "topup" | "withdraw";
-
 interface DepositViewProps {
   locale: string;
 }
 
-/** «Кошелёк»: top up through a kassa; withdrawals are on their way. */
+/** «Кошелёк»: top up through a kassa (withdrawals are hidden until they exist, owner 2026-10-20). */
 export function DepositView({ locale }: DepositViewProps) {
   const t = useTranslations("web.deposit");
   const auth = useTranslations("web.auth");
   const nav = useTranslations("web.nav");
   const { status, user, signInHref } = useAuth();
   const signedIn = status === "signed_in" && user !== null;
-  const [tab, setTab] = useState<Tab>("topup");
   const providers = useQuery({
     queryKey: ["payments", "providers"],
     queryFn: getProviders,
@@ -46,13 +41,6 @@ export function DepositView({ locale }: DepositViewProps) {
         {nav("signIn")}
       </a>
     );
-  } else if (tab === "withdraw") {
-    body = (
-      <div className="bg-surface border-border text-fg-muted flex items-center gap-3 rounded-xl border p-6">
-        <ArrowUpFromLine className="text-fg-dim size-5" aria-hidden />
-        {t("withdrawSoon")}
-      </div>
-    );
   } else {
     body = (
       <TopupForm
@@ -63,40 +51,12 @@ export function DepositView({ locale }: DepositViewProps) {
     );
   }
 
-  const tabs: { key: Tab; icon: typeof Wallet }[] = [
-    { key: "topup", icon: ArrowDownToLine },
-    { key: "withdraw", icon: ArrowUpFromLine },
-  ];
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-h2 flex items-center gap-3 font-semibold tracking-tight">
-          <Wallet className="text-accent size-8" aria-hidden />
-          {t("wallet")}
-        </h1>
-        {signedIn ? (
-          <div role="tablist" className="bg-surface flex gap-1 rounded-lg p-1">
-            {tabs.map(({ key, icon: Icon }) => (
-              <button
-                key={key}
-                type="button"
-                role="tab"
-                aria-selected={tab === key}
-                onClick={() => {
-                  setTab(key);
-                }}
-                className={cn(
-                  "text-body flex items-center gap-2 rounded-md px-4 py-2 font-medium transition-colors",
-                  tab === key ? "bg-surface-2 text-fg" : "text-fg-muted hover:text-fg",
-                )}
-              >
-                <Icon className={cn("size-4", tab === key && "text-accent")} aria-hidden />
-                {t(key)}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
+      <h1 className="text-h2 flex items-center gap-3 font-semibold tracking-tight">
+        <Wallet className="text-accent size-8" aria-hidden />
+        {t("wallet")}
+      </h1>
       {body}
     </div>
   );
