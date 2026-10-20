@@ -4,6 +4,7 @@ import { DEFAULT_LOCALE, isLocale } from "@csmarket/i18n";
 import { useTranslations } from "next-intl";
 import { useId, type ReactNode } from "react";
 
+import { BuySteps, type BuyStage } from "./BuySteps";
 import { SkinBuyForm } from "./SkinBuyForm";
 import { SkinGuestForm } from "./SkinGuestForm";
 import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
@@ -12,6 +13,7 @@ import { useTradeLinkGate } from "./useTradeLinkGate";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { displayPrice } from "@/lib/skins";
+import { verdictMessage } from "@/lib/trade-link";
 
 interface SkinBuyPanelProps {
   slug: string;
@@ -34,6 +36,10 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
   const offers = useSkinOffers();
   const { selected } = useSelectedOffer();
   const headingId = useId();
+
+  const linkWorks = gate.link !== null && verdictMessage(gate.state)?.tone !== "bad";
+  const stage: BuyStage | null =
+    status === "loading" || status === "suspended" ? null : !signedIn ? 1 : linkWorks ? 3 : 2;
 
   let body: ReactNode;
   if (status === "loading" || offers === null) {
@@ -90,7 +96,7 @@ export function SkinBuyPanel({ slug, locale }: SkinBuyPanelProps) {
         </p>
       )}
       {body}
-      {selected && <p className="text-fg-dim text-small">{t("howItWorks")}</p>}
+      {selected && stage !== null && <BuySteps stage={stage} />}
     </section>
   );
 }

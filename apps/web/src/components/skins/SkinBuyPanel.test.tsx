@@ -578,12 +578,19 @@ describe("SkinBuyPanel — buying", () => {
     expect(await buyButton("381 000")).toBeEnabled();
   });
 
-  it("explains how delivery works", async () => {
+  it("shows the way to the skin, with payment lit for a buyer whose link works", async () => {
     panel();
-    expect(
-      await screen.findByText(
-        "После оплаты продавец отправит обмен в Steam. Примите его — скин ваш.",
-      ),
-    ).toBeInTheDocument();
+    const steps = await screen.findByTestId("buy-steps");
+    expect(steps).toHaveTextContent("Принять обмен");
+    const now = steps.querySelector('[data-state="now"]');
+    expect(now).toHaveTextContent("Оплата");
+  });
+
+  it("lights the trade link while the link is refused", async () => {
+    signedIn({ trade_link_verdict: "bad", trade_link_reason: "private" });
+    m.check.mockResolvedValue({ trade_link: LINK, verdict: "bad", reason: "private" });
+    panel();
+    const steps = await screen.findByTestId("buy-steps");
+    expect(steps.querySelector('[data-state="now"]')).toHaveTextContent("Трейд-ссылка");
   });
 });

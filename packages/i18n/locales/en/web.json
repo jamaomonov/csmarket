@@ -411,7 +411,6 @@
     "offerGone": "This offer was just bought. Next one — {price}",
     "noneLeft": "No offers left",
     "failed": "Couldn't place the order. Please try again.",
-    "howItWorks": "After you pay, the seller sends you a Steam trade offer. Accept it — the skin is yours.",
     "charge": {
       "price": "Price",
       "toBalance": "To balance",
@@ -433,6 +432,12 @@
       "editLink": "Change in profile",
       "recheck": "Check again",
       "checking": "Checking…"
+    },
+    "steps": {
+      "signIn": "Sign in",
+      "link": "Trade link",
+      "pay": "Payment",
+      "accept": "Accept the trade"
     }
   },
   "orders": {
