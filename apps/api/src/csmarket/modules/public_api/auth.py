@@ -70,7 +70,7 @@ def _token(authorization: str | None) -> str:
 
 async def api_caller(
     request: Request,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     authorization: Annotated[str | None, Header()] = None,
 ) -> ApiCaller:
     """Resolve the caller from the bearer key.

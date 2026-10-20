@@ -33,7 +33,7 @@ from csmarket.modules.users.models import User
 
 router = APIRouter(prefix="/admin/skins", tags=["admin"], dependencies=[Depends(require_admin)])
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 Admin = Annotated[User, Depends(require_admin)]
 IdemKey = Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)]
 

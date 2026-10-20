@@ -71,7 +71,7 @@ async def check_offer(
     item_id: str,
     offer_id: str,
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     availability: Annotated[AvailabilityClient, Depends(availability_client)],
 ) -> JSONResponse:
     """Whether the offer is still for sale and its price for your tariff, checked now.

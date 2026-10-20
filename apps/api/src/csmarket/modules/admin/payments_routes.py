@@ -24,7 +24,7 @@ from csmarket.modules.admin.payments_schemas import (
 
 router = APIRouter(prefix="/admin/payments", tags=["admin"], dependencies=[Depends(require_admin)])
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 
 
 @router.get("", response_model=AdminPaymentsOut, summary="Find payments")

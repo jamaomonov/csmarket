@@ -41,7 +41,7 @@ from csmarket.modules.users.api import User
 
 router = APIRouter(tags=["sales"])
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 Me = Annotated[User, Depends(current_user)]
 
 

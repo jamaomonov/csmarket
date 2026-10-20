@@ -39,7 +39,7 @@ from csmarket.modules.click.errors import (
 router = APIRouter(prefix="/payments/click", tags=["click"])
 log = get_logger("csmarket.click.webhook")
 
-DbSession = Annotated[AsyncSession, Depends(db_session)]
+DbSession = Annotated[AsyncSession, Depends(db_session, scope="function")]
 
 #: The longest account value worth echoing into a log line (a top-up number is 8).
 _LOG_NUMBER_MAX = 16

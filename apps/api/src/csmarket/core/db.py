@@ -65,6 +65,9 @@ def get_engine() -> AsyncEngine:
             pool_size=10,
             max_overflow=10,
             echo=False,
+            # A DBAPIError's text otherwise carries every bound value (an email, a steam_id)
+            # into uvicorn's log and Sentry (AGENTS §10).
+            hide_parameters=True,
         )
     return _engine
 

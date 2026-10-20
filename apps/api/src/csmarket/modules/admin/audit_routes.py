@@ -15,7 +15,7 @@ from csmarket.modules.admin.filters import text_filter
 
 router = APIRouter(prefix="/admin/audit", tags=["admin"], dependencies=[Depends(require_admin)])
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 _Filter = text_filter(64)
 
 

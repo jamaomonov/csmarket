@@ -62,6 +62,10 @@ The number is never in a list, a letter or a log; do not screenshot it.
 without an answer (409 `payout_user_blocked`); the answer goes into the audit row. Usually the
 right move is not to pay: leave it, or «Отклонить» if the wallet is active.
 
+**Skinslink reverted the trade** (the request carries the `rolled_back` flag): the seller has
+the skins back, so «Отклонить» is refused (409 `payout_sale_reverted`) — it would hand them
+the money too. Close it with «Закрыть без выплаты»; «Выплачено» needs a stated reason.
+
 **Pressed the wrong one?** For 10 minutes the page offers «Вернуть в очередь» (a reason is
 required, audited `sales.payout.undo`):
 

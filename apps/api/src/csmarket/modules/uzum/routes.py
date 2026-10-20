@@ -46,7 +46,7 @@ from csmarket.modules.uzum.errors import (
 router = APIRouter(prefix="/payments/uzum", tags=["uzum"])
 log = get_logger("csmarket.uzum.merchant")
 
-DbSession = Annotated[AsyncSession, Depends(db_session)]
+DbSession = Annotated[AsyncSession, Depends(db_session, scope="function")]
 
 #: The parsed request body (untrusted JSON object).
 Body = dict[str, Any]

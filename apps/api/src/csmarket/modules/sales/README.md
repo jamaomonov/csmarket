@@ -96,7 +96,9 @@ settings answer carries `warnings` (`balance_bonus_eats_margin`), never a refusa
 `admin_routes.py` mounts the payout queue, a request's page, the sales list and page, and the
 settings editor; `payouts_summary` feeds the dashboard's «К выплате» tile. Paid and reject lock
 the sale, then its request (the order `status.py` takes) and need a `to_pay` request (409
-`payout_not_payable`); a reject credits `amount + fee` (the pre-fee `items_uzs`) to the balance,
+`payout_not_payable`); a reject credits `amount + fee` (the pre-fee `items_uzs`) to the balance
+— refused while the sale is flagged `rolled_back` (409 `payout_sale_reverted`: the seller has
+the skins back),
 keyed `payout_return:{id}`. The admin's reason is free text for the admin only: the seller's
 letter and sale page say just that the transfer failed and the money is on the balance
 (`SaleOut` has no reason field). The full card number leaves only through the keyless `POST /payouts/{id}/reveal`, audited

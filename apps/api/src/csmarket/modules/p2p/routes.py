@@ -29,7 +29,7 @@ MAX_BODY_BYTES = 64 * 1024
 @router.post("/p2p", status_code=status.HTTP_200_OK, summary="HUMO notifications (P2P)")
 async def p2p_webhook(
     request: Request,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     secret: Annotated[str, Header(alias="X-Telegram-Bot-Api-Secret-Token")] = "",
 ) -> dict[str, Any]:
     """Verify the secret header, journal the update, settle a matching request."""

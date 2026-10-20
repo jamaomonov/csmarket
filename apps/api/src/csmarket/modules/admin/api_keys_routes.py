@@ -27,7 +27,7 @@ from csmarket.modules.users.api import User
 
 router = APIRouter(prefix="/admin/api-keys", tags=["admin"], dependencies=[Depends(require_admin)])
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 Admin = Annotated[User, Depends(require_admin)]
 Key = Annotated[str, Depends(required_key)]
 

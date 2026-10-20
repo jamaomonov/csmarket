@@ -45,7 +45,7 @@ class RateUnavailableError(UpstreamUnavailableError):
 @router.get("", response_model=BalanceOut, summary="My balance")
 async def get_balance(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> BalanceOut:
     """Spendable soʻm; ``"0"`` before the first top-up.
 
@@ -64,7 +64,7 @@ async def get_balance(
 @router.get("/entries", response_model=EntriesOut, summary="My balance history")
 async def get_entries(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     *,
     cursor: str | None = None,
     limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
@@ -90,7 +90,7 @@ async def convert(
     body: ConvertIn,
     response: Response,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> ConvertOut:
     """Soʻm → the dollar wallet at the site rate (CBU plus the uplift).

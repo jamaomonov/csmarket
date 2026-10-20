@@ -29,7 +29,7 @@ router = APIRouter(prefix="/dev/orders", tags=["dev"], dependencies=[Depends(dev
 async def dev_pay_order(
     number: str,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> OrderOut:
     """Settle the owner's order through ``mock`` (the real ``settle`` hook).
 
@@ -52,7 +52,7 @@ async def dev_move_trade(
     number: str,
     body: DevTradeIn,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     fake: Annotated[FakeTradeClient, Depends(fake_client)],
 ) -> WaxpeerTrade:
     """Accept, decline or roll back the owner's trade at the fake; the trade as it now is.

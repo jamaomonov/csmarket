@@ -40,7 +40,9 @@ wallet_router = APIRouter(prefix="/wallet", tags=["wallet"])
 
 
 @router.get("/providers", response_model=ProvidersOut, summary="Kassas available now")
-async def list_providers(db: Annotated[AsyncSession, Depends(db_session)]) -> ProvidersOut:
+async def list_providers(
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
+) -> ProvidersOut:
     """Anonymous: the storefront shows these tiles, each with the percent the buyer pays on
     top (spec 2026-10-14-kassa-fee) and its switch: a ``maintenance`` kassa is shown greyed, an
     ``off`` one is left out (spec 2026-10-19-p2p-topup). ``topup_only`` kassas (P2P) are never
@@ -68,7 +70,7 @@ async def post_topup(
     body: TopupIn,
     request: Request,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> TopupOut:
     """Open a top-up in the chosen kassa; the response says where to pay.
@@ -104,7 +106,7 @@ async def post_topup(
 async def get_topup(
     number: str,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     locale: Locale = "ru",
 ) -> TopupOut:
     """The owner's top-up; anyone else's (or an unknown number) is a 404, never a 403."""

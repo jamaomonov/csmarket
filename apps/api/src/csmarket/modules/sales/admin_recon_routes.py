@@ -79,7 +79,7 @@ class ReconOut(BaseModel):
 
 @router.get("/reconciliation", response_model=ReconOut, summary="Skinslink reconciliation")
 async def get_reconciliation(
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     days: Annotated[int, Query(description="1 (today), 7 or 30 Tashkent days")] = 7,
     problems: Annotated[bool, Query(description="Only the flagged sales")] = False,
     cursor: Annotated[str | None, Query(max_length=200)] = None,

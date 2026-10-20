@@ -276,6 +276,25 @@ async def test_a_request_a_revert_already_canceled_cannot_be_paid_or_rejected(
     assert [a for a, _ in await _audit(db_session)] == []
 
 
+async def test_reject_refuses_a_reverted_sale(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    """Review 2026-10-20: Skinslink reverted the trade, so the seller has the skins back;
+    «Отклонить» would hand them the money as well. «Закрыть без выплаты» is the way."""
+    headers = await admin_headers()
+    request = await _payable(db_session)
+    sale = await db_session.get(Sale, request.sale_id)
+    assert sale is not None
+    sale.attention_reason = "rolled_back"
+    await db_session.commit()
+    r = await integration_client.post(
+        f"{BASE}/{request.id}/reject", json={"reason": "x"}, headers={**headers, **_key(60)}
+    )
+    assert (r.status_code, r.json()["code"]) == (409, "payout_sale_reverted")
+    assert await user_balance(db_session, request.user_id) == 0
+    assert [a for a, _ in await _audit(db_session)] == []
+
+
 async def test_the_queue_pages_by_cursor(
     db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
 ) -> None:

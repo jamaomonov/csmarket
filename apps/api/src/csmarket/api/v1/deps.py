@@ -18,7 +18,7 @@ async def db_session() -> AsyncIterator[AsyncSession]:
         yield session
 
 
-SessionDep = Depends(db_session)
+SessionDep = Depends(db_session, scope="function")
 
 
 def dev_gate() -> None:

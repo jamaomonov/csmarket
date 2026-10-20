@@ -45,7 +45,7 @@ from csmarket.modules.payme.errors import (
 router = APIRouter(prefix="/payments/payme", tags=["payme"])
 log = get_logger("csmarket.payme.merchant")
 
-DbSession = Annotated[AsyncSession, Depends(db_session)]
+DbSession = Annotated[AsyncSession, Depends(db_session, scope="function")]
 
 #: A JSON-RPC response body: ``result`` or ``error``, and the request's ``id``.
 RpcResponse = dict[str, Any]

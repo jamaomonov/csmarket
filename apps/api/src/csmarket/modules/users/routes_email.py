@@ -36,7 +36,7 @@ router = APIRouter(prefix="/email", tags=["email"])
 async def resend_verification(
     request: Request,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> VerificationSentOut:
     """Queue a new confirmation letter for the current, unconfirmed email.
@@ -61,7 +61,7 @@ async def resend_verification(
 async def confirm(
     request: Request,
     body: EmailConfirmIn,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> EmailConfirmOut:
     """Confirm the address a link's token names; anonymous, so a link opened on another
     device works.

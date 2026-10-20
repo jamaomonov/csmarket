@@ -24,7 +24,7 @@ router = APIRouter(prefix="/skins/seo", tags=["skins"])
 
 @router.get("/slugs", response_model=SkinSlugsOut, summary="Item pages for the sitemap")
 async def get_slugs(
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     offset: Annotated[int, Query(ge=0)] = 0,
     limit: Annotated[int, Query(ge=1, le=5000)] = 5000,
 ) -> SkinSlugsOut:

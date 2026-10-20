@@ -192,7 +192,7 @@ def _offer_out(p: PricedOffer, profile: str) -> dict[str, Any]:
 async def item_offers(
     item_id: str,
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> Response:
     """Offers of the item, cheapest first, priced by the key's tariff.
 
@@ -239,7 +239,7 @@ _ORDER_ERRORS: dict[int | str, dict[str, Any]] = {
 async def place_order(
     body: ApiOrderIn,
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     availability: Annotated[AvailabilityClient, Depends(availability_client)],
 ) -> PublicOrderOut:
     """Buy the offer ``offer_id`` of ``item_id`` (else its cheapest within ``max_price_usd``).
@@ -318,7 +318,7 @@ async def _place_order(
 async def get_order(
     order_id: str,
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> PublicOrderOut:
     """The API order ``order_id`` of this key's owner (any of their keys); another user's or
     an unknown one is 404."""
@@ -337,7 +337,7 @@ async def get_order(
 )
 async def list_orders(
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     cursor: Annotated[str | None, Query(max_length=256)] = None,
     status: PublicOrderStatus | None = None,
 ) -> PublicOrdersPage:
@@ -351,7 +351,7 @@ async def list_orders(
 @router.get("/me", response_model=MeOut, summary="Balance, key and limits", responses=_AUTH_ERRORS)
 async def me(
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> MeOut:
     """The USD balance, whether the USD wallet is on, the calling key and its limits."""
     await enforce(caller, "read")
@@ -382,7 +382,7 @@ _WEBHOOK_DELETE_SCOPE = "public_api.webhook_delete"
 )
 async def get_webhook(
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> WebhookOut | None:
     """The webhook URL and the state of its latest delivery, or ``null`` when none is set."""
     await enforce(caller, "read")
@@ -401,7 +401,7 @@ async def get_webhook(
 async def put_webhook(
     body: WebhookIn,
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> WebhookOut:
     """Replace the webhook URL. ``https`` only; the host must resolve to public addresses.
@@ -450,7 +450,7 @@ async def put_webhook(
 )
 async def delete_webhook(
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Response:
     """Remove the webhook; 204 even when none was set. Needs ``Idempotency-Key``."""

@@ -47,7 +47,7 @@ router = APIRouter(
     prefix="/admin/sales/payouts", tags=["admin"], dependencies=[Depends(require_admin)]
 )
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 Admin = Annotated[User, Depends(require_admin)]
 Key = Annotated[str, Depends(required_key)]
 
@@ -188,8 +188,8 @@ async def post_paid(
     response_model=PayoutDetailOut,
     responses={
         409: {
-            "description": f"`payout_not_payable`, {_CLAIMED}, `wallet_frozen` or "
-            "`idempotency_mismatch`"
+            "description": f"`payout_not_payable`, {_CLAIMED}, `wallet_frozen`, "
+            "`payout_sale_reverted` or `idempotency_mismatch`"
         }
     },
     summary="Reject a payout to the balance",

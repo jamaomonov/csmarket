@@ -55,7 +55,7 @@ async def post_order(
     request: Request,
     response: Response,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     client: Annotated[SearchClient, Depends(search_client)],
     availability: Annotated[AvailabilityClient, Depends(availability_client)],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
@@ -94,7 +94,7 @@ async def post_order_pay(
     body: OrderPayIn,
     request: Request,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> OrderPayOut:
     """Pay from the balance (the order is ``paid`` at once) or get a kassa's payment page.
@@ -122,7 +122,7 @@ async def post_order_pay(
 async def get_order(
     number: str,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> OrderOut:
     """The owner's order; anyone else's, an unknown or a malformed number is a 404."""
     return await _owned_out(db, user.id, number)
@@ -131,7 +131,7 @@ async def get_order(
 @me_router.get("/orders", response_model=OrdersPage, summary="My orders")
 async def get_my_orders(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     cursor: str | None = None,
 ) -> OrdersPage:
     """My orders, newest first, 20 a page; cancelled and expired unpaid ones are left out."""

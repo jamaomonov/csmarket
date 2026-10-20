@@ -284,9 +284,16 @@ async def reject(db: AsyncSession, *, request_id: str, admin_id: str, reason: st
 
     Raises:
         ConflictError: ``payout_not_payable``, ``payout_claimed``, ``wallet_frozen`` (the
-            seller's wallet is frozen: nothing can be credited; pay the card or unfreeze).
+            seller's wallet is frozen: nothing can be credited; pay the card or unfreeze),
+            ``payout_sale_reverted`` (Skinslink reverted the trade: the seller has the skins
+            back, so nothing is owed — close it with :func:`cancel_rolled_back`).
     """
     sale, request = await locked(db, request_id, admin_id=admin_id)
+    if sale.attention_reason == "rolled_back":
+        raise ConflictError(
+            "the sale's trade was reverted; the seller has the skins back",
+            code="payout_sale_reverted",
+        )
     if request.user_id in await frozen_users(db, [request.user_id]):
         raise ConflictError("the seller's wallet is frozen", code="wallet_frozen")
     amount = request.amount_uzs + request.fee_uzs

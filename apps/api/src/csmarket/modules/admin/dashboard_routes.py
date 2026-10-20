@@ -23,7 +23,7 @@ router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(requir
 
 @router.get("/dashboard", response_model=DashboardOut, summary="The dashboard")
 async def dashboard(
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     days: Annotated[int, Query(description="1 (today), 7 or 30 Tashkent days")] = 1,
 ) -> DashboardOut:
     """Sales, margin and refunds by Tashkent day, orders in flight, open attentions and the

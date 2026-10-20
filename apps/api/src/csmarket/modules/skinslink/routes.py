@@ -31,7 +31,7 @@ from csmarket.modules.skinslink.webhook import verify
 router = APIRouter(prefix="/skinslink", tags=["skinslink"])
 log = get_logger("csmarket.skinslink.webhook")
 
-DbSession = Annotated[AsyncSession, Depends(db_session)]
+DbSession = Annotated[AsyncSession, Depends(db_session, scope="function")]
 #: A webhook body is a handful of short fields.
 _MAX_BODY = 4096
 

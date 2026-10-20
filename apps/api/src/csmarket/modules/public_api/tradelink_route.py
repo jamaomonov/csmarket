@@ -49,7 +49,7 @@ _AUTH_ERRORS: dict[int | str, dict[str, Any]] = {
 async def check_trade_link_route(
     body: TradeLinkCheckIn,
     caller: Annotated[ApiCaller, Depends(api_caller)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     checkers: Annotated[tuple[TradelinkChecker, HoldChecker], Depends(tradelink_checkers)],
 ) -> TradeLinkCheckOut:
     """Whether a Steam trade can be sent to ``trade_link`` now (advisory).

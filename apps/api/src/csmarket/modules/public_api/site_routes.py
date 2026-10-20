@@ -36,7 +36,7 @@ def _out(key: ApiKey) -> ApiKeyOut:
 @router.get("", response_model=ApiKeyOut | None, summary="My API key")
 async def get_key(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> ApiKeyOut | None:
     """The live key's facts, or ``null`` when none. The token is never returned."""
     key = await keys.live_key(db, user.id)
@@ -48,7 +48,7 @@ async def get_key(
 @router.post("", response_model=ApiKeyIssuedOut, status_code=201, summary="Issue an API key")
 async def issue_key(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> ApiKeyIssuedOut:
     """Issue a key, revoking the live one; the token is shown once.
@@ -77,7 +77,7 @@ async def issue_key(
 @router.delete("", status_code=204, summary="Revoke my API key")
 async def revoke_key(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> Response:
     """Revoke the live key; 404 ``api_key_missing`` when there is none. A replay answers 204."""
@@ -96,7 +96,7 @@ async def revoke_key(
 async def set_ip_allowlist(
     body: IpAllowlistIn,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> ApiKeyOut:
     """Replace the live key's allow-list; ``[]`` lets any address in.

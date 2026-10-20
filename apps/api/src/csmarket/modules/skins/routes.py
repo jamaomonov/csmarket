@@ -194,7 +194,7 @@ def _weapons(raw: str | None) -> str | None:
 @router.get("/catalog", response_model=SkinsPageOut, summary="Browse the skins catalogue")
 async def get_catalog(
     *,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     category: str | None = None,
     weapon: Annotated[str | None, Query(max_length=2000)] = None,
     exterior: str | None = None,
@@ -254,7 +254,7 @@ async def get_catalog(
 
 @router.get("/facets", response_model=SkinFacetsOut, summary="Counts per category, weapon, wear")
 async def get_facets(
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     category: Annotated[str | None, Query(max_length=32)] = None,
 ) -> SkinFacetsOut:
     """Facet counts; with ``category`` the weapon, wear and rarity facets are scoped to it."""
@@ -288,7 +288,7 @@ async def get_facets(
 
 @router.get("/suggest", response_model=SkinSuggestOut, summary="Search-as-you-type")
 async def get_suggest(
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     q: Annotated[str, Query(min_length=1, max_length=80)],
 ) -> SkinSuggestOut:
     """Up to ten on-sale items matching ``q`` (aliases expanded), best match first."""
@@ -307,7 +307,9 @@ async def get_suggest(
 
 
 @router.get("/{slug}", response_model=SkinDetailOut, summary="One item with its cheapest listings")
-async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]) -> SkinDetailOut:
+async def get_detail(
+    slug: str, db: Annotated[AsyncSession, Depends(db_session, scope="function")]
+) -> SkinDetailOut:
     """The item page; a sold-out item is a page, an unknown or hidden one a 404."""
     categories = enabled_categories(get_settings())
     item = await get_item(db, slug, categories=categories)
@@ -366,7 +368,7 @@ async def get_detail(slug: str, db: Annotated[AsyncSession, Depends(db_session)]
 async def get_listings(
     slug: str,
     request: Request,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     client: Annotated[SearchClient, Depends(search_client)],
 ) -> SkinListingsOut:
     """Live offers for one item; a Waxpeer problem is a 200 with ``degraded: true``.

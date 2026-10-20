@@ -25,7 +25,7 @@ def bearer_token(authorization: str | None) -> str:
 
 async def current_user(
     authorization: Annotated[str | None, Header()] = None,
-    db: AsyncSession = Depends(db_session),  # noqa: B008
+    db: AsyncSession = Depends(db_session, scope="function"),  # noqa: B008
 ) -> User:
     """The authenticated user; 401 when absent/invalid, 403 when banned."""
     return await resolve_current_user(db, bearer_token(authorization))

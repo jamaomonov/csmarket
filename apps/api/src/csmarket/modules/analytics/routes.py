@@ -25,7 +25,7 @@ from csmarket.modules.orders.api import TASHKENT
 
 router = APIRouter(prefix="/admin/analytics", tags=["admin"], dependencies=[Depends(require_admin)])
 
-Db = Annotated[AsyncSession, Depends(db_session)]
+Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 Since = Annotated[date, Query(description="First Tashkent day")]
 Until = Annotated[date, Query(description="Last Tashkent day, included")]
 

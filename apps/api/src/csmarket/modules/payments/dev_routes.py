@@ -25,7 +25,7 @@ router = APIRouter(prefix="/dev", tags=["dev"], dependencies=[Depends(dev_gate)]
 async def dev_pay_topup(
     number: str,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> TopupOut:
     """Settle the owner's top-up through ``mock`` (the real ``settle`` hook).
 

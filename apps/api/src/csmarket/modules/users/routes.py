@@ -61,7 +61,7 @@ async def _me_out(db: AsyncSession, user: User) -> MeOut:
 @router.get("", response_model=MeOut, summary="The signed-in account")
 async def get_me(
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> MeOut:
     """Profile, roles, trade-link state and email confirmation state."""
     return await _me_out(db, user)
@@ -72,7 +72,7 @@ async def patch_me(
     request: Request,
     body: MePatchIn,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> MeOut:
     """Partial update; replays a stored response for a repeated ``Idempotency-Key``.
@@ -97,7 +97,7 @@ async def patch_me(
 async def put_trade_link(
     body: TradeLinkIn,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     idempotency_key: Annotated[str | None, Header(alias=IDEMPOTENCY_HEADER)] = None,
 ) -> TradeLinkOut:
     """Parse, require that it is this account's own link, save. No external call."""
@@ -118,7 +118,7 @@ async def put_trade_link(
 async def check_my_trade_link(
     request: Request,
     user: Annotated[User, Depends(current_user)],
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     checkers: Annotated[tuple[TradelinkChecker, HoldChecker], Depends(tradelink_checkers)],
     body: TradeLinkCheckIn | None = None,
 ) -> TradeLinkOut:

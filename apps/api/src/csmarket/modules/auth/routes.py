@@ -86,7 +86,7 @@ async def steam_complete(
     body: SteamCallbackIn,
     request: Request,
     response: Response,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     oid: Annotated[str | None, Cookie(alias=OID_COOKIE_NAME)] = None,
 ) -> TokensOut | JSONResponse:
     """Verify the callback with Steam and open a session.
@@ -117,7 +117,7 @@ async def steam_complete(
 @router.post("/refresh", response_model=TokensOut, summary="Rotate the refresh cookie")
 async def refresh(
     response: Response,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     refresh_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE_NAME)] = None,
 ) -> TokensOut:
     """Rotate-on-use; the reuse trip-wire lives in the service.
@@ -135,7 +135,7 @@ async def refresh(
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Sign out")
 async def logout_route(
     response: Response,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     authorization: Annotated[str | None, Header()] = None,
     refresh_token: Annotated[str | None, Cookie(alias=REFRESH_COOKIE_NAME)] = None,
 ) -> None:
@@ -174,7 +174,7 @@ async def dev_login_route(
     body: DevLoginIn,
     request: Request,
     response: Response,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
 ) -> TokensOut:
     """Local work and e2e only; 404 unless ``dev_login_active`` (never in prod)."""
     await guard_ip(request, bucket="dev-login")
