@@ -234,7 +234,10 @@ export default async function SkinPage({ params }: Props) {
             {/* Left: the picture with the cheapest offer on it, then the other wears. Right:
               name, price and buying, then the facts. On phones the order is the source order:
               picture → wears → buying → facts. */}
-            <div className="flex min-w-0 flex-col gap-6">
+            {/* Beside the taller buy column the picture stays in view while it scrolls (no
+              empty space under the wears, owner 2026-10-20). Only on screens tall enough to
+              hold the picture and the wears whole; phones stack as before. */}
+            <div className="flex min-w-0 flex-col gap-6 md:self-start md:[@media(min-height:820px)]:sticky md:[@media(min-height:820px)]:top-20">
               <SkinHero
                 image={item.image_url}
                 name={item.name}
