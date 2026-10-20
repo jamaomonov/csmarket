@@ -102,3 +102,13 @@ def test_non_ascii_digits_never_parse() -> None:
 )
 def test_a_damaged_notification_is_unparsed(text: str) -> None:
     assert parse_humo(text).kind == "unparsed"
+
+
+def test_an_amount_too_long_for_the_journal_is_unparsed() -> None:
+    """Review 2026-10-20: ``Numeric(18,2)`` holds 16 whole digits; a longer number raised a
+    DataError, a 500, and the relay retried the message for ever."""
+    text = (
+        "🎉 Пополнение\n➕ 1.000.000.000.000.000.000,00 UZS\n📍 x\n"
+        "💳 HUMOCARD *4321\n🕓 10:00 20.10.2026\n💰 1.000,00 UZS"
+    )
+    assert parse_humo(text).kind == "unparsed"

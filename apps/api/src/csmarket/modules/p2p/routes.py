@@ -20,6 +20,7 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.metrics import record_p2p_notification
+from csmarket.core.request_body import read_capped
 from csmarket.modules.p2p.intake import ingest_update
 
 router = APIRouter(prefix="/webhooks/telegram", tags=["webhooks"])
@@ -36,8 +37,8 @@ async def p2p_webhook(
     expected = get_settings().p2p_webhook_secret
     if not expected or not hmac.compare_digest(secret.encode(), expected.encode()):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    raw = await request.body()
-    if len(raw) > MAX_BODY_BYTES:
+    raw = await read_capped(request, MAX_BODY_BYTES)
+    if raw is None:
         raise HTTPException(status_code=status.HTTP_413_CONTENT_TOO_LARGE)
     try:
         update = json.loads(raw)

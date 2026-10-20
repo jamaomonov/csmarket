@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from csmarket.core import clock
 from csmarket.core import config as cfg
-from csmarket.modules.p2p.models import P2PIncoming, P2PReservation
+from csmarket.modules.p2p.models import P2PCard, P2PIncoming, P2PReservation
 from csmarket.modules.p2p.settings import load_settings
 from csmarket.modules.payments.api import WalletTopup
 from httpx import AsyncClient, Response
@@ -232,3 +232,30 @@ async def test_a_transfer_whose_top_up_was_paid_another_way_stays_on_the_journal
     row = await db_session.scalar(select(P2PIncoming))
     assert row is not None
     assert row.result == "unmatched"  # money to resolve by hand, never lost
+
+
+async def test_a_wrong_sized_body_is_413_before_it_is_read_whole(
+    integration_client: AsyncClient, db_session: AsyncSession
+) -> None:
+    await _world(db_session)
+    big = {"update_id": 1, "business_message": {"text": "x" * (70 * 1024)}}
+    r = await _post(integration_client, big)
+    assert r.status_code == 413
+
+
+async def test_a_request_handed_out_is_paid_even_after_its_card_was_switched_off(
+    integration_client: AsyncClient, db_session: AsyncSession, customer_headers: Headers
+) -> None:
+    """Review 2026-10-20: the buyer saw the number and transferred on time; an admin
+    switching the card off in between must not strand the transfer as unmatched."""
+    await _world(db_session)
+    h = await customer_headers()
+    t = await _request(integration_client, h)
+    card = await db_session.scalar(select(P2PCard))
+    assert card is not None
+    card.active = False
+    await db_session.commit()
+    amount = f"{int(t['p2p']['amount_uzs']):,}".replace(",", ".") + ",00"
+    r = await _post(integration_client, _update(_text(amount)))
+    assert r.status_code == 200
+    assert (await _topup(db_session, t["number"])).status == "succeeded"

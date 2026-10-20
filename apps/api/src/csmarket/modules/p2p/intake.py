@@ -124,8 +124,9 @@ async def _payable(
         select(P2PReservation)
         .join(P2PCard, P2PCard.id == P2PReservation.card_id)
         .where(
+            # Not ``P2PCard.active``: the buyer saw the number; a card switched off since
+            # must not strand an on-time transfer (the switch only stops new requests).
             P2PCard.pan_last4 == p.card_last4,
-            P2PCard.active.is_(True),
             P2PReservation.amount_uzs == int(p.amount),
             P2PReservation.status.in_(("pending", "expired")),
             P2PReservation.holds_amount.is_(True),

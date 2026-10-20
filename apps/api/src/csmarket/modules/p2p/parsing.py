@@ -17,7 +17,9 @@ from pydantic import BaseModel, ConfigDict
 
 TASHKENT = ZoneInfo("Asia/Tashkent")
 
-_AMOUNT = r"(\d{1,3}(?:\.\d{3})*,\d{2})\s*UZS"
+# At most 15 whole digits: the journal's ``Numeric(18,2)``; a longer number is ``unparsed``
+# (it was a DataError, a 500 and endless relay retries — review 2026-10-20).
+_AMOUNT = r"(\d{1,3}(?:\.\d{3}){0,4},\d{2})\s*UZS"
 # ASCII only: ``\d`` would also take Arabic-Indic and other Unicode digits, and each
 # pattern is anchored to its own line so a free-text source line cannot supply a
 # card or a time.

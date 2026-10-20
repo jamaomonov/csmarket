@@ -90,9 +90,9 @@ credit it by hand to that buyer (§3) after checking their balance history, or r
 
 ### inactive card
 
-A card switched off while a request on it is open: the buyer's on-time transfer lands
-`unmatched` (only active cards match). Wait for open requests to close before switching a card
-off, or credit such transfers by hand.
+A card switched off stops new requests only: a request already handed out on it is still
+paid by an on-time transfer (the buyer saw the number), and counts toward the card's daily
+limit until its quarantine ends. Nothing to do by hand.
 
 ### silence
 

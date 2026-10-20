@@ -3,6 +3,7 @@ the quarantine ends the amount is free again and the unpaid attempt is cancelled
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
@@ -12,7 +13,7 @@ from csmarket.modules.p2p.models import P2PReservation
 from csmarket.modules.payments.models import Payment
 from httpx import AsyncClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.p2p_factory import make_card, p2p_on
 
@@ -50,3 +51,45 @@ async def test_expire_quarantine_then_release(
     payment = await db_session.get(Payment, row.payment_id)
     assert payment is not None
     assert payment.status == "cancelled"
+
+
+async def test_the_sweep_skips_a_request_intake_is_settling(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+    customer_headers: Headers,
+) -> None:
+    """Review 2026-10-20: a late credit settles an expired request at the moment its
+    quarantine ends; the sweep must not release the amount of a row another transaction
+    holds (``paid`` keeps its own quarantine)."""
+    await p2p_on(db_session)
+    await make_card(db_session)
+    r = await integration_client.post(
+        "/api/v1/wallet/topups",
+        json={"amount_uzs": 100_000, "provider": "p2p", "locale": "ru"},
+        headers={**(await customer_headers()), "Idempotency-Key": f"p2p-{uuid.uuid4()}"},
+    )
+    assert r.status_code == 201, r.text
+    row = await db_session.scalar(select(P2PReservation))
+    assert row is not None
+    expires = row.expires_at
+    await sweep(db_session, at=expires + timedelta(seconds=1))
+    await db_session.commit()
+
+    other = async_sessionmaker(bind=db_engine, expire_on_commit=False)()
+    try:
+        await other.execute(
+            select(P2PReservation).where(P2PReservation.id == row.id).with_for_update()
+        )
+        result = await asyncio.wait_for(
+            sweep(db_session, at=expires + timedelta(minutes=10, seconds=1)), timeout=5
+        )
+        await db_session.commit()
+    finally:
+        await other.rollback()
+        await other.close()
+    assert result.released == 0
+    db_session.expire_all()
+    row = await db_session.scalar(select(P2PReservation))
+    assert row is not None
+    assert row.holds_amount is True

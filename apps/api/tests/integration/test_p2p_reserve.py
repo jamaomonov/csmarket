@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Awaitable, Callable
+from datetime import timedelta
 from typing import Any
 
+from csmarket.modules.p2p.api import sweep
+from csmarket.modules.p2p.models import P2PReservation
 from httpx import AsyncClient, Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.p2p_factory import PAN, make_card, p2p_on
@@ -110,6 +114,25 @@ async def test_a_card_daily_limit_counts_open_holds(
     await p2p_on(db_session)
     await make_card(db_session, daily_limit_uzs=150_000)
     assert _p2p(await _open(integration_client, await customer_headers()))
+    r = await _open(integration_client, await admin_headers())
+    assert (r.status_code, r.json()["code"]) == (409, "p2p_unavailable")
+
+
+async def test_a_card_daily_limit_counts_an_expired_request_still_in_quarantine(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    customer_headers: Headers,
+    admin_headers: Headers,
+) -> None:
+    """Review 2026-10-20: intake still pays an expired request for ten minutes, so the
+    limit counts it until the quarantine ends."""
+    await p2p_on(db_session)
+    await make_card(db_session, daily_limit_uzs=150_000)
+    assert _p2p(await _open(integration_client, await customer_headers()))
+    row = await db_session.scalar(select(P2PReservation))
+    assert row is not None
+    await sweep(db_session, at=row.expires_at + timedelta(seconds=1))
+    await db_session.commit()
     r = await _open(integration_client, await admin_headers())
     assert (r.status_code, r.json()["code"]) == (409, "p2p_unavailable")
 

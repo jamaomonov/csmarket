@@ -40,7 +40,8 @@ async def _lock_limited(db: AsyncSession, cards: Sequence[P2PCard]) -> None:
 
 
 async def held_today(db: AsyncSession, card: P2PCard, at: datetime) -> int:
-    """Soʻm the card is committed to today: paid this Tashkent day plus open holds."""
+    """Soʻm the card is committed to today: paid this Tashkent day plus open holds (a
+    ``pending`` request, or an ``expired`` one whose quarantine still takes a late transfer)."""
     start = datetime.combine(at.astimezone(TASHKENT).date(), time(), TASHKENT)
     total = await db.scalar(
         select(func.coalesce(func.sum(P2PReservation.amount_uzs), 0)).where(
@@ -48,6 +49,7 @@ async def held_today(db: AsyncSession, card: P2PCard, at: datetime) -> int:
             or_(
                 and_(P2PReservation.status == "paid", P2PReservation.closed_at >= start),
                 and_(P2PReservation.status == "pending", P2PReservation.expires_at > at),
+                and_(P2PReservation.status == "expired", P2PReservation.holds_amount.is_(True)),
             ),
         )
     )

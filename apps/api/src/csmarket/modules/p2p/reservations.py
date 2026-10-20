@@ -211,11 +211,15 @@ async def sweep(db: AsyncSession, *, at: datetime) -> SweepResult:
     done = list(
         (
             await db.execute(
-                select(P2PReservation).where(
+                select(P2PReservation)
+                .where(
                     P2PReservation.holds_amount.is_(True),
                     P2PReservation.status.in_(("expired", "cancelled", "paid")),
                     P2PReservation.quarantine_until <= at,
                 )
+                # Intake locks the row it settles: a late credit landing as the quarantine
+                # ends must keep its hold (``paid`` restarts it); the next tick gets it.
+                .with_for_update(skip_locked=True)
             )
         ).scalars()
     )
