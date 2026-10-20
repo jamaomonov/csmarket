@@ -131,8 +131,12 @@ describe("SkinListings", () => {
     const chosen = await screen.findByRole("button", { name: "Выбран" });
     expect(chosen).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByLabelText("picked")).toHaveTextContent("1");
+    const scroll = vi.spyOn(window, "scrollTo").mockImplementation(() => undefined);
     fireEvent.click(screen.getByRole("button", { name: "Выбрать" }));
     expect(screen.getByLabelText("picked")).toHaveTextContent("2");
+    // Up to the picture and the buy panel, which now show the picked lot.
+    expect(scroll).toHaveBeenCalledWith({ top: 0, behavior: "smooth" });
+    scroll.mockRestore();
     expect(screen.getAllByRole("button", { name: /^Выбра/ })).toHaveLength(2);
   });
 

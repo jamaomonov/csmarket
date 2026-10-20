@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import messages from "@csmarket/i18n/locales/ru/web.json";
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, expect, it, vi } from "vitest";
 
 import { SkinHero } from "./SkinHero";
-import { SkinOffersProvider } from "./SkinOffers";
+import { SkinOffersProvider, useSelectedOffer } from "./SkinOffers";
 
 import type * as SkinsModule from "@/lib/skins";
 
@@ -32,10 +32,25 @@ const lot = (id: number, usd: string, float: number, stickers: number) => ({
   inspect_url: "steam://rungame/730/1/+csgo_econ_action_preview%20S1A1D1",
 });
 
+function Pick({ id }: { id: string }) {
+  const { select } = useSelectedOffer();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        select(id);
+      }}
+    >
+      pick
+    </button>
+  );
+}
+
 function hero() {
   render(
     <NextIntlClientProvider locale="ru" messages={{ web: messages }}>
       <SkinOffersProvider slug="ak">
+        <Pick id="wx:2" />
         <SkinHero
           image="https://x/economy/image/ak"
           name="AK-47 | Redline"
@@ -71,4 +86,12 @@ it("shows the wear and no float or inspect until offers load or when there are n
   expect(await screen.findByText("FT")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Осмотр/ })).not.toBeInTheDocument();
   expect(screen.queryByText("0.3692")).not.toBeInTheDocument();
+});
+
+it("redraws the picture for the lot the buyer picked (float, stickers)", async () => {
+  hero();
+  expect(await screen.findByText("0.3692")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "pick" }));
+  expect(screen.getByText("0.2000")).toBeInTheDocument();
+  expect(screen.queryByRole("img", { name: "Sticker | 2" })).not.toBeInTheDocument();
 });

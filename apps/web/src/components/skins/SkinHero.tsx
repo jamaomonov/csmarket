@@ -6,7 +6,7 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 
 import { SkinFloatBar } from "./SkinFloatBar";
-import { useCheapestOffer } from "./SkinOffers";
+import { useSelectedOffer } from "./SkinOffers";
 import { StickerImage } from "./StickerImage";
 
 /**
@@ -27,7 +27,8 @@ export function SkinHero({
   rarityColor: string | null;
 }) {
   const t = useTranslations("web.skins");
-  const offer = useCheapestOffer();
+  // The lot the buy panel buys: the cheapest until the buyer picks another in the list.
+  const offer = useSelectedOffer().selected;
   const glow = rarityGlow(rarityColor);
   const float = offer?.float_value ?? null;
   const stickers = offer?.stickers ?? [];

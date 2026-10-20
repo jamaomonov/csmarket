@@ -10,9 +10,10 @@ import { fetchSkinListings } from "@/lib/skins";
 interface OffersState {
   /** `null` while loading; `[]` when there are none or the read failed. */
   offers: SkinListing[] | null;
-  /** The lowest-priced offer — what the picture and the headline price show. */
+  /** The lowest-priced offer — the default selection. */
   cheapest: SkinListing | null;
-  /** The offer the buy panel buys: the cheapest until the buyer picks another. */
+  /** The offer the buy panel buys and the picture and headline price show: the cheapest
+   * until the buyer picks another. */
   selected: SkinListing | null;
   select: (listingId: string) => void;
   /** The server quoted another soʻm price for this offer: show and send that one. */
@@ -87,11 +88,6 @@ export function SkinOffersProvider({ slug, children }: { slug: string; children:
 
 export function useSkinOffers(): SkinListing[] | null {
   return useContext(OffersContext).offers;
-}
-
-/** The cheapest live offer, `null` until offers load or when there are none. */
-export function useCheapestOffer(): SkinListing | null {
-  return useContext(OffersContext).cheapest;
 }
 
 /** The offer to buy and how to change it (a row's «Выбрать», the next offer, a new price). */

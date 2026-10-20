@@ -4,14 +4,15 @@ import { offerHeadline, steamDiscount } from "@csmarket/utils/skins";
 import { ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { useSkinOffers } from "./SkinOffers";
+import { useSelectedOffer, useSkinOffers } from "./SkinOffers";
 
 import { displayPrice } from "@/lib/skins";
 
 /**
- * The headline price — the cheapest live offer once offers load, with how much cheaper than
- * Steam it is; the stored price as «от …» before that — and, on a line of its own, the
- * Steam market link for comparison. Buying lives in `SkinBuyPanel`.
+ * The headline price — the selected live offer once offers load (the cheapest until the
+ * buyer picks another), with how much cheaper than Steam it is; the stored price as «от …»
+ * before that — and, on a line of its own, the Steam market link for comparison. Buying
+ * lives in `SkinBuyPanel`.
  */
 export function SkinPriceBlock({
   storedUzs,
@@ -29,7 +30,12 @@ export function SkinPriceBlock({
 }) {
   const t = useTranslations("web.skins");
   const offers = useSkinOffers();
-  const head = offerHeadline(storedUzs, storedUsd, offers);
+  const { selected } = useSelectedOffer();
+  // The picked lot once offers load (the cheapest by default); the stored «от» price before.
+  const head =
+    selected !== null
+      ? { uzs: selected.price_uzs, usd: selected.price_usd, from: false }
+      : offerHeadline(storedUzs, storedUsd, offers);
   const price = displayPrice(locale, head.uzs, head.usd);
   const off = head.usd !== null ? steamDiscount(head.usd, steamUsd) : null;
   return (

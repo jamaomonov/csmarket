@@ -141,6 +141,8 @@ export function SkinListings({
                   aria-pressed={selected?.listing_id === l.listing_id}
                   onClick={() => {
                     select(l.listing_id);
+                    // Up to the picture and the buy panel, which now show this lot.
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                   className={cn(
                     "text-small h-9 shrink-0 rounded-lg border px-3 font-semibold",
