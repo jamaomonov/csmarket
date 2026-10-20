@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: t("title"), robots: { index: false, follow: false } };
 }
 
-/** «Обмены»: per-account, so it renders client-side; `?type=purchases|sales|hold` filters. */
+/** «Трейды»: per-account, so it renders client-side; `?type=purchases|sales|hold` filters. */
 export default async function TradesPage({ params, searchParams }: Props) {
   const { locale } = await params;
   if (hasLocale(routing.locales, locale)) {

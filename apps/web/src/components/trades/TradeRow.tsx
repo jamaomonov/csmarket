@@ -20,7 +20,7 @@ interface RowProps {
   when: Intl.DateTimeFormat;
 }
 
-/** One purchase on «Обмены»: what was paid, leaving the balance as «−». */
+/** One purchase on «Трейды»: what was paid, leaving the balance as «−». */
 export function OrderRow({ order, locale, when }: RowProps & { order: OrderOut }) {
   const t = useTranslations("web.trades");
   const badge = orderBadge(order);
@@ -56,7 +56,7 @@ function orderNote(
   return order.paid_with === "wallet" ? t("paidBalance") : null;
 }
 
-/** One sale on «Обмены»: the first item («+N» more) and the money coming in as «+». */
+/** One sale on «Трейды»: the first item («+N» more) and the money coming in as «+». */
 export function SaleRow({ sale, locale, when }: RowProps & { sale: SaleOut }) {
   const t = useTranslations("web.trades");
   const [first] = sale.items;

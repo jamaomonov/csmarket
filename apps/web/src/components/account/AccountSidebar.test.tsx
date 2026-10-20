@@ -28,11 +28,11 @@ describe("AccountSidebar", () => {
     expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
-      ["Обмены", "/account/trades"],
+      ["Трейды", "/account/trades"],
       ["Реферал", "/account/referral"],
     ]);
     for (const a of links) expect(a.querySelector("svg")).not.toBeNull();
-    expect(within(nav).getByRole("link", { name: "Обмены" })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: "Трейды" })).toHaveAttribute(
       "aria-current",
       "page",
     );

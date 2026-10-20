@@ -221,7 +221,7 @@ describe("OrderView — no order to show", () => {
     await tick();
     expect(screen.getByRole("heading", { name: "Заказ не найден." })).toBeInTheDocument();
     expect(state()).toBe("notFound");
-    expect(screen.getByRole("link", { name: "← К обменам" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "← К трейдам" })).toHaveAttribute(
       "href",
       "/account/trades",
     );

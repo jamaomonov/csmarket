@@ -48,7 +48,7 @@ export const ACCOUNT_NAV: NavEntry[] = [
   { key: "referral", href: REFERRAL, icon: Gift },
 ];
 
-/** «Обмены» is the list and every order and sale page it opens. */
+/** «Трейды» is the list and every order and sale page it opens. */
 const TRADE_PATHS = ["/orders", "/account/sales"];
 
 /** The market is the catalogue and everything under it. */

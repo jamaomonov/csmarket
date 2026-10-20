@@ -12,7 +12,7 @@ import { getPendingSales, PENDING_KEY } from "@/lib/sales";
 
 /**
  * The signed-in balance with a «+» to top up; `compact` drops the «сум» on phones. Under
- * it, money from sales still in Steam's 7 days, a link to those sales on «Обмены».
+ * it, money from sales still in Steam's 7 days, a link to those sales on «Трейды».
  */
 export function BalanceChip({ compact = false }: { compact?: boolean }) {
   const t = useTranslations("web.nav");

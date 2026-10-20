@@ -11,7 +11,7 @@ const trades = entry("trades");
 const cards = entry("transactions");
 
 describe("isCurrent", () => {
-  it("keeps «Обмены» current on an order's and a sale's page", () => {
+  it("keeps «Трейды» current on an order's and a sale's page", () => {
     for (const path of ["/account/trades", "/orders/03TVB3PM", "/account/sales/SKMBK33X"]) {
       expect(isCurrent(trades, path)).toBe(true);
     }

@@ -19,7 +19,7 @@ interface TradesViewProps {
   type: TradesType;
 }
 
-/** «Обмены»: purchases and sales in one list, newest first; «В холде» — sales whose money waits. */
+/** «Трейды»: purchases and sales in one list, newest first; «В холде» — sales whose money waits. */
 export function TradesView({ locale, type }: TradesViewProps) {
   const t = useTranslations("web.trades");
   return (

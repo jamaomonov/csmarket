@@ -29,7 +29,7 @@ export default async function OrderPage({ params }: Props) {
     setRequestLocale(locale);
   }
   return (
-    // The profile's frame (as `account/layout.tsx`): the order lives on «Обмены».
+    // The profile's frame (as `account/layout.tsx`): the order lives on «Трейды».
     <div className="mx-auto flex max-w-[1100px] flex-col gap-8 px-4 py-8 sm:px-6">
       <AccountSidebar />
       <main id="main-content" className="min-w-0 flex-1">

@@ -15,7 +15,7 @@ const page = (type?: string) =>
   });
 
 describe("trades page", () => {
-  it("is titled «Обмены» and never indexed", async () => {
+  it("is titled «Трейды» and never indexed", async () => {
     const meta = await generateMetadata({ params: Promise.resolve({ locale: "ru" }) });
     expect(meta).toEqual({ title: "web.trades.title", robots: { index: false, follow: false } });
   });

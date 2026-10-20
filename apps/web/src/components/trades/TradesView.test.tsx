@@ -108,7 +108,7 @@ describe("TradesView", () => {
 
   it("purchases do not ask for sales", async () => {
     view("purchases");
-    expect(await screen.findByText("Обменов пока нет.")).toBeInTheDocument();
+    expect(await screen.findByText("Трейдов пока нет.")).toBeInTheDocument();
     expect(api.listSales).not.toHaveBeenCalled();
   });
 

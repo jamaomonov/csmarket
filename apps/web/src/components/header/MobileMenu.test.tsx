@@ -39,7 +39,7 @@ describe("MobileMenu", () => {
       ["Отзывы", "/reviews"],
       ["Профиль", "/account"],
       ["Транзакции", "/account/transactions"],
-      ["Обмены", "/account/trades"],
+      ["Трейды", "/account/trades"],
       ["Реферал", "/account/referral"],
     ]);
     expect(screen.getByRole("menuitem", { name: "Маркет" }).querySelector("svg")).not.toBeNull();
