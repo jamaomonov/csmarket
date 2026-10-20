@@ -77,7 +77,7 @@ def test_offered_after_click_before_mock(monkeypatch: pytest.MonkeyPatch) -> Non
         CSMARKET_PAYME_MERCHANT_ID=_MERCHANT,
         CSMARKET_PAYME_KEY="fake-payme-key",
     )
-    assert available_providers()[:2] == ["click", "payme"]
+    assert available_providers()[:2] == ["payme", "click"]
 
 
 def test_registered_under_its_slug() -> None:

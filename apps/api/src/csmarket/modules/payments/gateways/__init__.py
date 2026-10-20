@@ -15,8 +15,8 @@ from csmarket.modules.payments.gateways.base import PaymentGateway, return_url
 #: Kassas that only take balance top-ups, never an order (P2P, spec 2026-10-19-p2p-topup).
 TOPUP_ONLY = frozenset({"p2p"})
 
-#: The order the storefront offers providers in.
-_ORDER = ("click", "payme", "uzum", "p2p", "mock")
+#: The order the storefront offers providers in (owner 2026-10-20: Payme first).
+_ORDER = ("payme", "click", "uzum", "p2p", "mock")
 
 
 @cache
@@ -39,7 +39,8 @@ def registry() -> dict[str, PaymentGateway]:
 
 
 def available_providers() -> list[str]:
-    """Slugs of the gateways that can take payments now, in ``click, payme, uzum, mock`` order."""
+    """Slugs of the gateways that can take payments now, in ``payme, click, uzum, p2p, mock``
+    order (owner 2026-10-20)."""
     known = registry()
     return [slug for slug in _ORDER if slug in known and known[slug].available]
 

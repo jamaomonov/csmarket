@@ -49,12 +49,12 @@ def test_prod_offers_exactly_the_configured_kassas(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("CSMARKET_PAYME_MERCHANT_ID", "6a1faaca155c8e168e2a0000")
     monkeypatch.setenv("CSMARKET_PAYME_KEY", "fake-payme-key")
     get_settings.cache_clear()
-    assert available_providers() == ["click", "payme", "p2p"]
+    assert available_providers() == ["payme", "click", "p2p"]
     monkeypatch.setenv("CSMARKET_UZUM_SERVICE_ID", "101202")
     monkeypatch.setenv("CSMARKET_UZUM_LOGIN", "fake-uzum-login")
     monkeypatch.setenv("CSMARKET_UZUM_PASSWORD", "fake-uzum-password")
     get_settings.cache_clear()
-    assert available_providers() == ["click", "payme", "uzum", "p2p"]
+    assert available_providers() == ["payme", "click", "uzum", "p2p"]
 
 
 def test_an_unknown_provider_is_not_found() -> None:

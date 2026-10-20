@@ -103,7 +103,7 @@ def test_offered_after_click_and_payme_before_mock(monkeypatch: pytest.MonkeyPat
         CSMARKET_UZUM_LOGIN="fake-login",
         CSMARKET_UZUM_PASSWORD="fake-pw",
     )
-    assert available_providers()[:3] == ["click", "payme", "uzum"]
+    assert available_providers()[:3] == ["payme", "click", "uzum"]
 
 
 def test_registered_under_its_slug() -> None:

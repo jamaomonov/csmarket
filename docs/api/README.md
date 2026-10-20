@@ -97,7 +97,7 @@ no `Idempotency-Key`. Bodies of the catalogue, facets and suggest are cached 60 
 Signed in (401 without a token), except the provider list.
 
 - `GET /payments/providers` — anonymous; `{providers: [{slug, fee_pct}]}`, the kassas available
-  now in the order `click, payme, uzum, mock` (`mock` never in prod). The balance page shows
+  now in the order `payme, click, uzum, p2p, mock` (`mock` never in prod). The balance page shows
   these. `fee_pct` (`"1.5"`, `"0"`) is what the buyer pays on top through that kassa — the
   kassa charges `base + ceil(base × fee_pct / 100)` (spec 2026-10-14-kassa-fee). Each carries
   `status` (`on` / `maintenance`; `off` is left out) and `topup_only`. A kassa without
