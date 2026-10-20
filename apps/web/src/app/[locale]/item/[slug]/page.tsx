@@ -17,6 +17,7 @@ import { SkinListings } from "@/components/skins/SkinListings";
 import { SkinOffersProvider } from "@/components/skins/SkinOffers";
 import { SkinPriceBlock } from "@/components/skins/SkinPriceBlock";
 import { SkinSimilar } from "@/components/skins/SkinSimilar";
+import { SkinStickyBuy } from "@/components/skins/SkinStickyBuy";
 import { SkinWearPicker } from "@/components/skins/SkinWearPicker";
 import { Link } from "@/i18n/navigation";
 import { routing } from "@/i18n/routing";
@@ -290,6 +291,7 @@ export default async function SkinPage({ params }: Props) {
               />
             </section>
           )}
+          {item.buy_enabled && <SkinStickyBuy locale={locale} />}
         </SkinOffersProvider>
 
         <SkinSimilar
