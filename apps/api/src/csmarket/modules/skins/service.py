@@ -96,7 +96,8 @@ def decode_cursor(token: str) -> tuple[CursorValue, str]:
     if value is None:
         return value, item_id
     if isinstance(value, int):
-        if not 0 <= value < _INT64:  # asyncpg overflows past int64 (a 500, not a 422)
+        # A discount sort pages negative values; asyncpg overflows past int64 (a 500).
+        if not -_INT64 <= value < _INT64:
             raise ValidationError("invalid cursor")
         return value, item_id
     if isinstance(value, str):
@@ -104,7 +105,7 @@ def decode_cursor(token: str) -> tuple[CursorValue, str]:
             price = Decimal(value)
         except ArithmeticError as exc:
             raise ValidationError("invalid cursor") from exc
-        if not price.is_finite() or price < 0:
+        if not price.is_finite():
             raise ValidationError("invalid cursor")
         return price, item_id
     raise ValidationError("invalid cursor")

@@ -14982,7 +14982,7 @@
             "description": "Successful Response"
           },
           "409": {
-            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `wallet_frozen` or `idempotency_mismatch`"
+            "description": "`payout_not_payable`, `payout_claimed` (another admin is paying it), `wallet_frozen`, `payout_sale_reverted` or `idempotency_mismatch`"
           },
           "422": {
             "content": {

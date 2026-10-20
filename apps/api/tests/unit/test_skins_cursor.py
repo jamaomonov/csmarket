@@ -36,7 +36,7 @@ def test_cursor_round_trips_a_decimal_price_exactly() -> None:
         b'[[1],"x"]',
         # Review 2026-10-20: past int64 (asyncpg overflow) or not a number — 422, not 500.
         b'[100000000000000000000,"x"]',
-        b'[-1,"x"]',
+        b'[-100000000000000000000,"x"]',
         b'["NaN","x"]',
         b'["Infinity","x"]',
     ],
@@ -45,3 +45,9 @@ def test_well_formed_but_wrong_cursors_are_validation_errors(payload: bytes) -> 
     token = base64.urlsafe_b64encode(payload).decode().rstrip("=")
     with pytest.raises(ValidationError):
         decode_cursor(token)
+
+
+def test_a_negative_discount_cursor_round_trips() -> None:
+    """The discount sort pages below zero (Steam cheaper than us)."""
+    assert decode_cursor(encode_cursor(-12, "x")) == (-12, "x")
+    assert decode_cursor(encode_cursor(Decimal("-3.5"), "x")) == (Decimal("-3.5"), "x")
