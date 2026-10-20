@@ -26,11 +26,18 @@ ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8100
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 RUN pnpm --filter @csmarket/web build
 
+# Only Next's traced standalone server, its static files and the OG assets it reads from
+# disk, run as the image's unprivileged `node` user — no source, no dev dependencies, no
+# package manager (review 2026-10-20).
 FROM mirror.gcr.io/library/node:22-alpine AS runner
 WORKDIR /app
-ENV NODE_ENV=production
-RUN npm i -g corepack@latest && corepack enable && corepack prepare pnpm@9.12.0 --activate
-COPY --from=builder /app /app
+ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
+COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=node:node /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=node:node /app/apps/web/public ./apps/web/public
+# `og-assets.ts` reads fonts and images from process.cwd(), which server.js sets to its dir.
+COPY --from=builder --chown=node:node /app/apps/web/assets ./apps/web/assets
+USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:3000/ || exit 1
-CMD ["pnpm", "--filter", "@csmarket/web", "start"]
+CMD ["node", "apps/web/server.js"]

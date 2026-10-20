@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+
 import createNextIntlPlugin from "next-intl/plugin";
 
 import type { NextConfig } from "next";
@@ -6,6 +8,11 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // The image ships `.next/standalone` (a traced server and only the modules it needs) and
+  // runs it as `node`, not the whole workspace as root (review 2026-10-20). The root is
+  // the monorepo, so the workspace packages are traced too.
+  output: "standalone",
+  outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   // Metadata before the first byte for every client, not only Next's list of "HTML-limited"
   // bots: with streamed metadata a `notFound()` in `generateMetadata` arrives after the 200
   // has gone out, and Googlebot sees a soft 404 (a 200 around «Страница не найдена»). Item,
