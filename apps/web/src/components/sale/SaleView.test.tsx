@@ -164,7 +164,7 @@ describe("SaleView", () => {
     });
     view();
     expect(
-      await screen.findByText(/После 15 октября отправим 147\s400 .* на карту Humo •••• 9015/),
+      await screen.findByText(/После 15 октября 147\s400 .* поступят на карту Humo •••• 9015/),
     ).toBeInTheDocument();
   });
 
@@ -179,7 +179,7 @@ describe("SaleView", () => {
     });
     view();
     expect(await screen.findByText("Продажа не состоялась")).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/Скоро отправим/);
+    expect(document.body.textContent).not.toMatch(/Скоро .* поступят/);
   });
 
   it("a card payout waiting out the days says when the money comes", async () => {
@@ -194,7 +194,7 @@ describe("SaleView", () => {
     });
     view();
     expect(await screen.findByText("Скины получены")).toBeInTheDocument();
-    expect(document.body.textContent).not.toMatch(/Скоро отправим/);
+    expect(document.body.textContent).not.toMatch(/Скоро .* поступят/);
   });
 
   it("a card payout waiting out the days without a date still reads whole", async () => {
@@ -211,7 +211,7 @@ describe("SaleView", () => {
     view();
     expect(
       await screen.findByText(
-        /После 7 дней защиты Steam отправим 147\s400 .* на карту Humo •••• 9015\./,
+        /После 7 дней защиты Steam 147\s400 .* поступят на карту Humo •••• 9015\./,
       ),
     ).toBeInTheDocument();
   });

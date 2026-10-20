@@ -597,7 +597,7 @@
       "accept": "Accept the trade in Steam — otherwise your skins stay with you.",
       "protection": "We wait out Steam's 7-day protection.",
       "balance": "The money reaches your balance 7 days after the trade.",
-      "card": "We send the money to your card after Steam's 7-day protection, within 12 hours."
+      "card": "The money reaches your card within 12 hours after Steam's 7-day protection."
     },
     "submit": "Sell for {sum}",
     "addMore": "Add {sum} more",
@@ -721,16 +721,16 @@
         "title": "Skins received",
         "text": "{amount} will arrive on {date}.",
         "textSoon": "{amount} will arrive after Steam's 7-day protection.",
-        "textCard": "After {date} we will send {amount} to the card {card}.",
-        "textCardSoon": "After Steam's 7-day protection we will send {amount} to the card {card}."
+        "textCard": "After {date}, {amount} will reach the card {card}.",
+        "textCardSoon": "After Steam's 7-day protection, {amount} will reach the card {card}."
       },
       "credited": {
         "title": "Money on your balance",
         "text": "{amount} is on your csmarket balance."
       },
       "payout": {
-        "title": "Sending the money",
-        "text": "We will send {amount} to the card {card} soon."
+        "title": "Money on its way",
+        "text": "{amount} will reach the card {card} soon."
       },
       "paid": {
         "title": "Money sent",

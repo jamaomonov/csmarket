@@ -597,7 +597,7 @@
       "accept": "Steamʼda almashuvni qabul qiling — aks holda skinlar oʻzingizda qoladi.",
       "protection": "Steamʼning 7 kunlik himoyasini kutamiz.",
       "balance": "Pul almashuvdan 7 kun keyin balansga tushadi.",
-      "card": "Pulni Steamʼning 7 kunlik himoyasidan keyin, 12 soat ichida kartaga yuboramiz."
+      "card": "Pul Steamʼning 7 kunlik himoyasidan keyin 12 soat ichida kartaga tushadi."
     },
     "submit": "{sum} ga sotish",
     "addMore": "Yana {sum} qoʻshing",
@@ -721,16 +721,16 @@
         "title": "Skinlar qabul qilindi",
         "text": "{amount} {date} tushadi.",
         "textSoon": "{amount} Steamʼning 7 kunlik himoyasidan keyin tushadi.",
-        "textCard": "{date} dan keyin {amount} ni {card} kartasiga yuboramiz.",
-        "textCardSoon": "Steamʼning 7 kunlik himoyasidan keyin {amount} ni {card} kartasiga yuboramiz."
+        "textCard": "{date} dan keyin {amount} {card} kartasiga tushadi.",
+        "textCardSoon": "Steamʼning 7 kunlik himoyasidan keyin {amount} {card} kartasiga tushadi."
       },
       "credited": {
         "title": "Pul balansda",
         "text": "{amount} csmarket balansiga oʻtkazildi."
       },
       "payout": {
-        "title": "Pul yuborilmoqda",
-        "text": "Tez orada {amount} ni {card} kartasiga yuboramiz."
+        "title": "Pul yoʻlda",
+        "text": "Tez orada {amount} {card} kartasiga tushadi."
       },
       "paid": {
         "title": "Pul yuborildi",

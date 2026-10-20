@@ -363,7 +363,9 @@ describe("SellView", () => {
     expect(screen.getAllByText(/Примите обмен в Steam/)[0]).toBeInTheDocument();
     expect(screen.getAllByText(/на баланс через 7 дней/)[0]).toBeInTheDocument();
     fireEvent.click(first(screen.getAllByRole("radio", { name: /Новая карта Humo/ })));
-    expect(screen.getAllByText(/на карту после 7 дней защиты Steam/)[0]).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/поступят на карту в течение 12 часов после 7 дней защиты Steam/)[0],
+    ).toBeInTheDocument();
   });
 
   it("links to the seller's sales", async () => {
