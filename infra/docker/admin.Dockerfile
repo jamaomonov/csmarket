@@ -1,5 +1,5 @@
 # syntax=mirror.gcr.io/docker/dockerfile:1.7
-FROM mirror.gcr.io/library/node:22-alpine AS base
+FROM mirror.gcr.io/library/node:26-alpine AS base
 RUN npm i -g corepack@latest && corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 

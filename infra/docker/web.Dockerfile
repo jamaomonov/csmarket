@@ -1,5 +1,5 @@
 # syntax=mirror.gcr.io/docker/dockerfile:1.7
-FROM mirror.gcr.io/library/node:22-alpine AS base
+FROM mirror.gcr.io/library/node:26-alpine AS base
 RUN npm i -g corepack@latest && corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /app
 
@@ -29,7 +29,7 @@ RUN pnpm --filter @csmarket/web build
 # Only Next's traced standalone server, its static files and the OG assets it reads from
 # disk, run as the image's unprivileged `node` user — no source, no dev dependencies, no
 # package manager (review 2026-10-20).
-FROM mirror.gcr.io/library/node:22-alpine AS runner
+FROM mirror.gcr.io/library/node:26-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production HOSTNAME=0.0.0.0 PORT=3000
 COPY --from=builder --chown=node:node /app/apps/web/.next/standalone ./
