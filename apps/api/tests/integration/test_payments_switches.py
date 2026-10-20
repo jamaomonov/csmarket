@@ -63,3 +63,20 @@ async def test_an_open_payment_still_settles_after_the_switch(
     await db_session.commit()
     seen = (await integration_client.get(f"{TOPUPS}/{number}", headers=h)).json()
     assert seen["status"] == "succeeded"
+
+
+async def test_a_kassa_without_credentials_is_shown_only_in_maintenance(
+    integration_client: AsyncClient, db_session: AsyncSession, customer_headers: Headers
+) -> None:
+    """Owner 2026-10-20: Uzum's tile shows greyed «Технические работы» before its keys exist.
+    «on» without keys still hides it — the kassa cannot take money — and a top-up through it
+    is refused (422: no keys, not a payable kassa)."""
+    await set_fees(db_session, statuses={"uzum": "on"})
+    body = (await integration_client.get("/api/v1/payments/providers")).json()
+    assert all(p["slug"] != "uzum" for p in body["providers"])
+    await set_fees(db_session, statuses={"uzum": "maintenance"})
+    body = (await integration_client.get("/api/v1/payments/providers")).json()
+    uzum = next(p for p in body["providers"] if p["slug"] == "uzum")
+    assert uzum["status"] == "maintenance"
+    r = await _topup(integration_client, await customer_headers(), provider="uzum")
+    assert r.status_code == 422  # type: ignore[attr-defined]  # no keys: not a payable kassa

@@ -16,8 +16,8 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.errors import NotFoundError
 from csmarket.core.idempotency import IDEMPOTENCY_HEADER, require_idempotency_key
 from csmarket.modules.auth.api import current_user, guard_ip
-from csmarket.modules.payments.fees import DEFAULT_KASSA_FEES, plain_pct, read_kassa_fees
-from csmarket.modules.payments.gateways import TOPUP_ONLY, available_providers
+from csmarket.modules.payments.fees import plain_pct, read_kassa_fees
+from csmarket.modules.payments.gateways import TOPUP_ONLY, available_providers, known_kassas
 from csmarket.modules.payments.schemas import (
     Locale,
     ProviderOut,
@@ -46,9 +46,13 @@ async def list_providers(
     """Anonymous: the storefront shows these tiles, each with the percent the buyer pays on
     top (spec 2026-10-14-kassa-fee) and its switch: a ``maintenance`` kassa is shown greyed, an
     ``off`` one is left out (spec 2026-10-19-p2p-topup). ``topup_only`` kassas (P2P) are never
-    offered at checkout."""
-    slugs = available_providers()
-    fees = await read_kassa_fees(db) if slugs else DEFAULT_KASSA_FEES
+    offered at checkout. A kassa without credentials yet is listed only under ``maintenance``
+    (owner 2026-10-20: the tile announces it); ``on`` without credentials stays hidden."""
+    fees = await read_kassa_fees(db)
+    live = available_providers()
+    kassas = known_kassas()
+    candidates = [*kassas, *(slug for slug in live if slug not in kassas)]  # the dev mock last
+    slugs = [s for s in candidates if s in live or fees.status(s) == "maintenance"]
     return ProvidersOut(
         providers=[
             ProviderOut(

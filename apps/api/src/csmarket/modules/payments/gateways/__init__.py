@@ -44,6 +44,13 @@ def available_providers() -> list[str]:
     return [slug for slug in _ORDER if slug in known and known[slug].available]
 
 
+def known_kassas() -> list[str]:
+    """Every real kassa this build knows (not the dev ``mock``), available or not, in order:
+    one without credentials yet can still be shown greyed under maintenance."""
+    known = registry()
+    return [slug for slug in _ORDER if slug in known and slug != "mock"]
+
+
 def get_gateway(provider: str) -> PaymentGateway:
     """The gateway for ``provider``.
 
@@ -56,4 +63,11 @@ def get_gateway(provider: str) -> PaymentGateway:
     return gateway
 
 
-__all__ = ["PaymentGateway", "available_providers", "get_gateway", "registry", "return_url"]
+__all__ = [
+    "PaymentGateway",
+    "available_providers",
+    "get_gateway",
+    "known_kassas",
+    "registry",
+    "return_url",
+]

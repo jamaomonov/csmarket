@@ -99,7 +99,10 @@ Signed in (401 without a token), except the provider list.
 - `GET /payments/providers` — anonymous; `{providers: [{slug, fee_pct}]}`, the kassas available
   now in the order `click, payme, uzum, mock` (`mock` never in prod). The balance page shows
   these. `fee_pct` (`"1.5"`, `"0"`) is what the buyer pays on top through that kassa — the
-  kassa charges `base + ceil(base × fee_pct / 100)` (spec 2026-10-14-kassa-fee).
+  kassa charges `base + ceil(base × fee_pct / 100)` (spec 2026-10-14-kassa-fee). Each carries
+  `status` (`on` / `maintenance`; `off` is left out) and `topup_only`. A kassa without
+  credentials yet is listed only while the admin keeps it under `maintenance` — a greyed tile
+  announcing it; `on` without credentials stays hidden, and paying through it is 422.
 - `POST /wallet/topups` `{amount_uzs, provider, locale}` + **required** `Idempotency-Key`
   (16..160 chars) → **201** `TopupOut {number, amount_uzs, fee_uzs, charge_uzs, provider, status, expires_at,
 intent_url, awaiting_kassa}` — `amount_uzs` reaches the balance, the kassa charges `charge_uzs`
