@@ -874,7 +874,7 @@
       "kicker": "Nega csmarket",
       "title": "Oʻzbekistonlik oʻyinchilar uchun",
       "lead": "Odatiy usulda toʻlang, skinni Steam’da oling va saytdan ona tilingizda foydalaning.",
-      "telegram": "Telegram’da yozish",
+      "telegram": "Telegram kanal",
       "g1": "Soʻmda toʻlov",
       "g1d": "Click, Payme, Uzum yoki sayt balansi. Narx soʻmda — kursni hisoblash shart emas.",
       "g2": "Xorijiy karta kerak emas",
@@ -887,7 +887,7 @@
     "faq": {
       "kicker": "Savollar",
       "title": "Koʻp beriladigan savollar",
-      "lead": "Javob topmadingizmi? Telegram’da yozing.",
+      "lead": "Javob topmadingizmi? Telegram’da qoʻllab-quvvatlashga yozing.",
       "items": [
         {
           "q": "Oʻzbekistonda CS2 skinini qanday sotib olish mumkin?",
@@ -968,14 +968,17 @@
       "about": "CS2 skinlari Oʻzbekistonda. Narxlar soʻmda, skin Steam’ga almashuv orqali keladi.",
       "market": "Market",
       "service": "Xizmatlar",
-      "help": "Yordam",
       "sell": "Skin sotish",
       "steam": "Steam’ni toʻldirish",
       "reviews": "Sharhlar",
       "api": "Dasturchilar uchun API",
       "faq": "Koʻp beriladigan savollar",
       "legal": "Valve Corporation bilan bogʻliq emas. Counter-Strike va Steam — Valve’ning savdo belgilari.",
-      "weapons": "Qurollar"
+      "weapons": "Qurollar",
+      "telegram": "Telegram",
+      "tgChannel": "Yangiliklar va chegirmalar",
+      "tgChat": "Chat",
+      "tgSupport": "Qoʻllab-quvvatlash"
     }
   },
   "seoPages": {

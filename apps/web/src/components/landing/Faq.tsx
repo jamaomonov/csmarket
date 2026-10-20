@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { PlusIcon } from "./Icons";
 
 import { JsonLd } from "@/components/JsonLd";
-import { telegramUrl } from "@/lib/landing";
+import { TELEGRAM } from "@/lib/telegram";
 
 export interface FaqItem {
   q: string;
@@ -27,20 +27,17 @@ export function faqJsonLd(items: FaqItem[]): object {
 export async function Faq({ locale }: { locale: string }) {
   const t = await getTranslations({ locale, namespace: "web.landing.faq" });
   const items = t.raw("items") as FaqItem[]; // the catalogue's own array of {q, a}
-  const tg = telegramUrl();
   return (
     <section aria-labelledby="lp-faq" id="faq">
       <div className="wrap faq-wrap">
         <div>
           <div className="kicker">{t("kicker")}</div>
           <h2 id="lp-faq">{t("title")}</h2>
-          {tg !== "" && (
-            <p className="sec-lead">
-              <a href={tg} rel="noopener noreferrer" target="_blank">
-                {t("lead")}
-              </a>
-            </p>
-          )}
+          <p className="sec-lead">
+            <a href={TELEGRAM.support} rel="noopener noreferrer" target="_blank">
+              {t("lead")}
+            </a>
+          </p>
         </div>
         <div className="faq">
           {items.map((item, i) => (

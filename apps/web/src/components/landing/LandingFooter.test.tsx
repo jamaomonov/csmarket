@@ -21,7 +21,6 @@ vi.mock("@/i18n/navigation", () => ({
     <a href={href}>{children}</a>
   ),
 }));
-vi.mock("@/lib/landing", () => ({ telegramUrl: () => "" }));
 
 import { LandingFooter } from "./LandingFooter";
 
@@ -39,6 +38,17 @@ describe("LandingFooter", () => {
       "/legal/imprint",
     ]);
     expect(within(nav).getByRole("link", { name: "Публичная оферта" })).toBeInTheDocument();
+  });
+
+  it("splits Telegram by purpose: channel, community, support", async () => {
+    render(await LandingFooter({ locale: "ru" }));
+    const nav = screen.getByRole("navigation", { name: "Telegram" });
+    const links = within(nav).getAllByRole("link");
+    expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+      ["Новости и скидки", "https://t.me/cs2marketuz"],
+      ["Сообщество", "https://t.me/csmarketuz_chat"],
+      ["Поддержка", "https://t.me/jama_omonov"],
+    ]);
   });
 
   it("speaks the page's language", async () => {

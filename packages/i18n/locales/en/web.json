@@ -874,7 +874,7 @@
       "kicker": "Why csmarket",
       "title": "Made for players in Uzbekistan",
       "lead": "Pay the way you are used to, get the skin in Steam and use the site in your own language.",
-      "telegram": "Message us on Telegram",
+      "telegram": "Telegram channel",
       "g1": "Pay in soʻm",
       "g1d": "Click, Payme, Uzum or the site balance. Prices are in soʻm — no exchange rate maths.",
       "g2": "No foreign card needed",
@@ -887,7 +887,7 @@
     "faq": {
       "kicker": "Questions",
       "title": "Frequently asked questions",
-      "lead": "Didn’t find an answer? Message us on Telegram.",
+      "lead": "Didn’t find an answer? Message support on Telegram.",
       "items": [
         {
           "q": "How do I buy a CS2 skin in Uzbekistan?",
@@ -968,14 +968,17 @@
       "about": "CS2 skins in Uzbekistan. Prices in soʻm, the skin arrives as a Steam trade.",
       "market": "Market",
       "service": "Service",
-      "help": "Help",
       "sell": "Sell skins",
       "steam": "Top up Steam",
       "reviews": "Reviews",
       "api": "API for developers",
       "faq": "FAQ",
       "legal": "Not affiliated with Valve Corporation. Counter-Strike and Steam are trademarks of Valve.",
-      "weapons": "Weapons"
+      "weapons": "Weapons",
+      "telegram": "Telegram",
+      "tgChannel": "News and deals",
+      "tgChat": "Community",
+      "tgSupport": "Support"
     }
   },
   "seoPages": {

@@ -5,7 +5,7 @@ import { BanIcon, CardIcon, ChatIcon, RefundIcon, TelegramGlyph } from "./Icons"
 
 import type { ReactNode } from "react";
 
-import { telegramUrl } from "@/lib/landing";
+import { TELEGRAM } from "@/lib/telegram";
 
 const CARDS: { key: "g1" | "g2" | "g3" | "g4"; icon: ReactNode; tint: string }[] = [
   { key: "g1", icon: <CardIcon />, tint: "93 178 255" },
@@ -15,7 +15,6 @@ const CARDS: { key: "g1" | "g2" | "g3" | "g4"; icon: ReactNode; tint: string }[]
 ];
 
 export async function WhyUs({ locale }: { locale: string }) {
-  const tg = telegramUrl();
   const t = await getTranslations({ locale, namespace: "web.landing.why" });
   return (
     <section aria-labelledby="lp-why">
@@ -24,12 +23,10 @@ export async function WhyUs({ locale }: { locale: string }) {
           <div className="kicker">{t("kicker")}</div>
           <h2 id="lp-why">{t("title")}</h2>
           <p className="sec-lead">{t("lead")}</p>
-          {tg !== "" && (
-            <a className="tg" href={tg} rel="noopener noreferrer" target="_blank">
-              <TelegramGlyph />
-              {t("telegram")}
-            </a>
-          )}
+          <a className="tg" href={TELEGRAM.channel} rel="noopener noreferrer" target="_blank">
+            <TelegramGlyph />
+            {t("telegram")}
+          </a>
         </div>
         <div className="why-cards">
           {CARDS.map((c) => (

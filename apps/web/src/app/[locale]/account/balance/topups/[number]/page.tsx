@@ -3,7 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { TopupStatus } from "@/components/balance/TopupStatus";
 import { routing } from "@/i18n/routing";
-import { telegramUrl } from "@/lib/landing";
+import { TELEGRAM } from "@/lib/telegram";
 
 interface Props {
   params: Promise<{ locale: string; number: string }>;
@@ -30,7 +30,7 @@ export default async function TopupPage({ params }: Props) {
   }
   return (
     <main id="main-content" className="min-w-0 flex-1">
-      <TopupStatus locale={locale} number={number} supportUrl={telegramUrl()} />
+      <TopupStatus locale={locale} number={number} supportUrl={TELEGRAM.support} />
     </main>
   );
 }

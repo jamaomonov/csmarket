@@ -22,6 +22,7 @@ import {
   weaponPath,
 } from "@/lib/paths";
 import { weaponSlug } from "@/lib/skin-landing";
+import { TELEGRAM_LINKS } from "@/lib/telegram";
 
 const CATEGORIES = ["knives", "gloves", "rifles", "pistols", "smgs", "cases", "agents"] as const;
 const WEAPONS = ["AK-47", "AWP", "M4A1-S", "Desert Eagle", "Karambit", "Butterfly Knife"];
@@ -55,7 +56,7 @@ export async function SiteFooter({ locale }: { locale: string }) {
   const tLegal = await getTranslations({ locale, namespace: "legal" });
   return (
     <footer className="border-border text-fg-dim text-small border-t">
-      <div className="mx-auto grid max-w-[1320px] grid-cols-2 gap-6 px-4 pb-28 pt-8 sm:px-6 md:grid-cols-4 md:pb-10">
+      <div className="mx-auto grid max-w-[1320px] grid-cols-2 gap-6 px-4 pb-28 pt-8 sm:px-6 md:grid-cols-5 md:pb-10">
         <Column
           title={t("market")}
           links={[
@@ -85,7 +86,24 @@ export async function SiteFooter({ locale }: { locale: string }) {
             { href: REVIEWS, label: t("reviews") },
           ]}
         />
-        <div className="col-span-2 space-y-2 md:col-span-4">
+        <nav aria-label={t("telegram")}>
+          <h2 className="text-fg text-small mb-2 font-bold">{t("telegram")}</h2>
+          <ul className="space-y-1.5">
+            {TELEGRAM_LINKS.map((l) => (
+              <li key={l.key}>
+                <a
+                  href={l.href}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  className="hover:text-fg"
+                >
+                  {t(l.key)}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <div className="col-span-2 space-y-2 md:col-span-5">
           <nav aria-label={tLegal("index.title")} className="flex flex-wrap gap-x-4 gap-y-1">
             {LEGAL_DOCS.map((doc) => (
               <Link key={doc} href={legalPath(doc)} className="hover:text-fg">

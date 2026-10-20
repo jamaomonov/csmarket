@@ -4,7 +4,6 @@ import { getTranslations } from "next-intl/server";
 import { PayMarks } from "./Wordmarks";
 
 import { Link } from "@/i18n/navigation";
-import { telegramUrl } from "@/lib/landing";
 import { LEGAL_DOCS } from "@/lib/legal";
 import {
   categoryPath,
@@ -19,13 +18,13 @@ import {
   weaponPath,
 } from "@/lib/paths";
 import { weaponSlug } from "@/lib/skin-landing";
+import { TELEGRAM_LINKS } from "@/lib/telegram";
 
 const MARKET_LINKS = ["knives", "gloves", "rifles", "pistols", "cases"] as const;
 /** The most searched models, linked to their indexable `/weapon/<slug>` pages. */
 const WEAPONS = ["AK-47", "AWP", "M4A1-S", "Desert Eagle", "Karambit", "Butterfly Knife"];
 
 export async function LandingFooter({ locale }: { locale: string }) {
-  const tg = telegramUrl();
   const t = await getTranslations({ locale, namespace: "web.landing.footer" });
   const tCat = await getTranslations({ locale, namespace: "web.skins.category" });
   const tBuy = await getTranslations({ locale, namespace: "web.seoPages.footer" });
@@ -88,21 +87,21 @@ export async function LandingFooter({ locale }: { locale: string }) {
               <li>
                 <a href="https://docs.csmarket.uz">{t("api")}</a>
               </li>
-            </ul>
-          </nav>
-          <nav aria-label={t("help")}>
-            <h4>{t("help")}</h4>
-            <ul>
               <li>
                 <a href="#faq">{t("faq")}</a>
               </li>
-              {tg !== "" && (
-                <li>
-                  <a href={tg} rel="noopener noreferrer" target="_blank">
-                    Telegram
+            </ul>
+          </nav>
+          <nav aria-label={t("telegram")}>
+            <h4>{t("telegram")}</h4>
+            <ul>
+              {TELEGRAM_LINKS.map((l) => (
+                <li key={l.key}>
+                  <a href={l.href} rel="noopener noreferrer" target="_blank">
+                    {t(l.key)}
                   </a>
                 </li>
-              )}
+              ))}
             </ul>
           </nav>
         </div>

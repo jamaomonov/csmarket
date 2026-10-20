@@ -127,18 +127,12 @@ describe("landing", () => {
     expect(all).toHaveTextContent("50 скинов");
   });
 
-  it("the FAQ promises Telegram only once the link is set", async () => {
-    vi.stubEnv("CSMARKET_TELEGRAM_URL", "");
-    const { container, unmount } = render(await Faq({ locale: "ru" }));
-    expect(container).not.toHaveTextContent("Telegram");
-    unmount();
-    vi.stubEnv("CSMARKET_TELEGRAM_URL", "https://t.me/csmarket_uz");
+  it("the FAQ sends an unanswered question to support, not to the channel", async () => {
     render(await Faq({ locale: "ru" }));
-    expect(screen.getByRole("link", { name: /Telegram/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /поддержку/ })).toHaveAttribute(
       "href",
-      "https://t.me/csmarket_uz",
+      "https://t.me/jama_omonov",
     );
-    vi.unstubAllEnvs();
   });
 
   it("faqJsonLd maps questions and answers", () => {

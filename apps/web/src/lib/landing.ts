@@ -9,6 +9,7 @@ import { unstable_cache } from "next/cache";
 import type { SkinFacets, SkinItem, SkinsPage } from "@csmarket/utils/skins";
 
 import { apiGet } from "@/lib/server-api";
+import { TELEGRAM } from "@/lib/telegram";
 
 /** Seconds the landing's catalogue reads are cached. */
 const REVALIDATE = 300;
@@ -264,18 +265,13 @@ export async function getLandingData(): Promise<LandingData> {
 }
 
 /**
- * The support channel, read on the server at request time from `CSMARKET_TELEGRAM_URL` (owner,
- * 2026-10-09: «оставь пустым, позже дам»); empty hides its links.
+ * Profiles for `Organization.sameAs`: the Telegram channel, then `CSMARKET_SOCIAL_URLS`
+ * (comma-separated https URLs) for any other.
  */
-export function telegramUrl(): string {
-  const url = process.env.CSMARKET_TELEGRAM_URL ?? "";
-  return url.startsWith("https://") ? url : "";
-}
-
-/** Profiles for `Organization.sameAs`: `CSMARKET_SOCIAL_URLS`, comma-separated https URLs. */
 export function socialUrls(): string[] {
-  return (process.env.CSMARKET_SOCIAL_URLS ?? "")
+  const extra = (process.env.CSMARKET_SOCIAL_URLS ?? "")
     .split(",")
     .map((u) => u.trim())
-    .filter((u) => u.startsWith("https://"));
+    .filter((u) => u.startsWith("https://") && u !== TELEGRAM.channel);
+  return [TELEGRAM.channel, ...extra];
 }
