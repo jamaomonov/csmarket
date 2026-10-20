@@ -18372,7 +18372,7 @@
     },
     "/api/v1/payments/providers": {
       "get": {
-        "description": "Anonymous: the storefront shows these tiles, each with the percent the buyer pays on\ntop (spec 2026-10-14-kassa-fee) and its switch: a ``maintenance`` kassa is shown greyed, an\n``off`` one is left out (spec 2026-10-19-p2p-topup). ``topup_only`` kassas (P2P) are never\noffered at checkout.",
+        "description": "Anonymous: the storefront shows these tiles, each with the percent the buyer pays on\ntop (spec 2026-10-14-kassa-fee) and its switch: a ``maintenance`` kassa is shown greyed, an\n``off`` one is left out (spec 2026-10-19-p2p-topup). ``topup_only`` kassas (P2P) are never\noffered at checkout. A kassa without credentials yet is listed only under ``maintenance``\n(owner 2026-10-20: the tile announces it); ``on`` without credentials stays hidden.",
         "operationId": "list_providers_api_v1_payments_providers_get",
         "responses": {
           "200": {
