@@ -41,3 +41,22 @@ def test_a_month_window_spans_the_whole_month() -> None:
     assert (w.since, w.until) == (date(2028, 2, 1), date(2028, 2, 29))
     with pytest.raises(ValidationError):
         month_window("2026-13")
+
+
+@pytest.mark.parametrize(
+    ("since", "until"),
+    [(date(1, 1, 1), date(1, 1, 1)), (date(9999, 12, 31), date(9999, 12, 31))],
+)
+def test_a_window_outside_the_shop_s_years_is_refused(since: date, until: date) -> None:
+    """Review 2026-10-20: year 1 overflowed ``previous()``, year 9999 ``end`` — both 500s."""
+    with pytest.raises(ValidationError) as e:
+        parse_window(since, until)
+    assert e.value.extra["code"] == "analytics_window"
+
+
+def test_a_month_outside_the_shop_s_years_is_refused() -> None:
+    from csmarket.modules.analytics.window import month_window
+
+    with pytest.raises(ValidationError) as e:
+        month_window("0000-01")
+    assert e.value.extra["code"] == "analytics_month"

@@ -22,15 +22,15 @@ owners) and `sales` (`sales_pnl_between`, the buy-back).
 
 ## Files
 
-| File                     | What                                                                 |
-| ------------------------ | -------------------------------------------------------------------- |
-| `window.py`              | `Window`, `parse_window` (≤ 366 days), `month_window`, the cache TTL |
-| `lines.py`               | `order_lines` — one row per counted order, every block groups it     |
-| `business.py`            | totals and days (`summary`, `by_day`), refunds, new buyers, buy-back |
-| `blocks.py`, `buyers.py` | markets, channels, payments, categories, top skins, fees, buyers     |
-| `losses.py`              | «Продано в минус»                                                    |
-| `cache.py`, `service.py` | Redis answers; assembling the three endpoints                        |
-| `routes.py`              | `GET /admin/analytics/{business,calendar,losses}` — admin only       |
+| File                     | What                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------- |
+| `window.py`              | `Window`, `parse_window` (≤ 366 days, years 2000–2100), `month_window`, the cache TTL |
+| `lines.py`               | `order_lines` — one row per counted order, every block groups it                      |
+| `business.py`            | totals and days (`summary`, `by_day`), refunds, new buyers, buy-back                  |
+| `blocks.py`, `buyers.py` | markets, channels, payments, categories, top skins, fees, buyers                      |
+| `losses.py`              | «Продано в минус»                                                                     |
+| `cache.py`, `service.py` | Redis answers; assembling the three endpoints                                         |
+| `routes.py`              | `GET /admin/analytics/{business,calendar,losses}` — admin only                        |
 
 ## Cache
 

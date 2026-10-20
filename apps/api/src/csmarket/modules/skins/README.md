@@ -246,7 +246,8 @@ on (no feature flag, ruling Q1).
   dearest Covert skin (else the dearest) for the filter menu; rarities by `RARITY_TIER`, agents' `teams` only inside a
   category), `suggest`, `get_item` (a sold-out item still resolves; an unknown, hidden or
   disabled-category slug is `NotFoundError`), `family` (every visible wear / StatTrak / Souvenir
-  twin). A bad cursor is a 422.
+  twin). A bad cursor is a 422 — including a value past int64 or a non-finite price, which
+  asyncpg would otherwise turn into a 500.
 - **`routes`** (`/skins`): `GET /catalog` (`category, weapon` (one model, or up to 30
   comma-separated, sorted for the cache key)`, exterior, stattrak, souvenir,
 rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..100 default

@@ -391,6 +391,10 @@ async def get_listings(
     ]
     rows: list[Listing] = []
     degraded = False
+    # Nothing below reads the database: give the connection back before the Waxpeer call
+    # (up to 4 s; AGENTS §11), keeping ``item``'s loaded columns out of the rollback's expiry.
+    db.expunge(item)
+    await db.rollback()
     if settings.waxpeer_buy_enabled:  # off: Skinslink resells the same listings, cheaper
         rows, degraded = await listings_for(
             item, client=client, redis=get_redis(), budget_per_minute=listings_budget(settings)

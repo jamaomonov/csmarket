@@ -37,6 +37,9 @@ async def enqueue_sale_check(db: AsyncSession, merchant_tx_id: object) -> bool:
         return False
     if await db.scalar(select(Sale.id).where(Sale.id == sale_id)) is None:
         return False
+    # One queued check is enough (a replayed webhook; review 2026-10-20).
+    if await db.scalar(select(SaleCheck.id).where(SaleCheck.sale_id == sale_id).limit(1)):
+        return True
     db.add(SaleCheck(sale_id=sale_id))
     await db.flush()
     await db.execute(select(func.pg_notify(SALES_CHANNEL, sale_id)))

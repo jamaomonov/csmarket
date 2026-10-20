@@ -101,7 +101,9 @@ worker and the scheduler import only this.
   webhook queues a check, a deposit webhook (`trade_id`, ADR-0016) queues a check of the sale
   its `merchant_tx_id` names (`sales.api.enqueue_sale_check`). 404 while Skinslink buying
   **and** selling are both off.
-- **`checks.py`** — `enqueue_check` (row + `NOTIFY skinslink` in the caller's transaction) and
+- **`checks.py`** — `enqueue_check` (row + `NOTIFY skinslink` in the caller's transaction; a
+  purchase already queued is not queued again — the webhook's signature has no nonce, so a
+  replay must not cost a `purchase_status` call per batch) and
   `claim_checks` (`FOR UPDATE SKIP LOCKED`, deletes what it takes, one id once). The drain
   itself is `orders.skinslink_status.drain_checks` (it applies statuses to orders).
 - **`balance.py`** — `refresh_balance` (the `skinslink.balance` job, every 5 min): exports the

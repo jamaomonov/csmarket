@@ -82,8 +82,11 @@ async def test_a_fresh_created_transaction_is_untouched(db_session: AsyncSession
 
 async def test_a_performed_transaction_is_never_touched(db_session: AsyncSession) -> None:
     topup = await make_topup(db_session)
-    await _create(db_session, topup, "performed", age_ms=13 * _HOUR_MS)
+    await _create(db_session, topup, "performed", age_ms=0)
     await payme_svc.perform_transaction(db_session, payme_id="performed")
+    await db_session.commit()
+    txn, _ = await _row(db_session, "performed")
+    txn.create_time -= 13 * _HOUR_MS  # performed long ago: the sweep must look past it
     await db_session.commit()
     assert await cancel_stale(db_session) == 0
     txn, payment = await _row(db_session, "performed")
@@ -179,3 +182,18 @@ async def test_the_scan_skips_a_topup_a_callback_holds(
     assert count == 0
     assert (await _row(db_session, "held"))[0].state == 1
     assert await cancel_stale(db_session) == 1
+
+
+async def test_a_perform_past_the_timeout_cancels_with_reason_4(db_session: AsyncSession) -> None:
+    """Review 2026-10-20 (Payme spec): a state-1 transaction older than 12 h is cancelled
+    (reason 4) and Perform answers −31008 — the sweep must not be the only guard."""
+    from csmarket.modules.payme.errors import PaymeError
+
+    topup = await make_topup(db_session)
+    await _create(db_session, topup, "pt-late-perform", age_ms=_TIMEOUT_MS + _HOUR_MS)
+    with pytest.raises(PaymeError) as e:
+        await payme_svc.perform_transaction(db_session, payme_id="pt-late-perform")
+    assert (e.value.code, e.value.persist) == (-31008, True)
+    await db_session.commit()
+    txn, payment = await _row(db_session, "pt-late-perform")
+    assert (txn.state, txn.reason, payment.status) == (-1, 4, "cancelled")

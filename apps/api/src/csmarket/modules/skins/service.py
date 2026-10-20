@@ -81,6 +81,9 @@ def encode_cursor(value: CursorValue, item_id: str) -> str:
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
 
+_INT64 = 2**63
+
+
 def decode_cursor(token: str) -> tuple[CursorValue, str]:
     """Inverse of :func:`encode_cursor`; anything else is a 422, not a 500."""
     try:
@@ -90,13 +93,20 @@ def decode_cursor(token: str) -> tuple[CursorValue, str]:
         raise ValidationError("invalid cursor") from exc
     if not isinstance(item_id, str) or isinstance(value, bool):
         raise ValidationError("invalid cursor")
-    if value is None or isinstance(value, int):
+    if value is None:
+        return value, item_id
+    if isinstance(value, int):
+        if not 0 <= value < _INT64:  # asyncpg overflows past int64 (a 500, not a 422)
+            raise ValidationError("invalid cursor")
         return value, item_id
     if isinstance(value, str):
         try:
-            return Decimal(value), item_id
+            price = Decimal(value)
         except ArithmeticError as exc:
             raise ValidationError("invalid cursor") from exc
+        if not price.is_finite() or price < 0:
+            raise ValidationError("invalid cursor")
+        return price, item_id
     raise ValidationError("invalid cursor")
 
 

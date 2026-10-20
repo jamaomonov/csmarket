@@ -18,6 +18,7 @@ from typing import Any
 import pytest
 from csmarket.core.config import get_settings
 from csmarket.modules.payme.models import PaymeTransaction
+from csmarket.modules.payme.service import now_ms
 from csmarket.modules.payments.hooks import ensure_attempt, mark_pending, settle
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import resolve
@@ -34,7 +35,8 @@ TEST_KEY = "fake-payme-sandbox-key"
 PROD_KEY = "fake-payme-cabinet-key"
 AMOUNT = Decimal(50000)
 TIYIN = 5_000_000
-TIME = 1_790_000_000_000
+# A minute ago: Perform refuses a state-1 transaction older than 12 h (Payme's rule).
+TIME = now_ms() - 60_000
 
 
 @pytest.fixture(autouse=True)

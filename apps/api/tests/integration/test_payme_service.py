@@ -25,7 +25,8 @@ from tests.integration.payments_factory import make_topup
 
 AMOUNT = Decimal(50000)
 TIYIN = 5_000_000
-TIME = 1_790_000_000_000
+# A minute ago: Perform refuses a state-1 transaction older than 12 h (Payme's rule).
+TIME = payme_svc.now_ms() - 60_000
 
 
 async def _create(

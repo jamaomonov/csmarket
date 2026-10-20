@@ -142,8 +142,8 @@ The scheduler job `payme.timeout` (every 5 min, first run after 180 s) runs
 and their attempt is cancelled; the owner's expiry sweep (top-up or order) then closes the
 owner. A row whose owner a callback holds is skipped until the next tick; one failing row is logged
 (`payme.timeout.row_failed`) and skipped. A PerformTransaction on a state-1 row older than
-12 h that the sweep has not reached yet still settles — the customer paid, so the credit is
-safe, and the sweep closes the window within 5 minutes.
+12 h that the sweep has not reached yet does the same on the spot: `-1`, reason 4, `-31008`
+with `persist` (Payme's rule; Payme returns the payer's money — review 2026-10-20).
 
 ## Error codes
 

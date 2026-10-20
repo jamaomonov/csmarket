@@ -78,6 +78,7 @@ log = get_logger("csmarket.payme.service")
 PROVIDER = "payme"
 #: A state-1 transaction Payme has not performed or cancelled in this long is cancelled.
 TIMEOUT = timedelta(hours=12)
+_TIMEOUT_MS = int(TIMEOUT.total_seconds() * 1000)
 #: Payme's cancellation reasons we set ourselves: 3 "execution error" (a second charge
 #: refused at perform), 4 "timeout" (the sweep).
 REASON_EXECUTION_ERROR = 3
@@ -333,6 +334,11 @@ async def perform_transaction(db: AsyncSession, *, payme_id: str) -> Result:
         return {"transaction": txn.id, "perform_time": txn.perform_time, "state": txn.state}
     if txn.state != STATE_CREATED:
         raise operation_not_permitted()
+    if now_ms() - txn.create_time > _TIMEOUT_MS:
+        # Payme's rule: a state-1 transaction past 12 h is cancelled (reason 4) and refused —
+        # not only by the sweep, which may not have reached it yet (review 2026-10-20).
+        await _cancel_created(db, txn, reason=REASON_TIMEOUT)
+        raise operation_not_permitted(persist=True)
     payment = await _payment(db, txn.payment_id)
     if payable.reason in _CREDITED or payment.status == "succeeded":
         raise await _refuse_second_charge(db, txn)

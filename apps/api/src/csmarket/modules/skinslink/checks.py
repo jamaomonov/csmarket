@@ -14,7 +14,16 @@ from csmarket.modules.skinslink.models import SKINSLINK_CHANNEL, SkinslinkCheck
 
 
 async def enqueue_check(db: AsyncSession, purchase_id: int) -> None:
-    """Queue a check of ``purchase_id``; delivered when the caller commits."""
+    """Queue a check of ``purchase_id``; delivered when the caller commits.
+
+    One already queued is enough: the webhook's signature has no nonce, so a replayed one
+    must not turn into a ``purchase_status`` call per batch (review 2026-10-20).
+    """
+    queued = await db.scalar(
+        select(SkinslinkCheck.id).where(SkinslinkCheck.purchase_id == purchase_id).limit(1)
+    )
+    if queued is not None:
+        return
     db.add(SkinslinkCheck(purchase_id=purchase_id))
     await db.flush()
     await db.execute(select(func.pg_notify(SKINSLINK_CHANNEL, str(purchase_id))))

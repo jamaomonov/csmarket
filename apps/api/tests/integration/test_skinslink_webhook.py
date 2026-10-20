@@ -110,7 +110,7 @@ async def test_duplicates_are_harmless(
     for _ in range(2):
         await integration_client.post(URL, json={"purchase_id": 9, "sign": _sign(9)})
     count = await db_session.scalar(select(func.count()).select_from(SkinslinkCheck))
-    assert count == 2  # two one-shot checks; asking Skinslink twice is idempotent
+    assert count == 1  # one queued check is enough; asking Skinslink twice would be idempotent
 
 
 async def test_the_webhook_is_not_rate_limited_by_the_coarse_tier(
@@ -119,3 +119,14 @@ async def test_the_webhook_is_not_rate_limited_by_the_coarse_tier(
     for _ in range(70):
         r = await integration_client.post(URL, json={"trade_id": 5, "sign": _sign(5)})
         assert r.status_code == 200
+
+
+async def test_a_replayed_webhook_queues_one_check(
+    integration_client: AsyncClient, db_session: AsyncSession, active: None
+) -> None:
+    """Review 2026-10-20: the signature has no nonce, so a replay loop would turn into one
+    ``purchase_status`` call per batch against the shared Skinslink key."""
+    body = {"purchase_id": PURCHASE_ID, "sign": _sign(PURCHASE_ID), "status": "completed"}
+    for _ in range(3):
+        assert (await integration_client.post(URL, json=body)).status_code == 200
+    assert await _checks(db_session) == [PURCHASE_ID]

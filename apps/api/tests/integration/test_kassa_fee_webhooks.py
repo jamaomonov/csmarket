@@ -27,7 +27,8 @@ from tests.integration.test_uzum_service import SERVICE_ID as UZUM_SERVICE
 from tests.integration.test_uzum_service import SOURCE
 
 BASE = Decimal(100000)
-TIME = 1_790_000_000_000
+# A minute ago: Perform refuses a state-1 transaction older than 12 h (Payme's rule).
+TIME = payme_svc.now_ms() - 60_000
 
 
 async def _fails(coro: Any) -> int:

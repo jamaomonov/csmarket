@@ -34,6 +34,11 @@ def test_cursor_round_trips_a_decimal_price_exactly() -> None:
         b"[1,2]",  # the id must be a string
         b'["not-a-number","x"]',
         b'[[1],"x"]',
+        # Review 2026-10-20: past int64 (asyncpg overflow) or not a number — 422, not 500.
+        b'[100000000000000000000,"x"]',
+        b'[-1,"x"]',
+        b'["NaN","x"]',
+        b'["Infinity","x"]',
     ],
 )
 def test_well_formed_but_wrong_cursors_are_validation_errors(payload: bytes) -> None:

@@ -59,12 +59,21 @@ class Window(BaseModel):
         return LONG_TTL if self.until + SETTLED_AFTER < today else SHORT_TTL
 
 
+#: The shop's years: outside them ``previous()`` and ``end`` overflow ``date`` (a 500).
+MIN_YEAR, MAX_YEAR = 2000, 2100
+
+
 def parse_window(since: date, until: date) -> Window:
     """A checked window.
 
     Raises:
-        ValidationError: ``analytics_window`` — backwards or longer than :data:`MAX_DAYS`.
+        ValidationError: ``analytics_window`` — backwards, longer than :data:`MAX_DAYS`, or
+            outside :data:`MIN_YEAR`..:data:`MAX_YEAR`.
     """
+    if not (MIN_YEAR <= since.year <= MAX_YEAR and MIN_YEAR <= until.year <= MAX_YEAR):
+        raise ValidationError(
+            f"the window must lie in {MIN_YEAR}..{MAX_YEAR}", code="analytics_window"
+        )
     if until < since or (until - since).days + 1 > MAX_DAYS:
         raise ValidationError(
             f"the window must be 1..{MAX_DAYS} days with since <= until", code="analytics_window"
@@ -79,7 +88,7 @@ def month_window(month: str) -> Window:
         ValidationError: ``analytics_month`` — not a ``YYYY-MM`` month.
     """
     found = _MONTH.match(month)
-    if found is None or not 1 <= int(found[2]) <= 12:
+    if found is None or not 1 <= int(found[2]) <= 12 or not MIN_YEAR <= int(found[1]) <= MAX_YEAR:
         raise ValidationError("month must be YYYY-MM", code="analytics_month")
     year, number = int(found[1]), int(found[2])
     last = calendar.monthrange(year, number)[1]
