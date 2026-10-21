@@ -19,8 +19,9 @@ hold as usual.
 
 1. Admin → «На проверке» (a counter in the menu): number, kind, kassa, amount, reason, the
    window sum and the limit at hold time.
-2. Open the user card → «Риск»: money in through kassas over the last 24 h and 7 d, other open
-   holds, the policy. Also the user's orders and Steam profile age.
+2. Open the user card → «Риск»: money in through kassas over the last 24 h and 7 d,
+   «На проверке: N» (the user's open holds, this one included), the policy. Also the user's
+   orders and the Steam profile link on the user card.
 3. Decide. Both buttons ask for a confirm and are safe to press twice.
 
 ## Release — «Пропустить»
@@ -42,8 +43,9 @@ button (it only records the fact; nothing reaches the balance):
   HUMO notification), then press the button.
 
 A top-up ends `rejected`, an order `cancelled`. If the kassa cancels the payment on its own
-(Payme `CancelTransaction`, a Click or Uzum reverse), the hold closes by itself as
-`reversed_by_kassa`; nothing to press.
+(Payme `CancelTransaction`, an Uzum reverse), the hold closes by itself as
+`reversed_by_kassa`; nothing to press. Click tells us nothing about a refund made in its
+cabinet: after it, press «Вернул на карту» as usual.
 
 A decided hold answers 409 `hold_decided`; reload the list.
 

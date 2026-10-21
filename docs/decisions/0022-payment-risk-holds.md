@@ -40,9 +40,10 @@ user bypasses both limits.
 - «Пропустить» goes through the normal paths (`credit_topup`, `mark_paid`). «Вернул на карту»
   records that the admin returned the money in the kassa's cabinet (card transfer for P2P): the
   attempt goes `refunded`, a top-up `rejected`, an order `cancelled`; never to the balance.
-- A kassa reversing a held payment itself (Payme `CancelTransaction`, Click / Uzum reverse)
-  closes the hold `reversed_by_kassa`, top-up `reversed` with no debit, order `cancelled`. This
+- A kassa reversing a held payment itself (Payme `CancelTransaction`, Uzum reverse) closes
+  the hold `reversed_by_kassa`, top-up `reversed` with no debit, order `cancelled`. This
   is the one exception to R7 (an order payment is never reversed): a held order bought nothing.
+  Click sends no reversal: after a refund in its cabinet the admin presses «Вернул на карту».
 - `credit_received_transfer` (an admin crediting an unmatched P2P transfer) passes
   `check_risk=False`: it is the admin's own decision.
 
