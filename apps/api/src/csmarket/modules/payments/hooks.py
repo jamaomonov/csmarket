@@ -33,17 +33,19 @@ from csmarket.core.errors import ConflictError
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
 from csmarket.modules.orders.api import Order, mark_paid
+from csmarket.modules.payments import holds
 from csmarket.modules.payments.external_ids import unclaimed_external_id
 from csmarket.modules.payments.fees import Charge, current_charge
 from csmarket.modules.payments.fsm import LIVE, InvalidTransitionError, move
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable
+from csmarket.modules.risk.api import verdict as risk_verdict
 from csmarket.modules.wallet.api import InsufficientBalanceError, credit_topup, reverse_topup
 
 log = get_logger("csmarket.payments.hooks")
 
-#: Top-up statuses that already consumed their one credit.
-_CREDITED = frozenset({"succeeded", "reversed"})
+#: Top-up statuses that already consumed their one payment (credited, or held for review).
+_CREDITED = frozenset({"succeeded", "reversed", "held", "rejected"})
 
 
 #: An attempt's owner: what it pays for.
@@ -258,7 +260,9 @@ async def mark_pending(db: AsyncSession, *, payment: Payment) -> None:
     await db.flush()
 
 
-async def settle(db: AsyncSession, *, payment: Payment, event_id: str) -> None:
+async def settle(
+    db: AsyncSession, *, payment: Payment, event_id: str, check_risk: bool = True
+) -> None:
     """Money arrived for ``payment``: mark it succeeded and pay its owner once.
 
     A top-up is credited to the balance; an order goes ``paid`` (``orders.mark_paid``:
@@ -268,65 +272,82 @@ async def settle(db: AsyncSession, *, payment: Payment, event_id: str) -> None:
     money arrived. ``event_id`` (the kassa's transaction id) is kept in the attempt's
     metadata.
 
+    Before paying, the risk verdict may hold the money (spec 2026-10-21): the attempt goes
+    ``succeeded`` (the kassa is answered as paid), the owner ``held``, nothing is credited and
+    no ``NOTIFY``. ``check_risk=False`` is the admin's own credit of a received transfer.
+
     Raises:
-        AlreadyPaidError: the top-up was already credited, or the order is no longer
-            ``pending`` (paid through another attempt, or cancelled — then
-            ``cancelled`` is true); the kassa refuses
-            this second charge.
+        AlreadyPaidError: the top-up was already credited or held, or the order is no longer
+            ``pending`` (paid or held through another attempt, or cancelled — then
+            ``cancelled`` is true); the kassa refuses this second charge.
         InvalidTransitionError: the attempt is cancelled, failed or refunded.
     """
     owner = await _lock_owner_then_payment(db, payment)
     if payment.status == "succeeded":
         return
-    if isinstance(owner, Order):
-        await _settle_order(db, payment=payment, order=owner, event_id=event_id)
+    _refuse_second_payment(owner, payment)
+    verdict = await risk_verdict(db, payment) if check_risk else None
+    move(payment, "succeeded")
+    payment.extra_metadata = {**payment.extra_metadata, "settle_event_id": event_id}
+    if verdict is not None and verdict.hold:
+        await holds.hold(db, payment=payment, owner=owner, verdict=verdict)
         return
+    if isinstance(owner, Order):
+        await _pay_order(db, payment=payment, order=owner)
+        return
+    await _credit(db, payment=payment, topup=owner)
+
+
+def _refuse_second_payment(owner: Owner, payment: Payment) -> None:
+    """Raise :class:`AlreadyPaidError` when the owner was already paid or put on review."""
+    if isinstance(owner, Order):
+        if owner.status == "pending":
+            return
+        log.warning(
+            "payments.order.second_payment_refused",
+            number=owner.number,
+            provider=payment.provider,
+            status=owner.status,
+        )
+        if owner.status == "cancelled":
+            raise AlreadyPaidError("order cancelled", code="cancelled")
+        raise AlreadyPaidError("order already paid")
     if owner.status in _CREDITED:
         log.warning(
             "payments.topup.second_payment_refused", number=owner.number, provider=payment.provider
         )
         raise AlreadyPaidError("top-up already paid")
-    move(payment, "succeeded")
-    payment.extra_metadata = {**payment.extra_metadata, "settle_event_id": event_id}
-    owner.status = "succeeded"
-    owner.payment_id = payment.id
-    owner.succeeded_at = payment.succeeded_at
-    await credit_topup(
-        db,
-        user_id=owner.user_id,
-        topup_id=owner.id,
-        amount=owner.amount_uzs,
-        provider=payment.provider,
-    )
-    await db.flush()
-    log.info(
-        "payments.topup.credited",
-        number=owner.number,
-        provider=payment.provider,
-        amount=str(owner.amount_uzs),
-    )
 
 
-async def _settle_order(db: AsyncSession, *, payment: Payment, order: Order, event_id: str) -> None:
-    """The order half of :func:`settle`; the caller holds the order, then the attempt."""
-    if order.status != "pending":
-        log.warning(
-            "payments.order.second_payment_refused",
-            number=order.number,
-            provider=payment.provider,
-            status=order.status,
-        )
-        if order.status == "cancelled":
-            raise AlreadyPaidError("order cancelled", code="cancelled")
-        raise AlreadyPaidError("order already paid")
-    move(payment, "succeeded")
-    payment.extra_metadata = {**payment.extra_metadata, "settle_event_id": event_id}
+async def _pay_order(db: AsyncSession, *, payment: Payment, order: Order) -> None:
+    """The order half of :func:`settle`: mark it paid (``NOTIFY orders`` on commit)."""
     await mark_paid(db, order, provider=payment.provider)
     log.info(
         "payments.order.paid",
         number=order.number,
         provider=payment.provider,
         amount=str(payment.amount_uzs),
+    )
+
+
+async def _credit(db: AsyncSession, *, payment: Payment, topup: WalletTopup) -> None:
+    """The top-up half of :func:`settle`: credit the balance once."""
+    topup.status = "succeeded"
+    topup.payment_id = payment.id
+    topup.succeeded_at = payment.succeeded_at
+    await credit_topup(
+        db,
+        user_id=topup.user_id,
+        topup_id=topup.id,
+        amount=topup.amount_uzs,
+        provider=payment.provider,
+    )
+    await db.flush()
+    log.info(
+        "payments.topup.credited",
+        number=topup.number,
+        provider=payment.provider,
+        amount=str(topup.amount_uzs),
     )
 
 

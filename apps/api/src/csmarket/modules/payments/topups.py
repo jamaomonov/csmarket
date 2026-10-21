@@ -257,7 +257,7 @@ async def credit_received_transfer(
     """Book money that already arrived outside any open top-up (an admin crediting an unmatched
     P2P transfer, spec 2026-10-19-p2p-topup): a new top-up for ``user_id`` and its attempt in
     ``provider``, settled at once through :func:`.hooks.settle`. Flushes, never commits; the
-    kassa switch is not consulted (the money is in).
+    kassa switch and the risk limits are not consulted (the money is in; the admin decided).
     """
     topup = WalletTopup(
         id=new_id(),
@@ -272,7 +272,7 @@ async def credit_received_transfer(
     await db.flush()
     payable = await resolve(db, topup.number, lock=True)
     payment = await ensure_attempt(db, payable=payable, provider=provider)
-    await settle(db, payment=payment, event_id=event_id)
+    await settle(db, payment=payment, event_id=event_id, check_risk=False)
     log.info("payments.topup.credited_by_hand", number=topup.number, provider=provider)
     return topup
 

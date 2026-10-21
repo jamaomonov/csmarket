@@ -25,7 +25,13 @@ Kind = Literal["topup", "order"]
 Reason = Literal["ok", "paid", "expired", "reversed", "not_found"]
 
 #: A top-up status that is not payable, and why.
-_REFUSED: dict[str, Reason] = {"succeeded": "paid", "expired": "expired", "reversed": "reversed"}
+_REFUSED: dict[str, Reason] = {
+    "succeeded": "paid",
+    "held": "paid",
+    "rejected": "paid",
+    "expired": "expired",
+    "reversed": "reversed",
+}
 
 
 @dataclass(frozen=True)
