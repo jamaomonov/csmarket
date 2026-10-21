@@ -95,11 +95,22 @@ describe("HoldsPage", () => {
     fireEvent.click(firstButton("Вернул на карту"));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("На баланс ничего не зачислится");
+    expect(dialog).toHaveTextContent("в кабинете кассы");
     fireEvent.click(within(dialog).getByRole("button", { name: "Вернул на карту" }));
     await waitFor(() => {
       expect(api.decideHold).toHaveBeenCalledOnce();
     });
     expect(api.decideHold.mock.calls[0]?.slice(0, 2)).toEqual(["h1", "returned"]);
+  });
+
+  it("asks about a card transfer for a held P2P payment", async () => {
+    api.getHolds.mockResolvedValue({ items: [{ ...OPEN, provider: "p2p" }], next_cursor: null });
+    renderPage();
+    await screen.findByText("TU-0001");
+    fireEvent.click(firstButton("Вернул на карту"));
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("переводом на карту");
+    expect(dialog).not.toHaveTextContent("в кабинете кассы");
   });
 
   it("says the hold was already decided", async () => {

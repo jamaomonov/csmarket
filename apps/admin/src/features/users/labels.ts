@@ -68,6 +68,7 @@ const PROVIDERS: Record<string, string> = {
   click: "Click",
   payme: "Payme",
   uzum: "Uzum",
+  p2p: "P2P",
   mock: "тестовая",
   wallet: "баланс",
   usd_wallet: "баланс в $",

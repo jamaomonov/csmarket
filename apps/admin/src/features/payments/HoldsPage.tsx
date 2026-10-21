@@ -1,7 +1,8 @@
 /**
  * «На проверке»: payments the risk limits held (spec 2026-10-21-payment-risk-limits). The money is
  * in the kassa; the operator either lets the payment through («Пропустить») or, after sending
- * the money back to the card in the kassa's cabinet, marks it («Вернул на карту»).
+ * the money back to the card (in the kassa's cabinet, or by a card transfer for P2P), marks it
+ * («Вернул на карту»).
  */
 import { Button } from "@csmarket/ui";
 import {
@@ -44,7 +45,8 @@ function confirmText(h: Hold, act: Act): string {
       h.kind === "topup" ? "Пополнение будет зачислено." : "Заказ уйдёт в покупку."
     }`;
   }
-  return `Вы вернули ${formatSum(h.amount_uzs)} на карту в кабинете кассы? На баланс ничего не зачислится.`;
+  const how = h.provider === "p2p" ? "переводом на карту" : "на карту в кабинете кассы";
+  return `Вы вернули ${formatSum(h.amount_uzs)} ${how}? На баланс ничего не зачислится.`;
 }
 
 const ACT_LABEL: Record<Act, string> = { release: "Пропустить", returned: "Вернул на карту" };
