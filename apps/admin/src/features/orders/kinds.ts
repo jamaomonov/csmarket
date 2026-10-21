@@ -1,6 +1,7 @@
 /** The closed sets the orders API filters by (kept apart from `api.ts` so tests can mock that). */
 export const ORDER_STATUSES = [
   "pending",
+  "held",
   "paid",
   "buying",
   "trade_sent",

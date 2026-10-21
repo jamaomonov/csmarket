@@ -9,6 +9,8 @@ const TONES: Record<TopupStatus, Tone> = {
   succeeded: "success",
   expired: "muted",
   reversed: "danger",
+  held: "progress",
+  rejected: "muted",
 };
 
 export function TopupStatusChip({ status }: { status: TopupStatus }) {

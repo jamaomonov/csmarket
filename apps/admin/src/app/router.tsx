@@ -18,6 +18,7 @@ import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { OrderDetail } from "@/features/orders/OrderDetail";
 import { P2PPage } from "@/features/p2p/P2PPage";
 import { FeeSettingsPage } from "@/features/payments/FeeSettingsPage";
+import { HoldsPage } from "@/features/payments/HoldsPage";
 import { PaymentDetail } from "@/features/payments/PaymentDetail";
 import { PaymentsPage } from "@/features/payments/PaymentsPage";
 import { PricingPage } from "@/features/pricing/PricingPage";
@@ -65,6 +66,7 @@ export const router = createBrowserRouter([
           { path: "/trades", element: <TradesPage /> },
           { path: "/payments", element: <PaymentsPage /> },
           { path: "/payments/:id", element: <PaymentDetail /> },
+          { path: "/payment-holds", element: <HoldsPage /> },
           { path: "/payment-settings", element: <FeeSettingsPage /> },
           { path: "/p2p", element: <P2PPage /> },
           { path: "/audit", element: <AuditPage /> },

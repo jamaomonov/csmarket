@@ -56,6 +56,8 @@ const TOPUP_STATUSES: Record<TopupStatus, string> = {
   succeeded: "зачислено",
   expired: "истекло",
   reversed: "отменено кассой",
+  held: "на проверке",
+  rejected: "возвращено на карту",
 };
 
 export function topupStatusLabel(status: TopupStatus): string {

@@ -27,7 +27,7 @@ function renderLayout(path = "/") {
 }
 
 beforeEach(() => {
-  getDashboard.mockResolvedValue({ attention: 3, payouts: { to_pay_count: 2 } });
+  getDashboard.mockResolvedValue({ attention: 3, payouts: { to_pay_count: 2 }, holds_open: 4 });
 });
 
 describe("Layout", () => {
@@ -38,7 +38,7 @@ describe("Layout", () => {
       within(nav)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["Дашборд", "Аналитика", "Обмены", "Пользователи", "Платежи", "P2P"]);
+    ).toEqual(["Дашборд", "Аналитика", "Обмены", "Пользователи", "Платежи", "На проверке", "P2P"]);
     expect(within(nav).getByRole("button", { name: /Выкуп/ })).toBeInTheDocument();
     expect(within(nav).getByRole("button", { name: /Настройки/ })).toBeInTheDocument();
     expect(screen.queryByText("API-ключи")).toBeNull();
@@ -61,6 +61,7 @@ describe("Layout", () => {
     const nav = screen.getByRole("navigation", { name: "Основная навигация" });
     expect(await within(nav).findByLabelText("ждут внимания: 3")).toBeInTheDocument();
     expect(await within(nav).findByLabelText("к выплате: 2")).toBeInTheDocument();
+    expect(await within(nav).findByLabelText("Платежи на проверке: 4")).toBeInTheDocument();
   });
 
   it("marks the current page; an order page belongs to «Обмены»", () => {

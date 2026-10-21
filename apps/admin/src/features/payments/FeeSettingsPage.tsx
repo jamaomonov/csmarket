@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getFeeSettings, saveFeeSettings, type KassaFees, type KassaStatus } from "./api";
+import { ReviewLimitsBlock } from "./ReviewLimitsBlock";
 
 import { PageHeader } from "@/components/PageHeader";
 import { SavedNotice } from "@/components/SavedNotice";
@@ -131,6 +132,7 @@ export function FeeSettingsPage() {
           ))}
         </div>
       </section>
+      <ReviewLimitsBlock />
       {invalid && (
         <p role="alert" className="text-danger text-sm">
           Комиссия — число от 0 до 10, не больше двух знаков после точки.

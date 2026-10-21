@@ -15,6 +15,7 @@ import {
   roleLabel,
   tradeVerdictText,
 } from "./labels";
+import { RiskBlock } from "./RiskBlock";
 import { TopupStatusChip } from "./TopupStatusChip";
 import { UsdSwitchDialog } from "./UsdSwitchDialog";
 import { useIdempotencyKey } from "./useIdempotencyKey";
@@ -216,6 +217,7 @@ function Overview({ card, onUsd }: { card: AdminUserCard; onUsd: () => void }) {
         <Profile card={card} />
       </Section>
       <UsdBlock card={card} onSwitch={onUsd} />
+      <RiskBlock userId={card.user.id} />
     </>
   );
   return <DetailGrid main={main} side={side} />;
