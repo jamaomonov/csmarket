@@ -4,7 +4,7 @@ One vocabulary for Waxpeer, Skinslink and LIS-SKINS, built on the buyer's and th
 views (``trade_view``, ``public_view``) — no new rule:
 
 ==============  ==========================================================================
-``pending``     waits for payment
+``pending``     waits for payment (``pending``, or ``held``: paid, on the admin's review)
 ``buying``      ``paid`` / ``buying``
 ``sent``        ``trade_sent``, the buyer has not accepted (``public_view.is_accepted``)
 ``hold``        accepted while Steam's protection runs (:func:`protection_end` in the future;
@@ -41,6 +41,7 @@ Purchase = SkinslinkPurchase | LisskinsPurchase
 #: Order statuses whose row state is the status alone (no refund yet).
 _SETTLED: dict[str, TradeRowState] = {
     "pending": "pending",
+    "held": "pending",
     "cancelled": "cancelled",
     "failed": "failed_held",
     "returned": "failed_held",

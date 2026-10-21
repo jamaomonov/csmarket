@@ -34,6 +34,8 @@ def _wx(**extra: object) -> SkinTrade:
     ("order", "trade", "purchase", "state"),
     [
         (_order("pending"), None, None, "pending"),
+        # Held for review: not paid yet as far as the trade goes, nothing is bought.
+        (_order("held"), None, None, "pending"),
         (_order("cancelled"), None, None, "cancelled"),
         (_order("paid"), None, None, "buying"),
         (_order("buying"), _wx(status=2), None, "buying"),
