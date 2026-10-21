@@ -32,6 +32,7 @@ MODULES = (
     "lisskins",
     "sales",
     "public_api",
+    "risk",
 )
 THRESHOLD = 95.0
 

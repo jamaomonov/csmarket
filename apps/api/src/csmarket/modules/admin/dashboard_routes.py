@@ -14,6 +14,7 @@ from csmarket.core.redis import get_redis
 from csmarket.modules.admin.dashboard_schemas import DashboardOut
 from csmarket.modules.admin.deps import require_admin
 from csmarket.modules.orders.api import Days, dashboard_summary
+from csmarket.modules.payments.api import open_counts
 from csmarket.modules.sales.api import payouts_summary, sales_pnl
 
 _WINDOWS = frozenset({1, 7, 30})
@@ -35,4 +36,5 @@ async def dashboard(
     at = now()
     summary = await dashboard_summary(db, get_redis(), days=window, at=at)
     pnl = await sales_pnl(db, days=window, at=at)
-    return DashboardOut.of(summary, await payouts_summary(db), pnl)
+    holds_open = sum((await open_counts(db)).values())
+    return DashboardOut.of(summary, await payouts_summary(db), pnl, holds_open)

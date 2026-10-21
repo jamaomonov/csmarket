@@ -300,6 +300,12 @@ SALE_ATTENTION_OPEN = Gauge(
     "Sales with an open attention, by reason (alert: SaleAttentionOpen; set by sales.poll).",
     ("reason",),
 )
+PAYMENT_HOLDS_OPEN = Gauge(
+    "csmarket_payment_holds_open",
+    "Kassa payments held for an admin, by reason (alert: PaymentHeldForReview; set by the "
+    "scheduler's payment_holds job).",
+    ("reason",),
+)
 SALE_HOLDS_OVERDUE = Gauge(
     "csmarket_sale_holds_overdue",
     "Sales still in hold 6 h past their hold end (alert: SaleHoldOverdue; set by sales.poll).",
@@ -591,6 +597,16 @@ def set_sale_attention_open(reason: SaleAttentionReason, count: int) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_sale_attention_open", error=type(exc).__name__
+        )
+
+
+def set_payment_holds_open(reason: str, count: int) -> None:
+    """Set how many held payments are open for ``reason``. Never raises."""
+    try:
+        PAYMENT_HOLDS_OPEN.labels(reason=reason).set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_payment_holds_open", error=type(exc).__name__
         )
 
 

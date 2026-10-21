@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api";
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "ждёт оплаты",
+  held: "На проверке",
   paid: "оплачен",
   buying: "покупаем",
   trade_sent: "обмен отправлен",
@@ -20,6 +21,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 /** One tone per state (refunds neutral: the money went back, the case is closed). */
 export const STATUS_TONE: Record<OrderStatus, Tone> = {
   pending: "muted",
+  held: "progress",
   paid: "progress",
   buying: "progress",
   trade_sent: "progress",

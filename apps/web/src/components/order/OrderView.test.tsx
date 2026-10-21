@@ -211,6 +211,31 @@ describe("OrderView — the trade", () => {
     expect(steps).toEqual(["done", "done", "done"]);
     expect(screen.queryByText(/защищает/)).toBeNull();
   });
+
+  it("shows a held order as being checked and no trade card", async () => {
+    m.get.mockResolvedValue(
+      orderOut(number, { status: "held", paid_with: "payme", paid_at: null, payable: false }),
+    );
+    view();
+    expect(await screen.findByText("Оплата получена, проверяем платёж.")).toBeInTheDocument();
+    expect(screen.queryByText(/Покупаем скин/)).toBeNull();
+    expect(screen.queryByText(/Обмен отправлен/)).toBeNull();
+  });
+
+  it("shows a cancelled order paid by a kassa as returned to the card", async () => {
+    m.get.mockResolvedValue(
+      orderOut(number, {
+        status: "cancelled",
+        paid_with: "payme",
+        paid_at: null,
+        payable: false,
+      }),
+    );
+    view();
+    expect(
+      await screen.findByText("Платёж отменён, деньги возвращены на карту."),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("OrderView — no order to show", () => {

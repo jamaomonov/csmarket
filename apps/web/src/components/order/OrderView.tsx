@@ -217,11 +217,20 @@ function OrderBody({ order, locale, kassa, onPaid }: OrderBodyProps) {
       ) : (
         <p className="text-lg font-semibold">{t("expired")}</p>
       );
+    case "held":
+      // Paid by a kassa and under review: no trade yet, so no countdown.
+      return <p className="text-lg font-semibold">{t("held")}</p>;
     case "cancelled":
-      // Only the expiry sweep cancels an order; one never paid simply ran out of time.
+      // Never paid: ran out of time. Paid by a kassa and never settled: returned to the card.
       return (
         <p className="text-lg font-semibold">
-          {t(order.paid_at === null ? "expired" : "cancelled")}
+          {t(
+            order.paid_at !== null
+              ? "cancelled"
+              : order.paid_with !== null
+                ? "returnedToCard"
+                : "expired",
+          )}
         </p>
       );
     case "paid":

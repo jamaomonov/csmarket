@@ -361,8 +361,9 @@ async def cancel_transaction(db: AsyncSession, *, payme_id: str, reason: int) ->
 
     State 1 → −1: the attempt is released (unless another state-1 row holds it); an order
     stays ``pending``. State 2 → −2: a top-up is reversed if its money is still on the
-    balance; a spent top-up or any order answers −31007 and nothing changes (ruling R7). A
-    replay on a cancelled transaction echoes it.
+    balance; a spent top-up or any order answers −31007 and nothing changes (ruling R7) —
+    except a held one, which is taken back with nothing debited. A replay on a cancelled
+    transaction echoes it.
 
     Raises:
         PaymeError: −31003 unknown, −31007 the top-up was spent or the payment was an

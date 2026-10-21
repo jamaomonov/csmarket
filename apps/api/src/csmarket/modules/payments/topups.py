@@ -32,6 +32,7 @@ from csmarket.modules.payments.hooks import cancel_pending, ensure_attempt, mark
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.payments.payable import Payable, resolve
 from csmarket.modules.payments.switches import ensure_open
+from csmarket.modules.risk.api import ensure_kassa_allowed
 from csmarket.modules.wallet.api import WALLET
 
 log = get_logger("csmarket.payments.topups")
@@ -213,6 +214,7 @@ async def create_topup(
     if existing is not None:
         return await _replay(db, existing, amount=amount_uzs, provider=provider, locale=locale)
     _check_amount(amount_uzs)
+    await ensure_kassa_allowed(db, user_id)
     gateway = kassa_for_new_topup(provider)
     await ensure_open(db, provider)
     topup = WalletTopup(
@@ -257,7 +259,7 @@ async def credit_received_transfer(
     """Book money that already arrived outside any open top-up (an admin crediting an unmatched
     P2P transfer, spec 2026-10-19-p2p-topup): a new top-up for ``user_id`` and its attempt in
     ``provider``, settled at once through :func:`.hooks.settle`. Flushes, never commits; the
-    kassa switch is not consulted (the money is in).
+    kassa switch and the risk limits are not consulted (the money is in; the admin decided).
     """
     topup = WalletTopup(
         id=new_id(),
@@ -272,7 +274,7 @@ async def credit_received_transfer(
     await db.flush()
     payable = await resolve(db, topup.number, lock=True)
     payment = await ensure_attempt(db, payable=payable, provider=provider)
-    await settle(db, payment=payment, event_id=event_id)
+    await settle(db, payment=payment, event_id=event_id, check_risk=False)
     log.info("payments.topup.credited_by_hand", number=topup.number, provider=provider)
     return topup
 

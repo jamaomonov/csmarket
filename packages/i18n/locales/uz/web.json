@@ -163,6 +163,8 @@
       "toBalance": "Balansga qaytish",
       "expired": "Toʻlov vaqti tugadi. Yangi toʻldirish yarating.",
       "reversed": "Toʻldirish bekor qilindi.",
+      "held": "Toʻlov qabul qilindi, tekshiryapmiz.",
+      "rejected": "Toʻlov bekor qilindi, pul kartaga qaytarildi.",
       "notFound": "Toʻldirish topilmadi."
     },
     "pending": "Tushishi kutilmoqda: {sum}",
@@ -180,6 +182,7 @@
     },
     "methodMaintenance": "Texnik ishlar",
     "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang.",
+    "kassaBlocked": "Hisobingiz uchun karta orqali toʻlov mavjud emas. Yordamga yozing.",
     "p2p": {
       "method": "Kartaga o‘tkazma",
       "title": "Kartaga o‘tkazing",
@@ -426,6 +429,7 @@
     },
     "methodMaintenance": "Texnik ishlar",
     "methodUnavailable": "Bu kassa hozir ishlamayapti — boshqasini tanlang.",
+    "kassaBlocked": "Hisobingiz uchun karta orqali toʻlov mavjud emas. Yordamga yozing.",
     "fix": {
       "openPrivacy": "Maxfiylik sozlamalarini ochish",
       "openTradeUrl": "Havolani Steamʼdan olish",
@@ -449,11 +453,14 @@
     "notFound": "Buyurtma topilmadi.",
     "cancelled": "Buyurtma bekor qilindi.",
     "expired": "Toʻlov vaqti tugadi.",
+    "held": "Toʻlov qabul qilindi, tekshiryapmiz.",
+    "returnedToCard": "Toʻlov bekor qilindi, pul kartaga qaytarildi.",
     "payNow": "{price} toʻlash",
     "payTest": "Toʻlash (test)",
     "signedOut": "Buyurtmalarni ochish uchun Steam orqali kiring.",
     "status": {
       "pending": "Toʻlov kutilmoqda",
+      "held": "Tekshiruvda",
       "paid": "Toʻlandi",
       "buying": "Sotib olinmoqda",
       "trade_sent": "Almashuv yuborildi",

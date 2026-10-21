@@ -79,8 +79,9 @@ successful payment — the money is ours to keep or return.
   (or by card transfer for P2P) and records it. The attempt goes `refunded`; a top-up goes
   `rejected` (new status) with nothing credited; an order goes `cancelled`. Nothing reaches
   the balance: a carder must not get spendable money.
-- **The kassa cancels a held payment itself** (Payme `CancelTransaction` after perform, a
-  Click reversal): the attempt goes `refunded`, the hold closes as `reversed_by_kassa`, a
+- **The kassa cancels a held payment itself** (Payme `CancelTransaction` after perform, an
+  Uzum reverse; Click sends none, so after a refund in its cabinet the admin presses «Вернул
+  на карту»): the attempt goes `refunded`, the hold closes as `reversed_by_kassa`, a
   top-up goes `reversed` with no debit (it was never credited), an order goes `cancelled`.
   Today an order payment is never reversed (R7) because the skin is already bought; a held
   order bought nothing, so the reversal is allowed for it alone.

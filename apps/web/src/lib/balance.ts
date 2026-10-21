@@ -19,7 +19,7 @@ export const TOPUP_MAX = 10_000_000;
 /** Round numbers a customer would actually transfer. */
 export const QUICK_AMOUNTS: readonly number[] = [50_000, 100_000, 250_000, 500_000];
 
-export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed";
+export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed" | "held" | "rejected";
 
 /** `TopupOut`. */
 /** A P2P top-up's transfer (spec 2026-10-19-p2p-topup): where and exactly how much. */

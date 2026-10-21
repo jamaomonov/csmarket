@@ -45,6 +45,7 @@ type FormError =
   | "badAmount"
   | "failed"
   | "methodUnavailable"
+  | "kassaBlocked"
   | "p2pAmount"
   | "p2pDailyLimit"
   | "p2pOpenRequest"
@@ -146,6 +147,8 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
         // The kassa was switched meanwhile: re-read the tiles so it greys or goes.
         void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
         setError("methodUnavailable");
+      } else if (code === "kassa_payment_blocked") {
+        setError("kassaBlocked");
       } else if (code !== undefined && code in P2P_ERRORS) {
         // The API names its current range (the admin may change it).
         const extra = err instanceof SessionApiError ? err.body : null;
@@ -168,6 +171,8 @@ export function TopupForm({ locale, providers }: TopupFormProps) {
         return t("badAmount", bounds);
       case "methodUnavailable":
         return t("methodUnavailable");
+      case "kassaBlocked":
+        return t("kassaBlocked");
       case "p2pAmount":
         return t("p2p.badAmount", {
           min: formatUzs(locale, p2pRange.min),

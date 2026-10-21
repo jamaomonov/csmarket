@@ -45,6 +45,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "orders.health",
         "orders.erase_trade_links",
         "p2p.sweep",
+        "payment_holds",
     ]
 
 

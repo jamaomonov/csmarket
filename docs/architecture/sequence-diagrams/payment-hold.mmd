@@ -1,0 +1,34 @@
+sequenceDiagram
+    autonumber
+    participant K as Kassa (Click / Payme / Uzum / P2P)
+    participant API as API (hooks.settle)
+    participant R as risk.verdict
+    participant DB as Postgres
+    actor A as Admin
+    participant W as Worker
+
+    K->>API: Payment confirmed
+    API->>R: verdict(payment)
+    R->>DB: pg_advisory_xact_lock(user), sums in a savepoint
+    alt trusted, or within the limits
+        R-->>API: pass
+        API->>DB: credit top-up / mark_paid (NOTIFY orders)
+        API-->>K: success
+    else over kassa or user limit, or the check failed
+        R-->>API: hold (kassa_limit / user_limit / check_failed)
+        API->>DB: attempt succeeded, owner held, payment_holds row
+        API-->>K: success (nothing credited, nothing bought)
+        Note over DB: gauge csmarket_payment_holds_open, alert PaymentHeldForReview
+    end
+
+    alt Admin releases
+        A->>API: POST /admin/payments/holds/{id}/release
+        API->>DB: credit_topup / mark_paid, hold released
+        API->>W: NOTIFY orders (order)
+    else Admin returned the money in the cabinet
+        A->>API: POST /admin/payments/holds/{id}/returned
+        API->>DB: attempt refunded, top-up rejected / order cancelled, hold returned
+    else Kassa cancels the held payment itself
+        K->>API: Cancel / reverse
+        API->>DB: attempt refunded, top-up reversed (no debit) / order cancelled, hold reversed_by_kassa
+    end

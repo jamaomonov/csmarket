@@ -141,6 +141,9 @@ async def _reset_realtime_redis() -> AsyncIterator[None]:
 #: `TRUNCATE … CASCADE`. A new table goes in front of whatever it references.
 _EMPTY_IN_ORDER: tuple[str, ...] = (
     "email_outbox",
+    "payment_holds",
+    "user_risk_policies",
+    "kassa_review_limits",
     "admin_audit_log",
     "idempotent_responses",
     "refresh_tokens",
@@ -209,6 +212,14 @@ async def db_engine():
                 await conn.execute(
                     text(
                         "TRUNCATE TABLE " + ", ".join(_EMPTY_IN_ORDER) + " RESTART IDENTITY CASCADE"
+                    )
+                )
+        async with engine.begin() as conn:  # the migration's seed, which tests may have changed
+            for provider in ("payme", "click", "uzum", "p2p"):
+                await conn.execute(
+                    text(
+                        "INSERT INTO kassa_review_limits (provider, enabled, max_amount_uzs, "
+                        f"window_hours) VALUES ('{provider}', true, 2000000, 24)"
                     )
                 )
         yield engine

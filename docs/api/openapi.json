@@ -1032,6 +1032,7 @@
           "status": {
             "enum": [
               "pending",
+              "held",
               "paid",
               "buying",
               "trade_sent",
@@ -1136,6 +1137,7 @@
           "status": {
             "enum": [
               "pending",
+              "held",
               "paid",
               "buying",
               "trade_sent",
@@ -1290,6 +1292,7 @@
           "status": {
             "enum": [
               "pending",
+              "held",
               "paid",
               "buying",
               "trade_sent",
@@ -2640,7 +2643,9 @@
               "pending",
               "succeeded",
               "expired",
-              "reversed"
+              "reversed",
+              "held",
+              "rejected"
             ],
             "title": "Status",
             "type": "string"
@@ -2700,7 +2705,9 @@
               "pending",
               "succeeded",
               "expired",
-              "reversed"
+              "reversed",
+              "held",
+              "rejected"
             ],
             "title": "Status",
             "type": "string"
@@ -3289,6 +3296,7 @@
           "status": {
             "enum": [
               "pending",
+              "held",
               "paid",
               "buying",
               "trade_sent",
@@ -4230,6 +4238,32 @@
           "payload"
         ],
         "title": "AuditRow",
+        "type": "object"
+      },
+      "AuthorOut": {
+        "description": "Who saved.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "AuthorOut",
         "type": "object"
       },
       "BalanceOut": {
@@ -5201,6 +5235,11 @@
             "title": "Days",
             "type": "integer"
           },
+          "holds_open": {
+            "default": 0,
+            "title": "Holds Open",
+            "type": "integer"
+          },
           "in_flight": {
             "title": "In Flight",
             "type": "integer"
@@ -5462,6 +5501,170 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HoldOut": {
+        "description": "One held payment and its decision (``decision`` ``None`` = open).",
+        "properties": {
+          "amount_uzs": {
+            "title": "Amount Uzs",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "limit_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit Uzs"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/HoldUserOut"
+          },
+          "window_sum_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Sum Uzs"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "kind",
+          "provider",
+          "amount_uzs",
+          "reason",
+          "window_sum_uzs",
+          "limit_uzs",
+          "user",
+          "created_at",
+          "decision",
+          "decided_by",
+          "decided_at"
+        ],
+        "title": "HoldOut",
+        "type": "object"
+      },
+      "HoldPage": {
+        "description": "A page of holds, newest first; ``next_cursor`` ``None`` on the last page.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/HoldOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "HoldPage",
+        "type": "object"
+      },
+      "HoldUserOut": {
+        "description": "A user as the holds page names them.",
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "HoldUserOut",
         "type": "object"
       },
       "IncomingOut": {
@@ -5860,6 +6063,75 @@
           }
         },
         "title": "KassaFees",
+        "type": "object"
+      },
+      "KassaLimitIn": {
+        "additionalProperties": false,
+        "description": "One kassa's limit as the admin saves it.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_amount_uzs": {
+            "maximum": 1000000000.0,
+            "minimum": 1.0,
+            "title": "Max Amount Uzs",
+            "type": "integer"
+          },
+          "provider": {
+            "enum": [
+              "payme",
+              "click",
+              "uzum",
+              "p2p"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "window_hours": {
+            "maximum": 720.0,
+            "minimum": 1.0,
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider",
+          "enabled",
+          "max_amount_uzs",
+          "window_hours"
+        ],
+        "title": "KassaLimitIn",
+        "type": "object"
+      },
+      "KassaLimitOut": {
+        "description": "One kassa's limit.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_amount_uzs": {
+            "title": "Max Amount Uzs",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "provider",
+          "enabled",
+          "max_amount_uzs",
+          "window_hours"
+        ],
+        "title": "KassaLimitOut",
         "type": "object"
       },
       "KassaTimes": {
@@ -6597,6 +6869,7 @@
           "status": {
             "enum": [
               "pending",
+              "held",
               "paid",
               "buying",
               "trade_sent",
@@ -8456,6 +8729,207 @@
           "number"
         ],
         "title": "RevealOut",
+        "type": "object"
+      },
+      "ReviewLimitsIn": {
+        "additionalProperties": false,
+        "description": "The kassas to save; one row per kassa at most.",
+        "properties": {
+          "limits": {
+            "items": {
+              "$ref": "#/components/schemas/KassaLimitIn"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Limits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "limits"
+        ],
+        "title": "ReviewLimitsIn",
+        "type": "object"
+      },
+      "ReviewLimitsOut": {
+        "description": "Every kassa's limit; ``updated_at`` is the version for ``If-Match``.",
+        "properties": {
+          "limits": {
+            "items": {
+              "$ref": "#/components/schemas/KassaLimitOut"
+            },
+            "title": "Limits",
+            "type": "array"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "limits",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "ReviewLimitsOut",
+        "type": "object"
+      },
+      "RiskPolicyIn": {
+        "additionalProperties": false,
+        "description": "A user's policy as the admin saves it.",
+        "properties": {
+          "kassa_blocked": {
+            "title": "Kassa Blocked",
+            "type": "boolean"
+          },
+          "max_amount_uzs": {
+            "anyOf": [
+              {
+                "maximum": 1000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount Uzs"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "trusted": {
+            "title": "Trusted",
+            "type": "boolean"
+          },
+          "window_hours": {
+            "default": 24,
+            "maximum": 720.0,
+            "minimum": 1.0,
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "trusted",
+          "kassa_blocked",
+          "max_amount_uzs"
+        ],
+        "title": "RiskPolicyIn",
+        "type": "object"
+      },
+      "RiskPolicyOut": {
+        "description": "A user's policy and their recent kassa money, for the user card.",
+        "properties": {
+          "kassa_blocked": {
+            "title": "Kassa Blocked",
+            "type": "boolean"
+          },
+          "max_amount_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Amount Uzs"
+          },
+          "money_in_24h_uzs": {
+            "title": "Money In 24H Uzs",
+            "type": "string"
+          },
+          "money_in_7d_uzs": {
+            "title": "Money In 7D Uzs",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "open_holds": {
+            "title": "Open Holds",
+            "type": "integer"
+          },
+          "trusted": {
+            "title": "Trusted",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "trusted",
+          "kassa_blocked",
+          "max_amount_uzs",
+          "window_hours",
+          "note",
+          "updated_at",
+          "updated_by",
+          "money_in_24h_uzs",
+          "money_in_7d_uzs",
+          "open_holds"
+        ],
+        "title": "RiskPolicyOut",
         "type": "object"
       },
       "SaleCardOut": {
@@ -10859,7 +11333,9 @@
               "pending",
               "succeeded",
               "expired",
-              "reversed"
+              "reversed",
+              "held",
+              "rejected"
             ],
             "title": "Status",
             "type": "string"
@@ -12791,6 +13267,7 @@
                 {
                   "enum": [
                     "pending",
+                    "held",
                     "paid",
                     "buying",
                     "trade_sent",
@@ -13939,6 +14416,374 @@
           }
         },
         "summary": "Find payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/holds": {
+      "get": {
+        "description": "Open holds newest first by when they were held, or decided ones by when decided.",
+        "operationId": "get_holds_api_v1_admin_payments_holds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "decided"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Held kassa payments",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/holds/{hold_id}/release": {
+      "post": {
+        "description": "\u00ab\u041f\u0440\u043e\u043f\u0443\u0441\u0442\u0438\u0442\u044c\u00bb: the order is paid and bought, the top-up credited.",
+        "operationId": "post_release_api_v1_admin_payments_holds__hold_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hold_id",
+            "required": true,
+            "schema": {
+              "title": "Hold Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`hold_not_found`"
+          },
+          "409": {
+            "description": "`hold_decided` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Release a held payment",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/holds/{hold_id}/returned": {
+      "post": {
+        "description": "\u00ab\u0412\u0435\u0440\u043d\u0443\u043b \u043d\u0430 \u043a\u0430\u0440\u0442\u0443\u00bb: nothing is credited; the order is cancelled, the top-up rejected.",
+        "operationId": "post_returned_api_v1_admin_payments_holds__hold_id__returned_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hold_id",
+            "required": true,
+            "schema": {
+              "title": "Hold Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`hold_not_found`"
+          },
+          "409": {
+            "description": "`hold_decided` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record a held payment returned to the card",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/payments/review-limits": {
+      "get": {
+        "description": "Every kassa's limit, who saved last and when.",
+        "operationId": "get_limits_api_v1_admin_payments_review_limits_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewLimitsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The kassa limits",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Replace the given kassas' limits; payments already held stay held.",
+        "operationId": "put_limits_api_v1_admin_payments_review_limits_put",
+        "parameters": [
+          {
+            "description": "The `updated_at` the edit started from, or `none`. Absent: no check.",
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The `updated_at` the edit started from, or `none`. Absent: no check.",
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewLimitsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewLimitsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`settings_stale` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save the kassa limits",
         "tags": [
           "admin"
         ]
@@ -16809,6 +17654,141 @@
           }
         },
         "summary": "Ban a user",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/users/{user_id}/risk": {
+      "get": {
+        "description": "The policy (defaults when none), the user's kassa money and open holds.",
+        "operationId": "get_policy_api_v1_admin_users__user_id__risk_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskPolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A user's risk policy",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "Replace the user's trusted / blocked flags, own limit and note.",
+        "operationId": "put_policy_api_v1_admin_users__user_id__risk_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RiskPolicyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RiskPolicyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save a user's risk policy",
         "tags": [
           "admin"
         ]

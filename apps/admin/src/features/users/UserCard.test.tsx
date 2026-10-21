@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type AdminUserCard } from "./api";
-import { CARD, renderCard as renderWith, STEAM_ID, USER_SALES } from "./fixtures";
+import { CARD, RISK, renderCard as renderWith, STEAM_ID, USER_SALES } from "./fixtures";
 
 import { ApiError } from "@/lib/api";
 
@@ -15,6 +15,8 @@ const api = vi.hoisted(() => ({
   adjustBalance: vi.fn(),
   adjustUsdBalance: vi.fn(),
   switchUsdWallet: vi.fn(),
+  getRisk: vi.fn(),
+  saveRisk: vi.fn(),
 }));
 vi.mock("./api", () => api);
 const salesApi = vi.hoisted(() => ({ getUserSales: vi.fn() }));
@@ -38,6 +40,7 @@ describe("UserCard", () => {
   beforeEach(() => {
     Object.values(api).forEach((f) => f.mockReset());
     api.getUserCard.mockResolvedValue(CARD);
+    api.getRisk.mockResolvedValue(RISK);
     salesApi.getUserSales.mockReset();
     salesApi.getUserSales.mockResolvedValue(USER_SALES);
   });

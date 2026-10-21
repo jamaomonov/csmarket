@@ -138,12 +138,17 @@ class DashboardOut(BaseModel):
     lisskins: LisskinsOut
     payouts: PayoutsOut
     sales_pnl: SalesPnlOut
+    #: Kassa payments held for an admin («На проверке»), all reasons.
+    holds_open: int = 0
 
     @classmethod
-    def of(cls, d: Dashboard, payouts: PayoutsSummary, pnl: SalesPnl) -> DashboardOut:
+    def of(
+        cls, d: Dashboard, payouts: PayoutsSummary, pnl: SalesPnl, holds_open: int = 0
+    ) -> DashboardOut:
         """Strings for the money."""
         s = d.sales
         return cls(
+            holds_open=holds_open,
             days=d.days,
             since=d.since,
             sales=SalesOut(

@@ -520,6 +520,25 @@ places). `PUT` the same path with `{click, payme, uzum}`, a required `Idempotenc
 `settings_stale`, a rate outside 0–10 is 422. Audited `payments.settings.save`; open payments
 keep the fee they were created with. The admin payment rows carry `fee_uzs`.
 
+## Payment risk limits (ADR-0022)
+
+Admin only; spec `2026-10-21-payment-risk-limits-design.md`. Every write takes a required
+`Idempotency-Key`, is audited, and a replay answers the first result.
+
+| Route                                          | What                                                                                                |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `GET /admin/payments/review-limits`            | the kassa limits and their version                                                                  |
+| `PUT /admin/payments/review-limits`            | save all of them; `If-Match` (the `updated_at` the edit started from), stale = 409 `settings_stale` |
+| `GET /admin/payments/holds?state=open/decided` | held payments, keyset-paginated                                                                     |
+| `POST /admin/payments/holds/{id}/release`      | «Пропустить»; a decided hold is 409 `hold_decided`                                                  |
+| `POST /admin/payments/holds/{id}/returned`     | «Вернул на карту»; same 409                                                                         |
+| `GET /admin/users/{id}/risk`                   | the policy, the user's kassa money in 24 h / 7 d, open holds                                        |
+| `PUT /admin/users/{id}/risk`                   | save the policy                                                                                     |
+
+Top-up and order views gain statuses `held` and (top-up) `rejected`. A user with
+`kassa_blocked` gets 403 `kassa_payment_blocked` when starting a kassa payment (top-up, order
+paid through a kassa, P2P request); the balance still works. The public API never meets holds.
+
 ## Admin pricing and dashboard (M4b)
 
 Admin only (401 without a token, 403 for a customer). Writes need `Idempotency-Key` (16–160);

@@ -19,7 +19,8 @@ from csmarket.modules.orders.models import Order
 
 #: The legal edges; a status absent from a set cannot be reached from that key.
 TRANSITIONS: dict[str, frozenset[str]] = {
-    "pending": frozenset({"paid", "cancelled"}),
+    "pending": frozenset({"paid", "held", "cancelled"}),
+    "held": frozenset({"paid", "cancelled"}),
     "paid": frozenset({"buying"}),
     "buying": frozenset({"trade_sent", "delivered", "failed", "returned"}),
     "trade_sent": frozenset({"delivered", "returned"}),

@@ -2,11 +2,13 @@ import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CARD, renderCard as renderWith, USER_SALES } from "./fixtures";
+import { CARD, RISK, renderCard as renderWith, USER_SALES } from "./fixtures";
 
 import { ApiError } from "@/lib/api";
 
 const api = vi.hoisted(() => ({
+  getRisk: vi.fn(),
+  saveRisk: vi.fn(),
   listUsers: vi.fn(),
   getUserCard: vi.fn(),
   banUser: vi.fn(),
@@ -28,6 +30,7 @@ describe("BanDialog (on the user card)", () => {
   beforeEach(() => {
     Object.values(api).forEach((f) => f.mockReset());
     api.getUserCard.mockResolvedValue(CARD);
+    api.getRisk.mockResolvedValue(RISK);
     salesApi.getUserSales.mockResolvedValue(USER_SALES);
   });
 

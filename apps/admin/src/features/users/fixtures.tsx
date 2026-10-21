@@ -3,7 +3,7 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-import { type AdminUserCard } from "./api";
+import { type AdminUserCard, type RiskPolicy } from "./api";
 import { UserCard } from "./UserCard";
 import { ORDER_ROW } from "../orders/fixtures";
 import { type AdminUserSales } from "../sales/api";
@@ -69,6 +69,19 @@ export const CARD: AdminUserCard = {
   balance_usd: "0.000",
   api_key_id: null,
   usd_entries: [],
+};
+
+export const RISK: RiskPolicy = {
+  trusted: false,
+  kassa_blocked: false,
+  max_amount_uzs: null,
+  window_hours: 24,
+  note: null,
+  updated_at: null,
+  updated_by: null,
+  money_in_24h_uzs: "1500000",
+  money_in_7d_uzs: "4200000",
+  open_holds: 0,
 };
 
 export const USER_SALES: AdminUserSales = {

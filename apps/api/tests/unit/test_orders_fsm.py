@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from csmarket.modules.orders.fsm import TRANSITIONS, InvalidOrderTransitionError, move
-from csmarket.modules.orders.models import IN_FLIGHT, ORDER_STATUSES, TERMINAL, Order
+from csmarket.modules.orders.models import IN_FLIGHT, ON_REVIEW, ORDER_STATUSES, TERMINAL, Order
 
 
 def _order(status: str) -> Order:
@@ -70,7 +70,7 @@ def test_every_target_is_a_known_status() -> None:
 def test_terminal_and_in_flight_partition_the_non_pending_statuses() -> None:
     assert {s for s, edges in TRANSITIONS.items() if not edges} == TERMINAL
     assert IN_FLIGHT.isdisjoint(TERMINAL)
-    assert {"pending"} | IN_FLIGHT | TERMINAL == set(ORDER_STATUSES)
+    assert {"pending"} | ON_REVIEW | IN_FLIGHT | TERMINAL == set(ORDER_STATUSES)
 
 
 def test_paid_stamps_paid_at_and_returned_stamps_failed_at() -> None:

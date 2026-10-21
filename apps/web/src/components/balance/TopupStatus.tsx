@@ -27,12 +27,14 @@ import { TRANSACTIONS } from "@/lib/paths";
 const POLL_MS = 3_000;
 /** …for at most 40 polls (2 min) while the tab is visible; then «Обновить». */
 const MAX_POLLS = 40;
+/** A held top-up may wait hours for the decision: poll it slowly, with no cutoff. */
+const HELD_POLL_MS = 20_000;
 
 /**
  * What the customer sees. A pending top-up with nothing to pay is being checked while a
  * kassa holds it (it may still settle), else it reads as expired.
  */
-type View = "pending" | "checking" | "succeeded" | "expired" | "reversed";
+type View = "pending" | "checking" | "succeeded" | "expired" | "reversed" | "held" | "rejected";
 
 function viewOf(topup: Topup): View {
   if (topup.status === "pending" && topup.intent_url === null) {
@@ -42,7 +44,8 @@ function viewOf(topup: Topup): View {
 }
 
 /** Views that can still change: the page keeps polling. */
-const isOpen = (view: View): boolean => view === "pending" || view === "checking";
+const isOpen = (view: View): boolean =>
+  view === "pending" || view === "checking" || view === "held";
 
 /** The kassa page to send the customer to, or `null` (nothing payable, or the dev kassa). */
 function kassaUrl(topup: Topup): string | null {
@@ -87,6 +90,7 @@ export function TopupStatus({ locale, number, supportUrl = "" }: TopupStatusProp
       const data = query.state.data;
       if (data && !isOpen(viewOf(data))) return false;
       if (!data && isNotFound(query.state.error)) return false;
+      if (data?.status === "held") return HELD_POLL_MS;
       const cap = data?.provider === "p2p" ? P2P_MAX_POLLS : MAX_POLLS;
       return polls.count > cap ? false : POLL_MS;
     },
@@ -157,6 +161,10 @@ export function TopupStatus({ locale, number, supportUrl = "" }: TopupStatusProp
       return <Outcome view="expired" title={t("topup.expired")} />;
     case "reversed":
       return <Outcome view="reversed" title={t("topup.reversed")} />;
+    case "held":
+      return <Outcome view="held" title={t("topup.held")} />;
+    case "rejected":
+      return <Outcome view="rejected" title={t("topup.rejected")} />;
     case "checking":
       return (
         <Waiting
@@ -347,6 +355,7 @@ function StateIcon({ view }: { view: View | "notFound" }) {
       );
     case "pending":
     case "checking":
+    case "held":
       return (
         <span className={`${box} bg-info/15 text-info`}>
           <Loader2 className="size-6 animate-spin" aria-hidden />
@@ -359,6 +368,7 @@ function StateIcon({ view }: { view: View | "notFound" }) {
         </span>
       );
     case "reversed":
+    case "rejected":
     case "notFound":
       return (
         <span className={`${box} bg-danger/15 text-danger`}>

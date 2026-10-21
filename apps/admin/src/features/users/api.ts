@@ -61,7 +61,7 @@ export interface AdminEntry {
   reason: string | null;
 }
 
-export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed";
+export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed" | "held" | "rejected";
 
 export interface AdminTopup {
   number: string;
@@ -171,3 +171,32 @@ export function switchUsdWallet(
     { idempotencyKey: key },
   );
 }
+
+/** «Риск»: a user's kassa policy and what they put in through the kassas lately. */
+export interface RiskPolicy {
+  trusted: boolean;
+  kassa_blocked: boolean;
+  max_amount_uzs: string | null;
+  window_hours: number;
+  note: string | null;
+  updated_at: string | null;
+  updated_by: { id: string; display_name: string | null } | null;
+  money_in_24h_uzs: string;
+  money_in_7d_uzs: string;
+  open_holds: number;
+}
+export interface RiskPolicyIn {
+  trusted: boolean;
+  kassa_blocked: boolean;
+  max_amount_uzs: number | null;
+  window_hours: number;
+  note: string | null;
+}
+
+export const getRisk = (id: string): Promise<RiskPolicy> =>
+  session.apiGet<RiskPolicy>(`${BASE}/${encodeURIComponent(id)}/risk`);
+
+export const saveRisk = (id: string, body: RiskPolicyIn, key: string): Promise<RiskPolicy> =>
+  session.apiPut<RiskPolicy>(`${BASE}/${encodeURIComponent(id)}/risk`, body, {
+    idempotencyKey: key,
+  });

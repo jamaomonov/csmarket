@@ -3,6 +3,8 @@ import { type KassaTxn } from "./api";
 import { type PaymentPurpose, type PaymentStatus } from "./kinds";
 
 import { type Tone } from "@/components/StatusChip";
+import { errorText } from "@/features/users/labels";
+import { ApiError } from "@/lib/api";
 import { formatSum } from "@/lib/format";
 
 export const STATUS_LABELS: Record<PaymentStatus, string> = {
@@ -72,4 +74,30 @@ export const EXTRA_LABELS: readonly (readonly [string, string])[] = [
 /** A run of five digits is a phone number leaking through; the API masks it, so never show it. */
 export function safeExtraValue(key: string, value: string): string {
   return key === "phone" && /\d{5,}/.test(value) ? "скрыт" : value;
+}
+
+export const HOLD_REASON_LABELS: Record<string, string> = {
+  kassa_limit: "Лимит кассы",
+  user_limit: "Лимит пользователя",
+  check_failed: "Проверка не сработала",
+};
+
+export const HOLD_DECISION_LABELS: Record<string, string> = {
+  released: "Пропущен",
+  returned: "Возвращён на карту",
+  reversed_by_kassa: "Отменён кассой",
+};
+
+const HOLD_ERRORS: Record<string, string> = {
+  hold_decided: "Этот платёж уже решён — страница обновлена.",
+  hold_not_found: "Платёж не найден — возможно, его уже убрали из очереди.",
+};
+
+/** A hold decision's error in words; anything else goes through the shared text. */
+export function holdErrorText(err: unknown): string {
+  if (err instanceof ApiError && err.code !== undefined) {
+    const known = HOLD_ERRORS[err.code];
+    if (known !== undefined) return known;
+  }
+  return errorText(err);
 }

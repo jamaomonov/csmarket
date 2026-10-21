@@ -13,7 +13,7 @@ import { useAuthStore } from "@/features/auth/authStore";
 import { getDashboard } from "@/features/dashboard/api";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 
-type Counter = "attention" | "toPay" | "salesAttention";
+type Counter = "attention" | "toPay" | "salesAttention" | "holds";
 
 interface NavLinkItem {
   to: string;
@@ -44,6 +44,7 @@ const NAV: NavEntry[] = [
   },
   { to: "/users", label: "Пользователи", also: ["/api-keys"] },
   { to: "/payments", label: "Платежи" },
+  { to: "/payment-holds", label: "На проверке", counter: "holds" },
   { to: "/p2p", label: "P2P" },
   {
     label: "Настройки",
@@ -61,6 +62,7 @@ const COUNTER_LABEL: Record<Counter, string> = {
   attention: "ждут внимания",
   toPay: "к выплате",
   salesAttention: "продажи ждут проверки",
+  holds: "Платежи на проверке",
 };
 
 const isMenu = (e: NavEntry): e is NavMenu => "items" in e;
@@ -81,6 +83,7 @@ function useCounters(): Record<Counter, number> {
     attention: query.data?.attention ?? 0,
     toPay: query.data?.payouts.to_pay_count ?? 0,
     salesAttention: query.data?.payouts.sales_attention ?? 0,
+    holds: query.data?.holds_open ?? 0,
   };
 }
 
@@ -258,7 +261,7 @@ export function Layout() {
     };
   }, [sheetOpen]);
 
-  const waiting = counters.attention + counters.toPay + counters.salesAttention;
+  const waiting = counters.attention + counters.toPay + counters.salesAttention + counters.holds;
   return (
     <div className="flex min-h-screen flex-col">
       <a

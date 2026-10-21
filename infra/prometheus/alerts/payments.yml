@@ -18,3 +18,16 @@ groups:
             {{ $labels.reason }} in 15 minutes. Check whether the kassa's credentials
             or cabinet settings changed before treating it as probing.
           runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/kassa-setup.md#rejections"
+
+      # Money that arrived through a kassa above a risk limit (or whose check failed) and
+      # waits for an admin in «На проверке». Set by the scheduler's payment_holds job.
+      - alert: PaymentHeldForReview
+        expr: max by (reason) (csmarket_payment_holds_open{job="scheduler"}) > 0
+        for: 1m
+        labels: { severity: page }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} kassa payment(s) held for review ({{ $labels.reason }})'
+          description: >
+            Money arrived through a kassa above a risk limit and waits for an admin:
+            «На проверке» in the admin — release it or return it to the card.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/payment-held-for-review.md"

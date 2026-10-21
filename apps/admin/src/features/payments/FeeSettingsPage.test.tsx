@@ -10,6 +10,8 @@ import { ApiError } from "@/lib/api";
 const api = vi.hoisted(() => ({ getFeeSettings: vi.fn(), saveFeeSettings: vi.fn() }));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<object>()), ...api }));
 
+vi.mock("./ReviewLimitsBlock", () => ({ ReviewLimitsBlock: () => null }));
+
 const SAVED = {
   settings: { click: "1", payme: "0", uzum: "0", statuses: {} },
   updated_at: "2026-10-14T10:00:00.123456Z",

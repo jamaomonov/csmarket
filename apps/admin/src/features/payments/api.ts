@@ -36,7 +36,7 @@ export interface PaymentFull extends AdminPaymentRow {
   provider_ref: string | null;
 }
 
-export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed";
+export type TopupStatus = "pending" | "succeeded" | "expired" | "reversed" | "held" | "rejected";
 
 export interface PaymentTopup {
   number: string;
@@ -135,3 +135,76 @@ export function saveFeeSettings(
     headers: { "If-Match": version ?? "none" },
   });
 }
+
+/** «Лимит без проверки»: what one user may pass through a kassa in a window; over it a payment is held. */
+export interface KassaLimit {
+  provider: string;
+  enabled: boolean;
+  max_amount_uzs: string;
+  window_hours: number;
+}
+export interface ReviewLimitsOut {
+  limits: KassaLimit[];
+  updated_at: string | null;
+  updated_by: { id: string; display_name: string | null } | null;
+}
+export interface KassaLimitIn {
+  provider: string;
+  enabled: boolean;
+  max_amount_uzs: number;
+  window_hours: number;
+}
+export type HoldReason = "kassa_limit" | "user_limit" | "check_failed";
+export type HoldDecision = "released" | "returned" | "reversed_by_kassa";
+export interface HoldUser {
+  id: string;
+  display_name: string | null;
+}
+export interface Hold {
+  id: string;
+  number: string;
+  kind: "topup" | "order";
+  provider: string;
+  amount_uzs: string;
+  reason: HoldReason;
+  window_sum_uzs: string | null;
+  limit_uzs: string | null;
+  user: HoldUser;
+  created_at: string;
+  decision: HoldDecision | null;
+  decided_by: HoldUser | null;
+  decided_at: string | null;
+}
+export interface HoldPage {
+  items: Hold[];
+  next_cursor: string | null;
+}
+
+export const getReviewLimits = (): Promise<ReviewLimitsOut> =>
+  session.apiGet<ReviewLimitsOut>(`${BASE}/review-limits`);
+
+/** `version` is the `updated_at` the edit started from; a save over someone else's is 409. */
+export function saveReviewLimits(
+  limits: KassaLimitIn[],
+  version: string | null,
+  key: string,
+): Promise<ReviewLimitsOut> {
+  return session.api<ReviewLimitsOut>(`${BASE}/review-limits`, {
+    method: "PUT",
+    body: { limits },
+    idempotencyKey: key,
+    headers: { "If-Match": version ?? "none" },
+  });
+}
+
+export const getHolds = (state: "open" | "decided", cursor: string | null): Promise<HoldPage> =>
+  session.apiGet<HoldPage>(
+    `${BASE}/holds?state=${state}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+  );
+
+export const decideHold = (id: string, act: "release" | "returned", key: string): Promise<Hold> =>
+  session.apiPost<Hold>(
+    `${BASE}/holds/${encodeURIComponent(id)}/${act}`,
+    {},
+    { idempotencyKey: key },
+  );

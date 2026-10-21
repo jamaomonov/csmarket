@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { kindLabel } from "./labels";
+import { kindLabel, providerLabel } from "./labels";
 
 describe("kindLabel", () => {
   it("names every ledger kind in Russian", () => {
@@ -13,5 +13,13 @@ describe("kindLabel", () => {
 
   it("falls back to the raw kind", () => {
     expect(kindLabel("sell_payout")).toBe("sell_payout");
+  });
+});
+
+describe("providerLabel", () => {
+  it("names every kassa, P2P included", () => {
+    expect(providerLabel("click")).toBe("Click");
+    expect(providerLabel("p2p")).toBe("P2P");
+    expect(providerLabel(null)).toBe("—");
   });
 });

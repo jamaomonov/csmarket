@@ -256,6 +256,18 @@ describe("TopupForm", () => {
     );
   });
 
+  it("says card payment is closed for a blocked account", async () => {
+    mocks.createTopup.mockRejectedValue(
+      new SessionApiError(403, "Forbidden", { code: "kassa_payment_blocked" }),
+    );
+    setup();
+    fireEvent.click(screen.getByRole("button", { name: groupDigits("50000", "ru") }));
+    fireEvent.click(submit());
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Оплата картой недоступна для вашего аккаунта. Напишите в поддержку.",
+    );
+  });
+
   it("says why a card transfer was refused", async () => {
     mocks.createTopup.mockRejectedValue(
       new SessionApiError(409, "Conflict", { code: "p2p_daily_limit" }),

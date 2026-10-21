@@ -163,6 +163,8 @@
       "toBalance": "Back to balance",
       "expired": "Time to pay has run out. Start a new top-up.",
       "reversed": "Top-up cancelled.",
+      "held": "Payment received, we are checking it.",
+      "rejected": "Payment cancelled, the money is back on your card.",
       "notFound": "Top-up not found."
     },
     "pending": "On its way: {sum}",
@@ -180,6 +182,7 @@
     },
     "methodMaintenance": "Under maintenance",
     "methodUnavailable": "This payment method is unavailable right now — choose another.",
+    "kassaBlocked": "Card payment is not available for your account. Please contact support.",
     "p2p": {
       "method": "Card transfer",
       "title": "Transfer to the card",
@@ -426,6 +429,7 @@
     },
     "methodMaintenance": "Under maintenance",
     "methodUnavailable": "This payment method is unavailable right now — choose another.",
+    "kassaBlocked": "Card payment is not available for your account. Please contact support.",
     "fix": {
       "openPrivacy": "Open privacy settings",
       "openTradeUrl": "Get the link in Steam",
@@ -449,11 +453,14 @@
     "notFound": "Order not found.",
     "cancelled": "Order cancelled.",
     "expired": "Time to pay has run out.",
+    "held": "Payment received, we are checking it.",
+    "returnedToCard": "Payment cancelled, the money is back on your card.",
     "payNow": "Pay {price}",
     "payTest": "Pay (test)",
     "signedOut": "Sign in with Steam to see your orders.",
     "status": {
       "pending": "Awaiting payment",
+      "held": "Under review",
       "paid": "Paid",
       "buying": "Buying",
       "trade_sent": "Trade sent",

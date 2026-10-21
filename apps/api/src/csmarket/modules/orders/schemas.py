@@ -11,7 +11,15 @@ from csmarket.modules.orders.trade_view import RefundedTo, SkinTradeOut
 from csmarket.modules.skins.api import offer_id_of, parse_offer_id
 
 OrderStatusOut = Literal[
-    "pending", "paid", "buying", "trade_sent", "delivered", "cancelled", "failed", "returned"
+    "pending",
+    "held",
+    "paid",
+    "buying",
+    "trade_sent",
+    "delivered",
+    "cancelled",
+    "failed",
+    "returned",
 ]
 
 

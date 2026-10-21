@@ -16,6 +16,8 @@ export interface DashboardOut {
   };
   refunds: { count: number; amount_uzs: string };
   in_flight: number;
+  /** Payments waiting for an operator's decision («На проверке»). */
+  holds_open?: number;
   attention: number;
   /** `sales_attention`: sales with an open attention («Выкуп» → «Продажи», «Проверено»). */
   payouts: { to_pay_count: number; to_pay_uzs: string; sales_attention?: number };

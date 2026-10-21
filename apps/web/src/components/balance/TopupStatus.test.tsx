@@ -99,6 +99,21 @@ describe("TopupStatus", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows a held top-up as being checked, without the kassa link", async () => {
+    api.getTopup.mockResolvedValue(topup({ status: "held", intent_url: null }));
+    view();
+    expect(await screen.findByText("Оплата получена, проверяем платёж.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Перейти к оплате" })).toBeNull();
+  });
+
+  it("shows a rejected top-up as returned to the card", async () => {
+    api.getTopup.mockResolvedValue(topup({ status: "rejected", intent_url: null }));
+    view();
+    expect(
+      await screen.findByText("Платёж отменён, деньги возвращены на карту."),
+    ).toBeInTheDocument();
+  });
+
   it("waits for a payment: amount, a way to the kassa, no automatic opening without ?go=1", async () => {
     api.getTopup.mockResolvedValue(topup());
     view();
@@ -232,6 +247,20 @@ describe("TopupStatus", () => {
     expect(screen.getByRole("heading", { name: /^Баланс пополнен на/ })).toBeInTheDocument();
     await tick(30_000);
     expect(api.getTopup).toHaveBeenCalledTimes(3);
+  });
+
+  it("a held top-up keeps polling slowly after the 2-minute poll budget, until the decision", async () => {
+    vi.useFakeTimers();
+    api.getTopup.mockResolvedValue(topup({ status: "held", intent_url: null }));
+    view();
+    await tick(3 * 60_000);
+    const atThreeMinutes = api.getTopup.mock.calls.length;
+    await tick(3 * 60_000);
+    expect(api.getTopup.mock.calls.length).toBeGreaterThan(atThreeMinutes);
+    expect(screen.getByText("Оплата получена, проверяем платёж.")).toBeInTheDocument();
+    api.getTopup.mockResolvedValue(topup({ status: "rejected", intent_url: null }));
+    await tick(60_000);
+    expect(screen.getByText("Платёж отменён, деньги возвращены на карту.")).toBeInTheDocument();
   });
 
   it("a reversed top-up says it was cancelled", async () => {
