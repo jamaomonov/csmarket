@@ -22,6 +22,7 @@ MODULES = (
     "lisskins",
     "sales",
     "public_api",
+    "risk",
 )
 
 

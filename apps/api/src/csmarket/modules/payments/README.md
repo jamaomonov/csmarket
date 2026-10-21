@@ -197,6 +197,17 @@ An attempt's _owner_ is its top-up or its order.
 - `dev_pay(db, *, number)` (R11) — `ensure_attempt(mock)` → `mark_pending` → `settle`; a
   no-op once paid; `ConflictError` `code=topup_not_payable` when expired or reversed.
 
+## Holds (`holds.py`, `holds_admin.py`, `holds_routes.py`, ADR-0022)
+
+`settle` asks `risk.verdict` first (`check_risk=True`; only `credit_received_transfer` passes
+`False`). On a hold it calls `holds.hold`: the owner goes `held`, a `payment_holds` row is
+written, nothing is credited or bought. `open_hold_for`, `close`, `reverse_held` (a kassa
+cancelling a held payment: attempt `refunded`, top-up `reversed` with no debit, order
+`cancelled`, hold `reversed_by_kassa`) and `open_counts` (the gauge) live in `holds.py`;
+`holds_admin.py` has `release`, `mark_returned` and the list (split out for an import cycle);
+`holds_routes.py` serves `/admin/payments/holds`. `hooks.lock_owner_then_payment` is public.
+Runbook: `docs/runbooks/payment-held-for-review.md`.
+
 ## Gateways (`gateways/`, rulings R10, R11)
 
 A gateway only builds the URL the customer is sent to — `intent_url(payable=, locale=)`;
