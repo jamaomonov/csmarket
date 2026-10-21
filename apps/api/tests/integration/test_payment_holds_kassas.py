@@ -29,13 +29,14 @@ from csmarket.modules.payments.api import (
     reverse,
     settle,
 )
+from csmarket.modules.realtime.api import CHANNEL
 from csmarket.modules.risk.api import PaymentHold
 from csmarket.modules.wallet.api import user_balance
 from httpx import AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.integration.orders_factory import make_order
+from tests.integration.orders_factory import listen_channel, make_order
 from tests.integration.p2p_factory import make_card, p2p_on
 from tests.integration.payments_factory import make_topup, make_user
 from tests.integration.risk_factory import set_kassa_limit
@@ -340,8 +341,10 @@ async def test_kassa_reversal_of_held_order_cancels_it(db_session: AsyncSession)
     await db_session.commit()
     await settle(db_session, payment=p, event_id="e1")
     await db_session.commit()
-    await reverse(db_session, payment=p, event_id="r1")
-    await db_session.commit()
+    async with listen_channel(CHANNEL) as events:
+        await reverse(db_session, payment=p, event_id="r1")
+        await db_session.commit()
+        assert await events.drain() == [f"{order.user_id}:{order.number}"]
     await db_session.refresh(order)
     assert (order.status, p.status) == ("cancelled", "refunded")
     assert order.cancelled_at is not None

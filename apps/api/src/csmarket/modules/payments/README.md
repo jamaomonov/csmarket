@@ -135,13 +135,24 @@ An attempt's _owner_ is its top-up or its order.
 - **A kassa never reverses an order** (R7): the skin is bought at payment and refunds go
   to the balance, so `reverse` raises `OrderReversalRefusedError` before touching anything.
   The one exception is a `held` order (spec 2026-10-21): nothing was bought, so the kassa's
-  reversal cancels it.
+  reversal cancels it (and nudges the buyer's open order page).
+- **Admin decisions on a hold** (`holds_admin.py`, routes `holds_routes.py` at
+  `/admin/payments/holds`, mounted before the admin payments router): `release`
+  («Пропустить») — an order through `orders.mark_paid` (`NOTIFY orders`, the worker buys), a
+  top-up `succeeded` and `wallet.credit_topup` keyed by the top-up; `mark_returned` («Вернул на
+  карту») — attempt `refunded`, order `cancelled` (nudged, `paid_with` kept) or top-up
+  `rejected`, nothing credited. Both lock owner → payment → hold, refuse a decided hold (409
+  `hold_decided`; unknown 404 `hold_not_found`), take an `Idempotency-Key` and audit
+  `payments.hold.release` / `payments.hold.returned` (target `payment_hold`). The list
+  `GET /admin/payments/holds?state=open|decided&cursor=` is keyset over `created_at` /
+  `decided_at`, 50 a page, one query. Apart from `holds.py` because it imports `admin.api`
+  (which imports `payments.api`).
 - **No overdraft**: `reverse_topup` locks the user's wallet and refuses when the balance is
   below the amount; nothing is written and the caller rolls back.
 - **Lock order, everywhere: owner (top-up or order) → kassa transaction row → payment →
   user wallet.** A kassa opening an attempt resolves the owner with `lock=True` before it
   touches the attempt, so every hook that moves an attempt (`mark_pending`, `settle`,
-  `reverse`, `cancel_pending`) locks the owner first too (`_lock_owner_then_payment`), and
+  `reverse`, `cancel_pending`) locks the owner first too (`lock_owner_then_payment`), and
   so do the expiry sweep and the kassas' timeout sweeps (`lock_owner_or_skip`). The other
   order deadlocks a create racing a settle
   (`test_settle_and_a_kassa_create_on_one_topup_do_not_deadlock`,
@@ -151,7 +162,8 @@ An attempt's _owner_ is its top-up or its order.
 **Logs:** `payments.attempt.created`, `payments.topup.created`, `payments.topup.credited`,
 `payments.topup.reversed`, `payments.topup.reverse_refused`,
 `payments.topup.second_payment_refused`, `payments.order.paid`, `payments.order.second_payment_refused`,
-`payments.order.reverse_refused`, `payments.hold.reversed_by_kassa` — number, provider, amount and status only, never the user.
+`payments.order.reverse_refused`, `payments.hold.reversed_by_kassa`, `payments.hold.missing`
+(error: a held owner without an open hold), `payments.hold.released`, `payments.hold.returned` — number, provider, amount and status only, never the user.
 
 ## Top-ups (`topups.py`, owner decision D1, rulings R3, R8, R11)
 

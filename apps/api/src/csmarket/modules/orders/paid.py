@@ -23,7 +23,8 @@ ORDERS_CHANNEL = "orders"
 
 
 async def mark_paid(db: AsyncSession, order: Order, *, provider: str) -> None:
-    """Move ``order`` ``pending`` → ``paid``, record who paid, and ``NOTIFY orders``.
+    """Move ``order`` ``pending`` (or ``held``, an admin's release) → ``paid``, record who paid,
+    and ``NOTIFY orders``.
 
     Args:
         db: Session; the caller holds the order ``FOR UPDATE`` and commits.
@@ -32,7 +33,7 @@ async def mark_paid(db: AsyncSession, order: Order, *, provider: str) -> None:
             public API; stored in ``orders.paid_with``).
 
     Raises:
-        InvalidOrderTransitionError: the order is not ``pending``; nothing is written and
+        InvalidOrderTransitionError: the order is not ``pending`` / ``held``; nothing is written and
             nothing is sent.
     """
     move(order, "paid")

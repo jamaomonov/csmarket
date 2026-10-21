@@ -29,6 +29,7 @@ from csmarket.modules.p2p.admin_routes import router as p2p_admin_router
 from csmarket.modules.p2p.routes import router as p2p_webhook_router
 from csmarket.modules.payme.routes import router as payme_router
 from csmarket.modules.payments.dev_routes import router as payments_dev_router
+from csmarket.modules.payments.holds_routes import router as payment_holds_router
 from csmarket.modules.payments.routes import router as payments_router
 from csmarket.modules.payments.routes import wallet_router as topups_router
 from csmarket.modules.payments.settings_routes import router as payment_settings_router
@@ -59,8 +60,10 @@ router = APIRouter()
 router.include_router(admin_router)
 router.include_router(admin_users_router)
 router.include_router(admin_api_keys_router)
-# Before ``admin_payments_router``: its ``/admin/payments/{number}`` would read ``settings``.
+# Before ``admin_payments_router``: its ``/admin/payments/{number}`` would read ``settings`` /
+# ``holds``.
 router.include_router(payment_settings_router)
+router.include_router(payment_holds_router)
 router.include_router(admin_payments_router)
 router.include_router(admin_audit_router)
 router.include_router(admin_dashboard_router)

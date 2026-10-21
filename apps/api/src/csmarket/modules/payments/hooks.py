@@ -118,7 +118,7 @@ async def _owner_ref(
     return WalletTopup, topup_id
 
 
-async def _lock_owner_then_payment(db: AsyncSession, payment: Payment) -> Owner:
+async def lock_owner_then_payment(db: AsyncSession, payment: Payment) -> Owner:
     """Lock the attempt's owner (its top-up or its order), then the attempt itself; both
     re-read from the DB."""
     model, owner_id = await _owner_ref(db, _payment_id(payment))
@@ -253,7 +253,7 @@ async def mark_pending(db: AsyncSession, *, payment: Payment) -> None:
     Raises:
         InvalidTransitionError: the attempt is already settled, failed or cancelled.
     """
-    await _lock_owner_then_payment(db, payment)
+    await lock_owner_then_payment(db, payment)
     if payment.status == "pending":
         return
     move(payment, "pending")
@@ -282,7 +282,7 @@ async def settle(
             ``cancelled`` is true); the kassa refuses this second charge.
         InvalidTransitionError: the attempt is cancelled, failed or refunded.
     """
-    owner = await _lock_owner_then_payment(db, payment)
+    owner = await lock_owner_then_payment(db, payment)
     if payment.status == "succeeded":
         return
     _refuse_second_payment(owner, payment)
@@ -366,7 +366,7 @@ async def reverse(db: AsyncSession, *, payment: Payment, event_id: str) -> None:
         OrderReversalRefusedError: ``payment`` paid an order; nothing is written.
         InvalidTransitionError: the attempt never succeeded.
     """
-    owner = await _lock_owner_then_payment(db, payment)
+    owner = await lock_owner_then_payment(db, payment)
     if payment.status == "refunded":
         return
     if owner.status == "held":
@@ -411,7 +411,7 @@ async def cancel_pending(db: AsyncSession, *, payment: Payment) -> None:
     back to ``cancelled`` without a reversal. Locks the owner, then the attempt. An order
     stays ``pending`` (its own expiry sweep cancels it).
     """
-    await _lock_owner_then_payment(db, payment)
+    await lock_owner_then_payment(db, payment)
     if payment.status not in LIVE:
         return
     move(payment, "cancelled")
@@ -428,6 +428,7 @@ __all__ = [
     "charge_of",
     "ensure_attempt",
     "lock_owner_or_skip",
+    "lock_owner_then_payment",
     "mark_pending",
     "reverse",
     "settle",

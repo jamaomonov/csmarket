@@ -18,6 +18,7 @@ from csmarket.modules.orders.api import Order
 from csmarket.modules.orders.api import move as move_order
 from csmarket.modules.payments.fsm import move as move_payment
 from csmarket.modules.payments.models import Payment, WalletTopup
+from csmarket.modules.realtime.api import nudge
 from csmarket.modules.risk.api import HoldDecision, HoldKind, PaymentHold, Verdict
 
 log = get_logger("csmarket.payments.holds")
@@ -114,7 +115,8 @@ async def reverse_held(
     """The kassa took back a held payment: nothing was credited or bought, nothing to claw back.
 
     The attempt goes ``refunded``, an order ``cancelled``, a top-up ``reversed``, and the open
-    hold closes as ``reversed_by_kassa`` with no admin.
+    hold closes as ``reversed_by_kassa`` with no admin. A cancelled order nudges its buyer's
+    open page.
 
     Args:
         db: Session; the caller locked the owner, then the payment, and commits.
@@ -127,10 +129,13 @@ async def reverse_held(
     payment.extra_metadata = {**payment.extra_metadata, "reverse_event_id": event_id}
     if isinstance(owner, Order):
         move_order(owner, "cancelled")
+        await nudge(db, user_id=owner.user_id, number=owner.number)
     else:
         owner.status = "reversed"
     if row is not None:
         close(row, decision="reversed_by_kassa", admin_id=None)
+    else:
+        log.error("payments.hold.missing", number=owner.number)
     await db.flush()
     log.warning(
         "payments.hold.reversed_by_kassa",
