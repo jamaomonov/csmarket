@@ -245,7 +245,7 @@ async def test_replay_returns_the_same_answer(
     assert await user_balance(db_session, user.id) == Decimal(50_000)
 
 
-@pytest.mark.parametrize("hold_id", [str(uuid.uuid4()), "not-a-uuid"])
+@pytest.mark.parametrize("hold_id", ["00000000-0000-4000-8000-000000000000", "not-a-uuid"])
 async def test_unknown_hold_is_404(
     integration_client: AsyncClient, admin_headers: Headers, hold_id: str
 ) -> None:
