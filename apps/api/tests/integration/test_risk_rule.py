@@ -103,6 +103,18 @@ async def test_an_error_holds_and_leaves_the_transaction_usable(db_session: Asyn
     await db_session.refresh(current)  # the session still works
 
 
+async def test_a_lock_failure_raises_rather_than_holds(db_session: AsyncSession) -> None:
+    # Fail-closed covers the checks; a failed lock aborts the caller's transaction, where
+    # no hold could be written anyway, so the real error surfaces.
+    user = await make_user(db_session)
+    current = await _new(db_session, user.id, 1)
+    with (
+        patch("csmarket.modules.risk.rule.lock_user", side_effect=RuntimeError("lock")),
+        pytest.raises(RuntimeError, match="lock"),
+    ):
+        await verdict(db_session, current)
+
+
 async def test_two_settles_at_once_are_serialised(db_engine: AsyncEngine) -> None:
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     async with factory() as db:

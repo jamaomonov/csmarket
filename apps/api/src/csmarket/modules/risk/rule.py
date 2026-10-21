@@ -2,7 +2,8 @@
 
 Asked by ``payments.hooks.settle`` before money is credited or an order is paid. A user's
 settles are serialised by a transaction-scoped advisory lock, so two kassas paying at once
-cannot both slip under a limit. Fail-closed (owner ruling 5): any error is a hold.
+cannot both slip under a limit. Fail-closed (owner ruling 5): any error in the checks is a
+hold; a failed lock raises (the caller's transaction is lost, no hold could be written).
 """
 
 from __future__ import annotations
@@ -104,10 +105,12 @@ async def _judge(db: AsyncSession, payment: Payment) -> Verdict:
 
 
 async def verdict(db: AsyncSession, payment: Payment) -> Verdict:
-    """Pass or hold ``payment`` (not yet ``succeeded``); never raises.
+    """Pass or hold ``payment`` (not yet ``succeeded``); the checks never raise.
 
-    Takes the user's advisory lock first; the reads run in a savepoint so a failed query
-    leaves the caller's transaction usable, and any error is a ``check_failed`` hold.
+    Takes the user's advisory lock first, outside the fail-closed guard: a failed lock aborts
+    the caller's transaction, where no hold could be written, so its error surfaces. The
+    reads then run in a savepoint so a failed query leaves the caller's transaction usable,
+    and any error there is a ``check_failed`` hold.
 
     Args:
         db: The caller's session, inside the settle transaction.
@@ -115,16 +118,21 @@ async def verdict(db: AsyncSession, payment: Payment) -> Verdict:
 
     Returns:
         The verdict; a hold carries the reason and, for a limit, the sum and the limit.
+
+    Raises:
+        Exception: Whatever the advisory lock raises (the caller's transaction is lost).
     """
+    # Read before the savepoint: its rollback may expire the attempt's attributes.
+    number, provider = payment.number, payment.provider
+    await lock_user(db, payment.user_id)
     try:
-        await lock_user(db, payment.user_id)
         async with db.begin_nested():
             return await _judge(db, payment)
     except Exception as exc:  # noqa: BLE001 -- fail-closed by owner ruling 5
         log.warning(
             "payments.risk.check_failed",
-            number=payment.number,
-            provider=payment.provider,
+            number=number,
+            provider=provider,
             error=type(exc).__name__,
         )
         return Verdict(hold=True, reason="check_failed")
