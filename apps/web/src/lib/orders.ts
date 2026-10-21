@@ -13,7 +13,15 @@ import { session } from "./api";
 import type { Locale } from "@csmarket/i18n";
 
 export type OrderStatus =
-  "pending" | "paid" | "buying" | "trade_sent" | "delivered" | "cancelled" | "failed" | "returned";
+  | "pending"
+  | "held"
+  | "paid"
+  | "buying"
+  | "trade_sent"
+  | "delivered"
+  | "cancelled"
+  | "failed"
+  | "returned";
 
 export type TradeState = "buying" | "offer_sent" | "accepted" | "released" | "failed";
 

@@ -56,6 +56,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [unavailable, setUnavailable] = useState(false);
+  const [blocked, setBlocked] = useState(false);
   // `busy` disables the button from the next render; this blocks a click that lands first.
   const inFlight = useRef(false);
   const test = provider === "mock";
@@ -84,6 +85,7 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
     setBusy(true);
     setFailed(false);
     setUnavailable(false);
+    setBlocked(false);
     let leaving = false;
     try {
       leaving = await run(provider);
@@ -101,6 +103,8 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
         // The kassa was switched meanwhile: re-read the tiles so it greys or goes.
         void qc.invalidateQueries({ queryKey: PROVIDERS_KEY });
         setUnavailable(true);
+      } else if (err instanceof SessionApiError && err.code === "kassa_payment_blocked") {
+        setBlocked(true);
       } else {
         setFailed(true);
       }
@@ -129,9 +133,13 @@ export function OrderPay({ order, locale, initial, onPaid }: OrderPayProps) {
         {...(wallet ? { wallet } : {})}
       />
       <ChargeLines locale={locale} base={Number(order.price_uzs)} charge={charge} kind="order" />
-      {failed || unavailable ? (
+      {failed || unavailable || blocked ? (
         <p role="alert" className="text-danger text-sm">
-          {unavailable ? buy("methodUnavailable") : common("errors.generic")}
+          {blocked
+            ? buy("kassaBlocked")
+            : unavailable
+              ? buy("methodUnavailable")
+              : common("errors.generic")}
         </p>
       ) : null}
       <Button

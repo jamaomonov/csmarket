@@ -32,6 +32,8 @@ export function orderBadge(order: OrderOut): Badge {
   switch (order.status) {
     case "pending":
       return { tone: "wait", key: "orders.status.pending" };
+    case "held":
+      return { tone: "wait", key: "orders.status.held" };
     case "paid":
     case "buying":
       return { tone: "run", key: "orders.status.buying" };

@@ -99,6 +99,21 @@ describe("TopupStatus", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows a held top-up as being checked, without the kassa link", async () => {
+    api.getTopup.mockResolvedValue(topup({ status: "held", intent_url: null }));
+    view();
+    expect(await screen.findByText("Оплата получена, проверяем платёж.")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Перейти к оплате" })).toBeNull();
+  });
+
+  it("shows a rejected top-up as returned to the card", async () => {
+    api.getTopup.mockResolvedValue(topup({ status: "rejected", intent_url: null }));
+    view();
+    expect(
+      await screen.findByText("Платёж отменён, деньги возвращены на карту."),
+    ).toBeInTheDocument();
+  });
+
   it("waits for a payment: amount, a way to the kassa, no automatic opening without ?go=1", async () => {
     api.getTopup.mockResolvedValue(topup());
     view();
