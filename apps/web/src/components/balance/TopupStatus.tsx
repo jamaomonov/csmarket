@@ -27,6 +27,8 @@ import { TRANSACTIONS } from "@/lib/paths";
 const POLL_MS = 3_000;
 /** …for at most 40 polls (2 min) while the tab is visible; then «Обновить». */
 const MAX_POLLS = 40;
+/** A held top-up may wait hours for the decision: poll it slowly, with no cutoff. */
+const HELD_POLL_MS = 20_000;
 
 /**
  * What the customer sees. A pending top-up with nothing to pay is being checked while a
@@ -88,6 +90,7 @@ export function TopupStatus({ locale, number, supportUrl = "" }: TopupStatusProp
       const data = query.state.data;
       if (data && !isOpen(viewOf(data))) return false;
       if (!data && isNotFound(query.state.error)) return false;
+      if (data?.status === "held") return HELD_POLL_MS;
       const cap = data?.provider === "p2p" ? P2P_MAX_POLLS : MAX_POLLS;
       return polls.count > cap ? false : POLL_MS;
     },
