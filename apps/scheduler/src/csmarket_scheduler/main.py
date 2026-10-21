@@ -43,6 +43,7 @@ from csmarket_scheduler.jobs import (
     orders_health,
     p2p_sweep,
     payme_timeout,
+    payment_holds,
     public_feed,
     purge_refresh_tokens,
     sales_poll,
@@ -97,6 +98,7 @@ def build_scheduler() -> AsyncIOScheduler:
     orders_health.register(scheduler)
     orders_erase.register(scheduler)
     p2p_sweep.register(scheduler)
+    payment_holds.register(scheduler)
     return scheduler
 
 

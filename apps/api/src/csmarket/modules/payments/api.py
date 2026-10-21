@@ -23,6 +23,7 @@ from csmarket.modules.payments.gateways import (
     get_gateway,
     return_url,
 )
+from csmarket.modules.payments.holds import open_counts
 from csmarket.modules.payments.hooks import (
     AlreadyPaidError,
     OrderReversalRefusedError,
@@ -81,6 +82,7 @@ __all__ = [
     "lock_owner_or_skip",
     "mark_pending",
     "move",
+    "open_counts",
     "owned_topup",
     "read_kassa_fees",
     "resolve",

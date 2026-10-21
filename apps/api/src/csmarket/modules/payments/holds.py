@@ -9,7 +9,9 @@ records why. Nothing is credited and no ``NOTIFY orders`` is sent until an admin
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from typing import get_args
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
@@ -19,7 +21,7 @@ from csmarket.modules.orders.api import move as move_order
 from csmarket.modules.payments.fsm import move as move_payment
 from csmarket.modules.payments.models import Payment, WalletTopup
 from csmarket.modules.realtime.api import nudge
-from csmarket.modules.risk.api import HoldDecision, HoldKind, PaymentHold, Verdict
+from csmarket.modules.risk.api import HoldDecision, HoldKind, HoldReason, PaymentHold, Verdict
 
 log = get_logger("csmarket.payments.holds")
 
@@ -143,3 +145,14 @@ async def reverse_held(
         provider=payment.provider,
         amount=str(payment.amount_uzs),
     )
+
+
+async def open_counts(db: AsyncSession) -> dict[HoldReason, int]:
+    """How many holds are open (undecided), by reason; every reason is present, 0 by default."""
+    rows = await db.execute(
+        select(PaymentHold.reason, func.count())
+        .where(PaymentHold.decision.is_(None))
+        .group_by(PaymentHold.reason)
+    )
+    found = {reason: n for reason, n in rows.all()}
+    return {reason: int(found.get(reason, 0)) for reason in get_args(HoldReason)}

@@ -10,6 +10,7 @@ import pytest
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.orders.api import Order
 from csmarket.modules.payments.api import Payment, WalletTopup, ensure_attempt, resolve, settle
+from csmarket.modules.payments.holds import open_counts
 from csmarket.modules.payments.holds_admin import PAGE
 from csmarket.modules.realtime.api import CHANNEL
 from csmarket.modules.risk.api import PaymentHold
@@ -260,3 +261,17 @@ async def test_customer_cannot_list(
 ) -> None:
     r = await integration_client.get(BASE, headers=await customer_headers())
     assert r.status_code == 403
+
+
+async def test_open_counts_and_dashboard(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    await _held_topup(db_session)
+    counts = await open_counts(db_session)
+    assert counts["kassa_limit"] >= 1
+    assert counts["check_failed"] == 0
+    assert set(counts) == {"kassa_limit", "user_limit", "check_failed"}
+    r = await integration_client.get(
+        "/api/v1/admin/dashboard?days=1", headers=await admin_headers()
+    )
+    assert r.json()["holds_open"] >= 1
