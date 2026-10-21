@@ -156,7 +156,7 @@ class AdminTopupOut(BaseModel):
 
     number: str
     amount_uzs: str
-    status: Literal["pending", "succeeded", "expired", "reversed"]
+    status: Literal["pending", "succeeded", "expired", "reversed", "held", "rejected"]
     #: The kassa that took the money, else the first attempt's; ``null`` without one.
     provider: str | None
     created_at: datetime

@@ -67,7 +67,7 @@ class TopupOut(BaseModel):
     charge_uzs: str
     #: The kassa the top-up was opened in.
     provider: str | None
-    status: Literal["pending", "succeeded", "expired", "reversed"]
+    status: Literal["pending", "succeeded", "expired", "reversed", "held", "rejected"]
     expires_at: datetime
     #: Where to pay; ``null`` once the top-up cannot be paid.
     intent_url: str | None

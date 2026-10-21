@@ -40,7 +40,9 @@ from csmarket.modules.orders import models as _orders_models  # noqa: F401
 
 PURPOSES = ("topup", "order")
 PAYMENT_STATUSES = ("created", "pending", "succeeded", "failed", "cancelled", "refunded")
-TOPUP_STATUSES = ("pending", "succeeded", "expired", "reversed")
+#: ``held``: a kassa paid it, the risk rule holds it for an admin (spec 2026-10-21);
+#: ``rejected``: the admin returned that money to the card, nothing was credited.
+TOPUP_STATUSES = ("pending", "succeeded", "expired", "reversed", "held", "rejected")
 
 
 def _in(values: tuple[str, ...]) -> str:
@@ -168,6 +170,13 @@ class Payment(Base):
         # text_pattern_ops: the admin search's prefix LIKE ('T7K%') uses it under any
         # collation (a plain btree only under C); equality still uses it too.
         Index("ix_payments_number", "number", postgresql_ops={"number": "text_pattern_ops"}),
+        Index(
+            "ix_payments_user_provider_succeeded",
+            "user_id",
+            "provider",
+            text("succeeded_at DESC"),
+            postgresql_where=text("status = 'succeeded'"),
+        ),
         Index("ix_payments_topup", "topup_id"),
         # The payable resolver's callers, the kassa sweeps and the admin read by order.
         Index("ix_payments_order", "order_id"),

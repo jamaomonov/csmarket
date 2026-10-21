@@ -42,6 +42,7 @@ from csmarket.modules.public_api import models as _public_api_models  # noqa: F4
 
 ORDER_STATUSES = (
     "pending",
+    "held",
     "paid",
     "buying",
     "trade_sent",
@@ -56,6 +57,9 @@ ORDER_SOURCES = ("waxpeer", "skinslink", "lisskins")
 TERMINAL: frozenset[str] = frozenset({"delivered", "cancelled", "failed", "returned"})
 #: Paid, not yet settled: the money is ours and the skin is on its way (no refund now).
 IN_FLIGHT: frozenset[str] = frozenset({"paid", "buying", "trade_sent"})
+#: Paid through a kassa, held by the risk rule until an admin decides (spec 2026-10-21):
+#: not ``pending`` (no second payment, no expiry), not in flight (nothing is bought).
+ON_REVIEW: frozenset[str] = frozenset({"held"})
 #: Why a trade waits for an admin (ruling R3); ``NULL`` when it does not.
 ATTENTION_REASONS = (
     "buy_unconfirmed",

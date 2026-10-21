@@ -66,7 +66,7 @@ class AdminTopupInfo(BaseModel):
 
     number: str
     amount_uzs: str
-    status: Literal["pending", "succeeded", "expired", "reversed"]
+    status: Literal["pending", "succeeded", "expired", "reversed", "held", "rejected"]
     expires_at: datetime
     succeeded_at: datetime | None
 
@@ -76,7 +76,15 @@ class AdminOrderInfo(BaseModel):
 
     number: str
     status: Literal[
-        "pending", "paid", "buying", "trade_sent", "delivered", "cancelled", "failed", "returned"
+        "pending",
+        "held",
+        "paid",
+        "buying",
+        "trade_sent",
+        "delivered",
+        "cancelled",
+        "failed",
+        "returned",
     ]
     #: Whole soʻm, digits.
     price_uzs: str
