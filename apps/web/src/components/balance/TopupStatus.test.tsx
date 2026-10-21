@@ -249,25 +249,18 @@ describe("TopupStatus", () => {
     expect(api.getTopup).toHaveBeenCalledTimes(3);
   });
 
-  it("a held top-up keeps polling slowly past the poll budget until the decision", async () => {
-    vi.useFakeTimers();
-    const held = topup({ status: "held", intent_url: null });
-    api.getTopup
-      .mockResolvedValueOnce(held)
-      .mockResolvedValue(topup({ status: "rejected", intent_url: null }));
-    view();
-    await tick();
-    await tick(3 * 60_000);
-    expect(api.getTopup.mock.calls.length).toBeGreaterThan(1);
-    expect(screen.getByText("Платёж отменён, деньги возвращены на карту.")).toBeInTheDocument();
-  });
-
-  it("a held top-up is still asked after ten minutes", async () => {
+  it("a held top-up keeps polling slowly after the 2-minute poll budget, until the decision", async () => {
     vi.useFakeTimers();
     api.getTopup.mockResolvedValue(topup({ status: "held", intent_url: null }));
     view();
-    await tick(10 * 60_000);
-    expect(api.getTopup.mock.calls.length).toBeGreaterThan(25);
+    await tick(3 * 60_000);
+    const atThreeMinutes = api.getTopup.mock.calls.length;
+    await tick(3 * 60_000);
+    expect(api.getTopup.mock.calls.length).toBeGreaterThan(atThreeMinutes);
+    expect(screen.getByText("Оплата получена, проверяем платёж.")).toBeInTheDocument();
+    api.getTopup.mockResolvedValue(topup({ status: "rejected", intent_url: null }));
+    await tick(60_000);
+    expect(screen.getByText("Платёж отменён, деньги возвращены на карту.")).toBeInTheDocument();
   });
 
   it("a reversed top-up says it was cancelled", async () => {
