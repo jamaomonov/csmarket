@@ -1,5 +1,6 @@
 """What other modules may import from ``risk``."""
 
+from csmarket.modules.risk.block import ensure_kassa_allowed
 from csmarket.modules.risk.models import (
     HoldDecision,
     HoldKind,
@@ -18,6 +19,7 @@ __all__ = [
     "PaymentHold",
     "UserRiskPolicy",
     "Verdict",
+    "ensure_kassa_allowed",
     "money_in",
     "verdict",
 ]

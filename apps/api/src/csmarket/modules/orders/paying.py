@@ -51,6 +51,7 @@ from csmarket.modules.payments.api import (
     settle,
 )
 from csmarket.modules.payments.api import move as move_payment
+from csmarket.modules.risk.api import ensure_kassa_allowed
 from csmarket.modules.wallet.api import WALLET, debit_purchase
 
 log = get_logger("csmarket.orders.paying")
@@ -196,6 +197,7 @@ async def pay_order(
     if provider == WALLET:
         await _pay_from_balance(db, order)
     else:
+        await ensure_kassa_allowed(db, user_id)
         intent_url = await _open_in_kassa(db, payable, provider=provider, locale=locale)
     out = OrderPayOut(
         order=await _owner_view(db, user_id=user_id, number=number), intent_url=intent_url

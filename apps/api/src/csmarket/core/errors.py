@@ -80,6 +80,15 @@ class AccountSuspendedError(AppError):
     title = "Account suspended"
 
 
+class KassaBlockedError(AppError):
+    """The admin blocked kassa payments for this account; the balance still pays."""
+
+    status_code = 403
+    type_uri = "https://csmarket.uz/errors/kassa-payment-blocked"
+    title = "Kassa payments blocked"
+    report = False
+
+
 class RateLimitedError(AppError):
     """Request rate limit exceeded -- client should slow down."""
 
