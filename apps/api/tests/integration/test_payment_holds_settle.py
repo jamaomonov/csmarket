@@ -14,13 +14,14 @@ from csmarket.modules.payments.api import (
     resolve,
     settle,
 )
+from csmarket.modules.realtime.api import CHANNEL
 from csmarket.modules.risk.api import PaymentHold
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import user_balance
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.integration.orders_factory import listen_orders, make_order
+from tests.integration.orders_factory import listen_channel, listen_orders, make_order
 from tests.integration.payments_factory import make_topup, make_user
 from tests.integration.risk_factory import set_kassa_limit
 
@@ -73,10 +74,12 @@ async def test_order_over_limit_is_held_without_notify(db_session: AsyncSession)
         db_session, payable=await resolve(db_session, order.number, lock=True), provider="payme"
     )
     await db_session.commit()
-    async with listen_orders() as heard:
+    async with listen_channel(CHANNEL) as events, listen_orders() as heard:
         await settle(db_session, payment=p, event_id="e1")
         await db_session.commit()
         assert await heard.drain() == []
+        # The buyer's open page re-reads the order and shows «проверяем платёж».
+        assert await events.drain() == [f"{order.user_id}:{order.number}"]
     await db_session.refresh(order)
     assert (order.status, order.paid_with, order.paid_at) == ("held", "payme", None)
     assert p.status == "succeeded"
@@ -122,6 +125,35 @@ async def test_second_attempt_on_held_topup_is_refused_at_settle(
     await db_session.commit()
     with pytest.raises(AlreadyPaidError):
         await settle(db_session, payment=p2, event_id="e2")
+
+
+async def test_second_attempt_on_held_order_is_refused_at_settle(
+    db_session: AsyncSession,
+) -> None:
+    await set_kassa_limit(db_session, "payme", 1)
+    order = await make_order(db_session)
+    p = await ensure_attempt(
+        db_session, payable=await resolve(db_session, order.number, lock=True), provider="payme"
+    )
+    p2 = await ensure_attempt(
+        db_session, payable=await resolve(db_session, order.number, lock=True), provider="click"
+    )
+    await db_session.commit()
+    await settle(db_session, payment=p, event_id="e1")
+    await db_session.commit()
+    payable = await resolve(db_session, order.number)
+    assert payable.reason == "paid"
+    with pytest.raises(AlreadyPaidError):
+        await ensure_attempt(db_session, payable=payable, provider="uzum")
+    async with listen_orders() as heard:
+        with pytest.raises(AlreadyPaidError):
+            await settle(db_session, payment=p2, event_id="e2")
+        await db_session.rollback()
+        assert await heard.drain() == []
+    await db_session.refresh(order)
+    assert (order.status, order.paid_with, order.paid_at) == ("held", "payme", None)
+    await db_session.refresh(p2)
+    assert p2.status != "succeeded"
 
 
 async def test_credit_received_transfer_is_never_held(db_session: AsyncSession) -> None:

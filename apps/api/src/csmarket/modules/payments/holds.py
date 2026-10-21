@@ -2,7 +2,8 @@
 
 :func:`hold` is called by ``hooks.settle`` when the risk verdict holds: the attempt is already
 ``succeeded`` (the kassa has the money), the owner goes ``held`` and a ``payment_holds`` row
-records why. Nothing is credited and no ``NOTIFY orders`` is sent until an admin decides.
+records why. Nothing is credited and no ``NOTIFY orders`` is sent until an admin decides; a
+held order only nudges its buyer's open page (realtime), which then reads «проверяем платёж».
 :func:`reverse_held` is the kassa taking a held payment back (the one exception to ruling R7);
 :func:`close` records any decision on an open hold.
 """
@@ -32,7 +33,8 @@ async def hold(
     """Put ``owner`` on review for ``payment`` (already ``succeeded``) and record why.
 
     An order goes ``pending`` → ``held`` with ``paid_with`` = the provider (``paid_at`` stays
-    empty); a top-up goes ``held`` and points at the attempt, uncredited.
+    empty) and nudges its buyer's open page; a top-up goes ``held`` and points at the
+    attempt, uncredited.
 
     Args:
         db: Session; the caller holds the owner, then the payment ``FOR UPDATE`` and commits.
@@ -47,6 +49,7 @@ async def hold(
     if isinstance(owner, Order):
         move_order(owner, "held")
         owner.paid_with = payment.provider
+        await nudge(db, user_id=owner.user_id, number=owner.number)
         kind = "order"
     else:
         owner.status = "held"
