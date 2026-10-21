@@ -323,8 +323,8 @@ async def reverse(db: AsyncSession, *, trans_id: str) -> Result:
     ``CREATED`` → the attempt is released (unless another CREATED row holds it).
     ``FAILED`` → its attempt was already released; only the row closes. ``CONFIRMED`` → a
     top-up is reversed if its money is still on the balance; a spent top-up or any order
-    answers 10017 and nothing changes (ruling R7). An order whose CREATED row is reversed
-    stays ``pending``.
+    answers 10017 and nothing changes (ruling R7) — except a held one, which is taken back
+    with nothing debited. An order whose CREATED row is reversed stays ``pending``.
 
     Raises:
         UzumError: 10014 unknown, 10018 already reversed, 10017 the top-up was spent or the

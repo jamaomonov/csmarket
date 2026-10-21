@@ -356,7 +356,9 @@ async def reverse(db: AsyncSession, *, payment: Payment, event_id: str) -> None:
 
     A no-op when already ``refunded``. Otherwise the user's wallet is locked and debited
     (``topup_reversal``), the attempt goes ``refunded`` and the top-up ``reversed``. An
-    order payment is never reversed (ruling R7).
+    order payment is never reversed (ruling R7). A held payment (spec 2026-10-21) is the one
+    exception to R7: nothing was bought, so the order is cancelled and nothing is debited
+    (``holds.reverse_held``).
 
     Raises:
         TopupSpentError: the balance no longer covers the top-up (ruling R7); nothing is
@@ -365,13 +367,16 @@ async def reverse(db: AsyncSession, *, payment: Payment, event_id: str) -> None:
         InvalidTransitionError: the attempt never succeeded.
     """
     owner = await _lock_owner_then_payment(db, payment)
+    if payment.status == "refunded":
+        return
+    if owner.status == "held":
+        await holds.reverse_held(db, payment=payment, owner=owner, event_id=event_id)
+        return
     if isinstance(owner, Order):
         log.warning(
             "payments.order.reverse_refused", number=owner.number, provider=payment.provider
         )
         raise OrderReversalRefusedError("an order payment is never reversed by a kassa")
-    if payment.status == "refunded":
-        return
     if payment.status != "succeeded":
         raise InvalidTransitionError(f"payment cannot go {payment.status} -> refunded")
     try:
