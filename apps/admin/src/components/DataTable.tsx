@@ -26,6 +26,8 @@ interface DataTableProps<R> {
   loading?: boolean;
   error?: ReactNode;
   empty?: ReactNode;
+  /** A next step under the empty sentence (a link to where the work comes from). */
+  emptyAction?: ReactNode;
   footer?: ReactNode;
   onRowClick?: (row: R) => void;
   attention?: (row: R) => boolean;
@@ -44,6 +46,7 @@ export function DataTable<R>({
   loading = false,
   error,
   empty = "Ничего не найдено.",
+  emptyAction,
   footer,
   onRowClick,
   attention,
@@ -56,7 +59,9 @@ export function DataTable<R>({
   }
   const list = rows ?? [];
   const showSkeleton = loading && list.length === 0;
-  if (!showSkeleton && list.length === 0) return <EmptyState>{empty}</EmptyState>;
+  if (!showSkeleton && list.length === 0) {
+    return <EmptyState action={emptyAction}>{empty}</EmptyState>;
+  }
 
   const table = (
     <div

@@ -81,6 +81,16 @@ describe("HoldsPage", () => {
     });
   });
 
+  it("an empty list leads to the payment settings, where the limits live", async () => {
+    api.getHolds.mockResolvedValue({ items: [], next_cursor: null });
+    renderPage();
+    expect(await screen.findByText("Ничего не ждёт решения.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Лимиты в настройках оплаты" })).toHaveAttribute(
+      "href",
+      "/payment-settings",
+    );
+  });
+
   it("lists an open hold with its reason, amount and user link", async () => {
     renderPage();
     expect(await screen.findByText("TU-0001")).toBeInTheDocument();

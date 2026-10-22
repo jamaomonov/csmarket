@@ -24,7 +24,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Reason } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
-import { LINK } from "@/components/TextLink";
+import { LINK, TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { getDashboard } from "@/features/dashboard/api";
@@ -201,6 +201,7 @@ export function HoldsPage() {
         loading={list.isPending}
         error={list.isError ? errorText(list.error) : undefined}
         empty={open ? "Ничего не ждёт решения." : "Решённых пока нет."}
+        emptyAction={<TextLink to="/payment-settings">Лимиты в настройках оплаты</TextLink>}
         columns={[
           {
             key: "number",

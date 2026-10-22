@@ -12,7 +12,7 @@ import { payoutErrorText } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
-import { LINK } from "@/components/TextLink";
+import { LINK, TextLink } from "@/components/TextLink";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -63,6 +63,7 @@ export function SellBlocksPage() {
         loading={query.isPending}
         error={query.isError ? errorText(query.error) : undefined}
         empty="Никому не запрещено."
+        emptyAction={<TextLink to="/payouts">Заявки на выплату</TextLink>}
         columns={[
           {
             key: "user",
