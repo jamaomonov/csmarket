@@ -4,6 +4,7 @@
  * as the only word.
  */
 import { providerLabel } from "@/features/users/labels";
+import { reasonWord } from "@/lib/dictionary";
 import { formatSignedSum } from "@/lib/format";
 
 /** Every action the API writes today (`audit.record` call sites). */
@@ -146,6 +147,11 @@ function payloadValue(key: string, value: unknown): string {
     return formatSignedSum(value);
   }
   if (key === "provider" && typeof value === "string") return providerLabel(value);
+  // A sale's checked attention stores its code as the reason («rolled_back»).
+  if (key === "reason" && typeof value === "string" && /^[a-z_]+$/.test(value)) {
+    const said = reasonWord("saleAttention", value);
+    if (said.unknown === null) return said.word;
+  }
   const text = typeof value === "string" ? value : JSON.stringify(value);
   const shown = text
     .split(" -> ")

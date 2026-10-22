@@ -167,6 +167,13 @@ describe("AuditPage", () => {
           payload: { items_repriced: 12, enabled: "false -> true", flux: "on" },
         }),
         row({ id: "r-2", action: "orders.teleport" }),
+        row({
+          id: "r-3",
+          action: "sales.attention.resolve",
+          target_type: "sale",
+          target_id: "SQWHF77Q",
+          payload: { reason: "rolled_back" },
+        }),
       ],
       next_cursor: null,
     });
@@ -177,6 +184,9 @@ describe("AuditPage", () => {
     expect(within(table).getByText("flux")).toHaveClass("text-meta");
     expect(within(table).getByText("другое действие")).toBeInTheDocument();
     expect(within(table).getByText("orders.teleport")).toHaveClass("text-meta");
+    expect(
+      within(table).getByText("причина: откат после выплаты — разобрать вручную"),
+    ).toBeInTheDocument();
   });
 
   it("filters by action, target type and target id", async () => {
