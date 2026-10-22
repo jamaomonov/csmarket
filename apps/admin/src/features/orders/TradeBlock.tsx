@@ -74,7 +74,11 @@ export function TradeBlock({ trade }: { trade: AdminTradeOut | null }) {
               {trade.is_released && <span className="text-fg-muted"> · снята</span>}
             </Row>
             <Row label="Продавец">{sellerText(trade.seller)}</Row>
-            {trade.reason !== null && <Row label="Причина">{trade.reason}</Row>}
+            {trade.reason !== null && (
+              <Row label="Причина">
+                <Reason of="supplier" code={trade.reason} />
+              </Row>
+            )}
             <Row label="Штрафы">{penaltiesText(trade.penalties)}</Row>
             <Attention trade={trade} />
           </dl>

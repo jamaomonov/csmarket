@@ -82,7 +82,7 @@ function sourceFields(detail: AdminOrderDetail): [string, ReactNode][] {
         />,
       ],
       ["Покупка", trade.waxpeer_id === null ? "—" : String(trade.waxpeer_id)],
-      ["Причина", trade.reason ?? "—"],
+      ["Причина", <SupplierReason key="r" code={trade.reason} />],
     ];
   }
   return [];

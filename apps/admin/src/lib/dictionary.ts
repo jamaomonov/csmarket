@@ -218,6 +218,7 @@ const RETURN: Record<string, string> = { ...FAILURE, other: "без причин
 const SUPPLIER_REASON: Record<string, string> = {
   trade_create_error: "Steam не создал обмен",
   not_accepted: "обмен не принят",
+  "not accepted": "обмен не принят",
   canceled: "обмен отменён",
   cancelled: "обмен отменён",
   declined: "покупатель отклонил обмен",
