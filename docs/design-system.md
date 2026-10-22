@@ -113,7 +113,7 @@ The admin composes its pages from `apps/admin/src/components` (admin UX review, 
   screen (`useNarrow`, < 768 px).
 - **Status chips** — one component, `Status` (`components/Status.tsx`): `<Status of="order"
 code={status} />` reads its word and tone from the one dictionary, `lib/dictionary.ts`, which
-  holds every status (order, trade, payment, top-up, sale, payout, P2P, supplier, Waxpeer) and
+  holds every status (order, trade, payment, top-up, sale, payout, P2P, a market's own word (`market`), Waxpeer) and
   every reason (failure, attention, payout flag, reconciliation, hold, return). Tones, not filled
   bricks: `bg-<tone>/15 text-<tone>`; `progress` (warning), `info` (a hold), `success`,
   `danger`, `neutral`, `muted`; the green accent is never a status. Chips are lower-case
