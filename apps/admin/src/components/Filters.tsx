@@ -26,7 +26,7 @@ export function SearchBox({ label, value, onChange, maxLength }: SearchBoxProps)
       onChange={(e) => {
         onChange(e.target.value);
       }}
-      className="border-border bg-bg h-9 w-full min-w-0 rounded-md border px-3 text-sm sm:w-80"
+      className="border-border bg-bg h-11 w-full min-w-0 rounded-md border px-3 text-sm sm:w-80 md:h-9"
     />
   );
 }
@@ -57,7 +57,7 @@ export function FilterSelect<T extends string>({
       onChange={(e) => {
         onChange(e.target.value);
       }}
-      className={`border-border bg-bg h-9 min-w-0 flex-1 rounded-md border px-2 text-sm sm:flex-none ${
+      className={`border-border bg-bg h-11 min-w-0 flex-1 rounded-md border px-2 text-sm sm:flex-none md:h-9 ${
         value !== "" ? "text-fg" : "text-fg-muted"
       }`}
     >

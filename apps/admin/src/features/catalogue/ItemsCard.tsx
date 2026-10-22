@@ -100,12 +100,13 @@ export function ItemsCard() {
               setText(e.target.value);
             }}
             placeholder="Например: redline"
-            className="border-border bg-bg h-10 rounded-md border px-3 text-base"
+            className="border-border bg-bg h-11 rounded-md border px-3 text-base"
           />
         </label>
-        <label className="flex items-center gap-2 text-sm">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
           <input
             type="checkbox"
+            className="accent-accent size-5"
             checked={onlyHidden}
             onChange={(e) => {
               setOnlyHidden(e.target.checked);
