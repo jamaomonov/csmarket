@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { SteamOfferValue, TradeLinkValue } from "./SteamLinks";
 
@@ -8,7 +8,15 @@ const LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY"
 describe("SteamLinks", () => {
   it("hides the token on screen, opens and copies the whole link", async () => {
     const write = vi.fn(() => Promise.resolve());
-    Object.assign(navigator, { clipboard: { writeText: write } });
+    const saved = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: write },
+      configurable: true,
+    });
+    onTestFinished(() => {
+      if (saved) Object.defineProperty(navigator, "clipboard", saved);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    });
     render(<TradeLinkValue link={LINK} />);
     const shown = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••";
     expect(screen.getByRole("link", { name: shown })).toHaveAttribute("href", LINK);
@@ -24,6 +32,15 @@ describe("SteamLinks", () => {
       <TradeLinkValue link="https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY" />,
     );
     expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("hides the token of a stored link that is not an https link too", () => {
+    render(
+      <TradeLinkValue link="http://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY" />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(document.body.textContent).not.toContain("AbCdXY");
+    expect(document.body.textContent).toContain("token=••••");
   });
 
   it("says when no link is saved", () => {

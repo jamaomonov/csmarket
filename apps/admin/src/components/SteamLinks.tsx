@@ -21,7 +21,7 @@ export function TradeLinkValue({ link }: { link: string | null }) {
           {maskToken(link)}
         </a>
       ) : (
-        link
+        maskToken(link)
       )}
       <CopyButton value={link} label="Скопировать трейд-ссылку" />
     </span>
