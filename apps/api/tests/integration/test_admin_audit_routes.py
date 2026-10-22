@@ -13,7 +13,9 @@ from httpx import AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from tests.integration.orders_factory import make_item_and_rate
 from tests.integration.payments_factory import make_user
+from tests.integration.sales_factory import make_request, make_sale
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 URL = "/api/v1/admin/audit"
@@ -83,6 +85,7 @@ async def test_rows_carry_actor_and_payload_newest_first(
             "action": "wallet.adjust",
             "target_type": "user",
             "target_id": "u-9",
+            "target_label": None,
             "actor": {"id": anon.id, "display_name": None},
             "payload": {"amount_uzs": -5000, "reason": "double credit"},
         },
@@ -92,6 +95,7 @@ async def test_rows_carry_actor_and_payload_newest_first(
             "action": "users.ban",
             "target_type": "user",
             "target_id": "t-1",
+            "target_label": None,
             "actor": {"id": ann.id, "display_name": "Ann"},
             "payload": {"reason": "spam"},
         },
@@ -222,3 +226,36 @@ async def test_list_query_count_is_constant(
     few = await _count(3)
     assert few > 0
     assert few == await _count(12)
+
+
+async def test_id_targets_carry_a_readable_label(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    ann = await _admin(db_session, "Ann")
+    seller = await _admin(db_session, "Seller Sam")
+    item, _ = await make_item_and_rate(db_session)
+    sale = await make_sale(db_session, user=seller, payout_to="card", status="payout")
+    request = await make_request(db_session, sale)
+    missing = str(uuid.uuid4())
+    await _row(db_session, ann, target_type="user", target_id=seller.id, minutes=0)
+    await _row(db_session, ann, target_type="user", target_id=missing, minutes=1)
+    await _row(db_session, ann, target_type="skin_item", target_id=item.id, minutes=2)
+    await _row(
+        db_session,
+        ann,
+        action="sales.payout.paid",
+        target_type="payout_request",
+        target_id=request.id,
+        minutes=3,
+    )
+    await _row(db_session, ann, action="skins.alias.put", target_type="skin_alias", minutes=4)
+    r = await integration_client.get(URL, headers=await admin_headers())
+    assert r.status_code == 200, r.text
+    labels = [(i["target_type"], i["target_label"]) for i in r.json()["items"]]
+    assert labels == [
+        ("skin_alias", None),  # names itself (the alias is the id)
+        ("payout_request", sale.number),
+        ("skin_item", item.market_hash_name),
+        ("user", None),  # no such user
+        ("user", "Seller Sam"),
+    ]
