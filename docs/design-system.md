@@ -115,8 +115,18 @@ The admin composes its pages from `apps/admin/src/components` (admin UX review, 
   `info` (a hold), `success`, `danger`, `neutral`, `muted`. The green accent is never a status.
 - **Money** — `$` before the number, two places in lists (three only for the USD wallet), digit
   groups, a typographic minus coloured `danger`.
-- **Tabs** (underlined, with counters; red when they count work), **FiltersBar** / **SearchBox** /
-  **FilterSelect** (one compact row), **UserCell**, **EmptyState**.
+- **Filters** — one pattern on every list. The main status is `Tabs` (underlined, never pills,
+  checkboxes or a segmented control), with a counter wherever the API counts it, red when it
+  counts work; the tab lives in the URL (`?status=`, `?attention=`, `?problems=1`, `?state=`), so
+  old links keep working. Secondary filters are one row of `FilterSelect` («Касса: все»; on a phone
+  the selects share the row) beside a `SearchBox` in the normal font with a short placeholder
+  that is never cut («Продажа, карта, имя или Steam ID»). No labelled 40 px selects, no monospace
+  search. Lists: «Обмены» view, «Заявки на выплату» status, «Продажи» attention, «Платежи» status,
+  «Сверка» «Все / Проблемы N», «На проверке» «Открытые N / Решённые», P2P journal result.
+- **Times in lists** — one format, `listTime` / `When` (`lib/format.ts`, `components/When.tsx`):
+  relative inside 24 hours («5 мин назад»), then `DD.MM HH:MM` (`DD.MM.YYYY` for an earlier
+  year), the full date in the tooltip. Detail pages show the absolute `formatDateTime`.
+- **UserCell**, **EmptyState**.
 - **Detail pages** — `DetailGrid` (2 : 1 columns, one on phones) of `Section`s with `Row`s
   (label 140 px, muted); an open attention is a `Banner` at the top, actions sit under the header,
   rare or dangerous ones behind «⋯» (`MoreMenu`).

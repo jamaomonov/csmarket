@@ -9,6 +9,7 @@ import { errorText, roleLabel } from "./labels";
 import { tariffLabel } from "../apiKeys/labels";
 
 import { DataTable } from "@/components/DataTable";
+import { FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
@@ -63,17 +64,9 @@ export function UsersPage() {
             { key: "api", label: "С API-ключом" },
           ]}
         />
-        <input
-          type="search"
-          aria-label="Имя или Steam ID"
-          placeholder="Имя или Steam ID"
-          value={text}
-          maxLength={80}
-          onChange={(e) => {
-            setText(e.target.value);
-          }}
-          className="border-border bg-bg h-9 w-full rounded-md border px-3 text-sm sm:w-72"
-        />
+        <FiltersBar>
+          <SearchBox label="Имя или Steam ID" value={text} maxLength={80} onChange={setText} />
+        </FiltersBar>
       </div>
       <DataTable
         label="Пользователи"

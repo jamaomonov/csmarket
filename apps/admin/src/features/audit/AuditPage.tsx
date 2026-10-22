@@ -1,4 +1,4 @@
-/** «Журнал»: what admins did, newest first. Read-only. */
+/** «Журнал»: what admins did, newest first, filtered by one row of `FilterSelect`s. Read-only. */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import {
   targetTypeLabel,
 } from "./labels";
 
+import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { PageHeader } from "@/components/PageHeader";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
@@ -31,35 +32,6 @@ const DEBOUNCE_MS = 300;
 const TARGET_ID_MAX = 64;
 const ACTIONS = Object.keys(ACTION_LABELS);
 const TARGET_TYPES = Object.keys(TARGET_TYPE_LABELS);
-
-interface FilterSelectProps {
-  label: string;
-  value: string;
-  labels: Readonly<Record<string, string>>;
-  onChange: (value: string) => void;
-}
-
-function FilterSelect({ label, value, labels, onChange }: FilterSelectProps) {
-  return (
-    <label className="flex flex-col gap-1 text-sm">
-      {label}
-      <select
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-        }}
-        className="border-border bg-bg h-10 rounded-md border px-3 text-base"
-      >
-        <option value="">Все</option>
-        {Object.entries(labels).map(([k, v]) => (
-          <option key={k} value={k}>
-            {v}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 function Target({ row }: { row: AuditRow }) {
   const path = targetPath(row.target_type, row.target_id);
@@ -143,13 +115,15 @@ export function AuditPage() {
   const rows = list.data?.pages.flatMap((p) => p.items) ?? [];
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <PageHeader title="Журнал" />
-      <div className="flex flex-wrap items-end gap-4">
+      <FiltersBar>
+        <SearchBox label="Id цели" value={idText} maxLength={TARGET_ID_MAX} onChange={setIdText} />
         <FilterSelect
           label="Действие"
           value={action}
-          labels={ACTION_LABELS}
+          options={ACTIONS}
+          text={(k) => ACTION_LABELS[k] ?? k}
           onChange={(v) => {
             url.set("action", v);
           }}
@@ -157,24 +131,13 @@ export function AuditPage() {
         <FilterSelect
           label="Тип цели"
           value={targetType}
-          labels={TARGET_TYPE_LABELS}
+          options={TARGET_TYPES}
+          text={(k) => TARGET_TYPE_LABELS[k] ?? k}
           onChange={(v) => {
             url.set("target_type", v);
           }}
         />
-        <label className="flex max-w-xs flex-col gap-1 text-sm">
-          Id цели
-          <input
-            type="search"
-            value={idText}
-            maxLength={TARGET_ID_MAX}
-            onChange={(e) => {
-              setIdText(e.target.value);
-            }}
-            className="border-border bg-bg h-10 rounded-md border px-3 font-mono text-base"
-          />
-        </label>
-      </div>
+      </FiltersBar>
       {list.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {list.isError && (
         <p role="alert" className="text-danger">

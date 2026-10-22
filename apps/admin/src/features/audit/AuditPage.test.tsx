@@ -124,6 +124,14 @@ describe("AuditPage", () => {
     expect(await screen.findByText("Записей нет.")).toBeInTheDocument();
   });
 
+  it("the filters are one row of compact selects and a plain search", async () => {
+    api.listAudit.mockResolvedValue({ items: [], next_cursor: null });
+    renderPage();
+    expect(await screen.findByRole("option", { name: "Действие: все" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Тип цели: все" })).toBeInTheDocument();
+    expect(screen.getByRole("searchbox", { name: "Id цели" })).not.toHaveClass("font-mono");
+  });
+
   it("drops unknown options and an over-long id from a hand-edited URL", async () => {
     api.listAudit.mockResolvedValue({ items: [], next_cursor: null });
     renderPage(`/audit?action=orders.nope&target_type=planet&target_id=${"x".repeat(65)}`);

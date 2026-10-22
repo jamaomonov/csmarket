@@ -67,7 +67,7 @@ export function Tabs<K extends string>({
       ref={row}
       role="tablist"
       aria-label={label}
-      className="border-border -mb-px flex gap-1 overflow-x-auto border-b"
+      className="border-border flex gap-1 overflow-x-auto border-b"
     >
       {items.map((t) => {
         const active = t.key === value;
