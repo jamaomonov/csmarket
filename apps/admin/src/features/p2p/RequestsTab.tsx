@@ -10,7 +10,8 @@ import { DataTable } from "@/components/DataTable";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { When } from "@/components/When";
+import { formatSum } from "@/lib/format";
 
 type Filter = "all" | RequestStatus;
 
@@ -66,11 +67,7 @@ export function RequestsTab() {
           {
             key: "created",
             header: "Создана",
-            cell: (r) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(r.created_at)}
-              </span>
-            ),
+            cell: (r) => <When iso={r.created_at} className="text-fg-muted" />,
           },
         ]}
         mobileCard={(r) => (

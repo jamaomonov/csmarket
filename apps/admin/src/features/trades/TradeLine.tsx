@@ -5,12 +5,13 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminTradeRow } from "./api";
 import { SOURCE_LABELS, STATE_LABELS, STATE_TONE } from "./labels";
-import { ago, clockTime, shortDate, shortDateTime, timeLeft } from "./time";
+import { shortDate, timeLeft } from "./time";
 import { TradeExpand } from "./TradeExpand";
 import { ATTENTION_LABELS, FAILURE_LABELS } from "../orders/labels";
 import { AttentionBadge } from "../orders/StatusChip";
 
 import { StatusChip } from "@/components/StatusChip";
+import { When } from "@/components/When";
 import { providerLabel } from "@/features/users/labels";
 import { formatSum } from "@/lib/format";
 
@@ -127,7 +128,6 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
           <Link to={`/orders/${row.number}`} className="font-mono font-medium hover:underline">
             {row.number}
           </Link>
-          <p className="text-fg-muted whitespace-nowrap text-xs">{shortDateTime(row.created_at)}</p>
         </td>
         <td className="py-2 pr-3">
           <SkinCell row={row} />
@@ -177,8 +177,7 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
           <StateCell row={row} />
         </td>
         <td className="whitespace-nowrap py-2 pr-3">
-          <p>{ago(row.created_at)}</p>
-          <p className="text-fg-muted text-xs tabular-nums">{clockTime(row.created_at)}</p>
+          <When iso={row.created_at} />
         </td>
         <td className="py-2">
           <button
@@ -223,7 +222,7 @@ export function TradeCard({ row }: { row: AdminTradeRow }) {
         </Link>
         <span>{SOURCE_LABELS[row.source]}</span>
         <span>{row.buyer.display_name ?? "Без имени"}</span>
-        <span>{ago(row.created_at)}</span>
+        <When iso={row.created_at} />
       </p>
     </div>
   );

@@ -7,7 +7,7 @@ import { AttentionBadge, OrderStatusChip } from "./StatusChip";
 import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
 import { SkinThumb } from "@/components/SkinThumb";
-import { formatDateTime } from "@/lib/format";
+import { When } from "@/components/When";
 
 export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label: string }) {
   const navigate = useNavigate();
@@ -64,9 +64,7 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
         {
           key: "created",
           header: "Создан",
-          cell: (o) => (
-            <span className="text-fg-muted whitespace-nowrap">{formatDateTime(o.created_at)}</span>
-          ),
+          cell: (o) => <When iso={o.created_at} className="text-fg-muted" />,
         },
       ]}
       mobileCard={(o) => (
@@ -86,7 +84,7 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
               estimated={o.protected_estimated}
             />
             <AttentionBadge reason={o.attention_reason} />
-            <span className="text-fg-dim ml-auto text-xs">{formatDateTime(o.created_at)}</span>
+            <When iso={o.created_at} className="text-fg-dim ml-auto text-xs" />
           </div>
         </div>
       )}

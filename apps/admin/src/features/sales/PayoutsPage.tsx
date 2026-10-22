@@ -27,8 +27,9 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { formatSum } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
@@ -38,7 +39,7 @@ const DEBOUNCE_MS = 300;
 
 function Waiting({ row }: { row: PayoutRow }) {
   if (row.status !== "to_pay" || !row.to_pay_at) {
-    return <span className="text-fg-muted">{formatDateTime(row.paid_at ?? row.created_at)}</span>;
+    return <When iso={row.paid_at ?? row.created_at} className="text-fg-muted" />;
   }
   const w = waitingFor(row.to_pay_at);
   return <span className={WAIT_CLASS[w.level]}>ждёт {w.text}</span>;

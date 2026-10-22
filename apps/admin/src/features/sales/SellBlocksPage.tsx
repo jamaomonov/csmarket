@@ -12,9 +12,9 @@ import { payoutErrorText } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
-import { formatDateTime } from "@/lib/format";
 
 function Unblock({ block }: { block: SellBlock }) {
   const qc = useQueryClient();
@@ -79,7 +79,11 @@ export function SellBlocksPage() {
             cell: (b) => (
               <span className="text-fg-muted">
                 {b.blocked_by?.display_name ?? "—"}
-                {b.blocked_at ? `, ${formatDateTime(b.blocked_at)}` : ""}
+                {b.blocked_at ? (
+                  <>
+                    , <When iso={b.blocked_at} />
+                  </>
+                ) : null}
               </span>
             ),
           },
@@ -96,7 +100,11 @@ export function SellBlocksPage() {
             <p>{b.reason ?? "—"}</p>
             <p className="text-fg-dim text-xs">
               {b.blocked_by?.display_name ?? "—"}
-              {b.blocked_at ? `, ${formatDateTime(b.blocked_at)}` : ""}
+              {b.blocked_at ? (
+                <>
+                  , <When iso={b.blocked_at} />
+                </>
+              ) : null}
             </p>
           </div>
         )}

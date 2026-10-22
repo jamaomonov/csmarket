@@ -17,8 +17,8 @@ import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
@@ -157,11 +157,7 @@ export function SalesPage() {
           {
             key: "created",
             header: "Создана",
-            cell: (s) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(s.created_at)}
-              </span>
-            ),
+            cell: (s) => <When iso={s.created_at} className="text-fg-muted" />,
           },
         ]}
         mobileCard={(s) => (
@@ -173,7 +169,7 @@ export function SalesPage() {
             <div className="flex flex-wrap gap-2">
               <SaleStatusChip status={s.status} />
               <span className="text-fg-muted">{s.user.display_name ?? "Без имени"}</span>
-              <span className="text-fg-dim ml-auto text-xs">{formatDateTime(s.created_at)}</span>
+              <When iso={s.created_at} className="text-fg-dim ml-auto text-xs" />
             </div>
             {s.attention_reason ? (
               <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>

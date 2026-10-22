@@ -20,8 +20,8 @@ import {
 } from "./labels";
 
 import { PageHeader } from "@/components/PageHeader";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
@@ -80,8 +80,8 @@ function Target({ row }: { row: AuditRow }) {
 function AuditTableRow({ row }: { row: AuditRow }) {
   return (
     <tr className="border-border border-t align-top">
-      <td className="text-fg-muted whitespace-nowrap py-2 pr-3">
-        {formatDateTime(row.created_at)}
+      <td className="text-fg-muted py-2 pr-3">
+        <When iso={row.created_at} />
       </td>
       <td className="py-2 pr-3">
         <Link to={`/users/${row.actor.id}`} className="hover:underline">

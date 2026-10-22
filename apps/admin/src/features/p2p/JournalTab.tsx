@@ -12,7 +12,8 @@ import { DataTable } from "@/components/DataTable";
 import { SearchBox } from "@/components/Filters";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { When } from "@/components/When";
+import { formatSum } from "@/lib/format";
 
 const REFRESH_MS = 15_000;
 type Filter = "all" | IncomingResult;
@@ -80,11 +81,7 @@ export function JournalTab() {
           {
             key: "time",
             header: "Время",
-            cell: (r) => (
-              <span className="whitespace-nowrap">
-                {formatDateTime(r.bank_time ?? r.received_at)}
-              </span>
-            ),
+            cell: (r) => <When iso={r.bank_time ?? r.received_at} />,
           },
           {
             key: "amount",
@@ -113,7 +110,7 @@ export function JournalTab() {
               {chip(r)}
             </div>
             <div className="text-fg-muted flex flex-wrap gap-2 text-xs">
-              <span>{formatDateTime(r.bank_time ?? r.received_at)}</span>
+              <When iso={r.bank_time ?? r.received_at} />
               <span>{r.card_last4 ? `•••• ${r.card_last4}` : ""}</span>
             </div>
             {action(r)}

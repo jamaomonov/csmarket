@@ -21,6 +21,27 @@ export function formatDateTime(iso: string): string {
   return `${date} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+/**
+ * The one time format of list rows (admin UX audit §2): relative inside the last 24 hours
+ * («только что», «5 мин назад», «3 ч назад»), absolute beyond — `DD.MM HH:MM` this year,
+ * `DD.MM.YYYY` an earlier one. A time slightly ahead (clock skew) reads «только что».
+ * Detail pages keep `formatDateTime`; a list row puts it in the tooltip (`When`).
+ */
+export function listTime(iso: string, now: number = Date.now()): string {
+  const d = new Date(iso);
+  const ms = Math.max(0, now - d.getTime());
+  if (ms < MINUTE) return "только что";
+  if (ms < HOUR) return `${String(Math.floor(ms / MINUTE))} мин назад`;
+  if (ms < DAY) return `${String(Math.floor(ms / HOUR))} ч назад`;
+  const full = formatDateTime(iso);
+  if (d.getFullYear() !== new Date(now).getFullYear()) return full.slice(0, 10);
+  return `${full.slice(0, 5)} ${full.slice(11)}`;
+}
+
 /** `"250.000"` -> `$250.000` (the API's three-decimal dollar string, as is). */
 export function formatUsd(value: string): string {
   return `$${value}`;

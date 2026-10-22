@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
-import { formatDateTime } from "@/lib/format";
+import { When } from "@/components/When";
 import { useDebounced } from "@/lib/useDebounced";
 
 const DEBOUNCE_MS = 300;
@@ -122,11 +122,7 @@ export function UsersPage() {
           {
             key: "created",
             header: "Регистрация",
-            cell: (u) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(u.created_at)}
-              </span>
-            ),
+            cell: (u) => <When iso={u.created_at} className="text-fg-muted" />,
           },
         ]}
         mobileCard={(u) => (

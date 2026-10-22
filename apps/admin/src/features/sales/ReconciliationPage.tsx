@@ -21,8 +21,8 @@ import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
 import { pick } from "@/lib/url-guards";
 import { useUrlParams } from "@/lib/useUrlParams";
 
@@ -149,11 +149,12 @@ export function ReconciliationPage() {
           {
             key: "done",
             header: "Завершена",
-            cell: (r) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {r.done_at ? formatDateTime(r.done_at) : "—"}
-              </span>
-            ),
+            cell: (r) =>
+              r.done_at ? (
+                <When iso={r.done_at} className="text-fg-muted" />
+              ) : (
+                <span className="text-fg-muted">—</span>
+              ),
           },
         ]}
         mobileCard={(r) => (
@@ -167,9 +168,11 @@ export function ReconciliationPage() {
                 из <Money usd={r.quoted_usd} />
               </span>
               {r.flag && <span className="text-danger">{FLAG_LABELS[r.flag]}</span>}
-              <span className="text-fg-dim ml-auto text-xs">
-                {r.done_at ? formatDateTime(r.done_at) : "—"}
-              </span>
+              {r.done_at ? (
+                <When iso={r.done_at} className="text-fg-dim ml-auto text-xs" />
+              ) : (
+                <span className="text-fg-dim ml-auto text-xs">—</span>
+              )}
             </div>
           </div>
         )}

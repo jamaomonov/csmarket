@@ -23,10 +23,11 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText, providerLabel } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { formatSum } from "@/lib/format";
 
 type State = "open" | "decided";
 type Act = "release" | "returned";
@@ -129,7 +130,12 @@ function DecisionCell({ h }: { h: Hold }) {
       <div>{label}</div>
       <div className="text-fg-muted text-xs">
         {h.decided_by?.display_name ?? "—"}
-        {h.decided_at !== null && ` · ${formatDateTime(h.decided_at)}`}
+        {h.decided_at !== null && (
+          <>
+            {" · "}
+            <When iso={h.decided_at} />
+          </>
+        )}
       </div>
     </div>
   );
@@ -213,11 +219,7 @@ export function HoldsPage() {
           {
             key: "created",
             header: "Создан",
-            cell: (h) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(h.created_at)}
-              </span>
-            ),
+            cell: (h) => <When iso={h.created_at} className="text-fg-muted" />,
           },
           {
             key: "action",

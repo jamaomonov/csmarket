@@ -19,8 +19,8 @@ import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { errorText, providerLabel } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
@@ -157,11 +157,7 @@ export function PaymentsPage() {
             {
               key: "created",
               header: "Создан",
-              cell: (p) => (
-                <span className="text-fg-muted whitespace-nowrap">
-                  {formatDateTime(p.created_at)}
-                </span>
-              ),
+              cell: (p) => <When iso={p.created_at} className="text-fg-muted" />,
             },
           ]}
           mobileCard={(p) => (
@@ -173,7 +169,7 @@ export function PaymentsPage() {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusChip status={p.status} />
                 <span className="text-fg-muted">{providerLabel(p.provider)}</span>
-                <span className="text-fg-dim ml-auto text-xs">{formatDateTime(p.created_at)}</span>
+                <When iso={p.created_at} className="text-fg-dim ml-auto text-xs" />
               </div>
             </div>
           )}
