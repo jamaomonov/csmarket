@@ -155,11 +155,11 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
   const paidIsNext = by !== null && by.id === meId;
   return (
     <section className="flex flex-col gap-3" aria-label="Решение">
-      {/* On a phone the decision stays at the bottom of the screen while the card scrolls. */}
+      {/* On a phone the decision stays at the bottom of the screen, above the bottom bar. */}
       {detail.can_decide || undoUntil !== null || detail.can_cancel === true ? (
         <div
           data-testid="decision-bar"
-          className="bg-bg/95 border-border sticky bottom-0 z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none"
+          className="bg-bg/95 border-border bottom-(--bottom-nav) sticky z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none"
         >
           {detail.can_decide ? (
             <Button

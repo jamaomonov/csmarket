@@ -1,79 +1,24 @@
 /**
- * App shell: a top bar (admin UX review §2) — direct links, two menus (Выкуп, Настройки) and
- * red counters of what waits for an operator; on phones ☰ opens a sheet with every page.
+ * App shell (admin UX audit §1): a top bar with Дашборд and the menu groups (Очередь, Деньги,
+ * Люди, Аналитика, Настройки, Журнал) and red counters of what waits for an operator. Below
+ * `lg` the groups move to a bottom bar — Обмены, Выплаты, Проверка and «Ещё» with every page.
  * API keys live on the user card, not here.
  */
 import { Button, Logo } from "@csmarket/ui";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, LogOut, Menu, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, Outlet, useLocation } from "react-router-dom";
+
+import { currentItem, DASHBOARD, GROUPS } from "./nav";
+import { BottomBar, type Counters, MoreSheet, TopLink, TopMenu } from "./NavParts";
 
 import { useAuthStore } from "@/features/auth/authStore";
 import { getDashboard } from "@/features/dashboard/api";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 
-type Counter = "attention" | "toPay" | "salesAttention" | "holds";
-
-interface NavLinkItem {
-  to: string;
-  label: string;
-  end?: boolean;
-  /** Other path prefixes the item stands for (an order page belongs to «Обмены»). */
-  also?: string[];
-  counter?: Counter;
-}
-interface NavMenu {
-  label: string;
-  items: NavLinkItem[];
-}
-type NavEntry = NavLinkItem | NavMenu;
-
-const NAV: NavEntry[] = [
-  { to: "/", label: "Дашборд", end: true },
-  { to: "/analytics", label: "Аналитика" },
-  { to: "/trades", label: "Обмены", also: ["/orders/"], counter: "attention" },
-  {
-    label: "Выкуп",
-    items: [
-      { to: "/payouts", label: "Заявки на выплату", counter: "toPay" },
-      { to: "/sales", label: "Продажи", counter: "salesAttention" },
-      { to: "/sales/reconciliation", label: "Сверка" },
-      { to: "/sale-blocks", label: "Запрет выкупа" },
-    ],
-  },
-  { to: "/users", label: "Пользователи", also: ["/api-keys"] },
-  { to: "/payments", label: "Платежи" },
-  { to: "/payment-holds", label: "На проверке", counter: "holds" },
-  { to: "/p2p", label: "P2P" },
-  {
-    label: "Настройки",
-    items: [
-      { to: "/pricing", label: "Цены" },
-      { to: "/catalogue", label: "Каталог" },
-      { to: "/sale-settings", label: "Выкуп" },
-      { to: "/payment-settings", label: "Оплата" },
-      { to: "/audit", label: "Журнал" },
-    ],
-  },
-];
-
-const COUNTER_LABEL: Record<Counter, string> = {
-  attention: "ждут внимания",
-  toPay: "к выплате",
-  salesAttention: "продажи ждут проверки",
-  holds: "Платежи на проверке",
-};
-
-const isMenu = (e: NavEntry): e is NavMenu => "items" in e;
-
-function isCurrent(item: NavLinkItem, pathname: string): boolean {
-  if ((item.also ?? []).some((p) => pathname.startsWith(p))) return true;
-  return item.end === true ? pathname === item.to : pathname.startsWith(item.to);
-}
-
 /** Counters from the dashboard (one request a minute, shared with the dashboard page). */
-function useCounters(): Record<Counter, number> {
+function useCounters(): Counters {
   const query = useQuery({
     queryKey: [...DASHBOARD_KEY, 1],
     queryFn: () => getDashboard(1),
@@ -85,163 +30,6 @@ function useCounters(): Record<Counter, number> {
     salesAttention: query.data?.payouts.sales_attention ?? 0,
     holds: query.data?.holds_open ?? 0,
   };
-}
-
-function CounterBadge({ kind, value }: { kind: Counter; value: number }) {
-  if (value <= 0) return null;
-  return (
-    <span
-      aria-label={`${COUNTER_LABEL[kind]}: ${String(value)}`}
-      className="bg-danger text-danger-fg text-meta rounded-full px-1.5 font-semibold tabular-nums"
-    >
-      {value}
-    </span>
-  );
-}
-
-const topLinkClass = (active: boolean): string =>
-  [
-    "flex h-full items-center gap-1.5 border-b-2 px-3 text-sm transition-colors",
-    active ? "border-accent text-fg font-medium" : "text-fg-muted hover:text-fg border-transparent",
-  ].join(" ");
-
-function TopMenu({
-  menu,
-  pathname,
-  counters,
-}: {
-  menu: NavMenu;
-  pathname: string;
-  counters: Record<Counter, number>;
-}) {
-  const [open, setOpen] = useState(false);
-  const box = useRef<HTMLDivElement>(null);
-  const active = menu.items.some((i) => isCurrent(i, pathname));
-  // The closed menu shows the first of its counters that has something waiting.
-  const counted =
-    menu.items.find((i) => i.counter !== undefined && counters[i.counter] > 0)?.counter ??
-    menu.items.find((i) => i.counter !== undefined)?.counter;
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => {
-      // A click target is always a DOM node (DOM narrowing).
-      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => {
-      document.removeEventListener("mousedown", close);
-    };
-  }, [open]);
-
-  return (
-    <div
-      ref={box}
-      className="relative h-full"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") setOpen(false);
-      }}
-    >
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => {
-          setOpen((v) => !v);
-        }}
-        className={topLinkClass(active)}
-      >
-        {menu.label}
-        {counted !== undefined && <CounterBadge kind={counted} value={counters[counted]} />}
-        <ChevronDown className="size-3.5" aria-hidden />
-      </button>
-      {open && (
-        <div
-          role="menu"
-          aria-label={menu.label}
-          className="border-border bg-surface absolute left-0 top-full z-30 mt-1 min-w-52 rounded-lg border p-1 shadow-[var(--shadow-menu)]"
-        >
-          {menu.items.map((item) => (
-            <Link
-              key={item.to}
-              to={item.to}
-              role="menuitem"
-              aria-current={isCurrent(item, pathname) ? "page" : undefined}
-              className={`flex items-center justify-between gap-3 rounded-md px-3 py-2 text-sm ${
-                isCurrent(item, pathname) ? "text-accent" : "hover:bg-surface-2"
-              }`}
-            >
-              {item.label}
-              {item.counter && <CounterBadge kind={item.counter} value={counters[item.counter]} />}
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MobileSheet({
-  pathname,
-  counters,
-  onClose,
-}: {
-  pathname: string;
-  counters: Record<Counter, number>;
-  onClose: () => void;
-}) {
-  const link = (item: NavLinkItem) => (
-    <NavLink
-      key={item.to}
-      to={item.to}
-      end={item.end ?? false}
-      aria-current={isCurrent(item, pathname) ? "page" : undefined}
-      className={`text-lead flex items-center justify-between rounded-md px-3 py-2.5 ${
-        isCurrent(item, pathname) ? "bg-accent-subtle text-accent" : "hover:bg-surface-2"
-      }`}
-    >
-      {item.label}
-      {item.counter && <CounterBadge kind={item.counter} value={counters[item.counter]} />}
-    </NavLink>
-  );
-  return (
-    <div role="dialog" aria-modal="true" aria-label="Меню" className="fixed inset-0 z-50 lg:hidden">
-      <button
-        type="button"
-        aria-label="Закрыть меню"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/60"
-      />
-      <nav className="border-border bg-surface absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto border-r p-3">
-        <div className="mb-3 flex items-center justify-between px-1">
-          <Logo className="text-lg" />
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Закрыть"
-            className="text-fg-muted hover:bg-surface-2 grid size-10 place-items-center rounded-md"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        {NAV.map((entry) =>
-          isMenu(entry) ? (
-            <div key={entry.label} className="border-border mt-2 border-t pt-2">
-              <p className="text-fg-dim text-meta px-3 pb-1 font-medium uppercase tracking-wider">
-                {entry.label}
-              </p>
-              {entry.items.map(link)}
-            </div>
-          ) : (
-            link(entry)
-          ),
-        )}
-      </nav>
-    </div>
-  );
 }
 
 export function Layout() {
@@ -261,7 +49,7 @@ export function Layout() {
     };
   }, [sheetOpen]);
 
-  const waiting = counters.attention + counters.toPay + counters.salesAttention + counters.holds;
+  const current = currentItem(pathname);
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -271,19 +59,6 @@ export function Layout() {
         Перейти к содержимому
       </a>
       <header className="border-border bg-bg/95 h-(--topbar-height) sticky top-0 z-20 flex items-center gap-4 border-b px-4 backdrop-blur md:px-6">
-        <button
-          type="button"
-          onClick={() => {
-            setSheetOpen(true);
-          }}
-          className="text-fg-muted hover:bg-surface-2 relative grid size-10 place-items-center rounded-md lg:hidden"
-          aria-label="Открыть меню"
-        >
-          <Menu className="size-5" />
-          {waiting > 0 && (
-            <span aria-hidden className="bg-danger absolute right-1 top-1 size-2 rounded-full" />
-          )}
-        </button>
         <Link to="/" className="flex shrink-0 items-center gap-2">
           <Logo className="text-lg" />
           <span className="text-fg-dim hidden text-xs font-medium uppercase tracking-wider sm:inline">
@@ -291,21 +66,18 @@ export function Layout() {
           </span>
         </Link>
         <nav aria-label="Основная навигация" className="hidden h-full items-stretch lg:flex">
-          {NAV.map((entry) =>
-            isMenu(entry) ? (
-              <TopMenu key={entry.label} menu={entry} pathname={pathname} counters={counters} />
+          <TopLink item={DASHBOARD} current={current} />
+          {GROUPS.map((group) =>
+            group.items.length === 1 && group.items[0] !== undefined ? (
+              <TopLink key={group.label} item={group.items[0]} current={current} />
             ) : (
-              <Link
-                key={entry.to}
-                to={entry.to}
-                aria-current={isCurrent(entry, pathname) ? "page" : undefined}
-                className={topLinkClass(isCurrent(entry, pathname))}
-              >
-                {entry.label}
-                {entry.counter && (
-                  <CounterBadge kind={entry.counter} value={counters[entry.counter]} />
-                )}
-              </Link>
+              <TopMenu
+                key={group.label}
+                group={group}
+                current={current}
+                pathname={pathname}
+                counters={counters}
+              />
             ),
           )}
         </nav>
@@ -320,8 +92,8 @@ export function Layout() {
         </div>
       </header>
       {sheetOpen && (
-        <MobileSheet
-          pathname={pathname}
+        <MoreSheet
+          current={current}
           counters={counters}
           onClose={() => {
             setSheetOpen(false);
@@ -335,6 +107,16 @@ export function Layout() {
       >
         <Outlet />
       </main>
+      {/* Keeps the end of a page above the phone's bottom bar. */}
+      <div aria-hidden className="h-(--bottom-nav) shrink-0" />
+      <BottomBar
+        current={current}
+        counters={counters}
+        moreOpen={sheetOpen}
+        onMore={() => {
+          setSheetOpen(true);
+        }}
+      />
     </div>
   );
 }

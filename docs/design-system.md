@@ -93,9 +93,19 @@ The admin imports the same tokens, so it shares the palette; its layout is its o
 
 The admin composes its pages from `apps/admin/src/components` (admin UX review, 2026-10-09):
 
-- **Navigation** — a top bar: Дашборд · Обмены · Выкуп ▾ · Пользователи · Платежи · Настройки ▾,
-  red counters of what waits for an operator (`attention`, payouts to pay); ☰ opens a sheet on
-  phones. API keys have no page: a key is the «API-ключ» tab of its owner's card.
+- **Navigation** (`app/nav.ts`, the one list of pages) — Дашборд, then the groups **Очередь**
+  (Обмены, Заявки на выплату, На проверке), **Деньги** (Платежи, P2P, Продажи, Сверка),
+  **Люди** (Пользователи, Запрет выкупа), **Аналитика**, **Настройки** (Цены, Каталог,
+  Настройки выкупа, Оплата), **Журнал**. From `lg` a top bar: a group of one is a link, the others
+  are menus; a closed menu shows the sum of its counters. Below `lg` a bottom bar of four, 56 px
+  plus `env(safe-area-inset-bottom)`: Обмены, Выплаты, Проверка with their counters and «Ещё» — a
+  bottom sheet with every page, each group under a heading and a divider («Ещё» counts what its
+  pages wait for). Counters are red numbers, never a bare dot. The page belongs to the longest
+  matching path («Сверка» is not «Продажи»; an order is «Обмены»). The bar's height is
+  `--bottom-nav` (0 from `lg`): a spacer keeps the page end above it, and sticky or fixed bottom
+  bars (`SaveBar`, a payout's decision) sit `bottom-(--bottom-nav)`, stacked above it — the
+  navigation stays reachable on every page. API keys have no page: a key is the «API-ключ» tab of
+  its owner's card.
 - **PageHeader** — back link, a 22 px title, chips beside it, actions on the right, a muted meta line.
 - **DataTable** — padded cells (`px-3 py-2.5`), right-aligned `tabular-nums` money, a hover row,
   a 3 px red left edge for rows needing an operator, skeleton / empty / error states, a footer

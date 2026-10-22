@@ -1,7 +1,7 @@
 /**
- * The one save bar of a settings page: pinned to the bottom of the screen across its full width,
- * shown only when something changed, with «Изменено: N полей», «Сбросить» and «Сохранить». A
- * spacer under the form keeps the last fields reachable above it.
+ * The one save bar of a settings page: pinned to the bottom of the screen (above the phone's
+ * bottom bar) across its full width, shown only when something changed, with «Изменено: N
+ * полей», «Сбросить» and «Сохранить». A spacer under the form keeps the last fields reachable.
  */
 import { Button } from "@csmarket/ui";
 import { type ReactNode } from "react";
@@ -56,7 +56,7 @@ export function SaveBar({ changed, saving, onSave, onReset, children }: SaveBarP
       <div
         role="region"
         aria-label="Несохранённые изменения"
-        className="border-border bg-bg/95 fixed inset-x-0 bottom-0 z-30 border-t px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:px-6"
+        className="border-border bg-bg/95 bottom-(--bottom-nav) fixed inset-x-0 z-30 border-t px-4 py-3 backdrop-blur md:px-6 lg:pb-[max(0.75rem,env(safe-area-inset-bottom))]"
       >
         <div className="mx-auto flex max-w-[1600px] flex-col gap-2">
           {children}
