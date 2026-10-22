@@ -5,7 +5,7 @@
  * the money breakdown, the items and the seller's other sales and payouts.
  */
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import { payoutKey } from "./keys";
 import { payoutCode } from "./labels";
@@ -19,6 +19,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
 import { Status } from "@/components/Status";
+import { TextLink } from "@/components/TextLink";
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -72,9 +73,9 @@ function History({ d }: { d: Detail }) {
           <ul className="mb-3 text-sm">
             {d.history_payouts.map((h) => (
               <li key={h.id} className={li}>
-                <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
+                <TextLink to={`/payouts/${h.id}`} number>
                   {h.sale_number}
-                </Link>
+                </TextLink>
                 <Status of="payout" code={h.status} />
                 <Money uzs={h.amount_uzs} />
               </li>
@@ -88,9 +89,9 @@ function History({ d }: { d: Detail }) {
           <ul className="text-sm">
             {d.history_sales.map((h) => (
               <li key={h.number} className={li}>
-                <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
+                <TextLink to={`/sales/${h.number}`} number>
                   {h.number}
-                </Link>
+                </TextLink>
                 <Status of="sale" code={h.status} />
                 <Money uzs={h.payout_uzs} />
               </li>
@@ -144,12 +145,19 @@ export function PayoutDetail() {
         title={
           <>
             Выплата по продаже{" "}
-            <Link to={`/sales/${s.number}`} className="font-mono hover:underline">
+            <TextLink to={`/sales/${s.number}`} number>
               {s.number}
-            </Link>
+            </TextLink>
           </>
         }
-        meta={d.request.user.display_name ?? "Без имени"}
+        meta={
+          <>
+            Продавец:{" "}
+            <TextLink to={`/users/${d.request.user.id}`}>
+              {d.request.user.display_name ?? "без имени"}
+            </TextLink>
+          </>
+        }
         badges={<Status of="payout" code={payoutCode(d.request.status, d.request.flags)} />}
       />
       {blocked ? (

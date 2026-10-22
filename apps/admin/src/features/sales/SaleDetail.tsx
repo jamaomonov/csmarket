@@ -5,6 +5,7 @@
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -16,14 +17,14 @@ import { ItemList } from "./Parts";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
-import { Status } from "@/components/Status";
+import { Reason, Status } from "@/components/Status";
 import { SteamOfferValue } from "@/components/SteamLinks";
 import { UserCell } from "@/components/UserCell";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { reasonText } from "@/lib/dictionary";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatRate } from "@/lib/format";
 
 const at = (iso: string | null): string => (iso ? formatDateTime(iso) : "—");
 
@@ -100,7 +101,11 @@ export function SaleDetail() {
     <div className="space-y-4">
       <PageHeader
         back={{ to: "/sales", label: "Продажи" }}
-        title={<span className="font-mono">{s.number}</span>}
+        title={
+          <>
+            Продажа <span className="font-mono">{s.number}</span>
+          </>
+        }
         badges={<Status of="sale" code={s.status} tone={s.attention_open ? "danger" : undefined} />}
       />
       <Attention sale={s} />
@@ -121,8 +126,14 @@ export function SaleDetail() {
                 </Row>
                 {s.payout ? (
                   <Row label="Выплата на карту">
-                    <Link to={`/payouts/${s.payout.id}`} className="hover:underline">
+                    <Link
+                      to={`/payouts/${s.payout.id}`}
+                      className="group inline-flex items-center gap-1.5"
+                      data-testid="sale-payout-link"
+                    >
                       <Status of="payout" code={s.payout.status} />
+                      <span className="text-accent text-sm group-hover:underline">заявка</span>
+                      <ChevronRight className="text-accent size-4" aria-hidden />
                     </Link>
                   </Row>
                 ) : null}
@@ -131,7 +142,9 @@ export function SaleDetail() {
                   <SteamOfferValue offerId={s.trade_offer_id} />
                 </Row>
                 <Row label="Бот">{s.bot_name ?? "—"}</Row>
-                <Row label="Причина закрытия">{s.fail_reason ?? "—"}</Row>
+                <Row label="Причина закрытия">
+                  {s.fail_reason === null ? "—" : <Reason of="supplier" code={s.fail_reason} />}
+                </Row>
               </dl>
             </Section>
             <ItemList items={s.items} />
@@ -147,7 +160,7 @@ export function SaleDetail() {
                 <Row label="Skinslink: зачисляет">
                   {s.amount_usd !== null ? <Money usd={s.amount_usd} /> : "—"}
                 </Row>
-                <Row label="Курс">{s.rate}</Row>
+                <Row label="Курс">{formatRate(s.rate)}</Row>
                 <Row label="Предметы">
                   <Money uzs={s.items_uzs} />
                 </Row>

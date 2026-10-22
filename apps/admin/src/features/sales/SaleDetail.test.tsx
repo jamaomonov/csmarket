@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PAYOUT_DETAIL } from "./fixtures";
+import { PAYOUT_DETAIL, PAYOUT_ROW } from "./fixtures";
 import { SaleDetail } from "./SaleDetail";
 
 const api = vi.hoisted(() => ({ getSale: vi.fn(), resolveSale: vi.fn() }));
@@ -29,10 +29,23 @@ describe("SaleDetail", () => {
 
   it("shows the amounts and the items", async () => {
     renderPage();
-    expect(await screen.findByRole("heading", { name: "S7K2M9QX" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Продажа S7K2M9QX" })).toBeInTheDocument();
     expect(screen.getByText(/147\s400 сум/)).toBeInTheDocument();
+    expect(screen.getByText(/^12\s650,5\sсум за \$$/)).toBeInTheDocument();
     expect(screen.getByText("$12.83")).toBeInTheDocument();
     expect(screen.getByText("AK-47 | Redline (Field-Tested)")).toBeInTheDocument();
+  });
+
+  it("the payout chip is a link to the payout request", async () => {
+    api.getSale.mockResolvedValue({
+      ...PAYOUT_DETAIL.sale,
+      status: "payout",
+      payout: { ...PAYOUT_ROW, status: "to_pay" },
+    });
+    renderPage();
+    const link = await screen.findByTestId("sale-payout-link");
+    expect(link).toHaveAttribute("href", `/payouts/${PAYOUT_ROW.id}`);
+    expect(link).toHaveTextContent("к выплате");
   });
 
   it("«Проверено» resolves an open attention with the note", async () => {

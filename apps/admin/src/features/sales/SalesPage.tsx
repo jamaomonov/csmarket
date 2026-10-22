@@ -6,10 +6,11 @@
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   ATTENTION_FILTERS,
+  type AdminSaleRow,
   type AdminSalesPage,
   type AttentionFilter,
   listSales,
@@ -21,8 +22,10 @@ import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { SkinThumb } from "@/components/SkinThumb";
 import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
+import { TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
@@ -44,6 +47,20 @@ const VIEW_LABELS: Record<View, string> = {
   resolved: "Проверены",
   any: "С пометкой",
 };
+
+/** The sale's dearest skin and «+N» for the rest. */
+function FirstSkin({ sale }: { sale: AdminSaleRow }) {
+  const first = sale.first_item ?? null;
+  if (first === null) return <span className="text-fg-dim">—</span>;
+  const rest = (sale.items_count ?? 1) - 1;
+  return (
+    <div className="flex min-w-0 items-center gap-2" data-testid="sale-first-skin">
+      <SkinThumb url={first.image_url} />
+      <span className="min-w-0 truncate">{first.name}</span>
+      {rest > 0 && <span className="text-fg-muted shrink-0 text-xs">+{rest}</span>}
+    </div>
+  );
+}
 
 export function SalesPage() {
   const narrow = useNarrow();
@@ -125,11 +142,12 @@ export function SalesPage() {
             key: "number",
             header: "Номер",
             cell: (s) => (
-              <Link to={`/sales/${s.number}`} className="font-mono font-medium hover:underline">
+              <TextLink to={`/sales/${s.number}`} number>
                 {s.number}
-              </Link>
+              </TextLink>
             ),
           },
+          { key: "skins", header: "Скины", cell: (s) => <FirstSkin sale={s} /> },
           {
             key: "status",
             header: "Статус",
@@ -182,6 +200,7 @@ export function SalesPage() {
               <span className="font-mono">{s.number}</span>
               <Money uzs={s.payout_uzs} />
             </div>
+            <FirstSkin sale={s} />
             <div className="flex flex-wrap gap-2">
               <Status of="sale" code={s.status} />
               <span className="text-fg-muted">{s.user.display_name ?? "Без имени"}</span>

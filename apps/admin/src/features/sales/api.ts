@@ -55,6 +55,10 @@ export interface AdminSaleRow {
   /** Set and not marked «Проверено» yet. */
   attention_open: boolean;
   created_at: string;
+  /** The dearest skin of the sale (the list rows carry it). */
+  first_item?: { name: string; image_url: string | null } | null;
+  /** How many skins the sale has (the list rows carry it). */
+  items_count?: number;
 }
 
 /** A sale on the user page, with the skins it sold. */

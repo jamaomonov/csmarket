@@ -25,6 +25,8 @@ describe("SalesPage", () => {
           attention_reason: "rolled_back",
           attention_open: true,
           created_at: s.created_at,
+          first_item: { name: "AK-47 | Redline (Field-Tested)", image_url: null },
+          items_count: 2,
         },
       ],
       next_cursor: null,
@@ -53,6 +55,10 @@ describe("SalesPage", () => {
     );
     expect(screen.getByRole("tab", { name: "Все" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("searchbox")).not.toHaveClass("font-mono");
+    expect(screen.getByTestId("sale-first-skin")).toHaveTextContent(
+      "AK-47 | Redline (Field-Tested)+1",
+    );
+    expect(screen.getByRole("link", { name: "S7K2M9QX" })).toHaveClass("text-accent");
   });
 
   it("filters by the attention from the URL", async () => {

@@ -331,6 +331,39 @@ describe("PayoutDetail", () => {
     expect(await screen.findByText("отменено: продавец отменил обмен")).toBeInTheDocument();
   });
 
+  it("puts red risks on top and folds the rest under «Всё в порядке»", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      risk: { ...PAYOUT_DETAIL.risk, wallet_frozen: true },
+    });
+    renderPage();
+    const risks = await screen.findByRole("region", { name: "Риски" });
+    expect(within(risks).getByTestId("risk-alarms")).toHaveTextContent("Кошелёкзаморожен");
+    const calm = within(risks).getByText("Всё в порядке: 9").closest("details");
+    expect(calm).not.toHaveAttribute("open");
+    expect(calm).toHaveTextContent("Продано всего");
+    expect(calm).not.toHaveTextContent("Кошелёк");
+  });
+
+  it("with nothing red says so and still folds the details", async () => {
+    api.getPayout.mockResolvedValue(PAYOUT_DETAIL);
+    renderPage();
+    const risks = await screen.findByRole("region", { name: "Риски" });
+    expect(within(risks).getByText("Рисков не видно.")).toBeInTheDocument();
+    expect(within(risks).getByText("Всё в порядке: 10")).toBeInTheDocument();
+  });
+
+  it("names the seller with a link to the card", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      request: { ...PAYOUT_DETAIL.request, user: { id: "u-1", display_name: null } },
+    });
+    renderPage();
+    const seller = await screen.findByRole("link", { name: "без имени" });
+    expect(seller).toHaveAttribute("href", "/users/u-1");
+    expect(seller.parentElement).toHaveTextContent("Продавец: без имени");
+  });
+
   it("shows the risks and blocks selling from the page", async () => {
     api.getPayout.mockResolvedValue({
       ...PAYOUT_DETAIL,
