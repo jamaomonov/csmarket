@@ -7,6 +7,7 @@ import { PAYOUT_DETAIL, PAYOUT_ROW } from "./fixtures";
 import { PayoutDetail } from "./PayoutDetail";
 
 import { useAuthStore } from "@/features/auth/authStore";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({
   getPayout: vi.fn(),
@@ -300,12 +301,7 @@ describe("PayoutDetail", () => {
   });
 
   it("on a phone the confirm is a bottom sheet that confirms", async () => {
-    const matchMedia = vi.fn(() => ({
-      matches: true,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }));
-    Object.defineProperty(window, "matchMedia", { value: matchMedia, configurable: true });
+    const restore = asPhone();
     try {
       api.markPaid.mockResolvedValue({ ...PAYOUT_DETAIL, can_decide: false });
       renderPage();
@@ -321,7 +317,7 @@ describe("PayoutDetail", () => {
         expect(screen.queryByRole("dialog")).toBeNull();
       });
     } finally {
-      Object.defineProperty(window, "matchMedia", { value: undefined, configurable: true });
+      restore();
     }
   });
 

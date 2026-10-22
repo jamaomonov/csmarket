@@ -9,6 +9,7 @@ import { detailKey } from "./keys";
 import { OrderDetail } from "./OrderDetail";
 
 import { ApiError } from "@/lib/api";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({
   listOrders: vi.fn(),
@@ -255,12 +256,7 @@ describe("OrderDetail", () => {
     });
 
     it("on a phone the refund confirm is a bottom sheet", async () => {
-      const matchMedia = vi.fn(() => ({
-        matches: true,
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-      }));
-      Object.defineProperty(window, "matchMedia", { value: matchMedia, configurable: true });
+      const restore = asPhone();
       try {
         api.refundOrder.mockResolvedValue({ ...RESOLVED, can_refund: false, can_retry: false });
         renderDetail();
@@ -274,7 +270,7 @@ describe("OrderDetail", () => {
           expect(screen.queryByRole("dialog")).toBeNull();
         });
       } finally {
-        Object.defineProperty(window, "matchMedia", { value: undefined, configurable: true });
+        restore();
       }
     });
 

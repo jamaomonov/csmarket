@@ -7,6 +7,7 @@ import { type AdminTradeRow, type AdminTradesPage } from "./api";
 import { TradesPage } from "./TradesPage";
 
 import { DETAIL, SKINSLINK } from "@/features/orders/fixtures";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({ listTrades: vi.fn() }));
 vi.mock("./api", () => api);
@@ -290,6 +291,19 @@ describe("TradesPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Показать ещё" }));
     expect(await screen.findByRole("link", { name: "O2" })).toBeInTheDocument();
     expect(api.listTrades).toHaveBeenLastCalledWith({ view: "all", cursor: "c2" });
+  });
+
+  it("on a phone puts «Требуют внимания» first, where the scrolling row shows it", async () => {
+    const restore = asPhone();
+    try {
+      api.listTrades.mockResolvedValue(page([FLAGGED]));
+      renderPage();
+      const tabs = await screen.findAllByRole("tab");
+      expect(tabs[0]).toHaveTextContent(/Требуют внимания/);
+      expect(tabs[1]).toHaveTextContent(/^Все/);
+    } finally {
+      restore();
+    }
   });
 
   it("on a phone shows cards with the status and price, not a wide table", async () => {
