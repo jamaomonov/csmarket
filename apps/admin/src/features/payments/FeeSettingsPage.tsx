@@ -2,16 +2,19 @@
  * «Настройки оплаты»: the percent each kassa adds on top of an order or a top-up paid through
  * it (spec 2026-10-14-kassa-fee). A save affects new payments only — an open one keeps the fee
  * it was shown; audited. The save names the version it was edited from, so a stale tab cannot
- * write old numbers back.
+ * write old numbers back. One `SaveBar` saves the fees, the kassa states and «Лимит без
+ * проверки» together; switching a kassa off asks first («Payme будет скрыт на сайте»).
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getFeeSettings, saveFeeSettings, type KassaFees, type KassaStatus } from "./api";
-import { ReviewLimitsBlock } from "./ReviewLimitsBlock";
+import { LIMITS_INVALID, ReviewLimitsBlock, useReviewLimits } from "./ReviewLimitsBlock";
 
+import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { countChanges, SaveBar } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
 import { Tabs } from "@/components/Tabs";
 import { payoutErrorText } from "@/features/sales/labels";
@@ -29,6 +32,7 @@ const KASSAS: readonly { key: RateKey; label: string }[] = [
   { key: "uzum", label: "Комиссия Uzum, %" },
 ];
 const RATE = /^\d{1,2}(\.\d{1,2})?$/;
+const RATE_INVALID = "Комиссия — число от 0 до 10, не больше двух знаков после точки.";
 
 /** Every kassa with a switch (P2P has no fee: a card transfer costs the buyer nothing). */
 const SWITCHED: readonly { slug: string; label: string }[] = [
@@ -47,6 +51,21 @@ function statusOf(doc: KassaFees, slug: string): KassaStatus {
   return doc.statuses[slug] ?? (slug === "p2p" ? "off" : "on");
 }
 
+/** The states as the page shows them: a kassa missing from the document has its default. */
+function normalised(doc: KassaFees): KassaFees {
+  return {
+    ...doc,
+    statuses: Object.fromEntries(SWITCHED.map((k) => [k.slug, statusOf(doc, k.slug)])),
+  };
+}
+
+/** The kassas this draft hides from the site that the saved document shows. */
+function goingOff(saved: KassaFees, doc: KassaFees): string[] {
+  return SWITCHED.filter(
+    ({ slug }) => statusOf(saved, slug) !== "off" && statusOf(doc, slug) === "off",
+  ).map(({ label }) => label);
+}
+
 function valid(doc: KassaFees): boolean {
   return KASSAS.every(({ key }) => RATE.test(doc[key]) && Number(doc[key]) <= 10);
 }
@@ -54,8 +73,10 @@ function valid(doc: KassaFees): boolean {
 export function FeeSettingsPage() {
   const qc = useQueryClient();
   const settings = useQuery({ queryKey: KEY, queryFn: getFeeSettings });
+  const limits = useReviewLimits();
   const [draft, setDraft] = useState<KassaFees | null>(null);
-  const [invalid, setInvalid] = useState(false);
+  const [invalid, setInvalid] = useState<string[]>([]);
+  const [hiding, setHiding] = useState<string[] | null>(null);
   const key = useIdempotencyKey("admin-fee-settings");
   const version = settings.data?.updated_at ?? null;
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -63,7 +84,6 @@ export function FeeSettingsPage() {
     mutationFn: (doc: KassaFees) => saveFeeSettings(doc, version, key.keyFor(JSON.stringify(doc))),
     onSuccess: (out) => {
       key.reset();
-      setSavedAt(new Date());
       qc.setQueryData(KEY, out);
       setDraft(null);
     },
@@ -76,8 +96,34 @@ export function FeeSettingsPage() {
     );
   }
   if (!settings.data) return <p className="text-fg-muted">Загрузка…</p>;
-  const doc = draft ?? settings.data.settings;
   const saved = settings.data;
+  const doc = draft ?? saved.settings;
+  const feesChanged =
+    draft === null ? 0 : countChanges(normalised(saved.settings), normalised(doc));
+  const changed = feesChanged + limits.changed;
+  const saving = save.isPending || limits.mutation.isPending;
+  const run = async (): Promise<void> => {
+    setHiding(null);
+    try {
+      if (feesChanged > 0) await save.mutateAsync(doc);
+      if (limits.changed > 0) await limits.save();
+      setSavedAt(new Date());
+    } catch {
+      // Shown in the save bar from the mutation's error.
+    }
+  };
+  const submit = (): void => {
+    const wrong = [
+      ...(feesChanged > 0 && !valid(doc) ? [RATE_INVALID] : []),
+      ...(limits.changed > 0 && !limits.valid() ? [LIMITS_INVALID] : []),
+    ];
+    setInvalid(wrong);
+    if (wrong.length > 0) return;
+    const off = goingOff(saved.settings, doc);
+    if (off.length > 0) setHiding(off);
+    else void run();
+  };
+  const failed = save.error ?? limits.mutation.error;
   return (
     <div className="flex max-w-2xl flex-col gap-4">
       <PageHeader
@@ -132,45 +178,62 @@ export function FeeSettingsPage() {
           ))}
         </div>
       </section>
-      <ReviewLimitsBlock />
-      {invalid && (
-        <p role="alert" className="text-danger text-sm">
-          Комиссия — число от 0 до 10, не больше двух знаков после точки.
-        </p>
-      )}
-      {save.isError && (
-        <p role="alert" className="text-danger text-sm">
-          {payoutErrorText(save.error)}
-        </p>
-      )}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          disabled={draft === null || save.isPending}
-          onClick={() => {
-            if (!valid(doc)) {
-              setInvalid(true);
-              return;
-            }
-            setInvalid(false);
-            save.mutate(doc);
+      <ReviewLimitsBlock limits={limits} />
+      <SaveBar
+        changed={changed}
+        saving={saving}
+        onSave={submit}
+        onReset={() => {
+          setDraft(null);
+          setInvalid([]);
+          save.reset();
+          limits.reset();
+        }}
+      >
+        {invalid.map((text) => (
+          <p key={text} role="alert" className="text-danger text-sm">
+            {text}
+          </p>
+        ))}
+        {failed ? (
+          <p role="alert" className="text-danger text-sm">
+            {payoutErrorText(failed)}
+          </p>
+        ) : null}
+      </SaveBar>
+      {hiding !== null ? (
+        <Modal
+          title={`Выключить: ${hiding.join(", ")}?`}
+          description="Начатые оплаты дойдут до конца."
+          onClose={() => {
+            setHiding(null);
           }}
         >
-          Сохранить
-        </Button>
-        {draft !== null && (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setDraft(null);
-              setInvalid(false);
-            }}
-          >
-            Отменить
-          </Button>
-        )}
-      </div>
+          <ul className="space-y-1 text-sm">
+            {hiding.map((label) => (
+              <li key={label}>{label} будет скрыт на сайте.</li>
+            ))}
+          </ul>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setHiding(null);
+              }}
+            >
+              Отмена
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                void run();
+              }}
+            >
+              Да, выключить
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }

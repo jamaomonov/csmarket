@@ -1,12 +1,18 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ReviewLimitsBlock } from "./ReviewLimitsBlock";
+import { FeeSettingsPage } from "./FeeSettingsPage";
 
 import { ApiError } from "@/lib/api";
 
-const api = vi.hoisted(() => ({ getReviewLimits: vi.fn(), saveReviewLimits: vi.fn() }));
+const api = vi.hoisted(() => ({
+  getReviewLimits: vi.fn(),
+  saveReviewLimits: vi.fn(),
+  getFeeSettings: vi.fn(),
+  saveFeeSettings: vi.fn(),
+}));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<object>()), ...api }));
 
 const row = (provider: string) => ({
@@ -25,25 +31,32 @@ function renderBlock() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <ReviewLimitsBlock />
+      <MemoryRouter>
+        <FeeSettingsPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-describe("ReviewLimitsBlock", () => {
+describe("ReviewLimitsBlock (on «Настройки оплаты»)", () => {
   beforeEach(() => {
     Object.values(api).forEach((f) => f.mockReset());
     api.getReviewLimits.mockResolvedValue(SAVED);
     api.saveReviewLimits.mockResolvedValue(SAVED);
+    api.getFeeSettings.mockResolvedValue({
+      settings: { click: "0", payme: "0", uzum: "0", statuses: {} },
+      updated_at: null,
+      updated_by: null,
+    });
   });
 
   it("renders a row per kassa", async () => {
     renderBlock();
     expect(await screen.findByText("Лимит без проверки")).toBeInTheDocument();
     for (const name of ["Payme", "Click", "Uzum", "Перевод на карту (P2P)"]) {
-      expect(screen.getByText(name)).toBeInTheDocument();
+      expect(screen.getByLabelText(`${name}: сумма, сум`)).toBeInTheDocument();
     }
-    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    expect(screen.getAllByRole("checkbox", { name: /: включён$/ })).toHaveLength(4);
   });
 
   it("saves the edited row with the version and a key", async () => {
