@@ -1,7 +1,8 @@
 /**
  * The confirm step of a money action. On a phone it is a bottom sheet (`Modal`), so the sticky
  * action bar never covers it and the main answer spans the width; on desktop it stays inline
- * under the buttons, scrolls into view and puts the focus on its first field. Either way the
+ * under the buttons, scrolls into view and puts the focus on its first field (none: the main
+ * answer, the last button); Esc closes it and the focus goes back to its trigger. Either way the
  * content sits in a group labelled «Подтверждение».
  */
 import { type ReactNode, useEffect, useRef } from "react";
@@ -38,15 +39,29 @@ export function ConfirmSheet({
 }: ConfirmSheetProps) {
   const narrow = useNarrow();
   const box = useRef<HTMLDivElement>(null);
+  const closeRef = useRef({ onClose, busy });
+  closeRef.current = { onClose, busy };
   useEffect(() => {
     const root = box.current;
     if (narrow || root === null) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     // jsdom has no scrollIntoView.
     if (typeof root.scrollIntoView === "function") {
       root.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
-    const field = root.querySelector<HTMLElement>(FIELD);
-    field?.focus({ preventScroll: true });
+    // The first field, else the main answer: the last enabled button (it comes after «Отмена»).
+    const buttons = root.querySelectorAll<HTMLElement>("button:not([disabled])");
+    const target = root.querySelector<HTMLElement>(FIELD) ?? buttons[buttons.length - 1];
+    target?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !closeRef.current.busy) closeRef.current.onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      // Back to what opened it, if it is still on the page.
+      if (opener?.isConnected === true) opener.focus({ preventScroll: true });
+    };
   }, [narrow]);
   const group = (
     <div
