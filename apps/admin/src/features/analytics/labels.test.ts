@@ -10,4 +10,12 @@ describe("compactSom", () => {
     expect(compactSom(950)).toBe("950");
     expect(compactSom(0)).toBe("0");
   });
+
+  it("rounds up into the next unit and never shows «−0»", () => {
+    expect(compactSom(999_600)).toMatch(/^1\sмлн$/);
+    expect(compactSom(-999_600)).toMatch(/^−1\sмлн$/);
+    expect(compactSom(999_950)).toMatch(/^1\sмлн$/);
+    expect(compactSom("-0.4")).toBe("0");
+    expect(compactSom("-0")).toBe("0");
+  });
 });

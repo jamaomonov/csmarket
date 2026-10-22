@@ -1,8 +1,9 @@
 /**
  * «Разобрано», «Вернуть деньги на баланс», «Повторить покупку». The refund and the retry are
  * offered only when the API says they would succeed (`can_refund` / `can_retry`); each goes
- * through a confirm step (a bottom sheet on a phone, `ConfirmSheet`) and sends one `Idempotency-Key` per confirmed submission. An open
- * confirm step closes by itself when a refetch says its action is no longer possible.
+ * through a confirm step (a bottom sheet on a phone, `ConfirmSheet`) and sends one
+ * `Idempotency-Key` per confirmed submission. An open confirm step closes by itself when a
+ * refetch says its action is no longer possible.
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
