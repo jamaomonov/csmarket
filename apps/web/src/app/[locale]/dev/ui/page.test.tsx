@@ -41,6 +41,7 @@ describe("dev UI showcase", () => {
       "Input",
       "Select",
       "Checkbox",
+      "Switch",
       "Dropdown",
       "Accordion",
       "Panel",

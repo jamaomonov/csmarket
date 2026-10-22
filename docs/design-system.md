@@ -49,6 +49,9 @@ text colour do not cancel each other.
 - **Input** / `inputClass`, **Select** / `selectClass` — outlined fields; focus turns the outline
   green with a soft ring.
 - **Checkbox** — a real input; **CheckMark** — the box alone, for filter options that are links.
+- **Switch** — an on/off setting (`role="switch"`): the whole row is the button, ≥ 44 px tall,
+  the track, the label («Выкуп») and its state in words (`states={["включён", "выключен"]}`,
+  optional `hint`). Settings that are on or off use it; a filter option stays a `Checkbox`.
 - **Dropdown** — a menu button (WAI-ARIA menu): items are links (pass the app's router `Link`
   as `LinkComponent`) or actions, with an optional count (`meta`), separators, a loading and a
   status row, and `onOpenChange` for loading on first open. `maxHeight` caps a long list
