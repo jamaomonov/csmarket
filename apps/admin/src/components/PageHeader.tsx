@@ -15,7 +15,10 @@ export function PageHeader({ title, meta, back, actions, badges }: PageHeaderPro
   return (
     <header className="space-y-1">
       {back !== undefined && (
-        <Link to={back.to} className="text-fg-muted hover:text-fg text-sm">
+        <Link
+          to={back.to}
+          className="text-fg-muted hover:text-fg -my-2 -ml-2 inline-flex min-h-11 items-center px-2 text-sm"
+        >
           ← {back.label}
         </Link>
       )}

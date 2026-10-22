@@ -6,6 +6,7 @@ export { Panel } from "./components/Panel";
 export { Input, inputClass } from "./components/Input";
 export { Select, selectClass } from "./components/Select";
 export { Checkbox, CheckMark } from "./components/Checkbox";
+export { Switch, type SwitchProps } from "./components/Switch";
 export {
   Dropdown,
   type DropdownEntry,

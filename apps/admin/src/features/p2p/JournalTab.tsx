@@ -6,13 +6,14 @@ import { useState } from "react";
 import { type Incoming, type IncomingResult, listIncoming } from "./api";
 import { CreditDialog } from "./CreditDialog";
 import { incomingKey } from "./keys";
-import { RESULT_LABELS, RESULT_TONES, wholeSom } from "./labels";
+import { wholeSom } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
-import { SearchBox } from "@/components/Filters";
-import { StatusChip } from "@/components/StatusChip";
+import { FiltersBar, SearchBox } from "@/components/Filters";
+import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { When } from "@/components/When";
+import { formatSum } from "@/lib/format";
 
 const REFRESH_MS = 15_000;
 type Filter = "all" | IncomingResult;
@@ -32,10 +33,11 @@ export function JournalTab() {
     refetchInterval: REFRESH_MS,
   });
   const chip = (r: Incoming) => (
-    <StatusChip tone={r.chain_ok === false ? "danger" : RESULT_TONES[r.result]}>
-      {RESULT_LABELS[r.result]}
-      {r.chain_ok === false ? " · разрыв цепочки" : ""}
-    </StatusChip>
+    <Status
+      of="p2pIncoming"
+      code={r.result}
+      {...(r.chain_ok === false && { tone: "danger", sub: "разрыв цепочки" })}
+    />
   );
   const action = (r: Incoming) =>
     r.can_credit ? (
@@ -54,11 +56,9 @@ export function JournalTab() {
     );
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchBox label="Сумма, сум" value={amount} onChange={setAmount} maxLength={12} mono />
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <Tabs<Filter>
           label="Результат"
-          variant="segmented"
           value={filter}
           onChange={setFilter}
           items={[
@@ -68,6 +68,9 @@ export function JournalTab() {
             { key: "ignored", label: "Не наши" },
           ]}
         />
+        <FiltersBar>
+          <SearchBox label="Сумма, сум" value={amount} onChange={setAmount} maxLength={12} />
+        </FiltersBar>
       </div>
       <DataTable
         label="Входящие уведомления"
@@ -80,11 +83,7 @@ export function JournalTab() {
           {
             key: "time",
             header: "Время",
-            cell: (r) => (
-              <span className="whitespace-nowrap">
-                {formatDateTime(r.bank_time ?? r.received_at)}
-              </span>
-            ),
+            cell: (r) => <When iso={r.bank_time ?? r.received_at} />,
           },
           {
             key: "amount",
@@ -113,7 +112,7 @@ export function JournalTab() {
               {chip(r)}
             </div>
             <div className="text-fg-muted flex flex-wrap gap-2 text-xs">
-              <span>{formatDateTime(r.bank_time ?? r.received_at)}</span>
+              <When iso={r.bank_time ?? r.received_at} />
               <span>{r.card_last4 ? `•••• ${r.card_last4}` : ""}</span>
             </div>
             {action(r)}

@@ -14,3 +14,11 @@ export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export const PAYMENT_PURPOSES = ["topup", "order"] as const;
 export type PaymentPurpose = (typeof PAYMENT_PURPOSES)[number];
+
+/** Every kassa a settings block lists, in the one order every block uses (P2P last). */
+export const SETTINGS_KASSAS: readonly { slug: string; label: string; short: string }[] = [
+  { slug: "click", label: "Click", short: "Click" },
+  { slug: "payme", label: "Payme", short: "Payme" },
+  { slug: "uzum", label: "Uzum", short: "Uzum" },
+  { slug: "p2p", label: "Перевод на карту (P2P)", short: "P2P" },
+];

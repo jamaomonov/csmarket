@@ -1,20 +1,22 @@
 /** «Пользователи»: find an account by name or Steam ID; a tab keeps those with an API key. */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
+import { KeyRound } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { type AdminUsersPage, listUsers, type ListUsersParams } from "./api";
-import { errorText, roleLabel } from "./labels";
+import { type AdminUserRow, type AdminUsersPage, listUsers, type ListUsersParams } from "./api";
+import { errorText } from "./labels";
 import { tariffLabel } from "../apiKeys/labels";
 
 import { DataTable } from "@/components/DataTable";
+import { FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
-import { formatDateTime } from "@/lib/format";
+import { When } from "@/components/When";
 import { useDebounced } from "@/lib/useDebounced";
 
 const DEBOUNCE_MS = 300;
@@ -26,6 +28,29 @@ function params(q: string, cursor: string | null, view: View): ListUsersParams {
     ...(cursor !== null && { cursor }),
     ...(view === "api" && { hasApiKey: true }),
   };
+}
+
+/**
+ * Beside the name, only what sets a user apart: «админ», an API key (an icon, its tariff in the
+ * tooltip), «заблокирован». A plain client carries nothing — no column of «—» and «клиент».
+ */
+function Badges({ user: u }: { user: AdminUserRow }) {
+  return (
+    <>
+      {u.roles.includes("admin") && <StatusChip tone="info">админ</StatusChip>}
+      {u.api_key !== null && (
+        <span
+          role="img"
+          aria-label={`API-ключ: ${tariffLabel(u.api_key.pricing_profile)}`}
+          title={`API-ключ: ${tariffLabel(u.api_key.pricing_profile)}`}
+          className="text-fg-muted shrink-0"
+        >
+          <KeyRound aria-hidden className="size-4" />
+        </span>
+      )}
+      {u.banned_at !== null && <StatusChip tone="danger">заблокирован</StatusChip>}
+    </>
+  );
 }
 
 export function UsersPage() {
@@ -63,17 +88,9 @@ export function UsersPage() {
             { key: "api", label: "С API-ключом" },
           ]}
         />
-        <input
-          type="search"
-          aria-label="Имя или Steam ID"
-          placeholder="Имя или Steam ID"
-          value={text}
-          maxLength={80}
-          onChange={(e) => {
-            setText(e.target.value);
-          }}
-          className="border-border bg-bg h-9 w-full rounded-md border px-3 text-sm sm:w-72"
-        />
+        <FiltersBar>
+          <SearchBox label="Имя или Steam ID" value={text} maxLength={80} onChange={setText} />
+        </FiltersBar>
       </div>
       <DataTable
         label="Пользователи"
@@ -90,7 +107,13 @@ export function UsersPage() {
             key: "name",
             header: "Пользователь",
             cell: (u) => (
-              <UserCell id={u.id} name={u.display_name} avatarUrl={u.avatar_url} sub={u.steam_id} />
+              <UserCell
+                id={u.id}
+                name={u.display_name}
+                avatarUrl={u.avatar_url}
+                sub={u.steam_id}
+                badges={<Badges user={u} />}
+              />
             ),
           },
           {
@@ -100,33 +123,9 @@ export function UsersPage() {
             cell: (u) => <Money uzs={u.balance_uzs} />,
           },
           {
-            key: "api",
-            header: "API",
-            cell: (u) =>
-              u.api_key === null ? (
-                <span className="text-fg-dim">—</span>
-              ) : (
-                <StatusChip tone="neutral">{tariffLabel(u.api_key.pricing_profile)}</StatusChip>
-              ),
-          },
-          {
-            key: "role",
-            header: "Роль",
-            cell: (u) => (
-              <div className="flex flex-wrap gap-1">
-                <span className="text-fg-muted">{roleLabel(u.roles)}</span>
-                {u.banned_at !== null && <StatusChip tone="danger">заблокирован</StatusChip>}
-              </div>
-            ),
-          },
-          {
             key: "created",
             header: "Регистрация",
-            cell: (u) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(u.created_at)}
-              </span>
-            ),
+            cell: (u) => <When iso={u.created_at} className="text-fg-muted" />,
           },
         ]}
         mobileCard={(u) => (
@@ -135,7 +134,7 @@ export function UsersPage() {
               id={u.id}
               name={u.display_name}
               avatarUrl={u.avatar_url}
-              sub={u.banned_at !== null ? "заблокирован" : roleLabel(u.roles)}
+              badges={<Badges user={u} />}
             />
             <Money uzs={u.balance_uzs} className="text-sm" />
           </div>

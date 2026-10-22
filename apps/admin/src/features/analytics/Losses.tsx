@@ -8,6 +8,7 @@ import { labelOf, som, SOURCE_LABELS } from "./labels";
 import { type Span } from "./period";
 
 import { Section } from "@/components/Section";
+import { LINK } from "@/components/TextLink";
 import { formatDateTime } from "@/lib/format";
 
 export function Losses({ span, channel }: { span: Span; channel: Channel }) {
@@ -30,7 +31,7 @@ export function Losses({ span, channel }: { span: Span; channel: Channel }) {
         <ul className="divide-border divide-y text-sm">
           {items.map((l) => (
             <li key={l.number} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-1.5">
-              <Link to={`/orders/${l.number}`} className="font-mono hover:underline">
+              <Link to={`/orders/${l.number}`} className={`${LINK} font-mono`}>
                 {l.number}
               </Link>
               <span className="min-w-0 flex-1 truncate">{l.name}</span>

@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type ReconPage } from "./reconApi";
-import { ReconciliationPage } from "./ReconciliationPage";
+import { ReconCard, ReconciliationPage } from "./ReconciliationPage";
 
 const api = vi.hoisted(() => ({ getReconciliation: vi.fn() }));
 vi.mock("./reconApi", async (importOriginal) => ({
@@ -62,16 +62,55 @@ describe("ReconciliationPage", () => {
   it("shows the totals and flags a short credit", async () => {
     renderPage();
     expect((await screen.findAllByText("S7K2M9QX")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Недозачислено").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("недозачислено").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Итоги")).toHaveTextContent("Проблемы1");
     expect(api.getReconciliation).toHaveBeenCalledWith({ days: 7, problems: false });
   });
 
   it("asks for the problems only and another period", async () => {
     renderPage("/sales/reconciliation?days=30");
-    fireEvent.click(await screen.findByLabelText("Только проблемы"));
+    expect(await screen.findByRole("tab", { name: "Все" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: "Проблемы 1" }));
     await waitFor(() => {
       expect(api.getReconciliation).toHaveBeenLastCalledWith({ days: 30, problems: true });
     });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("an old ?problems=1 link opens the «Проблемы» tab", async () => {
+    renderPage("/sales/reconciliation?problems=1");
+    expect(await screen.findByRole("tab", { name: "Проблемы 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(api.getReconciliation).toHaveBeenCalledWith({ days: 7, problems: true });
+  });
+
+  it("keeps the «Проблемы» count while the other tab loads", async () => {
+    renderPage();
+    await screen.findByRole("tab", { name: "Проблемы 1" });
+    api.getReconciliation.mockReturnValue(new Promise(() => undefined));
+    fireEvent.click(screen.getByRole("tab", { name: "Проблемы 1" }));
+    await waitFor(() => {
+      expect(api.getReconciliation).toHaveBeenLastCalledWith({ days: 7, problems: true });
+    });
+    expect(screen.getByRole("tab", { name: "Проблемы 1" })).toBeInTheDocument();
+  });
+
+  it("labels every figure on a phone's card, an uncredited sale included", () => {
+    const row = PAGE.items[0];
+    if (row === undefined) throw new Error("no row");
+    render(
+      <MemoryRouter>
+        <ReconCard row={{ ...row, amount_usd: null, diff_usd: null, done_at: null }} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("зачислено").parentElement).toHaveTextContent("зачислено ещё нет");
+    expect(screen.getByText("ожидали")).toBeInTheDocument();
+    expect(screen.getByText("не завершена")).toBeInTheDocument();
+    expect(screen.queryByText("—")).toBeNull();
   });
 });

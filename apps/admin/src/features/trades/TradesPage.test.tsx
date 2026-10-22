@@ -7,6 +7,7 @@ import { type AdminTradeRow, type AdminTradesPage } from "./api";
 import { TradesPage } from "./TradesPage";
 
 import { DETAIL, SKINSLINK } from "@/features/orders/fixtures";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({ listTrades: vi.fn() }));
 vi.mock("./api", () => api);
@@ -115,7 +116,7 @@ describe("TradesPage", () => {
     );
     expect(api.listTrades).toHaveBeenCalledWith({ view: "all" });
     expect(screen.getByRole("tab", { name: "Все 40" })).toHaveAttribute("aria-selected", "true");
-    for (const name of ["В пути 5", "На холде 3", "Требуют внимания 2", "Возвраты 1"]) {
+    for (const name of ["В пути 5", "На защите 3", "Требуют внимания 2", "Возвраты 1"]) {
       expect(screen.getByRole("tab", { name })).toHaveAttribute("aria-selected", "false");
     }
   });
@@ -123,7 +124,7 @@ describe("TradesPage", () => {
   it("requests the tab's view when it is clicked", async () => {
     api.listTrades.mockResolvedValue(page([ROW]));
     renderPage();
-    fireEvent.click(await screen.findByRole("tab", { name: "На холде 3" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "На защите 3" }));
     await waitFor(() => {
       expect(api.listTrades).toHaveBeenCalledWith({ view: "hold" });
     });
@@ -157,14 +158,15 @@ describe("TradesPage", () => {
     expect(within(row).getByText("Skinslink")).toBeInTheDocument();
     expect(within(row).getByTestId("trade-price")).toHaveTextContent("$13.58");
     expect(within(row).getByText("себест. $12.00")).toBeInTheDocument();
-    const offer = within(row).getByRole("link", { name: "6912345678" });
-    expect(offer).toHaveAttribute("href", "https://steamcommunity.com/tradeoffer/6912345678/");
-    expect(offer).toHaveAttribute("target", "_blank");
+    // The Steam offer is in the expanded row now; rarity is a dot on the picture.
+    expect(within(row).queryByRole("link", { name: "6912345678" })).toBeNull();
+    expect(within(row).getByTestId("rarity-dot")).toHaveStyle({ backgroundColor: "#d32ce6" });
+    expect(within(row).getByRole("link", { name: "O7K2M9QX" })).toHaveClass("text-accent");
     expect(within(row).queryByText("Трейд-ссылка")).toBeNull(); // in the expanded row now
     expect(within(row).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
     expect(within(row).getByText("Click")).toBeInTheDocument();
     expect(within(row).getByTestId("trade-state")).toHaveTextContent("отправлен");
-    expect(within(row).getByTestId("trade-state")).toHaveAttribute("title", "Площадка: active");
+    expect(within(row).getByTestId("trade-state")).toHaveAttribute("title", "Площадка: идёт");
     expect(within(row).getByText("3 мин назад")).toBeInTheDocument();
   });
 
@@ -193,8 +195,8 @@ describe("TradesPage", () => {
     api.listTrades.mockResolvedValue(page([HELD]));
     renderPage();
     const row = await rowOf("H1");
-    expect(within(row).getByTestId("trade-state")).toHaveTextContent("на холде");
-    expect(within(row).getByTestId("hold-left")).toHaveTextContent(/^6д 4ч · 15\.10$/);
+    expect(within(row).getByTestId("trade-state")).toHaveTextContent(/^принят$/);
+    expect(within(row).getByTestId("hold-left")).toHaveTextContent(/^защита до 15\.10 · 6д 4ч$/);
   });
 
   it("names an API order's owner and a refund's reason", async () => {
@@ -203,8 +205,8 @@ describe("TradesPage", () => {
     const row = await rowOf("R1");
     expect(within(row).getByText("LIS-SKINS")).toBeInTheDocument();
     expect(within(row).getByText("API · Partner Co")).toBeInTheDocument();
-    expect(within(row).getByTestId("trade-state")).toHaveTextContent("возврат · обмен не принят");
-    expect(within(row).getByText("—")).toBeInTheDocument();
+    expect(within(row).getByTestId("trade-state")).toHaveTextContent(/^возврат$/);
+    expect(within(row).getByText("обмен не принят")).toBeInTheDocument();
   });
 
   it("tints rows that need attention and names the reason", async () => {
@@ -246,9 +248,20 @@ describe("TradesPage", () => {
       expect.stringContaining("Покупка начата"),
       expect.stringContaining("Обмен отправлен"),
     ]);
-    expect(within(details).getByText("active")).toBeInTheDocument();
+    expect(within(details).getByText("идёт")).toBeInTheDocument();
     expect(within(details).getByText("178")).toBeInTheDocument();
-    expect(within(details).getByText("timeout")).toBeInTheDocument();
+    // An unknown market reason reads «другая причина» with its code small.
+    expect(within(details).getByText("timeout")).toHaveClass("text-meta");
+    expect(within(details).getByText(/другая причина/)).toBeInTheDocument();
+    // The exact time, with seconds, to match against a market's or Steam's log.
+    expect(within(steps).getAllByRole("listitem")[0]).toHaveTextContent(
+      /\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/,
+    );
+    expect(within(details).getByRole("link", { name: "6912345678" })).toHaveAttribute(
+      "href",
+      "https://steamcommunity.com/tradeoffer/6912345678/",
+    );
+    expect(details.querySelector(".font-mono")).toBeNull();
     expect(within(details).getByRole("link", { name: "Открыть заказ →" })).toHaveAttribute(
       "href",
       "/orders/O7K2M9QX",
@@ -292,6 +305,19 @@ describe("TradesPage", () => {
     expect(api.listTrades).toHaveBeenLastCalledWith({ view: "all", cursor: "c2" });
   });
 
+  it("on a phone puts «Требуют внимания» first, where the scrolling row shows it", async () => {
+    const restore = asPhone();
+    try {
+      api.listTrades.mockResolvedValue(page([FLAGGED]));
+      renderPage();
+      const tabs = await screen.findAllByRole("tab");
+      expect(tabs[0]).toHaveTextContent(/Требуют внимания/);
+      expect(tabs[1]).toHaveTextContent(/^Все/);
+    } finally {
+      restore();
+    }
+  });
+
   it("on a phone shows cards with the status and price, not a wide table", async () => {
     const before = Object.getOwnPropertyDescriptor(window, "matchMedia");
     window.matchMedia = ((query: string) => ({
@@ -331,6 +357,6 @@ describe("TradesPage", () => {
       ]),
     );
     renderPage();
-    expect(await screen.findByTestId("hold-left")).toHaveTextContent(/^≈ /);
+    expect(await screen.findByTestId("hold-left")).toHaveTextContent(/^защита до ≈ /);
   });
 });

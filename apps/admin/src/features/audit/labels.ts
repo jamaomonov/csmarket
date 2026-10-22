@@ -1,10 +1,17 @@
-/** Operator-facing Russian labels for the audit log. Unknown values fall back to the raw string. */
+/**
+ * Operator-facing Russian words for the audit log: actions, target types, payload keys. An
+ * unknown action or key shows its code small beside «другое действие» / as itself — never alone
+ * as the only word.
+ */
+import { providerLabel } from "@/features/users/labels";
+import { reasonWord } from "@/lib/dictionary";
 import { formatSignedSum } from "@/lib/format";
 
 /** Every action the API writes today (`audit.record` call sites). */
 export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "users.ban": "Блокировка",
   "users.unban": "Разблокировка",
+  "users.risk.update": "Риск пользователя изменён",
   "wallet.adjust": "Изменение баланса",
   "skins.item.hide": "Скин скрыт",
   "skins.item.colors": "Цвета скина изменены",
@@ -34,10 +41,22 @@ export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "api_keys.tariff": "Тариф API-ключа",
   "api_keys.limits": "Лимиты API-ключа",
   "api_keys.revoke": "API-ключ отозван",
+  "payments.settings.save": "Настройки оплаты",
+  "payments.review_limits.update": "Лимиты проверки касс",
+  "payments.hold.release": "Платёж пропущен с проверки",
+  "payments.hold.returned": "Платёж возвращён на карту",
+  "p2p.card.add": "P2P: карта добавлена",
+  "p2p.card.update": "P2P: карта изменена",
+  "p2p.settings.save": "P2P: подключение и лимиты",
+  "p2p.incoming.credit": "P2P: перевод зачислен вручную",
 };
 
-export function actionLabel(action: string): string {
-  return ACTION_LABELS[action] ?? action;
+/** The action in words; an unknown one is «другое действие» with its code beside it. */
+export function actionWord(action: string): { word: string; unknown: string | null } {
+  const known = Object.hasOwn(ACTION_LABELS, action) ? ACTION_LABELS[action] : undefined;
+  return known === undefined
+    ? { word: "другое действие", unknown: action }
+    : { word: known, unknown: null };
 }
 
 export const TARGET_TYPE_LABELS: Readonly<Record<string, string>> = {
@@ -50,6 +69,12 @@ export const TARGET_TYPE_LABELS: Readonly<Record<string, string>> = {
   sale: "Продажа",
   sale_settings: "Настройки выкупа",
   skin_pricing_rules: "Наценки",
+  payment_settings: "Настройки оплаты",
+  payment_hold: "Платёж на проверке",
+  kassa_review_limits: "Лимиты проверки касс",
+  p2p_card: "P2P-карта",
+  p2p_settings: "Настройки P2P",
+  p2p_incoming: "P2P-перевод",
 };
 
 export function targetTypeLabel(type: string): string {
@@ -75,36 +100,106 @@ export function targetPath(type: string, id: string): string | null {
   }
 }
 
+/** Payload keys in words; a key not here shows as itself, small. */
 const PAYLOAD_KEYS: Readonly<Record<string, string>> = {
   reason: "причина",
   amount_uzs: "сумма",
-  slug: "slug",
   alias: "синоним",
   text: "значение",
   from: "было",
   to: "стало",
   note: "комментарий",
-  enabled: "включён",
+  enabled: "включено",
   hidden: "скрыт",
   override: "выплачено несмотря на блокировку",
   was: "было",
   last4: "карта",
+  items_repriced: "цены пересчитаны у скинов",
+  margin_override_pp: "своя наценка, %",
+  fixed_price_usd: "своя цена, $",
+  colors: "цвета",
+  number: "номер",
+  provider: "касса",
+  label: "название",
+  topup: "пополнение",
+  margin: "наценки",
+  rate_cut_pct: "скидка с курса, %",
+  balance_bonus_pct: "бонус за баланс, %",
+  card_fee_pct: "комиссия карты, %",
+  bank_fee_pct: "комиссия банка, %",
+  card_min_uzs: "минимум на карту",
+  min_sum_usd: "минимум продажи, $",
+  max_sale_usd: "лимит продажи, $",
+  max_user_day_usd: "лимит пользователя в день, $",
+  max_day_usd: "лимит в день, $",
+  unchanged: "без изменений",
+  trusted: "доверенный",
+  kassa_blocked: "оплата кассой запрещена",
+  max_amount_uzs: "лимит, сум",
+  window_hours: "окно, ч",
 };
+
+/** Keys that only repeat what the target already says (the skin's slug beside its name). */
+const HIDDEN_KEYS: ReadonlySet<string> = new Set(["slug", "user_id"]);
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const MAX_VALUE = 120;
 
+const WORDS: Readonly<Record<string, string>> = { true: "да", false: "нет", null: "—" };
+
+/** `true` → «да», `"5 -> 7"` → «5 → 7», a long value cut; a UUID is never shown. */
 function payloadValue(key: string, value: unknown): string {
   if (key === "amount_uzs" && (typeof value === "number" || typeof value === "string")) {
     return formatSignedSum(value);
   }
+  if (key === "provider" && typeof value === "string") return providerLabel(value);
+  // A sale's checked attention stores its code as the reason («rolled_back»).
+  if (key === "reason" && typeof value === "string" && /^[a-z_]+$/.test(value)) {
+    const said = reasonWord("saleAttention", value);
+    if (said.unknown === null) return said.word;
+  }
   const text = typeof value === "string" ? value : JSON.stringify(value);
-  return text.length > MAX_VALUE ? `${text.slice(0, MAX_VALUE)}…` : text;
+  const shown = text
+    .split(" -> ")
+    .map((part) => WORDS[part] ?? part)
+    .join(" → ");
+  return shown.length > MAX_VALUE ? `${shown.slice(0, MAX_VALUE)}…` : shown;
 }
 
-/** The payload as short `key: value` pairs, in the order stored. */
-export function payloadLines(payload: Record<string, unknown>): { key: string; text: string }[] {
-  return Object.entries(payload).map(([key, value]) => ({
-    key,
-    text: `${PAYLOAD_KEYS[key] ?? key}: ${payloadValue(key, value)}`,
-  }));
+/** `max_amount_uzs` → «лимит, сум»; a kassa limit's `click.enabled` → «Click: включено». */
+function keyLabel(key: string): string | null {
+  if (Object.hasOwn(PAYLOAD_KEYS, key)) return PAYLOAD_KEYS[key] ?? null;
+  const [provider, field, ...rest] = key.split(".");
+  if (provider && field && rest.length === 0 && Object.hasOwn(PAYLOAD_KEYS, field)) {
+    return `${providerLabel(provider)}: ${PAYLOAD_KEYS[field] ?? field}`;
+  }
+  return null;
+}
+
+export interface PayloadLine {
+  key: string;
+  /** The key in words; `null` when unknown (the page shows the key itself, small). */
+  label: string | null;
+  text: string;
+}
+
+/** The payload as short `key: value` lines, in the order stored; ids and slugs left out. */
+export function payloadLines(
+  payload: Record<string, unknown>,
+  /** Keys the target already names (a hold's payment number). */
+  shown: readonly string[] = [],
+): PayloadLine[] {
+  return Object.entries(payload)
+    .filter(
+      ([key, value]) =>
+        !HIDDEN_KEYS.has(key) &&
+        !shown.includes(key) &&
+        !(typeof value === "string" && UUID.test(value)),
+    )
+    .map(([key, value]) => ({
+      key,
+      label: keyLabel(key),
+      text: payloadValue(key, value),
+    }));
 }

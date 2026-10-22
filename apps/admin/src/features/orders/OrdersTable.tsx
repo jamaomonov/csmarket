@@ -2,12 +2,15 @@
 import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminOrderRow } from "./api";
-import { AttentionBadge, OrderStatusChip } from "./StatusChip";
+import { AttentionBadge } from "./AttentionBadge";
+import { orderChip } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
 import { SkinThumb } from "@/components/SkinThumb";
-import { formatDateTime } from "@/lib/format";
+import { Status } from "@/components/Status";
+import { LINK } from "@/components/TextLink";
+import { When } from "@/components/When";
 
 export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label: string }) {
   const navigate = useNavigate();
@@ -26,7 +29,7 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
           key: "number",
           header: "Номер",
           cell: (o) => (
-            <Link to={`/orders/${o.number}`} className="font-mono hover:underline">
+            <Link to={`/orders/${o.number}`} className={`${LINK} font-mono`}>
               {o.number}
             </Link>
           ),
@@ -52,10 +55,9 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
           header: "Статус",
           cell: (o) => (
             <div className="flex flex-wrap items-center gap-1">
-              <OrderStatusChip
-                status={o.status}
-                protectedUntil={o.protected_until}
-                estimated={o.protected_estimated}
+              <Status
+                {...orderChip(o.status, o.protected_until, o.protected_estimated)}
+                testId="order-status"
               />
               <AttentionBadge reason={o.attention_reason} />
             </div>
@@ -64,9 +66,7 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
         {
           key: "created",
           header: "Создан",
-          cell: (o) => (
-            <span className="text-fg-muted whitespace-nowrap">{formatDateTime(o.created_at)}</span>
-          ),
+          cell: (o) => <When iso={o.created_at} className="text-fg-muted" />,
         },
       ]}
       mobileCard={(o) => (
@@ -80,13 +80,12 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
             <span className="truncate">{o.name}</span>
           </div>
           <div className="flex flex-wrap items-center gap-1">
-            <OrderStatusChip
-              status={o.status}
-              protectedUntil={o.protected_until}
-              estimated={o.protected_estimated}
+            <Status
+              {...orderChip(o.status, o.protected_until, o.protected_estimated)}
+              testId="order-status"
             />
             <AttentionBadge reason={o.attention_reason} />
-            <span className="text-fg-dim ml-auto text-xs">{formatDateTime(o.created_at)}</span>
+            <When iso={o.created_at} className="text-fg-dim ml-auto text-xs" />
           </div>
         </div>
       )}

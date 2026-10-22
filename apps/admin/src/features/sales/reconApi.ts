@@ -26,12 +26,6 @@ export interface ReconPage {
   problems: number;
 }
 
-export const FLAG_LABELS: Record<ReconFlag, string> = {
-  short: "Недозачислено",
-  missing: "Нет зачисления",
-  reverted: "Откат",
-};
-
 export const RECON_KEY = ["admin", "sales", "reconciliation"] as const;
 
 export function getReconciliation(p: {

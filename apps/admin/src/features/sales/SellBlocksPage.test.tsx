@@ -24,6 +24,23 @@ describe("SellBlocksPage", () => {
     api.setSellBlock.mockReset().mockResolvedValue({});
   });
 
+  it("an empty list leads to the payouts, where blocks are made", async () => {
+    api.listSellBlocks.mockResolvedValue({ items: [] });
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <SellBlocksPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Никому не запрещено.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Заявки на выплату" })).toHaveAttribute(
+      "href",
+      "/payouts",
+    );
+  });
+
   it("lists the blocked users and lifts a block", async () => {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(

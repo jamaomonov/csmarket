@@ -2,4 +2,13 @@
 
 :root {
   --topbar-height: 56px;
+  /* The phone's bottom bar (56 px + the home indicator); 0 from lg, where the top bar has it all.
+     Sticky and fixed bottom bars (SaveBar, a payout's decision) sit this far up. */
+  --bottom-nav: calc(56px + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --bottom-nav: 0px;
+  }
 }

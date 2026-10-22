@@ -15,6 +15,7 @@ import { RulesForm } from "./RulesForm";
 
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { countChanges } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime, formatSum } from "@/lib/format";
@@ -35,9 +36,8 @@ function StatusLine({ data }: { data: PricingOut }) {
     parts.push("правила по умолчанию");
   }
   return (
-    <p data-testid="pricing-status" className="text-fg-muted text-sm">
-      {parts.join(", ")}
-    </p>
+    // A span: the header's meta line is already a <p>.
+    <span data-testid="pricing-status">{parts.join(", ")}</span>
   );
 }
 
@@ -79,7 +79,7 @@ export function PricingPage() {
   if (!pricing.data) return <p className="text-fg-muted">Загрузка…</p>;
   const saved = fromRules(pricing.data.rules);
   const current = draft ?? saved;
-  const dirty = JSON.stringify(current) !== JSON.stringify(saved);
+  const changed = countChanges(saved, current);
 
   const confirm = (): void => {
     if (inFlight.current) return;
@@ -87,52 +87,61 @@ export function PricingPage() {
     save.mutate(current);
   };
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-4">
       <PageHeader title="Цены" meta={<StatusLine data={pricing.data} />} />
       <SavedNotice at={savedAt} />
-      <RulesForm
-        draft={current}
-        dirty={dirty}
-        saving={save.isPending}
-        error={save.isError ? errorText(save.error) : null}
-        onChange={setDraft}
-        onReset={() => {
-          setDraft(null);
-          save.reset();
-        }}
-        onSave={() => {
-          save.reset();
-          setConfirming(true);
-        }}
-      />
-      {confirming && (
-        <Modal
-          title="Сохранить наценки?"
-          description="Цены всех скинов пересчитаются по новым правилам."
-          busy={save.isPending}
-          onClose={() => {
-            setConfirming(false);
-          }}
-        >
-          <div className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={save.isPending}
-              onClick={() => {
+      {/* Form 2/3, the check 1/3 and sticky on a wide screen; on a phone the check follows the rules. */}
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        <div className="min-w-0 lg:col-span-2">
+          <RulesForm
+            draft={current}
+            changed={changed}
+            saving={save.isPending}
+            error={save.isError ? errorText(save.error) : null}
+            onChange={setDraft}
+            onReset={() => {
+              setDraft(null);
+              save.reset();
+            }}
+            onSave={() => {
+              save.reset();
+              setConfirming(true);
+            }}
+          />
+          {confirming && (
+            <Modal
+              title="Сохранить наценки?"
+              description="Цены всех скинов пересчитаются по новым правилам."
+              busy={save.isPending}
+              onClose={() => {
                 setConfirming(false);
               }}
             >
-              Отмена
-            </Button>
-            <Button type="button" disabled={save.isPending} onClick={confirm}>
-              Да, сохранить
-            </Button>
-          </div>
-        </Modal>
-      )}
-      <PreviewCard rules={toRules(current)} />
-      <OverrideCard />
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={save.isPending}
+                  onClick={() => {
+                    setConfirming(false);
+                  }}
+                >
+                  Отмена
+                </Button>
+                <Button type="button" disabled={save.isPending} onClick={confirm}>
+                  Да, сохранить
+                </Button>
+              </div>
+            </Modal>
+          )}
+        </div>
+        <div className="min-w-0 lg:sticky lg:top-[calc(var(--topbar-height)+1rem)] lg:col-start-3 lg:row-span-2 lg:row-start-1">
+          <PreviewCard rules={toRules(current)} />
+        </div>
+        <div className="min-w-0 lg:col-span-2">
+          <OverrideCard />
+        </div>
+      </div>
     </div>
   );
 }

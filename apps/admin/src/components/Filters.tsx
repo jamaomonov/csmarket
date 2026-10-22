@@ -1,4 +1,7 @@
-/** The filters row (review §4.6): a compact search box and selects, one line on desktop. */
+/**
+ * The filters row (admin UX audit §2): the main status is `Tabs` with counters above it; here a
+ * search box in the normal font (a short placeholder, never cut) and secondary `FilterSelect`s.
+ */
 import { type ReactNode } from "react";
 
 export function FiltersBar({ children }: { children: ReactNode }) {
@@ -10,10 +13,9 @@ interface SearchBoxProps {
   value: string;
   onChange: (value: string) => void;
   maxLength?: number;
-  mono?: boolean;
 }
 
-export function SearchBox({ label, value, onChange, maxLength, mono }: SearchBoxProps) {
+export function SearchBox({ label, value, onChange, maxLength }: SearchBoxProps) {
   return (
     <input
       type="search"
@@ -24,9 +26,7 @@ export function SearchBox({ label, value, onChange, maxLength, mono }: SearchBox
       onChange={(e) => {
         onChange(e.target.value);
       }}
-      className={`border-border bg-bg h-9 w-full rounded-md border px-3 text-sm sm:w-80 ${
-        mono === true ? "font-mono" : ""
-      }`}
+      className="border-border bg-bg h-11 w-full min-w-0 rounded-md border px-3 text-sm sm:w-80 md:h-9"
     />
   );
 }
@@ -39,7 +39,10 @@ interface FilterSelectProps<T extends string> {
   onChange: (value: string) => void;
 }
 
-/** «<label>: все» — the label is the empty option, so the select needs no caption above it. */
+/**
+ * «<label>: все» — the label is the empty option, so the select needs no caption above it. On a
+ * phone the selects share one row (each shrinks); the search box above takes the full width.
+ */
 export function FilterSelect<T extends string>({
   label,
   value,
@@ -54,7 +57,7 @@ export function FilterSelect<T extends string>({
       onChange={(e) => {
         onChange(e.target.value);
       }}
-      className={`border-border bg-bg h-9 rounded-md border px-2 text-sm ${
+      className={`border-border bg-bg h-11 min-w-0 flex-1 rounded-md border px-2 text-sm sm:flex-none md:h-9 ${
         value !== "" ? "text-fg" : "text-fg-muted"
       }`}
     >

@@ -1,7 +1,6 @@
 /** «Платёж»: one payment, its top-up and the kassa's own transactions. Read-only. */
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 
 import {
   type AdminPaymentDetail,
@@ -17,25 +16,15 @@ import {
   PURPOSE_LABELS,
   safeExtraValue,
 } from "./labels";
-import { StatusChip } from "./StatusChip";
 
 import { PageHeader } from "@/components/PageHeader";
-import { DetailGrid } from "@/components/Section";
+import { DetailGrid, More, Row, Section } from "@/components/Section";
+import { Status } from "@/components/Status";
+import { TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
-import { OrderStatusChip } from "@/features/orders/StatusChip";
 import { errorText, providerLabel } from "@/features/users/labels";
-import { TopupStatusChip } from "@/features/users/TopupStatusChip";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSum } from "@/lib/format";
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-2">
-      <dt className="text-fg-muted w-40 shrink-0">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
 
 function when(iso: string | null): string {
   return iso === null ? "—" : formatDateTime(iso);
@@ -43,39 +32,37 @@ function when(iso: string | null): string {
 
 function TopupBlock({ topup }: { topup: PaymentTopup }) {
   return (
-    <section aria-label="Пополнение" className="space-y-2">
-      <h2 className="text-lg font-semibold">Пополнение</h2>
-      <dl className="space-y-1 text-sm">
-        <Field label="Номер">
+    <Section title="Пополнение">
+      <dl>
+        <Row label="Номер">
           <span className="font-mono">{topup.number}</span>
-        </Field>
-        <Field label="Сумма">{formatSum(topup.amount_uzs)}</Field>
-        <Field label="Статус">
-          <TopupStatusChip status={topup.status} />
-        </Field>
-        <Field label="Действует до">{when(topup.expires_at)}</Field>
-        <Field label="Зачислено">{when(topup.succeeded_at)}</Field>
+        </Row>
+        <Row label="Сумма">{formatSum(topup.amount_uzs)}</Row>
+        <Row label="Статус">
+          <Status of="topup" code={topup.status} />
+        </Row>
+        <Row label="Действует до">{when(topup.expires_at)}</Row>
+        <Row label="Зачислено">{when(topup.succeeded_at)}</Row>
       </dl>
-    </section>
+    </Section>
   );
 }
 
 function OrderBlock({ order }: { order: PaymentOrder }) {
   return (
-    <section aria-label="Заказ" className="space-y-2">
-      <h2 className="text-lg font-semibold">Заказ</h2>
-      <dl className="space-y-1 text-sm">
-        <Field label="Номер">
-          <Link to={`/orders/${order.number}`} className="font-mono hover:underline">
+    <Section title="Заказ">
+      <dl>
+        <Row label="Номер">
+          <TextLink to={`/orders/${order.number}`} number>
             {order.number}
-          </Link>
-        </Field>
-        <Field label="Цена">{formatSum(order.price_uzs)}</Field>
-        <Field label="Статус">
-          <OrderStatusChip status={order.status} />
-        </Field>
+          </TextLink>
+        </Row>
+        <Row label="Цена">{formatSum(order.price_uzs)}</Row>
+        <Row label="Статус">
+          <Status of="order" code={order.status} testId="order-status" />
+        </Row>
       </dl>
-    </section>
+    </Section>
   );
 }
 
@@ -108,8 +95,7 @@ function KassaTimes({ times }: { times: KassaTxn["times"] }) {
 
 function KassaTable({ kassa }: { kassa: KassaTxn[] }) {
   return (
-    <section aria-label="Транзакции кассы" className="space-y-2">
-      <h2 className="text-lg font-semibold">Транзакции кассы</h2>
+    <Section title="Транзакции кассы">
       {kassa.length === 0 ? (
         <p className="text-fg-muted text-sm">Касса ещё не обращалась.</p>
       ) : (
@@ -151,57 +137,56 @@ function KassaTable({ kassa }: { kassa: KassaTxn[] }) {
           </table>
         </div>
       )}
-    </section>
+    </Section>
+  );
+}
+
+function PaymentBlock({ payment }: { payment: AdminPaymentDetail["payment"] }) {
+  return (
+    <Section title="Платёж">
+      <dl>
+        <Row label="Назначение">{PURPOSE_LABELS[payment.purpose]}</Row>
+        <Row label="Сумма">{formatSum(payment.amount_uzs)}</Row>
+        {payment.fee_uzs !== "0" && <Row label="Комиссия кассы">{formatSum(payment.fee_uzs)}</Row>}
+        <Row label="Касса">{providerLabel(payment.provider)}</Row>
+        <Row label="Статус">
+          <Status of="payment" code={payment.status} testId="payment-status" />
+        </Row>
+        <Row label="Пользователь">
+          <UserCell
+            id={payment.user.id}
+            name={payment.user.display_name}
+            avatarUrl={payment.user.avatar_url}
+          />
+        </Row>
+        <Row label="Создан">{formatDateTime(payment.created_at)}</Row>
+        <Row label="Оплачен">{when(payment.succeeded_at)}</Row>
+      </dl>
+      <More>
+        <Row label="Номер в кассе">
+          {payment.provider_ref === null ? (
+            "—"
+          ) : (
+            <span className="break-all">{payment.provider_ref}</span>
+          )}
+        </Row>
+      </More>
+    </Section>
   );
 }
 
 function Body({ detail }: { detail: AdminPaymentDetail }) {
   const { payment, topup, order, kassa } = detail;
+  const what =
+    order !== null ? (
+      <OrderBlock order={order} />
+    ) : topup !== null ? (
+      <TopupBlock topup={topup} />
+    ) : undefined;
   return (
     <div className="space-y-4" data-testid="payment-detail">
-      <DetailGrid
-        main={
-          <>
-            <KassaTable kassa={kassa} />
-            {topup !== null && <TopupBlock topup={topup} />}
-            {order !== null && <OrderBlock order={order} />}
-          </>
-        }
-        side={
-          <section
-            aria-label="Платёж"
-            className="border-border bg-surface space-y-2 rounded-lg border p-4"
-          >
-            <dl className="space-y-1 text-sm">
-              <Field label="Назначение">{PURPOSE_LABELS[payment.purpose]}</Field>
-              <Field label="Сумма">{formatSum(payment.amount_uzs)}</Field>
-              {payment.fee_uzs !== "0" && (
-                <Field label="Комиссия кассы">{formatSum(payment.fee_uzs)}</Field>
-              )}
-              <Field label="Касса">{providerLabel(payment.provider)}</Field>
-              <Field label="Статус">
-                <StatusChip status={payment.status} />
-              </Field>
-              <Field label="Пользователь">
-                <UserCell
-                  id={payment.user.id}
-                  name={payment.user.display_name}
-                  avatarUrl={payment.user.avatar_url}
-                />
-              </Field>
-              <Field label="Создан">{formatDateTime(payment.created_at)}</Field>
-              <Field label="Оплачен">{when(payment.succeeded_at)}</Field>
-              <Field label="Номер в кассе">
-                {payment.provider_ref === null ? (
-                  "—"
-                ) : (
-                  <span className="font-mono">{payment.provider_ref}</span>
-                )}
-              </Field>
-            </dl>
-          </section>
-        }
-      />
+      <DetailGrid main={<PaymentBlock payment={payment} />} side={what} />
+      <KassaTable kassa={kassa} />
     </div>
   );
 }
@@ -220,7 +205,11 @@ export function PaymentDetail() {
       <PageHeader
         back={{ to: "/payments", label: "Все платежи" }}
         title={query.data ? `Платёж ${query.data.payment.number}` : "Платёж"}
-        badges={query.data && <StatusChip status={query.data.payment.status} />}
+        badges={
+          query.data && (
+            <Status of="payment" code={query.data.payment.status} testId="payment-status" />
+          )
+        }
       />
       {query.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {notFound && <p className="text-fg-muted">Платёж не найден.</p>}

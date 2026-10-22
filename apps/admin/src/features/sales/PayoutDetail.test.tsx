@@ -7,6 +7,7 @@ import { PAYOUT_DETAIL, PAYOUT_ROW } from "./fixtures";
 import { PayoutDetail } from "./PayoutDetail";
 
 import { useAuthStore } from "@/features/auth/authStore";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({
   getPayout: vi.fn(),
@@ -267,6 +268,59 @@ describe("PayoutDetail", () => {
     });
   });
 
+  it("hides «Отклонить» once Skinslink reverted the trade: the API would refuse it", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      can_cancel: true,
+      paid_needs_override: true,
+      request: { ...PAYOUT_DETAIL.request, flags: ["rolled_back"] },
+    });
+    renderPage();
+    expect(await screen.findByRole("button", { name: "Отменить (откат)" })).toBeInTheDocument();
+    expect(screen.getByText(/Если деньги ещё не ушли — «Отменить \(откат\)»/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
+  });
+
+  it("one green button per step: «Беру в работу», then «Выплачено»", async () => {
+    renderPage();
+    const take = await screen.findByRole("button", { name: "Беру в работу" });
+    expect(take.className).toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "Выплачено" }).className).not.toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "Скопировать номер" }).className).not.toContain(
+      "bg-accent",
+    );
+  });
+
+  it("«Выплачено» is the green one once the request is mine", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      request: { ...PAYOUT_ROW, claimed_by: ME, claimed_until: "2026-10-15T10:15:00Z" },
+    });
+    renderPage();
+    expect(await screen.findByRole("button", { name: "Выплачено" })).toHaveClass("bg-accent");
+  });
+
+  it("on a phone the confirm is a bottom sheet that confirms", async () => {
+    const restore = asPhone();
+    try {
+      api.markPaid.mockResolvedValue({ ...PAYOUT_DETAIL, can_decide: false });
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Выплачено" }));
+      const sheet = screen.getByRole("dialog", { name: "Подтвердите выплату" });
+      expect(within(sheet).getByText(/^147\s400 сум$/)).toBeInTheDocument();
+      expect(within(sheet).getByText("•••• 9015")).toBeInTheDocument();
+      fireEvent.click(within(sheet).getByRole("button", { name: "Да, выплачено" }));
+      await waitFor(() => {
+        expect(api.markPaid).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+    } finally {
+      restore();
+    }
+  });
+
   it("says a request was canceled because the seller reverted the trade", async () => {
     api.getPayout.mockResolvedValue({
       ...PAYOUT_DETAIL,
@@ -274,7 +328,56 @@ describe("PayoutDetail", () => {
       can_decide: false,
     });
     renderPage();
-    expect(await screen.findByText("Отменено: продавец отменил обмен")).toBeInTheDocument();
+    expect(await screen.findByText("отменено: продавец отменил обмен")).toBeInTheDocument();
+  });
+
+  it("puts red risks on top and folds the rest under «Всё в порядке»", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      risk: { ...PAYOUT_DETAIL.risk, wallet_frozen: true },
+    });
+    renderPage();
+    const risks = await screen.findByRole("region", { name: "Риски" });
+    expect(within(risks).getByTestId("risk-alarms")).toHaveTextContent("Кошелёкзаморожен");
+    const calm = within(risks).getByText("Всё в порядке: 9").closest("details");
+    expect(calm).not.toHaveAttribute("open");
+    expect(calm).toHaveTextContent("Продано всего");
+    expect(calm).not.toHaveTextContent("Кошелёк");
+  });
+
+  it("an unknown card is a warning on top, never folded as fine", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      risk: { ...PAYOUT_DETAIL.risk, card_known: false },
+    });
+    renderPage();
+    const risks = await screen.findByRole("region", { name: "Риски" });
+    const warnings = within(risks).getByTestId("risk-warnings");
+    expect(warnings).toHaveTextContent("Та же карта у других");
+    expect(within(warnings).getByText(/неизвестно/)).toHaveClass("text-warning");
+    expect(within(risks).queryByTestId("risk-alarms")).toBeNull();
+    expect(within(risks).queryByText("Рисков не видно.")).toBeNull();
+    const calm = within(risks).getByText("Всё в порядке: 9").closest("details");
+    expect(calm).not.toHaveTextContent("Та же карта");
+  });
+
+  it("with nothing red says so and still folds the details", async () => {
+    api.getPayout.mockResolvedValue(PAYOUT_DETAIL);
+    renderPage();
+    const risks = await screen.findByRole("region", { name: "Риски" });
+    expect(within(risks).getByText("Рисков не видно.")).toBeInTheDocument();
+    expect(within(risks).getByText("Всё в порядке: 10")).toBeInTheDocument();
+  });
+
+  it("names the seller with a link to the card", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      request: { ...PAYOUT_DETAIL.request, user: { id: "u-1", display_name: null } },
+    });
+    renderPage();
+    const seller = await screen.findByRole("link", { name: "без имени" });
+    expect(seller).toHaveAttribute("href", "/users/u-1");
+    expect(seller.parentElement).toHaveTextContent("Продавец: без имени");
   });
 
   it("shows the risks and blocks selling from the page", async () => {

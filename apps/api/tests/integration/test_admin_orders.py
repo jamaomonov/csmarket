@@ -14,6 +14,7 @@ from csmarket.core import clock
 from csmarket.core.ids import new_id
 from csmarket.modules.orders.models import ATTENTION_REASONS, FAILURE_REASONS, Order
 from csmarket.modules.payments.models import Payment
+from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
 from sqlalchemy import event, update
@@ -340,6 +341,7 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
         "margin_usd",
         "protected_until",
         "protected_estimated",
+        "image_url",
     }
     assert o["trade_link"] == LINK  # whole, for an admin to copy (owner, 2026-10-19)
     assert (o["number"], o["status"], o["user_id"]) == (order.number, "trade_sent", buyer.id)
@@ -364,6 +366,20 @@ async def test_detail_shows_every_column_masked_link_trade_payments_and_margin(
         }
     ]
     assert (body["can_refund"], body["can_retry"]) == (False, False)
+
+
+async def test_detail_names_the_skins_picture_for_the_header(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    h = await admin_headers()
+    order = await _order(db_session)
+    item = await db_session.get(SkinItem, order.skin_item_id)
+    assert item is not None
+    item.image_url = "https://community.akamai.steamstatic.com/economy/image/redrawn"
+    await db_session.commit()
+    r = await integration_client.get(f"/api/v1/admin/orders/{order.number}", headers=h)
+    assert r.status_code == 200, r.text
+    assert r.json()["order"]["image_url"] == item.image_url
 
 
 async def test_detail_margin_against_cost_before_the_buy_and_no_trade(

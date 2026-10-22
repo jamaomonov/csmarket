@@ -31,7 +31,7 @@ describe("SaleSettingsPage", () => {
 
   it("saves the edited document with a key after a confirm", async () => {
     renderPage();
-    fireEvent.click(await screen.findByLabelText("Выкуп включён"));
+    fireEvent.click(await screen.findByRole("switch", { name: "Выкуп" }));
     fireEvent.change(screen.getByLabelText("Минимум на карту, сум"), {
       target: { value: "50000" },
     });
@@ -58,16 +58,40 @@ describe("SaleSettingsPage", () => {
     expect(key).toMatch(/^admin-sale-settings-/);
   });
 
+  it("shows sums grouped and sends them as before: digits, no spaces", async () => {
+    renderPage();
+    const min = await screen.findByLabelText("Минимум на карту, сум");
+    fireEvent.change(min, { target: { value: "2\u00a0000000" } });
+    expect(min).toHaveValue("2\u00a0000\u00a0000");
+    fireEvent.change(screen.getByLabelText("Максимум одной продажи, $"), {
+      target: { value: "1 500.5" },
+    });
+    fireEvent.change(screen.getByLabelText("От (2), $"), { target: { value: "1\u00a0000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    fireEvent.click(screen.getByRole("button", { name: "Да, сохранить" }));
+    await waitFor(() => {
+      expect(api.saveSaleSettings).toHaveBeenCalledOnce();
+    });
+    const doc = api.saveSaleSettings.mock.calls[0]?.[0] as {
+      card_min_uzs: unknown;
+      max_sale_usd: unknown;
+      margin: { from_usd: string }[];
+    };
+    expect(doc.card_min_uzs).toBe(2000000);
+    expect(doc.max_sale_usd).toBe("1500.5");
+    expect(doc.margin[1]?.from_usd).toBe("1000");
+  });
+
   it("adds and removes a margin bracket", async () => {
     renderPage();
-    await screen.findByLabelText("Выкуп включён");
-    expect(screen.getAllByLabelText(/^От, \$/)).toHaveLength(4);
+    await screen.findByRole("switch", { name: "Выкуп" });
+    expect(screen.getAllByLabelText(/^От \(\d+\), \$/)).toHaveLength(4);
     fireEvent.click(screen.getByRole("button", { name: "Добавить диапазон" }));
-    expect(screen.getAllByLabelText(/^От, \$/)).toHaveLength(5);
+    expect(screen.getAllByLabelText(/^От \(\d+\), \$/)).toHaveLength(5);
     const last = screen.getAllByRole("button", { name: "Убрать диапазон" }).at(-1);
     if (!last) throw new Error("no remove button");
     fireEvent.click(last);
-    expect(screen.getAllByLabelText(/^От, \$/)).toHaveLength(4);
+    expect(screen.getAllByLabelText(/^От \(\d+\), \$/)).toHaveLength(4);
   });
 
   it("does not send an emptied minimum", async () => {
@@ -83,13 +107,13 @@ describe("SaleSettingsPage", () => {
 
   it("keeps a row's input when an earlier row is removed", async () => {
     renderPage();
-    await screen.findByLabelText("Выкуп включён");
-    const inputs = screen.getAllByLabelText(/^От, \$/);
+    await screen.findByRole("switch", { name: "Выкуп" });
+    const inputs = screen.getAllByLabelText(/^От \(\d+\), \$/);
     inputs[0]?.focus();
     const second = screen.getAllByRole("button", { name: "Убрать диапазон" }).at(1);
     if (!second) throw new Error("no remove button");
     fireEvent.click(second);
-    expect(inputs[0]).toBe(screen.getAllByLabelText(/^От, \$/)[0]);
+    expect(inputs[0]).toBe(screen.getAllByLabelText(/^От \(\d+\), \$/)[0]);
   });
 
   it("sends the limits, empty as no limit, with the version it was edited from", async () => {
@@ -116,10 +140,45 @@ describe("SaleSettingsPage", () => {
       new ApiError(409, "conflict", { code: "settings_stale" }),
     );
     renderPage();
-    fireEvent.click(await screen.findByLabelText("Выкуп включён"));
+    fireEvent.click(await screen.findByRole("switch", { name: "Выкуп" }));
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     fireEvent.click(screen.getByRole("button", { name: "Да, сохранить" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("сохранил кто-то другой");
+  });
+
+  it("shows the save bar only when something changed, counting the fields", async () => {
+    renderPage();
+    await screen.findByRole("switch", { name: "Выкуп" });
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("Комиссия Humo, %"), { target: { value: "1.5" } });
+    fireEvent.change(screen.getByLabelText("Минимум на карту, сум"), {
+      target: { value: "50000" },
+    });
+    expect(screen.getByText("Изменено: 2 поля")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Комиссия Humo, %"), {
+      target: { value: SETTINGS.settings.card_fee_pct.humo },
+    });
+    expect(screen.getByText("Изменено: 1 поле")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+  });
+
+  it("asks before turning selling off", async () => {
+    api.getSaleSettings.mockResolvedValue({
+      ...SETTINGS,
+      settings: { ...SETTINGS.settings, enabled: true },
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("switch", { name: "Выкуп" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(screen.getByRole("dialog", { name: "Выключить выкуп?" })).toHaveTextContent(
+      "Пользователи не смогут продавать скины",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Да, выключить" }));
+    await waitFor(() => {
+      expect(api.saveSaleSettings).toHaveBeenCalledOnce();
+    });
+    expect(api.saveSaleSettings.mock.calls[0]?.[0]).toMatchObject({ enabled: false });
   });
 
   it("shows the money-losing warning", async () => {

@@ -1,21 +1,23 @@
 /** One line of the «Обмены» table and its expandable details. */
 import { ChevronDown } from "lucide-react";
 import { type MouseEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { type AdminTradeRow } from "./api";
-import { SOURCE_LABELS, STATE_LABELS, STATE_TONE } from "./labels";
-import { ago, clockTime, shortDate, shortDateTime, timeLeft } from "./time";
+import { SOURCE_LABELS } from "./labels";
+import { shortDate, timeLeft } from "./time";
 import { TradeExpand } from "./TradeExpand";
-import { ATTENTION_LABELS, FAILURE_LABELS } from "../orders/labels";
-import { AttentionBadge } from "../orders/StatusChip";
+import { AttentionBadge } from "../orders/AttentionBadge";
 
-import { StatusChip } from "@/components/StatusChip";
+import { Reason, Status } from "@/components/Status";
+import { TextLink } from "@/components/TextLink";
+import { When } from "@/components/When";
 import { providerLabel } from "@/features/users/labels";
+import { statusText } from "@/lib/dictionary";
 import { formatSum } from "@/lib/format";
 
 /** Columns of the table, the chevron's included (the details row spans them all). */
-export const COLUMNS = 9;
+export const COLUMNS = 8;
 
 /** `"13.580000"` → `$13.58`, `"-1.200000"` → `−$1.20` (display only: the digits are cut). */
 export function dollars(value: string): string {
@@ -43,14 +45,22 @@ export function SkinCell({ row }: { row: AdminTradeRow }) {
   const { item } = row;
   return (
     <div className="flex min-w-56 items-center gap-2">
-      <span
-        aria-hidden
-        className="bg-border h-10 w-1 shrink-0 rounded"
-        style={item.rarity_color === null ? undefined : { backgroundColor: item.rarity_color }}
-      />
-      {item.image_url !== null && (
-        <img src={item.image_url} alt="" className="size-10 shrink-0 object-contain" />
-      )}
+      {/* Rarity is a dot on the picture: the row's left edge is only for «needs attention». */}
+      <span className="relative shrink-0">
+        {item.image_url !== null ? (
+          <img src={item.image_url} alt="" className="size-10 object-contain" />
+        ) : (
+          <span aria-hidden className="bg-surface-2 block size-10 rounded" />
+        )}
+        {item.rarity_color !== null && (
+          <span
+            aria-hidden
+            data-testid="rarity-dot"
+            className="ring-surface absolute -left-0.5 -top-0.5 size-2.5 rounded-full ring-2"
+            style={{ backgroundColor: item.rarity_color }}
+          />
+        )}
+      </span>
       <div className="min-w-0">
         <p className="line-clamp-2 max-w-60 leading-tight" title={item.name}>
           {item.name}
@@ -65,33 +75,43 @@ export function SkinCell({ row }: { row: AdminTradeRow }) {
   );
 }
 
+/** The source's own status word for a tooltip: Waxpeer's code is digits, the rest a word. */
+export function sourceStatusText(status: string): string {
+  return statusText(/^\d+$/.test(status) ? "waxpeer" : "market", status);
+}
+
 export function StateCell({ row }: { row: AdminTradeRow }) {
-  const reason =
-    row.trade_state === "refunded" && row.failure_reason !== null
-      ? ` · ${FAILURE_LABELS[row.failure_reason]}`
-      : "";
+  const hold =
+    row.trade_state === "hold" && row.protected_until !== null ? row.protected_until : null;
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1">
-        <StatusChip
-          tone={STATE_TONE[row.trade_state]}
+        <Status
+          of="trade"
+          code={row.trade_state}
           testId="trade-state"
-          {...(row.source_status === null ? {} : { title: `Площадка: ${row.source_status}` })}
-        >
-          {STATE_LABELS[row.trade_state]}
-          {reason}
-        </StatusChip>
+          title={
+            row.source_status === null
+              ? undefined
+              : `Площадка: ${sourceStatusText(row.source_status)}`
+          }
+        />
         <AttentionBadge reason={row.attention_reason} />
       </div>
-      {row.attention_reason !== null && (
-        <p className="text-danger whitespace-nowrap text-xs">
-          {ATTENTION_LABELS[row.attention_reason]}
-        </p>
+      {row.trade_state === "refunded" && row.failure_reason !== null && (
+        <Reason of="failure" code={row.failure_reason} className="text-fg-muted block text-xs" />
       )}
-      {row.trade_state === "hold" && row.protected_until !== null && (
+      {row.attention_reason !== null && (
+        <Reason
+          of="orderAttention"
+          code={row.attention_reason}
+          className="text-danger block whitespace-nowrap text-xs"
+        />
+      )}
+      {hold !== null && (
         <p data-testid="hold-left" className="text-fg-muted whitespace-nowrap text-xs">
-          {row.protected_estimated ? "≈ " : ""}
-          {timeLeft(row.protected_until)} · {shortDate(row.protected_until)}
+          защита до {row.protected_estimated ? "≈ " : ""}
+          {shortDate(hold)} · {timeLeft(hold)}
         </p>
       )}
     </div>
@@ -124,10 +144,9 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
             attention ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""
           }`}
         >
-          <Link to={`/orders/${row.number}`} className="font-mono font-medium hover:underline">
+          <TextLink to={`/orders/${row.number}`} number>
             {row.number}
-          </Link>
-          <p className="text-fg-muted whitespace-nowrap text-xs">{shortDateTime(row.created_at)}</p>
+          </TextLink>
         </td>
         <td className="py-2 pr-3">
           <SkinCell row={row} />
@@ -148,37 +167,22 @@ export function TradeLine({ row, open, onToggle }: TradeLineProps) {
           </p>
           <p className="text-fg-muted text-xs">себест. {dollars(row.cost_usd)}</p>
         </td>
-        <td className="whitespace-nowrap py-2 pr-3">
-          {row.offer_url === null ? (
-            "—"
-          ) : (
-            <a
-              href={row.offer_url}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono hover:underline"
-            >
-              {row.steam_offer_id}
-            </a>
-          )}
-        </td>
         <td className="py-2 pr-3">
           <div className="flex items-center gap-2">
             {row.buyer.avatar_url !== null && (
               <img src={row.buyer.avatar_url} alt="" className="size-6 rounded-full" />
             )}
-            <Link to={`/users/${row.buyer.id}`} className="whitespace-nowrap hover:underline">
+            <TextLink to={`/users/${row.buyer.id}`} className="whitespace-nowrap">
               {row.buyer.display_name ?? "Без имени"}
-            </Link>
+            </TextLink>
           </div>
           <p className="text-fg-muted text-xs">{providerLabel(row.paid_with)}</p>
         </td>
-        <td className="py-2 pr-3">
+        <td className="min-w-48 py-2 pr-3">
           <StateCell row={row} />
         </td>
         <td className="whitespace-nowrap py-2 pr-3">
-          <p>{ago(row.created_at)}</p>
-          <p className="text-fg-muted text-xs tabular-nums">{clockTime(row.created_at)}</p>
+          <When iso={row.created_at} />
         </td>
         <td className="py-2">
           <button
@@ -218,12 +222,12 @@ export function TradeCard({ row }: { row: AdminTradeRow }) {
         </p>
       </div>
       <p className="text-fg-muted flex flex-wrap gap-x-2 text-xs">
-        <Link to={`/orders/${row.number}`} className="font-mono hover:underline">
+        <TextLink to={`/orders/${row.number}`} number>
           {row.number}
-        </Link>
+        </TextLink>
         <span>{SOURCE_LABELS[row.source]}</span>
         <span>{row.buyer.display_name ?? "Без имени"}</span>
-        <span>{ago(row.created_at)}</span>
+        <When iso={row.created_at} />
       </p>
     </div>
   );

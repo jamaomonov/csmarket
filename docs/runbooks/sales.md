@@ -13,7 +13,7 @@ Telegram).
 2. Deploy with `CSMARKET_SALES_ENABLED=false`; then set it `true` in `secrets/api.env` and
    restart the API, the worker and the scheduler with the pinned `IMAGE_TAG`.
 3. In the admin, «Настройки» → «Выкуп»: set the real card fees, the bonus, the margin
-   brackets; leave «Выкуп включён» off. A save made in a tab opened before someone else's save
+   brackets; leave the «Выкуп» switch off. A save made in a tab opened before someone else's save
    is refused («Настройки уже сохранил кто-то другой», 409 `settings_stale`): reload and edit
    again. Read the `warnings` the settings answer carries (a red banner on the page):
    `balance_bonus_eats_margin` means the top bracket's margin less the balance bonus less 1 %
@@ -24,7 +24,7 @@ Telegram).
    24 h. Sales that ended paying nothing (`closed`, `reverted`) do not count. A sale over one is
    refused at `POST /sell` with 409 `above_sale_maximum`, `user_daily_limit` or `daily_limit`
    (with `limit_usd` and `left_usd`). Start low while learning.
-5. The owner makes a test sale with «Выкуп включён» on for a minute: inventory, offer, accept,
+5. The owner makes a test sale with the «Выкуп» switch on for a minute: inventory, offer, accept,
    `hold`. Check the sale page and «Продажи» in the admin; then decide whether to leave it on.
 
 ## Paying a card request (from a phone)
@@ -68,7 +68,8 @@ be paid; nothing reaches the balance either.
 
 **Skinslink reverted the trade** (the request carries the `rolled_back` flag): the seller has
 the skins back, so «Отклонить» is refused (409 `payout_sale_reverted`) — it would hand them
-the money too. Close it with «Закрыть без выплаты»; «Выплачено» needs a stated reason.
+the money too, and the page hides it. Close the request with «Отменить (откат)» (the red
+banner says the same); «Выплачено» needs a stated reason.
 
 **Pressed the wrong one?** For 10 minutes the page offers «Вернуть в очередь» (a reason is
 required, audited `sales.payout.undo`):
@@ -222,7 +223,7 @@ written at the time.
 
 ## Switching off
 
-The admin's «Выкуп включён» off (instant), or `CSMARKET_SALES_ENABLED=false` (a restart).
+The admin's «Выкуп» switch off (instant), or `CSMARKET_SALES_ENABLED=false` (a restart).
 Open sales keep settling: the poll and the worker run while the Skinslink key is set, and the
 webhook stays open while both Skinslink credentials are set, whatever the switches.
 

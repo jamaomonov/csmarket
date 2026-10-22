@@ -5,24 +5,26 @@
  */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
-  FLAG_LABELS,
   getReconciliation,
   RECON_KEY,
   type ReconDays,
   type ReconPage,
+  type ReconRow,
 } from "./reconApi";
-import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Reason, Status } from "@/components/Status";
+import { Tabs } from "@/components/Tabs";
+import { LINK } from "@/components/TextLink";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
 import { pick } from "@/lib/url-guards";
 import { useUrlParams } from "@/lib/useUrlParams";
 
@@ -54,6 +56,10 @@ export function ReconciliationPage() {
     getNextPageParam: (last) => last.next_cursor,
   });
   const first = query.data?.pages[0];
+  // The count rides on every page; keep the last one so the badge does not blink on a tab switch.
+  const lastProblems = useRef<number | null>(null);
+  if (first !== undefined) lastProblems.current = first.problems;
+  const problemsCount = lastProblems.current;
   const items = query.data?.pages.flatMap((p) => p.items);
   return (
     <section className="space-y-4">
@@ -76,27 +82,35 @@ export function ReconciliationPage() {
           </Total>
         </div>
       )}
-      <FiltersBar>
-        <FilterSelect
-          label="Период"
-          value={period}
-          options={PERIODS}
-          text={(p) => PERIOD_LABELS[p]}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Tabs<"all" | "problems">
+          label="Какие продажи"
+          value={problems ? "problems" : "all"}
           onChange={(v) => {
-            url.set("days", v === "7" ? "" : v);
+            url.set("problems", v === "problems" ? "1" : "");
           }}
+          items={[
+            { key: "all", label: "Все" },
+            {
+              key: "problems",
+              label: "Проблемы",
+              ...(problemsCount !== null && { count: problemsCount }),
+              alert: true,
+            },
+          ]}
         />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={problems}
-            onChange={(e) => {
-              url.set("problems", e.target.checked ? "1" : "");
+        <FiltersBar>
+          <FilterSelect
+            label="Период"
+            value={period}
+            options={PERIODS}
+            text={(p) => PERIOD_LABELS[p]}
+            onChange={(v) => {
+              url.set("days", v === "7" ? "" : v);
             }}
           />
-          Только проблемы
-        </label>
-      </FiltersBar>
+        </FiltersBar>
+      </div>
       <DataTable
         label="Сверка"
         rows={items}
@@ -113,7 +127,7 @@ export function ReconciliationPage() {
             key: "number",
             header: "Продажа",
             cell: (r) => (
-              <Link to={`/sales/${r.number}`} className="font-mono font-medium hover:underline">
+              <Link to={`/sales/${r.number}`} className={`${LINK} font-mono`}>
                 {r.number}
               </Link>
             ),
@@ -123,8 +137,10 @@ export function ReconciliationPage() {
             header: "Статус",
             cell: (r) => (
               <>
-                <SaleStatusChip status={r.status} />
-                {r.flag && <div className="text-danger text-xs">{FLAG_LABELS[r.flag]}</div>}
+                <Status of="sale" code={r.status} />
+                {r.flag && (
+                  <Reason of="reconFlag" code={r.flag} className="text-danger block text-xs" />
+                )}
               </>
             ),
           },
@@ -149,30 +165,15 @@ export function ReconciliationPage() {
           {
             key: "done",
             header: "Завершена",
-            cell: (r) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {r.done_at ? formatDateTime(r.done_at) : "—"}
-              </span>
-            ),
+            cell: (r) =>
+              r.done_at ? (
+                <When iso={r.done_at} className="text-fg-muted" />
+              ) : (
+                <span className="text-fg-muted">—</span>
+              ),
           },
         ]}
-        mobileCard={(r) => (
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-mono">{r.number}</span>
-              {r.amount_usd === null ? "—" : <Money usd={r.amount_usd} />}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span>
-                из <Money usd={r.quoted_usd} />
-              </span>
-              {r.flag && <span className="text-danger">{FLAG_LABELS[r.flag]}</span>}
-              <span className="text-fg-dim ml-auto text-xs">
-                {r.done_at ? formatDateTime(r.done_at) : "—"}
-              </span>
-            </div>
-          </div>
-        )}
+        mobileCard={(r) => <ReconCard row={r} />}
         footer={
           query.hasNextPage ? (
             <Button
@@ -187,6 +188,44 @@ export function ReconciliationPage() {
         }
       />
     </section>
+  );
+}
+
+/** A phone's row: every figure says what it is («ожидали», «зачислено», «завершена»). */
+export function ReconCard({ row: r }: { row: ReconRow }) {
+  return (
+    <div className="space-y-1 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono">{r.number}</span>
+        <Status of="sale" code={r.status} />
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        <span>
+          <span className="text-fg-muted">ожидали</span> <Money usd={r.quoted_usd} />
+        </span>
+        <span>
+          <span className="text-fg-muted">зачислено</span>{" "}
+          {r.amount_usd === null ? "ещё нет" : <Money usd={r.amount_usd} />}
+        </span>
+        {r.diff_usd !== null && Number(r.diff_usd) !== 0 && (
+          <span>
+            <span className="text-fg-muted">разница</span> <Money usd={r.diff_usd} />
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {r.flag && <Reason of="reconFlag" code={r.flag} className="text-danger" />}
+        <span className="text-fg-dim ml-auto text-xs">
+          {r.done_at ? (
+            <>
+              завершена <When iso={r.done_at} />
+            </>
+          ) : (
+            "не завершена"
+          )}
+        </span>
+      </div>
+    </div>
   );
 }
 

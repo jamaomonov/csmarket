@@ -1,15 +1,30 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { SteamOfferValue, TradeLinkValue } from "./SteamLinks";
 
 const LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY";
 
 describe("SteamLinks", () => {
-  it("shows the whole trade link as a link to open or copy", () => {
+  it("hides the token on screen, opens and copies the whole link", async () => {
+    const write = vi.fn(() => Promise.resolve());
+    const saved = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText: write },
+      configurable: true,
+    });
+    onTestFinished(() => {
+      if (saved) Object.defineProperty(navigator, "clipboard", saved);
+      else Reflect.deleteProperty(navigator, "clipboard");
+    });
     render(<TradeLinkValue link={LINK} />);
-    expect(screen.getByRole("link", { name: LINK })).toHaveAttribute("href", LINK);
-    expect(screen.getByRole("button", { name: "Скопировать трейд-ссылку" })).toBeInTheDocument();
+    const shown = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••";
+    expect(screen.getByRole("link", { name: shown })).toHaveAttribute("href", LINK);
+    expect(document.body.textContent).not.toContain("AbCdXY");
+    fireEvent.click(screen.getByRole("button", { name: "Скопировать трейд-ссылку" }));
+    await waitFor(() => {
+      expect(write).toHaveBeenCalledWith(LINK);
+    });
   });
 
   it("shows an erased (masked) link as text only", () => {
@@ -17,6 +32,15 @@ describe("SteamLinks", () => {
       <TradeLinkValue link="https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••XY" />,
     );
     expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("hides the token of a stored link that is not an https link too", () => {
+    render(
+      <TradeLinkValue link="http://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY" />,
+    );
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(document.body.textContent).not.toContain("AbCdXY");
+    expect(document.body.textContent).toContain("token=••••");
   });
 
   it("says when no link is saved", () => {

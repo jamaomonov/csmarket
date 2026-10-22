@@ -3,13 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminUserSale, getUserSales } from "./api";
-import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
 import { Section } from "@/components/Section";
 import { SkinThumb } from "@/components/SkinThumb";
-import { formatDateTime } from "@/lib/format";
+import { Status } from "@/components/Status";
+import { LINK } from "@/components/TextLink";
+import { When } from "@/components/When";
 
 /** Skins shown by name in a row; the rest are «+ ещё N». */
 const SHOWN = 2;
@@ -57,7 +58,7 @@ export function UserSales({ userId }: { userId: string }) {
             key: "number",
             header: "Номер",
             cell: (s) => (
-              <Link to={`/sales/${s.number}`} className="font-mono hover:underline">
+              <Link to={`/sales/${s.number}`} className={`${LINK} font-mono`}>
                 {s.number}
               </Link>
             ),
@@ -74,15 +75,11 @@ export function UserSales({ userId }: { userId: string }) {
             header: "Куда",
             cell: (s) => (s.payout_to === "card" ? "карта" : "баланс"),
           },
-          { key: "status", header: "Статус", cell: (s) => <SaleStatusChip status={s.status} /> },
+          { key: "status", header: "Статус", cell: (s) => <Status of="sale" code={s.status} /> },
           {
             key: "created",
             header: "Создана",
-            cell: (s) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(s.created_at)}
-              </span>
-            ),
+            cell: (s) => <When iso={s.created_at} className="text-fg-muted" />,
           },
         ]}
         mobileCard={(s) => (
@@ -93,9 +90,9 @@ export function UserSales({ userId }: { userId: string }) {
             </div>
             <Skins sale={s} />
             <div className="flex flex-wrap gap-2">
-              <SaleStatusChip status={s.status} />
+              <Status of="sale" code={s.status} />
               <span className="text-fg-muted">{s.payout_to === "card" ? "карта" : "баланс"}</span>
-              <span className="text-fg-dim ml-auto text-xs">{formatDateTime(s.created_at)}</span>
+              <When iso={s.created_at} className="text-fg-dim ml-auto text-xs" />
             </div>
           </div>
         )}

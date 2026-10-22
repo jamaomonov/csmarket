@@ -105,4 +105,5 @@ Business connection in Telegram (still on, «HUMO Card» selected, Messages on),
 ## 5. Switches
 
 Admin → Настройки → Оплата → P2P: «Работает» / «Тех. работы» (the tile is greyed, no new
-requests) / «Выключен» (no tile). Open requests settle in every state.
+requests) / «Выключен» (no tile), then «Сохранить» in the bar at the bottom of the page;
+«Выключен» asks first («… будет скрыт на сайте»). Open requests settle in every state.

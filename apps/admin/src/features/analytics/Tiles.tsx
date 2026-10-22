@@ -4,8 +4,10 @@ import { type ReactNode } from "react";
 import { type Totals } from "./api";
 import { type Delta, delta, dollars, som } from "./labels";
 
-/** `up` is good for money and orders; for refunds it is bad. */
+/** `up` is good for money and orders; for refunds it is bad. Nothing to compare: no line. */
 function Change({ d, upIsBad = false }: { d: Delta; upIsBad?: boolean }) {
+  // Nothing to compare with (the previous period had none): no «—» line under the figure.
+  if (d.dir === "none") return null;
   const good = d.dir === "up" ? !upIsBad : d.dir === "down" ? upIsBad : null;
   const tone = good === null ? "text-fg-muted" : good ? "text-success" : "text-danger";
   return <span className={`text-xs font-medium ${tone}`}>{d.text}</span>;

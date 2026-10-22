@@ -11,6 +11,7 @@ import {
   LogoMark,
   Panel,
   Select,
+  Switch,
 } from "@csmarket/ui";
 import { notFound } from "next/navigation";
 
@@ -107,6 +108,32 @@ export function Showcase() {
         <span className="text-body flex items-center gap-2">
           <CheckMark checked /> CheckMark
         </span>
+      </Section>
+      <Section name="Switch">
+        <Switch
+          label="Выкуп"
+          states={["включён", "выключен"]}
+          checked
+          onCheckedChange={() => {
+            /* the showcase acts on nothing */
+          }}
+        />
+        <Switch
+          label="Доверенный"
+          states={["да", "нет"]}
+          checked={false}
+          onCheckedChange={() => {
+            /* the showcase acts on nothing */
+          }}
+        />
+        <Switch
+          label="Недоступен"
+          checked={false}
+          disabled
+          onCheckedChange={() => {
+            /* the showcase acts on nothing */
+          }}
+        />
       </Section>
       <Section name="Dropdown">
         <Dropdown

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +10,8 @@ import { ApiError } from "@/lib/api";
 
 const api = vi.hoisted(() => ({ getHolds: vi.fn(), decideHold: vi.fn() }));
 vi.mock("./api", async (importOriginal) => ({ ...(await importOriginal<object>()), ...api }));
+const dashboard = vi.hoisted(() => ({ getDashboard: vi.fn() }));
+vi.mock("@/features/dashboard/api", () => dashboard);
 
 const OPEN: Hold = {
   id: "h1",
@@ -41,11 +43,11 @@ function firstButton(name: string): HTMLElement {
   return found;
 }
 
-function renderPage() {
+function renderPage(path = "/payment-holds") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[path]}>
         <HoldsPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -59,6 +61,34 @@ describe("HoldsPage", () => {
       Promise.resolve({ items: state === "open" ? [OPEN] : [DECIDED], next_cursor: null }),
     );
     api.decideHold.mockResolvedValue(DECIDED);
+    dashboard.getDashboard.mockReset().mockResolvedValue({ holds_open: 3 });
+  });
+
+  it("«Открытые» counts what waits; ?state=decided opens «Решённые»", async () => {
+    renderPage();
+    expect(await screen.findByRole("tab", { name: "Открытые 3" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    cleanup();
+    renderPage("/payment-holds?state=decided");
+    expect(await screen.findByRole("tab", { name: "Решённые" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await waitFor(() => {
+      expect(api.getHolds).toHaveBeenCalledWith("decided", null);
+    });
+  });
+
+  it("an empty list leads to the payment settings, where the limits live", async () => {
+    api.getHolds.mockResolvedValue({ items: [], next_cursor: null });
+    renderPage();
+    expect(await screen.findByText("Ничего не ждёт решения.")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Лимиты в настройках оплаты" })).toHaveAttribute(
+      "href",
+      "/payment-settings",
+    );
   });
 
   it("lists an open hold with its reason, amount and user link", async () => {

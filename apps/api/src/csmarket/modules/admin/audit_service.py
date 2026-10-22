@@ -1,17 +1,73 @@
-"""Reading the admin audit trail (writing is ``audit.record``)."""
+"""Reading the admin audit trail (writing is ``audit.record``), with readable target names."""
 
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict
+from collections.abc import Iterable
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import Select, and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.cursor import decode_cursor, encode_cursor
 from csmarket.core.errors import ValidationError
 from csmarket.modules.admin.audit_schemas import AuditActor, AuditRow
 from csmarket.modules.admin.models import AdminAuditLog
+from csmarket.modules.public_api.api import ApiKey
+from csmarket.modules.sales.api import PayoutRequest, Sale
+from csmarket.modules.skins.api import SkinItem
 from csmarket.modules.users.api import User
+
+
+def _uuids(ids: Iterable[str]) -> list[str]:
+    """The ids that are UUIDs (a hand-written row never reaches a UUID column as text)."""
+    out = []
+    for raw in ids:
+        try:
+            out.append(str(uuid.UUID(raw)))
+        except ValueError:
+            continue
+    return out
+
+
+def _label_query(target_type: str, ids: list[str]) -> Select[str, str | None] | None:
+    """``(id, label)`` of one id-only target type; ``None`` for a type that names itself."""
+    match target_type:
+        case "user":
+            return select(User.id, User.display_name).where(User.id.in_(ids))
+        case "skin_item":
+            return select(SkinItem.id, SkinItem.market_hash_name).where(SkinItem.id.in_(ids))
+        case "payout_request":
+            return (
+                select(PayoutRequest.id, Sale.number)
+                .join(Sale, Sale.id == PayoutRequest.sale_id)
+                .where(PayoutRequest.id.in_(ids))
+            )
+        case "api_key":
+            return (
+                select(ApiKey.id, User.display_name)
+                .join(User, User.id == ApiKey.user_id)
+                .where(ApiKey.id.in_(ids))
+            )
+        case _:
+            return None
+
+
+async def _target_labels(db: AsyncSession, rows: list[AdminAuditLog]) -> dict[tuple[str, str], str]:
+    """Readable names of a page's id-only targets: one query per target type on the page."""
+    wanted: defaultdict[str, set[str]] = defaultdict(set)
+    for row in rows:
+        wanted[row.target_type].add(row.target_id)
+    labels: dict[tuple[str, str], str] = {}
+    for target_type, ids in wanted.items():
+        uuids = _uuids(ids)
+        stmt = _label_query(target_type, uuids) if uuids else None
+        if stmt is None:
+            continue
+        for target_id, label in (await db.execute(stmt)).all():
+            if label:
+                labels[(target_type, str(target_id))] = label
+    return labels
 
 
 async def list_audit(
@@ -57,6 +113,7 @@ async def list_audit(
         )
     rows = list((await db.execute(stmt)).all())
     page, more = rows[:limit], len(rows) > limit
+    labels = await _target_labels(db, [row for row, _ in page])
     items = [
         AuditRow(
             id=row.id,
@@ -64,6 +121,7 @@ async def list_audit(
             action=row.action,
             target_type=row.target_type,
             target_id=row.target_id,
+            target_label=labels.get((row.target_type, row.target_id)),
             actor=AuditActor(id=row.actor_user_id, display_name=name),
             payload=row.payload,
         )

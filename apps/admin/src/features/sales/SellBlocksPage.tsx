@@ -12,9 +12,10 @@ import { payoutErrorText } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
+import { LINK, TextLink } from "@/components/TextLink";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
-import { formatDateTime } from "@/lib/format";
 
 function Unblock({ block }: { block: SellBlock }) {
   const qc = useQueryClient();
@@ -62,12 +63,13 @@ export function SellBlocksPage() {
         loading={query.isPending}
         error={query.isError ? errorText(query.error) : undefined}
         empty="Никому не запрещено."
+        emptyAction={<TextLink to="/payouts">Заявки на выплату</TextLink>}
         columns={[
           {
             key: "user",
             header: "Пользователь",
             cell: (b) => (
-              <Link to={`/users/${b.user.id}`} className="hover:underline">
+              <Link to={`/users/${b.user.id}`} className={LINK}>
                 {b.user.display_name ?? "Без имени"}
               </Link>
             ),
@@ -79,7 +81,11 @@ export function SellBlocksPage() {
             cell: (b) => (
               <span className="text-fg-muted">
                 {b.blocked_by?.display_name ?? "—"}
-                {b.blocked_at ? `, ${formatDateTime(b.blocked_at)}` : ""}
+                {b.blocked_at ? (
+                  <>
+                    , <When iso={b.blocked_at} />
+                  </>
+                ) : null}
               </span>
             ),
           },
@@ -88,7 +94,7 @@ export function SellBlocksPage() {
         mobileCard={(b) => (
           <div className="space-y-1 text-sm">
             <div className="flex items-center justify-between gap-2">
-              <Link to={`/users/${b.user.id}`} className="font-medium hover:underline">
+              <Link to={`/users/${b.user.id}`} className={`${LINK} font-medium`}>
                 {b.user.display_name ?? "Без имени"}
               </Link>
               <Unblock block={b} />
@@ -96,7 +102,11 @@ export function SellBlocksPage() {
             <p>{b.reason ?? "—"}</p>
             <p className="text-fg-dim text-xs">
               {b.blocked_by?.display_name ?? "—"}
-              {b.blocked_at ? `, ${formatDateTime(b.blocked_at)}` : ""}
+              {b.blocked_at ? (
+                <>
+                  , <When iso={b.blocked_at} />
+                </>
+              ) : null}
             </p>
           </div>
         )}

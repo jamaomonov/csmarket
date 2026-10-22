@@ -151,7 +151,11 @@ async def recent_key_orders(db: AsyncSession, api_key_id: str) -> list[AdminOrde
 
 
 def _order_full(
-    order: Order, trade: SkinTrade | None, purchase: PurchaseRow | None, fx_rate: Decimal
+    order: Order,
+    trade: SkinTrade | None,
+    purchase: PurchaseRow | None,
+    fx_rate: Decimal,
+    image_url: str | None = None,
 ) -> AdminOrderFull:
     charged = spent(order, trade, purchase)
     columns = {c.key: getattr(order, c.key) for c in Order.__table__.columns}
@@ -173,6 +177,7 @@ def _order_full(
             "protected_estimated": protection_is_estimate(purchase),
             # An erased link is stored masked already.
             "trade_link": order.trade_link,
+            "image_url": image_url,
         }
     )
 
@@ -230,22 +235,25 @@ async def order_detail(db: AsyncSession, number: str) -> AdminOrderDetail:
         raise NotFoundError("order not found")
     found = (
         await db.execute(
-            select(Order, User.display_name, User.avatar_url, FxSnapshot.usd_uzs)
+            select(
+                Order, User.display_name, User.avatar_url, FxSnapshot.usd_uzs, SkinItem.image_url
+            )
             .join(User, User.id == Order.user_id)
             .join(FxSnapshot, FxSnapshot.id == Order.fx_snapshot_id)
+            .outerjoin(SkinItem, SkinItem.id == Order.skin_item_id)
             .where(Order.number == number)
         )
     ).one_or_none()
     if found is None:
         raise NotFoundError("order not found")
-    order, display_name, avatar_url, fx_rate = found
+    order, display_name, avatar_url, fx_rate, image_url = found
     trade = await db.scalar(select(SkinTrade).where(SkinTrade.order_id == order.id))
     purchase = await purchase_of(db, order, lock=False)
     payments = await db.scalars(
         select(Payment).where(Payment.order_id == order.id).order_by(Payment.created_at, Payment.id)
     )
     return AdminOrderDetail(
-        order=_order_full(order, trade, purchase, Decimal(fx_rate)),
+        order=_order_full(order, trade, purchase, Decimal(fx_rate), image_url),
         user=AdminOrderUser(id=order.user_id, display_name=display_name, avatar_url=avatar_url),
         trade=_trade_out(trade) if trade is not None else None,
         skinslink=_purchase_out(purchase) if isinstance(purchase, SkinslinkPurchase) else None,

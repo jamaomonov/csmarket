@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,6 +25,8 @@ describe("SalesPage", () => {
           attention_reason: "rolled_back",
           attention_open: true,
           created_at: s.created_at,
+          first_item: { name: "AK-47 | Redline (Field-Tested)", image_url: null },
+          items_count: 2,
         },
       ],
       next_cursor: null,
@@ -47,10 +49,16 @@ describe("SalesPage", () => {
     );
     expect(screen.getAllByText("выплата на карту").length).toBeGreaterThan(1); // row + filter option
     expect(screen.getByText(/147\s400 сум/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ждут проверки: 2" })).toHaveAttribute(
-      "href",
-      "/sales?attention=open",
+    expect(screen.getByRole("tab", { name: "Ждут проверки 2" })).toHaveAttribute(
+      "aria-selected",
+      "false",
     );
+    expect(screen.getByRole("tab", { name: "Все" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("searchbox")).not.toHaveClass("font-mono");
+    expect(screen.getByTestId("sale-first-skin")).toHaveTextContent(
+      "AK-47 | Redline (Field-Tested)+1",
+    );
+    expect(screen.getByRole("link", { name: "S7K2M9QX" })).toHaveClass("text-accent");
   });
 
   it("filters by the attention from the URL", async () => {
@@ -64,6 +72,28 @@ describe("SalesPage", () => {
     );
     await screen.findByRole("link", { name: "S7K2M9QX" });
     expect(api.listSales).toHaveBeenCalledWith({ attention: "open" });
-    expect(screen.getByLabelText("Пометка")).toHaveValue("open");
+    expect(screen.getByRole("tab", { name: "Ждут проверки 2" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("a tab filters by the attention, the status stays a select", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>
+          <SalesPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: "Проверены" }));
+    await waitFor(() => {
+      expect(api.listSales).toHaveBeenCalledWith({ attention: "resolved" });
+    });
+    fireEvent.change(screen.getByLabelText("Статус"), { target: { value: "credited" } });
+    await waitFor(() => {
+      expect(api.listSales).toHaveBeenCalledWith({ status: "credited", attention: "resolved" });
+    });
   });
 });

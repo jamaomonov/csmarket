@@ -4,6 +4,12 @@ import { APPLIED } from "./labels";
 
 import { formatSum } from "@/lib/format";
 
+/** Percentage points added to the margin, in plain words: «+5 %», «−2 %», «0 %». */
+export function points(pp: string): string {
+  if (Number(pp) === 0) return "0 %";
+  return pp.startsWith("-") ? `−${pp.slice(1)} %` : `+${pp} %`;
+}
+
 interface QuoteViewProps {
   quote: PreviewOut;
 }
@@ -12,11 +18,11 @@ export function QuoteView({ quote }: QuoteViewProps) {
   const rows: [string, string][] = [
     ["Себестоимость", `$${quote.cost_usd}`],
     ["Расходы", `$${quote.expenses_usd}`],
-    ["Маржа брекета", `$${quote.bracket_margin_usd}`],
-    ["Категория", `${quote.category_pp} п.п.`],
-    ["Оружие", `${quote.weapon_pp} п.п.`],
-    ["Ликвидность", `${quote.liquidity_pp} п.п.`],
-    ["Скин", `${quote.item_pp} п.п.`],
+    ["Маржа по себестоимости", `$${quote.bracket_margin_usd}`],
+    ["Надбавка категории", points(quote.category_pp)],
+    ["Надбавка оружия", points(quote.weapon_pp)],
+    ["За мало лотов", points(quote.liquidity_pp)],
+    ["Своя надбавка скина", points(quote.item_pp)],
     ["Итого наценка", `${quote.effective_percent} %`],
   ];
   return (

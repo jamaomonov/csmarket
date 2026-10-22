@@ -8,6 +8,8 @@ export interface AuditRow {
   action: string;
   target_type: string;
   target_id: string;
+  /** A readable name for an id-only target (a display name, a skin, a sale number). */
+  target_label?: string | null;
   actor: { id: string; display_name: string | null };
   /** Flat scalars as written by the audit call: a reason, an amount, a slug. Never PII. */
   payload: Record<string, unknown>;

@@ -6,6 +6,7 @@ import { type AdminUserCard } from "./api";
 import { CARD, RISK, renderCard as renderWith, STEAM_ID, USER_SALES } from "./fixtures";
 
 import { ApiError } from "@/lib/api";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({
   listUsers: vi.fn(),
@@ -67,7 +68,9 @@ describe("UserCard", () => {
     );
     expect(screen.getByText("ivan@example.test")).toBeInTheDocument();
     expect(screen.getByText("узбекский")).toBeInTheDocument();
-    expect(screen.getByText(CARD.user.trade_link ?? "")).toBeInTheDocument();
+    expect(
+      screen.getByText("https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/задержка обмена/)).toBeInTheDocument();
     expect(screen.getByTestId("user-balance")).toHaveTextContent(/^30\s000 сум$/);
 
@@ -114,11 +117,42 @@ describe("UserCard", () => {
     );
   });
 
-  it("says there are no orders yet", async () => {
-    api.getUserCard.mockResolvedValue({ ...CARD, orders: [] });
+  it("folds empty sections into one line instead of empty cards", async () => {
+    api.getUserCard.mockResolvedValue({ ...CARD, orders: [], topups: [], entries: [] });
+    salesApi.getUserSales.mockResolvedValue({ ...USER_SALES, items: [] });
     renderCard();
-    const orders = await screen.findByRole("region", { name: "Заказы" });
-    expect(orders).toHaveTextContent("Заказов пока не было.");
+    await waitFor(() => {
+      expect(screen.getByTestId("empty-sections")).toHaveTextContent(
+        "Пока пусто: История баланса, Заказы, Продажи, Пополнения.",
+      );
+    });
+    for (const name of ["Заказы", "Продажи", "Пополнения", "История баланса"]) {
+      expect(screen.queryByRole("region", { name })).toBeNull();
+    }
+  });
+
+  it("puts «Профиль» and «Риск» before the history on a phone", async () => {
+    const restore = asPhone();
+    try {
+      renderCard();
+      const profile = await screen.findByRole("region", { name: "Профиль" });
+      const history = screen.getByRole("region", { name: "История баланса" });
+      expect(
+        profile.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  it("keeps the history first on a wide screen", async () => {
+    renderCard();
+    const profile = await screen.findByRole("region", { name: "Профиль" });
+    const history = screen.getByRole("region", { name: "История баланса" });
+    expect(
+      history.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByTestId("empty-sections")).toBeNull();
   });
 
   it("credits after a confirm step with a signed amount, reason and key", async () => {
@@ -311,7 +345,7 @@ describe("UserCard", () => {
       api.adjustUsdBalance.mockResolvedValue(USD_CARD);
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "250" } });
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
@@ -329,11 +363,57 @@ describe("UserCard", () => {
       expect(api.adjustBalance).not.toHaveBeenCalled();
     });
 
+    it("groups the sum as typed and sends whole soʻm as before", async () => {
+      api.adjustBalance.mockResolvedValue(CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      const sum = screen.getByLabelText("Сумма, сум");
+      fireEvent.change(sum, { target: { value: "-2000000" } });
+      expect(sum).toHaveValue("-2\u00a0000\u00a0000");
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Ошибочное начисление" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      fireEvent.click(await screen.findByRole("button", { name: /^Списать 2\s000\s000 сум$/ }));
+      await waitFor(() => {
+        expect(api.adjustBalance).toHaveBeenCalledWith(
+          "u-1",
+          -2000000,
+          "Ошибочное начисление",
+          expect.any(String),
+        );
+      });
+    });
+
+    it("sends grouped dollars as the API's string", async () => {
+      api.adjustUsdBalance.mockResolvedValue(USD_CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
+      const sum = screen.getByLabelText("Сумма, USD");
+      expect(sum).toHaveAttribute("inputmode", "decimal");
+      fireEvent.change(sum, { target: { value: "1500.5" } });
+      expect(sum).toHaveValue("1\u00a0500.5");
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      fireEvent.click(await screen.findByRole("button", { name: /^Начислить/ }));
+      await waitFor(() => {
+        expect(api.adjustUsdBalance).toHaveBeenCalledWith(
+          "u-1",
+          "1500.500",
+          "Стартовый баланс",
+          expect.any(String),
+        );
+      });
+    });
+
     it("refuses a comma and groups the confirm amount so 1000 is not read as 1", async () => {
       api.adjustUsdBalance.mockResolvedValue(USD_CARD);
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
       });
@@ -351,7 +431,7 @@ describe("UserCard", () => {
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
       fireEvent.change(screen.getByLabelText("Сумма, сум"), { target: { value: "50 000" } });
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       expect(screen.getByLabelText("Сумма, USD")).toHaveValue("");
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
@@ -365,7 +445,7 @@ describe("UserCard", () => {
     it("refuses a dollar amount with four decimals", async () => {
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1.2345" } });
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },

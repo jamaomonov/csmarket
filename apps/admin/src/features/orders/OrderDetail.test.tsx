@@ -9,6 +9,7 @@ import { detailKey } from "./keys";
 import { OrderDetail } from "./OrderDetail";
 
 import { ApiError } from "@/lib/api";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({
   listOrders: vi.fn(),
@@ -74,7 +75,7 @@ describe("OrderDetail", () => {
     expect(within(money).getByText("$13.50")).toBeInTheDocument();
     expect(within(money).getByText("$13.58")).toBeInTheDocument();
     expect(within(money).getByText("$0.38")).toBeInTheDocument();
-    expect(within(money).getByText("12650.5000")).toBeInTheDocument();
+    expect(within(money).getByText(/^12\s650,5\sсум за \$$/)).toBeInTheDocument();
     expect(within(order).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
 
     const payments = screen.getByRole("region", { name: "Платежи" });
@@ -85,12 +86,51 @@ describe("OrderDetail", () => {
     expect(within(payments).getByText("оплачен")).toBeInTheDocument();
   });
 
-  it("names the order's source and offer", async () => {
+  it("names the order's source, the offer folded under «Подробнее»", async () => {
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText("Waxpeer", { exact: false })).toHaveTextContent(
-      "Waxpeer · wx:4242",
-    );
+    expect(within(order).getByText("Waxpeer")).toBeInTheDocument();
+    expect(within(order).getByText("wx:4242").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("puts the skin's picture, name and price in the header", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, image_url: "https://img.example/ak.png" },
+    });
+    renderDetail();
+    const skin = await screen.findByTestId("order-header-skin");
+    expect(skin).toHaveTextContent(/AK-47 \| Redline \(Field-Tested\)171\s800 сум/);
+    expect(skin.querySelector("img")).toHaveAttribute("src", "https://img.example/ak.png");
+  });
+
+  it("on a wide screen the actions sit in the header", async () => {
+    api.getOrder.mockResolvedValue(RESOLVED);
+    renderDetail();
+    await screen.findByRole("heading", { name: "Заказ O7K2M9QX" });
+    const header = document.querySelector("header");
+    if (header === null) throw new Error("no header");
+    expect(
+      within(header).getByRole("button", { name: "Вернуть деньги на баланс" }),
+    ).toBeInTheDocument();
+  });
+
+  it("on a phone reads summary, then the action bar, then the details", async () => {
+    const restore = asPhone();
+    try {
+      api.getOrder.mockResolvedValue(RESOLVED);
+      renderDetail();
+      const summary = await screen.findByRole("region", { name: "Заказ" });
+      const bar = screen.getByRole("group", { name: "Действия" });
+      const trade = screen.getByRole("region", { name: "Обмен" });
+      expect(bar.closest("header")).toBeNull();
+      const follows = (a: Element, b: Element) =>
+        Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(follows(summary, bar)).toBe(true);
+      expect(follows(bar, trade)).toBe(true);
+    } finally {
+      restore();
+    }
   });
 
   it("names a Skinslink order's source and shows its purchase", async () => {
@@ -102,12 +142,11 @@ describe("OrderDetail", () => {
     });
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText("Skinslink", { exact: false })).toHaveTextContent(
-      "Skinslink · sl:380",
-    );
+    expect(within(order).getByText("Skinslink")).toBeInTheDocument();
+    expect(within(order).getByText("sl:380")).toBeInTheDocument();
     const purchase = screen.getByRole("region", { name: "Покупка Skinslink" });
     expect(within(purchase).getByText("178")).toBeInTheDocument();
-    expect(within(purchase).getByText("active")).toBeInTheDocument();
+    expect(within(purchase).getByText("идёт")).toBeInTheDocument();
     expect(within(purchase).getByText("$12.000000")).toBeInTheDocument();
     expect(within(purchase).getByRole("link", { name: "6912345678" })).toHaveAttribute(
       "href",
@@ -126,12 +165,11 @@ describe("OrderDetail", () => {
     });
     renderDetail();
     const order = await screen.findByRole("region", { name: "Заказ" });
-    expect(within(order).getByText("LIS-SKINS", { exact: false })).toHaveTextContent(
-      "LIS-SKINS · ls:125345",
-    );
+    expect(within(order).getByText("LIS-SKINS")).toBeInTheDocument();
+    expect(within(order).getByText("ls:125345")).toBeInTheDocument();
     const purchase = screen.getByRole("region", { name: "Покупка LIS-SKINS" });
     expect(within(purchase).getByText("55")).toBeInTheDocument();
-    expect(within(purchase).getByText("wait_accept")).toBeInTheDocument();
+    expect(within(purchase).getByText("ждёт принятия")).toBeInTheDocument();
     expect(within(purchase).getByText("$12.340000")).toBeInTheDocument();
     expect(within(purchase).getByRole("link", { name: "7252638866" })).toHaveAttribute(
       "href",
@@ -157,7 +195,7 @@ describe("OrderDetail", () => {
   it("renders the trade block and the whole trade link", async () => {
     renderDetail();
     const trade = await screen.findByRole("region", { name: "Обмен" });
-    expect(within(trade).getByText("4 — предложение отправлено")).toBeInTheDocument();
+    expect(within(trade).getByText("предложение отправлено")).toBeInTheDocument();
     expect(within(trade).getByRole("link", { name: "7000000001" })).toHaveAttribute(
       "href",
       "https://steamcommunity.com/tradeoffer/7000000001/",
@@ -166,9 +204,13 @@ describe("OrderDetail", () => {
     expect(within(trade).getByText("6f1c2a52-0000-4000-8000-000000000001")).toBeInTheDocument();
     expect(within(trade).getByText(/SellerName/)).toBeInTheDocument();
     expect(within(trade).getByText("seller_cancelled")).toBeInTheDocument();
-    // Whole, for an admin to copy (owner, 2026-10-19).
+    // Opened and copied whole (owner, 2026-10-19); the token hidden on screen (audit, batch 4).
     const link = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY";
-    expect(screen.getByRole("link", { name: link })).toHaveAttribute("href", link);
+    expect(
+      screen.getByRole("link", {
+        name: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••",
+      }),
+    ).toHaveAttribute("href", link);
   });
 
   it("copies the project id and the Waxpeer id", async () => {
@@ -252,6 +294,25 @@ describe("OrderDetail", () => {
         expect(screen.queryByRole("button", { name: "Вернуть деньги на баланс" })).toBeNull();
       });
       expect(screen.getByTestId("order-status")).toHaveTextContent("не получилось");
+    });
+
+    it("on a phone the refund confirm is a bottom sheet", async () => {
+      const restore = asPhone();
+      try {
+        api.refundOrder.mockResolvedValue({ ...RESOLVED, can_refund: false, can_retry: false });
+        renderDetail();
+        fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
+        const sheet = screen.getByRole("dialog", { name: "Вернуть деньги" });
+        fireEvent.click(within(sheet).getByRole("button", { name: "Вернуть" }));
+        await waitFor(() => {
+          expect(api.refundOrder).toHaveBeenCalledTimes(1);
+        });
+        await waitFor(() => {
+          expect(screen.queryByRole("dialog")).toBeNull();
+        });
+      } finally {
+        restore();
+      }
     });
 
     it("says a Skinslink / LIS-SKINS refund asks the market first, in dollars for an API order", async () => {

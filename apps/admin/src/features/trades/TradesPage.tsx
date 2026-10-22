@@ -29,7 +29,12 @@ import { useUrlParams } from "@/lib/useUrlParams";
 const DEBOUNCE_MS = 300;
 /** The API's `q` ceiling (and the input's `maxLength`). */
 const Q_MAX = 100;
-const HEADERS = ["#", "Скин", "Источник", "Цена", "Обмен", "Покупатель", "Статус", "Время"];
+/** On a phone the tab counting work comes first: the row scrolls and the end is off-screen. */
+const PHONE_ORDER: readonly TradeView[] = [
+  "attention",
+  ...TRADE_VIEWS.filter((v) => v !== "attention"),
+];
+const HEADERS = ["#", "Скин", "Источник", "Цена", "Покупатель", "Статус", "Время"];
 
 export function TradesPage() {
   const narrow = useNarrow();
@@ -94,7 +99,7 @@ export function TradesPage() {
           onChange={(v) => {
             url.set("view", v === "all" ? "" : v);
           }}
-          items={TRADE_VIEWS.map((v) => ({
+          items={(narrow ? PHONE_ORDER : TRADE_VIEWS).map((v) => ({
             key: v,
             label: TRADE_VIEW_LABELS[v],
             ...(counts !== null && { count: counts[v] }),

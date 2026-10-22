@@ -8,6 +8,7 @@ import { PAYMENT_STATUSES } from "./kinds";
 import { PaymentsPage } from "./PaymentsPage";
 
 import { ApiError } from "@/lib/api";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({ listPayments: vi.fn(), getPayment: vi.fn() }));
 vi.mock("./api", () => api);
@@ -39,6 +40,25 @@ describe("PaymentsPage", () => {
     expect(within(row).getByTestId("payment-status")).toHaveTextContent("оплачен");
     expect(within(row).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
     expect(api.listPayments).toHaveBeenCalledWith({});
+  });
+
+  it("the number is an accent link", async () => {
+    api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
+    renderPage();
+    expect(await screen.findByRole("link", { name: "P100001" })).toHaveClass("text-accent");
+  });
+
+  it("a phone card names what was paid for and by whom", async () => {
+    const restore = asPhone();
+    try {
+      api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
+      renderPage();
+      expect(await screen.findByTestId("payment-card-what")).toHaveTextContent(
+        `${ROW.purpose === "order" ? "заказ" : "пополнение"} · Ivan`,
+      );
+    } finally {
+      restore();
+    }
   });
 
   it("shows the chip text for every status", async () => {
@@ -79,7 +99,7 @@ describe("PaymentsPage", () => {
   it("filters by status, kassa and purpose", async () => {
     api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
     renderPage();
-    fireEvent.change(await screen.findByLabelText("Статус"), { target: { value: "failed" } });
+    fireEvent.click(await screen.findByRole("tab", { name: "Не прошли" }));
     await waitFor(() => {
       expect(api.listPayments).toHaveBeenLastCalledWith({ status: "failed" });
     });
@@ -102,6 +122,19 @@ describe("PaymentsPage", () => {
     renderPage("/payments?status=bogus");
     await screen.findByTestId("payments-table");
     expect(api.listPayments).toHaveBeenCalledWith({});
+    expect(screen.getByRole("tab", { name: "Все" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("reads the status tab from the URL; the search is in the normal font", async () => {
+    api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
+    renderPage("/payments?status=refunded");
+    await screen.findByTestId("payments-table");
+    expect(api.listPayments).toHaveBeenCalledWith({ status: "refunded" });
+    expect(screen.getByRole("tab", { name: "Возвращены" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("searchbox")).not.toHaveClass("font-mono");
   });
 
   it("ignores a ?q= longer than the API accepts", async () => {

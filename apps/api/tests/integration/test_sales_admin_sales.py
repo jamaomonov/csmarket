@@ -10,8 +10,8 @@ import pytest
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.sales.rules import DEFAULT_SALE_SETTINGS
 from httpx import AsyncClient
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import event, select
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from tests.integration.sales_factory import make_sale
 from tests.integration.sales_kit import add_rate
@@ -33,6 +33,57 @@ async def test_the_list_filters_by_status_and_number(
     assert [s["number"] for s in r.json()["items"]] == [hold.number]
     r = await integration_client.get(BASE, params={"q": hold.number[:5].lower()}, headers=headers)
     assert [s["number"] for s in r.json()["items"]] == [hold.number]
+
+
+async def test_a_list_row_names_its_dearest_skin_and_how_many(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    headers = await admin_headers()
+    # The dearest skin is not the first asset: ordering by asset would pick the wrong one.
+    sale = await make_sale(
+        db_session,
+        status="hold",
+        items=(
+            ("100", "P250 | Sand Dune (Field-Tested)", Decimal("0.5"), Decimal(5_600)),
+            ("101", "AK-47 | Redline (Field-Tested)", Decimal("12.45"), Decimal(149_600)),
+            ("102", "MP9 | Sand Dashed (Field-Tested)", Decimal("0.2"), Decimal(2_400)),
+        ),
+    )
+    r = await integration_client.get(BASE, params={"q": sale.number}, headers=headers)
+    assert r.status_code == 200, r.text
+    row = r.json()["items"][0]
+    assert row["first_item"] == {"name": "AK-47 | Redline (Field-Tested)", "image_url": None}
+    assert row["items_count"] == 3
+
+
+async def test_the_sales_list_query_count_is_constant(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    db_engine: AsyncEngine,
+) -> None:
+    headers = await admin_headers()
+
+    async def _count(sales: int) -> int:
+        for _ in range(sales):
+            await make_sale(db_session, status="hold")
+        statements: list[str] = []
+
+        def _capture(*args: object) -> None:
+            statements.append(str(args[2]))
+
+        engine = db_engine.sync_engine
+        event.listen(engine, "before_cursor_execute", _capture)
+        try:
+            r = await integration_client.get(BASE, params={"limit": 100}, headers=headers)
+        finally:
+            event.remove(engine, "before_cursor_execute", _capture)
+        assert r.status_code == 200, r.text
+        assert all(i["items_count"] > 0 for i in r.json()["items"])
+        return len(statements)
+
+    few = await _count(2)
+    assert few == await _count(9)
 
 
 async def test_a_sales_page_shows_skinslinks_amount_our_payout_and_margin(

@@ -1,18 +1,13 @@
 /** The «Бизнес» breakdown blocks: markets, channels, payments, categories, skins, buyers… */
-import { type BusinessOut } from "./api";
+import { type ReactNode } from "react";
+
+import { type BusinessOut, type KeyCount } from "./api";
 import { BarList } from "./charts/BarList";
-import {
-  CATEGORY_LABELS,
-  dollars,
-  labelOf,
-  PAYMENT_LABELS,
-  REASON_LABELS,
-  som,
-  SOURCE_LABELS,
-} from "./labels";
+import { CATEGORY_LABELS, dollars, labelOf, PAYMENT_LABELS, som, SOURCE_LABELS } from "./labels";
 
 import { Row, Section } from "@/components/Section";
 import { SkinThumb } from "@/components/SkinThumb";
+import { Reason } from "@/components/Status";
 import { UserCell } from "@/components/UserCell";
 
 interface B {
@@ -91,8 +86,22 @@ export function TopSkins({ data }: B) {
   );
 }
 
+const ORDERS = new Intl.PluralRules("ru");
+const ORDER_WORD: Record<string, string> = { one: "заказ", few: "заказа", many: "заказов" };
+
+/** «3 заказа». */
+function ordersText(n: number): string {
+  return `${String(n)} ${ORDER_WORD[ORDERS.select(n)] ?? "заказа"}`;
+}
+
+/**
+ * «Покупатели»: a numbered list, each name a link to the card with its orders under it. Two
+ * buyers with one name («Mail») also show the end of their account id, never a Steam ID.
+ */
 export function Buyers({ data }: B) {
   const b = data.buyers;
+  const names = b.top.map((u) => u.display_name ?? "");
+  const twin = (name: string | null): boolean => names.filter((n) => n === (name ?? "")).length > 1;
   return (
     <Section title="Покупатели">
       <dl className="mb-3">
@@ -104,12 +113,21 @@ export function Buyers({ data }: B) {
         </Row>
       </dl>
       <ul className="divide-border divide-y text-sm">
-        {b.top.map((u) => (
+        {b.top.map((u, i) => (
           <li key={u.id} className="flex items-center gap-3 py-1.5">
+            <span className="text-fg-dim w-5 shrink-0 text-right tabular-nums">{i + 1}</span>
             <div className="min-w-0 flex-1">
-              <UserCell id={u.id} name={u.display_name} avatarUrl={u.avatar_url} />
+              <UserCell
+                id={u.id}
+                name={u.display_name}
+                avatarUrl={u.avatar_url}
+                sub={
+                  twin(u.display_name)
+                    ? `${ordersText(u.orders)} · id …${u.id.slice(-4)}`
+                    : ordersText(u.orders)
+                }
+              />
             </div>
-            <span className="text-fg-muted shrink-0 tabular-nums">{u.orders}</span>
             <span className="w-28 shrink-0 text-right tabular-nums">{som(u.revenue_uzs)}</span>
           </li>
         ))}
@@ -136,6 +154,37 @@ export function Buyback({ data }: B) {
   );
 }
 
+/**
+ * A refunds breakdown. One group that holds them all gets no count (it would only repeat the
+ * total above): «все: обмен не принят».
+ */
+function Breakdown({
+  label,
+  rows,
+  total,
+  name,
+}: {
+  label: string;
+  rows: KeyCount[];
+  total: number;
+  name: (key: string) => ReactNode;
+}) {
+  const only = rows.length === 1 && rows[0]?.count === total;
+  return (
+    <ul aria-label={label} className="min-w-0">
+      {rows.map((k) => (
+        <li key={k.key} className="flex justify-between gap-2">
+          <span className="min-w-0 truncate">
+            {only && <span className="text-fg-muted">все: </span>}
+            {name(k.key)}
+          </span>
+          {!only && <span className="tabular-nums">{k.count}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function Refunds({ data }: B) {
   const r = data.refunds;
   return (
@@ -144,22 +193,18 @@ export function Refunds({ data }: B) {
         {r.count} · {som(r.amount_uzs)}
       </p>
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <ul>
-          {r.by_source.map((k) => (
-            <li key={k.key} className="flex justify-between">
-              <span>{labelOf(SOURCE_LABELS, k.key)}</span>
-              <span className="tabular-nums">{k.count}</span>
-            </li>
-          ))}
-        </ul>
-        <ul>
-          {r.by_reason.map((k) => (
-            <li key={k.key} className="flex justify-between">
-              <span className="truncate">{labelOf(REASON_LABELS, k.key)}</span>
-              <span className="tabular-nums">{k.count}</span>
-            </li>
-          ))}
-        </ul>
+        <Breakdown
+          label="По площадкам"
+          rows={r.by_source}
+          total={r.count}
+          name={(key) => labelOf(SOURCE_LABELS, key)}
+        />
+        <Breakdown
+          label="По причинам"
+          rows={r.by_reason}
+          total={r.count}
+          name={(key) => <Reason of="return" code={key} />}
+        />
       </div>
     </Section>
   );

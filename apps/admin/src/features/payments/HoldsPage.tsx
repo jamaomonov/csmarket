@@ -9,24 +9,31 @@ import {
   type InfiniteData,
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { decideHold, getHolds, type Hold, type HoldPage } from "./api";
-import { HOLD_DECISION_LABELS, HOLD_REASON_LABELS, holdErrorText } from "./labels";
+import { holdErrorText } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Reason } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
+import { LINK, TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
+import { getDashboard } from "@/features/dashboard/api";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText, providerLabel } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { formatSum } from "@/lib/format";
+import { pick } from "@/lib/url-guards";
+import { useUrlParams } from "@/lib/useUrlParams";
 
 type State = "open" | "decided";
 type Act = "release" | "returned";
@@ -123,20 +130,35 @@ function Actions({ onPick }: { onPick: (a: Act) => void }) {
 }
 
 function DecisionCell({ h }: { h: Hold }) {
-  const label = h.decision === null ? "—" : (HOLD_DECISION_LABELS[h.decision] ?? h.decision);
   return (
     <div className="text-sm">
-      <div>{label}</div>
+      <div>
+        {h.decision === null ? "—" : <Reason of="holdDecision" code={h.decision} capitalise />}
+      </div>
       <div className="text-fg-muted text-xs">
         {h.decided_by?.display_name ?? "—"}
-        {h.decided_at !== null && ` · ${formatDateTime(h.decided_at)}`}
+        {h.decided_at !== null && (
+          <>
+            {" · "}
+            <When iso={h.decided_at} />
+          </>
+        )}
       </div>
     </div>
   );
 }
 
+const STATES: readonly State[] = ["open", "decided"];
+
 export function HoldsPage() {
-  const [state, setState] = useState<State>("open");
+  const url = useUrlParams();
+  const state: State = pick(STATES, url.get("state")) ?? "open";
+  // The open count is the dashboard's (shared with the menu's counter): the list has none.
+  const dashboard = useQuery({
+    queryKey: [...DASHBOARD_KEY, 1],
+    queryFn: () => getDashboard(1),
+    refetchInterval: 60_000,
+  });
   const [picked, setPicked] = useState<{ hold: Hold; act: Act } | null>(null);
   const list = useInfiniteQuery<
     HoldPage,
@@ -159,9 +181,16 @@ export function HoldsPage() {
       <Tabs<State>
         label="Состояние"
         value={state}
-        onChange={setState}
+        onChange={(v) => {
+          url.set("state", v === "open" ? "" : v);
+        }}
         items={[
-          { key: "open", label: "Открытые" },
+          {
+            key: "open",
+            label: "Открытые",
+            ...(dashboard.data !== undefined && { count: dashboard.data.holds_open }),
+            alert: true,
+          },
           { key: "decided", label: "Решённые" },
         ]}
       />
@@ -172,6 +201,7 @@ export function HoldsPage() {
         loading={list.isPending}
         error={list.isError ? errorText(list.error) : undefined}
         empty={open ? "Ничего не ждёт решения." : "Решённых пока нет."}
+        emptyAction={<TextLink to="/payment-settings">Лимиты в настройках оплаты</TextLink>}
         columns={[
           {
             key: "number",
@@ -180,7 +210,7 @@ export function HoldsPage() {
               <>
                 <Link
                   to={`/payments?q=${encodeURIComponent(h.number)}`}
-                  className="font-mono font-medium hover:underline"
+                  className={`${LINK} font-mono`}
                 >
                   {h.number}
                 </Link>
@@ -200,7 +230,7 @@ export function HoldsPage() {
             header: "Причина",
             cell: (h) => (
               <>
-                {HOLD_REASON_LABELS[h.reason] ?? h.reason}
+                <Reason of="holdReason" code={h.reason} capitalise />
                 <div className="text-fg-muted text-xs">{windowText(h)}</div>
               </>
             ),
@@ -213,11 +243,7 @@ export function HoldsPage() {
           {
             key: "created",
             header: "Создан",
-            cell: (h) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(h.created_at)}
-              </span>
-            ),
+            cell: (h) => <When iso={h.created_at} className="text-fg-muted" />,
           },
           {
             key: "action",

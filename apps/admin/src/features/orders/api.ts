@@ -67,6 +67,8 @@ export interface AdminOrderFull {
   protected_estimated: boolean;
   /** Already masked by the API: the token is never in the page. */
   trade_link: string | null;
+  /** The catalogue's picture of the skin; `null` (or absent) when it has none. */
+  image_url?: string | null;
   paid_with: string | null;
   created_at: string;
   updated_at: string;

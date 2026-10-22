@@ -244,6 +244,10 @@ Read-only, `require_admin` on each router (401 / 403 as above), newest first wit
   else of `payment_source` and no Payme fiscal data is returned.
 - **Audit:** exact-match filters; a non-UUID `actor_id` is 422 `actor_id`. `payload` is the
   stored object as written by `record` (names of things, no PII).
+  `target_label` names an id-only target for the «Журнал» page: a user's or an API key
+  owner's display name, a skin's market name, a payout's sale number (one query per target
+  type on the page, through `users`, `skins`, `sales` and `public_api` `api`); `null`
+  otherwise. Never PII.
 - **Direction:** `admin` imports `click`, `payme`, `uzum` and `payments` through their `api`;
   none imports `admin.payments_*` / `admin.audit_*` (`tests/unit/test_import_order.py`).
 - Tests: `tests/integration/test_admin_payments.py`, `test_admin_audit_routes.py`.

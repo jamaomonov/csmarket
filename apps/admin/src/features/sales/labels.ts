@@ -1,11 +1,12 @@
 /** «Выкуп»'s words for the operator (Russian). */
-import { type AttentionFilter, type AttentionReason, type CardType, type SaleStatus } from "./api";
+import { type CardType } from "./api";
 import { type PayoutFlag, type PayoutStatus } from "./payoutsApi";
 
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 
-export const PAYOUT_LABELS: Record<PayoutStatus, string> = {
+/** The queue's tabs (a tab names many requests: «Ждут 7 дней»); a chip is `Status of="payout"`. */
+export const PAYOUT_TABS: Record<PayoutStatus, string> = {
   to_pay: "К выплате",
   waiting_hold: "Ждут 7 дней",
   paid: "Выплачено",
@@ -13,38 +14,26 @@ export const PAYOUT_LABELS: Record<PayoutStatus, string> = {
   canceled: "Отменено",
 };
 
-export const SALE_LABELS: Record<SaleStatus, string> = {
-  creating: "создаётся",
-  offered: "обмен отправлен",
-  hold: "холд 7 дней",
-  credited: "зачислено на баланс",
-  payout: "выплата на карту",
-  closed: "закрыта",
-  reverted: "откат обмена",
+/** A payout row's risk flags that block «Выплачено» or need a look (words: the dictionary). */
+export const FLAG_DANGER: Record<PayoutFlag, boolean> = {
+  banned: true,
+  wallet_frozen: true,
+  sell_blocked: true,
+  shared_card: true,
+  new_account: false,
+  rolled_back: true,
+  seller_reverted: true,
 };
 
-export const ATTENTION_LABELS: Record<AttentionReason, string> = {
-  rolled_back: "откат после выплаты — разобрать вручную",
-  late_deposit: "закрыта, но Skinslink видит обмен — разобрать вручную",
-  credit_blocked: "кошелёк заморожен — зачисление ждёт разморозки",
-};
-
-export const ATTENTION_FILTER_LABELS: Record<AttentionFilter, string> = {
-  open: "ждут проверки",
-  resolved: "проверены",
-  any: "с пометкой",
-};
-
-/** A payout row's risk chips; `danger` ones block «Выплачено» or need a look. */
-export const FLAG_LABELS: Record<PayoutFlag, { text: string; danger: boolean }> = {
-  banned: { text: "аккаунт заблокирован", danger: true },
-  wallet_frozen: { text: "кошелёк заморожен", danger: true },
-  sell_blocked: { text: "выкуп запрещён", danger: true },
-  shared_card: { text: "карта у других", danger: true },
-  new_account: { text: "новый аккаунт", danger: false },
-  rolled_back: { text: "обмен отменён", danger: true },
-  seller_reverted: { text: "продавец отменил обмен", danger: true },
-};
+/** A payout's chip: a request canceled because the seller reverted the trade says so. */
+export function payoutCode(
+  status: PayoutStatus,
+  flags: readonly PayoutFlag[] | null | undefined,
+): PayoutStatus | "seller_reverted" {
+  return status === "canceled" && (flags ?? []).includes("seller_reverted")
+    ? "seller_reverted"
+    : status;
+}
 
 export const CARD_BRANDS: Record<CardType, string> = {
   uzcard: "Uzcard",

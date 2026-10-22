@@ -1,5 +1,8 @@
-/** Underlined tabs with counters (review §4.7); `segmented` for a period switch. */
-import { type ReactNode } from "react";
+/**
+ * Underlined tabs with counters (review §4.7); `segmented` for a period switch. When the row
+ * scrolls sideways (a phone), the active tab is kept in view.
+ */
+import { type ReactNode, useEffect, useRef } from "react";
 
 export interface TabItem<K extends string> {
   key: K;
@@ -24,6 +27,19 @@ export function Tabs<K extends string>({
   label,
   variant = "underline",
 }: TabsProps<K>) {
+  const row = useRef<HTMLDivElement>(null);
+  // Re-run when the counters arrive: they change the tabs' widths.
+  const shape = items.map((t) => `${t.key}:${String(t.count)}`).join();
+  useEffect(() => {
+    const root = row.current;
+    const active = root?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (root == null || active == null || root.scrollWidth <= root.clientWidth) return;
+    const box = root.getBoundingClientRect();
+    const tab = active.getBoundingClientRect();
+    // Only as far as needed: the first tabs (work first) stay visible when they can.
+    if (tab.left < box.left) root.scrollLeft -= box.left - tab.left;
+    else if (tab.right > box.right) root.scrollLeft += tab.right - box.right;
+  }, [value, shape]);
   if (variant === "segmented") {
     return (
       <div role="tablist" aria-label={label} className="bg-surface inline-flex rounded-md p-0.5">
@@ -48,9 +64,12 @@ export function Tabs<K extends string>({
   }
   return (
     <div
+      ref={row}
       role="tablist"
       aria-label={label}
-      className="border-border -mb-px flex gap-1 overflow-x-auto border-b"
+      // The line is an inset shadow, not a border: the active tab's underline paints over it
+      // (a border sits outside the scroll box, which would clip a tab pulled down onto it).
+      className="flex gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border)]"
     >
       {items.map((t) => {
         const active = t.key === value;

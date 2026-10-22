@@ -121,6 +121,8 @@ class AdminOrderFull(BaseModel):
     pricing_profile: str | None
     #: The whole link (an erased order's is stored masked).
     trade_link: str | None
+    #: The catalogue's picture of the skin, for the page's header; ``None`` when it has none.
+    image_url: str | None = None
     paid_with: str | None
     created_at: datetime
     updated_at: datetime

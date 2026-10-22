@@ -187,6 +187,7 @@ function CardNumber({ detail, onRevealed }: { detail: Detail; onRevealed: () => 
           Показать номер
         </Button>
         <Button
+          variant="secondary"
           onClick={() => {
             // Started inside the tap: Safari keeps the right to write the clipboard.
             if (number !== null) {

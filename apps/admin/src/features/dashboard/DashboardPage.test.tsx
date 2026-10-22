@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -102,6 +102,9 @@ describe("DashboardPage", () => {
     expect(tile("Баланс LIS-SKINS")).toHaveTextContent("обновлено 3 мин назад");
     const link = within(tile("Требуют внимания")).getByRole("link");
     expect(link).toHaveAttribute("href", "/trades?view=attention");
+    // A link tile shows a chevron; a figure-only tile does not.
+    expect(within(tile("Требуют внимания")).getByTestId("tile-chevron")).toBeInTheDocument();
+    expect(within(tile("Баланс Waxpeer")).queryByTestId("tile-chevron")).toBeNull();
   });
 
   it("an unknown balance says so", async () => {
@@ -157,6 +160,35 @@ describe("DashboardPage", () => {
     expect(rows.map((r) => r.textContent)).toContain("01.100—$0.00");
   });
 
+  it("shows the per-day table for 7 / 30 days only, not for «Сегодня»", async () => {
+    renderPage();
+    await screen.findByTestId("tile-Продажи");
+    expect(screen.queryByRole("table")).toBeNull();
+    cleanup();
+    renderPage("/?days=30");
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+  });
+
+  it("puts the «Сделать сейчас» tiles in one row: three, or four with sales to check", async () => {
+    const titles = (row: HTMLElement): string[] =>
+      Array.from(row.querySelectorAll<HTMLElement>(":scope > [data-testid^='tile-']")).map((t) =>
+        (t.dataset.testid ?? "").replace(/^tile-/, ""),
+      );
+    renderPage();
+    let row = await screen.findByTestId("now-tiles");
+    expect(titles(row)).toEqual(["Требуют внимания", "К выплате", "В пути"]);
+    expect(row).toHaveClass("grid-cols-3");
+    cleanup();
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      payouts: { ...DATA.payouts, sales_attention: 3 },
+    });
+    renderPage();
+    row = await screen.findByTestId("now-tiles");
+    expect(titles(row)).toEqual(["Требуют внимания", "К выплате", "В пути", "Продажи: проверить"]);
+    expect(row).toHaveClass("grid-cols-4");
+  });
+
   it("shows what buying skins from users earned", async () => {
     api.getDashboard.mockResolvedValue({
       ...DATA,
@@ -184,6 +216,9 @@ describe("DashboardPage", () => {
       "/sales/reconciliation",
     );
     expect(tile("Выкуп: выплачено")).not.toHaveTextContent("к выплате");
+    // Dollars large, soʻm small under them.
+    expect(tile("Выкуп: выплачено")).toHaveTextContent(/^Выкуп: выплачено\$22\.12276\s500 сум/);
+    expect(tile("Выкуп: выплачено")).toHaveTextContent(/удержано 5\s200 сум · банку 1\s500 сум/);
   });
 
   it("hides the skin-sales block without sales", async () => {

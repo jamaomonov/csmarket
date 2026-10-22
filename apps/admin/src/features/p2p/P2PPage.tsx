@@ -32,7 +32,7 @@ export function P2PPage() {
           { key: "journal", label: "Журнал" },
           { key: "requests", label: "Заявки" },
           { key: "cards", label: "Карты" },
-          { key: "settings", label: "Настройки" },
+          { key: "settings", label: "Подключение и лимиты" },
         ]}
       />
       {tab === "journal" && <JournalTab />}

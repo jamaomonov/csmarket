@@ -64,7 +64,7 @@ describe("OverrideCard", () => {
     api.saveItemPricing.mockResolvedValue({ ...ITEM, margin_override_pp: "10" });
     renderCard();
     await pick();
-    fireEvent.change(screen.getByLabelText("Наценка, п.п."), { target: { value: "10" } });
+    fireEvent.change(screen.getByLabelText("Своя надбавка, %"), { target: { value: "10" } });
     expect(await screen.findByText(/Будет продаваться за \$60\.00/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сохранить цену" }));
     await waitFor(() => {

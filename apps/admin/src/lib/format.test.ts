@@ -1,6 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDateTime, formatSignedSum, formatSum } from "./format";
+import {
+  clockTime,
+  dayHeading,
+  dayKey,
+  formatDateTime,
+  formatDateTimeSeconds,
+  formatRate,
+  formatSignedSum,
+  formatSum,
+  listTime,
+} from "./format";
 
 describe("formatSum", () => {
   it("groups whole soʻm and names the unit", () => {
@@ -21,5 +31,50 @@ describe("formatDateTime", () => {
   it("renders DD.MM.YYYY HH:MM in local time", () => {
     const iso = new Date(2026, 9, 1, 9, 5).toISOString();
     expect(formatDateTime(iso)).toBe("01.10.2026 09:05");
+  });
+});
+
+describe("listTime", () => {
+  const NOW = new Date(2026, 9, 22, 12, 0, 0).getTime();
+  const ago = (ms: number): string => new Date(NOW - ms).toISOString();
+  const MIN = 60_000;
+
+  it("is relative inside the last 24 hours", () => {
+    expect(listTime(ago(20_000), NOW)).toBe("только что");
+    expect(listTime(ago(-5 * MIN), NOW)).toBe("только что");
+    expect(listTime(ago(3 * MIN), NOW)).toBe("3 мин назад");
+    expect(listTime(ago(5 * 60 * MIN), NOW)).toBe("5 ч назад");
+    expect(listTime(ago(24 * 60 * MIN - 1), NOW)).toBe("23 ч назад");
+  });
+
+  it("is absolute beyond: DD.MM HH:MM this year, DD.MM.YYYY an earlier one", () => {
+    expect(listTime(new Date(2026, 9, 21, 9, 5).toISOString(), NOW)).toBe("21.10 09:05");
+    expect(listTime(new Date(2025, 11, 31, 23, 0).toISOString(), NOW)).toBe("31.12.2025");
+  });
+
+  it("reads a rate as soʻm for a dollar, without trailing zeros", () => {
+    expect(formatRate("12650.5000")).toBe("12\u00a0650,5\u00a0сум за $");
+    expect(formatRate("12700.0000")).toBe("12\u00a0700\u00a0сум за $");
+  });
+
+  it("gives the exact time with seconds", () => {
+    expect(formatDateTimeSeconds(new Date(2026, 9, 21, 9, 5, 7).toISOString())).toBe(
+      "21.10.2026 09:05:07",
+    );
+  });
+});
+
+describe("day groups", () => {
+  const NOW = new Date(2026, 9, 22, 12, 0, 0).getTime();
+  const at = (y: number, m: number, d: number, h = 9, min = 5): string =>
+    new Date(y, m, d, h, min).toISOString();
+
+  it("keys a moment by its local day and says it in words", () => {
+    expect(dayKey(at(2026, 9, 22, 0, 10))).toBe("2026-10-22");
+    expect(dayHeading(at(2026, 9, 22, 0, 10), NOW)).toBe("Сегодня");
+    expect(dayHeading(at(2026, 9, 21, 23, 59), NOW)).toBe("Вчера");
+    expect(dayHeading(at(2026, 9, 12), NOW)).toBe("12 октября");
+    expect(dayHeading(at(2025, 11, 31), NOW)).toBe("31 декабря 2025");
+    expect(clockTime(at(2026, 9, 12, 7, 3))).toBe("07:03");
   });
 });

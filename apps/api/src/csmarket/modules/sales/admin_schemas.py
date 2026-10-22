@@ -130,6 +130,13 @@ class AdminSaleItemOut(BaseModel):
     price_uzs: str
 
 
+class AdminSaleSkinOut(BaseModel):
+    """A skin of a sale in a list: its name and picture."""
+
+    name: str
+    image_url: str | None
+
+
 class AdminSaleRowOut(BaseModel):
     """A sale as the admin list shows it."""
 
@@ -144,13 +151,10 @@ class AdminSaleRowOut(BaseModel):
     #: The attention is set and no admin marked it checked yet.
     attention_open: bool
     created_at: datetime
-
-
-class AdminSaleSkinOut(BaseModel):
-    """A skin of a sale in a list: its name and picture."""
-
-    name: str
-    image_url: str | None
+    #: The dearest skin of the sale, for the list (``None`` on a row that does not carry it).
+    first_item: AdminSaleSkinOut | None = None
+    #: How many skins the sale has (``0`` on a row that does not carry it).
+    items_count: int = 0
 
 
 class AdminUserSaleOut(AdminSaleRowOut):

@@ -11,6 +11,8 @@ import { errorText } from "./labels";
 import { parseAmount, parseUsd } from "./parseAmount";
 import { type IdempotencyKey } from "./useIdempotencyKey";
 
+import { MoneyField } from "@/components/MoneyInput";
+import { Tabs } from "@/components/Tabs";
 import { formatSum, formatUsd } from "@/lib/format";
 
 /** The API's per-adjustment ceiling (`wallet.ADMIN_ADJUST_MAX`). */
@@ -148,35 +150,30 @@ export function AdjustForm({ userId, idem, onDone, onClose }: AdjustFormProps) {
   const input = "border-border bg-bg rounded-md border px-3 text-base";
   return (
     <form onSubmit={onReview} className={box} data-testid="adjust-form">
-      <div role="group" aria-label="Валюта" className="flex gap-2">
-        {(["UZS", "USD"] as const).map((c) => (
-          <Button
-            key={c}
-            variant={currency === c ? "primary" : "secondary"}
-            aria-pressed={currency === c}
-            onClick={() => {
-              setCurrency(c);
-              // A typed amount means another unit after the switch: start over.
-              setAmountText("");
-              setFormError(null);
-            }}
-          >
-            {c === "UZS" ? "Сум" : "USD"}
-          </Button>
-        ))}
-      </div>
-      <label className="flex max-w-xs flex-col gap-1 text-sm">
-        {currency === "USD" ? "Сумма, USD" : "Сумма, сум"}
-        <input
-          value={amountText}
-          inputMode="numeric"
-          maxLength={20}
-          onChange={(e) => {
-            setAmountText(e.target.value);
-          }}
-          className={`${input} h-10`}
-        />
-      </label>
+      <Tabs<Currency>
+        label="Валюта"
+        variant="segmented"
+        value={currency}
+        items={[
+          { key: "UZS", label: "Сум" },
+          { key: "USD", label: "USD" },
+        ]}
+        onChange={(c) => {
+          setCurrency(c);
+          // A typed amount means another unit after the switch: start over.
+          setAmountText("");
+          setFormError(null);
+        }}
+      />
+      <MoneyField
+        label="Сумма"
+        unit={currency === "USD" ? "USD" : "сум"}
+        decimal={currency === "USD"}
+        className="w-full max-w-xs"
+        value={amountText}
+        maxLength={24}
+        onChange={setAmountText}
+      />
       <p className="text-fg-muted text-xs">Со знаком минус — списать.</p>
       <label className="flex flex-col gap-1 text-sm">
         Причина изменения

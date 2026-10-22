@@ -1,8 +1,11 @@
-/** «Платежи»: find a payment by number, filter by status, kassa and purpose, newest first. */
+/**
+ * «Платежи»: status `Tabs` (`?status=`), a search by number and the kassa and purpose
+ * `FilterSelect`s in one row, newest first.
+ */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   type AdminPaymentRow,
@@ -10,17 +13,19 @@ import {
   listPayments,
   type ListPaymentsParams,
 } from "./api";
-import { PAYMENT_PROVIDERS, PAYMENT_PURPOSES, PAYMENT_STATUSES } from "./kinds";
-import { PURPOSE_LABELS, STATUS_LABELS } from "./labels";
-import { StatusChip } from "./StatusChip";
+import { PAYMENT_PROVIDERS, PAYMENT_PURPOSES, PAYMENT_STATUSES, type PaymentStatus } from "./kinds";
+import { PURPOSE_LABELS } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Status } from "@/components/Status";
+import { Tabs } from "@/components/Tabs";
+import { TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { errorText, providerLabel } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
@@ -28,6 +33,27 @@ import { useUrlParams } from "@/lib/useUrlParams";
 const DEBOUNCE_MS = 300;
 /** The API's `q` ceiling (and the input's `maxLength`). */
 const Q_MAX = 32;
+
+type View = "all" | PaymentStatus;
+/** The status tabs; the list API has no counts, so none of them counts. */
+const VIEWS: readonly View[] = [
+  "all",
+  "succeeded",
+  "pending",
+  "created",
+  "failed",
+  "cancelled",
+  "refunded",
+];
+const VIEW_LABELS: Record<View, string> = {
+  all: "Все",
+  succeeded: "Оплачены",
+  pending: "Ждут кассу",
+  created: "Созданы",
+  failed: "Не прошли",
+  cancelled: "Отменены",
+  refunded: "Возвращены",
+};
 
 /** What the buyer paid: the base plus the kassa fee (spec 2026-10-14-kassa-fee). */
 function paidTotal(p: AdminPaymentRow): string {
@@ -77,22 +103,20 @@ export function PaymentsPage() {
   return (
     <section className="space-y-4">
       <PageHeader title="Платежи" />
+      <Tabs<View>
+        label="Статус"
+        value={status ?? "all"}
+        onChange={(v) => {
+          url.set("status", v === "all" ? "" : v);
+        }}
+        items={VIEWS.map((v) => ({ key: v, label: VIEW_LABELS[v] }))}
+      />
       <FiltersBar>
         <SearchBox
           label="Номер платежа или пополнения"
           value={text}
           maxLength={Q_MAX}
-          mono
           onChange={setText}
-        />
-        <FilterSelect
-          label="Статус"
-          value={status ?? ""}
-          options={PAYMENT_STATUSES}
-          text={(o) => STATUS_LABELS[o]}
-          onChange={(v) => {
-            url.set("status", v);
-          }}
         />
         <FilterSelect
           label="Касса"
@@ -132,9 +156,9 @@ export function PaymentsPage() {
               header: "Номер",
               cell: (p) => (
                 <>
-                  <Link to={`/payments/${p.id}`} className="font-mono font-medium hover:underline">
+                  <TextLink to={`/payments/${p.id}`} number>
                     {p.number}
-                  </Link>
+                  </TextLink>
                   <div className="text-fg-muted text-xs">{PURPOSE_LABELS[p.purpose]}</div>
                 </>
               ),
@@ -146,7 +170,11 @@ export function PaymentsPage() {
               cell: (p) => <Money uzs={paidTotal(p)} />,
             },
             { key: "kassa", header: "Касса", cell: (p) => providerLabel(p.provider) },
-            { key: "status", header: "Статус", cell: (p) => <StatusChip status={p.status} /> },
+            {
+              key: "status",
+              header: "Статус",
+              cell: (p) => <Status of="payment" code={p.status} testId="payment-status" />,
+            },
             {
               key: "user",
               header: "Пользователь",
@@ -157,11 +185,7 @@ export function PaymentsPage() {
             {
               key: "created",
               header: "Создан",
-              cell: (p) => (
-                <span className="text-fg-muted whitespace-nowrap">
-                  {formatDateTime(p.created_at)}
-                </span>
-              ),
+              cell: (p) => <When iso={p.created_at} className="text-fg-muted" />,
             },
           ]}
           mobileCard={(p) => (
@@ -170,10 +194,13 @@ export function PaymentsPage() {
                 <span className="font-mono">{p.number}</span>
                 <Money uzs={paidTotal(p)} />
               </div>
+              <p className="text-fg-muted truncate" data-testid="payment-card-what">
+                {PURPOSE_LABELS[p.purpose]} · {p.user.display_name ?? "без имени"}
+              </p>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusChip status={p.status} />
+                <Status of="payment" code={p.status} testId="payment-status" />
                 <span className="text-fg-muted">{providerLabel(p.provider)}</span>
-                <span className="text-fg-dim ml-auto text-xs">{formatDateTime(p.created_at)}</span>
+                <When iso={p.created_at} className="text-fg-dim ml-auto text-xs" />
               </div>
             </div>
           )}

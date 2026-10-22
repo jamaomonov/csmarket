@@ -1,31 +1,69 @@
 /**
- * «Продажи»: find a sale by number, filter by status and by attention («ждут проверки» — the
- * sales an admin has not marked «Проверено» yet; the badge counts them all), newest first.
+ * «Продажи»: attention `Tabs` (`?attention=`; «Ждут проверки» — the sales an admin has not marked
+ * «Проверено» yet, its counter counts them all), a status `FilterSelect` and a search by number,
+ * newest first.
  */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-import { ATTENTION_FILTERS, type AdminSalesPage, listSales, SALE_STATUSES } from "./api";
+import {
+  ATTENTION_FILTERS,
+  type AdminSaleRow,
+  type AdminSalesPage,
+  type AttentionFilter,
+  listSales,
+  SALE_STATUSES,
+} from "./api";
 import { SALES_LIST_KEY } from "./keys";
-import { ATTENTION_FILTER_LABELS, ATTENTION_LABELS, SALE_LABELS } from "./labels";
-import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { SkinThumb } from "@/components/SkinThumb";
+import { Status } from "@/components/Status";
+import { Tabs } from "@/components/Tabs";
+import { TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime } from "@/lib/format";
+import { reasonText, statusText } from "@/lib/dictionary";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
+import { useNarrow } from "@/lib/useNarrow";
 import { useUrlParams } from "@/lib/useUrlParams";
 
 const DEBOUNCE_MS = 300;
 
+type View = "all" | AttentionFilter;
+const VIEWS: readonly View[] = ["all", "open", "resolved", "any"];
+/** On a phone the tab counting work comes first. */
+const PHONE_VIEWS: readonly View[] = ["open", "all", "resolved", "any"];
+const VIEW_LABELS: Record<View, string> = {
+  all: "Все",
+  open: "Ждут проверки",
+  resolved: "Проверены",
+  any: "С пометкой",
+};
+
+/** The sale's dearest skin and «+N» for the rest. */
+function FirstSkin({ sale }: { sale: AdminSaleRow }) {
+  const first = sale.first_item ?? null;
+  if (first === null) return <span className="text-fg-dim">—</span>;
+  const rest = (sale.items_count ?? 1) - 1;
+  return (
+    <div className="flex min-w-0 items-center gap-2" data-testid="sale-first-skin">
+      <SkinThumb url={first.image_url} />
+      <span className="min-w-0 truncate">{first.name}</span>
+      {rest > 0 && <span className="text-fg-muted shrink-0 text-xs">+{rest}</span>}
+    </div>
+  );
+}
+
 export function SalesPage() {
+  const narrow = useNarrow();
   const navigate = useNavigate();
   const url = useUrlParams();
   const status = pick(SALE_STATUSES, url.get("status"));
@@ -62,34 +100,29 @@ export function SalesPage() {
   const open = query.data?.pages[0]?.attention_open ?? 0;
   return (
     <section className="space-y-4">
-      <PageHeader
-        title="Продажи"
-        meta={
-          open > 0 ? (
-            <Link to="/sales?attention=open" className="text-danger hover:underline">
-              Ждут проверки: {open}
-            </Link>
-          ) : undefined
-        }
+      <PageHeader title="Продажи" />
+      <Tabs<View>
+        label="Пометка"
+        value={attention ?? "all"}
+        onChange={(v) => {
+          url.set("attention", v === "all" ? "" : v);
+        }}
+        items={(narrow ? PHONE_VIEWS : VIEWS).map((v) => ({
+          key: v,
+          label: VIEW_LABELS[v],
+          ...(v === "open" && query.data !== undefined && { count: open }),
+          alert: v === "open",
+        }))}
       />
       <FiltersBar>
-        <SearchBox label="Номер продажи" value={text} maxLength={8} mono onChange={setText} />
+        <SearchBox label="Номер продажи" value={text} maxLength={8} onChange={setText} />
         <FilterSelect
           label="Статус"
           value={status ?? ""}
           options={SALE_STATUSES}
-          text={(s) => SALE_LABELS[s]}
+          text={(s) => statusText("sale", s)}
           onChange={(v) => {
             url.set("status", v);
-          }}
-        />
-        <FilterSelect
-          label="Пометка"
-          value={attention ?? ""}
-          options={ATTENTION_FILTERS}
-          text={(a) => ATTENTION_FILTER_LABELS[a]}
-          onChange={(v) => {
-            url.set("attention", v);
           }}
         />
       </FiltersBar>
@@ -109,20 +142,21 @@ export function SalesPage() {
             key: "number",
             header: "Номер",
             cell: (s) => (
-              <Link to={`/sales/${s.number}`} className="font-mono font-medium hover:underline">
+              <TextLink to={`/sales/${s.number}`} number>
                 {s.number}
-              </Link>
+              </TextLink>
             ),
           },
+          { key: "skins", header: "Скины", cell: (s) => <FirstSkin sale={s} /> },
           {
             key: "status",
             header: "Статус",
             cell: (s) => (
               <>
-                <SaleStatusChip status={s.status} />
+                <Status of="sale" code={s.status} />
                 {s.attention_reason ? (
                   <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
-                    {ATTENTION_LABELS[s.attention_reason]}
+                    {reasonText("saleAttention", s.attention_reason)}
                     {s.attention_open ? "" : " · проверено"}
                   </div>
                 ) : null}
@@ -157,11 +191,7 @@ export function SalesPage() {
           {
             key: "created",
             header: "Создана",
-            cell: (s) => (
-              <span className="text-fg-muted whitespace-nowrap">
-                {formatDateTime(s.created_at)}
-              </span>
-            ),
+            cell: (s) => <When iso={s.created_at} className="text-fg-muted" />,
           },
         ]}
         mobileCard={(s) => (
@@ -170,14 +200,15 @@ export function SalesPage() {
               <span className="font-mono">{s.number}</span>
               <Money uzs={s.payout_uzs} />
             </div>
+            <FirstSkin sale={s} />
             <div className="flex flex-wrap gap-2">
-              <SaleStatusChip status={s.status} />
+              <Status of="sale" code={s.status} />
               <span className="text-fg-muted">{s.user.display_name ?? "Без имени"}</span>
-              <span className="text-fg-dim ml-auto text-xs">{formatDateTime(s.created_at)}</span>
+              <When iso={s.created_at} className="text-fg-dim ml-auto text-xs" />
             </div>
             {s.attention_reason ? (
               <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
-                {ATTENTION_LABELS[s.attention_reason]}
+                {reasonText("saleAttention", s.attention_reason)}
                 {s.attention_open ? "" : " · проверено"}
               </div>
             ) : null}

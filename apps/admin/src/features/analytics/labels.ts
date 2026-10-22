@@ -38,8 +38,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   other: "Другое",
 };
 
-export const REASON_LABELS: Record<string, string> = { other: "Без причины" };
-
 export function labelOf(labels: Record<string, string>, key: string): string {
   return labels[key] ?? key;
 }
@@ -48,6 +46,20 @@ export function labelOf(labels: Record<string, string>, key: string): string {
 export function som(value: string | number): string {
   const n = Number(value);
   return n < 0 ? `−${formatSum(-n)}` : formatSum(n);
+}
+
+const MILLIONS = new Intl.NumberFormat("ru", { notation: "compact", maximumFractionDigits: 1 });
+const THOUSANDS = new Intl.NumberFormat("ru", { notation: "compact", maximumFractionDigits: 0 });
+
+/** A short sum for a narrow cell or an axis: `3,7 млн`, `−493 тыс`, `950`. */
+export function compactSom(value: string | number): string {
+  const n = Number(value);
+  // Intl rounds up across units by itself: 999 600 reads «1 млн», not «1000 тыс».
+  const text = (Math.abs(n) >= 1_000_000 ? MILLIONS : THOUSANDS)
+    .format(Math.abs(n))
+    .replace(/\.$/, "");
+  // A loss that rounds to nothing is «0», never «−0».
+  return n < 0 && text !== "0" ? `−${text}` : text;
 }
 
 /** Dollars with two decimals and a typographic minus. */

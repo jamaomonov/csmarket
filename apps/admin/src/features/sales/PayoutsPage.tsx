@@ -1,21 +1,22 @@
 /**
- * «Заявки на выплату»: status tabs with counts, the day's totals, a search (sale number, last
- * four, name, Steam ID). «К выплате» is oldest first with the waiting time tinted after 6 h
- * and 10 h, and who is paying each request right now. Cards on a phone; refreshed every 15 s so
+ * «Заявки на выплату»: status `Tabs` with counts (`?status=`), the day's totals, a search (sale
+ * number, last four, name, Steam ID). «К выплате» is oldest first with the waiting time tinted
+ * after 6 h and 10 h, and who is paying each request right now. Cards on a phone; refreshed every 15 s so
  * a request someone took or paid does not linger.
  */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { PAYOUTS_KEY } from "./keys";
-import { cardLabel, FLAG_LABELS, PAYOUT_LABELS } from "./labels";
+import { cardLabel, FLAG_DANGER, PAYOUT_TABS } from "./labels";
 import {
   listPayouts,
   PAYOUT_STATUSES,
   type PayoutRow,
   type PayoutsPage as Page,
+  type PayoutStatus,
   type PayoutTab,
   type PayoutTotals,
 } from "./payoutsApi";
@@ -26,9 +27,13 @@ import { FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
+import { Tabs } from "@/components/Tabs";
+import { LINK } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
+import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
-import { formatDateTime, formatSum } from "@/lib/format";
+import { reasonText } from "@/lib/dictionary";
+import { formatSum } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useUrlParams } from "@/lib/useUrlParams";
@@ -38,7 +43,7 @@ const DEBOUNCE_MS = 300;
 
 function Waiting({ row }: { row: PayoutRow }) {
   if (row.status !== "to_pay" || !row.to_pay_at) {
-    return <span className="text-fg-muted">{formatDateTime(row.paid_at ?? row.created_at)}</span>;
+    return <When iso={row.paid_at ?? row.created_at} className="text-fg-muted" />;
   }
   const w = waitingFor(row.to_pay_at);
   return <span className={WAIT_CLASS[w.level]}>ждёт {w.text}</span>;
@@ -53,31 +58,51 @@ function Flags({ row }: { row: PayoutRow }) {
         <StatusChip tone="info">платит {claimed.display_name ?? "администратор"}</StatusChip>
       ) : null}
       {(row.flags ?? []).map((f) => (
-        <StatusChip key={f} tone={FLAG_LABELS[f].danger ? "danger" : "progress"}>
-          {FLAG_LABELS[f].text}
+        <StatusChip key={f} tone={FLAG_DANGER[f] ? "danger" : "progress"}>
+          {reasonText("payoutFlag", f)}
         </StatusChip>
       ))}
     </div>
   );
 }
 
+/**
+ * The row's left edge: red for a dangerous flag or a request waiting over 10 h, orange after 6 h
+ * — the waiting time read at a glance down a phone's list of cards.
+ */
+export function edgeOf(r: PayoutRow): boolean | "warning" {
+  if ((r.flags ?? []).some((f) => FLAG_DANGER[f])) return true;
+  if (r.status !== "to_pay" || r.to_pay_at === null) return false;
+  const level = waitingFor(r.to_pay_at).level;
+  return level === "overdue" ? true : level === "late" ? "warning" : false;
+}
+
+/** Today's totals: one row of three, on a phone too (short labels, the sum under the count). */
 function Totals({ totals }: { totals: PayoutTotals }) {
   return (
-    <dl className="border-border bg-surface grid grid-cols-2 gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3">
+    <dl className="border-border bg-surface grid grid-cols-3 gap-2 rounded-lg border p-3 text-sm">
       <div>
-        <dt className="text-fg-muted">К выплате сейчас</dt>
+        <dt className="text-fg-muted text-xs sm:text-sm">К выплате</dt>
         <dd className="font-semibold tabular-nums">
-          {totals.to_pay_count} · {formatSum(totals.to_pay_uzs)}
+          {totals.to_pay_count}
+          <span className="text-fg-muted block text-xs font-normal sm:inline sm:text-sm">
+            <span className="hidden sm:inline"> · </span>
+            {formatSum(totals.to_pay_uzs)}
+          </span>
         </dd>
       </div>
       <div>
-        <dt className="text-fg-muted">Выплачено сегодня</dt>
+        <dt className="text-fg-muted text-xs sm:text-sm">Выплачено сегодня</dt>
         <dd className="font-semibold tabular-nums">
-          {totals.paid_today_count} · {formatSum(totals.paid_today_uzs)}
+          {totals.paid_today_count}
+          <span className="text-fg-muted block text-xs font-normal sm:inline sm:text-sm">
+            <span className="hidden sm:inline"> · </span>
+            {formatSum(totals.paid_today_uzs)}
+          </span>
         </dd>
       </div>
       <div>
-        <dt className="text-fg-muted">Отклонено сегодня</dt>
+        <dt className="text-fg-muted text-xs sm:text-sm">Отклонено сегодня</dt>
         <dd className="font-semibold tabular-nums">{totals.rejected_today_count}</dd>
       </div>
     </dl>
@@ -130,39 +155,42 @@ export function PayoutsPage() {
     refetchInterval: REFRESH_MS,
   });
   const first = query.data?.pages[0];
+  // The counts ride on every page; keep the last ones so the badges do not blink on a tab switch.
+  const lastCounts = useRef<Page["counts"] | null>(null);
+  if (first !== undefined) lastCounts.current = first.counts;
+  const counts = lastCounts.current;
   const items = query.data?.pages.flatMap((p) => p.items);
   return (
     <section className="space-y-4">
       <PageHeader title="Заявки на выплату" />
       {first?.totals ? <Totals totals={first.totals} /> : null}
-      <FiltersBar>
-        <SearchBox
-          label="Продажа, последние 4 цифры, имя или Steam ID"
-          value={text}
-          maxLength={64}
-          onChange={setText}
-        />
-      </FiltersBar>
-      {searching ? (
-        <p className="text-fg-muted text-sm">Поиск по всем статусам.</p>
-      ) : (
-        <nav aria-label="Статусы" className="flex flex-wrap gap-2">
-          {PAYOUT_STATUSES.map((s) => (
-            <Link
-              key={s}
-              to={`/payouts?status=${s}`}
-              aria-current={s === status ? "page" : undefined}
-              className={
-                s === status
-                  ? "bg-accent text-accent-fg rounded-md px-3 py-1.5 text-sm"
-                  : "bg-surface-2 rounded-md px-3 py-1.5 text-sm"
-              }
-            >
-              {PAYOUT_LABELS[s]} {first?.counts[s] ?? 0}
-            </Link>
-          ))}
-        </nav>
-      )}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {searching ? (
+          <p className="text-fg-muted text-sm">Поиск по всем статусам.</p>
+        ) : (
+          <Tabs<PayoutStatus>
+            label="Статусы"
+            value={status === "all" ? "to_pay" : status}
+            onChange={(s) => {
+              url.set("status", s);
+            }}
+            items={PAYOUT_STATUSES.map((s) => ({
+              key: s,
+              label: PAYOUT_TABS[s],
+              ...(counts !== null && { count: counts[s] }),
+              alert: s === "to_pay",
+            }))}
+          />
+        )}
+        <FiltersBar>
+          <SearchBox
+            label="Продажа, карта, имя или Steam ID"
+            value={text}
+            maxLength={64}
+            onChange={setText}
+          />
+        </FiltersBar>
+      </div>
       <DataTable
         label="Заявки"
         rows={items}
@@ -170,12 +198,7 @@ export function PayoutsPage() {
         loading={query.isPending}
         error={query.isError ? errorText(query.error) : undefined}
         empty="Заявок нет."
-        attention={(r) =>
-          (r.flags ?? []).some((f) => FLAG_LABELS[f].danger) ||
-          (r.status === "to_pay" &&
-            r.to_pay_at !== null &&
-            waitingFor(r.to_pay_at).level === "overdue")
-        }
+        attention={edgeOf}
         onRowClick={(r) => {
           void navigate(`/payouts/${r.id}`);
         }}
@@ -184,7 +207,7 @@ export function PayoutsPage() {
             key: "sale",
             header: "Продажа",
             cell: (r) => (
-              <Link to={`/payouts/${r.id}`} className="font-mono font-medium hover:underline">
+              <Link to={`/payouts/${r.id}`} className={`${LINK} font-mono`}>
                 {r.sale_number}
               </Link>
             ),

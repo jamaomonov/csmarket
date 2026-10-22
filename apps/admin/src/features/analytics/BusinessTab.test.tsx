@@ -6,6 +6,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { BUSINESS } from "./fixtures";
 
+const TOP = BUSINESS.buyers.top[0] ?? {
+  id: "u",
+  display_name: null,
+  avatar_url: null,
+  orders: 0,
+  revenue_uzs: "0",
+  profit_uzs: "0",
+};
+
 const api = vi.hoisted(() => ({
   getBusiness: vi.fn(),
   getCalendar: vi.fn(),
@@ -42,6 +51,35 @@ describe("AnalyticsPage — Бизнес", () => {
     expect(api.getBusiness).toHaveBeenCalledWith("2026-10-09", "2026-10-10", "all");
   });
 
+  it("draws no «—» line under a tile with nothing to compare against", async () => {
+    renderPage();
+    // The previous period had no refunds: no change line at all.
+    const refunds = await screen.findByTestId("tile-Возвраты");
+    expect(refunds).not.toHaveTextContent("—");
+  });
+
+  it("translates the refund reasons and never repeats the total as a count", async () => {
+    api.getBusiness.mockResolvedValue({
+      ...BUSINESS,
+      refunds: {
+        count: 19,
+        amount_uzs: "900000",
+        by_source: [
+          { key: "waxpeer", count: 12, amount_uzs: "500000" },
+          { key: "lisskins", count: 7, amount_uzs: "400000" },
+        ],
+        by_reason: [{ key: "not_accepted", count: 19, amount_uzs: "900000" }],
+      },
+    });
+    renderPage();
+    const refunds = await screen.findByRole("region", { name: "Возвраты" });
+    const reasons = within(refunds).getByRole("list", { name: "По причинам" });
+    expect(reasons).toHaveTextContent(/^все: обмен не принят$/);
+    expect(within(refunds).getByRole("list", { name: "По площадкам" })).toHaveTextContent(
+      "Waxpeer12LIS-SKINS7",
+    );
+  });
+
   it("asks again for another period and channel", async () => {
     renderPage();
     await screen.findByTestId("tile-Оборот");
@@ -64,6 +102,28 @@ describe("AnalyticsPage — Бизнес", () => {
     );
     expect(await screen.findByText("Нет — так и должно быть.")).toBeInTheDocument();
     expect(screen.getByTestId("day-chart")).toBeInTheDocument();
+  });
+
+  it("tells two buyers with one name apart by their card link and id tail", async () => {
+    api.getBusiness.mockResolvedValue({
+      ...BUSINESS,
+      buyers: {
+        ...BUSINESS.buyers,
+        top: [
+          { ...TOP, id: "aaaa-1111", display_name: "Mail", orders: 2 },
+          { ...TOP, id: "bbbb-2222", display_name: "Mail", orders: 5 },
+        ],
+      },
+    });
+    renderPage();
+    const buyers = await screen.findByRole("region", { name: "Покупатели" });
+    const links = within(buyers).getAllByRole("link", { name: "Mail" });
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
+      "/users/aaaa-1111",
+      "/users/bbbb-2222",
+    ]);
+    expect(within(buyers).getByText("2 заказа · id …1111")).toBeInTheDocument();
+    expect(within(buyers).getByText("5 заказов · id …2222")).toBeInTheDocument();
   });
 
   it("never reads a failed losses request as «none»", async () => {

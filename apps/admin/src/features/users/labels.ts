@@ -1,7 +1,7 @@
 /** Operator-facing Russian labels for the users pages. Unknown values fall back to the raw code. */
 import { assertNever } from "@csmarket/utils";
 
-import { type AdminUserDetail, type TopupStatus } from "./api";
+import { type AdminUserDetail } from "./api";
 
 import { ApiError, formatApiError } from "@/lib/api";
 
@@ -49,19 +49,6 @@ const KINDS: Record<string, string> = {
 
 export function kindLabel(kind: string): string {
   return KINDS[kind] ?? kind;
-}
-
-const TOPUP_STATUSES: Record<TopupStatus, string> = {
-  pending: "ждёт оплаты",
-  succeeded: "зачислено",
-  expired: "истекло",
-  reversed: "отменено кассой",
-  held: "на проверке",
-  rejected: "возвращено на карту",
-};
-
-export function topupStatusLabel(status: TopupStatus): string {
-  return TOPUP_STATUSES[status];
 }
 
 const PROVIDERS: Record<string, string> = {

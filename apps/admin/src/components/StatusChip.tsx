@@ -1,4 +1,9 @@
-/** A status chip with a tone (spec: admin UX review §4.2). Green accent is never a status. */
+/**
+ * The base chip: a tone and a word (admin UX review §4.2). Green accent is never a status. A
+ * status of a thing (an order, a payment, a payout…) is `Status`, which reads its word and tone
+ * from the one dictionary (`lib/dictionary.ts`); this base is for chips that are not statuses
+ * («админ», «API», a payout's risk flag).
+ */
 import { type ReactNode } from "react";
 
 export type Tone = "neutral" | "progress" | "info" | "success" | "danger" | "muted";
@@ -18,8 +23,8 @@ interface StatusChipProps {
   children: ReactNode;
   /** A second line under the chip (a hold's countdown, a refund's reason). */
   sub?: ReactNode;
-  title?: string;
-  testId?: string;
+  title?: string | undefined;
+  testId?: string | undefined;
 }
 
 export function StatusChip({ tone, children, sub, title, testId }: StatusChipProps) {

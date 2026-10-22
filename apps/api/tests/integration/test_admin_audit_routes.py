@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime, timedelta
 
 import pytest
 from csmarket.modules.admin.models import AdminAuditLog
+from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from tests.integration.orders_factory import make_item_and_rate
 from tests.integration.payments_factory import make_user
+from tests.integration.sales_factory import make_request, make_sale
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 URL = "/api/v1/admin/audit"
@@ -83,6 +87,7 @@ async def test_rows_carry_actor_and_payload_newest_first(
             "action": "wallet.adjust",
             "target_type": "user",
             "target_id": "u-9",
+            "target_label": None,
             "actor": {"id": anon.id, "display_name": None},
             "payload": {"amount_uzs": -5000, "reason": "double credit"},
         },
@@ -92,6 +97,7 @@ async def test_rows_carry_actor_and_payload_newest_first(
             "action": "users.ban",
             "target_type": "user",
             "target_id": "t-1",
+            "target_label": None,
             "actor": {"id": ann.id, "display_name": "Ann"},
             "payload": {"reason": "spam"},
         },
@@ -194,6 +200,23 @@ async def test_a_filter_keeps_its_cursor(
     assert rest["next_cursor"] is None
 
 
+async def _targets(db: AsyncSession) -> list[tuple[str, str]]:
+    """One fresh target of each id-only type the audit list labels."""
+    owner = await _admin(db, "Key Owner")
+    key = ApiKey(user_id=owner.id, token_hash=secrets.token_hex(32))
+    db.add(key)
+    await db.commit()
+    item, _ = await make_item_and_rate(db)
+    sale = await make_sale(db, payout_to="card", status="payout")
+    request = await make_request(db, sale)
+    return [
+        ("user", owner.id),
+        ("skin_item", item.id),
+        ("payout_request", request.id),
+        ("api_key", key.id),
+    ]
+
+
 async def test_list_query_count_is_constant(
     integration_client: AsyncClient,
     admin_headers: Headers,
@@ -203,8 +226,13 @@ async def test_list_query_count_is_constant(
     h = await admin_headers()
 
     async def _count(rows: int) -> int:
+        # Real UUID targets of every labelled type, so each label query runs on every page.
         for i in range(rows):
-            await _row(db_session, await _admin(db_session, f"A{i}"), minutes=i)
+            actor = await _admin(db_session, f"A{i}")
+            for target_type, target_id in await _targets(db_session):
+                await _row(
+                    db_session, actor, target_type=target_type, target_id=target_id, minutes=i
+                )
         statements: list[str] = []
 
         def _capture(*args: object) -> None:
@@ -222,3 +250,49 @@ async def test_list_query_count_is_constant(
     few = await _count(3)
     assert few > 0
     assert few == await _count(12)
+
+
+async def test_id_targets_carry_a_readable_label(
+    integration_client: AsyncClient, admin_headers: Headers, db_session: AsyncSession
+) -> None:
+    ann = await _admin(db_session, "Ann")
+    seller = await _admin(db_session, "Seller Sam")
+    item, _ = await make_item_and_rate(db_session)
+    sale = await make_sale(db_session, user=seller, payout_to="card", status="payout")
+    request = await make_request(db_session, sale)
+    missing = str(uuid.uuid4())
+    await _row(db_session, ann, target_type="user", target_id=seller.id, minutes=0)
+    await _row(db_session, ann, target_type="user", target_id=missing, minutes=1)
+    await _row(db_session, ann, target_type="skin_item", target_id=item.id, minutes=2)
+    await _row(
+        db_session,
+        ann,
+        action="sales.payout.paid",
+        target_type="payout_request",
+        target_id=request.id,
+        minutes=3,
+    )
+    owner = await _admin(db_session, "Partner Co")
+    key = ApiKey(user_id=owner.id, token_hash=secrets.token_hex(32))
+    db_session.add(key)
+    await db_session.commit()
+    await _row(
+        db_session,
+        ann,
+        action="api_keys.revoke",
+        target_type="api_key",
+        target_id=key.id,
+        minutes=4,
+    )
+    await _row(db_session, ann, action="skins.alias.put", target_type="skin_alias", minutes=5)
+    r = await integration_client.get(URL, headers=await admin_headers())
+    assert r.status_code == 200, r.text
+    labels = [(i["target_type"], i["target_label"]) for i in r.json()["items"]]
+    assert labels == [
+        ("skin_alias", None),  # names itself (the alias is the id)
+        ("api_key", "Partner Co"),
+        ("payout_request", sale.number),
+        ("skin_item", item.market_hash_name),
+        ("user", None),  # no such user
+        ("user", "Seller Sam"),
+    ]
