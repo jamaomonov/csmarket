@@ -152,4 +152,33 @@ describe("FeeSettingsPage", () => {
       expect(api.saveFeeSettings).toHaveBeenCalledOnce();
     });
   });
+
+  it("saves the fees before the limits", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Комиссия Payme, %"), { target: { value: "1" } });
+    fireEvent.change(await screen.findByLabelText("Click: окно, ч"), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(api.saveReviewLimits).toHaveBeenCalledOnce();
+    });
+    const fees = api.saveFeeSettings.mock.invocationCallOrder[0] ?? Infinity;
+    const limits = api.saveReviewLimits.mock.invocationCallOrder[0] ?? -1;
+    expect(fees).toBeLessThan(limits);
+  });
+
+  it("says the fees were saved when the limits fail, and keeps the limits to retry", async () => {
+    api.saveReviewLimits.mockRejectedValue(
+      new ApiError(409, "conflict", { code: "settings_stale" }),
+    );
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Комиссия Payme, %"), { target: { value: "1" } });
+    fireEvent.change(await screen.findByLabelText("Click: окно, ч"), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /^Комиссии и состояния касс сохранены, лимиты — нет: .*сохранил кто-то другой/,
+    );
+    expect(api.saveFeeSettings).toHaveBeenCalledOnce();
+    expect(screen.getByText("Изменено: 1 поле")).toBeInTheDocument();
+    expect(screen.getByLabelText<HTMLInputElement>("Click: окно, ч").value).toBe("12");
+  });
 });

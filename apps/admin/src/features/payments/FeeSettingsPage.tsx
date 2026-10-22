@@ -77,6 +77,8 @@ export function FeeSettingsPage() {
   const [draft, setDraft] = useState<KassaFees | null>(null);
   const [invalid, setInvalid] = useState<string[]>([]);
   const [hiding, setHiding] = useState<string[] | null>(null);
+  // The fees were written but the limits were not.
+  const [partial, setPartial] = useState(false);
   const key = useIdempotencyKey("admin-fee-settings");
   const version = settings.data?.updated_at ?? null;
   const [savedAt, setSavedAt] = useState<Date | null>(null);
@@ -102,14 +104,23 @@ export function FeeSettingsPage() {
     draft === null ? 0 : countChanges(normalised(saved.settings), normalised(doc));
   const changed = feesChanged + limits.changed;
   const saving = save.isPending || limits.mutation.isPending;
+  // Two documents, two requests: there is no transaction across them. The fees and the kassa
+  // states go first — they are what the confirm just asked about and what buyers see; the limits
+  // follow and, when they fail, keep their draft for a retry from the same bar.
   const run = async (): Promise<void> => {
     setHiding(null);
+    setPartial(false);
+    let feesSaved = false;
     try {
-      if (feesChanged > 0) await save.mutateAsync(doc);
+      if (feesChanged > 0) {
+        await save.mutateAsync(doc);
+        feesSaved = true;
+      }
       if (limits.changed > 0) await limits.save();
       setSavedAt(new Date());
     } catch {
-      // Shown in the save bar from the mutation's error.
+      // The reason is shown in the save bar from the mutation's error.
+      setPartial(feesSaved);
     }
   };
   const submit = (): void => {
@@ -186,6 +197,7 @@ export function FeeSettingsPage() {
         onReset={() => {
           setDraft(null);
           setInvalid([]);
+          setPartial(false);
           save.reset();
           limits.reset();
         }}
@@ -197,7 +209,9 @@ export function FeeSettingsPage() {
         ))}
         {failed ? (
           <p role="alert" className="text-danger text-sm">
-            {payoutErrorText(failed)}
+            {partial
+              ? `Комиссии и состояния касс сохранены, лимиты — нет: ${payoutErrorText(failed)}`
+              : payoutErrorText(failed)}
           </p>
         ) : null}
       </SaveBar>
