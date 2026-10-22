@@ -1,31 +1,52 @@
 /**
- * «Продажи»: find a sale by number, filter by status and by attention («ждут проверки» — the
- * sales an admin has not marked «Проверено» yet; the badge counts them all), newest first.
+ * «Продажи»: attention `Tabs` (`?attention=`; «Ждут проверки» — the sales an admin has not marked
+ * «Проверено» yet, its counter counts them all), a status `FilterSelect` and a search by number,
+ * newest first.
  */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { ATTENTION_FILTERS, type AdminSalesPage, listSales, SALE_STATUSES } from "./api";
+import {
+  ATTENTION_FILTERS,
+  type AdminSalesPage,
+  type AttentionFilter,
+  listSales,
+  SALE_STATUSES,
+} from "./api";
 import { SALES_LIST_KEY } from "./keys";
-import { ATTENTION_FILTER_LABELS, ATTENTION_LABELS, SALE_LABELS } from "./labels";
+import { ATTENTION_LABELS, SALE_LABELS } from "./labels";
 import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
+import { useNarrow } from "@/lib/useNarrow";
 import { useUrlParams } from "@/lib/useUrlParams";
 
 const DEBOUNCE_MS = 300;
 
+type View = "all" | AttentionFilter;
+const VIEWS: readonly View[] = ["all", "open", "resolved", "any"];
+/** On a phone the tab counting work comes first. */
+const PHONE_VIEWS: readonly View[] = ["open", "all", "resolved", "any"];
+const VIEW_LABELS: Record<View, string> = {
+  all: "Все",
+  open: "Ждут проверки",
+  resolved: "Проверены",
+  any: "С пометкой",
+};
+
 export function SalesPage() {
+  const narrow = useNarrow();
   const navigate = useNavigate();
   const url = useUrlParams();
   const status = pick(SALE_STATUSES, url.get("status"));
@@ -62,18 +83,22 @@ export function SalesPage() {
   const open = query.data?.pages[0]?.attention_open ?? 0;
   return (
     <section className="space-y-4">
-      <PageHeader
-        title="Продажи"
-        meta={
-          open > 0 ? (
-            <Link to="/sales?attention=open" className="text-danger hover:underline">
-              Ждут проверки: {open}
-            </Link>
-          ) : undefined
-        }
+      <PageHeader title="Продажи" />
+      <Tabs<View>
+        label="Пометка"
+        value={attention ?? "all"}
+        onChange={(v) => {
+          url.set("attention", v === "all" ? "" : v);
+        }}
+        items={(narrow ? PHONE_VIEWS : VIEWS).map((v) => ({
+          key: v,
+          label: VIEW_LABELS[v],
+          ...(v === "open" && query.data !== undefined && { count: open }),
+          alert: v === "open",
+        }))}
       />
       <FiltersBar>
-        <SearchBox label="Номер продажи" value={text} maxLength={8} mono onChange={setText} />
+        <SearchBox label="Номер продажи" value={text} maxLength={8} onChange={setText} />
         <FilterSelect
           label="Статус"
           value={status ?? ""}
@@ -81,15 +106,6 @@ export function SalesPage() {
           text={(s) => SALE_LABELS[s]}
           onChange={(v) => {
             url.set("status", v);
-          }}
-        />
-        <FilterSelect
-          label="Пометка"
-          value={attention ?? ""}
-          options={ATTENTION_FILTERS}
-          text={(a) => ATTENTION_FILTER_LABELS[a]}
-          onChange={(v) => {
-            url.set("attention", v);
           }}
         />
       </FiltersBar>

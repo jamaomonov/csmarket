@@ -43,13 +43,13 @@ describe("PayoutsPage", () => {
 
   it("opens on «К выплате» with every tab's count and the day's totals", async () => {
     renderPage();
-    expect(await screen.findByRole("link", { name: "К выплате 1" })).toHaveAttribute(
-      "aria-current",
-      "page",
+    expect(await screen.findByRole("tab", { name: "К выплате 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
-    expect(screen.getByRole("link", { name: "Ждут 7 дней 2" })).toHaveAttribute(
-      "href",
-      "/payouts?status=waiting_hold",
+    expect(screen.getByRole("tab", { name: "Ждут 7 дней 2" })).toHaveAttribute(
+      "aria-selected",
+      "false",
     );
     expect(screen.getByText("Выплачено сегодня").nextSibling).toHaveTextContent(/3 · 450\s000 сум/);
     expect(api.listPayouts).toHaveBeenCalledWith("to_pay", undefined, undefined);
@@ -87,10 +87,33 @@ describe("PayoutsPage", () => {
     expect(screen.getByText("продавец отменил обмен")).toBeInTheDocument();
   });
 
-  it("reads the tab from the URL", async () => {
+  it("reads the tab from the URL (old links keep working)", async () => {
     renderPage("/payouts?status=paid");
     await screen.findByRole("link", { name: "S7K2M9QX" });
     expect(api.listPayouts).toHaveBeenCalledWith("paid", undefined, undefined);
+    expect(screen.getByRole("tab", { name: "Выплачено 5" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("a tab switches the status", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("tab", { name: "Ждут 7 дней 2" }));
+    await waitFor(() => {
+      expect(api.listPayouts).toHaveBeenCalledWith("waiting_hold", undefined, undefined);
+    });
+    expect(screen.getByRole("tab", { name: "Ждут 7 дней 2" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("the search box is in the normal font with a short placeholder", () => {
+    renderPage();
+    const box = screen.getByRole("searchbox");
+    expect(box).toHaveAttribute("placeholder", "Продажа, карта, имя или Steam ID");
+    expect(box).not.toHaveClass("font-mono");
   });
 
   it("searches across every status", async () => {

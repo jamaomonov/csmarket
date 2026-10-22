@@ -69,9 +69,23 @@ describe("ReconciliationPage", () => {
 
   it("asks for the problems only and another period", async () => {
     renderPage("/sales/reconciliation?days=30");
-    fireEvent.click(await screen.findByLabelText("Только проблемы"));
+    expect(await screen.findByRole("tab", { name: "Все" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    fireEvent.click(await screen.findByRole("tab", { name: "Проблемы 1" }));
     await waitFor(() => {
       expect(api.getReconciliation).toHaveBeenLastCalledWith({ days: 30, problems: true });
     });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("an old ?problems=1 link opens the «Проблемы» tab", async () => {
+    renderPage("/sales/reconciliation?problems=1");
+    expect(await screen.findByRole("tab", { name: "Проблемы 1" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(api.getReconciliation).toHaveBeenCalledWith({ days: 7, problems: true });
   });
 });

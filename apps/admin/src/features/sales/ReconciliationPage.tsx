@@ -21,6 +21,7 @@ import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Tabs } from "@/components/Tabs";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { pick } from "@/lib/url-guards";
@@ -76,27 +77,35 @@ export function ReconciliationPage() {
           </Total>
         </div>
       )}
-      <FiltersBar>
-        <FilterSelect
-          label="Период"
-          value={period}
-          options={PERIODS}
-          text={(p) => PERIOD_LABELS[p]}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <Tabs<"all" | "problems">
+          label="Какие продажи"
+          value={problems ? "problems" : "all"}
           onChange={(v) => {
-            url.set("days", v === "7" ? "" : v);
+            url.set("problems", v === "problems" ? "1" : "");
           }}
+          items={[
+            { key: "all", label: "Все" },
+            {
+              key: "problems",
+              label: "Проблемы",
+              ...(first !== undefined && { count: first.problems }),
+              alert: true,
+            },
+          ]}
         />
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={problems}
-            onChange={(e) => {
-              url.set("problems", e.target.checked ? "1" : "");
+        <FiltersBar>
+          <FilterSelect
+            label="Период"
+            value={period}
+            options={PERIODS}
+            text={(p) => PERIOD_LABELS[p]}
+            onChange={(v) => {
+              url.set("days", v === "7" ? "" : v);
             }}
           />
-          Только проблемы
-        </label>
-      </FiltersBar>
+        </FiltersBar>
+      </div>
       <DataTable
         label="Сверка"
         rows={items}

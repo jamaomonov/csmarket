@@ -1,5 +1,5 @@
 /** «Выкуп»'s words for the operator (Russian). */
-import { type AttentionFilter, type AttentionReason, type CardType, type SaleStatus } from "./api";
+import { type AttentionReason, type CardType, type SaleStatus } from "./api";
 import { type PayoutFlag, type PayoutStatus } from "./payoutsApi";
 
 import { errorText } from "@/features/users/labels";
@@ -27,12 +27,6 @@ export const ATTENTION_LABELS: Record<AttentionReason, string> = {
   rolled_back: "откат после выплаты — разобрать вручную",
   late_deposit: "закрыта, но Skinslink видит обмен — разобрать вручную",
   credit_blocked: "кошелёк заморожен — зачисление ждёт разморозки",
-};
-
-export const ATTENTION_FILTER_LABELS: Record<AttentionFilter, string> = {
-  open: "ждут проверки",
-  resolved: "проверены",
-  any: "с пометкой",
 };
 
 /** A payout row's risk chips; `danger` ones block «Выплачено» or need a look. */

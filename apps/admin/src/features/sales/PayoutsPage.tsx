@@ -1,12 +1,12 @@
 /**
- * «Заявки на выплату»: status tabs with counts, the day's totals, a search (sale number, last
- * four, name, Steam ID). «К выплате» is oldest first with the waiting time tinted after 6 h
- * and 10 h, and who is paying each request right now. Cards on a phone; refreshed every 15 s so
+ * «Заявки на выплату»: status `Tabs` with counts (`?status=`), the day's totals, a search (sale
+ * number, last four, name, Steam ID). «К выплате» is oldest first with the waiting time tinted
+ * after 6 h and 10 h, and who is paying each request right now. Cards on a phone; refreshed every 15 s so
  * a request someone took or paid does not linger.
  */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { PAYOUTS_KEY } from "./keys";
@@ -16,6 +16,7 @@ import {
   PAYOUT_STATUSES,
   type PayoutRow,
   type PayoutsPage as Page,
+  type PayoutStatus,
   type PayoutTab,
   type PayoutTotals,
 } from "./payoutsApi";
@@ -26,6 +27,7 @@ import { FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
+import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
@@ -131,39 +133,42 @@ export function PayoutsPage() {
     refetchInterval: REFRESH_MS,
   });
   const first = query.data?.pages[0];
+  // The counts ride on every page; keep the last ones so the badges do not blink on a tab switch.
+  const lastCounts = useRef<Page["counts"] | null>(null);
+  if (first !== undefined) lastCounts.current = first.counts;
+  const counts = lastCounts.current;
   const items = query.data?.pages.flatMap((p) => p.items);
   return (
     <section className="space-y-4">
       <PageHeader title="Заявки на выплату" />
       {first?.totals ? <Totals totals={first.totals} /> : null}
-      <FiltersBar>
-        <SearchBox
-          label="Продажа, последние 4 цифры, имя или Steam ID"
-          value={text}
-          maxLength={64}
-          onChange={setText}
-        />
-      </FiltersBar>
-      {searching ? (
-        <p className="text-fg-muted text-sm">Поиск по всем статусам.</p>
-      ) : (
-        <nav aria-label="Статусы" className="flex flex-wrap gap-2">
-          {PAYOUT_STATUSES.map((s) => (
-            <Link
-              key={s}
-              to={`/payouts?status=${s}`}
-              aria-current={s === status ? "page" : undefined}
-              className={
-                s === status
-                  ? "bg-accent text-accent-fg rounded-md px-3 py-1.5 text-sm"
-                  : "bg-surface-2 rounded-md px-3 py-1.5 text-sm"
-              }
-            >
-              {PAYOUT_LABELS[s]} {first?.counts[s] ?? 0}
-            </Link>
-          ))}
-        </nav>
-      )}
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        {searching ? (
+          <p className="text-fg-muted text-sm">Поиск по всем статусам.</p>
+        ) : (
+          <Tabs<PayoutStatus>
+            label="Статусы"
+            value={status === "all" ? "to_pay" : status}
+            onChange={(s) => {
+              url.set("status", s);
+            }}
+            items={PAYOUT_STATUSES.map((s) => ({
+              key: s,
+              label: PAYOUT_LABELS[s],
+              ...(counts !== null && { count: counts[s] }),
+              alert: s === "to_pay",
+            }))}
+          />
+        )}
+        <FiltersBar>
+          <SearchBox
+            label="Продажа, карта, имя или Steam ID"
+            value={text}
+            maxLength={64}
+            onChange={setText}
+          />
+        </FiltersBar>
+      </div>
       <DataTable
         label="Заявки"
         rows={items}
