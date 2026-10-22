@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  clockTime,
+  dayHeading,
+  dayKey,
   formatDateTime,
   formatDateTimeSeconds,
   formatRate,
@@ -58,5 +61,20 @@ describe("listTime", () => {
     expect(formatDateTimeSeconds(new Date(2026, 9, 21, 9, 5, 7).toISOString())).toBe(
       "21.10.2026 09:05:07",
     );
+  });
+});
+
+describe("day groups", () => {
+  const NOW = new Date(2026, 9, 22, 12, 0, 0).getTime();
+  const at = (y: number, m: number, d: number, h = 9, min = 5): string =>
+    new Date(y, m, d, h, min).toISOString();
+
+  it("keys a moment by its local day and says it in words", () => {
+    expect(dayKey(at(2026, 9, 22, 0, 10))).toBe("2026-10-22");
+    expect(dayHeading(at(2026, 9, 22, 0, 10), NOW)).toBe("Сегодня");
+    expect(dayHeading(at(2026, 9, 21, 23, 59), NOW)).toBe("Вчера");
+    expect(dayHeading(at(2026, 9, 12), NOW)).toBe("12 октября");
+    expect(dayHeading(at(2025, 11, 31), NOW)).toBe("31 декабря 2025");
+    expect(clockTime(at(2026, 9, 12, 7, 3))).toBe("07:03");
   });
 });

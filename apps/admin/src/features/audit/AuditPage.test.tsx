@@ -32,6 +32,10 @@ function renderPage(url = "/audit") {
   );
 }
 
+/** The entries' rows: the header and the day headings have no cells. */
+const entries = (rows: HTMLElement[]): HTMLElement[] =>
+  rows.filter((r) => within(r).queryAllByRole("cell").length > 0);
+
 describe("AuditPage", () => {
   beforeEach(() => {
     api.listAudit.mockReset();
@@ -83,7 +87,7 @@ describe("AuditPage", () => {
     });
     renderPage();
     await screen.findByTestId("audit-table");
-    const [adjust, alias] = screen.getAllByRole("row").slice(1) as [HTMLElement, HTMLElement];
+    const [adjust, alias] = entries(screen.getAllByRole("row")) as [HTMLElement, HTMLElement];
     expect(within(adjust).getByRole("link", { name: "Boss" })).toHaveAttribute(
       "href",
       "/users/a-1",
@@ -135,7 +139,7 @@ describe("AuditPage", () => {
     const table = await screen.findByTestId("audit-table");
     expect(table).not.toHaveTextContent(uuid);
     expect(table).not.toHaveTextContent("slug");
-    const [user, skin, payout, hold, nameless] = within(table).getAllByRole("row").slice(1) as [
+    const [user, skin, payout, hold, nameless] = entries(within(table).getAllByRole("row")) as [
       HTMLElement,
       HTMLElement,
       HTMLElement,
@@ -239,6 +243,24 @@ describe("AuditPage", () => {
       target_type: "user",
       target_id: "x".repeat(64),
     });
+  });
+
+  it("groups the entries by day, a time under each heading", async () => {
+    api.listAudit.mockResolvedValue({
+      items: [
+        row({ id: "r-1", action: "users.ban", created_at: "2026-09-30T10:00:00Z" }),
+        row({ id: "r-2", action: "users.unban", created_at: "2026-09-30T08:00:00Z" }),
+        row({ id: "r-3", action: "users.ban", created_at: "2026-09-12T10:00:00Z" }),
+      ],
+      next_cursor: null,
+    });
+    renderPage();
+    const table = await screen.findByTestId("audit-table");
+    const headings = within(table)
+      .getAllByRole("columnheader")
+      .filter((h) => h.getAttribute("scope") === "colgroup");
+    expect(headings.map((h) => h.textContent)).toEqual(["30 сентября", "12 сентября"]);
+    expect(entries(within(table).getAllByRole("row"))).toHaveLength(3);
   });
 
   it("loads the next page behind «Показать ещё»", async () => {

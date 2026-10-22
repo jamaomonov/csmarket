@@ -158,7 +158,9 @@ code={status} />` reads its word and tone from the one dictionary, `lib/dictiona
   a chevron («к выплате · заявка ›»). A dashboard tile that opens a page shows a chevron and
   lights up on hover; a figure-only tile has neither.
 - **Audit log** — targets by name (the API's `target_label`: a display name, a skin, a sale
-  number), never a UUID or a slug; actions and payload keys in words, a diff «нет → да».
+  number), never a UUID or a slug; actions and payload keys in words, a diff «нет → да». Grouped
+  by day («Сегодня», «Вчера», «12 октября»; `dayHeading`), each entry's time `HH:MM` under its
+  day; on a phone each entry is a card (time and action, then who · target, then the data).
 - **Dialogs** — `Modal` (or the same look): a sheet from the bottom on a phone, a card on desktop,
   Esc and a click outside close it unless a request runs.
 - **Money confirms** — `ConfirmSheet`: a bottom sheet (`Modal`) on a phone, so a sticky action
