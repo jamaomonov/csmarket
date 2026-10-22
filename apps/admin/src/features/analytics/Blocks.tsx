@@ -1,18 +1,13 @@
 /** The «Бизнес» breakdown blocks: markets, channels, payments, categories, skins, buyers… */
-import { type BusinessOut } from "./api";
+import { type ReactNode } from "react";
+
+import { type BusinessOut, type KeyCount } from "./api";
 import { BarList } from "./charts/BarList";
-import {
-  CATEGORY_LABELS,
-  dollars,
-  labelOf,
-  PAYMENT_LABELS,
-  REASON_LABELS,
-  som,
-  SOURCE_LABELS,
-} from "./labels";
+import { CATEGORY_LABELS, dollars, labelOf, PAYMENT_LABELS, som, SOURCE_LABELS } from "./labels";
 
 import { Row, Section } from "@/components/Section";
 import { SkinThumb } from "@/components/SkinThumb";
+import { Reason } from "@/components/Status";
 import { UserCell } from "@/components/UserCell";
 
 interface B {
@@ -136,6 +131,37 @@ export function Buyback({ data }: B) {
   );
 }
 
+/**
+ * A refunds breakdown. One group that holds them all gets no count (it would only repeat the
+ * total above): «все: обмен не принят».
+ */
+function Breakdown({
+  label,
+  rows,
+  total,
+  name,
+}: {
+  label: string;
+  rows: KeyCount[];
+  total: number;
+  name: (key: string) => ReactNode;
+}) {
+  const only = rows.length === 1 && rows[0]?.count === total;
+  return (
+    <ul aria-label={label} className="min-w-0">
+      {rows.map((k) => (
+        <li key={k.key} className="flex justify-between gap-2">
+          <span className="min-w-0 truncate">
+            {only && <span className="text-fg-muted">все: </span>}
+            {name(k.key)}
+          </span>
+          {!only && <span className="tabular-nums">{k.count}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function Refunds({ data }: B) {
   const r = data.refunds;
   return (
@@ -144,22 +170,18 @@ export function Refunds({ data }: B) {
         {r.count} · {som(r.amount_uzs)}
       </p>
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <ul>
-          {r.by_source.map((k) => (
-            <li key={k.key} className="flex justify-between">
-              <span>{labelOf(SOURCE_LABELS, k.key)}</span>
-              <span className="tabular-nums">{k.count}</span>
-            </li>
-          ))}
-        </ul>
-        <ul>
-          {r.by_reason.map((k) => (
-            <li key={k.key} className="flex justify-between">
-              <span className="truncate">{labelOf(REASON_LABELS, k.key)}</span>
-              <span className="tabular-nums">{k.count}</span>
-            </li>
-          ))}
-        </ul>
+        <Breakdown
+          label="По площадкам"
+          rows={r.by_source}
+          total={r.count}
+          name={(key) => labelOf(SOURCE_LABELS, key)}
+        />
+        <Breakdown
+          label="По причинам"
+          rows={r.by_reason}
+          total={r.count}
+          name={(key) => <Reason of="return" code={key} />}
+        />
       </div>
     </Section>
   );

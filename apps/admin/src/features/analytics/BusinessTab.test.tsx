@@ -42,6 +42,35 @@ describe("AnalyticsPage — Бизнес", () => {
     expect(api.getBusiness).toHaveBeenCalledWith("2026-10-09", "2026-10-10", "all");
   });
 
+  it("draws no «—» line under a tile with nothing to compare against", async () => {
+    renderPage();
+    // The previous period had no refunds: no change line at all.
+    const refunds = await screen.findByTestId("tile-Возвраты");
+    expect(refunds).not.toHaveTextContent("—");
+  });
+
+  it("translates the refund reasons and never repeats the total as a count", async () => {
+    api.getBusiness.mockResolvedValue({
+      ...BUSINESS,
+      refunds: {
+        count: 19,
+        amount_uzs: "900000",
+        by_source: [
+          { key: "waxpeer", count: 12, amount_uzs: "500000" },
+          { key: "lisskins", count: 7, amount_uzs: "400000" },
+        ],
+        by_reason: [{ key: "not_accepted", count: 19, amount_uzs: "900000" }],
+      },
+    });
+    renderPage();
+    const refunds = await screen.findByRole("region", { name: "Возвраты" });
+    const reasons = within(refunds).getByRole("list", { name: "По причинам" });
+    expect(reasons).toHaveTextContent(/^все: обмен не принят$/);
+    expect(within(refunds).getByRole("list", { name: "По площадкам" })).toHaveTextContent(
+      "Waxpeer12LIS-SKINS7",
+    );
+  });
+
   it("asks again for another period and channel", async () => {
     renderPage();
     await screen.findByTestId("tile-Оборот");

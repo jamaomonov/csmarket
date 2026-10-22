@@ -38,8 +38,6 @@ export const CATEGORY_LABELS: Record<string, string> = {
   other: "Другое",
 };
 
-export const REASON_LABELS: Record<string, string> = { other: "Без причины" };
-
 export function labelOf(labels: Record<string, string>, key: string): string {
   return labels[key] ?? key;
 }
