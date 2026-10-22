@@ -27,29 +27,34 @@ function Now({ data }: { data: DashboardOut }) {
   return (
     <section aria-label="Сделать сейчас" className="space-y-2">
       <h2 className="text-fg-muted text-xs font-medium uppercase tracking-wider">Сделать сейчас</h2>
+      {/* One row of compact tiles on a phone, so the period's figures start on the first screen. */}
       <div
-        className={`grid grid-cols-1 gap-3 ${
-          (data.payouts.sales_attention ?? 0) > 0
-            ? "sm:grid-cols-2 lg:grid-cols-4"
-            : "sm:grid-cols-3"
+        data-testid="now-tiles"
+        className={`grid gap-2 sm:gap-3 ${
+          (data.payouts.sales_attention ?? 0) > 0 ? "grid-cols-4" : "grid-cols-3"
         }`}
       >
-        <Tile title="Требуют внимания" to="/trades?view=attention" alert={data.attention > 0}>
+        <Tile
+          compact
+          title="Требуют внимания"
+          to="/trades?view=attention"
+          alert={data.attention > 0}
+        >
           <span className={data.attention > 0 ? "text-danger" : ""}>{data.attention}</span>
         </Tile>
-        <Tile title="К выплате" to="/payouts" alert={data.payouts.to_pay_count > 0}>
+        <Tile compact title="К выплате" to="/payouts" alert={data.payouts.to_pay_count > 0}>
           <span className={data.payouts.to_pay_count > 0 ? "text-danger" : ""}>
             {data.payouts.to_pay_count}
           </span>
-          <span className="text-fg-muted text-sm font-normal">
+          <span className="text-fg-muted text-xs font-normal sm:text-sm">
             {formatSum(data.payouts.to_pay_uzs)}
           </span>
         </Tile>
-        <Tile title="В пути" to="/trades?view=active">
+        <Tile compact title="В пути" to="/trades?view=active">
           {data.in_flight}
         </Tile>
         {(data.payouts.sales_attention ?? 0) > 0 ? (
-          <Tile title="Продажи: проверить" to="/sales?attention=open" alert>
+          <Tile compact title="Продажи: проверить" to="/sales?attention=open" alert>
             <span className="text-danger">{data.payouts.sales_attention}</span>
           </Tile>
         ) : null}
@@ -210,7 +215,8 @@ export function DashboardPage() {
       {query.data && (
         <>
           <Period data={query.data} />
-          <ByDay data={query.data} />
+          {/* «Сегодня» is one day: its row would only repeat the tiles. */}
+          {days > 1 && <ByDay data={query.data} />}
           <SalesPnlBlock pnl={query.data.sales_pnl} />
           <Balances data={query.data} />
         </>

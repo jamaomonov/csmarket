@@ -13,12 +13,18 @@ interface TileProps {
   to?: string;
   /** Something waits for an operator: a red edge. */
   alert?: boolean;
+  /** Smaller padding and type on a phone, so a row of three fits one screen line. */
+  compact?: boolean;
 }
 
-export function Tile({ title, children, to, alert = false }: TileProps) {
+export function Tile({ title, children, to, alert = false, compact = false }: TileProps) {
   const body = (
     <>
-      <div className="text-fg-muted flex items-center justify-between gap-2 text-sm font-normal">
+      <div
+        className={`text-fg-muted flex items-center justify-between gap-1 font-normal ${
+          compact ? "text-xs leading-tight sm:gap-2 sm:text-sm" : "gap-2 text-sm"
+        }`}
+      >
         <span>{title}</span>
         {to !== undefined && (
           <ChevronRight
@@ -28,14 +34,18 @@ export function Tile({ title, children, to, alert = false }: TileProps) {
           />
         )}
       </div>
-      <div className="mt-1 flex flex-col gap-0.5 text-lg font-semibold tabular-nums">
+      <div
+        className={`mt-1 flex flex-col gap-0.5 font-semibold tabular-nums ${
+          compact ? "text-base sm:text-lg" : "text-lg"
+        }`}
+      >
         {children}
       </div>
     </>
   );
-  const cls = `border-border bg-surface block h-full rounded-lg border p-4 ${
-    alert ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""
-  }`;
+  const cls = `border-border bg-surface block h-full rounded-lg border ${
+    compact ? "p-2.5 sm:p-4" : "p-4"
+  } ${alert ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""}`;
   return (
     <div data-testid={`tile-${title}`} className="h-full">
       {to === undefined ? (
