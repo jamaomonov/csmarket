@@ -3,22 +3,23 @@
  * save names the version it was edited from: a tab left open while someone else saved gets
  * «уже сохранил кто-то другой» instead of silently writing old numbers back. `warnings` from
  * the API (a balance bonus that eats the margin) show above the form. The bottom `SaveBar` shows
- * only when something changed; turning «Выкуп включён» off asks «Выключить выкуп?».
+ * only when something changed; turning «Выкуп» off asks «Выключить выкуп?».
  */
-import { Button } from "@csmarket/ui";
+import { Button, Switch } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 
 import { CARD_TYPES_ORDER, getSaleSettings, saveSaleSettings, type SaleSettings } from "./api";
 import { SALE_SETTINGS_KEY } from "./keys";
 import { CARD_BRANDS, payoutErrorText } from "./labels";
-import { LimitsSection, NumberField, WARNING_TEXT, withLimits } from "./SettingsParts";
+import { LimitsSection, WARNING_TEXT, withLimits } from "./SettingsParts";
 
 import { Modal } from "@/components/Modal";
+import { MoneyField, MoneyInput } from "@/components/MoneyInput";
 import { PageHeader } from "@/components/PageHeader";
 import { countChanges, SaveBar } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
-import { Banner } from "@/components/Section";
+import { Banner, Section } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
@@ -104,66 +105,67 @@ export function SaleSettingsPage() {
       {(settings.data.warnings ?? []).map((w) => (
         <Banner key={w}>{WARNING_TEXT[w]}</Banner>
       ))}
-      <label
-        className={`flex cursor-pointer items-center justify-between gap-4 rounded-lg border px-4 py-3 ${
+      <div
+        className={`rounded-lg border px-4 py-1 ${
           doc.enabled ? "border-success/40 bg-success/10" : "border-border bg-surface"
         }`}
       >
-        <span>
-          <span className="block font-semibold">Выкуп включён</span>
-          <span className="text-fg-muted text-sm">
-            {doc.enabled ? "Пользователи могут продавать скины." : "Продажа скинов выключена."}
-          </span>
-        </span>
-        <input
-          type="checkbox"
-          role="switch"
-          aria-label="Выкуп включён"
+        <Switch
+          label="Выкуп"
+          states={["включён", "выключен"]}
+          hint={doc.enabled ? "пользователи могут продавать скины" : "продажа скинов закрыта"}
           checked={doc.enabled}
-          onChange={(e) => {
-            set({ enabled: e.target.checked });
+          onCheckedChange={(on) => {
+            set({ enabled: on });
           }}
-          className="accent-success size-5"
+          className="w-full"
         />
-      </label>
-      <section className="border-border bg-surface flex flex-col gap-2 rounded-lg border p-4">
-        <h2 className="font-semibold">Маржа по диапазонам цены Skinslink</h2>
-        <div aria-hidden className="text-fg-muted flex gap-2 text-xs">
-          <span className="w-40">От, $</span>
-          <span className="w-40">Маржа, %</span>
+      </div>
+      <Section title="Маржа по цене Skinslink">
+        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+          <span className="text-fg-muted text-xs">Цена от</span>
+          <span className="text-fg-muted text-xs">Маржа</span>
+          <span />
+          {doc.margin.map((b, i) => (
+            <Fragment key={ids[i]}>
+              <MoneyInput
+                label={`От (${String(i + 1)})`}
+                unit="$"
+                decimal
+                className="w-full"
+                value={b.from_usd}
+                onChange={(v) => {
+                  set({ margin: doc.margin.map((x, j) => (j === i ? { ...x, from_usd: v } : x)) });
+                }}
+              />
+              <MoneyInput
+                label={`Маржа (${String(i + 1)})`}
+                unit="%"
+                decimal
+                className="w-full"
+                value={b.percent}
+                onChange={(v) => {
+                  set({ margin: doc.margin.map((x, j) => (j === i ? { ...x, percent: v } : x)) });
+                }}
+              />
+              <Button
+                variant="secondary"
+                aria-label="Убрать диапазон"
+                className="size-10 px-0"
+                disabled={doc.margin.length === 1}
+                onClick={() => {
+                  set({ margin: doc.margin.filter((_, j) => j !== i) });
+                  setRowIds(ids.filter((_, j) => j !== i));
+                }}
+              >
+                ×
+              </Button>
+            </Fragment>
+          ))}
         </div>
-        {doc.margin.map((b, i) => (
-          <div key={ids[i]} className="flex flex-wrap items-end gap-2">
-            <NumberField
-              label={`От, $ (${String(i + 1)})`}
-              value={b.from_usd}
-              onChange={(v) => {
-                set({ margin: doc.margin.map((x, j) => (j === i ? { ...x, from_usd: v } : x)) });
-              }}
-            />
-            <NumberField
-              label={`Маржа, % (${String(i + 1)})`}
-              value={b.percent}
-              onChange={(v) => {
-                set({ margin: doc.margin.map((x, j) => (j === i ? { ...x, percent: v } : x)) });
-              }}
-            />
-            <Button
-              variant="secondary"
-              aria-label="Убрать диапазон"
-              disabled={doc.margin.length === 1}
-              onClick={() => {
-                set({ margin: doc.margin.filter((_, j) => j !== i) });
-                setRowIds(ids.filter((_, j) => j !== i));
-              }}
-            >
-              ×
-            </Button>
-          </div>
-        ))}
         <Button
           variant="secondary"
-          className="self-start"
+          className="mt-3"
           onClick={() => {
             set({ margin: [...doc.margin, { from_usd: "", percent: "" }] });
             setRowIds([...ids, nextId.current++]);
@@ -171,57 +173,70 @@ export function SaleSettingsPage() {
         >
           Добавить диапазон
         </Button>
-      </section>
-      <section className="border-border bg-surface flex flex-wrap gap-4 rounded-lg border p-4">
-        <NumberField
-          label="Скидка с курса ЦБ, %"
-          value={doc.rate_cut_pct}
-          onChange={(v) => {
-            set({ rate_cut_pct: v });
-          }}
-        />
-        <NumberField
-          label="Бонус за баланс, %"
-          value={doc.balance_bonus_pct}
-          onChange={(v) => {
-            set({ balance_bonus_pct: v });
-          }}
-        />
-        {CARD_TYPES_ORDER.map((t) => (
-          <NumberField
-            key={t}
-            label={`Комиссия ${CARD_BRANDS[t]}, %`}
-            value={doc.card_fee_pct[t]}
+      </Section>
+      <Section title="Курс, комиссии и минимумы">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <MoneyField
+            label="Скидка с курса ЦБ"
+            unit="%"
+            decimal
+            value={doc.rate_cut_pct}
             onChange={(v) => {
-              set({ card_fee_pct: { ...doc.card_fee_pct, [t]: v } });
+              set({ rate_cut_pct: v });
             }}
           />
-        ))}
-        <NumberField
-          label="Комиссия банка, %"
-          value={doc.bank_fee_pct ?? "1"}
-          onChange={(v) => {
-            set({ bank_fee_pct: v });
-          }}
-        />
-        <NumberField
-          label="Минимум на карту, сум"
-          value={minText ?? String(doc.card_min_uzs)}
-          onChange={(v) => {
-            setMinText(v);
-            if (draft === null) {
-              setDraft(doc);
-            }
-          }}
-        />
-        <NumberField
-          label="Минимальная сумма, $"
-          value={doc.min_sum_usd}
-          onChange={(v) => {
-            set({ min_sum_usd: v });
-          }}
-        />
-      </section>
+          <MoneyField
+            label="Бонус за баланс"
+            unit="%"
+            decimal
+            value={doc.balance_bonus_pct}
+            onChange={(v) => {
+              set({ balance_bonus_pct: v });
+            }}
+          />
+          {CARD_TYPES_ORDER.map((t) => (
+            <MoneyField
+              key={t}
+              label={`Комиссия ${CARD_BRANDS[t]}`}
+              unit="%"
+              decimal
+              value={doc.card_fee_pct[t]}
+              onChange={(v) => {
+                set({ card_fee_pct: { ...doc.card_fee_pct, [t]: v } });
+              }}
+            />
+          ))}
+          <MoneyField
+            label="Комиссия банка"
+            unit="%"
+            decimal
+            value={doc.bank_fee_pct ?? "1"}
+            onChange={(v) => {
+              set({ bank_fee_pct: v });
+            }}
+          />
+          <MoneyField
+            label="Минимум на карту"
+            unit="сум"
+            value={minText ?? String(doc.card_min_uzs)}
+            onChange={(v) => {
+              setMinText(v);
+              if (draft === null) {
+                setDraft(doc);
+              }
+            }}
+          />
+          <MoneyField
+            label="Минимальная сумма"
+            unit="$"
+            decimal
+            value={doc.min_sum_usd}
+            onChange={(v) => {
+              set({ min_sum_usd: v });
+            }}
+          />
+        </div>
+      </Section>
       <LimitsSection doc={doc} onChange={set} />
       <SaveBar
         changed={changed}
