@@ -114,11 +114,27 @@ describe("UserCard", () => {
     );
   });
 
-  it("says there are no orders yet", async () => {
-    api.getUserCard.mockResolvedValue({ ...CARD, orders: [] });
+  it("folds empty sections into one line instead of empty cards", async () => {
+    api.getUserCard.mockResolvedValue({ ...CARD, orders: [], topups: [], entries: [] });
+    salesApi.getUserSales.mockResolvedValue({ ...USER_SALES, items: [] });
     renderCard();
-    const orders = await screen.findByRole("region", { name: "Заказы" });
-    expect(orders).toHaveTextContent("Заказов пока не было.");
+    await waitFor(() => {
+      expect(screen.getByTestId("empty-sections")).toHaveTextContent(
+        "Пока пусто: История баланса, Заказы, Продажи, Пополнения.",
+      );
+    });
+    for (const name of ["Заказы", "Продажи", "Пополнения", "История баланса"]) {
+      expect(screen.queryByRole("region", { name })).toBeNull();
+    }
+  });
+
+  it("puts «Профиль» and «Риск» first on a phone", async () => {
+    renderCard();
+    const profile = await screen.findByRole("region", { name: "Профиль" });
+    const side = screen.getByTestId("detail-side");
+    expect(side).toContainElement(profile);
+    expect(side.className).toContain("order-first");
+    expect(screen.queryByTestId("empty-sections")).toBeNull();
   });
 
   it("credits after a confirm step with a signed amount, reason and key", async () => {

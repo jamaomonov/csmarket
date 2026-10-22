@@ -6,11 +6,25 @@
 import { ChevronRight } from "lucide-react";
 import { type ReactNode } from "react";
 
-export function DetailGrid({ main, side }: { main: ReactNode; side?: ReactNode }) {
+interface DetailGridProps {
+  main: ReactNode;
+  side?: ReactNode;
+  /** On a phone (one column) the side comes first: a card's profile and risk before history. */
+  sideFirst?: boolean;
+}
+
+export function DetailGrid({ main, side, sideFirst = false }: DetailGridProps) {
   return (
     <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
       <div className="min-w-0 space-y-4">{main}</div>
-      {side !== undefined && <div className="min-w-0 space-y-4">{side}</div>}
+      {side !== undefined && (
+        <div
+          data-testid="detail-side"
+          className={`min-w-0 space-y-4 ${sideFirst ? "order-first lg:order-none" : ""}`}
+        >
+          {side}
+        </div>
+      )}
     </div>
   );
 }

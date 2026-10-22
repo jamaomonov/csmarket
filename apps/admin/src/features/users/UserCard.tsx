@@ -28,7 +28,7 @@ import { Modal } from "@/components/Modal";
 import { Money } from "@/components/Money";
 import { MoreMenu } from "@/components/MoreMenu";
 import { PageHeader } from "@/components/PageHeader";
-import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { Banner, DetailGrid, EmptySections, Row, Section } from "@/components/Section";
 import { Status } from "@/components/Status";
 import { StatusChip } from "@/components/StatusChip";
 import { TradeLinkValue } from "@/components/SteamLinks";
@@ -100,7 +100,6 @@ function entryAmount(e: AdminEntry): string {
 function History({ entries, id, title }: { entries: AdminEntry[]; id: string; title: string }) {
   return (
     <Section title={title} label={title}>
-      {entries.length === 0 && <p className="text-fg-muted text-sm">Пока пусто.</p>}
       <ul id={id} className="divide-border divide-y text-sm">
         {entries.map((e) => (
           <li key={e.id} className="flex items-start justify-between gap-4 py-2">
@@ -200,27 +199,41 @@ function UsdBlock({ card, onSwitch }: { card: AdminUserCard; onSwitch: () => voi
 }
 
 function Overview({ card, onUsd }: { card: AdminUserCard; onUsd: () => void }) {
+  const sales = useUserSales(card.user.id);
+  const usdShown = card.usd_wallet_enabled || card.usd_entries.length > 0;
+  // Sections with nothing in them fold into one line under the rest (admin UX audit, P1).
+  const empty: string[] = [];
+  if (card.entries.length === 0) empty.push("История баланса");
+  if (usdShown && card.usd_entries.length === 0) empty.push("История USD");
+  if (card.orders.length === 0) empty.push("Заказы");
+  const noSales = sales.data?.items.length === 0;
+  if (noSales) empty.push("Продажи");
+  if (card.topups.length === 0) empty.push("Пополнения");
   const main = (
     <>
-      <History entries={card.entries} id="user-history" title="История баланса" />
-      {(card.usd_wallet_enabled || card.usd_entries.length > 0) && (
+      {card.entries.length > 0 && (
+        <History entries={card.entries} id="user-history" title="История баланса" />
+      )}
+      {usdShown && card.usd_entries.length > 0 && (
         <History entries={card.usd_entries} id="user-history-usd" title="История USD" />
       )}
-      <Orders orders={card.orders} />
-      <UserSales userId={card.user.id} />
-      <Topups topups={card.topups} />
+      {card.orders.length > 0 && <Orders orders={card.orders} />}
+      {!noSales && <UserSales userId={card.user.id} />}
+      {card.topups.length > 0 && <Topups topups={card.topups} />}
+      <EmptySections names={empty} />
     </>
   );
+  // «Профиль» and «Риск» first: on a phone they come before the history.
   const side = (
     <>
       <Section title="Профиль">
         <Profile card={card} />
       </Section>
-      <UsdBlock card={card} onSwitch={onUsd} />
       <RiskBlock userId={card.user.id} />
+      <UsdBlock card={card} onSwitch={onUsd} />
     </>
   );
-  return <DetailGrid main={main} side={side} />;
+  return <DetailGrid main={main} side={side} sideFirst />;
 }
 
 function CardBody({ card }: { card: AdminUserCard }) {
