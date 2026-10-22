@@ -112,3 +112,14 @@ The admin composes its pages from `apps/admin/src/components` (admin UX review, 
   rare or dangerous ones behind «⋯» (`MoreMenu`).
 - **Dialogs** — `Modal` (or the same look): a sheet from the bottom on a phone, a card on desktop,
   Esc and a click outside close it unless a request runs.
+- **Money confirms** — `ConfirmSheet`: a bottom sheet (`Modal`) on a phone, so a sticky action
+  bar never hides it, the amount and the card large and the main answer full width; inline under
+  the buttons on desktop, scrolled into view with the focus on its first field. One green button
+  per step (a payout: «Беру в работу», then «Выплачено»); dangerous actions («Отклонить»,
+  «Вернуть деньги на баланс») outlined red (`DANGER_OUTLINE`) on their own row; an action the
+  API would refuse is hidden, not shown disabled.
+- **Settings pages** — one `SaveBar` per page: pinned to the bottom across the screen, shown only
+  when something changed, «Изменено: N полей», «Сбросить», «Сохранить». Turning something off
+  that customers see (a kassa, «Выкуп включён») asks first and says what happens on the site.
+- **Tabs on a phone** — the row scrolls sideways; the active tab is kept in view and a tab that
+  counts work goes first («Требуют внимания» in «Обмены»).
