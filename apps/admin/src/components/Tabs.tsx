@@ -67,7 +67,9 @@ export function Tabs<K extends string>({
       ref={row}
       role="tablist"
       aria-label={label}
-      className="border-border flex gap-1 overflow-x-auto border-b"
+      // The line is an inset shadow, not a border: the active tab's underline paints over it
+      // (a border sits outside the scroll box, which would clip a tab pulled down onto it).
+      className="flex gap-1 overflow-x-auto shadow-[inset_0_-1px_0_var(--color-border)]"
     >
       {items.map((t) => {
         const active = t.key === value;
