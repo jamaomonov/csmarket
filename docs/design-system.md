@@ -111,8 +111,18 @@ The admin composes its pages from `apps/admin/src/components` (admin UX review, 
   a 3 px red left edge for rows needing an operator, skeleton / empty / error states, a footer
   («Показать ещё»), whole-row click, and `mobileCard` — cards instead of the table on a narrow
   screen (`useNarrow`, < 768 px).
-- **StatusChip** — tones, not filled bricks: `bg-<tone>/15 text-<tone>`; `progress` (warning),
-  `info` (a hold), `success`, `danger`, `neutral`, `muted`. The green accent is never a status.
+- **Status chips** — one component, `Status` (`components/Status.tsx`): `<Status of="order"
+code={status} />` reads its word and tone from the one dictionary, `lib/dictionary.ts`, which
+  holds every status (order, trade, payment, top-up, sale, payout, P2P, supplier, Waxpeer) and
+  every reason (failure, attention, payout flag, reconciliation, hold, return). Tones, not filled
+  bricks: `bg-<tone>/15 text-<tone>`; `progress` (warning), `info` (a hold), `success`,
+  `danger`, `neutral`, `muted`; the green accent is never a status. Chips are lower-case
+  («к выплате»); a tab or a heading made of the word capitalises it (`capital`). A code the
+  dictionary does not know reads «другой статус» / «другая причина» with the code small beside
+  it — never a bare code, never monospace. `Reason` is the same for a reason line. The same
+  state has one word everywhere: an accepted trade under Steam's protection is «принят» with
+  «защита до DD.MM» under it, on the order and in «Обмены». The base `StatusChip` is for chips
+  that are not statuses («админ», «API», a payout's risk flag).
 - **Money** — `$` before the number, two places in lists (three only for the USD wallet), digit
   groups, a typographic minus coloured `danger`.
 - **Filters** — one pattern on every list. The main status is `Tabs` (underlined, never pills,
@@ -127,9 +137,25 @@ The admin composes its pages from `apps/admin/src/components` (admin UX review, 
   relative inside 24 hours («5 мин назад»), then `DD.MM HH:MM` (`DD.MM.YYYY` for an earlier
   year), the full date in the tooltip. Detail pages show the absolute `formatDateTime`.
 - **UserCell**, **EmptyState**.
-- **Detail pages** — `DetailGrid` (2 : 1 columns, one on phones) of `Section`s with `Row`s
-  (label 140 px, muted); an open attention is a `Banner` at the top, actions sit under the header,
-  rare or dangerous ones behind «⋯» (`MoreMenu`).
+- **Detail pages** — `DetailGrid` (2 : 1 columns, one on phones; `sideFirst` puts the side —
+  a card's «Профиль» and «Риск» — first on a phone) of `Section`s with `Row`s (label 140 px,
+  muted, one column on a phone so values never break mid-word); no bare `h2` blocks. An open
+  attention is a `Banner` under the header. The page's actions sit in `PageHeader.actions` on a
+  wide screen and in an `ActionBar` on a phone — sticky at the bottom, above the bottom bar
+  (`bottom-(--bottom-nav)`), its buttons sharing the width; rare or dangerous ones behind «⋯»
+  (`MoreMenu`). A phone reads banner → summary → actions → details. Technical fields (ids to
+  search a supplier's cabinet by, a kassa reference) fold under «Подробнее» (`More`). Empty
+  sections fold into one line, «Пока пусто: Заказы, Продажи» (`EmptySections`). The header
+  names the thing (an order: its skin's picture, name and price; «Продажа <number>»; a payout:
+  «Продавец: <name>» as a link). A payout's «Риски» shows what needs a look in red on top and
+  folds the rest under «Всё в порядке: N». A rate reads «12 650,5 сум за $» (`formatRate`).
+- **Links** — a link looks like one: numbers (order, sale, payout, payment) and names in the
+  accent colour, underlined on hover (`TextLink`, or `LINK` on an `<a>`); a whole-row click
+  never replaces the number's own link. A chip that leads somewhere carries an accent word and
+  a chevron («к выплате · заявка ›»). A dashboard tile that opens a page shows a chevron and
+  lights up on hover; a figure-only tile has neither.
+- **Audit log** — targets by name (the API's `target_label`: a display name, a skin, a sale
+  number), never a UUID or a slug; actions and payload keys in words, a diff «нет → да».
 - **Dialogs** — `Modal` (or the same look): a sheet from the bottom on a phone, a card on desktop,
   Esc and a click outside close it unless a request runs.
 - **Money confirms** — `ConfirmSheet`: a bottom sheet (`Modal`) on a phone, so a sticky action
