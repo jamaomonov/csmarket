@@ -5,10 +5,14 @@ auto listing) and the **pricing document**: expenses %, margin brackets, liquidi
 category and weapon markups, minimum margin, floor price, soʻm rounding, the Steam cap, the
 cheap tail. The admin page «Цены» edits it (M4b, ADR-0008 R8).
 
-**The cheap tail** (ADR-0015) applies to items whose cost is under «Хвост: себестоимость до, $»
-(1 $). For them, a sticker gets «Хвост: наклейки, п.п.» (2) instead of its category markup
-(5), and an item with under 4 lots gets «Хвост: мало лотов, п.п.» (1) instead of +3. Every
-other band and category is unchanged. Clear the bound to switch the tail off. Code: `skins.pricing_admin`,
+The page says markups (percentage points added to the margin) as «+N %»; the block names are
+«Основное», «Дешёвые скины», «Маржа по себестоимости» (the margin brackets), «Надбавка за мало
+лотов» (the liquidity bands), «Надбавки по категориям» and «по оружию».
+
+**The cheap tail** (ADR-0015, the page's «Дешёвые скины») applies to items whose cost is under
+«Себестоимость до» (1 $). For them, a sticker gets «Надбавка наклейкам» (2 %) instead of its
+category markup (5), and an item with under 4 lots gets «Надбавка за мало лотов» (1 %) instead
+of +3. Every other band and category is unchanged. Clear the bound to switch the tail off. Code: `skins.pricing_admin`,
 `skins/README.md` «Pricing editor».
 
 ## Before saving: preview
@@ -20,7 +24,8 @@ component and «как посчитано» (formula / ручная цена / �
 
 ## What a save does
 
-«Сохранить» → «Сохранить и пересчитать цены всех скинов?» → one transaction: the advisory
+«Сохранить» (the bar at the bottom, shown once something changed) → «Сохранить наценки?»
+(«Цены всех скинов пересчитаются по новым правилам.») → «Да, сохранить» → one transaction: the advisory
 pricing lock (the 5-minute price sync waits for it), the document, every active item
 repriced, an audit row `skins.pricing.save {items_repriced}`. Only after the commit is the
 document published to Redis (`skins:pricing`) and the catalogue cache version bumped, so
@@ -30,7 +35,7 @@ descending to 0, a number out of range) is explained in Russian; nothing is save
 
 ## One item
 
-«Цена одного скина»: a margin override (п.п., −100…500, added on top of the rules) or a
+«Цена одного скина»: «Своя надбавка» (percentage points, −100…500, added on top of the rules) or a
 pinned price ($, honoured only while it covers cost + minimum margin). «Сбросить ручную
 цену» clears both. It reprices that item only; audit `skins.item.override`. «Только с ручной
 ценой» lists every item with an override.

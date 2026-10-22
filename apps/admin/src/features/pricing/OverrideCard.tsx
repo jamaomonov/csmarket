@@ -1,5 +1,5 @@
 /**
- * «Цена одного скина»: a margin override (п.п.) or a pinned price for one item, with the
+ * «Цена одного скина»: a margin override (percentage points, shown «+N %») or a pinned price for one item, with the
  * price it would sell at. «Сбросить ручную цену» sends both as `null`.
  */
 import { Button } from "@csmarket/ui";
@@ -14,7 +14,10 @@ import {
   saveItemPricing,
 } from "./api";
 import { errorText } from "./labels";
+import { points } from "./QuoteView";
 
+import { MoneyField } from "@/components/MoneyInput";
+import { Section } from "@/components/Section";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatSum } from "@/lib/format";
 import { useDebounced } from "@/lib/useDebounced";
@@ -62,7 +65,6 @@ function Editor({ item, onSaved }: EditorProps) {
     inFlight.current = true;
     save.mutate(b);
   };
-  const input = "border-border bg-bg h-10 w-36 rounded-md border px-3";
   return (
     <div className="border-border flex flex-col gap-3 rounded-md border p-4">
       <div className="font-medium">{item.name}</div>
@@ -70,29 +72,16 @@ function Editor({ item, onSaved }: EditorProps) {
         Себестоимость: {item.cost_usd ? `$${item.cost_usd}` : "нет предложений"} · сейчас:{" "}
         {item.price_usd ? `$${item.price_usd}` : "—"}
       </div>
-      <div className="flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          Наценка, п.п.
-          <input
-            inputMode="decimal"
-            value={pp}
-            onChange={(e) => {
-              setPp(e.target.value);
-            }}
-            className={input}
-          />
-        </label>
-        <label className="flex flex-col gap-1 text-sm">
-          Фиксированная цена, $
-          <input
-            inputMode="decimal"
-            value={fixed}
-            onChange={(e) => {
-              setFixed(e.target.value);
-            }}
-            className={input}
-          />
-        </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <MoneyField
+          label="Своя надбавка"
+          unit="%"
+          decimal
+          hint="К наценке по правилам, от −100 до 500."
+          value={pp}
+          onChange={setPp}
+        />
+        <MoneyField label="Фиксированная цена" unit="$" decimal value={fixed} onChange={setFixed} />
       </div>
       {quote.data && (
         <p className="text-sm">
@@ -145,67 +134,69 @@ export function OverrideCard() {
     enabled: q !== undefined || onlyOverridden,
   });
   return (
-    <section className="border-border bg-surface flex flex-col gap-4 rounded-lg border p-5">
-      <h2 className="text-lg font-semibold">Цена одного скина</h2>
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="flex flex-1 flex-col gap-1 text-sm">
-          Найти скин
-          <input
-            type="search"
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
+    <Section title="Цена одного скина">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="flex flex-1 flex-col gap-1 text-sm">
+            Найти скин
+            <input
+              type="search"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+              }}
+              placeholder="Например: asiimov"
+              className="border-border bg-bg h-11 rounded-md border px-3"
+            />
+          </label>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              className="accent-accent size-5"
+              checked={onlyOverridden}
+              onChange={(e) => {
+                setOnlyOverridden(e.target.checked);
+              }}
+            />
+            Только с ручной ценой
+          </label>
+        </div>
+        {list.isError && (
+          <p role="alert" className="text-danger">
+            {errorText(list.error)}
+          </p>
+        )}
+        {list.data?.items.length === 0 && <p className="text-fg-muted">Ничего не найдено.</p>}
+        {(list.data?.items.length ?? 0) > 0 && (
+          <ul className="flex flex-col gap-1">
+            {list.data?.items.map((item) => (
+              <li key={item.slug}>
+                <button
+                  type="button"
+                  className="text-accent min-h-11 text-left text-sm hover:underline sm:min-h-0 sm:py-1"
+                  onClick={() => {
+                    setChosen(item);
+                  }}
+                >
+                  {item.name}
+                  {item.margin_override_pp ? ` · ${points(item.margin_override_pp)}` : ""}
+                  {item.fixed_price_usd ? ` · $${item.fixed_price_usd}` : ""}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {chosen && (
+          <Editor
+            key={chosen.slug}
+            item={chosen}
+            onSaved={(saved) => {
+              setChosen(saved);
+              void qc.invalidateQueries({ queryKey: ["pricing"] });
             }}
-            placeholder="Например: asiimov"
-            className="border-border bg-bg h-10 rounded-md border px-3"
           />
-        </label>
-        <label className="flex h-10 items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={onlyOverridden}
-            onChange={(e) => {
-              setOnlyOverridden(e.target.checked);
-            }}
-          />
-          Только с ручной ценой
-        </label>
+        )}
       </div>
-      {list.isError && (
-        <p role="alert" className="text-danger">
-          {errorText(list.error)}
-        </p>
-      )}
-      {list.data?.items.length === 0 && <p className="text-fg-muted">Ничего не найдено.</p>}
-      {(list.data?.items.length ?? 0) > 0 && (
-        <ul className="flex flex-col gap-1">
-          {list.data?.items.map((item) => (
-            <li key={item.slug}>
-              <button
-                type="button"
-                className="text-left text-sm underline"
-                onClick={() => {
-                  setChosen(item);
-                }}
-              >
-                {item.name}
-                {item.margin_override_pp ? ` · ${item.margin_override_pp} п.п.` : ""}
-                {item.fixed_price_usd ? ` · $${item.fixed_price_usd}` : ""}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {chosen && (
-        <Editor
-          key={chosen.slug}
-          item={chosen}
-          onSaved={(saved) => {
-            setChosen(saved);
-            void qc.invalidateQueries({ queryKey: ["pricing"] });
-          }}
-        />
-      )}
-    </section>
+    </Section>
   );
 }

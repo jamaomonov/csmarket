@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -92,8 +92,9 @@ describe("PricingPage", () => {
   it("previews with the unsaved form values", async () => {
     renderPage();
     await typeExpenses("9");
-    fireEvent.change(screen.getByLabelText("Себестоимость, $"), { target: { value: "10" } });
-    fireEvent.change(screen.getByLabelText("Категория"), { target: { value: "rifles" } });
+    const check = screen.getByRole("region", { name: "Проверить цену" });
+    fireEvent.change(within(check).getByLabelText("Себестоимость, $"), { target: { value: "10" } });
+    fireEvent.change(within(check).getByLabelText("Категория"), { target: { value: "rifles" } });
     await act(async () => {
       await new Promise((r) => setTimeout(r, 350));
     });
@@ -103,6 +104,15 @@ describe("PricingPage", () => {
     });
     expect(await screen.findByText("$11.55")).toBeInTheDocument();
     expect(screen.getByText("по формуле")).toBeInTheDocument();
+  });
+
+  it("logs no nested <p> (the status line sits in the header's meta)", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderPage();
+    await screen.findByTestId("pricing-status");
+    expect(document.querySelector("p p")).toBeNull();
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
   });
 
   it("resets the form to the saved document", async () => {
