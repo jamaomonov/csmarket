@@ -9,6 +9,7 @@ import {
   type InfiniteData,
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
@@ -24,10 +25,13 @@ import { PageHeader } from "@/components/PageHeader";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
+import { getDashboard } from "@/features/dashboard/api";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText, providerLabel } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatSum } from "@/lib/format";
+import { pick } from "@/lib/url-guards";
+import { useUrlParams } from "@/lib/useUrlParams";
 
 type State = "open" | "decided";
 type Act = "release" | "returned";
@@ -141,8 +145,17 @@ function DecisionCell({ h }: { h: Hold }) {
   );
 }
 
+const STATES: readonly State[] = ["open", "decided"];
+
 export function HoldsPage() {
-  const [state, setState] = useState<State>("open");
+  const url = useUrlParams();
+  const state: State = pick(STATES, url.get("state")) ?? "open";
+  // The open count is the dashboard's (shared with the menu's counter): the list has none.
+  const dashboard = useQuery({
+    queryKey: [...DASHBOARD_KEY, 1],
+    queryFn: () => getDashboard(1),
+    refetchInterval: 60_000,
+  });
   const [picked, setPicked] = useState<{ hold: Hold; act: Act } | null>(null);
   const list = useInfiniteQuery<
     HoldPage,
@@ -165,9 +178,16 @@ export function HoldsPage() {
       <Tabs<State>
         label="Состояние"
         value={state}
-        onChange={setState}
+        onChange={(v) => {
+          url.set("state", v === "open" ? "" : v);
+        }}
         items={[
-          { key: "open", label: "Открытые" },
+          {
+            key: "open",
+            label: "Открытые",
+            ...(dashboard.data !== undefined && { count: dashboard.data.holds_open }),
+            alert: true,
+          },
           { key: "decided", label: "Решённые" },
         ]}
       />

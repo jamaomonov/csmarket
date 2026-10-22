@@ -79,7 +79,7 @@ describe("PaymentsPage", () => {
   it("filters by status, kassa and purpose", async () => {
     api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
     renderPage();
-    fireEvent.change(await screen.findByLabelText("Статус"), { target: { value: "failed" } });
+    fireEvent.click(await screen.findByRole("tab", { name: "Не прошли" }));
     await waitFor(() => {
       expect(api.listPayments).toHaveBeenLastCalledWith({ status: "failed" });
     });
@@ -102,6 +102,19 @@ describe("PaymentsPage", () => {
     renderPage("/payments?status=bogus");
     await screen.findByTestId("payments-table");
     expect(api.listPayments).toHaveBeenCalledWith({});
+    expect(screen.getByRole("tab", { name: "Все" })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("reads the status tab from the URL; the search is in the normal font", async () => {
+    api.listPayments.mockResolvedValue({ items: [ROW], next_cursor: null });
+    renderPage("/payments?status=refunded");
+    await screen.findByTestId("payments-table");
+    expect(api.listPayments).toHaveBeenCalledWith({ status: "refunded" });
+    expect(screen.getByRole("tab", { name: "Возвращены" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("searchbox")).not.toHaveClass("font-mono");
   });
 
   it("ignores a ?q= longer than the API accepts", async () => {

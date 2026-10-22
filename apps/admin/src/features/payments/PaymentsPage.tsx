@@ -1,4 +1,7 @@
-/** «Платежи»: find a payment by number, filter by status, kassa and purpose, newest first. */
+/**
+ * «Платежи»: status `Tabs` (`?status=`), a search by number and the kassa and purpose
+ * `FilterSelect`s in one row, newest first.
+ */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -10,14 +13,15 @@ import {
   listPayments,
   type ListPaymentsParams,
 } from "./api";
-import { PAYMENT_PROVIDERS, PAYMENT_PURPOSES, PAYMENT_STATUSES } from "./kinds";
-import { PURPOSE_LABELS, STATUS_LABELS } from "./labels";
+import { PAYMENT_PROVIDERS, PAYMENT_PURPOSES, PAYMENT_STATUSES, type PaymentStatus } from "./kinds";
+import { PURPOSE_LABELS } from "./labels";
 import { StatusChip } from "./StatusChip";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText, providerLabel } from "@/features/users/labels";
@@ -28,6 +32,27 @@ import { useUrlParams } from "@/lib/useUrlParams";
 const DEBOUNCE_MS = 300;
 /** The API's `q` ceiling (and the input's `maxLength`). */
 const Q_MAX = 32;
+
+type View = "all" | PaymentStatus;
+/** The status tabs; the list API has no counts, so none of them counts. */
+const VIEWS: readonly View[] = [
+  "all",
+  "succeeded",
+  "pending",
+  "created",
+  "failed",
+  "cancelled",
+  "refunded",
+];
+const VIEW_LABELS: Record<View, string> = {
+  all: "Все",
+  succeeded: "Оплачены",
+  pending: "Ждут кассу",
+  created: "Созданы",
+  failed: "Не прошли",
+  cancelled: "Отменены",
+  refunded: "Возвращены",
+};
 
 /** What the buyer paid: the base plus the kassa fee (spec 2026-10-14-kassa-fee). */
 function paidTotal(p: AdminPaymentRow): string {
@@ -77,22 +102,20 @@ export function PaymentsPage() {
   return (
     <section className="space-y-4">
       <PageHeader title="Платежи" />
+      <Tabs<View>
+        label="Статус"
+        value={status ?? "all"}
+        onChange={(v) => {
+          url.set("status", v === "all" ? "" : v);
+        }}
+        items={VIEWS.map((v) => ({ key: v, label: VIEW_LABELS[v] }))}
+      />
       <FiltersBar>
         <SearchBox
           label="Номер платежа или пополнения"
           value={text}
           maxLength={Q_MAX}
-          mono
           onChange={setText}
-        />
-        <FilterSelect
-          label="Статус"
-          value={status ?? ""}
-          options={PAYMENT_STATUSES}
-          text={(o) => STATUS_LABELS[o]}
-          onChange={(v) => {
-            url.set("status", v);
-          }}
         />
         <FilterSelect
           label="Касса"
