@@ -60,7 +60,13 @@ async def user_sales(db: AsyncSession, user_id: str) -> AdminUserSalesOut:
         sold_count=int(count),
         sold_uzs=wire_uzs(Decimal(total)),
         items=[
-            AdminUserSaleOut(**sale_row(s, user).model_dump(), items=skins[s.id]) for s in sales
+            AdminUserSaleOut(
+                **sale_row(s, user).model_dump(exclude={"first_item", "items_count"}),
+                items=skins[s.id],
+                first_item=skins[s.id][0] if skins[s.id] else None,
+                items_count=len(skins[s.id]),
+            )
+            for s in sales
         ],
     )
 

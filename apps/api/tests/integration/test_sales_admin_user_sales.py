@@ -49,6 +49,9 @@ async def test_the_user_page_lists_the_sales_with_their_skins_and_the_totals(
         {"name": "P250 | Sand Dune (Field-Tested)", "image_url": None},
     ]
     assert body["items"][0]["user"]["id"] == seller.id
+    # The row's own first skin and count agree with its skins.
+    assert body["items"][0]["first_item"] == body["items"][0]["items"][0]
+    assert body["items"][0]["items_count"] == 2
 
 
 async def test_a_user_who_never_sold_has_an_empty_page(
