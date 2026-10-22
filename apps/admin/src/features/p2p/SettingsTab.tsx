@@ -1,11 +1,16 @@
-/** «Настройки»: the trusted Telegram ids, the buyer's limits and the connection's state. */
-import { Button } from "@csmarket/ui";
+/**
+ * «Подключение и лимиты»: the connection's state, the trusted Telegram ids and the buyer's
+ * limits. Sums are `MoneyField`s (grouped, the unit on the right); one `SaveBar` like every
+ * settings page, shown only when something changed.
+ */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getP2PSettings, type P2PSettings, saveP2PSettings } from "./api";
 import { settingsKey } from "./keys";
 
+import { MoneyField } from "@/components/MoneyInput";
+import { countChanges, SaveBar } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
 import { Row, Section } from "@/components/Section";
 import { StatusChip } from "@/components/StatusChip";
@@ -13,16 +18,21 @@ import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
 
-const FIELDS: { key: keyof P2PSettings; label: string }[] = [
+type Key = keyof P2PSettings;
+
+const IDS: { key: Key; label: string }[] = [
   { key: "humo_bot_user_id", label: "Telegram id бота HUMO" },
   { key: "owner_telegram_user_id", label: "Ваш Telegram id" },
-  { key: "min_amount_uzs", label: "Минимум, сум" },
-  { key: "max_amount_uzs", label: "Максимум, сум" },
-  { key: "daily_count", label: "Пополнений в день" },
-  { key: "daily_amount_uzs", label: "Сумма в день, сум" },
 ];
 
-const OPTIONAL = new Set<keyof P2PSettings>(["humo_bot_user_id", "owner_telegram_user_id"]);
+const LIMITS: { key: Key; label: string; unit: string }[] = [
+  { key: "min_amount_uzs", label: "Минимум", unit: "сум" },
+  { key: "max_amount_uzs", label: "Максимум", unit: "сум" },
+  { key: "daily_amount_uzs", label: "Сумма в день", unit: "сум" },
+  { key: "daily_count", label: "Пополнений в день", unit: "шт" },
+];
+
+const ALL: Key[] = [...IDS, ...LIMITS].map((f) => f.key);
 
 export function SettingsTab() {
   const qc = useQueryClient();
@@ -48,9 +58,20 @@ export function SettingsTab() {
     );
   }
   const s = q.data;
-  const value = (k: keyof P2PSettings): string => draft?.[k] ?? (s[k] === null ? "" : String(s[k]));
+  const savedValue = (k: Key): string => (s[k] === null ? "" : String(s[k]));
+  const value = (k: Key): string => draft?.[k] ?? savedValue(k);
+  const changed =
+    draft === null
+      ? 0
+      : countChanges(
+          Object.fromEntries(ALL.map((k) => [k, savedValue(k)])),
+          Object.fromEntries(ALL.map((k) => [k, value(k)])),
+        );
+  const edit = (k: Key, v: string) => {
+    setDraft({ ...(draft ?? {}), [k]: v });
+  };
   const body = (): P2PSettings => {
-    const n = (k: keyof P2PSettings): number | null => {
+    const n = (k: Key): number | null => {
       const v = value(k).replace(/\D/g, "");
       return v === "" ? null : Number(v);
     };
@@ -77,40 +98,58 @@ export function SettingsTab() {
           </Row>
         </dl>
       </Section>
-      <Section title="Лимиты и доступ">
+      <SavedNotice at={savedAt} />
+      <Section title="Доступ">
         <div className="grid gap-3 sm:grid-cols-2">
-          {FIELDS.map(({ key: k, label }) => (
+          {IDS.map(({ key: k, label }) => (
             <label key={k} className="flex flex-col gap-1 text-sm">
               {label}
               <input
                 inputMode="numeric"
+                autoComplete="off"
                 value={value(k)}
-                placeholder={OPTIONAL.has(k) ? "не задан" : ""}
+                placeholder="не задан"
                 onChange={(e) => {
-                  setDraft({ ...(draft ?? {}), [k]: e.target.value });
+                  edit(k, e.target.value);
                 }}
-                className="border-border bg-bg h-10 rounded-md border px-3"
+                className="border-border bg-bg h-10 rounded-md border px-3 tabular-nums"
               />
             </label>
           ))}
         </div>
+      </Section>
+      <Section title="Лимиты пополнения">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {LIMITS.map(({ key: k, label, unit }) => (
+            <MoneyField
+              key={k}
+              label={label}
+              unit={unit}
+              value={value(k)}
+              onChange={(v) => {
+                edit(k, v);
+              }}
+            />
+          ))}
+        </div>
+      </Section>
+      <SaveBar
+        changed={changed}
+        saving={save.isPending}
+        onSave={() => {
+          save.mutate(body());
+        }}
+        onReset={() => {
+          setDraft(null);
+          save.reset();
+        }}
+      >
         {save.isError && (
-          <p role="alert" className="text-danger mt-2 text-sm">
+          <p role="alert" className="text-danger text-sm">
             {errorText(save.error)}
           </p>
         )}
-        <div className="mt-3 flex items-center gap-3">
-          <Button
-            disabled={draft === null || save.isPending}
-            onClick={() => {
-              save.mutate(body());
-            }}
-          >
-            Сохранить
-          </Button>
-          <SavedNotice at={savedAt} />
-        </div>
-      </Section>
+      </SaveBar>
     </div>
   );
 }

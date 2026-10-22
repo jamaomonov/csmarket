@@ -7,6 +7,7 @@ import { addCard, listCards, type P2PCard, patchCard } from "./api";
 import { cardsKey } from "./keys";
 
 import { DataTable } from "@/components/DataTable";
+import { MoneyField } from "@/components/MoneyInput";
 import { Section } from "@/components/Section";
 import { StatusChip } from "@/components/StatusChip";
 import { errorText } from "@/features/users/labels";
@@ -75,11 +76,12 @@ function AddCard() {
         <Field label="Номер карты" value={pan} onChange={setPan} inputMode="numeric" />
         <Field label="Держатель" value={holder} onChange={setHolder} />
         <Field label="Название" value={label} onChange={setLabel} />
-        <Field
-          label="Лимит в день, сум (пусто — без лимита)"
+        <MoneyField
+          label="Лимит в день"
+          unit="сум"
+          hint="Пусто — без лимита."
           value={daily}
           onChange={setDaily}
-          inputMode="numeric"
         />
       </div>
       <p className="text-fg-muted mt-2 text-sm">

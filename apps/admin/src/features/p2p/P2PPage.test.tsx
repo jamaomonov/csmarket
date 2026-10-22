@@ -119,10 +119,14 @@ describe("P2PPage", () => {
     });
     fireEvent.change(screen.getByLabelText("Держатель"), { target: { value: "TEST HOLDER" } });
     fireEvent.change(screen.getByLabelText("Название"), { target: { value: "Humo" } });
+    const daily = screen.getByLabelText("Лимит в день, сум");
+    fireEvent.change(daily, { target: { value: "20000000" } });
+    expect(daily).toHaveValue("20\u00a0000\u00a0000");
     fireEvent.click(screen.getByRole("button", { name: "Добавить карту" }));
     await waitFor(() => {
       expect(api.addCard).toHaveBeenCalledOnce();
     });
+    expect(api.addCard.mock.calls[0]?.[0]).toMatchObject({ daily_limit_uzs: 20000000 });
     expect(screen.getByLabelText("Номер карты")).toHaveValue("");
   });
 
@@ -143,9 +147,25 @@ describe("P2PPage", () => {
     );
     renderPage("/p2p?tab=settings");
     expect(await screen.findByText("подключено")).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Пополнений в день"), { target: { value: "5" } });
+    expect(screen.getByRole("tab", { name: "Подключение и лимиты" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+    const max = screen.getByLabelText("Максимум, сум");
+    expect(max).toHaveValue("5\u00a0000\u00a0000");
+    fireEvent.change(screen.getByLabelText("Пополнений в день, шт"), { target: { value: "5" } });
+    fireEvent.change(max, { target: { value: "6\u00a0000\u00a00000" } });
+    expect(screen.getByText("Изменено: 2 поля")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText(/Сохранено/)).toBeInTheDocument();
-    expect((api.saveP2PSettings.mock.calls[0] as [{ daily_count: number }])[0].daily_count).toBe(5);
+    expect(api.saveP2PSettings.mock.calls[0]?.[0]).toEqual({
+      humo_bot_user_id: 900,
+      owner_telegram_user_id: 500,
+      min_amount_uzs: 10000,
+      max_amount_uzs: 60000000,
+      daily_count: 5,
+      daily_amount_uzs: 10000000,
+    });
   });
 });
