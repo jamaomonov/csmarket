@@ -4,24 +4,22 @@
  * the edit started from, so a stale tab cannot write old numbers back. The draft and the save
  * live in `useReviewLimits`, so «Настройки оплаты» saves it with the fees from one save bar.
  */
+import { Switch } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getReviewLimits, type KassaLimitIn, type ReviewLimitsOut, saveReviewLimits } from "./api";
+import { SETTINGS_KASSAS } from "./kinds";
 
+import { MoneyInput } from "@/components/MoneyInput";
 import { countChanges } from "@/components/SaveBar";
-import { NumberField } from "@/features/sales/SettingsParts";
+import { Section } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 
 const KEY = ["admin", "payments", "review-limits"] as const;
 
-const KASSAS: readonly { slug: string; label: string }[] = [
-  { slug: "payme", label: "Payme" },
-  { slug: "click", label: "Click" },
-  { slug: "uzum", label: "Uzum" },
-  { slug: "p2p", label: "Перевод на карту (P2P)" },
-];
+const KASSAS = SETTINGS_KASSAS;
 const MAX_UZS = 1_000_000_000;
 const MAX_HOURS = 720;
 
@@ -110,49 +108,75 @@ export function ReviewLimitsBlock({ limits }: ReviewLimitsBlockProps) {
   const patch = (slug: string, change: Partial<LimitRow>) => {
     limits.setDraft(rows.map((r) => (r.provider === slug ? { ...r, ...change } : r)));
   };
+  const head = "text-fg-muted pb-1 text-left text-xs font-normal";
   return (
-    <section className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-4">
-      <h2 className="font-semibold">Лимит без проверки</h2>
-      <p className="text-fg-muted text-sm">
+    <Section title="Лимит без проверки">
+      <p className="text-fg-muted mb-3 text-sm">
         Сколько один пользователь может провести через кассу за окно. Свыше — платёж ждёт решения в
         «На проверке».
       </p>
-      <div className="flex flex-col gap-4">
-        {KASSAS.map(({ slug, label }) => {
-          const r = rows.find((x) => x.provider === slug);
-          if (r === undefined) return null;
-          return (
-            <div key={slug} className="flex flex-wrap items-end gap-4">
-              <span className="w-full text-sm font-medium sm:w-48 sm:pb-2">{label}</span>
-              <label className="flex items-center gap-2 pb-2 text-sm">
-                <input
-                  type="checkbox"
-                  aria-label={`${label}: включён`}
-                  checked={r.enabled}
-                  onChange={(e) => {
-                    patch(slug, { enabled: e.target.checked });
-                  }}
-                />
-                Включён
-              </label>
-              <NumberField
-                label={`${label}: сумма, сум`}
-                value={r.max}
-                onChange={(v) => {
-                  patch(slug, { max: v });
-                }}
-              />
-              <NumberField
-                label={`${label}: окно, ч`}
-                value={r.hours}
-                onChange={(v) => {
-                  patch(slug, { hours: v });
-                }}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </section>
+      <table className="-mx-2 w-full border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
+        <thead>
+          <tr>
+            <th scope="col" className={head}>
+              Касса
+            </th>
+            <th scope="col" className={head}>
+              Вкл
+            </th>
+            <th scope="col" className={head}>
+              Сумма
+            </th>
+            <th scope="col" className={`${head} w-24`}>
+              Окно
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {KASSAS.map(({ slug, label, short }) => {
+            const r = rows.find((x) => x.provider === slug);
+            if (r === undefined) return null;
+            return (
+              <tr key={slug}>
+                <th scope="row" className="text-left font-medium">
+                  {short}
+                </th>
+                <td className="w-12">
+                  <Switch
+                    label={<span className="sr-only">{label}: включён</span>}
+                    checked={r.enabled}
+                    onCheckedChange={(on) => {
+                      patch(slug, { enabled: on });
+                    }}
+                  />
+                </td>
+                <td>
+                  <MoneyInput
+                    label={`${label}: сумма`}
+                    unit="сум"
+                    className="w-full"
+                    value={r.max}
+                    onChange={(v) => {
+                      patch(slug, { max: v });
+                    }}
+                  />
+                </td>
+                <td>
+                  <MoneyInput
+                    label={`${label}: окно`}
+                    unit="ч"
+                    className="w-full"
+                    value={r.hours}
+                    onChange={(v) => {
+                      patch(slug, { hours: v });
+                    }}
+                  />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </Section>
   );
 }

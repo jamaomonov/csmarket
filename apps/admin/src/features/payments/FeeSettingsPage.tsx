@@ -10,15 +10,17 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getFeeSettings, saveFeeSettings, type KassaFees, type KassaStatus } from "./api";
+import { SETTINGS_KASSAS } from "./kinds";
 import { LIMITS_INVALID, ReviewLimitsBlock, useReviewLimits } from "./ReviewLimitsBlock";
 
 import { Modal } from "@/components/Modal";
+import { MoneyField } from "@/components/MoneyInput";
 import { PageHeader } from "@/components/PageHeader";
 import { countChanges, SaveBar } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
+import { Section } from "@/components/Section";
 import { Tabs } from "@/components/Tabs";
 import { payoutErrorText } from "@/features/sales/labels";
-import { NumberField } from "@/features/sales/SettingsParts";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime } from "@/lib/format";
@@ -27,20 +29,15 @@ const KEY = ["admin", "payments", "settings"] as const;
 type RateKey = Exclude<keyof KassaFees, "statuses">;
 
 const KASSAS: readonly { key: RateKey; label: string }[] = [
-  { key: "click", label: "Комиссия Click, %" },
-  { key: "payme", label: "Комиссия Payme, %" },
-  { key: "uzum", label: "Комиссия Uzum, %" },
+  { key: "click", label: "Комиссия Click" },
+  { key: "payme", label: "Комиссия Payme" },
+  { key: "uzum", label: "Комиссия Uzum" },
 ];
 const RATE = /^\d{1,2}(\.\d{1,2})?$/;
 const RATE_INVALID = "Комиссия — число от 0 до 10, не больше двух знаков после точки.";
 
 /** Every kassa with a switch (P2P has no fee: a card transfer costs the buyer nothing). */
-const SWITCHED: readonly { slug: string; label: string }[] = [
-  { slug: "click", label: "Click" },
-  { slug: "payme", label: "Payme" },
-  { slug: "uzum", label: "Uzum" },
-  { slug: "p2p", label: "Перевод на карту (P2P)" },
-];
+const SWITCHED = SETTINGS_KASSAS;
 const STATUS_ITEMS: { key: KassaStatus; label: string }[] = [
   { key: "on", label: "Работает" },
   { key: "maintenance", label: "Тех. работы" },
@@ -148,16 +145,18 @@ export function FeeSettingsPage() {
         }
       />
       <SavedNotice at={savedAt} />
-      <section className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-4">
-        <p className="text-fg-muted text-sm">
+      <Section title="Комиссия касс">
+        <p className="text-fg-muted mb-3 text-sm">
           Добавляется к сумме оплаты через эту кассу: и заказа, и пополнения. 0 — без комиссии.
           Открытые платежи сохраняют прежнюю комиссию.
         </p>
-        <div className="flex flex-wrap gap-4">
+        <div className="grid gap-4 sm:grid-cols-3">
           {KASSAS.map(({ key: k, label }) => (
-            <NumberField
+            <MoneyField
               key={k}
               label={label}
+              unit="%"
+              decimal
               value={doc[k]}
               onChange={(v) => {
                 setDraft({ ...doc, [k]: v });
@@ -165,10 +164,9 @@ export function FeeSettingsPage() {
             />
           ))}
         </div>
-      </section>
-      <section className="border-border bg-surface flex flex-col gap-3 rounded-lg border p-4">
-        <h2 className="font-semibold">Состояние касс</h2>
-        <p className="text-fg-muted text-sm">
+      </Section>
+      <Section title="Состояние касс">
+        <p className="text-fg-muted mb-3 text-sm">
           «Тех. работы» — касса видна на сайте, но не нажимается. «Выключен» — её не видно. Начатые
           оплаты в обоих случаях доходят до конца.
         </p>
@@ -188,7 +186,7 @@ export function FeeSettingsPage() {
             </div>
           ))}
         </div>
-      </section>
+      </Section>
       <ReviewLimitsBlock limits={limits} />
       <SaveBar
         changed={changed}
