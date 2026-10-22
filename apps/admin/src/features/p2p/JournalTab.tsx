@@ -9,7 +9,7 @@ import { incomingKey } from "./keys";
 import { RESULT_LABELS, RESULT_TONES, wholeSom } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
-import { SearchBox } from "@/components/Filters";
+import { FiltersBar, SearchBox } from "@/components/Filters";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
 import { When } from "@/components/When";
@@ -55,11 +55,9 @@ export function JournalTab() {
     );
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <SearchBox label="Сумма, сум" value={amount} onChange={setAmount} maxLength={12} mono />
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <Tabs<Filter>
           label="Результат"
-          variant="segmented"
           value={filter}
           onChange={setFilter}
           items={[
@@ -69,6 +67,9 @@ export function JournalTab() {
             { key: "ignored", label: "Не наши" },
           ]}
         />
+        <FiltersBar>
+          <SearchBox label="Сумма, сум" value={amount} onChange={setAmount} maxLength={12} />
+        </FiltersBar>
       </div>
       <DataTable
         label="Входящие уведомления"

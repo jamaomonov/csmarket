@@ -98,6 +98,18 @@ describe("P2PPage", () => {
     expect(body.user_id).toBe("u1");
   });
 
+  it("the journal filters by result with underlined tabs and a plain search", async () => {
+    renderPage();
+    const tabs = await screen.findByRole("tablist", { name: "Результат" });
+    expect(within(tabs).getByRole("tab", { name: "Все" })).toHaveAttribute("aria-selected", "true");
+    expect(tabs).not.toHaveClass("inline-flex");
+    fireEvent.click(within(tabs).getByRole("tab", { name: "Не сопоставлены" }));
+    await waitFor(() => {
+      expect(api.listIncoming).toHaveBeenLastCalledWith({ result: "unmatched" });
+    });
+    expect(screen.getByRole("searchbox", { name: "Сумма, сум" })).not.toHaveClass("font-mono");
+  });
+
   it("adds a card and clears the number field", async () => {
     api.addCard.mockResolvedValue(CARD);
     renderPage("/p2p?tab=cards");
