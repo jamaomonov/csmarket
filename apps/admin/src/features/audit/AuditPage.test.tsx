@@ -100,6 +100,85 @@ describe("AuditPage", () => {
     expect(within(alias).getByText("значение: ak-47")).toBeInTheDocument();
   });
 
+  it("names targets instead of showing their UUIDs", async () => {
+    const uuid = "6f1c2a52-0000-4000-8000-000000000001";
+    api.listAudit.mockResolvedValue({
+      items: [
+        row({ id: "r-1", action: "users.ban", target_id: uuid, target_label: "Ivan" }),
+        row({
+          id: "r-2",
+          action: "skins.item.hide",
+          target_type: "skin_item",
+          target_id: uuid,
+          target_label: "AK-47 | Redline (Field-Tested)",
+          payload: { slug: "ak-47-redline-field-tested" },
+        }),
+        row({
+          id: "r-3",
+          action: "sales.payout.paid",
+          target_type: "payout_request",
+          target_id: uuid,
+          target_label: "S7K2M9QX",
+        }),
+        row({
+          id: "r-4",
+          action: "payments.hold.release",
+          target_type: "payment_hold",
+          target_id: uuid,
+          payload: { number: "P100001", user_id: uuid },
+        }),
+        row({ id: "r-5", action: "users.unban", target_id: uuid, target_label: null }),
+      ],
+      next_cursor: null,
+    });
+    renderPage();
+    const table = await screen.findByTestId("audit-table");
+    expect(table).not.toHaveTextContent(uuid);
+    expect(table).not.toHaveTextContent("slug");
+    const [user, skin, payout, hold, nameless] = within(table).getAllByRole("row").slice(1) as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+    ];
+    expect(within(user).getByRole("link", { name: "Пользователь Ivan" })).toHaveAttribute(
+      "href",
+      `/users/${uuid}`,
+    );
+    expect(skin).toHaveTextContent("Скин AK-47 | Redline (Field-Tested)");
+    expect(within(payout).getByRole("link", { name: "Выплата S7K2M9QX" })).toHaveAttribute(
+      "href",
+      `/payouts/${uuid}`,
+    );
+    expect(hold).toHaveTextContent("Платёж на проверке P100001");
+    expect(hold).not.toHaveTextContent("номер");
+    expect(within(nameless).getByRole("link", { name: "Пользователь" })).toBeInTheDocument();
+  });
+
+  it("translates payload keys and values, an unknown key stays small", async () => {
+    api.listAudit.mockResolvedValue({
+      items: [
+        row({
+          id: "r-1",
+          action: "skins.pricing.save",
+          target_type: "skin_pricing_rules",
+          target_id: "1",
+          payload: { items_repriced: 12, enabled: "false -> true", flux: "on" },
+        }),
+        row({ id: "r-2", action: "orders.teleport" }),
+      ],
+      next_cursor: null,
+    });
+    renderPage();
+    const table = await screen.findByTestId("audit-table");
+    expect(within(table).getByText("цены пересчитаны у скинов: 12")).toBeInTheDocument();
+    expect(within(table).getByText("включено: нет → да")).toBeInTheDocument();
+    expect(within(table).getByText("flux")).toHaveClass("text-meta");
+    expect(within(table).getByText("другое действие")).toBeInTheDocument();
+    expect(within(table).getByText("orders.teleport")).toHaveClass("text-meta");
+  });
+
   it("filters by action, target type and target id", async () => {
     api.listAudit.mockResolvedValue({ items: [], next_cursor: null });
     renderPage();

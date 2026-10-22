@@ -1,8 +1,10 @@
-/** «Журнал»: what admins did, newest first, filtered by one row of `FilterSelect`s. Read-only. */
+/**
+ * «Журнал»: what admins did, newest first, filtered by one row of `FilterSelect`s. Targets read
+ * by name (the API's `target_label`), never by UUID; actions and payload keys in words. Read-only.
+ */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { type ReactNode, useEffect, useState } from "react";
 
 import {
   type AuditPage as AuditPageData,
@@ -12,7 +14,7 @@ import {
 } from "./api";
 import {
   ACTION_LABELS,
-  actionLabel,
+  actionWord,
   payloadLines,
   TARGET_TYPE_LABELS,
   targetPath,
@@ -21,6 +23,7 @@ import {
 
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { PageHeader } from "@/components/PageHeader";
+import { TextLink } from "@/components/TextLink";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { pick, upTo } from "@/lib/url-guards";
@@ -33,19 +36,47 @@ const TARGET_ID_MAX = 64;
 const ACTIONS = Object.keys(ACTION_LABELS);
 const TARGET_TYPES = Object.keys(TARGET_TYPE_LABELS);
 
+/** Targets whose id is already readable: an order or sale number, an alias. */
+const READABLE_IDS: ReadonlySet<string> = new Set(["order", "sale", "skin_alias"]);
+
+/** A target's name: the API's label, a readable id, a hold's payment number — never a UUID. */
+function targetName(row: AuditRow): ReactNode {
+  if (row.target_label) return row.target_label;
+  if (READABLE_IDS.has(row.target_type)) return <span className="font-mono">{row.target_id}</span>;
+  const number = row.payload.number;
+  if (row.target_type === "payment_hold" && typeof number === "string") {
+    return <span className="font-mono">{number}</span>;
+  }
+  return null;
+}
+
 function Target({ row }: { row: AuditRow }) {
   const path = targetPath(row.target_type, row.target_id);
-  const inner = (
+  const name = targetName(row);
+  const type = targetTypeLabel(row.target_type);
+  const inner =
+    name === null ? (
+      type
+    ) : (
+      <>
+        <span className="text-fg-muted">{type}</span> {name}
+      </>
+    );
+  return path === null ? <span>{inner}</span> : <TextLink to={path}>{inner}</TextLink>;
+}
+
+function Action({ action }: { action: string }) {
+  const a = actionWord(action);
+  return (
     <>
-      {targetTypeLabel(row.target_type)} <span className="font-mono text-xs">{row.target_id}</span>
+      {a.word}
+      {a.unknown !== null && (
+        <>
+          {" "}
+          <span className="text-fg-dim text-meta">{a.unknown}</span>
+        </>
+      )}
     </>
-  );
-  return path === null ? (
-    <span>{inner}</span>
-  ) : (
-    <Link to={path} className="hover:underline">
-      {inner}
-    </Link>
   );
 }
 
@@ -56,21 +87,23 @@ function AuditTableRow({ row }: { row: AuditRow }) {
         <When iso={row.created_at} />
       </td>
       <td className="py-2 pr-3">
-        <Link to={`/users/${row.actor.id}`} className="hover:underline">
-          {row.actor.display_name ?? "Без имени"}
-        </Link>
+        <TextLink to={`/users/${row.actor.id}`}>{row.actor.display_name ?? "Без имени"}</TextLink>
       </td>
-      <td className="py-2 pr-3" title={row.action}>
-        {actionLabel(row.action)}
+      <td className="py-2 pr-3">
+        <Action action={row.action} />
       </td>
-      <td className="break-all py-2 pr-3">
+      <td className="py-2 pr-3">
         <Target row={row} />
       </td>
       <td className="py-2">
         <ul className="space-y-0.5">
-          {payloadLines(row.payload).map((l) => (
-            <li key={l.key}>{l.text}</li>
-          ))}
+          {payloadLines(row.payload, row.target_type === "payment_hold" ? ["number"] : []).map(
+            (l) => (
+              <li key={l.key}>
+                {l.label ?? <span className="text-fg-dim text-meta">{l.key}</span>}: {l.text}
+              </li>
+            ),
+          )}
         </ul>
       </td>
     </tr>
