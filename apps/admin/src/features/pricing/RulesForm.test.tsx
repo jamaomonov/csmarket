@@ -11,7 +11,7 @@ function Harness({ onSave }: { onSave: (d: RulesDraft) => void }) {
   return (
     <RulesForm
       draft={draft}
-      dirty
+      changed={1}
       saving={false}
       error={null}
       onChange={setDraft}

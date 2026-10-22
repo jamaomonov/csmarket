@@ -15,6 +15,7 @@ import { RulesForm } from "./RulesForm";
 
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { countChanges } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatDateTime, formatSum } from "@/lib/format";
@@ -79,7 +80,7 @@ export function PricingPage() {
   if (!pricing.data) return <p className="text-fg-muted">Загрузка…</p>;
   const saved = fromRules(pricing.data.rules);
   const current = draft ?? saved;
-  const dirty = JSON.stringify(current) !== JSON.stringify(saved);
+  const changed = countChanges(saved, current);
 
   const confirm = (): void => {
     if (inFlight.current) return;
@@ -92,7 +93,7 @@ export function PricingPage() {
       <SavedNotice at={savedAt} />
       <RulesForm
         draft={current}
-        dirty={dirty}
+        changed={changed}
         saving={save.isPending}
         error={save.isError ? errorText(save.error) : null}
         onChange={setDraft}

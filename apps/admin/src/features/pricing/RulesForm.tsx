@@ -1,12 +1,13 @@
 /** The pricing document as a form: the numbers, the brackets, the bands and the markups. */
-import { Button } from "@csmarket/ui";
-
 import { RowsTable } from "./RowsTable";
 import { type KeyRow, type RulesDraft } from "./rules-draft";
 
+import { SaveBar } from "@/components/SaveBar";
+
 interface RulesFormProps {
   draft: RulesDraft;
-  dirty: boolean;
+  /** Fields that differ from the saved rules; the save bar shows only above 0. */
+  changed: number;
   saving: boolean;
   error: string | null;
   onChange: (draft: RulesDraft) => void;
@@ -42,7 +43,7 @@ const keyRows = (rows: Record<string, string>[]): KeyRow[] =>
 
 export function RulesForm({
   draft,
-  dirty,
+  changed,
   saving,
   error,
   onChange,
@@ -145,15 +146,7 @@ export function RulesForm({
           {error}
         </p>
       )}
-      <div className="border-border bg-bg/95 sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 border-t px-1 py-3 backdrop-blur">
-        <Button type="button" disabled={saving || !dirty} onClick={onSave}>
-          Сохранить
-        </Button>
-        <Button type="button" variant="secondary" disabled={!dirty || saving} onClick={onReset}>
-          Сбросить
-        </Button>
-        {dirty && <span className="text-warning text-sm">Есть несохранённые изменения</span>}
-      </div>
+      <SaveBar changed={changed} saving={saving} onSave={onSave} onReset={onReset} />
     </section>
   );
 }

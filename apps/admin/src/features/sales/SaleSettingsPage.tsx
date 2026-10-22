@@ -2,7 +2,8 @@
  * «Настройки выкупа»: the sale-settings document. A save affects new sales only; audited. The
  * save names the version it was edited from: a tab left open while someone else saved gets
  * «уже сохранил кто-то другой» instead of silently writing old numbers back. `warnings` from
- * the API (a balance bonus that eats the margin) show above the form.
+ * the API (a balance bonus that eats the margin) show above the form. The bottom `SaveBar` shows
+ * only when something changed; turning «Выкуп включён» off asks «Выключить выкуп?».
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import { LimitsSection, NumberField, WARNING_TEXT, withLimits } from "./Settings
 
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
+import { countChanges, SaveBar } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
 import { Banner } from "@/components/Section";
 import { errorText } from "@/features/users/labels";
@@ -71,6 +73,15 @@ export function SaleSettingsPage() {
     setInvalid(null);
     save.mutate(withLimits({ ...doc, card_min_uzs: Number(min) }));
   };
+  const savedDoc = settings.data.settings;
+  const changed =
+    draft === null && minText === null
+      ? 0
+      : countChanges(
+          { ...withLimits(savedDoc), card_min_uzs: String(savedDoc.card_min_uzs) },
+          { ...withLimits(doc), card_min_uzs: minText ?? String(doc.card_min_uzs) },
+        );
+  const turningOff = savedDoc.enabled && !doc.enabled;
   const set = (patch: Partial<SaleSettings>) => {
     setDraft({ ...doc, ...patch });
   };
@@ -212,29 +223,33 @@ export function SaleSettingsPage() {
         />
       </section>
       <LimitsSection doc={doc} onChange={set} />
-      <div className="border-border bg-bg/95 sticky bottom-0 z-10 flex gap-2 border-t py-3 backdrop-blur">
-        <Button
-          disabled={draft === null || save.isPending}
-          onClick={() => {
-            setConfirming(true);
-          }}
-        >
-          Сохранить
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={draft === null}
-          onClick={() => {
-            discard();
-          }}
-        >
-          Сбросить
-        </Button>
-      </div>
+      <SaveBar
+        changed={changed}
+        saving={save.isPending}
+        onSave={() => {
+          setConfirming(true);
+        }}
+        onReset={discard}
+      >
+        {invalid && !confirming ? (
+          <p role="alert" className="text-danger text-sm">
+            {invalid}
+          </p>
+        ) : null}
+        {save.isError && !confirming ? (
+          <p role="alert" className="text-danger text-sm">
+            {payoutErrorText(save.error)}
+          </p>
+        ) : null}
+      </SaveBar>
       {confirming ? (
         <Modal
-          title="Сохранить настройки выкупа?"
-          description="Действует на новые продажи."
+          title={turningOff ? "Выключить выкуп?" : "Сохранить настройки выкупа?"}
+          description={
+            turningOff
+              ? "Пользователи не смогут продавать скины. Начатые продажи дойдут до конца."
+              : "Действует на новые продажи."
+          }
           busy={save.isPending}
           onClose={() => {
             setConfirming(false);
@@ -265,20 +280,10 @@ export function SaleSettingsPage() {
                 submit();
               }}
             >
-              Да, сохранить
+              {turningOff ? "Да, выключить" : "Да, сохранить"}
             </Button>
           </div>
         </Modal>
-      ) : null}
-      {invalid && !confirming ? (
-        <p role="alert" className="text-danger">
-          {invalid}
-        </p>
-      ) : null}
-      {save.isError && !confirming ? (
-        <p role="alert" className="text-danger">
-          {payoutErrorText(save.error)}
-        </p>
       ) : null}
     </div>
   );

@@ -57,7 +57,7 @@ describe("PricingPage", () => {
     api.savePricing.mockResolvedValue(PRICING);
     renderPage();
     await typeExpenses("5");
-    expect(screen.getByText("Есть несохранённые изменения")).toBeInTheDocument();
+    expect(screen.getByText("Изменено: 1 поле")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     expect(screen.getByRole("dialog", { name: "Сохранить наценки?" })).toBeInTheDocument();
     expect(api.savePricing).not.toHaveBeenCalled();
@@ -110,6 +110,6 @@ describe("PricingPage", () => {
     await typeExpenses("8");
     fireEvent.click(screen.getByRole("button", { name: "Сбросить" }));
     expect(field("Расходы, %").value).toBe("3");
-    expect(screen.queryByText("Есть несохранённые изменения")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Изменено:/)).not.toBeInTheDocument();
   });
 });
