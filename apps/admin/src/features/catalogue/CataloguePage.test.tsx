@@ -78,7 +78,7 @@ describe("CataloguePage", () => {
     // The last good prices still show when the last sync failed.
     const state = screen.getByRole("region", { name: "Состояние" });
     expect(within(state).getByText("Цены обновлены").parentElement).toHaveTextContent(
-      `Цены обновлены${formatWhen("2026-10-01T10:00:00Z")}`,
+      `Цены обновлены ${formatWhen("2026-10-01T10:00:00Z")}`,
     );
     expect(screen.getByText(/^12\s700\sсум за \$$/)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Состояние" })).toHaveTextContent(
