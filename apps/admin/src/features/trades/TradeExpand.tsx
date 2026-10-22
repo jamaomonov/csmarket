@@ -1,17 +1,22 @@
-/** A trade's details under its row: the timeline and the source's own record, read from the
- * order page's data (`GET /admin/orders/{number}`, fetched on expand). */
+/**
+ * A trade's details under its row: the timeline with exact times (seconds: what an operator
+ * matches against a supplier's or Steam's log), the source's own record in words, the Steam
+ * offer, read from the order page's data (`GET /admin/orders/{number}`, fetched on expand).
+ */
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { type ReactNode } from "react";
 
 import { type AdminTradeRow } from "./api";
 import { SOURCE_LABELS } from "./labels";
 import { type AdminOrderDetail, getOrder } from "../orders/api";
 import { detailKey } from "../orders/keys";
 
+import { Reason, Status } from "@/components/Status";
 import { TradeLinkValue } from "@/components/SteamLinks";
+import { LINK, TextLink } from "@/components/TextLink";
 import { errorText } from "@/features/users/labels";
-import { reasonText, statusText } from "@/lib/dictionary";
-import { formatDateTime } from "@/lib/format";
+import { reasonText } from "@/lib/dictionary";
+import { formatDateTimeSeconds } from "@/lib/format";
 
 interface Step {
   label: string;
@@ -40,31 +45,60 @@ export function timeline(detail: AdminOrderDetail): Step[] {
     .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 }
 
-/** The source's own record: its status word, ids and why it failed. */
-function sourceFields(detail: AdminOrderDetail): [string, string][] {
+function SourceStatus({ status, waxpeer }: { status: string | null; waxpeer: boolean }) {
+  if (status === null) return <>—</>;
+  return <Status of={waxpeer ? "waxpeer" : "supplier"} code={status} />;
+}
+
+function SupplierReason({ code }: { code: string | null }) {
+  return code === null ? <>—</> : <Reason of="supplier" code={code} />;
+}
+
+/** The source's own record in words: its status, its purchase number and why it failed. */
+function sourceFields(detail: AdminOrderDetail): [string, ReactNode][] {
   const { trade, skinslink, lisskins } = detail;
   if (skinslink !== null) {
     return [
-      ["Статус", skinslink.status ?? "—"],
+      ["Статус", <SourceStatus key="s" status={skinslink.status} waxpeer={false} />],
       ["Покупка", skinslink.purchase_id === null ? "—" : String(skinslink.purchase_id)],
-      ["Причина", skinslink.fail_reason ?? "—"],
+      ["Причина", <SupplierReason key="r" code={skinslink.fail_reason} />],
     ];
   }
   if (lisskins !== null) {
     return [
-      ["Статус", lisskins.status ?? "—"],
+      ["Статус", <SourceStatus key="s" status={lisskins.status} waxpeer={false} />],
       ["Покупка", lisskins.purchase_id === null ? "—" : String(lisskins.purchase_id)],
-      ["Причина", lisskins.return_reason ?? lisskins.error ?? "—"],
+      ["Причина", <SupplierReason key="r" code={lisskins.return_reason ?? lisskins.error} />],
     ];
   }
   if (trade !== null) {
     return [
-      ["Статус", trade.status === null ? "—" : statusText("waxpeer", String(trade.status))],
-      ["Waxpeer id", trade.waxpeer_id === null ? "—" : String(trade.waxpeer_id)],
+      [
+        "Статус",
+        <SourceStatus
+          key="s"
+          status={trade.status === null ? null : String(trade.status)}
+          waxpeer
+        />,
+      ],
+      ["Покупка", trade.waxpeer_id === null ? "—" : String(trade.waxpeer_id)],
       ["Причина", trade.reason ?? "—"],
     ];
   }
   return [];
+}
+
+/** The Steam offer of the trade (it left the row: it is «—» on most of them). */
+function SteamOffer({ row }: { row: AdminTradeRow }) {
+  if (row.offer_url === null || row.steam_offer_id === null) return null;
+  return (
+    <p className="mt-2">
+      <span className="text-fg-muted">Обмен в Steam: </span>
+      <a href={row.offer_url} target="_blank" rel="noreferrer" className={LINK}>
+        {row.steam_offer_id}
+      </a>
+    </p>
+  );
 }
 
 export function TradeExpand({ row }: { row: AdminTradeRow }) {
@@ -86,9 +120,9 @@ export function TradeExpand({ row }: { row: AdminTradeRow }) {
           <ol className="space-y-1" aria-label="Ход обмена">
             {timeline(detail).map((s) => (
               <li key={s.label} className="flex gap-3">
-                <span className="text-fg-muted w-32 shrink-0 tabular-nums">
-                  {formatDateTime(s.at)}
-                </span>
+                <time dateTime={s.at} className="text-fg-muted w-40 shrink-0 tabular-nums">
+                  {formatDateTimeSeconds(s.at)}
+                </time>
                 <span>{s.label}</span>
               </li>
             ))}
@@ -99,10 +133,11 @@ export function TradeExpand({ row }: { row: AdminTradeRow }) {
               {sourceFields(detail).map(([name, value]) => (
                 <div key={name} className="contents">
                   <dt className="text-fg-muted">{name}</dt>
-                  <dd className="font-mono">{value}</dd>
+                  <dd>{value}</dd>
                 </div>
               ))}
             </dl>
+            <SteamOffer row={row} />
             {row.trade_link !== null && (
               <p className="text-fg-muted mt-2 text-xs">
                 Трейд-ссылка: <TradeLinkValue link={row.trade_link} />
@@ -111,9 +146,9 @@ export function TradeExpand({ row }: { row: AdminTradeRow }) {
           </div>
         </div>
       )}
-      <Link to={`/orders/${row.number}`} className="text-accent inline-block hover:underline">
+      <TextLink to={`/orders/${row.number}`} className="inline-block">
         Открыть заказ →
-      </Link>
+      </TextLink>
     </div>
   );
 }

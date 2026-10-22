@@ -34,7 +34,7 @@ const PHONE_ORDER: readonly TradeView[] = [
   "attention",
   ...TRADE_VIEWS.filter((v) => v !== "attention"),
 ];
-const HEADERS = ["#", "Скин", "Источник", "Цена", "Обмен", "Покупатель", "Статус", "Время"];
+const HEADERS = ["#", "Скин", "Источник", "Цена", "Покупатель", "Статус", "Время"];
 
 export function TradesPage() {
   const narrow = useNarrow();

@@ -158,9 +158,10 @@ describe("TradesPage", () => {
     expect(within(row).getByText("Skinslink")).toBeInTheDocument();
     expect(within(row).getByTestId("trade-price")).toHaveTextContent("$13.58");
     expect(within(row).getByText("себест. $12.00")).toBeInTheDocument();
-    const offer = within(row).getByRole("link", { name: "6912345678" });
-    expect(offer).toHaveAttribute("href", "https://steamcommunity.com/tradeoffer/6912345678/");
-    expect(offer).toHaveAttribute("target", "_blank");
+    // The Steam offer is in the expanded row now; rarity is a dot on the picture.
+    expect(within(row).queryByRole("link", { name: "6912345678" })).toBeNull();
+    expect(within(row).getByTestId("rarity-dot")).toHaveStyle({ backgroundColor: "#d32ce6" });
+    expect(within(row).getByRole("link", { name: "O7K2M9QX" })).toHaveClass("text-accent");
     expect(within(row).queryByText("Трейд-ссылка")).toBeNull(); // in the expanded row now
     expect(within(row).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
     expect(within(row).getByText("Click")).toBeInTheDocument();
@@ -206,7 +207,6 @@ describe("TradesPage", () => {
     expect(within(row).getByText("API · Partner Co")).toBeInTheDocument();
     expect(within(row).getByTestId("trade-state")).toHaveTextContent(/^возврат$/);
     expect(within(row).getByText("обмен не принят")).toBeInTheDocument();
-    expect(within(row).getByText("—")).toBeInTheDocument();
   });
 
   it("tints rows that need attention and names the reason", async () => {
@@ -248,9 +248,20 @@ describe("TradesPage", () => {
       expect.stringContaining("Покупка начата"),
       expect.stringContaining("Обмен отправлен"),
     ]);
-    expect(within(details).getByText("active")).toBeInTheDocument();
+    expect(within(details).getByText("идёт")).toBeInTheDocument();
     expect(within(details).getByText("178")).toBeInTheDocument();
-    expect(within(details).getByText("timeout")).toBeInTheDocument();
+    // An unknown supplier reason reads «другая причина» with its code small.
+    expect(within(details).getByText("timeout")).toHaveClass("text-meta");
+    expect(within(details).getByText(/другая причина/)).toBeInTheDocument();
+    // The exact time, with seconds, to match against a supplier's or Steam's log.
+    expect(within(steps).getAllByRole("listitem")[0]).toHaveTextContent(
+      /\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/,
+    );
+    expect(within(details).getByRole("link", { name: "6912345678" })).toHaveAttribute(
+      "href",
+      "https://steamcommunity.com/tradeoffer/6912345678/",
+    );
+    expect(details.querySelector(".font-mono")).toBeNull();
     expect(within(details).getByRole("link", { name: "Открыть заказ →" })).toHaveAttribute(
       "href",
       "/orders/O7K2M9QX",
