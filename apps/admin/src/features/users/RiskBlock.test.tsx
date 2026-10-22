@@ -34,7 +34,7 @@ describe("RiskBlock", () => {
 
   it("saves the policy with a key", async () => {
     renderBlock();
-    fireEvent.click(await screen.findByLabelText("Запретить оплату кассой"));
+    fireEvent.click(await screen.findByRole("switch", { name: "Запретить оплату кассой" }));
     fireEvent.change(screen.getByLabelText("Личный лимит, сум"), { target: { value: "1000000" } });
     fireEvent.change(screen.getByLabelText("Заметка"), { target: { value: "дроппер" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -53,9 +53,31 @@ describe("RiskBlock", () => {
     expect(key).toMatch(/^admin-user-risk-/);
   });
 
+  it("shows «Сохранить» only when something changed", async () => {
+    renderBlock();
+    const trusted = await screen.findByRole("switch", { name: "Доверенный" });
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+    fireEvent.click(trusted);
+    expect(screen.getByRole("button", { name: "Сохранить" })).toBeInTheDocument();
+    fireEvent.click(trusted);
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
+  });
+
+  it("groups the limit and sends it as a whole number", async () => {
+    renderBlock();
+    const max = await screen.findByLabelText("Личный лимит, сум");
+    fireEvent.change(max, { target: { value: "2000000" } });
+    expect(max).toHaveValue("2\u00a0000\u00a0000");
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(api.saveRisk).toHaveBeenCalledOnce();
+    });
+    expect(api.saveRisk.mock.calls[0]?.[1]).toMatchObject({ max_amount_uzs: 2000000 });
+  });
+
   it("an empty limit field sends null", async () => {
     renderBlock();
-    fireEvent.click(await screen.findByLabelText("Доверенный (без лимитов)"));
+    fireEvent.click(await screen.findByRole("switch", { name: "Доверенный" }));
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
       expect(api.saveRisk).toHaveBeenCalledOnce();

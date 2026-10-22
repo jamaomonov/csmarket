@@ -2,7 +2,7 @@
  * «Риск» on the user card: what the user put in through the kassas, their own limit, a «trusted»
  * pass and a kassa block (spec 2026-10-21-payment-risk-limits). Fetches and saves on its own.
  */
-import { Button } from "@csmarket/ui";
+import { Button, Switch } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -11,9 +11,10 @@ import { getRisk, saveRisk, type RiskPolicy, type RiskPolicyIn } from "./api";
 import { errorText } from "./labels";
 import { useIdempotencyKey } from "./useIdempotencyKey";
 
+import { MoneyField } from "@/components/MoneyInput";
+import { countChanges } from "@/components/SaveBar";
 import { SavedNotice } from "@/components/SavedNotice";
 import { Section } from "@/components/Section";
-import { NumberField } from "@/features/sales/SettingsParts";
 import { formatSum } from "@/lib/format";
 
 interface Draft {
@@ -51,29 +52,6 @@ function toBody(d: Draft): RiskPolicyIn | null {
     window_hours: Number(d.hours),
     note: note === "" ? null : note,
   };
-}
-
-function Check({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => {
-          onChange(e.target.checked);
-        }}
-      />
-      {label}
-    </label>
-  );
 }
 
 export function RiskBlock({ userId }: { userId: string }) {
@@ -115,6 +93,7 @@ export function RiskBlock({ userId }: { userId: string }) {
   const edit = (change: Partial<Draft>) => {
     setDraft({ ...d, ...change });
   };
+  const dirty = draft !== null && countChanges(toDraft(p), draft) > 0;
   const submit = () => {
     const body = toBody(d);
     setInvalid(body === null);
@@ -137,30 +116,37 @@ export function RiskBlock({ userId }: { userId: string }) {
           </p>
         )}
         <SavedNotice at={savedAt} />
-        <Check
-          label="Доверенный (без лимитов)"
-          checked={d.trusted}
-          onChange={(v) => {
-            edit({ trusted: v });
-          }}
-        />
-        <Check
-          label="Запретить оплату кассой"
-          checked={d.kassaBlocked}
-          onChange={(v) => {
-            edit({ kassaBlocked: v });
-          }}
-        />
-        <div className="flex flex-wrap gap-3">
-          <NumberField
-            label="Личный лимит, сум"
+        <div className="flex flex-col">
+          <Switch
+            label="Доверенный"
+            states={["да", "нет"]}
+            hint="без лимитов"
+            checked={d.trusted}
+            onCheckedChange={(v) => {
+              edit({ trusted: v });
+            }}
+          />
+          <Switch
+            label="Запретить оплату кассой"
+            states={["запрещена", "разрешена"]}
+            checked={d.kassaBlocked}
+            onCheckedChange={(v) => {
+              edit({ kassaBlocked: v });
+            }}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <MoneyField
+            label="Личный лимит"
+            unit="сум"
             value={d.max}
             onChange={(v) => {
               edit({ max: v });
             }}
           />
-          <NumberField
-            label="Окно, ч"
+          <MoneyField
+            label="Окно"
+            unit="ч"
             value={d.hours}
             onChange={(v) => {
               edit({ hours: v });
@@ -191,9 +177,25 @@ export function RiskBlock({ userId }: { userId: string }) {
             {errorText(save.error)}
           </p>
         )}
-        <Button type="button" size="sm" disabled={save.isPending} onClick={submit}>
-          Сохранить
-        </Button>
+        {dirty && (
+          <div className="flex gap-2">
+            <Button type="button" size="sm" disabled={save.isPending} onClick={submit}>
+              Сохранить
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={save.isPending}
+              onClick={() => {
+                setDraft(null);
+                setInvalid(false);
+              }}
+            >
+              Сбросить
+            </Button>
+          </div>
+        )}
       </div>
     </Section>
   );

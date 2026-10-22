@@ -343,7 +343,7 @@ describe("UserCard", () => {
       api.adjustUsdBalance.mockResolvedValue(USD_CARD);
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "250" } });
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
@@ -361,11 +361,57 @@ describe("UserCard", () => {
       expect(api.adjustBalance).not.toHaveBeenCalled();
     });
 
+    it("groups the sum as typed and sends whole soʻm as before", async () => {
+      api.adjustBalance.mockResolvedValue(CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      const sum = screen.getByLabelText("Сумма, сум");
+      fireEvent.change(sum, { target: { value: "-2000000" } });
+      expect(sum).toHaveValue("-2\u00a0000\u00a0000");
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Ошибочное начисление" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      fireEvent.click(await screen.findByRole("button", { name: /^Списать 2\s000\s000 сум$/ }));
+      await waitFor(() => {
+        expect(api.adjustBalance).toHaveBeenCalledWith(
+          "u-1",
+          -2000000,
+          "Ошибочное начисление",
+          expect.any(String),
+        );
+      });
+    });
+
+    it("sends grouped dollars as the API's string", async () => {
+      api.adjustUsdBalance.mockResolvedValue(USD_CARD);
+      renderCard();
+      fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
+      const sum = screen.getByLabelText("Сумма, USD");
+      expect(sum).toHaveAttribute("inputmode", "decimal");
+      fireEvent.change(sum, { target: { value: "1500.5" } });
+      expect(sum).toHaveValue("1\u00a0500.5");
+      fireEvent.change(screen.getByLabelText("Причина изменения"), {
+        target: { value: "Стартовый баланс" },
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Продолжить" }));
+      fireEvent.click(await screen.findByRole("button", { name: /^Начислить/ }));
+      await waitFor(() => {
+        expect(api.adjustUsdBalance).toHaveBeenCalledWith(
+          "u-1",
+          "1500.500",
+          "Стартовый баланс",
+          expect.any(String),
+        );
+      });
+    });
+
     it("refuses a comma and groups the confirm amount so 1000 is not read as 1", async () => {
       api.adjustUsdBalance.mockResolvedValue(USD_CARD);
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
       });
@@ -383,7 +429,7 @@ describe("UserCard", () => {
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
       fireEvent.change(screen.getByLabelText("Сумма, сум"), { target: { value: "50 000" } });
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       expect(screen.getByLabelText("Сумма, USD")).toHaveValue("");
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
@@ -397,7 +443,7 @@ describe("UserCard", () => {
     it("refuses a dollar amount with four decimals", async () => {
       renderCard();
       fireEvent.click(await screen.findByRole("button", { name: "Изменить баланс" }));
-      fireEvent.click(screen.getByRole("button", { name: "USD" }));
+      fireEvent.click(screen.getByRole("tab", { name: "USD" }));
       fireEvent.change(screen.getByLabelText("Сумма, USD"), { target: { value: "1.2345" } });
       fireEvent.change(screen.getByLabelText("Причина изменения"), {
         target: { value: "Стартовый баланс" },
