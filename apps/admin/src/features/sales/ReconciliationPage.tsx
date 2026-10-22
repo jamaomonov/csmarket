@@ -16,6 +16,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Reason, Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
+import { LINK } from "@/components/TextLink";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { pick } from "@/lib/url-guards";
@@ -120,7 +121,7 @@ export function ReconciliationPage() {
             key: "number",
             header: "Продажа",
             cell: (r) => (
-              <Link to={`/sales/${r.number}`} className="font-mono font-medium hover:underline">
+              <Link to={`/sales/${r.number}`} className={`${LINK} font-mono`}>
                 {r.number}
               </Link>
             ),

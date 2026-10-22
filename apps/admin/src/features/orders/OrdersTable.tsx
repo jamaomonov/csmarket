@@ -9,6 +9,7 @@ import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
 import { SkinThumb } from "@/components/SkinThumb";
 import { Status } from "@/components/Status";
+import { LINK } from "@/components/TextLink";
 import { When } from "@/components/When";
 
 export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label: string }) {
@@ -28,7 +29,7 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
           key: "number",
           header: "Номер",
           cell: (o) => (
-            <Link to={`/orders/${o.number}`} className="font-mono hover:underline">
+            <Link to={`/orders/${o.number}`} className={`${LINK} font-mono`}>
               {o.number}
             </Link>
           ),

@@ -12,6 +12,7 @@ import { payoutErrorText } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { PageHeader } from "@/components/PageHeader";
+import { LINK } from "@/components/TextLink";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -67,7 +68,7 @@ export function SellBlocksPage() {
             key: "user",
             header: "Пользователь",
             cell: (b) => (
-              <Link to={`/users/${b.user.id}`} className="hover:underline">
+              <Link to={`/users/${b.user.id}`} className={LINK}>
                 {b.user.display_name ?? "Без имени"}
               </Link>
             ),
@@ -92,7 +93,7 @@ export function SellBlocksPage() {
         mobileCard={(b) => (
           <div className="space-y-1 text-sm">
             <div className="flex items-center justify-between gap-2">
-              <Link to={`/users/${b.user.id}`} className="font-medium hover:underline">
+              <Link to={`/users/${b.user.id}`} className={`${LINK} font-medium`}>
                 {b.user.display_name ?? "Без имени"}
               </Link>
               <Unblock block={b} />

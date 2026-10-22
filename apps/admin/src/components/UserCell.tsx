@@ -2,6 +2,8 @@
 import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
+import { LINK } from "./TextLink";
+
 interface UserCellProps {
   id: string;
   name: string | null;
@@ -24,7 +26,7 @@ export function UserCell({ id, name, avatarUrl, sub }: UserCellProps) {
         </span>
       )}
       <div className="min-w-0">
-        <Link to={`/users/${id}`} className="hover:text-accent block truncate">
+        <Link to={`/users/${id}`} className={`${LINK} block truncate`}>
           {shown}
         </Link>
         {sub !== undefined && <div className="text-fg-dim truncate text-xs">{sub}</div>}

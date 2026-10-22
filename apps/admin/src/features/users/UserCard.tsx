@@ -33,6 +33,7 @@ import { Status } from "@/components/Status";
 import { StatusChip } from "@/components/StatusChip";
 import { TradeLinkValue } from "@/components/SteamLinks";
 import { Tabs } from "@/components/Tabs";
+import { LINK } from "@/components/TextLink";
 import { ApiError } from "@/lib/api";
 import {
   formatDateTime,
@@ -54,7 +55,7 @@ function Actor({ actor }: { actor: string | null }) {
   return (
     <>
       кто:{" "}
-      <Link to={`/users/${actor.slice("admin:".length)}`} className="hover:underline">
+      <Link to={`/users/${actor.slice("admin:".length)}`} className={LINK}>
         администратор
       </Link>
     </>
@@ -71,7 +72,7 @@ function Profile({ card }: { card: AdminUserCard }) {
           href={steamProfileUrl(u.steam_id)}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-accent hover:underline"
+          className={LINK}
         >
           Профиль в Steam
         </a>
@@ -139,7 +140,7 @@ function Topups({ topups }: { topups: AdminTopup[] }) {
             cell: (t) => (
               <Link
                 to={`/payments?q=${encodeURIComponent(t.number)}`}
-                className="font-mono hover:underline"
+                className={`${LINK} font-mono`}
               >
                 {t.number}
               </Link>

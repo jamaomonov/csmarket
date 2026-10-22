@@ -28,6 +28,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
+import { LINK } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
@@ -191,7 +192,7 @@ export function PayoutsPage() {
             key: "sale",
             header: "Продажа",
             cell: (r) => (
-              <Link to={`/payouts/${r.id}`} className="font-mono font-medium hover:underline">
+              <Link to={`/payouts/${r.id}`} className={`${LINK} font-mono`}>
                 {r.sale_number}
               </Link>
             ),

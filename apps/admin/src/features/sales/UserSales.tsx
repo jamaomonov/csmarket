@@ -9,6 +9,7 @@ import { Money } from "@/components/Money";
 import { Section } from "@/components/Section";
 import { SkinThumb } from "@/components/SkinThumb";
 import { Status } from "@/components/Status";
+import { LINK } from "@/components/TextLink";
 import { When } from "@/components/When";
 
 /** Skins shown by name in a row; the rest are «+ ещё N». */
@@ -57,7 +58,7 @@ export function UserSales({ userId }: { userId: string }) {
             key: "number",
             header: "Номер",
             cell: (s) => (
-              <Link to={`/sales/${s.number}`} className="font-mono hover:underline">
+              <Link to={`/sales/${s.number}`} className={`${LINK} font-mono`}>
                 {s.number}
               </Link>
             ),

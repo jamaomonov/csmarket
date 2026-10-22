@@ -102,6 +102,9 @@ describe("DashboardPage", () => {
     expect(tile("Баланс LIS-SKINS")).toHaveTextContent("обновлено 3 мин назад");
     const link = within(tile("Требуют внимания")).getByRole("link");
     expect(link).toHaveAttribute("href", "/trades?view=attention");
+    // A link tile shows a chevron; a figure-only tile does not.
+    expect(within(tile("Требуют внимания")).getByTestId("tile-chevron")).toBeInTheDocument();
+    expect(within(tile("Баланс Waxpeer")).queryByTestId("tile-chevron")).toBeNull();
   });
 
   it("an unknown balance says so", async () => {
