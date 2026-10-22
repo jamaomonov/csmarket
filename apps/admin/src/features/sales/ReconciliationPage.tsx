@@ -5,7 +5,7 @@
  */
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import {
@@ -55,6 +55,10 @@ export function ReconciliationPage() {
     getNextPageParam: (last) => last.next_cursor,
   });
   const first = query.data?.pages[0];
+  // The count rides on every page; keep the last one so the badge does not blink on a tab switch.
+  const lastProblems = useRef<number | null>(null);
+  if (first !== undefined) lastProblems.current = first.problems;
+  const problemsCount = lastProblems.current;
   const items = query.data?.pages.flatMap((p) => p.items);
   return (
     <section className="space-y-4">
@@ -89,7 +93,7 @@ export function ReconciliationPage() {
             {
               key: "problems",
               label: "Проблемы",
-              ...(first !== undefined && { count: first.problems }),
+              ...(problemsCount !== null && { count: problemsCount }),
               alert: true,
             },
           ]}

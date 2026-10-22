@@ -88,4 +88,15 @@ describe("ReconciliationPage", () => {
     );
     expect(api.getReconciliation).toHaveBeenCalledWith({ days: 7, problems: true });
   });
+
+  it("keeps the «Проблемы» count while the other tab loads", async () => {
+    renderPage();
+    await screen.findByRole("tab", { name: "Проблемы 1" });
+    api.getReconciliation.mockReturnValue(new Promise(() => undefined));
+    fireEvent.click(screen.getByRole("tab", { name: "Проблемы 1" }));
+    await waitFor(() => {
+      expect(api.getReconciliation).toHaveBeenLastCalledWith({ days: 7, problems: true });
+    });
+    expect(screen.getByRole("tab", { name: "Проблемы 1" })).toBeInTheDocument();
+  });
 });
