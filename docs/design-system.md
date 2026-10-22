@@ -167,8 +167,15 @@ code={status} />` reads its word and tone from the one dictionary, `lib/dictiona
   per step (a payout: «Беру в работу», then «Выплачено»); dangerous actions («Отклонить»,
   «Вернуть деньги на баланс») outlined red (`DANGER_OUTLINE`) on their own row; an action the
   API would refuse is hidden, not shown disabled.
+- **Money fields** — `MoneyInput` / `MoneyField` (`components/MoneyInput.tsx`): `inputMode`
+  numeric (decimal for dollars and percents), the digits grouped as typed («2 000 000»), the unit
+  inside on the right («сум», «$», «%», «ч»), the name read as «<label>, <unit>». It hands the form
+  the typed string without the group spaces, so the API gets the same digits as before; the form
+  keeps its own validation. Every soʻm or dollar amount in the admin uses it.
+- **Switches** — an on/off setting is the `Switch` from `@csmarket/ui` («Выкуп: включён /
+  выключен», «Доверенный», «Запретить оплату кассой», a kassa's limit), never a 14 px checkbox.
 - **Settings pages** — one `SaveBar` per page: pinned to the bottom across the screen, shown only
   when something changed, «Изменено: N полей», «Сбросить», «Сохранить». Turning something off
-  that customers see (a kassa, «Выкуп включён») asks first and says what happens on the site.
+  that customers see (a kassa, the «Выкуп» switch) asks first and says what happens on the site.
 - **Tabs on a phone** — the row scrolls sideways; the active tab is kept in view and a tab that
   counts work goes first («Требуют внимания» in «Обмены»).
