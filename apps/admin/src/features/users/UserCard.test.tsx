@@ -6,6 +6,7 @@ import { type AdminUserCard } from "./api";
 import { CARD, RISK, renderCard as renderWith, STEAM_ID, USER_SALES } from "./fixtures";
 
 import { ApiError } from "@/lib/api";
+import { asPhone } from "@/test/phone";
 
 const api = vi.hoisted(() => ({
   listUsers: vi.fn(),
@@ -128,12 +129,27 @@ describe("UserCard", () => {
     }
   });
 
-  it("puts «Профиль» and «Риск» first on a phone", async () => {
+  it("puts «Профиль» and «Риск» before the history on a phone", async () => {
+    const restore = asPhone();
+    try {
+      renderCard();
+      const profile = await screen.findByRole("region", { name: "Профиль" });
+      const history = screen.getByRole("region", { name: "История баланса" });
+      expect(
+        profile.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    } finally {
+      restore();
+    }
+  });
+
+  it("keeps the history first on a wide screen", async () => {
     renderCard();
     const profile = await screen.findByRole("region", { name: "Профиль" });
-    const side = screen.getByTestId("detail-side");
-    expect(side).toContainElement(profile);
-    expect(side.className).toContain("order-first");
+    const history = screen.getByRole("region", { name: "История баланса" });
+    expect(
+      history.compareDocumentPosition(profile) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.queryByTestId("empty-sections")).toBeNull();
   });
 

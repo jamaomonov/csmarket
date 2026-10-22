@@ -345,6 +345,22 @@ describe("PayoutDetail", () => {
     expect(calm).not.toHaveTextContent("Кошелёк");
   });
 
+  it("an unknown card is a warning on top, never folded as fine", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      risk: { ...PAYOUT_DETAIL.risk, card_known: false },
+    });
+    renderPage();
+    const risks = await screen.findByRole("region", { name: "Риски" });
+    const warnings = within(risks).getByTestId("risk-warnings");
+    expect(warnings).toHaveTextContent("Та же карта у других");
+    expect(within(warnings).getByText(/неизвестно/)).toHaveClass("text-warning");
+    expect(within(risks).queryByTestId("risk-alarms")).toBeNull();
+    expect(within(risks).queryByText("Рисков не видно.")).toBeNull();
+    const calm = within(risks).getByText("Всё в порядке: 9").closest("details");
+    expect(calm).not.toHaveTextContent("Та же карта");
+  });
+
   it("with nothing red says so and still folds the details", async () => {
     api.getPayout.mockResolvedValue(PAYOUT_DETAIL);
     renderPage();

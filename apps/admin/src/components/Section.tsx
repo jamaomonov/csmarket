@@ -6,6 +6,8 @@
 import { ChevronRight } from "lucide-react";
 import { type ReactNode } from "react";
 
+import { useNarrow } from "@/lib/useNarrow";
+
 interface DetailGridProps {
   main: ReactNode;
   side?: ReactNode;
@@ -14,16 +16,27 @@ interface DetailGridProps {
 }
 
 export function DetailGrid({ main, side, sideFirst = false }: DetailGridProps) {
+  const narrow = useNarrow();
+  const mainCol = <div className="min-w-0 space-y-4">{main}</div>;
+  const sideCol =
+    side === undefined ? null : (
+      <div data-testid="detail-side" className="min-w-0 space-y-4">
+        {side}
+      </div>
+    );
+  // One column on a phone: the side goes first in the reading order itself, not only visually.
   return (
     <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
-      <div className="min-w-0 space-y-4">{main}</div>
-      {side !== undefined && (
-        <div
-          data-testid="detail-side"
-          className={`min-w-0 space-y-4 ${sideFirst ? "order-first lg:order-none" : ""}`}
-        >
-          {side}
-        </div>
+      {sideFirst && narrow ? (
+        <>
+          {sideCol}
+          {mainCol}
+        </>
+      ) : (
+        <>
+          {mainCol}
+          {sideCol}
+        </>
       )}
     </div>
   );

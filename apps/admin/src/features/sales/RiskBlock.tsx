@@ -123,6 +123,8 @@ interface RiskRow {
   value: ReactNode;
   /** Red, on top; the rest fold under «Всё в порядке: N». */
   alarm: boolean;
+  /** Not known to be fine (an old card's fingerprint): amber, on top, never folded. */
+  warn?: boolean;
 }
 
 function SharedCard({ risk }: { risk: PayoutRisk }) {
@@ -173,6 +175,7 @@ function riskRows(risk: PayoutRisk, newAccount: boolean): RiskRow[] {
       label: "Та же карта у других",
       value: <SharedCard risk={risk} />,
       alarm: risk.card_known && risk.shared_card_users.length > 0,
+      warn: !risk.card_known,
     },
     { key: "age", label: "Аккаунт у нас", value: age(risk.account_created_at), alarm: newAccount },
     { key: "steam", label: "Steam", value: steam, alarm: false },
@@ -228,7 +231,8 @@ export function RiskBlock({ detail }: { detail: Detail }) {
   if (risk === null) return null;
   const rows = riskRows(risk, (detail.request.flags ?? []).includes("new_account"));
   const alarms = rows.filter((r) => r.alarm);
-  const calm = rows.filter((r) => !r.alarm);
+  const warnings = rows.filter((r) => !r.alarm && r.warn === true);
+  const calm = rows.filter((r) => !r.alarm && r.warn !== true);
   return (
     <Section title="Риски">
       {alarms.length > 0 ? (
@@ -239,8 +243,17 @@ export function RiskBlock({ detail }: { detail: Detail }) {
             </Row>
           ))}
         </dl>
-      ) : (
+      ) : warnings.length === 0 ? (
         <p className="text-success text-sm">Рисков не видно.</p>
+      ) : null}
+      {warnings.length > 0 && (
+        <dl data-testid="risk-warnings">
+          {warnings.map((r) => (
+            <Row key={r.key} label={r.label}>
+              <span className="text-warning">{r.value}</span>
+            </Row>
+          ))}
+        </dl>
       )}
       <More label={`Всё в порядке: ${String(calm.length)}`}>
         {calm.map((r) => (
