@@ -68,7 +68,9 @@ describe("UserCard", () => {
     );
     expect(screen.getByText("ivan@example.test")).toBeInTheDocument();
     expect(screen.getByText("узбекский")).toBeInTheDocument();
-    expect(screen.getByText(CARD.user.trade_link ?? "")).toBeInTheDocument();
+    expect(
+      screen.getByText("https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••"),
+    ).toBeInTheDocument();
     expect(screen.getByText(/задержка обмена/)).toBeInTheDocument();
     expect(screen.getByTestId("user-balance")).toHaveTextContent(/^30\s000 сум$/);
 

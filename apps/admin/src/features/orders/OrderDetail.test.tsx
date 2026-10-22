@@ -204,9 +204,13 @@ describe("OrderDetail", () => {
     expect(within(trade).getByText("6f1c2a52-0000-4000-8000-000000000001")).toBeInTheDocument();
     expect(within(trade).getByText(/SellerName/)).toBeInTheDocument();
     expect(within(trade).getByText("seller_cancelled")).toBeInTheDocument();
-    // Whole, for an admin to copy (owner, 2026-10-19).
+    // Opened and copied whole (owner, 2026-10-19); the token hidden on screen (audit, batch 4).
     const link = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY";
-    expect(screen.getByRole("link", { name: link })).toHaveAttribute("href", link);
+    expect(
+      screen.getByRole("link", {
+        name: "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••",
+      }),
+    ).toHaveAttribute("href", link);
   });
 
   it("copies the project id and the Waxpeer id", async () => {
