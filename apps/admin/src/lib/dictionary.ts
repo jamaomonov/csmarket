@@ -4,20 +4,18 @@
  * статус» / «другая причина» with the code itself, small, beside it — never a bare code alone.
  *
  * Chips are lower-case («оплачен», «к выплате»); a tab or a heading capitalises with `capital`.
+ *
+ * Type-only imports: the dictionary must not pull the feature API modules in at run time.
  */
-import { type Tone } from "@/components/StatusChip";
-import {
-  type AttentionReason,
-  type FailureReason,
-  type OrderStatus,
-} from "@/features/orders/kinds";
-import { type IncomingResult, type RequestStatus } from "@/features/p2p/api";
-import { type PaymentStatus } from "@/features/payments/kinds";
-import { type AttentionReason as SaleAttention, type SaleStatus } from "@/features/sales/api";
-import { type PayoutFlag, type PayoutStatus } from "@/features/sales/payoutsApi";
-import { type ReconFlag } from "@/features/sales/reconApi";
-import { type TradeRowState } from "@/features/trades/kinds";
-import { type TopupStatus } from "@/features/users/api";
+import type { Tone } from "@/components/StatusChip";
+import type { AttentionReason, FailureReason, OrderStatus } from "@/features/orders/kinds";
+import type { IncomingResult, RequestStatus } from "@/features/p2p/api";
+import type { PaymentStatus } from "@/features/payments/kinds";
+import type { AttentionReason as SaleAttention, SaleStatus } from "@/features/sales/api";
+import type { PayoutFlag, PayoutStatus } from "@/features/sales/payoutsApi";
+import type { ReconFlag } from "@/features/sales/reconApi";
+import type { TradeRowState } from "@/features/trades/kinds";
+import type { TopupStatus } from "@/features/users/api";
 
 export interface StatusWord {
   label: string;
