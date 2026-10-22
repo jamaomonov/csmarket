@@ -21,9 +21,7 @@ export function LisskinsBlock({ purchase: p }: LisskinsBlockProps) {
   return (
     <Section title="Покупка LIS-SKINS">
       <dl>
-        <Row label="Статус">
-          {p.status === null ? "—" : <Status of="supplier" code={p.status} />}
-        </Row>
+        <Row label="Статус">{p.status === null ? "—" : <Status of="market" code={p.status} />}</Row>
         <Row label="Предложение">
           {p.offer_url !== null && p.offer_id !== null ? (
             <a href={p.offer_url} target="_blank" rel="noreferrer" className={LINK}>
@@ -37,7 +35,7 @@ export function LisskinsBlock({ purchase: p }: LisskinsBlockProps) {
         <Row label="Списано">{p.amount_usd === null ? "—" : `$${p.amount_usd}`}</Row>
         {p.return_reason !== null && (
           <Row label="Возврат">
-            <Reason of="supplier" code={p.return_reason} />
+            <Reason of="market" code={p.return_reason} />
             {p.error !== null && <span className="text-fg-muted"> · {p.error}</span>}
           </Row>
         )}

@@ -77,7 +77,7 @@ export function SkinCell({ row }: { row: AdminTradeRow }) {
 
 /** The source's own status word for a tooltip: Waxpeer's code is digits, the rest a word. */
 export function sourceStatusText(status: string): string {
-  return statusText(/^\d+$/.test(status) ? "waxpeer" : "supplier", status);
+  return statusText(/^\d+$/.test(status) ? "waxpeer" : "market", status);
 }
 
 export function StateCell({ row }: { row: AdminTradeRow }) {

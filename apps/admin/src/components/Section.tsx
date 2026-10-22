@@ -62,7 +62,7 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
 }
 
 /**
- * Technical fields (ids to search a supplier's cabinet by, raw codes) folded under «Подробнее»
+ * Technical fields (ids to search a market's cabinet by, raw codes) folded under «Подробнее»
  * at the end of a section: an operator opens them when matching logs, not on every visit.
  */
 export function More({ children, label = "Подробнее" }: { children: ReactNode; label?: string }) {

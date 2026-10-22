@@ -76,7 +76,7 @@ export function TradeBlock({ trade }: { trade: AdminTradeOut | null }) {
             <Row label="Продавец">{sellerText(trade.seller)}</Row>
             {trade.reason !== null && (
               <Row label="Причина">
-                <Reason of="supplier" code={trade.reason} />
+                <Reason of="market" code={trade.reason} />
               </Row>
             )}
             <Row label="Штрафы">{penaltiesText(trade.penalties)}</Row>

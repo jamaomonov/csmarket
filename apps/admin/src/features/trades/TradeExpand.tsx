@@ -1,6 +1,6 @@
 /**
  * A trade's details under its row: the timeline with exact times (seconds: what an operator
- * matches against a supplier's or Steam's log), the source's own record in words, the Steam
+ * matches against a market's or Steam's log), the source's own record in words, the Steam
  * offer, read from the order page's data (`GET /admin/orders/{number}`, fetched on expand).
  */
 import { useQuery } from "@tanstack/react-query";
@@ -47,11 +47,11 @@ export function timeline(detail: AdminOrderDetail): Step[] {
 
 function SourceStatus({ status, waxpeer }: { status: string | null; waxpeer: boolean }) {
   if (status === null) return <>—</>;
-  return <Status of={waxpeer ? "waxpeer" : "supplier"} code={status} />;
+  return <Status of={waxpeer ? "waxpeer" : "market"} code={status} />;
 }
 
-function SupplierReason({ code }: { code: string | null }) {
-  return code === null ? <>—</> : <Reason of="supplier" code={code} />;
+function MarketReason({ code }: { code: string | null }) {
+  return code === null ? <>—</> : <Reason of="market" code={code} />;
 }
 
 /** The source's own record in words: its status, its purchase number and why it failed. */
@@ -61,14 +61,14 @@ function sourceFields(detail: AdminOrderDetail): [string, ReactNode][] {
     return [
       ["Статус", <SourceStatus key="s" status={skinslink.status} waxpeer={false} />],
       ["Покупка", skinslink.purchase_id === null ? "—" : String(skinslink.purchase_id)],
-      ["Причина", <SupplierReason key="r" code={skinslink.fail_reason} />],
+      ["Причина", <MarketReason key="r" code={skinslink.fail_reason} />],
     ];
   }
   if (lisskins !== null) {
     return [
       ["Статус", <SourceStatus key="s" status={lisskins.status} waxpeer={false} />],
       ["Покупка", lisskins.purchase_id === null ? "—" : String(lisskins.purchase_id)],
-      ["Причина", <SupplierReason key="r" code={lisskins.return_reason ?? lisskins.error} />],
+      ["Причина", <MarketReason key="r" code={lisskins.return_reason ?? lisskins.error} />],
     ];
   }
   if (trade !== null) {
@@ -82,7 +82,7 @@ function sourceFields(detail: AdminOrderDetail): [string, ReactNode][] {
         />,
       ],
       ["Покупка", trade.waxpeer_id === null ? "—" : String(trade.waxpeer_id)],
-      ["Причина", <SupplierReason key="r" code={trade.reason} />],
+      ["Причина", <MarketReason key="r" code={trade.reason} />],
     ];
   }
   return [];

@@ -143,7 +143,7 @@ export function SaleDetail() {
                 </Row>
                 <Row label="Бот">{s.bot_name ?? "—"}</Row>
                 <Row label="Причина закрытия">
-                  {s.fail_reason === null ? "—" : <Reason of="supplier" code={s.fail_reason} />}
+                  {s.fail_reason === null ? "—" : <Reason of="market" code={s.fail_reason} />}
                 </Row>
               </dl>
             </Section>

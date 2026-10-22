@@ -25,11 +25,11 @@ describe("dictionary", () => {
 
   it("an unknown reason reads «другая причина» and keeps its code", () => {
     expect(reasonWord("failure", "sold_out")).toEqual({ word: "скин продан", unknown: null });
-    expect(reasonWord("return", "brand_new")).toEqual({
+    expect(reasonWord("return", "never_seen")).toEqual({
       word: "другая причина",
-      unknown: "brand_new",
+      unknown: "never_seen",
     });
-    expect(reasonText("return", "brand_new")).toBe("другая причина (brand_new)");
+    expect(reasonText("return", "never_seen")).toBe("другая причина (never_seen)");
   });
 
   it("never reads an inherited key as a word", () => {

@@ -99,8 +99,8 @@ const P2P_REQUEST: Record<RequestStatus, StatusWord> = {
   cancelled: { label: "отменена", tone: "muted" },
 };
 
-/** A supplier's own status word (Skinslink, LIS-SKINS) as we have seen them. */
-const SUPPLIER: Record<string, StatusWord> = {
+/** A market's own status word (Skinslink, LIS-SKINS) as we have seen them. */
+const MARKET: Record<string, StatusWord> = {
   created: { label: "создана", tone: "muted" },
   pending: { label: "ждёт", tone: "progress" },
   active: { label: "идёт", tone: "progress" },
@@ -132,7 +132,7 @@ export const STATUSES = {
   payout: PAYOUT,
   p2pIncoming: P2P_INCOMING,
   p2pRequest: P2P_REQUEST,
-  supplier: SUPPLIER,
+  market: MARKET,
   waxpeer: WAXPEER,
 } as const;
 
@@ -214,8 +214,8 @@ const HOLD_DECISION: Record<string, string> = {
 /** Analytics' «Возвраты»: an order's failure reason, `other` when none was set. */
 const RETURN: Record<string, string> = { ...FAILURE, other: "без причины" };
 
-/** Why a supplier failed or returned a purchase, as far as we have seen the words. */
-const SUPPLIER_REASON: Record<string, string> = {
+/** Why a market failed or returned a purchase, as far as we have seen the words. */
+const MARKET_REASON: Record<string, string> = {
   trade_create_error: "Steam не создал обмен",
   not_accepted: "обмен не принят",
   "not accepted": "обмен не принят",
@@ -238,7 +238,7 @@ export const REASONS = {
   holdReason: HOLD_REASON,
   holdDecision: HOLD_DECISION,
   return: RETURN,
-  supplier: SUPPLIER_REASON,
+  market: MARKET_REASON,
   catalogueJob: CATALOGUE_JOB,
 } as const;
 

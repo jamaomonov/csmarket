@@ -250,10 +250,10 @@ describe("TradesPage", () => {
     ]);
     expect(within(details).getByText("идёт")).toBeInTheDocument();
     expect(within(details).getByText("178")).toBeInTheDocument();
-    // An unknown supplier reason reads «другая причина» with its code small.
+    // An unknown market reason reads «другая причина» with its code small.
     expect(within(details).getByText("timeout")).toHaveClass("text-meta");
     expect(within(details).getByText(/другая причина/)).toBeInTheDocument();
-    // The exact time, with seconds, to match against a supplier's or Steam's log.
+    // The exact time, with seconds, to match against a market's or Steam's log.
     expect(within(steps).getAllByRole("listitem")[0]).toHaveTextContent(
       /\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}:\d{2}/,
     );

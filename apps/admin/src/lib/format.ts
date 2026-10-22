@@ -21,7 +21,7 @@ export function formatDateTime(iso: string): string {
   return `${date} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
-/** `DD.MM.YYYY HH:MM:SS`: the exact time an operator matches against a supplier's or Steam's log. */
+/** `DD.MM.YYYY HH:MM:SS`: the exact time an operator matches against a market's or Steam's log. */
 export function formatDateTimeSeconds(iso: string): string {
   const s = new Date(iso).getSeconds();
   return `${formatDateTime(iso)}:${String(s).padStart(2, "0")}`;

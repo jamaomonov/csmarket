@@ -21,9 +21,7 @@ export function SkinslinkBlock({ purchase: p }: SkinslinkBlockProps) {
   return (
     <Section title="Покупка Skinslink">
       <dl>
-        <Row label="Статус">
-          {p.status === null ? "—" : <Status of="supplier" code={p.status} />}
-        </Row>
+        <Row label="Статус">{p.status === null ? "—" : <Status of="market" code={p.status} />}</Row>
         <Row label="Предложение">
           {p.offer_url !== null && p.offer_id !== null ? (
             <a href={p.offer_url} target="_blank" rel="noreferrer" className={LINK}>
@@ -36,7 +34,7 @@ export function SkinslinkBlock({ purchase: p }: SkinslinkBlockProps) {
         <Row label="Списано">{p.amount_usd === null ? "—" : `$${p.amount_usd}`}</Row>
         {p.fail_reason !== null && (
           <Row label="Причина">
-            <Reason of="supplier" code={p.fail_reason} />
+            <Reason of="market" code={p.fail_reason} />
           </Row>
         )}
         {p.hold_end_date !== null && <Row label="Холд до">{when(p.hold_end_date)}</Row>}
