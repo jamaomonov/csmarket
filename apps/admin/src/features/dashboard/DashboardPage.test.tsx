@@ -169,9 +169,24 @@ describe("DashboardPage", () => {
     expect(await screen.findByRole("table")).toBeInTheDocument();
   });
 
-  it("puts the three «Сделать сейчас» tiles in one row", async () => {
+  it("puts the «Сделать сейчас» tiles in one row: three, or four with sales to check", async () => {
+    const titles = (row: HTMLElement): string[] =>
+      Array.from(row.querySelectorAll<HTMLElement>(":scope > [data-testid^='tile-']")).map((t) =>
+        (t.dataset.testid ?? "").replace(/^tile-/, ""),
+      );
     renderPage();
-    expect(await screen.findByTestId("now-tiles")).toHaveClass("grid-cols-3");
+    let row = await screen.findByTestId("now-tiles");
+    expect(titles(row)).toEqual(["Требуют внимания", "К выплате", "В пути"]);
+    expect(row).toHaveClass("grid-cols-3");
+    cleanup();
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      payouts: { ...DATA.payouts, sales_attention: 3 },
+    });
+    renderPage();
+    row = await screen.findByTestId("now-tiles");
+    expect(titles(row)).toEqual(["Требуют внимания", "К выплате", "В пути", "Продажи: проверить"]);
+    expect(row).toHaveClass("grid-cols-4");
   });
 
   it("shows what buying skins from users earned", async () => {
