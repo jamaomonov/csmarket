@@ -2,8 +2,8 @@
 import { type ReactNode } from "react";
 
 import { type AdminLisskinsPurchaseOut } from "./api";
-import { ATTENTION_LABELS } from "./labels";
 
+import { reasonText } from "@/lib/dictionary";
 import { formatDateTime } from "@/lib/format";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -54,7 +54,7 @@ export function LisskinsBlock({ purchase: p }: LisskinsBlockProps) {
         )}
         {p.attention_reason !== null && (
           <Field label="Внимание">
-            {ATTENTION_LABELS[p.attention_reason]}
+            {reasonText("orderAttention", p.attention_reason)}
             {p.resolved_at !== null && ` · разобрано ${when(p.resolved_at)}`}
           </Field>
         )}

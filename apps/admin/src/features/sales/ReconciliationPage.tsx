@@ -8,19 +8,13 @@ import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { type ReactNode, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import {
-  FLAG_LABELS,
-  getReconciliation,
-  RECON_KEY,
-  type ReconDays,
-  type ReconPage,
-} from "./reconApi";
-import { SaleStatusChip } from "./StatusChips";
+import { getReconciliation, RECON_KEY, type ReconDays, type ReconPage } from "./reconApi";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Reason, Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
@@ -136,8 +130,10 @@ export function ReconciliationPage() {
             header: "Статус",
             cell: (r) => (
               <>
-                <SaleStatusChip status={r.status} />
-                {r.flag && <div className="text-danger text-xs">{FLAG_LABELS[r.flag]}</div>}
+                <Status of="sale" code={r.status} />
+                {r.flag && (
+                  <Reason of="reconFlag" code={r.flag} className="text-danger block text-xs" />
+                )}
               </>
             ),
           },
@@ -180,7 +176,7 @@ export function ReconciliationPage() {
               <span>
                 из <Money usd={r.quoted_usd} />
               </span>
-              {r.flag && <span className="text-danger">{FLAG_LABELS[r.flag]}</span>}
+              {r.flag && <Reason of="reconFlag" code={r.flag} className="text-danger" />}
               {r.done_at ? (
                 <When iso={r.done_at} className="text-fg-dim ml-auto text-xs" />
               ) : (

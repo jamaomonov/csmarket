@@ -16,12 +16,13 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { decideHold, getHolds, type Hold, type HoldPage } from "./api";
-import { HOLD_DECISION_LABELS, HOLD_REASON_LABELS, holdErrorText } from "./labels";
+import { holdErrorText } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { Modal } from "@/components/Modal";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Reason } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
@@ -128,10 +129,11 @@ function Actions({ onPick }: { onPick: (a: Act) => void }) {
 }
 
 function DecisionCell({ h }: { h: Hold }) {
-  const label = h.decision === null ? "—" : (HOLD_DECISION_LABELS[h.decision] ?? h.decision);
   return (
     <div className="text-sm">
-      <div>{label}</div>
+      <div>
+        {h.decision === null ? "—" : <Reason of="holdDecision" code={h.decision} capitalise />}
+      </div>
       <div className="text-fg-muted text-xs">
         {h.decided_by?.display_name ?? "—"}
         {h.decided_at !== null && (
@@ -226,7 +228,7 @@ export function HoldsPage() {
             header: "Причина",
             cell: (h) => (
               <>
-                {HOLD_REASON_LABELS[h.reason] ?? h.reason}
+                <Reason of="holdReason" code={h.reason} capitalise />
                 <div className="text-fg-muted text-xs">{windowText(h)}</div>
               </>
             ),

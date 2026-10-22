@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { PAYOUTS_KEY } from "./keys";
-import { cardLabel, FLAG_LABELS, PAYOUT_LABELS } from "./labels";
+import { cardLabel, FLAG_DANGER, PAYOUT_TABS } from "./labels";
 import {
   listPayouts,
   PAYOUT_STATUSES,
@@ -31,6 +31,7 @@ import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
+import { reasonText } from "@/lib/dictionary";
 import { formatSum } from "@/lib/format";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
@@ -56,8 +57,8 @@ function Flags({ row }: { row: PayoutRow }) {
         <StatusChip tone="info">платит {claimed.display_name ?? "администратор"}</StatusChip>
       ) : null}
       {(row.flags ?? []).map((f) => (
-        <StatusChip key={f} tone={FLAG_LABELS[f].danger ? "danger" : "progress"}>
-          {FLAG_LABELS[f].text}
+        <StatusChip key={f} tone={FLAG_DANGER[f] ? "danger" : "progress"}>
+          {reasonText("payoutFlag", f)}
         </StatusChip>
       ))}
     </div>
@@ -154,7 +155,7 @@ export function PayoutsPage() {
             }}
             items={PAYOUT_STATUSES.map((s) => ({
               key: s,
-              label: PAYOUT_LABELS[s],
+              label: PAYOUT_TABS[s],
               ...(counts !== null && { count: counts[s] }),
               alert: s === "to_pay",
             }))}
@@ -177,7 +178,7 @@ export function PayoutsPage() {
         error={query.isError ? errorText(query.error) : undefined}
         empty="Заявок нет."
         attention={(r) =>
-          (r.flags ?? []).some((f) => FLAG_LABELS[f].danger) ||
+          (r.flags ?? []).some((f) => FLAG_DANGER[f]) ||
           (r.status === "to_pay" &&
             r.to_pay_at !== null &&
             waitingFor(r.to_pay_at).level === "overdue")

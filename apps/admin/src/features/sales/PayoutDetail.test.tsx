@@ -328,7 +328,7 @@ describe("PayoutDetail", () => {
       can_decide: false,
     });
     renderPage();
-    expect(await screen.findByText("Отменено: продавец отменил обмен")).toBeInTheDocument();
+    expect(await screen.findByText("отменено: продавец отменил обмен")).toBeInTheDocument();
   });
 
   it("shows the risks and blocks selling from the page", async () => {

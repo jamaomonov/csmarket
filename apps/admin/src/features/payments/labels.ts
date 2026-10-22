@@ -1,35 +1,14 @@
 /** Operator-facing Russian labels for the payments pages. Unknown values fall back to the raw code. */
 import { type KassaTxn } from "./api";
-import { type PaymentPurpose, type PaymentStatus } from "./kinds";
+import { type PaymentPurpose } from "./kinds";
 
-import { type Tone } from "@/components/StatusChip";
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 import { formatSum } from "@/lib/format";
 
-export const STATUS_LABELS: Record<PaymentStatus, string> = {
-  created: "создан",
-  pending: "ждёт кассу",
-  succeeded: "оплачен",
-  failed: "не прошёл",
-  cancelled: "отменён",
-  refunded: "возвращён",
-};
-
 export const PURPOSE_LABELS: Record<PaymentPurpose, string> = {
   topup: "пополнение",
   order: "заказ",
-};
-
-/** Tailwind classes of the status chip. */
-/** One tone per state (refunds neutral: the money went back, the case is closed). */
-export const STATUS_TONE: Record<PaymentStatus, Tone> = {
-  created: "muted",
-  pending: "progress",
-  succeeded: "success",
-  failed: "danger",
-  cancelled: "muted",
-  refunded: "neutral",
 };
 
 const KASSA_STATUSES: Record<string, string> = {
@@ -75,18 +54,6 @@ export const EXTRA_LABELS: readonly (readonly [string, string])[] = [
 export function safeExtraValue(key: string, value: string): string {
   return key === "phone" && /\d{5,}/.test(value) ? "скрыт" : value;
 }
-
-export const HOLD_REASON_LABELS: Record<string, string> = {
-  kassa_limit: "Лимит кассы",
-  user_limit: "Лимит пользователя",
-  check_failed: "Проверка не сработала",
-};
-
-export const HOLD_DECISION_LABELS: Record<string, string> = {
-  released: "Пропущен",
-  returned: "Возвращён на карту",
-  reversed_by_kassa: "Отменён кассой",
-};
 
 const HOLD_ERRORS: Record<string, string> = {
   hold_decided: "Этот платёж уже решён — страница обновлена.",

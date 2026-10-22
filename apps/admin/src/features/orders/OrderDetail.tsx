@@ -3,23 +3,24 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { type AdminOrderDetail, getOrder } from "./api";
+import { AttentionBadge } from "./AttentionBadge";
 import { detailKey } from "./keys";
 import { type AttentionReason } from "./kinds";
-import { ATTENTION_LABELS, FAILURE_LABELS } from "./labels";
+import { orderChip } from "./labels";
 import { LisskinsBlock } from "./LisskinsBlock";
 import { OrderActions } from "./OrderActions";
 import { SkinslinkBlock } from "./SkinslinkBlock";
-import { AttentionBadge, OrderStatusChip } from "./StatusChip";
 import { TradeBlock } from "./TradeBlock";
 
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { Status } from "@/components/Status";
 import { TradeLinkValue } from "@/components/SteamLinks";
 import { UserCell } from "@/components/UserCell";
-import { StatusChip as PaymentStatusChip } from "@/features/payments/StatusChip";
 import { errorText, providerLabel } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
+import { reasonText } from "@/lib/dictionary";
 import { formatDateTime, formatSum } from "@/lib/format";
 
 const SOURCE_LABELS: Record<AdminOrderDetail["order"]["source"], string> = {
@@ -87,7 +88,7 @@ function Timeline({ detail }: { detail: AdminOrderDetail }) {
         {order.failed_at !== null && (
           <Row label="Не получилось">
             {when(order.failed_at)}
-            {order.failure_reason !== null && ` · ${FAILURE_LABELS[order.failure_reason]}`}
+            {order.failure_reason !== null && ` · ${reasonText("failure", order.failure_reason)}`}
           </Row>
         )}
         {order.refunded_at !== null && (
@@ -138,7 +139,7 @@ function Payments({ detail }: { detail: AdminOrderDetail }) {
             <Link to={`/payments/${p.id}`} className="hover:underline">
               {providerLabel(p.provider)} · {formatSum(p.amount_uzs)}
             </Link>
-            <PaymentStatusChip status={p.status} />
+            <Status of="payment" code={p.status} />
             <span className="text-fg-muted">{formatDateTime(p.created_at)}</span>
           </li>
         ))}
@@ -166,10 +167,13 @@ export function OrderDetail() {
         badges={
           detail && (
             <>
-              <OrderStatusChip
-                status={detail.order.status}
-                protectedUntil={detail.order.protected_until}
-                estimated={detail.order.protected_estimated}
+              <Status
+                {...orderChip(
+                  detail.order.status,
+                  detail.order.protected_until,
+                  detail.order.protected_estimated,
+                )}
+                testId="order-status"
               />
               <AttentionBadge reason={open} />
             </>
@@ -187,8 +191,8 @@ export function OrderDetail() {
         <div className="space-y-4" data-testid="order-detail">
           {open !== null && (
             <Banner>
-              Требует внимания: {ATTENTION_LABELS[open]}. Решите по ответу площадки, затем отметьте
-              «Разобрано».
+              Требует внимания: {reasonText("orderAttention", open)}. Решите по ответу площадки,
+              затем отметьте «Разобрано».
             </Banner>
           )}
           <OrderActions

@@ -116,7 +116,7 @@ describe("TradesPage", () => {
     );
     expect(api.listTrades).toHaveBeenCalledWith({ view: "all" });
     expect(screen.getByRole("tab", { name: "Все 40" })).toHaveAttribute("aria-selected", "true");
-    for (const name of ["В пути 5", "На холде 3", "Требуют внимания 2", "Возвраты 1"]) {
+    for (const name of ["В пути 5", "На защите 3", "Требуют внимания 2", "Возвраты 1"]) {
       expect(screen.getByRole("tab", { name })).toHaveAttribute("aria-selected", "false");
     }
   });
@@ -124,7 +124,7 @@ describe("TradesPage", () => {
   it("requests the tab's view when it is clicked", async () => {
     api.listTrades.mockResolvedValue(page([ROW]));
     renderPage();
-    fireEvent.click(await screen.findByRole("tab", { name: "На холде 3" }));
+    fireEvent.click(await screen.findByRole("tab", { name: "На защите 3" }));
     await waitFor(() => {
       expect(api.listTrades).toHaveBeenCalledWith({ view: "hold" });
     });
@@ -165,7 +165,7 @@ describe("TradesPage", () => {
     expect(within(row).getByRole("link", { name: "Ivan" })).toHaveAttribute("href", "/users/u-1");
     expect(within(row).getByText("Click")).toBeInTheDocument();
     expect(within(row).getByTestId("trade-state")).toHaveTextContent("отправлен");
-    expect(within(row).getByTestId("trade-state")).toHaveAttribute("title", "Площадка: active");
+    expect(within(row).getByTestId("trade-state")).toHaveAttribute("title", "Площадка: идёт");
     expect(within(row).getByText("3 мин назад")).toBeInTheDocument();
   });
 
@@ -194,8 +194,8 @@ describe("TradesPage", () => {
     api.listTrades.mockResolvedValue(page([HELD]));
     renderPage();
     const row = await rowOf("H1");
-    expect(within(row).getByTestId("trade-state")).toHaveTextContent("на холде");
-    expect(within(row).getByTestId("hold-left")).toHaveTextContent(/^6д 4ч · 15\.10$/);
+    expect(within(row).getByTestId("trade-state")).toHaveTextContent(/^принят$/);
+    expect(within(row).getByTestId("hold-left")).toHaveTextContent(/^защита до 15\.10 · 6д 4ч$/);
   });
 
   it("names an API order's owner and a refund's reason", async () => {
@@ -204,7 +204,8 @@ describe("TradesPage", () => {
     const row = await rowOf("R1");
     expect(within(row).getByText("LIS-SKINS")).toBeInTheDocument();
     expect(within(row).getByText("API · Partner Co")).toBeInTheDocument();
-    expect(within(row).getByTestId("trade-state")).toHaveTextContent("возврат · обмен не принят");
+    expect(within(row).getByTestId("trade-state")).toHaveTextContent(/^возврат$/);
+    expect(within(row).getByText("обмен не принят")).toBeInTheDocument();
     expect(within(row).getByText("—")).toBeInTheDocument();
   });
 
@@ -345,6 +346,6 @@ describe("TradesPage", () => {
       ]),
     );
     renderPage();
-    expect(await screen.findByTestId("hold-left")).toHaveTextContent(/^≈ /);
+    expect(await screen.findByTestId("hold-left")).toHaveTextContent(/^защита до ≈ /);
   });
 });

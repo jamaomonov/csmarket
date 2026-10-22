@@ -4,15 +4,15 @@ import { type MouseEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminTradeRow } from "./api";
-import { SOURCE_LABELS, STATE_LABELS, STATE_TONE } from "./labels";
+import { SOURCE_LABELS } from "./labels";
 import { shortDate, timeLeft } from "./time";
 import { TradeExpand } from "./TradeExpand";
-import { ATTENTION_LABELS, FAILURE_LABELS } from "../orders/labels";
-import { AttentionBadge } from "../orders/StatusChip";
+import { AttentionBadge } from "../orders/AttentionBadge";
 
-import { StatusChip } from "@/components/StatusChip";
+import { Reason, Status } from "@/components/Status";
 import { When } from "@/components/When";
 import { providerLabel } from "@/features/users/labels";
+import { statusText } from "@/lib/dictionary";
 import { formatSum } from "@/lib/format";
 
 /** Columns of the table, the chevron's included (the details row spans them all). */
@@ -66,33 +66,43 @@ export function SkinCell({ row }: { row: AdminTradeRow }) {
   );
 }
 
+/** The source's own status word for a tooltip: Waxpeer's code is digits, the rest a word. */
+export function sourceStatusText(status: string): string {
+  return statusText(/^\d+$/.test(status) ? "waxpeer" : "supplier", status);
+}
+
 export function StateCell({ row }: { row: AdminTradeRow }) {
-  const reason =
-    row.trade_state === "refunded" && row.failure_reason !== null
-      ? ` · ${FAILURE_LABELS[row.failure_reason]}`
-      : "";
+  const hold =
+    row.trade_state === "hold" && row.protected_until !== null ? row.protected_until : null;
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-1">
-        <StatusChip
-          tone={STATE_TONE[row.trade_state]}
+        <Status
+          of="trade"
+          code={row.trade_state}
           testId="trade-state"
-          {...(row.source_status === null ? {} : { title: `Площадка: ${row.source_status}` })}
-        >
-          {STATE_LABELS[row.trade_state]}
-          {reason}
-        </StatusChip>
+          title={
+            row.source_status === null
+              ? undefined
+              : `Площадка: ${sourceStatusText(row.source_status)}`
+          }
+        />
         <AttentionBadge reason={row.attention_reason} />
       </div>
-      {row.attention_reason !== null && (
-        <p className="text-danger whitespace-nowrap text-xs">
-          {ATTENTION_LABELS[row.attention_reason]}
-        </p>
+      {row.trade_state === "refunded" && row.failure_reason !== null && (
+        <Reason of="failure" code={row.failure_reason} className="text-fg-muted block text-xs" />
       )}
-      {row.trade_state === "hold" && row.protected_until !== null && (
+      {row.attention_reason !== null && (
+        <Reason
+          of="orderAttention"
+          code={row.attention_reason}
+          className="text-danger block whitespace-nowrap text-xs"
+        />
+      )}
+      {hold !== null && (
         <p data-testid="hold-left" className="text-fg-muted whitespace-nowrap text-xs">
-          {row.protected_estimated ? "≈ " : ""}
-          {timeLeft(row.protected_until)} · {shortDate(row.protected_until)}
+          защита до {row.protected_estimated ? "≈ " : ""}
+          {shortDate(hold)} · {timeLeft(hold)}
         </p>
       )}
     </div>

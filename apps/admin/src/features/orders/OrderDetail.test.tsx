@@ -158,7 +158,7 @@ describe("OrderDetail", () => {
   it("renders the trade block and the whole trade link", async () => {
     renderDetail();
     const trade = await screen.findByRole("region", { name: "Обмен" });
-    expect(within(trade).getByText("4 — предложение отправлено")).toBeInTheDocument();
+    expect(within(trade).getByText("предложение отправлено")).toBeInTheDocument();
     expect(within(trade).getByRole("link", { name: "7000000001" })).toHaveAttribute(
       "href",
       "https://steamcommunity.com/tradeoffer/7000000001/",

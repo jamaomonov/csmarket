@@ -10,19 +10,19 @@ import { Link, useParams } from "react-router-dom";
 
 import { type AdminSale, getSale, resolveSale } from "./api";
 import { SALES_LIST_KEY, saleKey } from "./keys";
-import { ATTENTION_LABELS, cardLabel, payoutErrorText } from "./labels";
+import { cardLabel, payoutErrorText } from "./labels";
 import { ItemList } from "./Parts";
-import { SaleStatusChip } from "./StatusChips";
-import { PayoutStatusChip } from "./StatusChips";
 
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { Status } from "@/components/Status";
 import { SteamOfferValue } from "@/components/SteamLinks";
 import { UserCell } from "@/components/UserCell";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
+import { reasonText } from "@/lib/dictionary";
 import { formatDateTime } from "@/lib/format";
 
 const at = (iso: string | null): string => (iso ? formatDateTime(iso) : "—");
@@ -44,7 +44,7 @@ function Attention({ sale }: { sale: AdminSale }) {
     },
   });
   if (sale.attention_reason === null) return null;
-  const label = ATTENTION_LABELS[sale.attention_reason];
+  const label = reasonText("saleAttention", sale.attention_reason);
   if (!sale.attention_open) {
     return (
       <Banner tone="info">
@@ -101,7 +101,7 @@ export function SaleDetail() {
       <PageHeader
         back={{ to: "/sales", label: "Продажи" }}
         title={<span className="font-mono">{s.number}</span>}
-        badges={<SaleStatusChip status={s.status} danger={s.attention_open} />}
+        badges={<Status of="sale" code={s.status} tone={s.attention_open ? "danger" : undefined} />}
       />
       <Attention sale={s} />
       <DetailGrid
@@ -122,7 +122,7 @@ export function SaleDetail() {
                 {s.payout ? (
                   <Row label="Выплата на карту">
                     <Link to={`/payouts/${s.payout.id}`} className="hover:underline">
-                      <PayoutStatusChip status={s.payout.status} />
+                      <Status of="payout" code={s.payout.status} />
                     </Link>
                   </Row>
                 ) : null}

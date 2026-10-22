@@ -8,16 +8,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
 
 import { payoutKey } from "./keys";
+import { payoutCode } from "./labels";
 import { ItemList } from "./Parts";
 import { PayBlock } from "./PayBlock";
 import { CANCEL_LABEL, PayoutActions } from "./PayoutActions";
 import { getPayout, type PayoutDetail as Detail } from "./payoutsApi";
 import { RiskBlock } from "./RiskBlock";
-import { PayoutStatusChip, SaleStatusChip } from "./StatusChips";
 
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { Status } from "@/components/Status";
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
@@ -74,7 +75,7 @@ function History({ d }: { d: Detail }) {
                 <Link to={`/payouts/${h.id}`} className="font-mono hover:underline">
                   {h.sale_number}
                 </Link>
-                <PayoutStatusChip status={h.status} />
+                <Status of="payout" code={h.status} />
                 <Money uzs={h.amount_uzs} />
               </li>
             ))}
@@ -90,7 +91,7 @@ function History({ d }: { d: Detail }) {
                 <Link to={`/sales/${h.number}`} className="font-mono hover:underline">
                   {h.number}
                 </Link>
-                <SaleStatusChip status={h.status} />
+                <Status of="sale" code={h.status} />
                 <Money uzs={h.payout_uzs} />
               </li>
             ))}
@@ -149,12 +150,7 @@ export function PayoutDetail() {
           </>
         }
         meta={d.request.user.display_name ?? "Без имени"}
-        badges={
-          <PayoutStatusChip
-            status={d.request.status}
-            sellerReverted={(d.request.flags ?? []).includes("seller_reverted")}
-          />
-        }
+        badges={<Status of="payout" code={payoutCode(d.request.status, d.request.flags)} />}
       />
       {blocked ? (
         <Banner>

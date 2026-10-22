@@ -7,10 +7,10 @@ import { type AdminTradeRow } from "./api";
 import { SOURCE_LABELS } from "./labels";
 import { type AdminOrderDetail, getOrder } from "../orders/api";
 import { detailKey } from "../orders/keys";
-import { FAILURE_LABELS, waxpeerStatusLabel } from "../orders/labels";
 
 import { TradeLinkValue } from "@/components/SteamLinks";
 import { errorText } from "@/features/users/labels";
+import { reasonText, statusText } from "@/lib/dictionary";
 import { formatDateTime } from "@/lib/format";
 
 interface Step {
@@ -21,7 +21,7 @@ interface Step {
 /** What happened, oldest first; steps not reached are left out. */
 export function timeline(detail: AdminOrderDetail): Step[] {
   const o = detail.order;
-  const refund = o.failure_reason === null ? "" : ` · ${FAILURE_LABELS[o.failure_reason]}`;
+  const refund = o.failure_reason === null ? "" : ` · ${reasonText("failure", o.failure_reason)}`;
   const steps: [string, string | null][] = [
     ["Создан", o.created_at],
     ["Оплачен", o.paid_at],
@@ -59,7 +59,7 @@ function sourceFields(detail: AdminOrderDetail): [string, string][] {
   }
   if (trade !== null) {
     return [
-      ["Статус", waxpeerStatusLabel(trade.status)],
+      ["Статус", trade.status === null ? "—" : statusText("waxpeer", String(trade.status))],
       ["Waxpeer id", trade.waxpeer_id === null ? "—" : String(trade.waxpeer_id)],
       ["Причина", trade.reason ?? "—"],
     ];

@@ -2,9 +2,9 @@
 import { type ReactNode } from "react";
 
 import { type AdminTradeOut } from "./api";
-import { ATTENTION_LABELS, waxpeerStatusLabel } from "./labels";
 
 import { CopyButton } from "@/components/CopyButton";
+import { reasonText, statusText } from "@/lib/dictionary";
 import { formatDateTime } from "@/lib/format";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -37,7 +37,7 @@ function Attention({ trade }: { trade: AdminTradeOut }) {
   if (trade.attention_reason === null) return null;
   return (
     <Field label="Внимание">
-      {ATTENTION_LABELS[trade.attention_reason]}
+      {reasonText("orderAttention", trade.attention_reason)}
       {trade.resolved_at !== null && (
         <span className="text-fg-muted">
           {" "}
@@ -57,7 +57,9 @@ export function TradeBlock({ trade }: { trade: AdminTradeOut | null }) {
         <p className="text-fg-muted text-sm">Покупки в Waxpeer ещё не было.</p>
       ) : (
         <dl className="space-y-1 text-sm">
-          <Field label="Статус Waxpeer">{waxpeerStatusLabel(trade.status)}</Field>
+          <Field label="Статус Waxpeer">
+            {trade.status === null ? "—" : statusText("waxpeer", String(trade.status))}
+          </Field>
           <Field label="Обмен в Steam">
             {trade.trade_id === null ? (
               "—"

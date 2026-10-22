@@ -1,69 +1,37 @@
-/** Operator-facing Russian labels for the order page and the order rows. Unknown codes show raw. */
-import { type AttentionReason, type FailureReason, type OrderStatus } from "./kinds";
+/** The order's chip and its actions' errors in Russian; statuses and reasons are `lib/dictionary`. */
+import { type OrderStatus } from "./kinds";
 
-import { type Tone } from "@/components/StatusChip";
 import { errorText } from "@/features/users/labels";
 import { ApiError } from "@/lib/api";
+import { formatDateTime } from "@/lib/format";
 
-export const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "ждёт оплаты",
-  held: "На проверке",
-  paid: "оплачен",
-  buying: "покупаем",
-  trade_sent: "обмен отправлен",
-  delivered: "получен",
-  cancelled: "отменён",
-  failed: "не получилось",
-  returned: "обмен не состоялся",
-};
+interface OrderChip {
+  of: "order";
+  code: OrderStatus | "accepted";
+  sub?: string;
+  title?: string;
+}
 
-/** Tailwind classes of the status chip. */
-/** One tone per state (refunds neutral: the money went back, the case is closed). */
-export const STATUS_TONE: Record<OrderStatus, Tone> = {
-  pending: "muted",
-  held: "progress",
-  paid: "progress",
-  buying: "progress",
-  trade_sent: "progress",
-  delivered: "success",
-  cancelled: "muted",
-  failed: "danger",
-  returned: "neutral",
-};
-
-export const ATTENTION_LABELS: Record<AttentionReason, string> = {
-  buy_unconfirmed: "ответ площадки потерян",
-  ambiguous_trade: "несколько обменов",
-  rolled_back: "откат после получения",
-  source_forbidden: "Площадка: IP не в белом списке",
-  audit_divergence: "расхождение со сверкой",
-};
-
-export const FAILURE_LABELS: Record<FailureReason, string> = {
-  sold_out: "скин продан",
-  source_low_balance: "не хватило денег на площадке",
-  invalid_trade_link: "неверная трейд-ссылка",
-  not_accepted: "обмен не принят",
-  trade_hold: "задержка обменов Steam",
-  price_moved: "цена поставщика выросла",
-  source_refused: "продавец не отдал скин",
-  admin: "вернул администратор",
-};
-
-/** Waxpeer's trade status codes we know (`orders.trades`); any other shows as a bare code. */
-export function waxpeerStatusLabel(status: number | null): string {
-  switch (status) {
-    case null:
-      return "—";
-    case 4:
-      return "4 — предложение отправлено";
-    case 5:
-      return "5 — выдан покупателю";
-    case 6:
-      return "6 — не состоялся";
-    default:
-      return String(status);
+/**
+ * An order's chip: an accepted trade under Steam's protection reads «принят» with «защита до
+ * DD.MM» under it (not stuck, a rollback is still possible), the same word as its trade row.
+ */
+export function orderChip(
+  status: OrderStatus,
+  protectedUntil: string | null = null,
+  estimated = false,
+): OrderChip {
+  const running = protectedUntil !== null && new Date(protectedUntil).getTime() > Date.now();
+  if (protectedUntil !== null && (status === "trade_sent" || (status === "delivered" && running))) {
+    const approx = estimated ? "≈ " : "";
+    return {
+      of: "order",
+      code: "accepted",
+      sub: `защита до ${approx}${formatDateTime(protectedUntil).slice(0, 5)}`,
+      title: `Покупатель принял обмен. Защита Steam до ${approx}${formatDateTime(protectedUntil)}, затем «получен».`,
+    };
   }
+  return { of: "order", code: status };
 }
 
 /** Order actions' 409s in Russian; the API's English `detail` is never shown for these. */

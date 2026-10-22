@@ -62,7 +62,7 @@ describe("ReconciliationPage", () => {
   it("shows the totals and flags a short credit", async () => {
     renderPage();
     expect((await screen.findAllByText("S7K2M9QX")).length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Недозачислено").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("недозачислено").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Итоги")).toHaveTextContent("Проблемы1");
     expect(api.getReconciliation).toHaveBeenCalledWith({ days: 7, problems: false });
   });

@@ -17,14 +17,12 @@ import {
   PURPOSE_LABELS,
   safeExtraValue,
 } from "./labels";
-import { StatusChip } from "./StatusChip";
 
 import { PageHeader } from "@/components/PageHeader";
 import { DetailGrid } from "@/components/Section";
+import { Status } from "@/components/Status";
 import { UserCell } from "@/components/UserCell";
-import { OrderStatusChip } from "@/features/orders/StatusChip";
 import { errorText, providerLabel } from "@/features/users/labels";
-import { TopupStatusChip } from "@/features/users/TopupStatusChip";
 import { ApiError } from "@/lib/api";
 import { formatDateTime, formatSum } from "@/lib/format";
 
@@ -51,7 +49,7 @@ function TopupBlock({ topup }: { topup: PaymentTopup }) {
         </Field>
         <Field label="Сумма">{formatSum(topup.amount_uzs)}</Field>
         <Field label="Статус">
-          <TopupStatusChip status={topup.status} />
+          <Status of="topup" code={topup.status} />
         </Field>
         <Field label="Действует до">{when(topup.expires_at)}</Field>
         <Field label="Зачислено">{when(topup.succeeded_at)}</Field>
@@ -72,7 +70,7 @@ function OrderBlock({ order }: { order: PaymentOrder }) {
         </Field>
         <Field label="Цена">{formatSum(order.price_uzs)}</Field>
         <Field label="Статус">
-          <OrderStatusChip status={order.status} />
+          <Status of="order" code={order.status} testId="order-status" />
         </Field>
       </dl>
     </section>
@@ -180,7 +178,7 @@ function Body({ detail }: { detail: AdminPaymentDetail }) {
               )}
               <Field label="Касса">{providerLabel(payment.provider)}</Field>
               <Field label="Статус">
-                <StatusChip status={payment.status} />
+                <Status of="payment" code={payment.status} testId="payment-status" />
               </Field>
               <Field label="Пользователь">
                 <UserCell
@@ -220,7 +218,11 @@ export function PaymentDetail() {
       <PageHeader
         back={{ to: "/payments", label: "Все платежи" }}
         title={query.data ? `Платёж ${query.data.payment.number}` : "Платёж"}
-        badges={query.data && <StatusChip status={query.data.payment.status} />}
+        badges={
+          query.data && (
+            <Status of="payment" code={query.data.payment.status} testId="payment-status" />
+          )
+        }
       />
       {query.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {notFound && <p className="text-fg-muted">Платёж не найден.</p>}

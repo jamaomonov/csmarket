@@ -16,17 +16,17 @@ import {
   SALE_STATUSES,
 } from "./api";
 import { SALES_LIST_KEY } from "./keys";
-import { ATTENTION_LABELS, SALE_LABELS } from "./labels";
-import { SaleStatusChip } from "./StatusChips";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText } from "@/features/users/labels";
+import { reasonText, statusText } from "@/lib/dictionary";
 import { pick, upTo } from "@/lib/url-guards";
 import { useDebounced } from "@/lib/useDebounced";
 import { useNarrow } from "@/lib/useNarrow";
@@ -103,7 +103,7 @@ export function SalesPage() {
           label="Статус"
           value={status ?? ""}
           options={SALE_STATUSES}
-          text={(s) => SALE_LABELS[s]}
+          text={(s) => statusText("sale", s)}
           onChange={(v) => {
             url.set("status", v);
           }}
@@ -135,10 +135,10 @@ export function SalesPage() {
             header: "Статус",
             cell: (s) => (
               <>
-                <SaleStatusChip status={s.status} />
+                <Status of="sale" code={s.status} />
                 {s.attention_reason ? (
                   <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
-                    {ATTENTION_LABELS[s.attention_reason]}
+                    {reasonText("saleAttention", s.attention_reason)}
                     {s.attention_open ? "" : " · проверено"}
                   </div>
                 ) : null}
@@ -183,13 +183,13 @@ export function SalesPage() {
               <Money uzs={s.payout_uzs} />
             </div>
             <div className="flex flex-wrap gap-2">
-              <SaleStatusChip status={s.status} />
+              <Status of="sale" code={s.status} />
               <span className="text-fg-muted">{s.user.display_name ?? "Без имени"}</span>
               <When iso={s.created_at} className="text-fg-dim ml-auto text-xs" />
             </div>
             {s.attention_reason ? (
               <div className={s.attention_open ? "text-danger text-xs" : "text-fg-dim text-xs"}>
-                {ATTENTION_LABELS[s.attention_reason]}
+                {reasonText("saleAttention", s.attention_reason)}
                 {s.attention_open ? "" : " · проверено"}
               </div>
             ) : null}

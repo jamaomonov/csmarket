@@ -16,7 +16,6 @@ import {
   tradeVerdictText,
 } from "./labels";
 import { RiskBlock } from "./RiskBlock";
-import { TopupStatusChip } from "./TopupStatusChip";
 import { UsdSwitchDialog } from "./UsdSwitchDialog";
 import { useIdempotencyKey } from "./useIdempotencyKey";
 import { ApiKeyPanel } from "../apiKeys/ApiKeyCard";
@@ -30,6 +29,7 @@ import { Money } from "@/components/Money";
 import { MoreMenu } from "@/components/MoreMenu";
 import { PageHeader } from "@/components/PageHeader";
 import { Banner, DetailGrid, Row, Section } from "@/components/Section";
+import { Status } from "@/components/Status";
 import { StatusChip } from "@/components/StatusChip";
 import { TradeLinkValue } from "@/components/SteamLinks";
 import { Tabs } from "@/components/Tabs";
@@ -152,7 +152,7 @@ function Topups({ topups }: { topups: AdminTopup[] }) {
             align: "right",
             cell: (t) => <Money uzs={t.amount_uzs} />,
           },
-          { key: "status", header: "Статус", cell: (t) => <TopupStatusChip status={t.status} /> },
+          { key: "status", header: "Статус", cell: (t) => <Status of="topup" code={t.status} /> },
           { key: "kassa", header: "Касса", cell: (t) => providerLabel(t.provider) },
           {
             key: "created",

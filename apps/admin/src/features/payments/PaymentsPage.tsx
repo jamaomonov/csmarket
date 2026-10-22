@@ -15,12 +15,12 @@ import {
 } from "./api";
 import { PAYMENT_PROVIDERS, PAYMENT_PURPOSES, PAYMENT_STATUSES, type PaymentStatus } from "./kinds";
 import { PURPOSE_LABELS } from "./labels";
-import { StatusChip } from "./StatusChip";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar, SearchBox } from "@/components/Filters";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
+import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
@@ -169,7 +169,11 @@ export function PaymentsPage() {
               cell: (p) => <Money uzs={paidTotal(p)} />,
             },
             { key: "kassa", header: "Касса", cell: (p) => providerLabel(p.provider) },
-            { key: "status", header: "Статус", cell: (p) => <StatusChip status={p.status} /> },
+            {
+              key: "status",
+              header: "Статус",
+              cell: (p) => <Status of="payment" code={p.status} testId="payment-status" />,
+            },
             {
               key: "user",
               header: "Пользователь",
@@ -190,7 +194,7 @@ export function PaymentsPage() {
                 <Money uzs={paidTotal(p)} />
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <StatusChip status={p.status} />
+                <Status of="payment" code={p.status} testId="payment-status" />
                 <span className="text-fg-muted">{providerLabel(p.provider)}</span>
                 <When iso={p.created_at} className="text-fg-dim ml-auto text-xs" />
               </div>

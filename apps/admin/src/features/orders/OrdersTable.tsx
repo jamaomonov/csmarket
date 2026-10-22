@@ -2,11 +2,13 @@
 import { Link, useNavigate } from "react-router-dom";
 
 import { type AdminOrderRow } from "./api";
-import { AttentionBadge, OrderStatusChip } from "./StatusChip";
+import { AttentionBadge } from "./AttentionBadge";
+import { orderChip } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { Money } from "@/components/Money";
 import { SkinThumb } from "@/components/SkinThumb";
+import { Status } from "@/components/Status";
 import { When } from "@/components/When";
 
 export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label: string }) {
@@ -52,10 +54,9 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
           header: "Статус",
           cell: (o) => (
             <div className="flex flex-wrap items-center gap-1">
-              <OrderStatusChip
-                status={o.status}
-                protectedUntil={o.protected_until}
-                estimated={o.protected_estimated}
+              <Status
+                {...orderChip(o.status, o.protected_until, o.protected_estimated)}
+                testId="order-status"
               />
               <AttentionBadge reason={o.attention_reason} />
             </div>
@@ -78,10 +79,9 @@ export function OrdersTable({ orders, label }: { orders: AdminOrderRow[]; label:
             <span className="truncate">{o.name}</span>
           </div>
           <div className="flex flex-wrap items-center gap-1">
-            <OrderStatusChip
-              status={o.status}
-              protectedUntil={o.protected_until}
-              estimated={o.protected_estimated}
+            <Status
+              {...orderChip(o.status, o.protected_until, o.protected_estimated)}
+              testId="order-status"
             />
             <AttentionBadge reason={o.attention_reason} />
             <When iso={o.created_at} className="text-fg-dim ml-auto text-xs" />

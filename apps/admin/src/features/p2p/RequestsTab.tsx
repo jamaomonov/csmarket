@@ -4,10 +4,9 @@ import { useState } from "react";
 
 import { listRequests, type RequestStatus } from "./api";
 import { requestsKey } from "./keys";
-import { REQUEST_LABELS, REQUEST_TONES } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
-import { StatusChip } from "@/components/StatusChip";
+import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
@@ -60,9 +59,7 @@ export function RequestsTab() {
           {
             key: "status",
             header: "Статус",
-            cell: (r) => (
-              <StatusChip tone={REQUEST_TONES[r.status]}>{REQUEST_LABELS[r.status]}</StatusChip>
-            ),
+            cell: (r) => <Status of="p2pRequest" code={r.status} />,
           },
           {
             key: "created",
@@ -74,7 +71,7 @@ export function RequestsTab() {
           <div className="space-y-1.5 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold tabular-nums">{formatSum(r.amount_uzs)}</span>
-              <StatusChip tone={REQUEST_TONES[r.status]}>{REQUEST_LABELS[r.status]}</StatusChip>
+              <Status of="p2pRequest" code={r.status} />
             </div>
             <UserCell
               id={r.user.id}

@@ -6,11 +6,11 @@ import { useState } from "react";
 import { type Incoming, type IncomingResult, listIncoming } from "./api";
 import { CreditDialog } from "./CreditDialog";
 import { incomingKey } from "./keys";
-import { RESULT_LABELS, RESULT_TONES, wholeSom } from "./labels";
+import { wholeSom } from "./labels";
 
 import { DataTable } from "@/components/DataTable";
 import { FiltersBar, SearchBox } from "@/components/Filters";
-import { StatusChip } from "@/components/StatusChip";
+import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
 import { When } from "@/components/When";
 import { formatSum } from "@/lib/format";
@@ -33,10 +33,11 @@ export function JournalTab() {
     refetchInterval: REFRESH_MS,
   });
   const chip = (r: Incoming) => (
-    <StatusChip tone={r.chain_ok === false ? "danger" : RESULT_TONES[r.result]}>
-      {RESULT_LABELS[r.result]}
-      {r.chain_ok === false ? " · разрыв цепочки" : ""}
-    </StatusChip>
+    <Status
+      of="p2pIncoming"
+      code={r.result}
+      {...(r.chain_ok === false && { tone: "danger", sub: "разрыв цепочки" })}
+    />
   );
   const action = (r: Incoming) =>
     r.can_credit ? (
