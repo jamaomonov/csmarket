@@ -35,6 +35,18 @@ async def test_the_list_filters_by_status_and_number(
     assert [s["number"] for s in r.json()["items"]] == [hold.number]
 
 
+async def test_a_list_row_names_its_dearest_skin_and_how_many(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    headers = await admin_headers()
+    sale = await make_sale(db_session, status="hold")
+    r = await integration_client.get(BASE, params={"q": sale.number}, headers=headers)
+    assert r.status_code == 200, r.text
+    row = r.json()["items"][0]
+    assert row["first_item"] == {"name": "AK-47 | Redline (Field-Tested)", "image_url": None}
+    assert row["items_count"] == 2
+
+
 async def test_a_sales_page_shows_skinslinks_amount_our_payout_and_margin(
     db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
 ) -> None:

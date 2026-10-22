@@ -26,6 +26,7 @@ from csmarket.modules.sales.admin_schemas import (
     AdminSaleItemOut,
     AdminSaleOut,
     AdminSaleRowOut,
+    AdminSaleSkinOut,
     AdminSalesPageOut,
     AdminUserOut,
     AttentionFilter,
@@ -196,6 +197,24 @@ def _attention_where(
     return where
 
 
+async def _first_skins(
+    db: AsyncSession, sale_ids: list[str]
+) -> dict[str, tuple[AdminSaleSkinOut, int]]:
+    """Each sale's dearest skin and its number of skins, in one query for the page."""
+    if not sale_ids:
+        return {}
+    rows = await db.execute(
+        select(SaleItem.sale_id, SaleItem.name, SaleItem.image_url)
+        .where(SaleItem.sale_id.in_(sale_ids))
+        .order_by(SaleItem.price_uzs.desc(), SaleItem.asset_id)
+    )
+    out: dict[str, tuple[AdminSaleSkinOut, int]] = {}
+    for sale_id, name, image in rows.all():
+        first, count = out.get(sale_id, (AdminSaleSkinOut(name=name, image_url=image), 0))
+        out[sale_id] = (first, count + 1)
+    return out
+
+
 async def list_sales_admin(
     db: AsyncSession,
     *,
@@ -222,10 +241,19 @@ async def list_sales_admin(
     found = list((await db.scalars(stmt)).all())
     page = found[:limit]
     users = await users_by_id(db, (s.user_id for s in page))
+    skins = await _first_skins(db, [s.id for s in page])
     next_cursor = encode_cursor(page[-1].created_at, page[-1].id) if len(found) > limit else None
     open_count = await db.scalar(select(func.count()).select_from(Sale).where(ATTENTION_OPEN_SQL))
     return AdminSalesPageOut(
-        items=[sale_row(s, user_of(users, s.user_id)) for s in page],
+        items=[
+            sale_row(s, user_of(users, s.user_id)).model_copy(
+                update={
+                    "first_item": skins[s.id][0] if s.id in skins else None,
+                    "items_count": skins[s.id][1] if s.id in skins else 0,
+                }
+            )
+            for s in page
+        ],
         next_cursor=next_cursor,
         attention_open=int(open_count or 0),
     )

@@ -861,6 +861,17 @@
             "title": "Id",
             "type": "string"
           },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
           "listing_id": {
             "anyOf": [
               {
@@ -2102,6 +2113,21 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "first_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminSaleSkinOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items_count": {
+            "default": 0,
+            "title": "Items Count",
+            "type": "integer"
           },
           "margin_usd": {
             "title": "Margin Usd",
@@ -3842,12 +3868,27 @@
             "title": "Created At",
             "type": "string"
           },
+          "first_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminSaleSkinOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/AdminSaleSkinOut"
             },
             "title": "Items",
             "type": "array"
+          },
+          "items_count": {
+            "default": 0,
+            "title": "Items Count",
+            "type": "integer"
           },
           "margin_usd": {
             "title": "Margin Usd",
@@ -4222,6 +4263,17 @@
           "target_id": {
             "title": "Target Id",
             "type": "string"
+          },
+          "target_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Label"
           },
           "target_type": {
             "title": "Target Type",
