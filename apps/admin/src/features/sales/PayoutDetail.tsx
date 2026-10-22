@@ -10,7 +10,7 @@ import { Link, useParams } from "react-router-dom";
 import { payoutKey } from "./keys";
 import { ItemList } from "./Parts";
 import { PayBlock } from "./PayBlock";
-import { PayoutActions } from "./PayoutActions";
+import { CANCEL_LABEL, PayoutActions } from "./PayoutActions";
 import { getPayout, type PayoutDetail as Detail } from "./payoutsApi";
 import { RiskBlock } from "./RiskBlock";
 import { PayoutStatusChip, SaleStatusChip } from "./StatusChips";
@@ -165,7 +165,7 @@ export function PayoutDetail() {
       {d.can_cancel === true ? (
         <Banner>
           Skinslink откатил обмен после того, как заявка стала к выплате. Если деньги ещё не ушли —
-          «Отменить (откат)».
+          «{CANCEL_LABEL}».
         </Banner>
       ) : null}
       <DetailGrid

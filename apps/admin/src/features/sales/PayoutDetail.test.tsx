@@ -267,6 +267,64 @@ describe("PayoutDetail", () => {
     });
   });
 
+  it("hides «Отклонить» once Skinslink reverted the trade: the API would refuse it", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      can_cancel: true,
+      paid_needs_override: true,
+      request: { ...PAYOUT_DETAIL.request, flags: ["rolled_back"] },
+    });
+    renderPage();
+    expect(await screen.findByRole("button", { name: "Отменить (откат)" })).toBeInTheDocument();
+    expect(screen.getByText(/Если деньги ещё не ушли — «Отменить \(откат\)»/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Отклонить" })).toBeNull();
+  });
+
+  it("one green button per step: «Беру в работу», then «Выплачено»", async () => {
+    renderPage();
+    const take = await screen.findByRole("button", { name: "Беру в работу" });
+    expect(take.className).toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "Выплачено" }).className).not.toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "Скопировать номер" }).className).not.toContain(
+      "bg-accent",
+    );
+  });
+
+  it("«Выплачено» is the green one once the request is mine", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      request: { ...PAYOUT_ROW, claimed_by: ME, claimed_until: "2026-10-15T10:15:00Z" },
+    });
+    renderPage();
+    expect(await screen.findByRole("button", { name: "Выплачено" })).toHaveClass("bg-accent");
+  });
+
+  it("on a phone the confirm is a bottom sheet that confirms", async () => {
+    const matchMedia = vi.fn(() => ({
+      matches: true,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    Object.defineProperty(window, "matchMedia", { value: matchMedia, configurable: true });
+    try {
+      api.markPaid.mockResolvedValue({ ...PAYOUT_DETAIL, can_decide: false });
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Выплачено" }));
+      const sheet = screen.getByRole("dialog", { name: "Подтвердите выплату" });
+      expect(within(sheet).getByText(/^147\s400 сум$/)).toBeInTheDocument();
+      expect(within(sheet).getByText("•••• 9015")).toBeInTheDocument();
+      fireEvent.click(within(sheet).getByRole("button", { name: "Да, выплачено" }));
+      await waitFor(() => {
+        expect(api.markPaid).toHaveBeenCalled();
+      });
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+    } finally {
+      Object.defineProperty(window, "matchMedia", { value: undefined, configurable: true });
+    }
+  });
+
   it("says a request was canceled because the seller reverted the trade", async () => {
     api.getPayout.mockResolvedValue({
       ...PAYOUT_DETAIL,

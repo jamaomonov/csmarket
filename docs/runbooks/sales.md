@@ -68,7 +68,8 @@ be paid; nothing reaches the balance either.
 
 **Skinslink reverted the trade** (the request carries the `rolled_back` flag): the seller has
 the skins back, so «Отклонить» is refused (409 `payout_sale_reverted`) — it would hand them
-the money too. Close it with «Закрыть без выплаты»; «Выплачено» needs a stated reason.
+the money too, and the page hides it. Close the request with «Отменить (откат)» (the red
+banner says the same); «Выплачено» needs a stated reason.
 
 **Pressed the wrong one?** For 10 minutes the page offers «Вернуть в очередь» (a reason is
 required, audited `sales.payout.undo`):
