@@ -111,7 +111,8 @@ The admin composes its pages from `apps/admin/src/components` (admin UX review, 
   its owner's card.
 - **PageHeader** — back link, a 22 px title, chips beside it, actions on the right, a muted meta line.
 - **DataTable** — padded cells (`px-3 py-2.5`), right-aligned `tabular-nums` money, a hover row,
-  a 3 px red left edge for rows needing an operator, skeleton / empty / error states, a footer
+  a 3 px red left edge for rows needing an operator (orange
+  for getting late: a payout waiting over 6 h, red over 10 h; on a phone's card too), skeleton / empty / error states, a footer
   («Показать ещё»), whole-row click, and `mobileCard` — cards instead of the table on a narrow
   screen (`useNarrow`, < 768 px).
 - **Status chips** — one component, `Status` (`components/Status.tsx`): `<Status of="order"

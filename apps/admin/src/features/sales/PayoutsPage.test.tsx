@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PAYOUT_ROW } from "./fixtures";
-import { PayoutsPage } from "./PayoutsPage";
+import { edgeOf, PayoutsPage } from "./PayoutsPage";
 
 const api = vi.hoisted(() => ({ listPayouts: vi.fn() }));
 vi.mock("./payoutsApi", async (importOriginal) => ({
@@ -124,5 +124,14 @@ describe("PayoutsPage", () => {
       expect(api.listPayouts).toHaveBeenCalledWith("all", undefined, "9015");
     });
     expect(screen.getByText("Поиск по всем статусам.")).toBeInTheDocument();
+  });
+
+  it("tints a card's edge by waiting time: orange after 6 h, red after 10 h", () => {
+    const ago = (h: number): string => new Date(Date.now() - h * 3_600_000).toISOString();
+    const row = { ...PAYOUT_ROW, status: "to_pay" as const, flags: [] };
+    expect(edgeOf({ ...row, to_pay_at: ago(1) })).toBe(false);
+    expect(edgeOf({ ...row, to_pay_at: ago(7) })).toBe("warning");
+    expect(edgeOf({ ...row, to_pay_at: ago(11) })).toBe(true);
+    expect(edgeOf({ ...row, status: "paid" as const, to_pay_at: ago(11) })).toBe(false);
   });
 });

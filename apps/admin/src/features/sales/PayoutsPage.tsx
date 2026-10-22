@@ -66,23 +66,43 @@ function Flags({ row }: { row: PayoutRow }) {
   );
 }
 
+/**
+ * The row's left edge: red for a dangerous flag or a request waiting over 10 h, orange after 6 h
+ * — the waiting time read at a glance down a phone's list of cards.
+ */
+export function edgeOf(r: PayoutRow): boolean | "warning" {
+  if ((r.flags ?? []).some((f) => FLAG_DANGER[f])) return true;
+  if (r.status !== "to_pay" || r.to_pay_at === null) return false;
+  const level = waitingFor(r.to_pay_at).level;
+  return level === "overdue" ? true : level === "late" ? "warning" : false;
+}
+
+/** Today's totals: one row of three, on a phone too (short labels, the sum under the count). */
 function Totals({ totals }: { totals: PayoutTotals }) {
   return (
-    <dl className="border-border bg-surface grid grid-cols-2 gap-2 rounded-lg border p-3 text-sm sm:grid-cols-3">
+    <dl className="border-border bg-surface grid grid-cols-3 gap-2 rounded-lg border p-3 text-sm">
       <div>
-        <dt className="text-fg-muted">К выплате сейчас</dt>
+        <dt className="text-fg-muted text-xs sm:text-sm">К выплате</dt>
         <dd className="font-semibold tabular-nums">
-          {totals.to_pay_count} · {formatSum(totals.to_pay_uzs)}
+          {totals.to_pay_count}
+          <span className="text-fg-muted block text-xs font-normal sm:inline sm:text-sm">
+            <span className="hidden sm:inline"> · </span>
+            {formatSum(totals.to_pay_uzs)}
+          </span>
         </dd>
       </div>
       <div>
-        <dt className="text-fg-muted">Выплачено сегодня</dt>
+        <dt className="text-fg-muted text-xs sm:text-sm">Выплачено сегодня</dt>
         <dd className="font-semibold tabular-nums">
-          {totals.paid_today_count} · {formatSum(totals.paid_today_uzs)}
+          {totals.paid_today_count}
+          <span className="text-fg-muted block text-xs font-normal sm:inline sm:text-sm">
+            <span className="hidden sm:inline"> · </span>
+            {formatSum(totals.paid_today_uzs)}
+          </span>
         </dd>
       </div>
       <div>
-        <dt className="text-fg-muted">Отклонено сегодня</dt>
+        <dt className="text-fg-muted text-xs sm:text-sm">Отклонено сегодня</dt>
         <dd className="font-semibold tabular-nums">{totals.rejected_today_count}</dd>
       </div>
     </dl>
@@ -178,12 +198,7 @@ export function PayoutsPage() {
         loading={query.isPending}
         error={query.isError ? errorText(query.error) : undefined}
         empty="Заявок нет."
-        attention={(r) =>
-          (r.flags ?? []).some((f) => FLAG_DANGER[f]) ||
-          (r.status === "to_pay" &&
-            r.to_pay_at !== null &&
-            waitingFor(r.to_pay_at).level === "overdue")
-        }
+        attention={edgeOf}
         onRowClick={(r) => {
           void navigate(`/payouts/${r.id}`);
         }}

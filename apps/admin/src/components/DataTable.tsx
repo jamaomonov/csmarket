@@ -30,13 +30,35 @@ interface DataTableProps<R> {
   emptyAction?: ReactNode;
   footer?: ReactNode;
   onRowClick?: (row: R) => void;
-  attention?: (row: R) => boolean;
+  /** A 3 px left edge: `true` red (needs an operator), `"warning"` orange (getting late). */
+  attention?: (row: R) => Edge;
   mobileCard?: (row: R) => ReactNode;
   /** Rendered under a row (an expanded row), full width. */
   below?: (row: R) => ReactNode;
 }
 
 const SKELETON_ROWS = 5;
+
+type Edge = boolean | "warning";
+
+const ROW_EDGE: Record<"danger" | "warning", string> = {
+  danger: "shadow-[inset_3px_0_0_var(--color-danger)]",
+  warning: "shadow-[inset_3px_0_0_var(--color-warning)]",
+};
+const CARD_EDGE: Record<"danger" | "warning", string> = {
+  danger: "border-l-danger border-l-[3px]",
+  warning: "border-l-warning border-l-[3px]",
+};
+const edgeTone = (e: Edge): "danger" | "warning" | null =>
+  e === true ? "danger" : e === "warning" ? "warning" : null;
+const rowEdge = (e: Edge): string => {
+  const tone = edgeTone(e);
+  return tone === null ? "" : ROW_EDGE[tone];
+};
+const cardEdge = (e: Edge): string => {
+  const tone = edgeTone(e);
+  return tone === null ? "" : CARD_EDGE[tone];
+};
 
 export function DataTable<R>({
   columns,
@@ -121,9 +143,9 @@ export function DataTable<R>({
           {list.map((row) => (
             <li
               key={rowKey(row)}
-              className={`border-border bg-surface rounded-lg border p-3 ${
-                attention?.(row) === true ? "border-l-danger border-l-[3px]" : ""
-              } ${onRowClick !== undefined ? "focus-visible:ring-accent hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2" : ""}`}
+              className={`border-border bg-surface rounded-lg border p-3 ${cardEdge(
+                attention?.(row) ?? false,
+              )} ${onRowClick !== undefined ? "focus-visible:ring-accent hover:bg-surface-hover cursor-pointer focus-visible:outline-none focus-visible:ring-2" : ""}`}
               // A tappable card is a link for the keyboard too: Tab reaches it, Enter opens it.
               {...(onRowClick === undefined
                 ? {}
@@ -151,7 +173,7 @@ export function DataTable<R>({
 interface TableRowProps<R> {
   row: R;
   columns: Column<R>[];
-  flagged: boolean;
+  flagged: Edge;
   onRowClick: ((row: R) => void) | undefined;
   extra: ReactNode;
 }
@@ -178,7 +200,7 @@ function TableRow<R>({ row, columns, flagged, onRowClick, extra }: TableRowProps
           <td
             key={c.key}
             className={`px-3 py-2.5 ${c.align === "right" ? "text-right tabular-nums" : ""} ${
-              i === 0 && flagged ? "shadow-[inset_3px_0_0_var(--color-danger)]" : ""
+              i === 0 ? rowEdge(flagged) : ""
             }`}
           >
             {c.cell(row)}
