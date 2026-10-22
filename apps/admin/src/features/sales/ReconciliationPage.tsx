@@ -8,7 +8,13 @@ import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { type ReactNode, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { getReconciliation, RECON_KEY, type ReconDays, type ReconPage } from "./reconApi";
+import {
+  getReconciliation,
+  RECON_KEY,
+  type ReconDays,
+  type ReconPage,
+  type ReconRow,
+} from "./reconApi";
 
 import { DataTable } from "@/components/DataTable";
 import { FilterSelect, FiltersBar } from "@/components/Filters";
@@ -167,25 +173,7 @@ export function ReconciliationPage() {
               ),
           },
         ]}
-        mobileCard={(r) => (
-          <div className="space-y-1 text-sm">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-mono">{r.number}</span>
-              {r.amount_usd === null ? "—" : <Money usd={r.amount_usd} />}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <span>
-                из <Money usd={r.quoted_usd} />
-              </span>
-              {r.flag && <Reason of="reconFlag" code={r.flag} className="text-danger" />}
-              {r.done_at ? (
-                <When iso={r.done_at} className="text-fg-dim ml-auto text-xs" />
-              ) : (
-                <span className="text-fg-dim ml-auto text-xs">—</span>
-              )}
-            </div>
-          </div>
-        )}
+        mobileCard={(r) => <ReconCard row={r} />}
         footer={
           query.hasNextPage ? (
             <Button
@@ -200,6 +188,44 @@ export function ReconciliationPage() {
         }
       />
     </section>
+  );
+}
+
+/** A phone's row: every figure says what it is («ожидали», «зачислено», «завершена»). */
+export function ReconCard({ row: r }: { row: ReconRow }) {
+  return (
+    <div className="space-y-1 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono">{r.number}</span>
+        <Status of="sale" code={r.status} />
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+        <span>
+          <span className="text-fg-muted">ожидали</span> <Money usd={r.quoted_usd} />
+        </span>
+        <span>
+          <span className="text-fg-muted">зачислено</span>{" "}
+          {r.amount_usd === null ? "ещё нет" : <Money usd={r.amount_usd} />}
+        </span>
+        {r.diff_usd !== null && Number(r.diff_usd) !== 0 && (
+          <span>
+            <span className="text-fg-muted">разница</span> <Money usd={r.diff_usd} />
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {r.flag && <Reason of="reconFlag" code={r.flag} className="text-danger" />}
+        <span className="text-fg-dim ml-auto text-xs">
+          {r.done_at ? (
+            <>
+              завершена <When iso={r.done_at} />
+            </>
+          ) : (
+            "не завершена"
+          )}
+        </span>
+      </div>
+    </div>
   );
 }
 

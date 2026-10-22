@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type ReconPage } from "./reconApi";
-import { ReconciliationPage } from "./ReconciliationPage";
+import { ReconCard, ReconciliationPage } from "./ReconciliationPage";
 
 const api = vi.hoisted(() => ({ getReconciliation: vi.fn() }));
 vi.mock("./reconApi", async (importOriginal) => ({
@@ -98,5 +98,19 @@ describe("ReconciliationPage", () => {
       expect(api.getReconciliation).toHaveBeenLastCalledWith({ days: 7, problems: true });
     });
     expect(screen.getByRole("tab", { name: "Проблемы 1" })).toBeInTheDocument();
+  });
+
+  it("labels every figure on a phone's card, an uncredited sale included", () => {
+    const row = PAGE.items[0];
+    if (row === undefined) throw new Error("no row");
+    render(
+      <MemoryRouter>
+        <ReconCard row={{ ...row, amount_usd: null, diff_usd: null, done_at: null }} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("зачислено").parentElement).toHaveTextContent("зачислено ещё нет");
+    expect(screen.getByText("ожидали")).toBeInTheDocument();
+    expect(screen.getByText("не завершена")).toBeInTheDocument();
+    expect(screen.queryByText("—")).toBeNull();
   });
 });
