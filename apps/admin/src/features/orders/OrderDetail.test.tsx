@@ -254,6 +254,30 @@ describe("OrderDetail", () => {
       expect(screen.getByTestId("order-status")).toHaveTextContent("не получилось");
     });
 
+    it("on a phone the refund confirm is a bottom sheet", async () => {
+      const matchMedia = vi.fn(() => ({
+        matches: true,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }));
+      Object.defineProperty(window, "matchMedia", { value: matchMedia, configurable: true });
+      try {
+        api.refundOrder.mockResolvedValue({ ...RESOLVED, can_refund: false, can_retry: false });
+        renderDetail();
+        fireEvent.click(await screen.findByRole("button", { name: "Вернуть деньги на баланс" }));
+        const sheet = screen.getByRole("dialog", { name: "Вернуть деньги" });
+        fireEvent.click(within(sheet).getByRole("button", { name: "Вернуть" }));
+        await waitFor(() => {
+          expect(api.refundOrder).toHaveBeenCalledTimes(1);
+        });
+        await waitFor(() => {
+          expect(screen.queryByRole("dialog")).toBeNull();
+        });
+      } finally {
+        Object.defineProperty(window, "matchMedia", { value: undefined, configurable: true });
+      }
+    });
+
     it("says a Skinslink / LIS-SKINS refund asks the market first, in dollars for an API order", async () => {
       api.getOrder.mockResolvedValue({
         ...RESOLVED,

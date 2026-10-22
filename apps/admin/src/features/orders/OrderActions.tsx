@@ -1,17 +1,18 @@
 /**
  * «Разобрано», «Вернуть деньги на баланс», «Повторить покупку». The refund and the retry are
  * offered only when the API says they would succeed (`can_refund` / `can_retry`); each goes
- * through a confirm step and sends one `Idempotency-Key` per confirmed submission. An open
+ * through a confirm step (a bottom sheet on a phone, `ConfirmSheet`) and sends one `Idempotency-Key` per confirmed submission. An open
  * confirm step closes by itself when a refetch says its action is no longer possible.
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import { type AdminOrderDetail, refundOrder, resolveOrder, retryOrder } from "./api";
 import { detailKey, TRADES_KEY } from "./keys";
 import { isOrderConflict, orderErrorText } from "./labels";
 
+import { CONFIRM_BUTTONS, ConfirmSheet, DANGER_OUTLINE } from "@/components/ConfirmSheet";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatSum, formatUsd } from "@/lib/format";
 
@@ -35,19 +36,6 @@ interface OrderActionsProps {
   detail: AdminOrderDetail;
   /** The page's refetch, run after a 409 so the buttons show what is really possible. */
   onStale: () => void;
-}
-
-function ConfirmBox({ children }: { children: ReactNode }) {
-  return (
-    <div
-      role="group"
-      aria-label="Подтверждение"
-      data-testid="order-confirm"
-      className="border-border bg-surface space-y-3 rounded-lg border p-4"
-    >
-      {children}
-    </div>
-  );
 }
 
 export function OrderActions({ detail, onStale }: OrderActionsProps) {
@@ -117,14 +105,11 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
   if (!needsResolve && !detail.can_refund && !detail.can_retry && error === null) return null;
 
   const busy = mutation.isPending;
+  const close = () => {
+    setPanel("none");
+  };
   const cancel = (
-    <Button
-      variant="ghost"
-      disabled={busy}
-      onClick={() => {
-        setPanel("none");
-      }}
-    >
+    <Button variant="ghost" disabled={busy} onClick={close}>
       Отмена
     </Button>
   );
@@ -145,7 +130,8 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
         )}
         {detail.can_refund && (
           <Button
-            variant="danger"
+            variant="secondary"
+            className={DANGER_OUTLINE}
             onClick={() => {
               open("refund");
             }}
@@ -196,7 +182,7 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
         </form>
       )}
       {panel === "refund" && detail.can_refund && (
-        <ConfirmBox>
+        <ConfirmSheet title="Вернуть деньги" busy={busy} onClose={close} testId="order-confirm">
           <p>
             Вернуть{" "}
             {order.paid_with === "usd_wallet"
@@ -209,9 +195,11 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
               Сначала спросим поставщика: деньги вернутся, только если покупка не состоялась.
             </p>
           )}
-          <div className="flex gap-2">
+          <div className={CONFIRM_BUTTONS}>
+            {cancel}
             <Button
               variant="danger"
+              size="lg"
               disabled={busy}
               onClick={() => {
                 submit("refund", null);
@@ -219,18 +207,19 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
             >
               Вернуть
             </Button>
-            {cancel}
           </div>
-        </ConfirmBox>
+        </ConfirmSheet>
       )}
       {panel === "retry" && detail.can_retry && (
-        <ConfirmBox>
+        <ConfirmSheet title="Повторить покупку" busy={busy} onClose={close} testId="order-confirm">
           <p>
             Сначала проверьте project id в кабинете Waxpeer — повтор купит скин, если покупки там
             нет.
           </p>
-          <div className="flex gap-2">
+          <div className={CONFIRM_BUTTONS}>
+            {cancel}
             <Button
+              size="lg"
               disabled={busy}
               onClick={() => {
                 submit("retry", null);
@@ -238,9 +227,8 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
             >
               Повторить
             </Button>
-            {cancel}
           </div>
-        </ConfirmBox>
+        </ConfirmSheet>
       )}
       {error !== null && (
         <p role="alert" className="text-danger text-sm">
