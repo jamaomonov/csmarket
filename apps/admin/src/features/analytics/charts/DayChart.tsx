@@ -12,9 +12,7 @@ import {
 } from "recharts";
 
 import { type DayOut } from "../api";
-import { som } from "../labels";
-
-const COMPACT = new Intl.NumberFormat("ru", { notation: "compact", maximumFractionDigits: 1 });
+import { compactSom, som } from "../labels";
 
 function rows(days: DayOut[]) {
   return days.map((d) => ({
@@ -35,23 +33,23 @@ const NAMES: Record<string, string> = {
 
 export function DayChart({ days }: { days: DayOut[] }) {
   return (
-    <div data-testid="day-chart" className="h-72 w-full">
+    <div data-testid="day-chart" className="h-72 w-full min-w-0">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={rows(days)} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="var(--color-border)" vertical={false} />
-          <XAxis dataKey="day" tick={{ fill: "var(--color-fg-muted)", fontSize: 12 }} />
+          <XAxis dataKey="day" tick={{ fill: "var(--color-fg-muted)", fontSize: 11 }} />
           <YAxis
             yAxisId="profit"
-            tickFormatter={(v: number) => COMPACT.format(v)}
-            tick={{ fill: "var(--color-fg-muted)", fontSize: 12 }}
-            width={48}
+            tickFormatter={(v: number) => compactSom(v)}
+            tick={{ fill: "var(--color-fg-muted)", fontSize: 11 }}
+            width={60}
           />
           <YAxis
             yAxisId="revenue"
             orientation="right"
-            tickFormatter={(v: number) => COMPACT.format(v)}
-            tick={{ fill: "var(--color-fg-dim)", fontSize: 12 }}
-            width={48}
+            tickFormatter={(v: number) => compactSom(v)}
+            tick={{ fill: "var(--color-fg-dim)", fontSize: 11 }}
+            width={52}
           />
           <Tooltip
             formatter={(value: number, name: string) => [som(value), NAMES[name] ?? name]}

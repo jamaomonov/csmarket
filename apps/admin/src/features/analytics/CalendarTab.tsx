@@ -5,7 +5,7 @@ import { useState } from "react";
 
 import { type Channel, type DayOut, getCalendar } from "./api";
 import { calendarKey } from "./keys";
-import { som } from "./labels";
+import { compactSom, som } from "./labels";
 import { shiftMonth, type Span } from "./period";
 
 import { useNarrow } from "@/lib/useNarrow";
@@ -147,7 +147,7 @@ export function CalendarTab({ month, channel, onMonth, onOpen }: CalendarTabProp
                 d === null ? (
                   <div key={`blank-${String(j)}`} role="gridcell" />
                 ) : (
-                  <div key={d.day} role="gridcell">
+                  <div key={d.day} role="gridcell" className="min-w-0">
                     <DayCell
                       day={d}
                       tone={toneOf(d)}
@@ -197,17 +197,25 @@ function DayCell({ day, tone, share, selected, narrow, onPick }: DayCellProps) {
         onPick(day.day);
       }}
       style={background !== undefined ? { background } : undefined}
-      className={`border-border flex h-16 w-full flex-col items-start rounded border p-1 text-left text-xs tabular-nums sm:h-20 ${
+      className={`border-border flex h-16 w-full min-w-0 flex-col items-start overflow-hidden rounded border p-1 text-left text-xs tabular-nums sm:h-20 ${
         tone === "empty" ? "opacity-50" : ""
       } ${selected ? "ring-accent ring-2" : ""}`}
     >
       <span className="font-medium">{n}</span>
       {tone !== "empty" && (
         <>
-          <span className={`font-semibold ${tone === "loss" ? "text-danger" : ""}`}>
-            {som(profit)}
+          <span
+            data-testid="day-profit"
+            className={`flex max-w-full flex-col font-semibold leading-tight ${narrow ? "" : "truncate"} ${tone === "loss" ? "text-danger" : ""}`}
+          >
+            {/* A phone's cell is ~47 px: the short sum goes on two lines, `3,7` over `млн`. */}
+            {narrow
+              ? compactSom(profit)
+                  .split(/\s/)
+                  .map((part) => <span key={part}>{part}</span>)
+              : som(profit)}
           </span>
-          {!narrow && <span className="text-fg">{som(day.revenue_uzs)}</span>}
+          {!narrow && <span className="text-fg max-w-full truncate">{som(day.revenue_uzs)}</span>}
         </>
       )}
     </button>

@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { BUSINESS, OCTOBER } from "./fixtures";
 
+import { asPhone } from "@/test/phone";
+
 const api = vi.hoisted(() => ({
   getBusiness: vi.fn(),
   getCalendar: vi.fn(),
@@ -79,5 +81,18 @@ describe("AnalyticsPage — Календарь", () => {
     fireEvent.click(screen.getByRole("button", { name: "Открыть 09.10" }));
     expect(search).toContain("from=2026-10-09");
     expect(search).toContain("to=2026-10-09");
+  });
+
+  it("on a phone a day shows a short sum that fits its cell", async () => {
+    const restore = asPhone();
+    try {
+      renderPage();
+      await screen.findByRole("grid");
+      const sums = screen.getAllByTestId("day-profit").map((e) => e.textContent);
+      expect(sums.length).toBeGreaterThan(0);
+      expect(sums.every((t) => !t.includes("сум"))).toBe(true);
+    } finally {
+      restore();
+    }
   });
 });

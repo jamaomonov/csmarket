@@ -41,7 +41,8 @@ export function BusinessTab({ span, channel }: { span: Span; channel: Channel })
       <Section title="Прибыль по дням">
         <DayChart days={data.by_day} />
       </Section>
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* `min-w-0`: a long name must not widen its column past a phone's screen. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 [&>*]:min-w-0">
         <Sources data={data} />
         <Channels data={data} />
         <Payments data={data} />

@@ -50,6 +50,16 @@ export function som(value: string | number): string {
   return n < 0 ? `−${formatSum(-n)}` : formatSum(n);
 }
 
+const MILLIONS = new Intl.NumberFormat("ru", { notation: "compact", maximumFractionDigits: 1 });
+const THOUSANDS = new Intl.NumberFormat("ru", { notation: "compact", maximumFractionDigits: 0 });
+
+/** A short sum for a narrow cell or an axis: `3,7 млн`, `−493 тыс`, `950`. */
+export function compactSom(value: string | number): string {
+  const n = Number(value);
+  const text = (Math.abs(n) >= 1_000_000 ? MILLIONS : THOUSANDS).format(Math.abs(n));
+  return `${n < 0 ? "−" : ""}${text.replace(/\.$/, "")}`;
+}
+
 /** Dollars with two decimals and a typographic minus. */
 export function dollars(value: string): string {
   const n = Number(value);
