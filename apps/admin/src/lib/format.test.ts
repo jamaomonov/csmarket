@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDateTime, formatSignedSum, formatSum, listTime } from "./format";
+import {
+  formatDateTime,
+  formatDateTimeSeconds,
+  formatRate,
+  formatSignedSum,
+  formatSum,
+  listTime,
+} from "./format";
 
 describe("formatSum", () => {
   it("groups whole soʻm and names the unit", () => {
@@ -40,5 +47,16 @@ describe("listTime", () => {
   it("is absolute beyond: DD.MM HH:MM this year, DD.MM.YYYY an earlier one", () => {
     expect(listTime(new Date(2026, 9, 21, 9, 5).toISOString(), NOW)).toBe("21.10 09:05");
     expect(listTime(new Date(2025, 11, 31, 23, 0).toISOString(), NOW)).toBe("31.12.2025");
+  });
+
+  it("reads a rate as soʻm for a dollar, without trailing zeros", () => {
+    expect(formatRate("12650.5000")).toBe("12\u00a0650,5\u00a0сум за $");
+    expect(formatRate("12700.0000")).toBe("12\u00a0700\u00a0сум за $");
+  });
+
+  it("gives the exact time with seconds", () => {
+    expect(formatDateTimeSeconds(new Date(2026, 9, 21, 9, 5, 7).toISOString())).toBe(
+      "21.10.2026 09:05:07",
+    );
   });
 });

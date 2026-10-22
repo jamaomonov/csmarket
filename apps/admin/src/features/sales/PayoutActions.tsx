@@ -24,6 +24,7 @@ import {
 
 import { CONFIRM_BUTTONS, ConfirmSheet, DANGER_OUTLINE } from "@/components/ConfirmSheet";
 import { Money } from "@/components/Money";
+import { ActionBar } from "@/components/Section";
 import { useAuthStore } from "@/features/auth/authStore";
 import { DASHBOARD_KEY } from "@/features/dashboard/keys";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
@@ -157,10 +158,7 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
     <section className="flex flex-col gap-3" aria-label="Решение">
       {/* On a phone the decision stays at the bottom of the screen, above the bottom bar. */}
       {detail.can_decide || undoUntil !== null || detail.can_cancel === true ? (
-        <div
-          data-testid="decision-bar"
-          className="bg-bg/95 border-border bottom-(--bottom-nav) sticky z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none"
-        >
+        <ActionBar label="Действия" testId="decision-bar">
           {detail.can_decide ? (
             <Button
               variant={paidIsNext ? "primary" : "secondary"}
@@ -194,7 +192,7 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
               {CANCEL_LABEL}
             </Button>
           ) : null}
-        </div>
+        </ActionBar>
       ) : null}
       {available.reject ? (
         <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">

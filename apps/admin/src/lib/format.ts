@@ -21,6 +21,19 @@ export function formatDateTime(iso: string): string {
   return `${date} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+/** `DD.MM.YYYY HH:MM:SS`: the exact time an operator matches against a supplier's or Steam's log. */
+export function formatDateTimeSeconds(iso: string): string {
+  const s = new Date(iso).getSeconds();
+  return `${formatDateTime(iso)}:${String(s).padStart(2, "0")}`;
+}
+
+const RATE = new Intl.NumberFormat("ru", { maximumFractionDigits: 4 });
+
+/** A USD rate: `"12650.5000"` -> `12 650,5 сум за $` (trailing zeros dropped). */
+export function formatRate(value: string | number): string {
+  return `${RATE.format(Number(value))}\u00a0сум за $`;
+}
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;

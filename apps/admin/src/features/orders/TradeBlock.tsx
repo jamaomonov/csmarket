@@ -1,20 +1,14 @@
-/** «Обмен»: the order's Waxpeer trade — status, Steam offer, deadlines, seller, ids to copy. */
-import { type ReactNode } from "react";
-
+/**
+ * «Обмен Waxpeer»: the order's Waxpeer trade — status, Steam offer, deadlines, seller; the ids to
+ * search Waxpeer's cabinet by are folded under «Подробнее».
+ */
 import { type AdminTradeOut } from "./api";
 
 import { CopyButton } from "@/components/CopyButton";
-import { reasonText, statusText } from "@/lib/dictionary";
+import { More, Row, Section } from "@/components/Section";
+import { Reason, Status } from "@/components/Status";
+import { LINK } from "@/components/TextLink";
 import { formatDateTime } from "@/lib/format";
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="text-fg-muted w-40 shrink-0">{label}</dt>
-      <dd className="min-w-0 break-all">{children}</dd>
-    </div>
-  );
-}
 
 function when(iso: string | null): string {
   return iso === null ? "—" : formatDateTime(iso);
@@ -33,11 +27,21 @@ function penaltiesText(penalties: unknown): string {
   return typeof penalties === "string" ? penalties : JSON.stringify(penalties);
 }
 
+function SteamOffer({ trade }: { trade: AdminTradeOut }) {
+  if (trade.trade_id === null) return <>—</>;
+  if (trade.offer_url === null) return <>{trade.trade_id}</>;
+  return (
+    <a href={trade.offer_url} target="_blank" rel="noopener noreferrer" className={LINK}>
+      {trade.trade_id}
+    </a>
+  );
+}
+
 function Attention({ trade }: { trade: AdminTradeOut }) {
   if (trade.attention_reason === null) return null;
   return (
-    <Field label="Внимание">
-      {reasonText("orderAttention", trade.attention_reason)}
+    <Row label="Внимание">
+      <Reason of="orderAttention" code={trade.attention_reason} />
       {trade.resolved_at !== null && (
         <span className="text-fg-muted">
           {" "}
@@ -45,63 +49,53 @@ function Attention({ trade }: { trade: AdminTradeOut }) {
           {trade.resolved_note !== null && `: ${trade.resolved_note}`}
         </span>
       )}
-    </Field>
+    </Row>
   );
 }
 
 export function TradeBlock({ trade }: { trade: AdminTradeOut | null }) {
   return (
-    <section aria-label="Обмен" className="space-y-2">
-      <h2 className="text-lg font-semibold">Обмен</h2>
+    <Section title="Обмен Waxpeer" label="Обмен">
       {trade === null ? (
         <p className="text-fg-muted text-sm">Покупки в Waxpeer ещё не было.</p>
       ) : (
-        <dl className="space-y-1 text-sm">
-          <Field label="Статус Waxpeer">
-            {trade.status === null ? "—" : statusText("waxpeer", String(trade.status))}
-          </Field>
-          <Field label="Обмен в Steam">
-            {trade.trade_id === null ? (
-              "—"
-            ) : trade.offer_url === null ? (
-              trade.trade_id
-            ) : (
-              <a
-                href={trade.offer_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent hover:underline"
-              >
-                {trade.trade_id}
-              </a>
-            )}
-          </Field>
-          <Field label="Отправить до">{when(trade.send_until)}</Field>
-          <Field label="Принят">{when(trade.accepted_at)}</Field>
-          <Field label="Защита до">
-            {when(trade.release_date)}
-            {trade.is_released && <span className="text-fg-muted"> · снята</span>}
-          </Field>
-          <Field label="Продавец">{sellerText(trade.seller)}</Field>
-          <Field label="Причина">{trade.reason ?? "—"}</Field>
-          <Field label="Штрафы">{penaltiesText(trade.penalties)}</Field>
-          <Attention trade={trade} />
-          <Field label="Project id">
-            <span className="font-mono">{trade.project_id}</span>
-            <CopyButton value={trade.project_id} label="Скопировать project id" />
-          </Field>
-          <Field label="Id Waxpeer">
-            {trade.waxpeer_id === null ? (
-              "—"
-            ) : (
-              <>
-                <span className="font-mono">{String(trade.waxpeer_id)}</span>
-                <CopyButton value={String(trade.waxpeer_id)} label="Скопировать id Waxpeer" />
-              </>
-            )}
-          </Field>
-        </dl>
+        <>
+          <dl>
+            <Row label="Статус">
+              {trade.status === null ? "—" : <Status of="waxpeer" code={String(trade.status)} />}
+            </Row>
+            <Row label="Обмен в Steam">
+              <SteamOffer trade={trade} />
+            </Row>
+            <Row label="Отправить до">{when(trade.send_until)}</Row>
+            <Row label="Принят">{when(trade.accepted_at)}</Row>
+            <Row label="Защита до">
+              {when(trade.release_date)}
+              {trade.is_released && <span className="text-fg-muted"> · снята</span>}
+            </Row>
+            <Row label="Продавец">{sellerText(trade.seller)}</Row>
+            {trade.reason !== null && <Row label="Причина">{trade.reason}</Row>}
+            <Row label="Штрафы">{penaltiesText(trade.penalties)}</Row>
+            <Attention trade={trade} />
+          </dl>
+          <More>
+            <Row label="Project id">
+              <span className="break-all">{trade.project_id}</span>
+              <CopyButton value={trade.project_id} label="Скопировать project id" />
+            </Row>
+            <Row label="Id Waxpeer">
+              {trade.waxpeer_id === null ? (
+                "—"
+              ) : (
+                <>
+                  {String(trade.waxpeer_id)}
+                  <CopyButton value={String(trade.waxpeer_id)} label="Скопировать id Waxpeer" />
+                </>
+              )}
+            </Row>
+          </More>
+        </>
       )}
-    </section>
+    </Section>
   );
 }

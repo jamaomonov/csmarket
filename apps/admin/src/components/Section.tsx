@@ -1,4 +1,9 @@
-/** Detail pages (review §4.8): titled sections in a two-column grid, label/value rows. */
+/**
+ * Detail pages (review §4.8, audit §4): titled sections in a two-column grid, label/value rows,
+ * technical fields folded under «Подробнее» (`More`), the page's actions in a bar that stays at
+ * the bottom of a phone's screen (`ActionBar`), and empty sections folded into one line.
+ */
+import { ChevronRight } from "lucide-react";
 import { type ReactNode } from "react";
 
 export function DetailGrid({ main, side }: { main: ReactNode; side?: ReactNode }) {
@@ -39,6 +44,63 @@ export function Row({ label, children }: { label: ReactNode; children: ReactNode
       <dt className="text-fg-muted">{label}</dt>
       <dd className="min-w-0 break-words">{children}</dd>
     </div>
+  );
+}
+
+/**
+ * Technical fields (ids to search a supplier's cabinet by, raw codes) folded under «Подробнее»
+ * at the end of a section: an operator opens them when matching logs, not on every visit.
+ */
+export function More({ children, label = "Подробнее" }: { children: ReactNode; label?: string }) {
+  return (
+    <details className="border-border group mt-2 border-t pt-2">
+      <summary className="text-fg-muted hover:text-fg flex min-h-11 cursor-pointer select-none list-none items-center gap-1 text-sm sm:min-h-0 [&::-webkit-details-marker]:hidden">
+        <ChevronRight className="size-4 transition-transform group-open:rotate-90" aria-hidden />
+        {label}
+      </summary>
+      <dl className="mt-1">{children}</dl>
+    </details>
+  );
+}
+
+/**
+ * A page's actions: inline under the header on a wide screen; on a phone a bar pinned to the
+ * bottom of the screen above the bottom navigation, its buttons sharing the width.
+ */
+export function ActionBar({
+  children,
+  label,
+  testId,
+}: {
+  children: ReactNode;
+  label: string;
+  testId?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      data-testid={testId}
+      className="bg-bg/95 border-border bottom-(--bottom-nav) sticky z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none"
+    >
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Sections with nothing in them, folded into one muted line («Пока пусто: Заказы, Продажи»), so
+ * a phone reaches the sections that have something without scrolling past empty cards.
+ */
+export function EmptySections({ names }: { names: string[] }) {
+  if (names.length === 0) return null;
+  return (
+    <p
+      data-testid="empty-sections"
+      className="border-border text-fg-muted rounded-lg border border-dashed px-4 py-3 text-sm"
+    >
+      Пока пусто: {names.join(", ")}.
+    </p>
   );
 }
 

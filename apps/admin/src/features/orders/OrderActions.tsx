@@ -4,10 +4,13 @@
  * through a confirm step (a bottom sheet on a phone, `ConfirmSheet`) and sends one
  * `Idempotency-Key` per confirmed submission. An open confirm step closes by itself when a
  * refetch says its action is no longer possible.
+ *
+ * `useOrderActions` returns the buttons and the open step apart: the page puts the buttons in
+ * its header on a wide screen and in the bottom `ActionBar` on a phone (admin UX audit §4).
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 
 import { type AdminOrderDetail, refundOrder, resolveOrder, retryOrder } from "./api";
 import { detailKey, TRADES_KEY } from "./keys";
@@ -33,13 +36,17 @@ interface Submission {
   key: string;
 }
 
-interface OrderActionsProps {
-  detail: AdminOrderDetail;
-  /** The page's refetch, run after a 409 so the buttons show what is really possible. */
-  onStale: () => void;
+export interface OrderActionsView {
+  /** The action buttons; `null` when there is nothing to do. */
+  buttons: ReactNode;
+  /** The open confirm step and the last error; `null` when there is neither. */
+  panel: ReactNode;
 }
 
-export function OrderActions({ detail, onStale }: OrderActionsProps) {
+/**
+ * @param onStale The page's refetch, run after a 409 so the buttons show what is really possible.
+ */
+export function useOrderActions(detail: AdminOrderDetail, onStale: () => void): OrderActionsView {
   const qc = useQueryClient();
   const { order, trade } = detail;
   const number = order.number;
@@ -103,7 +110,9 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
   const watched = trade ?? detail.skinslink ?? detail.lisskins;
   const needsResolve =
     watched !== null && watched.attention_reason !== null && watched.resolved_at === null;
-  if (!needsResolve && !detail.can_refund && !detail.can_retry && error === null) return null;
+  if (!needsResolve && !detail.can_refund && !detail.can_retry && error === null) {
+    return { buttons: null, panel: null };
+  }
 
   const busy = mutation.isPending;
   const close = () => {
@@ -115,10 +124,9 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
     </Button>
   );
 
-  return (
-    <section aria-label="Действия" className="space-y-3">
-      <h2 className="text-lg font-semibold">Действия</h2>
-      <div className="flex flex-wrap gap-2">
+  const buttons =
+    needsResolve || detail.can_refund || detail.can_retry ? (
+      <>
         {needsResolve && (
           <Button
             variant="secondary"
@@ -127,6 +135,16 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
             }}
           >
             Разобрано
+          </Button>
+        )}
+        {detail.can_retry && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              open("retry");
+            }}
+          >
+            Повторить покупку
           </Button>
         )}
         {detail.can_refund && (
@@ -140,47 +158,44 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
             Вернуть деньги на баланс
           </Button>
         )}
-        {detail.can_retry && (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              open("retry");
+      </>
+    ) : null;
+
+  const panelNode = (
+    <>
+      {panel === "resolve" && needsResolve && (
+        <ConfirmSheet title="Разобрано" busy={busy} onClose={close} testId="order-resolve-form">
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const text = note.trim();
+              submit("resolve", text === "" ? null : text);
             }}
           >
-            Повторить покупку
-          </Button>
-        )}
-      </div>
-      {panel === "resolve" && needsResolve && (
-        <form
-          className="border-border bg-surface space-y-3 rounded-lg border p-4"
-          data-testid="order-resolve-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const text = note.trim();
-            submit("resolve", text === "" ? null : text);
-          }}
-        >
-          <label className="flex flex-col gap-1 text-sm">
-            Заметка
-            <textarea
-              value={note}
-              maxLength={NOTE_MAX}
-              rows={3}
-              onChange={(e) => {
-                setNote(e.target.value);
-              }}
-              className="border-border bg-bg rounded-md border px-3 py-2 text-base"
-            />
-          </label>
-          <p className="text-fg-muted text-xs">Что нашли в кабинете Waxpeer. Без личных данных.</p>
-          <div className="flex gap-2">
-            <Button type="submit" disabled={busy}>
-              Сохранить
-            </Button>
-            {cancel}
-          </div>
-        </form>
+            <label className="flex flex-col gap-1 text-sm">
+              Заметка
+              <textarea
+                value={note}
+                maxLength={NOTE_MAX}
+                rows={3}
+                onChange={(e) => {
+                  setNote(e.target.value);
+                }}
+                className="border-border bg-bg rounded-md border px-3 py-2 text-base"
+              />
+            </label>
+            <p className="text-fg-muted text-xs">
+              Что нашли в кабинете площадки. Без личных данных.
+            </p>
+            <div className={CONFIRM_BUTTONS}>
+              {cancel}
+              <Button type="submit" size="lg" disabled={busy}>
+                Сохранить
+              </Button>
+            </div>
+          </form>
+        </ConfirmSheet>
       )}
       {panel === "refund" && detail.can_refund && (
         <ConfirmSheet title="Вернуть деньги" busy={busy} onClose={close} testId="order-confirm">
@@ -236,6 +251,7 @@ export function OrderActions({ detail, onStale }: OrderActionsProps) {
           {error}
         </p>
       )}
-    </section>
+    </>
   );
+  return { buttons, panel: panel === "none" && error === null ? null : panelNode };
 }
