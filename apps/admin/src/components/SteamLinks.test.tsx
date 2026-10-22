@@ -1,15 +1,22 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { SteamOfferValue, TradeLinkValue } from "./SteamLinks";
 
 const LINK = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=AbCdXY";
 
 describe("SteamLinks", () => {
-  it("shows the whole trade link as a link to open or copy", () => {
+  it("hides the token on screen, opens and copies the whole link", async () => {
+    const write = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { clipboard: { writeText: write } });
     render(<TradeLinkValue link={LINK} />);
-    expect(screen.getByRole("link", { name: LINK })).toHaveAttribute("href", LINK);
-    expect(screen.getByRole("button", { name: "Скопировать трейд-ссылку" })).toBeInTheDocument();
+    const shown = "https://steamcommunity.com/tradeoffer/new/?partner=1&token=••••";
+    expect(screen.getByRole("link", { name: shown })).toHaveAttribute("href", LINK);
+    expect(document.body.textContent).not.toContain("AbCdXY");
+    fireEvent.click(screen.getByRole("button", { name: "Скопировать трейд-ссылку" }));
+    await waitFor(() => {
+      expect(write).toHaveBeenCalledWith(LINK);
+    });
   });
 
   it("shows an erased (masked) link as text only", () => {
