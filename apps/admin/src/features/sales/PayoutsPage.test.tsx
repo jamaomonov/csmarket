@@ -73,7 +73,7 @@ describe("PayoutsPage", () => {
           ...PAYOUT_ROW,
           claimed_by: { id: "a-2", display_name: "Petr" },
           claimed_until: "2026-10-15T10:15:00Z",
-          flags: ["shared_card", "new_account"],
+          flags: ["shared_card", "new_account", "seller_reverted"],
         },
       ],
       counts: { to_pay: 1, waiting_hold: 0, paid: 0, rejected: 0, canceled: 0 },
@@ -84,6 +84,7 @@ describe("PayoutsPage", () => {
     expect(await screen.findByText("платит Petr")).toBeInTheDocument();
     expect(screen.getByText("карта у других")).toBeInTheDocument();
     expect(screen.getByText("новый аккаунт")).toBeInTheDocument();
+    expect(screen.getByText("продавец отменил обмен")).toBeInTheDocument();
   });
 
   it("reads the tab from the URL", async () => {

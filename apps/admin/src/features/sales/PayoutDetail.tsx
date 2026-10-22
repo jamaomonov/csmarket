@@ -149,7 +149,12 @@ export function PayoutDetail() {
           </>
         }
         meta={d.request.user.display_name ?? "Без имени"}
-        badges={<PayoutStatusChip status={d.request.status} />}
+        badges={
+          <PayoutStatusChip
+            status={d.request.status}
+            sellerReverted={(d.request.flags ?? []).includes("seller_reverted")}
+          />
+        }
       />
       {blocked ? (
         <Banner>

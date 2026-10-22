@@ -481,3 +481,17 @@ async def test_newest_first_tabs_page_by_cursor(
         )
     ).json()
     assert nobody["items"] == []
+
+
+async def test_a_request_canceled_by_the_sellers_revert_says_so(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    """The seller reverted the trade during the 7 days: the canceled request names why."""
+    headers = await admin_headers()
+    sale = await make_sale(db_session, status="reverted", payout_to="card")
+    request = await make_request(db_session, sale, status="canceled")
+    queue = (await integration_client.get(f"{BASE}?status=canceled", headers=headers)).json()
+    row = next(r for r in queue["items"] if r["id"] == request.id)
+    assert "seller_reverted" in row["flags"]
+    page = (await integration_client.get(f"{BASE}/{request.id}", headers=headers)).json()
+    assert "seller_reverted" in page["request"]["flags"]

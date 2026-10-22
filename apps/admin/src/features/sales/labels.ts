@@ -43,6 +43,7 @@ export const FLAG_LABELS: Record<PayoutFlag, { text: string; danger: boolean }> 
   shared_card: { text: "карта у других", danger: true },
   new_account: { text: "новый аккаунт", danger: false },
   rolled_back: { text: "обмен отменён", danger: true },
+  seller_reverted: { text: "продавец отменил обмен", danger: true },
 };
 
 export const CARD_BRANDS: Record<CardType, string> = {

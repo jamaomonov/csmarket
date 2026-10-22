@@ -36,6 +36,16 @@ export function SaleStatusChip({
   );
 }
 
-export function PayoutStatusChip({ status }: { status: PayoutStatus }) {
+/** A request canceled because the seller reverted the trade says so (`seller_reverted`). */
+export function PayoutStatusChip({
+  status,
+  sellerReverted = false,
+}: {
+  status: PayoutStatus;
+  sellerReverted?: boolean;
+}) {
+  if (status === "canceled" && sellerReverted) {
+    return <StatusChip tone="danger">Отменено: продавец отменил обмен</StatusChip>;
+  }
   return <StatusChip tone={PAYOUT_TONES[status]}>{PAYOUT_LABELS[status]}</StatusChip>;
 }

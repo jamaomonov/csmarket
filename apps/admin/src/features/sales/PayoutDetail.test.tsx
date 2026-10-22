@@ -267,6 +267,16 @@ describe("PayoutDetail", () => {
     });
   });
 
+  it("says a request was canceled because the seller reverted the trade", async () => {
+    api.getPayout.mockResolvedValue({
+      ...PAYOUT_DETAIL,
+      request: { ...PAYOUT_ROW, status: "canceled", flags: ["seller_reverted"] },
+      can_decide: false,
+    });
+    renderPage();
+    expect(await screen.findByText("Отменено: продавец отменил обмен")).toBeInTheDocument();
+  });
+
   it("shows the risks and blocks selling from the page", async () => {
     api.getPayout.mockResolvedValue({
       ...PAYOUT_DETAIL,

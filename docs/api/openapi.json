@@ -7470,7 +7470,8 @@
                 "sell_blocked",
                 "new_account",
                 "shared_card",
-                "rolled_back"
+                "rolled_back",
+                "seller_reverted"
               ],
               "type": "string"
             },

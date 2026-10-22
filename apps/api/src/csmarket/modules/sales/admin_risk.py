@@ -88,16 +88,16 @@ async def row_flags(
         (await db.scalars(select(SaleBlock.user_id).where(SaleBlock.user_id.in_(uids)))).all()
     )
     shared = await shared_fps(db, (c.number_fp for c in cards.values()))
-    reverted = set(
-        (
-            await db.scalars(
-                select(Sale.id).where(
-                    Sale.id.in_({r.sale_id for r in requests}),
-                    Sale.attention_reason == "rolled_back",
+    sales = {
+        sid: (status, attention)
+        for sid, status, attention in (
+            await db.execute(
+                select(Sale.id, Sale.status, Sale.attention_reason).where(
+                    Sale.id.in_({r.sale_id for r in requests})
                 )
             )
         ).all()
-    )
+    }
     young = now() - NEW_ACCOUNT
     out: dict[str, list[PayoutFlag]] = {}
     for r in requests:
@@ -114,8 +114,11 @@ async def row_flags(
             flags.append("new_account")
         if fp in shared:
             flags.append("shared_card")
-        if r.sale_id in reverted:
+        sale_status, attention = sales.get(r.sale_id, (None, None))
+        if attention == "rolled_back":
             flags.append("rolled_back")
+        if sale_status == "reverted":
+            flags.append("seller_reverted")
         out[r.id] = flags
     return out
 

@@ -62,6 +62,10 @@ The number is never in a list, a letter or a log; do not screenshot it.
 without an answer (409 `payout_user_blocked`); the answer goes into the audit row. Usually the
 right move is not to pay: leave it, or «Отклонить» if the wallet is active.
 
+**The seller reverted the trade during the 7 days**: nothing to do. The request cancels itself
+(«Отменено: продавец отменил обмен», the chip «продавец отменил обмен» in the list) and cannot
+be paid; nothing reaches the balance either.
+
 **Skinslink reverted the trade** (the request carries the `rolled_back` flag): the seller has
 the skins back, so «Отклонить» is refused (409 `payout_sale_reverted`) — it would hand them
 the money too. Close it with «Закрыть без выплаты»; «Выплачено» needs a stated reason.
