@@ -115,19 +115,19 @@ export function ReviewLimitsBlock({ limits }: ReviewLimitsBlockProps) {
         Сколько один пользователь может провести через кассу за окно. Свыше — платёж ждёт решения в
         «На проверке».
       </p>
-      <table className="-mx-2 w-full border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
+      <table className="-mx-2 w-[calc(100%+1rem)] table-fixed border-separate border-spacing-x-2 border-spacing-y-1 text-sm">
         <thead>
           <tr>
-            <th scope="col" className={head}>
+            <th scope="col" className={`${head} w-[3.25rem] sm:w-48`}>
               Касса
             </th>
-            <th scope="col" className={head}>
+            <th scope="col" className={`${head} w-12`}>
               Вкл
             </th>
             <th scope="col" className={head}>
               Сумма
             </th>
-            <th scope="col" className={`${head} w-24`}>
+            <th scope="col" className={`${head} w-16 sm:w-28`}>
               Окно
             </th>
           </tr>
@@ -141,7 +141,7 @@ export function ReviewLimitsBlock({ limits }: ReviewLimitsBlockProps) {
                 <th scope="row" className="text-left font-medium">
                   {short}
                 </th>
-                <td className="w-12">
+                <td>
                   <Switch
                     label={<span className="sr-only">{label}: включён</span>}
                     checked={r.enabled}

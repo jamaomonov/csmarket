@@ -122,7 +122,7 @@ export function SaleSettingsPage() {
         />
       </div>
       <Section title="Маржа по цене Skinslink">
-        <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
           <span className="text-fg-muted text-xs">Цена от</span>
           <span className="text-fg-muted text-xs">Маржа</span>
           <span />
@@ -175,7 +175,7 @@ export function SaleSettingsPage() {
         </Button>
       </Section>
       <Section title="Курс, комиссии и минимумы">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <MoneyField
             label="Скидка с курса ЦБ"
             unit="%"

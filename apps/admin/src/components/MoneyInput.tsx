@@ -70,7 +70,7 @@ export function MoneyInput({
   }, [shown]);
   return (
     <span
-      className={`border-border bg-bg focus-within:border-accent focus-within:ring-accent/30 flex h-10 items-center rounded-md border focus-within:ring-2 ${className}`}
+      className={`border-border bg-bg focus-within:border-accent focus-within:ring-accent/30 flex h-10 min-w-0 items-center rounded-md border focus-within:ring-2 ${className}`}
     >
       <input
         ref={input}
@@ -86,9 +86,9 @@ export function MoneyInput({
           caret.current = ungroup(text.slice(0, at)).length;
           onChange(ungroup(text));
         }}
-        className="h-full min-w-0 flex-1 bg-transparent px-3 text-right tabular-nums outline-none"
+        className="h-full min-w-0 flex-1 bg-transparent px-2 text-right tabular-nums outline-none sm:px-3"
       />
-      <span aria-hidden className="text-fg-muted pr-3 text-sm">
+      <span aria-hidden className="text-fg-muted pr-2 text-sm sm:pr-3">
         {unit}
       </span>
     </span>

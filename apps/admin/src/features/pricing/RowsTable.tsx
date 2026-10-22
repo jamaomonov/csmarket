@@ -80,7 +80,7 @@ export function RowsTable({
     <fieldset className="flex min-w-0 flex-col gap-2">
       <legend className="mb-1 text-sm font-semibold">{title}</legend>
       {hint !== undefined && <p className="text-fg-muted -mt-1 text-xs">{hint}</p>}
-      <div className="grid grid-cols-[1fr_1fr_auto] items-center gap-2">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
         {rows.length > 0 &&
           columns.map((col) => (
             <span key={col.field} aria-hidden className="text-fg-muted text-xs">
