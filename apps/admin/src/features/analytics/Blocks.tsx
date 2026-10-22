@@ -86,8 +86,22 @@ export function TopSkins({ data }: B) {
   );
 }
 
+const ORDERS = new Intl.PluralRules("ru");
+const ORDER_WORD: Record<string, string> = { one: "заказ", few: "заказа", many: "заказов" };
+
+/** «3 заказа». */
+function ordersText(n: number): string {
+  return `${String(n)} ${ORDER_WORD[ORDERS.select(n)] ?? "заказа"}`;
+}
+
+/**
+ * «Покупатели»: a numbered list, each name a link to the card with its orders under it. Two
+ * buyers with one name («Mail») also show the end of their account id, never a Steam ID.
+ */
 export function Buyers({ data }: B) {
   const b = data.buyers;
+  const names = b.top.map((u) => u.display_name ?? "");
+  const twin = (name: string | null): boolean => names.filter((n) => n === (name ?? "")).length > 1;
   return (
     <Section title="Покупатели">
       <dl className="mb-3">
@@ -99,12 +113,21 @@ export function Buyers({ data }: B) {
         </Row>
       </dl>
       <ul className="divide-border divide-y text-sm">
-        {b.top.map((u) => (
+        {b.top.map((u, i) => (
           <li key={u.id} className="flex items-center gap-3 py-1.5">
+            <span className="text-fg-dim w-5 shrink-0 text-right tabular-nums">{i + 1}</span>
             <div className="min-w-0 flex-1">
-              <UserCell id={u.id} name={u.display_name} avatarUrl={u.avatar_url} />
+              <UserCell
+                id={u.id}
+                name={u.display_name}
+                avatarUrl={u.avatar_url}
+                sub={
+                  twin(u.display_name)
+                    ? `${ordersText(u.orders)} · id …${u.id.slice(-4)}`
+                    : ordersText(u.orders)
+                }
+              />
             </div>
-            <span className="text-fg-muted shrink-0 tabular-nums">{u.orders}</span>
             <span className="w-28 shrink-0 text-right tabular-nums">{som(u.revenue_uzs)}</span>
           </li>
         ))}

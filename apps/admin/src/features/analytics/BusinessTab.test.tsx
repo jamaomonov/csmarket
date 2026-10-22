@@ -6,6 +6,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AnalyticsPage } from "./AnalyticsPage";
 import { BUSINESS } from "./fixtures";
 
+const TOP = BUSINESS.buyers.top[0] ?? {
+  id: "u",
+  display_name: null,
+  avatar_url: null,
+  orders: 0,
+  revenue_uzs: "0",
+  profit_uzs: "0",
+};
+
 const api = vi.hoisted(() => ({
   getBusiness: vi.fn(),
   getCalendar: vi.fn(),
@@ -93,6 +102,28 @@ describe("AnalyticsPage — Бизнес", () => {
     );
     expect(await screen.findByText("Нет — так и должно быть.")).toBeInTheDocument();
     expect(screen.getByTestId("day-chart")).toBeInTheDocument();
+  });
+
+  it("tells two buyers with one name apart by their card link and id tail", async () => {
+    api.getBusiness.mockResolvedValue({
+      ...BUSINESS,
+      buyers: {
+        ...BUSINESS.buyers,
+        top: [
+          { ...TOP, id: "aaaa-1111", display_name: "Mail", orders: 2 },
+          { ...TOP, id: "bbbb-2222", display_name: "Mail", orders: 5 },
+        ],
+      },
+    });
+    renderPage();
+    const buyers = await screen.findByRole("region", { name: "Покупатели" });
+    const links = within(buyers).getAllByRole("link", { name: "Mail" });
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
+      "/users/aaaa-1111",
+      "/users/bbbb-2222",
+    ]);
+    expect(within(buyers).getByText("2 заказа · id …1111")).toBeInTheDocument();
+    expect(within(buyers).getByText("5 заказов · id …2222")).toBeInTheDocument();
   });
 
   it("never reads a failed losses request as «none»", async () => {
