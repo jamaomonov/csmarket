@@ -47,6 +47,7 @@ function StatusBody({ s }: { s: CatalogStatus }) {
         <Row label="Скинов в каталоге">{formatNumber(s.items_total)}</Row>
         <Row label="В продаже">{formatNumber(s.items_active)}</Row>
         <Row label="Скрыто">{formatNumber(s.items_hidden)}</Row>
+        {s.prices_updated_at && <Row label="Цены обновлены">{formatWhen(s.prices_updated_at)}</Row>}
         <JobRow
           label="Каталог"
           job={s.import_job}

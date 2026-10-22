@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CataloguePage } from "./CataloguePage";
+import { formatWhen } from "./format";
 
 const api = vi.hoisted(() => ({
   getStatus: vi.fn(),
@@ -74,10 +75,25 @@ describe("CataloguePage", () => {
     renderPage();
     expect(await screen.findByText(/21\s000/)).toBeInTheDocument();
     expect(screen.getByText(/Цены не обновились/)).toBeInTheDocument(); // price_sync_job.ok === false
+    // The last good prices still show when the last sync failed.
+    const state = screen.getByRole("region", { name: "Состояние" });
+    expect(within(state).getByText("Цены обновлены").parentElement).toHaveTextContent(
+      `Цены обновлены${formatWhen("2026-10-01T10:00:00Z")}`,
+    );
     expect(screen.getByText(/^12\s700\sсум за \$$/)).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Состояние" })).toHaveTextContent(
       "Waxpeer прислал неполный список — цены остались прежними",
     );
+  });
+
+  it("says nothing about prices that were never updated", async () => {
+    api.getStatus.mockResolvedValue({
+      ...(await api.getStatus()),
+      prices_updated_at: null,
+    });
+    renderPage();
+    await screen.findByText(/21\s000/);
+    expect(screen.queryByText("Цены обновлены")).toBeNull();
   });
 
   it("hides an item", async () => {

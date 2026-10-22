@@ -11,6 +11,7 @@ import { formatSignedSum } from "@/lib/format";
 export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "users.ban": "Блокировка",
   "users.unban": "Разблокировка",
+  "users.risk.update": "Риск пользователя изменён",
   "wallet.adjust": "Изменение баланса",
   "skins.item.hide": "Скин скрыт",
   "skins.item.colors": "Цвета скина изменены",
@@ -41,6 +42,7 @@ export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "api_keys.limits": "Лимиты API-ключа",
   "api_keys.revoke": "API-ключ отозван",
   "payments.settings.save": "Настройки оплаты",
+  "payments.review_limits.update": "Лимиты проверки касс",
   "payments.hold.release": "Платёж пропущен с проверки",
   "payments.hold.returned": "Платёж возвращён на карту",
   "p2p.card.add": "P2P: карта добавлена",
@@ -69,6 +71,7 @@ export const TARGET_TYPE_LABELS: Readonly<Record<string, string>> = {
   skin_pricing_rules: "Наценки",
   payment_settings: "Настройки оплаты",
   payment_hold: "Платёж на проверке",
+  kassa_review_limits: "Лимиты проверки касс",
   p2p_card: "P2P-карта",
   p2p_settings: "Настройки P2P",
   p2p_incoming: "P2P-перевод",
@@ -130,6 +133,10 @@ const PAYLOAD_KEYS: Readonly<Record<string, string>> = {
   max_user_day_usd: "лимит пользователя в день, $",
   max_day_usd: "лимит в день, $",
   unchanged: "без изменений",
+  trusted: "доверенный",
+  kassa_blocked: "оплата кассой запрещена",
+  max_amount_uzs: "лимит, сум",
+  window_hours: "окно, ч",
 };
 
 /** Keys that only repeat what the target already says (the skin's slug beside its name). */
@@ -160,6 +167,16 @@ function payloadValue(key: string, value: unknown): string {
   return shown.length > MAX_VALUE ? `${shown.slice(0, MAX_VALUE)}…` : shown;
 }
 
+/** `max_amount_uzs` → «лимит, сум»; a kassa limit's `click.enabled` → «Click: включено». */
+function keyLabel(key: string): string | null {
+  if (Object.hasOwn(PAYLOAD_KEYS, key)) return PAYLOAD_KEYS[key] ?? null;
+  const [provider, field, ...rest] = key.split(".");
+  if (provider && field && rest.length === 0 && Object.hasOwn(PAYLOAD_KEYS, field)) {
+    return `${providerLabel(provider)}: ${PAYLOAD_KEYS[field] ?? field}`;
+  }
+  return null;
+}
+
 export interface PayloadLine {
   key: string;
   /** The key in words; `null` when unknown (the page shows the key itself, small). */
@@ -182,7 +199,7 @@ export function payloadLines(
     )
     .map(([key, value]) => ({
       key,
-      label: Object.hasOwn(PAYLOAD_KEYS, key) ? (PAYLOAD_KEYS[key] ?? null) : null,
+      label: keyLabel(key),
       text: payloadValue(key, value),
     }));
 }
