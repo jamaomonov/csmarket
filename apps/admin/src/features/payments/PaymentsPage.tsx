@@ -5,7 +5,7 @@
 import { Button } from "@csmarket/ui";
 import { type InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   type AdminPaymentRow,
@@ -22,6 +22,7 @@ import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { Status } from "@/components/Status";
 import { Tabs } from "@/components/Tabs";
+import { TextLink } from "@/components/TextLink";
 import { UserCell } from "@/components/UserCell";
 import { When } from "@/components/When";
 import { errorText, providerLabel } from "@/features/users/labels";
@@ -155,9 +156,9 @@ export function PaymentsPage() {
               header: "Номер",
               cell: (p) => (
                 <>
-                  <Link to={`/payments/${p.id}`} className="font-mono font-medium hover:underline">
+                  <TextLink to={`/payments/${p.id}`} number>
                     {p.number}
-                  </Link>
+                  </TextLink>
                   <div className="text-fg-muted text-xs">{PURPOSE_LABELS[p.purpose]}</div>
                 </>
               ),
@@ -193,6 +194,9 @@ export function PaymentsPage() {
                 <span className="font-mono">{p.number}</span>
                 <Money uzs={paidTotal(p)} />
               </div>
+              <p className="text-fg-muted truncate" data-testid="payment-card-what">
+                {PURPOSE_LABELS[p.purpose]} · {p.user.display_name ?? "без имени"}
+              </p>
               <div className="flex flex-wrap items-center gap-2">
                 <Status of="payment" code={p.status} testId="payment-status" />
                 <span className="text-fg-muted">{providerLabel(p.provider)}</span>
