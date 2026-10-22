@@ -7,6 +7,7 @@ import { useState } from "react";
 import { type AdminSkinItem, findItems, setHidden } from "./api";
 import { ColorEditor } from "./ColorEditor";
 
+import { Section } from "@/components/Section";
 import { StatusChip } from "@/components/StatusChip";
 import { ApiError, formatApiError } from "@/lib/api";
 import { useDebounced } from "@/lib/useDebounced";
@@ -88,8 +89,7 @@ export function ItemsCard() {
 
   const items = list.data?.items ?? [];
   return (
-    <section className="border-border bg-surface rounded-lg border p-5">
-      <h2 className="mb-3 text-lg font-semibold">Скины</h2>
+    <Section title="Скины">
       <div className="flex flex-wrap items-center gap-4">
         <label className="flex flex-1 flex-col gap-1 text-sm">
           Найти скин
@@ -141,6 +141,6 @@ export function ItemsCard() {
           ))}
         </ul>
       )}
-    </section>
+    </Section>
   );
 }

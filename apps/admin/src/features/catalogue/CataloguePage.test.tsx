@@ -74,7 +74,10 @@ describe("CataloguePage", () => {
     renderPage();
     expect(await screen.findByText(/21\s000/)).toBeInTheDocument();
     expect(screen.getByText(/Цены не обновились/)).toBeInTheDocument(); // price_sync_job.ok === false
-    expect(screen.getByText(/12\s700/)).toBeInTheDocument();
+    expect(screen.getByText(/^12\s700\sсум за \$$/)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Состояние" })).toHaveTextContent(
+      "Waxpeer прислал неполный список — цены остались прежними",
+    );
   });
 
   it("hides an item", async () => {

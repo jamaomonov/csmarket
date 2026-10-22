@@ -5,6 +5,7 @@ import { type SubmitEvent, useState } from "react";
 
 import { deleteAlias, listAliases, putAlias } from "./api";
 
+import { Section } from "@/components/Section";
 import { ApiError, formatApiError } from "@/lib/api";
 
 function errorText(err: unknown): string {
@@ -42,8 +43,7 @@ export function AliasesCard() {
   const items = list.data?.items ?? [];
   const input = "border-border bg-bg h-10 rounded-md border px-3 text-base";
   return (
-    <section className="border-border bg-surface rounded-lg border p-5">
-      <h2 className="mb-3 text-lg font-semibold">Синонимы для поиска</h2>
+    <Section title="Синонимы для поиска">
       {list.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {list.isError && (
         <p role="alert" className="text-danger">
@@ -148,6 +148,6 @@ export function AliasesCard() {
           {errorText(remove.error)}
         </p>
       )}
-    </section>
+    </Section>
   );
 }

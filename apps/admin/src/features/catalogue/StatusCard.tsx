@@ -1,77 +1,86 @@
-/** Catalogue counts, last job outcomes and the CBU rate. */
+/** «Состояние» of the catalogue: counts, the last job outcomes and the CBU rate (one Section). */
 import { useQuery } from "@tanstack/react-query";
 
 import { type CatalogStatus, getStatus, type JobOut } from "./api";
-import { formatNumber, formatRate, formatWhen } from "./format";
+import { formatNumber, formatWhen } from "./format";
 
+import { Row, Section } from "@/components/Section";
+import { Reason } from "@/components/Status";
 import { ApiError, formatApiError } from "@/lib/api";
+import { formatRate } from "@/lib/format";
 
-const ERROR_LABELS: Record<string, string> = {
-  thin_snapshot: "Waxpeer прислал неполный список — цены остались прежними",
-};
-
-interface JobLineProps {
-  name: string;
+interface JobRowProps {
+  label: string;
   job: JobOut | null;
   okText: string;
   failText: string;
 }
 
-function JobLine({ name, job, okText, failText }: JobLineProps) {
-  if (!job) return <li className="text-fg-muted">{name}: ещё не запускалось</li>;
-  if (job.ok) return <li>{`${okText} ${formatWhen(job.finished_at)}`}</li>;
-  const reason = job.error
-    ? (ERROR_LABELS[job.error] ?? `ошибка: ${job.error}`)
-    : "ошибка: неизвестна";
+function JobRow({ label, job, okText, failText }: JobRowProps) {
   return (
-    <li>
-      <span className="text-danger">{failText}</span>{" "}
-      <span className="text-fg-muted">{formatWhen(job.finished_at)}</span>
-      <div className="text-fg-muted text-sm">{reason}</div>
-    </li>
+    <Row label={label}>
+      {job === null ? (
+        <span className="text-fg-muted">ещё не запускалось</span>
+      ) : job.ok ? (
+        `${okText} ${formatWhen(job.finished_at)}`
+      ) : (
+        <>
+          <span className="text-danger">{failText}</span>{" "}
+          <span className="text-fg-muted">{formatWhen(job.finished_at)}</span>
+          <div className="text-fg-muted">
+            {job.error ? (
+              <Reason of="catalogueJob" code={job.error} capitalise />
+            ) : (
+              "Причина неизвестна"
+            )}
+          </div>
+        </>
+      )}
+    </Row>
   );
 }
 
 function StatusBody({ s }: { s: CatalogStatus }) {
   return (
-    <div className="space-y-4">
-      <ul className="space-y-1">
-        <li>Скинов в каталоге: {formatNumber(s.items_total)}</li>
-        <li>В продаже: {formatNumber(s.items_active)}</li>
-        <li>Скрыто: {formatNumber(s.items_hidden)}</li>
-        {s.prices_updated_at && <li>Цены обновлены: {formatWhen(s.prices_updated_at)}</li>}
-      </ul>
-      <ul className="space-y-1">
-        <JobLine
-          name="Каталог"
+    <>
+      <dl>
+        <Row label="Скинов в каталоге">{formatNumber(s.items_total)}</Row>
+        <Row label="В продаже">{formatNumber(s.items_active)}</Row>
+        <Row label="Скрыто">{formatNumber(s.items_hidden)}</Row>
+        <JobRow
+          label="Каталог"
           job={s.import_job}
-          okText="Каталог обновлён"
+          okText="Обновлён"
           failText="Каталог не обновился"
         />
-        <JobLine
-          name="Цены"
+        <JobRow
+          label="Цены"
           job={s.price_sync_job}
-          okText="Цены обновлены"
+          okText="Обновлены"
           failText="Цены не обновились"
         />
-      </ul>
-      <p>
-        {s.fx
-          ? `Курс ЦБ: ${formatRate(s.fx.usd_uzs)} сум за $ · ${formatWhen(s.fx.fetched_at)}`
-          : "Курса нет — цены показываются в долларах"}
-      </p>
+        <Row label="Курс ЦБ">
+          {s.fx ? (
+            <>
+              {formatRate(s.fx.usd_uzs)}
+              <span className="text-fg-muted"> · {formatWhen(s.fx.fetched_at)}</span>
+            </>
+          ) : (
+            "Курса нет — цены показываются в долларах"
+          )}
+        </Row>
+      </dl>
       {(!s.sync_enabled || !s.waxpeer_key_set) && (
-        <p className="text-fg-muted text-sm">Обновление цен выключено на этом сервере</p>
+        <p className="text-fg-muted mt-2 text-sm">Обновление цен выключено на этом сервере</p>
       )}
-    </div>
+    </>
   );
 }
 
 export function StatusCard() {
   const q = useQuery({ queryKey: ["catalogue", "status"], queryFn: getStatus });
   return (
-    <section className="border-border bg-surface rounded-lg border p-5">
-      <h2 className="mb-3 text-lg font-semibold">Состояние</h2>
+    <Section title="Состояние">
       {q.isPending && <p className="text-fg-muted">Загрузка…</p>}
       {q.isError && (
         <p role="alert" className="text-danger">
@@ -79,6 +88,6 @@ export function StatusCard() {
         </p>
       )}
       {q.data && <StatusBody s={q.data} />}
-    </section>
+    </Section>
   );
 }
