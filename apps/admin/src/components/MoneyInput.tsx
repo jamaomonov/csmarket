@@ -33,6 +33,33 @@ function caretAfter(shown: string, kept: number): number {
   return shown.length;
 }
 
+/**
+ * Backspace right after a group space, or Delete right before one, removes the digit beyond
+ * the space (the space alone carries nothing): the new raw value and the caret's place in
+ * non-space characters. `null` when the key is not over a group space.
+ */
+export function overGroupSpace(
+  key: string,
+  el: { value: string; selectionStart: number | null; selectionEnd: number | null },
+): { raw: string; caret: number } | null {
+  const at = el.selectionStart;
+  if (at === null || at !== el.selectionEnd) return null;
+  const text = el.value;
+  if (key === "Backspace" && at >= 2 && /\s/.test(text.charAt(at - 1))) {
+    return {
+      raw: ungroup(text.slice(0, at - 2) + text.slice(at - 1)),
+      caret: ungroup(text.slice(0, at - 2)).length,
+    };
+  }
+  if (key === "Delete" && /\s/.test(text.charAt(at)) && at + 1 < text.length) {
+    return {
+      raw: ungroup(text.slice(0, at + 1) + text.slice(at + 2)),
+      caret: ungroup(text.slice(0, at)).length,
+    };
+  }
+  return null;
+}
+
 interface MoneyInputProps {
   /** What the sum is («Минимум на карту»); the accessible name is «<label>, <unit>». */
   label: string;
@@ -80,6 +107,14 @@ export function MoneyInput({
         autoComplete="off"
         value={shown}
         maxLength={maxLength}
+        onKeyDown={(e) => {
+          const cut = overGroupSpace(e.key, e.currentTarget);
+          if (cut === null) return;
+          // A group space is not the value: the key takes the digit beside it instead.
+          e.preventDefault();
+          caret.current = cut.caret;
+          onChange(cut.raw);
+        }}
         onChange={(e) => {
           const text = e.target.value;
           const at = e.target.selectionStart ?? text.length;

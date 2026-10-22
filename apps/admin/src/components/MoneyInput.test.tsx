@@ -59,4 +59,30 @@ describe("MoneyInput", () => {
     expect(field).toHaveAttribute("inputmode", "decimal");
     expect(field).toHaveValue(`1${NB}500.5`);
   });
+
+  it("Backspace after a group space removes the digit before it, the caret stays there", () => {
+    const seen = vi.fn();
+    render(<Controlled onValue={seen} />);
+    const field = screen.getByRole<HTMLInputElement>("textbox", { name: "Сумма, сум" });
+    fireEvent.change(field, { target: { value: "2000000" } });
+    field.focus();
+    field.setSelectionRange(2, 2); // «2 |000 000»
+    fireEvent.keyDown(field, { key: "Backspace" });
+    expect(seen).toHaveBeenLastCalledWith("000000");
+    expect(field).toHaveValue("000\u00a0000");
+    expect(field.selectionStart).toBe(0);
+  });
+
+  it("Delete before a group space removes the digit after it, the caret stays", () => {
+    const seen = vi.fn();
+    render(<Controlled onValue={seen} />);
+    const field = screen.getByRole<HTMLInputElement>("textbox", { name: "Сумма, сум" });
+    fireEvent.change(field, { target: { value: "2000000" } });
+    field.focus();
+    field.setSelectionRange(1, 1); // «2| 000 000»
+    fireEvent.keyDown(field, { key: "Delete" });
+    expect(seen).toHaveBeenLastCalledWith("200000");
+    expect(field).toHaveValue("200\u00a0000");
+    expect(field.selectionStart).toBe(1);
+  });
 });
