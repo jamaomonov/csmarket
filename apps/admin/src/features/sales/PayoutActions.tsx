@@ -1,14 +1,16 @@
 /**
- * The decisions on a payout, each behind an confirm that says what exactly happens and
+ * The decisions on a payout, each behind a confirm that says what exactly happens and
  * one `Idempotency-Key` per submission: «Выплачено» (restates amount, card and seller; a banned
  * account or a frozen wallet needs a reason), «Отклонить» (hidden once Skinslink reverted the
  * trade — the API refuses it), «Отменить (откат)» when the sale was reverted, and «Вернуть в
  * очередь» for a decision of the last 10 minutes. The confirm is a bottom sheet on a phone
- * (`ConfirmSheet`); one green button per step, dangerous actions outlined red on their own row.
+ * (`ConfirmSheet`); one green button per step; «Отклонить» outlined red on its own row, while
+ * «Отменить (откат)» — the request's main action once the trade was reverted — stays in the
+ * sticky bar. A confirm closes by itself when a refetch says its action is gone.
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PAYOUTS_KEY, payoutKey, saleKey } from "./keys";
 import { CARD_BRANDS, last4, payoutErrorText } from "./labels";
@@ -131,20 +133,34 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
     setText("");
     act.reset();
   };
+  // Skinslink took the trade back: the API refuses «Отклонить» (it would pay the seller twice).
+  const canReject = !(detail.request.flags ?? []).includes("rolled_back");
+  const available: Record<Exclude<Panel, "none">, boolean> = {
+    paid: detail.can_decide,
+    reject: detail.can_decide && canReject,
+    cancel: detail.can_cancel === true,
+    undo: undoUntil !== null,
+  };
+  const gone = panel !== "none" && !available[panel];
+  // A refetch took the open action away (e.g. `rolled_back` arrived): close its confirm.
+  useEffect(() => {
+    if (gone) setPanel("none");
+  }, [gone]);
   const needsText = panel === "reject" || panel === "cancel" || panel === "undo";
   const needsOverride = panel === "paid" && detail.paid_needs_override === true;
   const blocked =
     act.isPending || (needsText && text.trim() === "") || (needsOverride && override.trim() === "");
-  if (!detail.can_decide && undoUntil === null) return null;
-  // Skinslink took the trade back: the API refuses «Отклонить» (it would pay the seller twice).
-  const canReject = !(detail.request.flags ?? []).includes("rolled_back");
+  if (!detail.can_decide && undoUntil === null && detail.can_cancel !== true) return null;
   // One green button per step: «Беру в работу» first, then «Выплачено».
   const paidIsNext = by !== null && by.id === meId;
   return (
     <section className="flex flex-col gap-3" aria-label="Решение">
       {/* On a phone the decision stays at the bottom of the screen while the card scrolls. */}
-      {detail.can_decide || undoUntil !== null ? (
-        <div className="bg-bg/95 border-border sticky bottom-0 z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none">
+      {detail.can_decide || undoUntil !== null || detail.can_cancel === true ? (
+        <div
+          data-testid="decision-bar"
+          className="bg-bg/95 border-border sticky bottom-0 z-20 -mx-4 flex flex-wrap gap-2 border-t px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none [&>button]:flex-1 sm:[&>button]:flex-none"
+        >
           {detail.can_decide ? (
             <Button
               variant={paidIsNext ? "primary" : "secondary"}
@@ -166,22 +182,6 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
               Вернуть в очередь
             </Button>
           ) : null}
-        </div>
-      ) : null}
-      {(detail.can_decide && canReject) || detail.can_cancel === true ? (
-        <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
-          {detail.can_decide && canReject ? (
-            <Button
-              variant="secondary"
-              className={DANGER_OUTLINE}
-              disabled={takenByOther}
-              onClick={() => {
-                open("reject");
-              }}
-            >
-              Отклонить
-            </Button>
-          ) : null}
           {detail.can_cancel === true ? (
             <Button
               variant="secondary"
@@ -196,6 +196,20 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
           ) : null}
         </div>
       ) : null}
+      {available.reject ? (
+        <div className="flex flex-wrap gap-2 [&>button]:flex-1 sm:[&>button]:flex-none">
+          <Button
+            variant="secondary"
+            className={DANGER_OUTLINE}
+            disabled={takenByOther}
+            onClick={() => {
+              open("reject");
+            }}
+          >
+            Отклонить
+          </Button>
+        </div>
+      ) : null}
       {takenByOther && detail.can_decide ? (
         <p className="text-fg-muted text-sm">Сначала «Забрать себе» — заявку платит другой.</p>
       ) : null}
@@ -204,7 +218,7 @@ export function PayoutActions({ detail, onStale }: { detail: Detail; onStale: ()
           Ошиблись? Вернуть можно до {formatDateTime(undoUntil).slice(-5)}.
         </p>
       ) : null}
-      {panel !== "none" ? (
+      {panel !== "none" && !gone ? (
         <ConfirmSheet
           title={TITLE[panel]}
           busy={act.isPending}
