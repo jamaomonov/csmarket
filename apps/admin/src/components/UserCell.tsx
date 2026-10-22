@@ -9,9 +9,11 @@ interface UserCellProps {
   name: string | null;
   avatarUrl?: string | null | undefined;
   sub?: ReactNode;
+  /** Chips and icons beside the name (a role chip on an admin, an API key icon). */
+  badges?: ReactNode;
 }
 
-export function UserCell({ id, name, avatarUrl, sub }: UserCellProps) {
+export function UserCell({ id, name, avatarUrl, sub, badges }: UserCellProps) {
   const shown = name !== null && name !== "" ? name : "Без имени";
   return (
     <div className="flex min-w-0 items-center gap-2">
@@ -26,9 +28,12 @@ export function UserCell({ id, name, avatarUrl, sub }: UserCellProps) {
         </span>
       )}
       <div className="min-w-0">
-        <Link to={`/users/${id}`} className={`${LINK} block truncate`}>
-          {shown}
-        </Link>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Link to={`/users/${id}`} className={`${LINK} truncate`}>
+            {shown}
+          </Link>
+          {badges}
+        </div>
         {sub !== undefined && <div className="text-fg-dim truncate text-xs">{sub}</div>}
       </div>
     </div>

@@ -71,10 +71,22 @@ describe("UsersPage", () => {
     const row = link.closest("tr");
     expect(row).not.toBeNull();
     expect(within(row as HTMLElement).getByText(/70\s000 сум/)).toBeInTheDocument();
-    expect(screen.getByText("администратор")).toBeInTheDocument();
+    expect(screen.getByText("админ")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Роль" })).toBeNull();
+    expect(screen.queryByRole("columnheader", { name: "API" })).toBeNull();
     expect(screen.getByText("заблокирован")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Без имени" })).toHaveAttribute("href", "/users/u-3");
     expect(api.listUsers).toHaveBeenCalledWith({});
+  });
+
+  it("marks an API key with an icon by the name, its tariff in words", async () => {
+    api.listUsers.mockResolvedValue({
+      items: [{ ...ROW, api_key: { id: "k-1", pricing_profile: "retail" } }],
+      next_cursor: null,
+    });
+    renderPage();
+    await screen.findByRole("link", { name: "Ivan" });
+    expect(screen.getByRole("img", { name: /^API-ключ: / })).toBeInTheDocument();
   });
 
   it("searches by name or Steam ID", async () => {
