@@ -144,7 +144,7 @@ code={status} />` reads its word and tone from the one dictionary, `lib/dictiona
   wide screen and in an `ActionBar` on a phone — sticky at the bottom, above the bottom bar
   (`bottom-(--bottom-nav)`), its buttons sharing the width; rare or dangerous ones behind «⋯»
   (`MoreMenu`). A phone reads banner → summary → actions → details. Technical fields (ids to
-  search a supplier's cabinet by, a kassa reference) fold under «Подробнее» (`More`). Empty
+  search a market's cabinet by, a kassa reference) fold under «Подробнее» (`More`). Empty
   sections fold into one line, «Пока пусто: Заказы, Продажи» (`EmptySections`). The header
   names the thing (an order: its skin's picture, name and price; «Продажа <number>»; a payout:
   «Продавец: <name>» as a link). A payout's «Риски» shows what needs a look in red on top and
