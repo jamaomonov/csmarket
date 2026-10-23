@@ -16,6 +16,7 @@ import { useArrivalKassa, useKassaAutoOpen } from "./useOrderArrival";
 import type { Locale } from "@csmarket/i18n";
 
 import { ENTRIES_KEY } from "@/components/balance/EntriesList";
+import { ReviewSlot } from "@/components/reviews/ReviewSlot";
 import { StatusBadge } from "@/components/trades/StatusBadge";
 import { TradeSteps, type TradeStep } from "@/components/trades/TradeSteps";
 import { Link } from "@/i18n/navigation";
@@ -149,6 +150,14 @@ export function OrderView({ locale, number }: OrderViewProps) {
           void order.refetch();
         }}
       />
+      {data.status === "delivered" && data.channel === "site" ? (
+        <ReviewSlot
+          kind="market"
+          number={data.number}
+          title={data.name}
+          imageUrl={data.image_url}
+        />
+      ) : null}
     </Panel>
   );
 }
