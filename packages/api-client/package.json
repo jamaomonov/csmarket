@@ -15,7 +15,7 @@
     "gen:api": "openapi-ts -i ../../docs/api/openapi.json -o src/generated -c @hey-api/client-fetch || echo 'openapi.json not yet generated'"
   },
   "dependencies": {
-    "@hey-api/client-fetch": "^0.5.0"
+    "@hey-api/client-fetch": "^0.13.1"
   },
   "devDependencies": {
     "@csmarket/config-eslint": "workspace:*",
