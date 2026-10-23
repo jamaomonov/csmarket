@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { BALANCE_KEY } from "@/lib/balance";
 import { orderKey, ORDERS_KEY } from "@/lib/orders";
 import { OrderSocket, wsUrl } from "@/lib/realtime";
+import { REVIEW_PENDING_KEY } from "@/lib/reviews";
 import { PENDING_KEY, saleKey, SALES_KEY } from "@/lib/sales";
 
 /** The access token, re-minted from the refresh cookie when memory has none. */
@@ -20,7 +21,8 @@ async function currentToken(): Promise<string | null> {
 
 /**
  * Keep one order socket open while a buyer is signed in: a nudge re-reads that order, the
- * orders list, the balance and its entries. Polling on the order page stays as it was.
+ * orders list, the balance and its entries — and the pending review (a deal that just succeeded
+ * opens the review modal, `ReviewPrompt`). Polling on the order page stays as it was.
  */
 export function useOrderSocket(): void {
   const { status, user } = useAuth();
@@ -38,6 +40,7 @@ export function useOrderSocket(): void {
         void qc.invalidateQueries({ queryKey: ORDERS_KEY });
         void qc.invalidateQueries({ queryKey: BALANCE_KEY });
         void qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+        void qc.invalidateQueries({ queryKey: REVIEW_PENDING_KEY });
       },
       onSaleChanged: (number) => {
         void qc.invalidateQueries({ queryKey: saleKey(number) });
@@ -45,6 +48,7 @@ export function useOrderSocket(): void {
         void qc.invalidateQueries({ queryKey: PENDING_KEY });
         void qc.invalidateQueries({ queryKey: BALANCE_KEY });
         void qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+        void qc.invalidateQueries({ queryKey: REVIEW_PENDING_KEY });
       },
     });
     socket.start();
