@@ -12,6 +12,10 @@ export const ACTION_LABELS: Readonly<Record<string, string>> = {
   "users.ban": "Блокировка",
   "users.unban": "Разблокировка",
   "users.risk.update": "Риск пользователя изменён",
+  "reviews.review.resolve": "Отзыв разобран",
+  "reviews.review.hide": "Отзыв скрыт с сайта",
+  "reviews.review.unhide": "Отзыв показан на сайте",
+  "reviews.settings.save": "Страница отзывов",
   "wallet.adjust": "Изменение баланса",
   "skins.item.hide": "Скин скрыт",
   "skins.item.colors": "Цвета скина изменены",
@@ -72,6 +76,8 @@ export const TARGET_TYPE_LABELS: Readonly<Record<string, string>> = {
   payment_settings: "Настройки оплаты",
   payment_hold: "Платёж на проверке",
   kassa_review_limits: "Лимиты проверки касс",
+  review: "Отзыв",
+  review_settings: "Настройки отзывов",
   p2p_card: "P2P-карта",
   p2p_settings: "Настройки P2P",
   p2p_incoming: "P2P-перевод",
@@ -102,6 +108,8 @@ export function targetPath(type: string, id: string): string | null {
 
 /** Payload keys in words; a key not here shows as itself, small. */
 const PAYLOAD_KEYS: Readonly<Record<string, string>> = {
+  kind: "тип",
+  rating: "оценка",
   reason: "причина",
   amount_uzs: "сумма",
   alias: "синоним",

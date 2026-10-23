@@ -1,11 +1,11 @@
 /**
  * The admin's menu (admin UX audit §1): Дашборд, then the groups Очередь, Деньги, Люди,
  * Аналитика, Настройки, Журнал. The top bar, the phone's bottom bar and its «Ещё» sheet all read
- * from here, so a page is listed once.
+ * from here, so a page is listed once. «Отзывы» sits in «Люди» with its count of bad reviews.
  */
 
 /** What waits for an operator, counted by the dashboard. */
-export type Counter = "attention" | "toPay" | "salesAttention" | "holds";
+export type Counter = "attention" | "toPay" | "salesAttention" | "holds" | "reviews";
 
 export interface NavItem {
   to: string;
@@ -60,6 +60,7 @@ export const GROUPS: readonly NavGroup[] = [
     items: [
       { to: "/users", label: "Пользователи", also: ["/api-keys"] },
       { to: "/sale-blocks", label: "Запрет выкупа" },
+      { to: "/reviews", label: "Отзывы", counter: "reviews" },
     ],
   },
   { label: "Аналитика", items: [{ to: "/analytics", label: "Аналитика" }] },
@@ -83,6 +84,7 @@ export const COUNTER_LABEL: Record<Counter, string> = {
   toPay: "к выплате",
   salesAttention: "продажи ждут проверки",
   holds: "Платежи на проверке",
+  reviews: "плохие отзывы",
 };
 
 const ALL: readonly NavItem[] = [DASHBOARD, ...GROUPS.flatMap((g) => g.items)];
