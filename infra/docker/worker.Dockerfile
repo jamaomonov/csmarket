@@ -1,5 +1,5 @@
 # syntax=mirror.gcr.io/docker/dockerfile:1.7
-FROM mirror.gcr.io/library/python:3.12-slim
+FROM mirror.gcr.io/library/python:3.15-slim
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
