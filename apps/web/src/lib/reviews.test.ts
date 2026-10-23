@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isGood, LIVE_SKEW_MS, shouldOpenLive, takeStripTurn, type PendingDeal } from "./reviews";
+import {
+  isGood,
+  LIVE_SKEW_MS,
+  saleCover,
+  shouldOpenLive,
+  takeStripTurn,
+  type PendingDeal,
+} from "./reviews";
 
 const VISIT = Date.parse("2026-10-23T10:00:00Z");
 const deal = (number: string, doneAt: number): PendingDeal => ({
@@ -50,5 +57,24 @@ describe("takeStripTurn", () => {
     });
     expect(takeStripTurn()).toBe(true);
     expect(takeStripTurn()).toBe(false);
+  });
+});
+
+describe("saleCover", () => {
+  const item = (asset_id: string, price_uzs: string) => ({
+    asset_id,
+    name: asset_id,
+    image_url: null,
+    exterior: null,
+    rarity_color: null,
+    price_uzs,
+  });
+
+  it("picks the dearest item, as the prompt does; a tie goes to the lower asset id", () => {
+    expect(saleCover([item("1", "90000"), item("2", "1250000"), item("3", "300000")])?.name).toBe(
+      "2",
+    );
+    expect(saleCover([item("9", "500"), item("4", "500")])?.name).toBe("4");
+    expect(saleCover<ReturnType<typeof item>>([])).toBeUndefined();
   });
 });

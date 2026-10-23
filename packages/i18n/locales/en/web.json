@@ -1062,20 +1062,26 @@
     "stars": {
       "label": "Rating",
       "star": "{n, plural, one {# star} other {# stars}}",
-      "of": "{n} out of 5"
+      "of": "Rated {n} out of 5"
     },
     "prompt": {
-      "titleMarket": "Trade done! How was your purchase?",
+      "titleMarket": "The skin is yours! How was your purchase?",
       "titleSale": "How did the sale go?",
-      "placeholderBad": "Tell us what happened?",
+      "placeholderBad": "What went wrong?",
       "placeholderGood": "A few kind words help us a lot",
       "textLabel": "Your review",
       "send": "Send",
       "later": "Not now",
       "close": "Close",
       "thanks": "Thank you for your review!",
-      "weWillContact": "We will get in touch",
-      "failed": "Could not send. Please try again."
+      "weWillContact": "We'll be in touch.",
+      "failed": "Could not send. Please try again.",
+      "titleEdit": "Edit your review",
+      "placeholderAny": "A few words about the deal — optional",
+      "pickRating": "Choose a rating",
+      "sending": "Sending…",
+      "done": "Done",
+      "weWillLook": "Thanks. We'll look into it."
     },
     "strip": {
       "label": "Review of your deal",
@@ -1091,7 +1097,7 @@
       "edit": "Edit"
     },
     "page": {
-      "title": "CS2 skin customers' reviews — csmarket",
+      "title": "csmarket customer reviews — CS2 skins in Uzbekistan",
       "description": "Ratings and reviews from CS2 skin buyers and sellers in Uzbekistan.",
       "heading": "Reviews",
       "summary": "{count, plural, one {# review} other {# reviews}}",

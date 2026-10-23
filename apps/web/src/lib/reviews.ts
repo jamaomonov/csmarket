@@ -157,3 +157,16 @@ export function takeStripTurn(): boolean {
     return true;
   }
 }
+
+/** A sale's picture for its review: the dearest item, then the lowest asset id — the item the
+ * prompt shows (`reviews/deals.py`), so the page and the prompt agree. */
+export function saleCover<T extends { asset_id: string; price_uzs: string }>(
+  items: readonly T[],
+): T | undefined {
+  let best: T | undefined;
+  for (const i of items) {
+    const diff = best === undefined ? 1 : Number(i.price_uzs) - Number(best.price_uzs);
+    if (diff > 0 || (diff === 0 && best !== undefined && i.asset_id < best.asset_id)) best = i;
+  }
+  return best;
+}

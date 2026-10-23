@@ -1062,43 +1062,49 @@
     "stars": {
       "label": "Baho",
       "star": "{n} yulduz",
-      "of": "5 dan {n}"
+      "of": "Baho: 5 dan {n}"
     },
     "prompt": {
-      "titleMarket": "Almashuv bajarildi! Xarid qanday boʻldi?",
+      "titleMarket": "Skin sizda! Xarid qanday oʻtdi?",
       "titleSale": "Sotuv qanday oʻtdi?",
-      "placeholderBad": "Nima boʻlganini aytib bering?",
+      "placeholderBad": "Nima yoqmadi?",
       "placeholderGood": "Bir-ikki iliq soʻz — bu bizga juda yordam beradi",
-      "textLabel": "Fikringiz",
+      "textLabel": "Sharhingiz",
       "send": "Yuborish",
       "later": "Hozir emas",
       "close": "Yopish",
-      "thanks": "Fikringiz uchun rahmat!",
-      "weWillContact": "Siz bilan bogʻlanamiz",
-      "failed": "Yuborib boʻlmadi. Qaytadan urinib koʻring."
+      "thanks": "Sharhingiz uchun rahmat!",
+      "weWillContact": "Siz bilan bogʻlanamiz.",
+      "failed": "Yuborib boʻlmadi. Qaytadan urinib koʻring.",
+      "titleEdit": "Sharhni oʻzgartirish",
+      "placeholderAny": "Bitim haqida bir-ikki soʻz — ixtiyoriy",
+      "pickRating": "Bahoni tanlang",
+      "sending": "Yuborilmoqda…",
+      "done": "Tayyor",
+      "weWillLook": "Rahmat. Biz koʻrib chiqamiz."
     },
     "strip": {
-      "label": "Bitim haqida fikr",
+      "label": "Bitim haqida sharh",
       "market": "{name} xaridi qanday oʻtdi?",
       "sale": "Sotuv qanday oʻtdi?",
       "later": "Hozir emas",
-      "dismiss": "Boshqa soʻramang"
+      "dismiss": "Qayta soʻramang"
     },
     "account": {
-      "label": "Fikringiz",
-      "leave": "Fikr qoldirish",
-      "yours": "Sizning bahoyingiz",
+      "label": "Sharhingiz",
+      "leave": "Sharh qoldirish",
+      "yours": "Sizning bahongiz",
       "edit": "Oʻzgartirish"
     },
     "page": {
-      "title": "CS2 skinlari boʻyicha mijozlar fikrlari — csmarket",
-      "description": "Oʻzbekistonda CS2 skinlari xaridorlari va sotuvchilarining baholari va fikrlari.",
-      "heading": "Fikrlar",
-      "summary": "{count} ta fikr",
+      "title": "CS2 skinlari boʻyicha mijozlar sharhlari — csmarket",
+      "description": "Oʻzbekistonda CS2 skinlari xaridorlari va sotuvchilarining baholari va sharhlari.",
+      "heading": "Sharhlar",
+      "summary": "{count} ta sharh",
       "sale": "Skinlar sotuvi",
       "anonymous": "Steam foydalanuvchisi",
       "more": "Yana koʻrsatish",
-      "empty": "Hozircha fikrlar yoʻq",
+      "empty": "Hozircha sharhlar yoʻq",
       "loadFailed": "Yuklab boʻlmadi. Qaytadan urinib koʻring."
     }
   }

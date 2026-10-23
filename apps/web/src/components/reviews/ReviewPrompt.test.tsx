@@ -20,7 +20,7 @@ const m = vi.hoisted(() => ({
   dismiss: vi.fn(),
   save: vi.fn(),
 }));
-vi.mock("@/lib/auth", () => ({ useAuth: () => m.auth.value }));
+vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: null, ...m.auth.value }) }));
 const nav = vi.hoisted(() => ({ path: "/ru/market" }));
 vi.mock("next/navigation", () => ({ usePathname: () => nav.path }));
 vi.mock("@/lib/reviews", async (importOriginal) => ({
@@ -95,7 +95,7 @@ describe("ReviewPrompt", () => {
     m.pending.mockResolvedValue({ deal: fresh("EF56GH78") });
     await nudge(client);
     expect(
-      await screen.findByRole("heading", { name: "Обмен прошёл! Как вам покупка?" }),
+      await screen.findByRole("heading", { name: "Скин у вас! Как вам покупка?" }),
     ).toBeInTheDocument();
   });
 
@@ -130,10 +130,7 @@ describe("ReviewPrompt", () => {
     const strip = await screen.findByRole("complementary", { name: "Отзыв о сделке" });
     fireEvent.click(within(strip).getByRole("radio", { name: "4 звезды" }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByRole("radio", { name: "4 звезды" })).toHaveAttribute(
-      "aria-checked",
-      "true",
-    );
+    expect(within(dialog).getByRole("radio", { name: "4 звезды" })).toBeChecked();
   });
 
   it("does not open the modal for an older deal after a send", async () => {
@@ -179,7 +176,7 @@ describe("ReviewPrompt", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     await nudge(client);
     expect(
-      await screen.findByRole("heading", { name: "Обмен прошёл! Как вам покупка?" }),
+      await screen.findByRole("heading", { name: "Скин у вас! Как вам покупка?" }),
     ).toBeInTheDocument();
   });
 
@@ -225,5 +222,44 @@ describe("ReviewPrompt", () => {
     expect(document.body.style.paddingBottom).not.toBe("");
     fireEvent.click(screen.getByRole("button", { name: "Не сейчас" }));
     expect(document.body.style.paddingBottom).toBe("");
+  });
+  it("a deal that succeeds during a payment waits on the strip, not in a modal", async () => {
+    nav.path = "/ru/deposit";
+    m.pending.mockResolvedValue({ deal: null });
+    const client = mount();
+    await waitFor(() => {
+      expect(client.getQueryData(REVIEW_PENDING_KEY)).toEqual({ deal: null });
+    });
+    m.pending.mockResolvedValue({ deal: fresh("EF56GH78") });
+    await nudge(client);
+    expect(await screen.findByText(/Как прошла покупка/)).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("never opens over another open dialog", async () => {
+    const other = document.createElement("dialog");
+    other.setAttribute("open", "");
+    document.body.append(other);
+    m.pending.mockResolvedValue({ deal: null });
+    const client = mount();
+    await waitFor(() => {
+      expect(client.getQueryData(REVIEW_PENDING_KEY)).toEqual({ deal: null });
+    });
+    m.pending.mockResolvedValue({ deal: fresh("EF56GH78") });
+    await nudge(client);
+    expect(await screen.findByText(/Как прошла покупка/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Скин у вас! Как вам покупка?" })).toBeNull();
+    other.remove();
+  });
+
+  it("keeps the strip off the deal's own page (it has «Оставить отзыв»)", async () => {
+    m.pending.mockResolvedValue({ deal: OLD });
+    nav.path = "/ru/orders/AB12CD34";
+    const client = mount();
+    await waitFor(() => {
+      expect(client.getQueryData(REVIEW_PENDING_KEY)).toEqual({ deal: OLD });
+    });
+    await act(() => Promise.resolve());
+    expect(screen.queryByText(/Как прошла покупка/)).toBeNull();
   });
 });

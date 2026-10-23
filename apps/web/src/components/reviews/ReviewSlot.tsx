@@ -18,7 +18,7 @@ interface ReviewSlotProps {
   imageUrl: string | null;
 }
 
-/** On a succeeded deal's page: «Оставить отзыв», or the stars given (editable for 14 days). */
+/** On a succeeded deal's page: «Оставить отзыв», or the review given (editable for 14 days). */
 export function ReviewSlot({ kind, number, title, imageUrl }: ReviewSlotProps) {
   const t = useTranslations("web.reviews.account");
   const [open, setOpen] = useState(false);
@@ -58,6 +58,11 @@ export function ReviewSlot({ kind, number, title, imageUrl }: ReviewSlotProps) {
               {t("edit")}
             </Button>
           ) : null}
+          {review.text !== null ? (
+            <p className="text-fg-muted line-clamp-2 basis-full whitespace-pre-line text-sm">
+              {review.text}
+            </p>
+          ) : null}
         </>
       )}
       {open ? (
@@ -65,6 +70,7 @@ export function ReviewSlot({ kind, number, title, imageUrl }: ReviewSlotProps) {
           deal={{ kind, number, title, image_url: imageUrl }}
           initialRating={review?.rating ?? null}
           initialText={review?.text ?? null}
+          editing={review !== null}
           onClose={() => {
             setOpen(false);
           }}

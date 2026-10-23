@@ -23,6 +23,9 @@ type Answer = "snooze" | "dismiss";
 
 /** Pages with their own sticky bottom bar («Купить», «Продать»): the strip waits off them. */
 const OWN_BOTTOM_BAR = /(^|\/)(item|sell)(\/|$)/;
+/** Pages where a buy, a sale or a top-up is under way: a deal that succeeds there waits on the
+ * strip instead of covering them with a modal. */
+const BUSY = /(^|\/)(item|sell|deposit)(\/|$)/;
 /** Room the strip takes at the bottom of the page, so it never hides the page's last line. */
 const STRIP_ROOM = "6rem";
 
@@ -30,7 +33,9 @@ const STRIP_ROOM = "6rem";
  * The site-wide review prompt (spec «Storefront»). The pending deal is read once per page load
  * and again on each socket nudge (`useOrderSocket` invalidates it). The deal pending at load
  * gets the bottom strip, once per visit; a deal that succeeds during the visit opens the modal
- * at once, on whatever page the user is.
+ * at once, on whatever page the user is — unless a payment is under way or another dialog is
+ * open: then it waits on the strip. The strip stays off the deal's own page, which has its own
+ * «Оставить отзыв».
  */
 export function ReviewPrompt() {
   const { status } = useAuth();
@@ -52,6 +57,9 @@ export function ReviewPrompt() {
   });
   const deal = pending.data?.deal ?? null;
   const pathname = usePathname();
+  // read inside the effect, which runs on each read of the deal, not on navigation
+  const pathRef = useRef(pathname);
+  pathRef.current = pathname;
   const signedIn = status === "signed_in";
 
   // Sign-out: drop what was shown for the previous user and the cached deal (a new sign-in
@@ -65,7 +73,11 @@ export function ReviewPrompt() {
     qc.removeQueries({ queryKey: REVIEW_PENDING_KEY });
   }, [signedIn, qc]);
 
-  const showStrip = signedIn && strip !== null && !OWN_BOTTOM_BAR.test(pathname);
+  const showStrip =
+    signedIn &&
+    strip !== null &&
+    !OWN_BOTTOM_BAR.test(pathname) &&
+    !pathname.split("/").includes(strip.number);
   useEffect(() => {
     if (!showStrip) return;
     document.body.style.paddingBottom = STRIP_ROOM;
@@ -84,6 +96,10 @@ export function ReviewPrompt() {
     const check = { initialNumber: initial.current.number, opened: opened.current, visitStartMs };
     if (!modalOpen.current && shouldOpenLive(deal, check)) {
       opened.current.add(deal.number);
+      if (BUSY.test(pathRef.current) || document.querySelector("dialog[open]") !== null) {
+        setStrip(deal);
+        return;
+      }
       setStrip(null);
       setModal({ deal, rating: null });
     }

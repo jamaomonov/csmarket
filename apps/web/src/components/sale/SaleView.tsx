@@ -15,6 +15,7 @@ import { TradeSteps, type TradeStep } from "@/components/trades/TradeSteps";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
 import { TRADES } from "@/lib/paths";
+import { saleCover } from "@/lib/reviews";
 import { getSale, saleKey, salePollInterval, type SaleOut } from "@/lib/sales";
 import { saleBadge, shortDay, type Tone } from "@/lib/trade-status";
 
@@ -284,8 +285,8 @@ export function SaleView({ locale, number }: SaleViewProps) {
         <ReviewSlot
           kind="sale"
           number={sale.data.number}
-          title={sale.data.items[0]?.name ?? ""}
-          imageUrl={sale.data.items[0]?.image_url ?? null}
+          title={saleCover(sale.data.items)?.name ?? ""}
+          imageUrl={saleCover(sale.data.items)?.image_url ?? null}
         />
       ) : null}
     </div>

@@ -9,6 +9,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { Stars } from "./Stars";
 
+import { useAuth } from "@/lib/auth";
 import {
   dealReviewKey,
   isGood,
@@ -34,6 +35,8 @@ interface ReviewDialogProps {
   onClose: () => void;
   /** «Не сейчас» (the live prompt and the strip); without it the button is not shown. */
   onLater?: () => void;
+  /** Changing a review already sent: «Изменить отзыв» as the title. */
+  editing?: boolean;
 }
 
 interface Sent {
@@ -43,8 +46,10 @@ interface Sent {
 
 /**
  * The review modal, mounted only while open: a native `<dialog>` opened with `showModal()`
- * (focus kept inside, Escape and the backdrop close it). The text is sent as typed and never
- * rendered as markup. One `Idempotency-Key` per body, so a retry after a lost answer replays.
+ * (focus kept inside, Escape closes it; the backdrop only while nothing was changed, so a stray
+ * tap never loses typed text). Focus goes back to the opener on close. The text is sent as typed
+ * and never rendered as markup. One `Idempotency-Key` per body, so a retry after a lost answer
+ * replays.
  */
 export function ReviewDialog({
   deal,
@@ -52,10 +57,12 @@ export function ReviewDialog({
   initialText = null,
   onClose,
   onLater,
+  editing = false,
 }: ReviewDialogProps) {
   const t = useTranslations("web.reviews.prompt");
   const locale = useLocale();
   const qc = useQueryClient();
+  const { user } = useAuth();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const key = useRef<{ body: string; key: string } | null>(null);
@@ -64,10 +71,16 @@ export function ReviewDialog({
 
   useEffect(() => {
     const dialog = ref.current;
-    if (dialog === null || dialog.open) return;
-    // jsdom has no showModal; the attribute keeps the content reachable there.
-    if (typeof dialog.showModal === "function") dialog.showModal();
-    else dialog.setAttribute("open", "");
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    if (dialog !== null && !dialog.open) {
+      // jsdom has no showModal; the attribute keeps the content reachable there.
+      if (typeof dialog.showModal === "function") dialog.showModal();
+      else dialog.setAttribute("open", "");
+    }
+    return () => {
+      if (dialog?.open === true && typeof dialog.close === "function") dialog.close();
+      if (opener?.isConnected === true) opener.focus();
+    };
   }, []);
 
   const send = useMutation({
@@ -84,9 +97,19 @@ export function ReviewDialog({
   });
 
   const sent = send.isSuccess ? send.variables : null;
-  const title = deal.kind === "market" ? t("titleMarket") : t("titleSale");
+  const title = editing
+    ? t("titleEdit")
+    : deal.kind === "market"
+      ? t("titleMarket")
+      : t("titleSale");
   const placeholder =
-    rating !== null && !isGood(rating) ? t("placeholderBad") : t("placeholderGood");
+    rating === null
+      ? t("placeholderAny")
+      : isGood(rating)
+        ? t("placeholderGood")
+        : t("placeholderBad");
+  const untouched = rating === initialRating && text === (initialText ?? "");
+  const canContact = user?.email != null && user.email_verified;
 
   return (
     <dialog
@@ -94,7 +117,7 @@ export function ReviewDialog({
       aria-labelledby={titleId}
       onClose={onClose}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && (untouched || sent !== null)) onClose();
       }}
       className="bg-surface-solid border-border text-fg backdrop:bg-bg/70 m-auto w-[min(480px,calc(100vw-32px))] rounded-2xl border p-0 shadow-[0_24px_60px_rgb(0_0_0/0.5)] backdrop:backdrop-blur-sm"
     >
@@ -111,13 +134,20 @@ export function ReviewDialog({
           // eslint-disable-next-line @next/next/no-img-element -- a Steam CDN image already cut to size
           <img src={deal.image_url} alt="" className="h-24 w-auto object-contain" />
         ) : null}
+        {deal.title !== "" ? <p className="text-fg-muted -mt-2 text-sm">{deal.title}</p> : null}
         <h2 id={titleId} className="text-h3 font-semibold tracking-tight">
           {sent === null ? title : t("thanks")}
         </h2>
         {sent !== null ? (
-          !isGood(sent.rating) ? (
-            <p className="text-fg-muted">{t("weWillContact")}</p>
-          ) : null
+          <div role="status" className="flex w-full flex-col items-center gap-4">
+            {!isGood(sent.rating) ? (
+              <p className="text-fg-muted">{canContact ? t("weWillContact") : t("weWillLook")}</p>
+            ) : null}
+            {/* the form it replaced held focus: «Готово» takes it, so it is not lost */}
+            <Button autoFocus onClick={onClose} className="w-full sm:w-auto">
+              {t("done")}
+            </Button>
+          </div>
         ) : (
           <form
             className="flex w-full flex-col items-center gap-4"
@@ -127,6 +157,9 @@ export function ReviewDialog({
             }}
           >
             <Stars value={rating} onChange={setRating} size="lg" />
+            {rating === null ? (
+              <p className="text-fg-dim -mt-2 text-sm">{t("pickRating")}</p>
+            ) : null}
             <textarea
               aria-label={t("textLabel")}
               value={text}
@@ -145,7 +178,7 @@ export function ReviewDialog({
             ) : null}
             <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
               <Button type="submit" disabled={rating === null || send.isPending}>
-                {t("send")}
+                {send.isPending ? t("sending") : t("send")}
               </Button>
               {onLater !== undefined ? (
                 <Button variant="ghost" onClick={onLater}>
