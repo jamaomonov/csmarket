@@ -21,6 +21,8 @@ const m = vi.hoisted(() => ({
   save: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => m.auth.value }));
+const nav = vi.hoisted(() => ({ path: "/ru/market" }));
+vi.mock("next/navigation", () => ({ usePathname: () => nav.path }));
 vi.mock("@/lib/reviews", async (importOriginal) => ({
   ...(await importOriginal<typeof ReviewsModule>()),
   getPendingReview: m.pending,
@@ -60,6 +62,8 @@ const nudge = (client: QueryClient) =>
 
 beforeEach(() => {
   window.sessionStorage.clear();
+  nav.path = "/ru/market";
+  document.body.style.paddingBottom = "";
   m.auth.value = { status: "signed_in" };
   for (const f of [m.pending, m.snooze, m.dismiss, m.save]) f.mockReset();
   m.snooze.mockResolvedValue(undefined);
@@ -157,5 +161,43 @@ describe("ReviewPrompt", () => {
     m.auth.value = { status: "anonymous" };
     mount();
     expect(m.pending).not.toHaveBeenCalled();
+  });
+
+  it("signing out hides the strip and forgets the deal", async () => {
+    m.pending.mockResolvedValue({ deal: OLD });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = () => (
+      <QueryClientProvider client={client}>
+        <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
+          <ReviewPrompt />
+        </NextIntlClientProvider>
+      </QueryClientProvider>
+    );
+    const { rerender } = render(tree());
+    expect(await screen.findByText(/Как прошла покупка/)).toBeInTheDocument();
+    m.auth.value = { status: "anonymous" };
+    rerender(tree());
+    expect(screen.queryByText(/Как прошла покупка/)).toBeNull();
+    expect(client.getQueryData(REVIEW_PENDING_KEY)).toBeUndefined();
+  });
+
+  it("keeps the strip off a page with its own bottom bar (buy, sell)", async () => {
+    m.pending.mockResolvedValue({ deal: OLD });
+    nav.path = "/ru/item/ak-47-redline-field-tested";
+    const client = mount();
+    await waitFor(() => {
+      expect(client.getQueryData(REVIEW_PENDING_KEY)).toEqual({ deal: OLD });
+    });
+    await act(() => Promise.resolve());
+    expect(screen.queryByText(/Как прошла покупка/)).toBeNull();
+  });
+
+  it("leaves room under the page for the strip", async () => {
+    m.pending.mockResolvedValue({ deal: OLD });
+    mount();
+    await screen.findByText(/Как прошла покупка/);
+    expect(document.body.style.paddingBottom).not.toBe("");
+    fireEvent.click(screen.getByRole("button", { name: "Не сейчас" }));
+    expect(document.body.style.paddingBottom).toBe("");
   });
 });

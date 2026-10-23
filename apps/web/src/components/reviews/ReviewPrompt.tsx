@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { ReviewDialog } from "./ReviewDialog";
@@ -19,6 +20,11 @@ import {
 } from "@/lib/reviews";
 
 type Answer = "snooze" | "dismiss";
+
+/** Pages with their own sticky bottom bar («Купить», «Продать»): the strip waits off them. */
+const OWN_BOTTOM_BAR = /(^|\/)(item|sell)(\/|$)/;
+/** Room the strip takes at the bottom of the page, so it never hides the page's last line. */
+const STRIP_ROOM = "6rem";
 
 /**
  * The site-wide review prompt (spec «Storefront»). The pending deal is read once per page load
@@ -42,6 +48,28 @@ export function ReviewPrompt() {
     retry: false,
   });
   const deal = pending.data?.deal ?? null;
+  const pathname = usePathname();
+  const signedIn = status === "signed_in";
+
+  // Sign-out: drop what was shown for the previous user and the cached deal (a new sign-in
+  // starts a fresh visit for the prompt).
+  useEffect(() => {
+    if (signedIn) return;
+    initial.current = null;
+    opened.current.clear();
+    setStrip(null);
+    setModal(null);
+    qc.removeQueries({ queryKey: REVIEW_PENDING_KEY });
+  }, [signedIn, qc]);
+
+  const showStrip = signedIn && strip !== null && !OWN_BOTTOM_BAR.test(pathname);
+  useEffect(() => {
+    if (!showStrip) return;
+    document.body.style.paddingBottom = STRIP_ROOM;
+    return () => {
+      document.body.style.paddingBottom = "";
+    };
+  }, [showStrip]);
 
   useEffect(() => {
     if (pending.data === undefined) return;
@@ -68,7 +96,7 @@ export function ReviewPrompt() {
 
   return (
     <>
-      {strip !== null ? (
+      {showStrip ? (
         <ReviewStrip
           deal={strip}
           onRate={(rating) => {
@@ -86,7 +114,7 @@ export function ReviewPrompt() {
           }}
         />
       ) : null}
-      {modal !== null ? (
+      {signedIn && modal !== null ? (
         <ReviewDialog
           deal={modal.deal}
           initialRating={modal.rating}
