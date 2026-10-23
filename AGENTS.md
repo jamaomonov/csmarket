@@ -61,7 +61,7 @@
 - **Admin analytics** (spec `2026-10-19-analytics-design.md`, plan `2026-10-19-analytics.md`, ADR-0020 recharts): the «Аналитика» page — gross profit by day and period at each order's market charge and CBU rate, a calendar, breakdowns — built on branch `analytics`, not merged.
 - **P2P top-ups and kassa switches** (spec `2026-10-19-p2p-topup-design.md`, plan `2026-10-19-p2p-topup.md`, ADR-0021, runbook `p2p.md`): balance top-ups by a card transfer matched from HUMO's Telegram notifications through a relay shared with YuPay, and on / maintenance / off per kassa — built on branch `p2p`, not merged; P2P ships off.
 - **Payment risk limits** (spec `2026-10-21-payment-risk-limits-design.md`, ADR-0022, runbook `payment-held-for-review.md`): money over a kassa or user window limit is held for an admin («На проверке») instead of being credited or bought — merged to `main` 2026-10-22.
-- **Reviews** (spec `2026-10-23-reviews-design.md`, plan `2026-10-23-reviews.md`, ADR-0023): 1–5 stars after a delivered order or a paid sale, the live prompt on any page, the admin's «Отзывы», `/reviews` behind «Показывать отзывы на сайте» — built on branch `reviews`, not merged.
+- **Reviews** (spec `2026-10-23-reviews-design.md`, plan `2026-10-23-reviews.md`, ADR-0023): 1–5 stars after a delivered order or a paid sale, the live prompt on any page, the admin's «Отзывы», `/reviews` behind «Показывать отзывы на сайте» — merged to `main` 2026-10-23, not deployed.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
