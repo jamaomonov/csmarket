@@ -6,6 +6,7 @@ storefront's own data cache keeps a page for up to 5 minutes).
 
 from __future__ import annotations
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
@@ -24,14 +25,12 @@ async def reviews_public(db: AsyncSession) -> bool:
 
 
 async def save_reviews_public(db: AsyncSession, *, value: bool, admin_id: str) -> ReviewSettingsRow:
-    """Upsert row 1; flushes, never commits."""
+    """Upsert row 1 in one statement (two first saves at once both land); never commits."""
+    values = {"reviews_public": value, "updated_by": admin_id, "updated_at": now()}
+    stmt = insert(ReviewSettingsRow).values(id=1, **values)
+    await db.execute(stmt.on_conflict_do_update(index_elements=["id"], set_=values))
     row = await settings_row(db)
-    if row is None:
-        row = ReviewSettingsRow(id=1, reviews_public=value, updated_by=admin_id, updated_at=now())
-        db.add(row)
-    else:
-        row.reviews_public, row.updated_by, row.updated_at = value, admin_id, now()
-    await db.flush()
+    assert row is not None  # just written in this transaction
     return row
 
 

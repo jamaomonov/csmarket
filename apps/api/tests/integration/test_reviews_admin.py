@@ -3,6 +3,7 @@ review text in any audit payload."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
@@ -12,10 +13,11 @@ import pytest
 from csmarket.core.clock import now
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.reviews import admin as reviews_admin
+from csmarket.modules.reviews.settings_store import reviews_public, save_reviews_public
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from tests.integration.conftest import ADMIN_STEAM_ID
 from tests.integration.reviews_factory import (
@@ -263,3 +265,21 @@ async def test_the_dashboard_counts_unresolved_bad_reviews(
     )
     r = await integration_client.get("/api/v1/admin/dashboard", headers=h)
     assert r.json()["reviews_bad_open"] == 2
+
+
+async def test_two_first_saves_of_the_switch_both_land(
+    db_engine: AsyncEngine, db_session: AsyncSession
+) -> None:
+    """Row 1 is not seeded: two admins saving at once on an empty table must not 500."""
+    admin_id = (await delivered_order(db_session)).user_id
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    async with factory() as first, factory() as second:
+        await save_reviews_public(first, value=True, admin_id=admin_id)
+        # the second insert waits on the first's uncommitted row 1, then meets it
+        racing = asyncio.create_task(save_reviews_public(second, value=False, admin_id=admin_id))
+        await asyncio.sleep(0.2)
+        await first.commit()
+        await racing
+        await second.commit()
+    async with factory() as check:
+        assert await reviews_public(check) is False
