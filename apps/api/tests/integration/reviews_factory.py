@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
+from typing import Any
 
 from csmarket.core.clock import now
 from csmarket.modules.orders.models import Order
@@ -34,7 +35,8 @@ async def credited_sale(
     db: AsyncSession, *, user: User | None = None, days_ago: float = 1.0, **over: object
 ) -> Sale:
     """A committed sale to the balance, credited ``days_ago`` days ago."""
-    values: dict[str, object] = {
+    # Any: ``make_sale``'s keywords are typed one by one; these are columns of mixed types
+    values: dict[str, Any] = {
         "status": "credited",
         "credited_at": now() - timedelta(days=days_ago),
         "trade_id": 7,

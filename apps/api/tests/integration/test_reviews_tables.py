@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 from csmarket.modules.reviews.models import Review
 from sqlalchemy.exc import IntegrityError
@@ -41,7 +43,8 @@ async def test_a_review_names_exactly_one_deal_of_its_kind(db_session: AsyncSess
     "over", [{"rating": 0}, {"rating": 6}, {"locale": "de"}, {"text": ""}, {"text": "x" * 1001}]
 )
 async def test_rating_locale_and_text_are_checked(
-    db_session: AsyncSession, over: dict[str, object]
+    db_session: AsyncSession,
+    over: dict[str, Any],  # Any: a bad value of any column type, refused by the database
 ) -> None:
     order = await delivered_order(db_session)
     with pytest.raises(IntegrityError):
