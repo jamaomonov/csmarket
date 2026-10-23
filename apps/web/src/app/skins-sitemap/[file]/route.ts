@@ -1,5 +1,6 @@
 import { legalPaths } from "@/lib/legal";
-import { CHEAP, HOME, itemPath, MARKET, PAY_METHODS, payPath, SELL } from "@/lib/paths";
+import { CHEAP, HOME, itemPath, MARKET, PAY_METHODS, payPath, REVIEWS, SELL } from "@/lib/paths";
+import { reviewsPublic } from "@/lib/reviews-server";
 import { landingPaths } from "@/lib/skin-landing";
 import { fetchSkinSlugs, getSkinFacets } from "@/lib/skins";
 import { SKINS_PER_SITEMAP, today, urlsetXml, xmlResponse } from "@/lib/skins-sitemap";
@@ -12,7 +13,7 @@ const notFound = (): Response => new Response("Not found", { status: 404 });
 /**
  * `/skins-sitemap/<n>.xml`: item pages `n × 5000` onwards, alphabetical;
  * `/skins-sitemap/landings.xml`: the home page, /market, /cheap, the payment-method pages, /sell and
- * the category and weapon landing pages and the legal documents.
+ * the category and weapon landing pages, the legal documents and /reviews while it is on.
  * An API outage throws (a 500 the crawler retries), it is never a 404.
  */
 export async function GET(
@@ -21,7 +22,7 @@ export async function GET(
 ): Promise<Response> {
   const { file } = await params;
   if (file === "landings.xml") {
-    const facets = await getSkinFacets();
+    const [facets, reviewsOn] = await Promise.all([getSkinFacets(), reviewsPublic()]);
     if (!facets) return notFound();
     return xmlResponse(
       urlsetXml(
@@ -33,6 +34,7 @@ export async function GET(
           SELL,
           ...landingPaths(facets),
           ...legalPaths(),
+          ...(reviewsOn ? [REVIEWS] : []),
         ],
         today(),
       ),

@@ -3,7 +3,6 @@ import { Star } from "lucide-react";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import type { PublicReviews } from "@/lib/reviews";
 import type { Metadata } from "next";
 
 import { ComingSoon } from "@/components/ComingSoon";
@@ -11,29 +10,17 @@ import { ReviewList } from "@/components/reviews/ReviewList";
 import { ReviewsMore } from "@/components/reviews/ReviewsMore";
 import { routing } from "@/i18n/routing";
 import { REVIEWS } from "@/lib/paths";
+import { fetchPublicReviews } from "@/lib/reviews-server";
 import { alternates, GEO_META, localeUrl, ogLocale, ROBOTS, shareImage } from "@/lib/seo";
-import { apiGet } from "@/lib/server-api";
 
 interface Props {
   params: Promise<{ locale: string }>;
 }
 
-/** The first page as the API serves it now (5-minute data cache); `null` when it cannot say. */
-async function firstPage(locale: string): Promise<PublicReviews | null> {
-  try {
-    return await apiGet<PublicReviews>(`/reviews?locale=${locale}`, {
-      revalidate: 300,
-      tags: ["reviews"],
-    });
-  } catch {
-    return null;
-  }
-}
-
 /** Indexed while the page is on; `noindex` while it is «Скоро» or the API cannot say. */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
-  const data = await firstPage(locale);
+  const data = await fetchPublicReviews(locale);
   if (!data?.enabled) {
     const nav = await getTranslations({ locale, namespace: "web.nav" });
     return { title: nav("reviews"), robots: { index: false, follow: true } };
@@ -67,7 +54,7 @@ export default async function ReviewsPage({ params }: Props) {
     // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
     setRequestLocale(locale);
   }
-  const data = await firstPage(locale);
+  const data = await fetchPublicReviews(locale);
   if (!data?.enabled) return <ComingSoon section="reviews" icon={Star} />;
   const t = await getTranslations("web.reviews.page");
   return (

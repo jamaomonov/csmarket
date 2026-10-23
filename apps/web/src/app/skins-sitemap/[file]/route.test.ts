@@ -60,6 +60,25 @@ describe("GET /skins-sitemap/<n>.xml", () => {
     expect(body).toContain("<loc>https://csmarket.uz/uz/legal/imprint</loc>");
   });
 
+  it("lists /reviews only while the public page is on", async () => {
+    mockedApiGetOrNull.mockResolvedValue({
+      categories: [],
+      weapons: [],
+      exteriors: [],
+      rarities: [],
+    });
+    const reviews = (on: boolean) => (path: string) =>
+      Promise.resolve(path.startsWith("/reviews") ? { enabled: on, items: [], count: 0 } : null);
+    mockedApiGet.mockImplementation(reviews(true));
+    const on = await (await call("landings.xml")).text();
+    expect(on).toContain("<loc>https://csmarket.uz/reviews</loc>");
+    expect(on).toContain("<loc>https://csmarket.uz/en/reviews</loc>");
+    mockedApiGet.mockImplementation(reviews(false));
+    expect(await (await call("landings.xml")).text()).not.toContain("/reviews</loc>");
+    mockedApiGet.mockRejectedValue(new Error("down"));
+    expect(await (await call("landings.xml")).text()).not.toContain("/reviews</loc>");
+  });
+
   it("404s the landings only when the API has no facets", async () => {
     mockedApiGetOrNull.mockResolvedValue(null);
     expect((await call("landings.xml")).status).toBe(404);
