@@ -157,6 +157,11 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - **Steam display name and avatar** — shown on the public page beside a published review (already
   public on Steam). Reviews of a deleted account (`users.deleted_at`) are not shown.
 - **The admin's resolve note** — staff text; kept out of audit payloads too.
+- **The replay copy** — `PUT /reviews/{kind}/{number}` keeps its answer, text included, in
+  `idempotent_responses` (scope `reviews.put:<user id>`) so a retried send replays it. Each send
+  or edit leaves one such row; the 24 h replay window (`IDEMPOTENCY_KEY_TTL_SECONDS`) has no
+  reaper yet, so these copies stay until one is built — an erasure flow must delete them with the
+  review.
 - There is no erasure flow yet: a user's review is not deleted on request.
 
 ### Payout cards (ADR-0016)

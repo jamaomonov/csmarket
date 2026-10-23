@@ -52,6 +52,11 @@ reviews on the site. Spec `docs/superpowers/specs/2026-10-23-reviews-design.md`.
 - Review text and Steam display names become public data once the page is on
   (`docs/security/pii-handling.md`).
 - There is no account-erasure flow yet: a user's review text is not deleted on request.
+- A card sale's «Выплачено» can be undone for 10 minutes (`sales/admin_undo.py`), but the prompt
+  fires at once. A review written in that window stays after an undo: the deal stops being
+  reviewable (no new prompt, no edit), the review itself is kept — it is still the seller's word
+  about the deal, and the payout is normally marked again. We accept this over delaying every
+  card seller's prompt by 10 minutes.
 
 ## Validation
 
