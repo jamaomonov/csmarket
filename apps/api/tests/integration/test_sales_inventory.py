@@ -14,12 +14,15 @@ from csmarket.modules.skinslink.api import (
     SkinslinkRateLimitedError,
     SkinslinkUnavailableError,
 )
+from csmarket.modules.users.models import User
 from fastapi import FastAPI
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tests.integration.conftest import CUSTOMER_STEAM_ID
 from tests.integration.fake_deposit_client import FakeDepositClient, inv_item
-from tests.integration.sales_factory import enable_sales
+from tests.integration.sales_factory import ITEMS, enable_sales, make_sale
 from tests.integration.sales_kit import (  # noqa: F401 -- the fixture
     Headers,
     add_rate,
@@ -106,6 +109,25 @@ async def test_the_inventory_is_priced_in_soum_from_the_cbu_rate(
         == {"asset_id", "name", "image_url", "exterior", "rarity_color", "category", "price_uzs"}
         for i in body["items"]
     )
+
+
+async def test_an_item_in_an_open_sale_is_not_offered_again(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,  # noqa: F811 -- the imported fixture
+    fake: FakeDepositClient,
+) -> None:
+    """An item in a sale still running (here in its 7 protection days) leaves the list; an
+    item of a sale that paid nothing (closed, reverted) is back."""
+    headers = await ready_seller(db_session, customer_headers)
+    user = await db_session.scalar(select(User).where(User.steam_id == CUSTOMER_STEAM_ID))
+    assert user is not None
+    await make_sale(db_session, user=user, status="hold", items=(ITEMS[0],))
+    await make_sale(db_session, user=user, status="closed", items=(ITEMS[1],))
+    r = await integration_client.get(URL, headers=headers)
+    assert r.status_code == 200, r.text
+    assert [i["asset_id"] for i in r.json()["items"]] == ["101"]
 
 
 async def test_the_snapshot_is_kept_and_refresh_asks_again(

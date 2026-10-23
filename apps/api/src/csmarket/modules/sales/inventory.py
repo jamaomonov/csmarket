@@ -37,6 +37,7 @@ from csmarket.core.money import wire_uzs
 from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.sales.cards import MAX_LIVE_CARDS
 from csmarket.modules.sales.gate import open_settings, sale_rate_now, trade_link_of
+from csmarket.modules.sales.models import OPEN_STATUSES, Sale, SaleItem
 from csmarket.modules.sales.pricing import min_sum_uzs, quote_item, sale_rate
 from csmarket.modules.sales.schemas import InventoryOut, SellConfigOut, SellItemOut
 from csmarket.modules.sales.settings_store import read_sale_settings
@@ -241,6 +242,17 @@ async def fetch_snapshot(
     return snap
 
 
+async def _in_open_sales(db: AsyncSession, user_id: str) -> set[str]:
+    """Asset ids of ``user_id``'s sales still running: offered, or accepted and in their
+    protection days. Skinslink's inventory and our 5-minute copy of it may still list them."""
+    rows = await db.scalars(
+        select(SaleItem.asset_id)
+        .join(Sale, Sale.id == SaleItem.sale_id)
+        .where(Sale.user_id == user_id, Sale.status.in_(OPEN_STATUSES))
+    )
+    return set(rows.all())
+
+
 async def _categories(db: AsyncSession, names: Iterable[str]) -> dict[str, str]:
     """``market_hash_name → category`` of the catalogue items among ``names`` (one query)."""
     wanted = set(names)
@@ -296,9 +308,11 @@ async def priced_inventory(
     user_id = user.id
     await db.rollback()  # no connection held across the Skinslink call (AGENTS §11)
     snap = await fetch_snapshot(redis, client, user_id=user_id, link=link, refresh=refresh)
-    categories = await _categories(db, (i.name for i in snap.items))
+    selling = await _in_open_sales(db, user_id)
+    items = [i for i in snap.items if i.id not in selling]
+    categories = await _categories(db, (i.name for i in items))
     await db.rollback()
-    priced = [(quote_item(i.price_usd, doc, rate).price_uzs, i) for i in snap.items]
+    priced = [(quote_item(i.price_usd, doc, rate).price_uzs, i) for i in items]
     priced.sort(key=lambda pair: pair[0], reverse=True)
     return InventoryOut(
         items=[

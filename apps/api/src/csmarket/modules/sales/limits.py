@@ -24,14 +24,12 @@ from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.errors import ConflictError
-from csmarket.modules.sales.models import Sale, SaleBlock, SaleItem
+from csmarket.modules.sales.models import OPEN_STATUSES, Sale, SaleBlock, SaleItem
 from csmarket.modules.sales.rules import SaleSettings
 from csmarket.modules.sales.schemas import plain
 
 #: The window of the daily limits.
 DAY = timedelta(hours=24)
-#: Sales whose Steam offer may still be accepted: their items cannot be sold twice.
-_OFFERING = ("creating", "offered")
 #: Sales that ended paying nothing do not count towards a limit.
 _UNPAID = ("closed", "reverted")
 
@@ -52,7 +50,8 @@ async def _check_items(db: AsyncSession, user_id: str, asset_ids: Sequence[str])
         .join(Sale, Sale.id == SaleItem.sale_id)
         .where(
             Sale.user_id == user_id,
-            Sale.status.in_(_OFFERING),
+            # ``hold`` too: the accepted items are gone, a repeat only earns Skinslink's 400
+            Sale.status.in_(OPEN_STATUSES),
             SaleItem.asset_id.in_(list(asset_ids)),
         )
         .limit(1)

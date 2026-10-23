@@ -108,6 +108,21 @@ async def test_an_item_in_an_open_sale_cannot_be_sold_again(
     assert len(fake.deposit_calls) == 1
 
 
+async def test_an_item_in_its_protection_days_cannot_be_sold_again(
+    db_session: AsyncSession,
+    integration_client: AsyncClient,
+    customer_headers: Headers,
+    sales_on: None,
+    fake: FakeDepositClient,
+) -> None:
+    """The offer was accepted (``hold``): the item is gone, a repeat must not reach Skinslink."""
+    headers, user = await _seller(db_session, integration_client, customer_headers)
+    await make_sale(db_session, user=user, status="hold")
+    r = await integration_client.post(URL, json=BALANCE, headers={**headers, **_key(3)})
+    assert (r.status_code, r.json()["code"]) == (409, "items_in_sale")
+    assert fake.deposit_calls == []
+
+
 async def test_an_item_of_a_closed_sale_can_be_sold_again(
     db_session: AsyncSession,
     integration_client: AsyncClient,

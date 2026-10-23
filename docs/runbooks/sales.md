@@ -234,7 +234,9 @@ Shipped on purpose; none of them puts money at risk.
 - A replayed webhook signature can grow `sale_checks` (the signature covers only the id; the
   worker drains the rows and every check is idempotent).
 - A double submit with two different `Idempotency-Key`s: the second is refused with 409
-  `items_in_sale` while the first sale's offer is open (`creating` / `offered`). The seller's
-  inventory list still shows those items until it is read again.
+  `items_in_sale` while the first sale is running (`creating`, `offered` or its 7-day `hold`).
+  `GET /sell/inventory` leaves out the items of a running sale, even from the 5-minute copy of
+  Skinslink's inventory (before 2026-10-23 a seller could re-sell an item in `hold`: each repeat
+  closed at once with `http_400`).
 - Settled sales (`credited`, `payout`, `reverted`) are not polled; a later `reverted` on them is
   seen only by the webhook.
