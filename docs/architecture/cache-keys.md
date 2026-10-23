@@ -79,7 +79,7 @@ read it, so the rule is the same as for logs (`docs/security/pii-handling.md`).
   page keys' digest.
 
 - **Buckets** in use: `steam-login`, `dev-login` (sign-in routes, no subject),
-  `trade-link-check`, `topup-create`, `order-create` and `order-pay` (IP plus user id; they guard `POST /wallet/topups`, `POST /orders` and `POST /orders/{number}/pay`) `ws-connect` (IP only; each order WebSocket, M4b), `email-verify` (IP plus user id on a re-send, IP only on a confirm; M4b) and `skins-listings` (IP only; a cache miss spends Waxpeer
+  `trade-link-check`, `topup-create`, `order-create` and `order-pay` (IP plus user id; they guard `POST /wallet/topups`, `POST /orders` and `POST /orders/{number}/pay`) `ws-connect` (IP only; each order WebSocket, M4b), `email-verify` (IP plus user id on a re-send, IP only on a confirm; M4b), `review` (IP plus user id; guards `PUT /reviews/{kind}/{number}`, ADR-0023) and `skins-listings` (IP only; a cache miss spends Waxpeer
   quota, so the bucket bounds distinct items per address). Per-bucket ceilings: `auth_ip_guard_bucket_max`
   (60 per window each); the subject ceiling is `auth_ip_guard_subject_max` (10).
 - **Fail open.** A Redis error in a blocklist read or write, or in `guard_ip`, lets the

@@ -1736,6 +1736,148 @@
         "title": "AdminResolveIn",
         "type": "object"
       },
+      "AdminReviewOut": {
+        "description": "One review in the admin's \u00ab\u041e\u0442\u0437\u044b\u0432\u044b\u00bb.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "locale": {
+            "title": "Locale",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "published": {
+            "title": "Published",
+            "type": "boolean"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/csmarket__modules__reviews__schemas__AdminUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved Note"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/csmarket__modules__reviews__schemas__AdminUserOut"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "number",
+          "rating",
+          "text",
+          "locale",
+          "hidden",
+          "published",
+          "user",
+          "created_at",
+          "updated_at",
+          "resolved_at",
+          "resolved_by",
+          "resolved_note"
+        ],
+        "title": "AdminReviewOut",
+        "type": "object"
+      },
+      "AdminReviewsPage": {
+        "description": "A page of reviews.",
+        "properties": {
+          "bad_open": {
+            "title": "Bad Open",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminReviewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "bad_open"
+        ],
+        "title": "AdminReviewsPage",
+        "type": "object"
+      },
       "AdminRevokeKeyIn": {
         "additionalProperties": false,
         "description": "Revoke a key, with a reason.",
@@ -1989,7 +2131,7 @@
           "resolved_by": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AdminUserOut"
+                "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
               },
               {
                 "type": "null"
@@ -2048,7 +2190,7 @@
             "type": "string"
           },
           "user": {
-            "$ref": "#/components/schemas/AdminUserOut"
+            "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
           }
         },
         "required": [
@@ -2167,7 +2309,7 @@
             "type": "string"
           },
           "user": {
-            "$ref": "#/components/schemas/AdminUserOut"
+            "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
           }
         },
         "required": [
@@ -3718,43 +3860,6 @@
         "title": "AdminUserKeyBrief",
         "type": "object"
       },
-      "AdminUserOut": {
-        "description": "A user as the admin lists name them.",
-        "properties": {
-          "avatar_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avatar Url"
-          },
-          "display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display Name"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "display_name"
-        ],
-        "title": "AdminUserOut",
-        "type": "object"
-      },
       "AdminUserRow": {
         "description": "One line of the users list.",
         "properties": {
@@ -3928,7 +4033,7 @@
             "type": "string"
           },
           "user": {
-            "$ref": "#/components/schemas/AdminUserOut"
+            "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
           }
         },
         "required": [
@@ -5305,6 +5410,11 @@
           "refunds": {
             "$ref": "#/components/schemas/csmarket__modules__admin__dashboard_schemas__RefundsOut"
           },
+          "reviews_bad_open": {
+            "default": 0,
+            "title": "Reviews Bad Open",
+            "type": "integer"
+          },
           "sales": {
             "$ref": "#/components/schemas/SalesOut"
           },
@@ -5338,6 +5448,109 @@
           "sales_pnl"
         ],
         "title": "DashboardOut",
+        "type": "object"
+      },
+      "DealOut": {
+        "description": "The deal the prompt asks about.",
+        "properties": {
+          "done_at": {
+            "format": "date-time",
+            "title": "Done At",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "market",
+              "sale"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "number",
+          "title",
+          "image_url",
+          "items",
+          "done_at"
+        ],
+        "title": "DealOut",
+        "type": "object"
+      },
+      "DealReviewOut": {
+        "description": "A deal of mine and my review of it.",
+        "properties": {
+          "can_review": {
+            "title": "Can Review",
+            "type": "boolean"
+          },
+          "editable_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Editable Until"
+          },
+          "kind": {
+            "enum": [
+              "market",
+              "sale"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "review": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MyReviewOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind",
+          "number",
+          "can_review",
+          "editable_until",
+          "review"
+        ],
+        "title": "DealReviewOut",
         "type": "object"
       },
       "EmailConfirmIn": {
@@ -6581,6 +6794,49 @@
         "title": "Money",
         "type": "object"
       },
+      "MyReviewOut": {
+        "description": "My review as I wrote it.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "locale": {
+            "title": "Locale",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rating",
+          "text",
+          "locale",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "MyReviewOut",
+        "type": "object"
+      },
       "NewCardIn": {
         "description": "A card typed in the cart. PII: ``number`` never appears in a repr or a log.",
         "properties": {
@@ -7211,7 +7467,7 @@
           "decided_by": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AdminUserOut"
+                "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
               },
               {
                 "type": "null"
@@ -7413,7 +7669,7 @@
           },
           "shared_card_users": {
             "items": {
-              "$ref": "#/components/schemas/AdminUserOut"
+              "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
             },
             "title": "Shared Card Users",
             "type": "array"
@@ -7486,7 +7742,7 @@
           "claimed_by": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AdminUserOut"
+                "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
               },
               {
                 "type": "null"
@@ -7574,7 +7830,7 @@
             "title": "To Pay At"
           },
           "user": {
-            "$ref": "#/components/schemas/AdminUserOut"
+            "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
           }
         },
         "required": [
@@ -7686,20 +7942,6 @@
           "next_cursor"
         ],
         "title": "PayoutsPageOut",
-        "type": "object"
-      },
-      "PendingOut": {
-        "description": "What my balance sales still in Steam's protection will pay, whole so\u02bbm.",
-        "properties": {
-          "pending_uzs": {
-            "title": "Pending Uzs",
-            "type": "string"
-          }
-        },
-        "required": [
-          "pending_uzs"
-        ],
-        "title": "PendingOut",
         "type": "object"
       },
       "PreviewIn": {
@@ -8347,6 +8589,128 @@
         "title": "PublicRefundOut",
         "type": "object"
       },
+      "PublicReviewOut": {
+        "description": "A published review as the public page shows it: no Steam ID, email, number or amount.",
+        "properties": {
+          "author_avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Avatar Url"
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "locale": {
+            "title": "Locale",
+            "type": "string"
+          },
+          "rating": {
+            "title": "Rating",
+            "type": "integer"
+          },
+          "skin_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skin Name"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "id",
+          "author_name",
+          "author_avatar_url",
+          "rating",
+          "text",
+          "kind",
+          "skin_name",
+          "locale",
+          "created_at"
+        ],
+        "title": "PublicReviewOut",
+        "type": "object"
+      },
+      "PublicReviewsOut": {
+        "description": "The public page: off, or the published reviews and their count (no average).",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PublicReviewOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "enabled",
+          "count",
+          "items",
+          "next_cursor"
+        ],
+        "title": "PublicReviewsOut",
+        "type": "object"
+      },
       "PublicTradeOut": {
         "description": "The Steam trade of an order whose offer is out; a time is ``None`` until known.",
         "properties": {
@@ -8733,25 +9097,6 @@
         "title": "RequestsPage",
         "type": "object"
       },
-      "ResolveIn": {
-        "description": "\u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043e\u00bb with an optional note.",
-        "properties": {
-          "note": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          }
-        },
-        "title": "ResolveIn",
-        "type": "object"
-      },
       "RevealIn": {
         "description": "Why the admin asks for the number: to look at it or to copy it.",
         "properties": {
@@ -8782,6 +9127,44 @@
           "number"
         ],
         "title": "RevealOut",
+        "type": "object"
+      },
+      "ReviewIn": {
+        "description": "Stars, an optional text and the interface locale the user wrote in.",
+        "properties": {
+          "locale": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Locale",
+            "type": "string"
+          },
+          "rating": {
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Rating",
+            "type": "integer"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "rating",
+          "locale"
+        ],
+        "title": "ReviewIn",
         "type": "object"
       },
       "ReviewLimitsIn": {
@@ -8843,6 +9226,63 @@
           "updated_by"
         ],
         "title": "ReviewLimitsOut",
+        "type": "object"
+      },
+      "ReviewSettingsIn": {
+        "description": "\u00ab\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u043e\u0442\u0437\u044b\u0432\u044b \u043d\u0430 \u0441\u0430\u0439\u0442\u0435\u00bb.",
+        "properties": {
+          "reviews_public": {
+            "title": "Reviews Public",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "reviews_public"
+        ],
+        "title": "ReviewSettingsIn",
+        "type": "object"
+      },
+      "ReviewSettingsOut": {
+        "description": "The switch, how many reviews it would show, and who set it last.",
+        "properties": {
+          "published_count": {
+            "title": "Published Count",
+            "type": "integer"
+          },
+          "reviews_public": {
+            "title": "Reviews Public",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/csmarket__modules__reviews__schemas__AdminUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "reviews_public",
+          "published_count",
+          "updated_at",
+          "updated_by"
+        ],
+        "title": "ReviewSettingsOut",
         "type": "object"
       },
       "RiskPolicyIn": {
@@ -9504,7 +9944,7 @@
           "updated_by": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AdminUserOut"
+                "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
               },
               {
                 "type": "null"
@@ -9746,7 +10186,7 @@
           "blocked_by": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/AdminUserOut"
+                "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
               },
               {
                 "type": "null"
@@ -9765,7 +10205,7 @@
             "title": "Reason"
           },
           "user": {
-            "$ref": "#/components/schemas/AdminUserOut"
+            "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__AdminUserOut"
           }
         },
         "required": [
@@ -12154,6 +12594,136 @@
         "title": "TradeLinkCheckIn",
         "type": "object"
       },
+      "csmarket__modules__reviews__schemas__AdminUserOut": {
+        "description": "A user as the admin's lists name them.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "avatar_url"
+        ],
+        "title": "AdminUserOut",
+        "type": "object"
+      },
+      "csmarket__modules__reviews__schemas__PendingOut": {
+        "description": "The newest deal to review now, or ``null``.",
+        "properties": {
+          "deal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DealOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "deal"
+        ],
+        "title": "PendingOut",
+        "type": "object"
+      },
+      "csmarket__modules__reviews__schemas__ResolveIn": {
+        "description": "\u00ab\u0420\u0430\u0437\u043e\u0431\u0440\u0430\u043d\u043e\u00bb: what the admin did.",
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "ResolveIn",
+        "type": "object"
+      },
+      "csmarket__modules__sales__admin_schemas__AdminUserOut": {
+        "description": "A user as the admin lists name them.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "display_name"
+        ],
+        "title": "AdminUserOut",
+        "type": "object"
+      },
+      "csmarket__modules__sales__admin_schemas__ResolveIn": {
+        "description": "\u00ab\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043e\u00bb with an optional note.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "ResolveIn",
+        "type": "object"
+      },
       "csmarket__modules__sales__schemas__CardOut": {
         "description": "A saved card: its type and last four digits, never the number.",
         "properties": {
@@ -12204,6 +12774,20 @@
           "items"
         ],
         "title": "CardsOut",
+        "type": "object"
+      },
+      "csmarket__modules__sales__schemas__PendingOut": {
+        "description": "What my balance sales still in Steam's protection will pay, whole so\u02bbm.",
+        "properties": {
+          "pending_uzs": {
+            "title": "Pending Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pending_uzs"
+        ],
+        "title": "PendingOut",
         "type": "object"
       },
       "csmarket__modules__users__schemas__MeOut": {
@@ -15040,6 +15624,481 @@
         ]
       }
     },
+    "/api/v1/admin/reviews": {
+      "get": {
+        "description": "\u00ab\u041f\u043b\u043e\u0445\u0438\u0435\u00bb (unresolved first), \u00ab\u0412\u0441\u0435\u00bb or \u00ab\u0425\u043e\u0440\u043e\u0448\u0438\u0435\u00bb; ``kind`` and ``locale`` filter;\n``bad_open`` counts the unresolved bad ones whatever the filters.",
+        "operationId": "get_reviews_api_v1_admin_reviews_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "tab",
+            "required": false,
+            "schema": {
+              "default": "bad",
+              "enum": [
+                "bad",
+                "all",
+                "good"
+              ],
+              "title": "Tab",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "market",
+                    "sale"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "ru",
+                    "uz",
+                    "en"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Locale"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReviewsPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reviews",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reviews/settings": {
+      "get": {
+        "description": "Whether ``/reviews`` shows the published reviews, and how many it would show.",
+        "operationId": "get_settings_api_v1_admin_reviews_settings_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The public-page switch",
+        "tags": [
+          "admin"
+        ]
+      },
+      "put": {
+        "description": "\u00ab\u041f\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0442\u044c \u043e\u0442\u0437\u044b\u0432\u044b \u043d\u0430 \u0441\u0430\u0439\u0442\u0435\u00bb; audited ``reviews.settings.save`` when it changes.",
+        "operationId": "put_settings_api_v1_admin_reviews_settings_put",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Switch the public page",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reviews/{review_id}/hide": {
+      "post": {
+        "description": "\u00ab\u0421\u043a\u0440\u044b\u0442\u044c \u0441 \u0441\u0430\u0439\u0442\u0430\u00bb.",
+        "operationId": "post_hide_api_v1_admin_reviews__review_id__hide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`review_not_found`"
+          },
+          "409": {
+            "description": "`review_not_bad` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Hide from the site",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reviews/{review_id}/resolve": {
+      "post": {
+        "description": "Mark a bad review handled with a note; one already resolved stays as it was.",
+        "operationId": "post_resolve_api_v1_admin_reviews__review_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/csmarket__modules__reviews__schemas__ResolveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`review_not_found`"
+          },
+          "409": {
+            "description": "`review_not_bad` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "\u00ab\u0420\u0430\u0437\u043e\u0431\u0440\u0430\u043d\u043e\u00bb",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/reviews/{review_id}/unhide": {
+      "post": {
+        "description": "\u00ab\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c\u00bb.",
+        "operationId": "post_unhide_api_v1_admin_reviews__review_id__unhide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "review_id",
+            "required": true,
+            "schema": {
+              "title": "Review Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`review_not_found`"
+          },
+          "409": {
+            "description": "`review_not_bad` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Show on the site",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/sales": {
       "get": {
         "description": "Newest first; ``q`` is a number prefix in any case. ``attention=open`` keeps the sales\nwaiting for an admin (``resolved``: already checked, ``any``: either); ``reason`` one\nattention reason. ``attention_open`` counts every open one, whatever the filters.",
@@ -16522,7 +17581,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolveIn"
+                "$ref": "#/components/schemas/csmarket__modules__sales__admin_schemas__ResolveIn"
               }
             }
           },
@@ -20484,6 +21543,484 @@
         ]
       }
     },
+    "/api/v1/reviews": {
+      "get": {
+        "description": "Public, no sign-in. While the page is off: ``enabled: false`` and nothing else (200, so\nthe storefront shows \u00ab\u0421\u043a\u043e\u0440\u043e\u00bb). On: the count of the published reviews and 20 of them,\n``locale``'s first, newest first. Never a Steam ID, an email, a number or an amount.",
+        "operationId": "get_reviews_api_v1_reviews_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "title": "Locale",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicReviewsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Published reviews",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/pending": {
+      "get": {
+        "description": "The newest deal of mine to review now (reviewable, within 14 days, no review, not\nsnoozed or dismissed), or ``{\"deal\": null}``. Reads only.",
+        "operationId": "get_pending_api_v1_reviews_pending_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__reviews__schemas__PendingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The deal to review now",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/{kind}/{number}": {
+      "get": {
+        "description": "Whether I may review the deal now (``can_review``, ``editable_until``) and my review.",
+        "operationId": "get_deal_review_api_v1_reviews__kind___number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "market",
+                "sale"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "maxLength": 8,
+              "minLength": 1,
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`deal_not_found` \u2014 no such deal of mine"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My review of a deal",
+        "tags": [
+          "reviews"
+        ]
+      },
+      "put": {
+        "description": "1\u20135 stars, an optional text (\u2264 1000 after trimming) and the interface locale.\n\n``Idempotency-Key`` (16..160) is required; a replay answers the stored review, a key reused\nfor another body is 409 ``idempotency_mismatch``.",
+        "operationId": "put_review_api_v1_reviews__kind___number__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "market",
+                "sale"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "maxLength": 8,
+              "minLength": 1,
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`deal_not_found` \u2014 no such deal of mine"
+          },
+          "409": {
+            "description": "`review_not_allowed` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "rate-limited (`review` bucket)"
+          }
+        },
+        "summary": "Write or edit my review",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/{kind}/{number}/dismiss": {
+      "post": {
+        "description": "No prompt for this deal again. ``Idempotency-Key`` required; a replay is 204.",
+        "operationId": "post_dismiss_api_v1_reviews__kind___number__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "market",
+                "sale"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "maxLength": 8,
+              "minLength": 1,
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`deal_not_found` \u2014 no such deal of mine"
+          },
+          "409": {
+            "description": "`review_not_allowed` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "\u00d7: never ask about this deal again",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/api/v1/reviews/{kind}/{number}/snooze": {
+      "post": {
+        "description": "No prompt for this deal for 3 days. ``Idempotency-Key`` required; a replay is 204.",
+        "operationId": "post_snooze_api_v1_reviews__kind___number__snooze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "market",
+                "sale"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "maxLength": 8,
+              "minLength": 1,
+              "title": "Number",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`deal_not_found` \u2014 no such deal of mine"
+          },
+          "409": {
+            "description": "`review_not_allowed` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "\u00ab\u041d\u0435 \u0441\u0435\u0439\u0447\u0430\u0441\u00bb: ask again in 3 days",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
     "/api/v1/sales": {
       "get": {
         "description": "My sales, newest first, 20 a page; ``status=hold`` keeps only those in the hold.\n\nSend the same ``status`` with the ``cursor`` of its page.",
@@ -20594,7 +22131,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PendingOut"
+                  "$ref": "#/components/schemas/csmarket__modules__sales__schemas__PendingOut"
                 }
               }
             },

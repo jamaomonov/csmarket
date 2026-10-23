@@ -33,6 +33,7 @@ MODULES = (
     "sales",
     "public_api",
     "risk",
+    "reviews",
 )
 THRESHOLD = 95.0
 

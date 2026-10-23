@@ -23,6 +23,7 @@ MODULES = (
     "sales",
     "public_api",
     "risk",
+    "reviews",
 )
 
 
