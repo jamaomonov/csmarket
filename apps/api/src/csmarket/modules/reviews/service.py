@@ -28,8 +28,8 @@ from csmarket.modules.reviews.schemas import (
     DealOut,
     DealReviewOut,
     MyReviewOut,
-    PendingOut,
     ReviewIn,
+    ReviewPendingOut,
 )
 
 log = get_logger("csmarket.reviews")
@@ -163,12 +163,12 @@ async def dismiss(db: AsyncSession, *, user_id: str, kind: Kind, number: str, at
     await db.flush()
 
 
-async def pending(db: AsyncSession, *, user_id: str, at: datetime) -> PendingOut:
+async def pending(db: AsyncSession, *, user_id: str, at: datetime) -> ReviewPendingOut:
     """The deal the prompt asks about now, or none."""
     deal = await pending_for(db, user_id, at)
     if deal is None or deal.done_at is None:
-        return PendingOut(deal=None)
-    return PendingOut(
+        return ReviewPendingOut(deal=None)
+    return ReviewPendingOut(
         deal=DealOut(
             kind=deal.kind,
             number=deal.number,

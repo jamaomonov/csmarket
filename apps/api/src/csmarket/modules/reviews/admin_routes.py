@@ -19,7 +19,7 @@ from csmarket.modules.reviews.schemas import (
     AdminReviewOut,
     AdminReviewsPage,
     LocaleIn,
-    ResolveIn,
+    ReviewResolveIn,
     ReviewSettingsIn,
     ReviewSettingsOut,
 )
@@ -93,7 +93,7 @@ async def _one(
     "/{review_id}/resolve", response_model=AdminReviewOut, responses=_ONE, summary="«Разобрано»"
 )
 async def post_resolve(
-    review_id: str, body: ResolveIn, user: Admin, db: Db, key: Key
+    review_id: str, body: ReviewResolveIn, user: Admin, db: Db, key: Key
 ) -> AdminReviewOut:
     """Mark a bad review handled with a note; one already resolved stays as it was."""
     return await _one(

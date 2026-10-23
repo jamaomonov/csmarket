@@ -53,7 +53,7 @@ class DealOut(BaseModel):
     done_at: datetime
 
 
-class PendingOut(BaseModel):
+class ReviewPendingOut(BaseModel):
     """The newest deal to review now, or ``null``."""
 
     deal: DealOut | None
@@ -108,7 +108,7 @@ class PublicReviewsOut(BaseModel):
     next_cursor: str | None
 
 
-class AdminUserOut(BaseModel):
+class ReviewAdminUserOut(BaseModel):
     """A user as the admin's lists name them."""
 
     id: str
@@ -130,11 +130,11 @@ class AdminReviewOut(BaseModel):
     hidden: bool
     #: Shown on the public page once it is on: good and not hidden.
     published: bool
-    user: AdminUserOut
+    user: ReviewAdminUserOut
     created_at: datetime
     updated_at: datetime
     resolved_at: datetime | None
-    resolved_by: AdminUserOut | None
+    resolved_by: ReviewAdminUserOut | None
     resolved_note: str | None
 
 
@@ -147,7 +147,7 @@ class AdminReviewsPage(BaseModel):
     bad_open: int
 
 
-class ResolveIn(BaseModel):
+class ReviewResolveIn(BaseModel):
     """«Разобрано»: what the admin did."""
 
     note: str = Field(min_length=1, max_length=500)
@@ -171,4 +171,4 @@ class ReviewSettingsOut(BaseModel):
     reviews_public: bool
     published_count: int
     updated_at: datetime | None
-    updated_by: AdminUserOut | None
+    updated_by: ReviewAdminUserOut | None

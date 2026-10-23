@@ -26,7 +26,7 @@ from csmarket.modules.reviews.public import published_count
 from csmarket.modules.reviews.schemas import (
     AdminReviewOut,
     AdminReviewsPage,
-    AdminUserOut,
+    ReviewAdminUserOut,
     ReviewSettingsOut,
 )
 from csmarket.modules.reviews.settings_store import save_reviews_public, settings_row
@@ -45,8 +45,10 @@ async def bad_open_count(db: AsyncSession) -> int:
     return int(await db.scalar(q) or 0)
 
 
-def _person(user: User) -> AdminUserOut:
-    return AdminUserOut(id=user.id, display_name=user.display_name, avatar_url=user.avatar_url)
+def _person(user: User) -> ReviewAdminUserOut:
+    return ReviewAdminUserOut(
+        id=user.id, display_name=user.display_name, avatar_url=user.avatar_url
+    )
 
 
 def _item(review: Review, number: str, author: User, admin: User | None) -> AdminReviewOut:

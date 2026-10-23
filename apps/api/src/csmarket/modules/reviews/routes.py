@@ -23,9 +23,9 @@ from csmarket.modules.reviews.public import public_page
 from csmarket.modules.reviews.schemas import (
     DealReviewOut,
     LocaleIn,
-    PendingOut,
     PublicReviewsOut,
     ReviewIn,
+    ReviewPendingOut,
 )
 from csmarket.modules.users.api import User
 
@@ -41,8 +41,8 @@ _DEAL_ERRORS: dict[int | str, dict[str, str]] = {
 }
 
 
-@router.get("/reviews/pending", response_model=PendingOut, summary="The deal to review now")
-async def get_pending(user: Me, db: Db) -> PendingOut:
+@router.get("/reviews/pending", response_model=ReviewPendingOut, summary="The deal to review now")
+async def get_pending(user: Me, db: Db) -> ReviewPendingOut:
     """The newest deal of mine to review now (reviewable, within 14 days, no review, not
     snoozed or dismissed), or ``{"deal": null}``. Reads only."""
     return await service.pending(db, user_id=user.id, at=now())
