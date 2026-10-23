@@ -9224,6 +9224,11 @@
             ],
             "title": "Display Name"
           },
+          "email_confirmed": {
+            "description": "A confirmed email to answer a bad review at (the address is on the user page).",
+            "title": "Email Confirmed",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -9232,7 +9237,8 @@
         "required": [
           "id",
           "display_name",
-          "avatar_url"
+          "avatar_url",
+          "email_confirmed"
         ],
         "title": "ReviewAdminUserOut",
         "type": "object"

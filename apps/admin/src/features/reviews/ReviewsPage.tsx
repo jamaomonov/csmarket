@@ -86,7 +86,11 @@ export function ReviewsPage() {
         />
       </FiltersBar>
       {list.isError ? <EmptyState tone="danger">{errorText(list.error)}</EmptyState> : null}
-      {list.isSuccess && items.length === 0 ? <EmptyState>Отзывов нет.</EmptyState> : null}
+      {list.isSuccess && items.length === 0 ? (
+        <EmptyState>
+          {filter.tab === "bad" ? "Плохих отзывов нет — всё разобрано." : "Отзывов нет."}
+        </EmptyState>
+      ) : null}
       <ul className="flex flex-col gap-2">
         {items.map((r) => (
           <ReviewRow key={r.id} review={r} onChanged={refresh} />

@@ -15,6 +15,9 @@ import { errorText } from "@/features/users/labels";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 
 const NOTE_MAX = 500;
+/** 4–5★ are good: published unless hidden. A bad review is never on the site, so it has no
+ * «Скрыть с сайта». */
+const GOOD_FROM = 4;
 
 interface ReviewRowProps {
   review: AdminReview;
@@ -44,7 +47,7 @@ export function ReviewRow({ review, onChanged }: ReviewRowProps) {
       onChanged();
     },
   });
-  const open = review.rating < 4 && review.resolved_at === null;
+  const open = review.rating < GOOD_FROM && review.resolved_at === null;
   return (
     <li
       data-testid={`review-${review.id}`}
@@ -61,6 +64,16 @@ export function ReviewRow({ review, onChanged }: ReviewRowProps) {
           name={review.user.display_name}
           avatarUrl={review.user.avatar_url}
         />
+        <span
+          className={review.user.email_confirmed ? "text-success" : "text-fg-dim"}
+          title={
+            review.user.email_confirmed
+              ? "Подтверждённый email: адрес на странице пользователя"
+              : "Подтверждённого email нет: ответить можно только через Steam"
+          }
+        >
+          {review.user.email_confirmed ? "есть email" : "без email"}
+        </span>
         <TextLink to={dealPath(review)} number>
           {review.number}
         </TextLink>
@@ -70,7 +83,9 @@ export function ReviewRow({ review, onChanged }: ReviewRowProps) {
       {review.resolved_at !== null ? (
         <p className="text-fg-muted text-sm">
           Разобрано <When iso={review.resolved_at} /> ·{" "}
-          {`${review.resolved_by?.display_name ?? "—"} · ${review.resolved_note ?? ""}`}
+          {[review.resolved_by?.display_name ?? "—", review.resolved_note]
+            .filter((part) => part !== null && part !== "")
+            .join(" · ")}
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -84,16 +99,18 @@ export function ReviewRow({ review, onChanged }: ReviewRowProps) {
             Разобрано
           </Button>
         ) : null}
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={hide.isPending}
-          onClick={() => {
-            hide.mutate(!review.hidden);
-          }}
-        >
-          {review.hidden ? "Показать" : "Скрыть с сайта"}
-        </Button>
+        {review.rating >= GOOD_FROM || review.hidden ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={hide.isPending}
+            onClick={() => {
+              hide.mutate(!review.hidden);
+            }}
+          >
+            {review.hidden ? "Показать" : "Скрыть с сайта"}
+          </Button>
+        ) : null}
       </div>
       {hide.isError ? (
         <p role="alert" className="text-danger text-sm">

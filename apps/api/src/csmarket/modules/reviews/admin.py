@@ -47,7 +47,10 @@ async def bad_open_count(db: AsyncSession) -> int:
 
 def _person(user: User) -> ReviewAdminUserOut:
     return ReviewAdminUserOut(
-        id=user.id, display_name=user.display_name, avatar_url=user.avatar_url
+        id=user.id,
+        display_name=user.display_name,
+        avatar_url=user.avatar_url,
+        email_confirmed=user.email is not None and user.email_verified_at is not None,
     )
 
 

@@ -97,7 +97,13 @@ async def test_tabs_and_filters(
     assert page["bad_open"] == 2
     first = page["items"][0]
     assert (first["kind"], first["number"], first["published"]) == ("sale", sale.number, False)
-    assert first["user"]["id"] == sale.user_id
+    assert (first["user"]["id"], first["user"]["email_confirmed"]) == (sale.user_id, False)
+    seller = await db_session.get(User, sale.user_id)
+    assert seller is not None
+    seller.email, seller.email_verified_at = "seller@example.com", at
+    await db_session.commit()
+    again = (await integration_client.get(BASE, headers=h)).json()["items"][0]
+    assert again["user"]["email_confirmed"] is True
     assert page["items"][2]["resolved_by"]["id"] == admin_id
     assert (
         await integration_client.get(BASE, params={"tab": "worst"}, headers=h)

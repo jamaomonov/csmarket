@@ -114,6 +114,9 @@ class ReviewAdminUserOut(BaseModel):
     id: str
     display_name: str | None
     avatar_url: str | None
+    email_confirmed: bool = Field(
+        description="A confirmed email to answer a bad review at (the address is on the user page)."
+    )
 
 
 class AdminReviewOut(BaseModel):

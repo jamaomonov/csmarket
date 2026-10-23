@@ -9,6 +9,8 @@ export interface ReviewUser {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
+  /** A confirmed email to answer a bad review at (the address is on the user page). */
+  email_confirmed: boolean;
 }
 
 export interface AdminReview {

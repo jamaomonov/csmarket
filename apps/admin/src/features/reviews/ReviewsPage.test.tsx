@@ -24,7 +24,7 @@ const BAD: AdminReview = {
   locale: "ru",
   hidden: false,
   published: false,
-  user: { id: "u1", display_name: "Aziz", avatar_url: null },
+  user: { id: "u1", display_name: "Aziz", avatar_url: null, email_confirmed: false },
   created_at: "2026-10-23T10:00:00Z",
   updated_at: "2026-10-23T10:00:00Z",
   resolved_at: null,
@@ -68,6 +68,28 @@ describe("ReviewsPage", () => {
       "/orders/AB12CD34",
     );
     expect(within(row).getByRole("link", { name: /Aziz/ })).toHaveAttribute("href", "/users/u1");
+    expect(within(row).getByText("без email")).toBeInTheDocument();
+    // a bad review is never on the site: nothing to hide
+    expect(within(row).queryByRole("button", { name: "Скрыть с сайта" })).toBeNull();
+  });
+
+  it("marks a user with a confirmed email to answer at", async () => {
+    api.getReviews.mockResolvedValue({
+      items: [{ ...BAD, user: { ...BAD.user, email_confirmed: true } }],
+      next_cursor: null,
+      bad_open: 1,
+    });
+    renderPage();
+    const row = await screen.findByTestId("review-r1");
+    expect(within(row).getByText("есть email")).toBeInTheDocument();
+  });
+
+  it("says the bad tab is all done when empty", async () => {
+    api.getReviews.mockResolvedValue({ items: [], next_cursor: null, bad_open: 0 });
+    renderPage();
+    expect(await screen.findByText("Плохих отзывов нет — всё разобрано.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /Хорошие/ }));
+    expect(await screen.findByText("Отзывов нет.")).toBeInTheDocument();
   });
 
   it("switches tabs and filters", async () => {
@@ -94,7 +116,7 @@ describe("ReviewsPage", () => {
     api.resolveReview.mockResolvedValue({
       ...BAD,
       resolved_at: "2026-10-23T11:00:00Z",
-      resolved_by: { id: "a1", display_name: "Owner", avatar_url: null },
+      resolved_by: { id: "a1", display_name: "Owner", avatar_url: null, email_confirmed: true },
       resolved_note: "Позвонили",
     });
     renderPage();
@@ -114,14 +136,16 @@ describe("ReviewsPage", () => {
     });
   });
 
-  it("hides a review from the site; a hidden one offers «Показать»", async () => {
-    api.setReviewHidden.mockResolvedValue({ ...BAD, hidden: true });
+  it("hides a good review from the site; a hidden one offers «Показать»", async () => {
+    const GOOD = { ...BAD, rating: 5, published: true };
+    api.getReviews.mockResolvedValue({ items: [GOOD], next_cursor: null, bad_open: 0 });
+    api.setReviewHidden.mockResolvedValue({ ...GOOD, hidden: true });
     renderPage();
     const hide = await screen.findByRole("button", { name: "Скрыть с сайта" });
     api.getReviews.mockResolvedValue({
-      items: [{ ...BAD, hidden: true }],
+      items: [{ ...GOOD, hidden: true, published: false }],
       next_cursor: null,
-      bad_open: 2,
+      bad_open: 0,
     });
     fireEvent.click(hide);
     await waitFor(() => {
@@ -140,7 +164,7 @@ describe("ReviewsPage", () => {
         {
           ...BAD,
           resolved_at: "2026-10-23T11:00:00Z",
-          resolved_by: { id: "a1", display_name: "Owner", avatar_url: null },
+          resolved_by: { id: "a1", display_name: "Owner", avatar_url: null, email_confirmed: true },
           resolved_note: "Позвонили",
         },
       ],
@@ -151,5 +175,27 @@ describe("ReviewsPage", () => {
     const row = await screen.findByTestId("review-r1");
     expect(within(row).getByText(/Owner · Позвонили/)).toBeInTheDocument();
     expect(within(row).queryByRole("button", { name: "Разобрано" })).toBeNull();
+  });
+
+  it("a resolved line without a note ends on who resolved it", async () => {
+    api.getReviews.mockResolvedValue({
+      items: [
+        {
+          ...BAD,
+          resolved_at: "2026-10-23T11:00:00Z",
+          resolved_by: { id: "a1", display_name: "Owner", avatar_url: null, email_confirmed: true },
+          resolved_note: null,
+        },
+      ],
+      next_cursor: null,
+      bad_open: 0,
+    });
+    renderPage();
+    const row = await screen.findByTestId("review-r1");
+    expect(
+      within(row)
+        .getByText(/Разобрано/)
+        .textContent.trimEnd(),
+    ).toMatch(/Owner$/);
   });
 });
