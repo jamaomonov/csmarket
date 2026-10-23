@@ -22,6 +22,7 @@ import { HoldsPage } from "@/features/payments/HoldsPage";
 import { PaymentDetail } from "@/features/payments/PaymentDetail";
 import { PaymentsPage } from "@/features/payments/PaymentsPage";
 import { PricingPage } from "@/features/pricing/PricingPage";
+import { ReviewsPage } from "@/features/reviews/ReviewsPage";
 import { PayoutDetail } from "@/features/sales/PayoutDetail";
 import { PayoutsPage } from "@/features/sales/PayoutsPage";
 import { ReconciliationPage } from "@/features/sales/ReconciliationPage";
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
           { path: "/sales/:number", element: <SaleDetail /> },
           { path: "/sale-settings", element: <SaleSettingsPage /> },
           { path: "/sale-blocks", element: <SellBlocksPage /> },
+          { path: "/reviews", element: <ReviewsPage /> },
           { path: "/api-keys", element: <Navigate to="/users?has_api_key=true" replace /> },
           { path: "/api-keys/:id", element: <ApiKeyRedirect /> },
           { path: "*", element: <NotFoundPage /> },

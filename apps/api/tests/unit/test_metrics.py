@@ -203,3 +203,18 @@ def test_a_failed_balance_read_is_not_stamped() -> None:
     assert metrics.WAXPEER_BALANCE_READ_TIMESTAMP._value.get() == 1.0
     metrics.set_waxpeer_balance(42.0, 50.0)
     assert metrics.WAXPEER_BALANCE_READ_TIMESTAMP._value.get() > 1.0
+
+
+def test_reviews_counter_keeps_its_labels_closed() -> None:
+    from csmarket.core.metrics import record_review
+    from prometheus_client import REGISTRY
+
+    def value(kind: str, rating: str) -> float:
+        labels = {"kind": kind, "rating": rating}
+        return REGISTRY.get_sample_value("csmarket_reviews_total", labels) or 0.0
+
+    before, other = value("sale", "3"), value("other", "other")
+    record_review("sale", 3)
+    record_review("weird", 9)
+    assert value("sale", "3") == before + 1
+    assert value("other", "other") == other + 1

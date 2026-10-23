@@ -152,6 +152,13 @@ SALE_OUTCOMES = Counter(
     "Sales moved by the status machine, by where they went (spec 2026-10-08).",
     ("outcome",),
 )
+#: Reviews written, by deal kind and stars (spec 2026-10-23-reviews); edits are not counted.
+REVIEWS = Counter(
+    "csmarket_reviews_total",
+    "Reviews written, by deal kind and stars (edits are not counted).",
+    ("kind", "rating"),
+)
+_REVIEW_KINDS = frozenset({"market", "sale"})
 
 
 #: Why an order's money went back to the balance (``orders.failure_reason``).
@@ -305,6 +312,11 @@ PAYMENT_HOLDS_OPEN = Gauge(
     "Kassa payments held for an admin, by reason (alert: PaymentHeldForReview; set by the "
     "scheduler's payment_holds job).",
     ("reason",),
+)
+REVIEWS_BAD_OPEN = Gauge(
+    "csmarket_reviews_bad_open",
+    "Bad reviews (1–3 stars) no admin has resolved yet (no alert: the admin menu counts them;"
+    " set by the scheduler's reviews job).",
 )
 SALE_HOLDS_OVERDUE = Gauge(
     "csmarket_sale_holds_overdue",
@@ -600,6 +612,16 @@ def set_sale_attention_open(reason: SaleAttentionReason, count: int) -> None:
         )
 
 
+def set_reviews_bad_open(count: int) -> None:
+    """Set how many bad reviews wait for an admin. Never raises."""
+    try:
+        REVIEWS_BAD_OPEN.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_reviews_bad_open", error=type(exc).__name__
+        )
+
+
 def set_payment_holds_open(reason: str, count: int) -> None:
     """Set how many held payments are open for ``reason``. Never raises."""
     try:
@@ -806,6 +828,18 @@ def record_lisskins_call(endpoint: LisskinsEndpoint, outcome: LisskinsOutcome) -
         {
             "endpoint": endpoint if endpoint in _LISSKINS_ENDPOINTS else "other",
             "outcome": outcome if outcome in _LISSKINS_OUTCOMES else "other",
+        },
+    )
+
+
+def record_review(kind: str, rating: int) -> None:
+    """Count one new review; a kind or rating outside the sets becomes ``"other"``. Never raises."""
+    _inc(
+        REVIEWS,
+        "csmarket_reviews_total",
+        {
+            "kind": kind if kind in _REVIEW_KINDS else "other",
+            "rating": str(rating) if 1 <= rating <= 5 else "other",
         },
     )
 

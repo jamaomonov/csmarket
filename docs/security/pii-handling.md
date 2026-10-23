@@ -149,6 +149,16 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
   (`orders.erase_trade_links`) nulls it 7 days after it was queued. Resend, as a processor,
   receives the recipient address, the subject and the body of each letter it sends.
 
+### Reviews (ADR-0023)
+
+- **Review text** — free text the user typed; may hold anything. Stored as typed (trimmed), never
+  logged, never in an audit payload or a metric label, rendered as text. Shown publicly only when
+  the review is good (4–5★), not hidden by an admin and the public page is on.
+- **Steam display name and avatar** — shown on the public page beside a published review (already
+  public on Steam). Reviews of a deleted account (`users.deleted_at`) are not shown.
+- **The admin's resolve note** — staff text; kept out of audit payloads too.
+- There is no erasure flow yet: a user's review is not deleted on request.
+
 ### Payout cards (ADR-0016)
 
 - **Card number** — `payout_cards.number_enc` + `number_nonce`: encrypted with `core.crypto`

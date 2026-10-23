@@ -31,6 +31,7 @@ beforeEach(() => {
     attention: 3,
     payouts: { to_pay_count: 2, sales_attention: 5 },
     holds_open: 4,
+    reviews_bad_open: 6,
   });
 });
 
@@ -52,7 +53,7 @@ describe("Layout", () => {
   it.each([
     ["Очередь", ["Обмены", "Заявки на выплату", "На проверке"]],
     ["Деньги", ["Платежи", "P2P", "Продажи", "Сверка"]],
-    ["Люди", ["Пользователи", "Запрет выкупа"]],
+    ["Люди", ["Пользователи", "Запрет выкупа", "Отзывы"]],
     ["Настройки", ["Цены", "Каталог", "Настройки выкупа", "Оплата"]],
   ])("the menu «%s» opens its pages", (group, pages) => {
     renderLayout();
@@ -72,6 +73,7 @@ describe("Layout", () => {
     // Closed, «Очередь» shows the sum of its queues: 3 + 2 + 4.
     expect(await within(nav).findByLabelText("Очередь, ждут: 9")).toBeInTheDocument();
     expect(within(nav).getByLabelText("Деньги, ждут: 5")).toBeInTheDocument();
+    expect(within(nav).getByLabelText("Люди, ждут: 6")).toBeInTheDocument();
     fireEvent.click(within(nav).getByRole("button", { name: /Очередь/ }));
     const menu = screen.getByRole("menu");
     expect(within(menu).getByLabelText("ждут внимания: 3")).toBeInTheDocument();
@@ -120,7 +122,8 @@ describe("Layout", () => {
     expect(within(bar).getByLabelText("к выплате: 2")).toBeInTheDocument();
     expect(within(bar).getByLabelText("Платежи на проверке: 4")).toBeInTheDocument();
     // «Ещё» counts the rest: the sales waiting for a check.
-    expect(within(bar).getByLabelText("Ещё ждут: 5")).toBeInTheDocument();
+    // 5 from «Деньги» plus the 6 bad reviews in «Люди»
+    expect(within(bar).getByLabelText("Ещё ждут: 11")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Открыть меню" })).toBeNull();
   });
 
@@ -138,7 +141,7 @@ describe("Layout", () => {
       within(people)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["Пользователи", "Запрет выкупа"]);
+    ).toEqual(["Пользователи", "Запрет выкупа", "Отзывы"]);
     expect(within(sheet).getByRole("link", { name: "Журнал" })).toHaveAttribute("href", "/audit");
     expect(within(sheet).getByRole("link", { name: "Аналитика" })).toHaveAttribute(
       "href",
@@ -171,6 +174,7 @@ describe("Layout", () => {
         "/sales",
         "/sales/reconciliation",
         "/sale-blocks",
+        "/reviews",
         "/users",
         "/payments",
         "/payment-holds",

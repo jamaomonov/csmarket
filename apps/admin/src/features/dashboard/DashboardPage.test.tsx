@@ -187,6 +187,22 @@ describe("DashboardPage", () => {
     row = await screen.findByTestId("now-tiles");
     expect(titles(row)).toEqual(["Требуют внимания", "К выплате", "В пути", "Продажи: проверить"]);
     expect(row).toHaveClass("grid-cols-4");
+    cleanup();
+    api.getDashboard.mockResolvedValue({
+      ...DATA,
+      payouts: { ...DATA.payouts, sales_attention: 3 },
+      reviews_bad_open: 2,
+    });
+    renderPage();
+    row = await screen.findByTestId("now-tiles");
+    expect(titles(row)).toEqual([
+      "Требуют внимания",
+      "К выплате",
+      "В пути",
+      "Продажи: проверить",
+      "Плохие отзывы",
+    ]);
+    expect(row).toHaveClass("grid-cols-5");
   });
 
   it("shows what buying skins from users earned", async () => {

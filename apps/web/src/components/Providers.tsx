@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 
+import { ReviewPrompt } from "@/components/reviews/ReviewPrompt";
 import { useOrderSocket } from "@/hooks/useOrderSocket";
 import { AuthProvider } from "@/lib/auth";
 
@@ -18,6 +19,7 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={client}>
       <AuthProvider>
         <OrderSocketMount />
+        <ReviewPrompt />
         {children}
       </AuthProvider>
     </QueryClientProvider>

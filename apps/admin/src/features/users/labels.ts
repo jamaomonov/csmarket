@@ -7,6 +7,8 @@ import { ApiError, formatApiError } from "@/lib/api";
 
 /** Known problem+json codes in Russian; the API's English `detail` is never shown for these. */
 const CODE_MESSAGES: Record<string, string> = {
+  review_not_bad: "Разбирают только плохие отзывы (1–3 звезды).",
+  review_not_found: "Отзыв не найден. Обновите страницу.",
   idempotency_mismatch: "Эта операция уже была выполнена с другими данными. Обновите страницу.",
   balance_too_low: "На балансе меньше, чем вы хотите списать.",
   ban_self: "Себя заблокировать нельзя.",

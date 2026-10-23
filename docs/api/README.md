@@ -539,6 +539,25 @@ Top-up and order views gain statuses `held` and (top-up) `rejected`. A user with
 `kassa_blocked` gets 403 `kassa_payment_blocked` when starting a kassa payment (top-up, order
 paid through a kassa, P2P request); the balance still works. The public API never meets holds.
 
+## Reviews (ADR-0023)
+
+Spec `2026-10-23-reviews-design.md`. Every write takes a required `Idempotency-Key` (replayed per
+user for the user routes, audited for the admin ones).
+
+| Route                                                  | What                                                                 |
+| ------------------------------------------------------ | -------------------------------------------------------------------- |
+| `GET /reviews/pending`                                 | the newest deal of the signed-in user to review now, or `null`       |
+| `GET /reviews/{kind}/{number}`                         | my review of that deal, whether it can be reviewed and until when    |
+| `PUT /reviews/{kind}/{number}`                         | write or edit (stars, text ≤ 1000, locale); ip_guard bucket `review` |
+| `POST /reviews/{kind}/{number}/snooze` / `/dismiss`    | «Не сейчас» (3 days) / × (for good); 204                             |
+| `GET /reviews?locale=&cursor=`                         | public; 200 with `enabled: false` while the page is off              |
+| `GET /admin/reviews?tab=bad/all/good&kind=&locale=`    | the admin list, keyset-paginated, with `bad_open`                    |
+| `POST /admin/reviews/{id}/resolve` / `hide` / `unhide` | «Разобрано» (bad only) / hide from / show on the public page         |
+| `GET` / `PUT /admin/reviews/settings`                  | the public page's switch and the published count                     |
+
+Errors: 404 `deal_not_found` / `review_not_found`, 409 `review_not_allowed` / `review_not_bad` /
+`idempotency_mismatch`, 422 `cursor`, 429 (the `review` bucket).
+
 ## Admin pricing and dashboard (M4b)
 
 Admin only (401 without a token, 403 for a customer). Writes need `Idempotency-Key` (16–160);

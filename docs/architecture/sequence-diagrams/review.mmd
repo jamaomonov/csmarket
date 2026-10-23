@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant W as Worker / admin
+    participant DB as Postgres
+    participant API as API (realtime)
+    participant B as Browser (any page)
+    W->>DB: order delivered / sale credited / payout paid + pg_notify
+    DB-->>API: NOTIFY order_events
+    API-->>B: {"type":"order.changed"|"sale.updated"}
+    B->>API: GET /reviews/pending
+    API-->>B: {deal} (succeeded during this visit)
+    B->>B: open the modal
+    B->>API: PUT /reviews/{kind}/{number} (Idempotency-Key)
+    API->>DB: lock the deal, insert / update the review
+    API-->>B: DealReviewOut
+    Note over B,API: a bad review lands in the admin's «Плохие»;<br/>a good one shows on /reviews once the page is on

@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Hourglass, Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { ReviewSlot } from "@/components/reviews/ReviewSlot";
 import { CARD_BRANDS } from "@/components/sell/PayoutPicker";
 import { ItemThumb } from "@/components/trades/ItemThumb";
 import { StatusBadge } from "@/components/trades/StatusBadge";
@@ -278,6 +279,15 @@ export function SaleView({ locale, number }: SaleViewProps) {
         {sale.data ? <SaleSubtitle sale={sale.data} locale={locale} /> : null}
       </header>
       {body}
+      {sale.data !== undefined &&
+      (sale.data.status === "credited" || sale.data.payout_status === "paid") ? (
+        <ReviewSlot
+          kind="sale"
+          number={sale.data.number}
+          title={sale.data.items[0]?.name ?? ""}
+          imageUrl={sale.data.items[0]?.image_url ?? null}
+        />
+      ) : null}
     </div>
   );
 }

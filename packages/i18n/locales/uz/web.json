@@ -1057,5 +1057,49 @@
   "consent": {
     "pay": "Toʻlov qilib, siz <link>ommaviy oferta</link> shartlarini qabul qilasiz.",
     "sell": "«Sotish» tugmasini bosib, siz <link>sotib olish shartlarini</link> qabul qilasiz."
+  },
+  "reviews": {
+    "stars": {
+      "label": "Baho",
+      "star": "{n} yulduz",
+      "of": "5 dan {n}"
+    },
+    "prompt": {
+      "titleMarket": "Almashuv bajarildi! Xarid qanday boʻldi?",
+      "titleSale": "Sotuv qanday oʻtdi?",
+      "placeholderBad": "Nima boʻlganini aytib bering?",
+      "placeholderGood": "Bir-ikki iliq soʻz — bu bizga juda yordam beradi",
+      "textLabel": "Fikringiz",
+      "send": "Yuborish",
+      "later": "Hozir emas",
+      "close": "Yopish",
+      "thanks": "Fikringiz uchun rahmat!",
+      "weWillContact": "Siz bilan bogʻlanamiz",
+      "failed": "Yuborib boʻlmadi. Qaytadan urinib koʻring."
+    },
+    "strip": {
+      "label": "Bitim haqida fikr",
+      "market": "{name} xaridi qanday oʻtdi?",
+      "sale": "Sotuv qanday oʻtdi?",
+      "later": "Hozir emas",
+      "dismiss": "Boshqa soʻramang"
+    },
+    "account": {
+      "label": "Fikringiz",
+      "leave": "Fikr qoldirish",
+      "yours": "Sizning bahoyingiz",
+      "edit": "Oʻzgartirish"
+    },
+    "page": {
+      "title": "CS2 skinlari boʻyicha mijozlar fikrlari — csmarket",
+      "description": "Oʻzbekistonda CS2 skinlari xaridorlari va sotuvchilarining baholari va fikrlari.",
+      "heading": "Fikrlar",
+      "summary": "{count} ta fikr",
+      "sale": "Skinlar sotuvi",
+      "anonymous": "Steam foydalanuvchisi",
+      "more": "Yana koʻrsatish",
+      "empty": "Hozircha fikrlar yoʻq",
+      "loadFailed": "Yuklab boʻlmadi. Qaytadan urinib koʻring."
+    }
   }
 }

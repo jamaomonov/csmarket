@@ -141,6 +141,9 @@ async def _reset_realtime_redis() -> AsyncIterator[None]:
 #: `TRUNCATE … CASCADE`. A new table goes in front of whatever it references.
 _EMPTY_IN_ORDER: tuple[str, ...] = (
     "email_outbox",
+    "review_prompts",
+    "reviews",
+    "review_settings",
     "payment_holds",
     "user_risk_policies",
     "kassa_review_limits",

@@ -44,6 +44,9 @@ vi.mock("@/lib/api", () => ({
   },
 }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => m.auth.value }));
+vi.mock("@/components/reviews/ReviewSlot", () => ({
+  ReviewSlot: ({ number }: { number: string }) => <div data-testid="review-slot">{number}</div>,
+}));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children }: { href: string; children: ReactNode }) => (
     <a href={href}>{children}</a>
@@ -287,5 +290,34 @@ describe("OrderView — no order to show", () => {
     view();
     expect(screen.getByText("Аккаунт заблокирован.")).toBeInTheDocument();
     expect(m.get).not.toHaveBeenCalled();
+  });
+});
+
+describe("OrderView — the review", () => {
+  it("a delivered site order offers its review", async () => {
+    m.get.mockResolvedValue(
+      orderOut(number, {
+        status: "delivered",
+        payable: false,
+        channel: "site",
+        trade: tradeOut({ state: "accepted" }),
+      }),
+    );
+    view();
+    expect(await screen.findByTestId("review-slot")).toHaveTextContent(number);
+  });
+
+  it("a delivered API order does not", async () => {
+    m.get.mockResolvedValue(
+      orderOut(number, {
+        status: "delivered",
+        payable: false,
+        channel: "api",
+        trade: tradeOut({ state: "accepted" }),
+      }),
+    );
+    view();
+    expect(await screen.findByText("Получено")).toBeInTheDocument();
+    expect(screen.queryByTestId("review-slot")).toBeNull();
   });
 });

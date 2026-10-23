@@ -3,7 +3,7 @@ import { SessionApiError } from "@csmarket/api-client";
 import common from "@csmarket/i18n/locales/ru/common.json";
 import ru from "@csmarket/i18n/locales/ru/web.json";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { NextIntlClientProvider } from "next-intl";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -16,6 +16,9 @@ import { saleOut } from "@/test/sales";
 
 const auth = vi.hoisted((): { value: Record<string, unknown> } => ({ value: {} }));
 vi.mock("@/lib/auth", () => ({ useAuth: () => auth.value }));
+vi.mock("@/components/reviews/ReviewSlot", () => ({
+  ReviewSlot: ({ number }: { number: string }) => <div data-testid="review-slot">{number}</div>,
+}));
 const api = vi.hoisted(() => ({ getSale: vi.fn() }));
 vi.mock("@/lib/sales", async (importOriginal) => ({
   ...(await importOriginal<typeof SalesModule>()),
@@ -240,5 +243,27 @@ describe("SaleView", () => {
       .filter((x) => x !== null);
     expect(steps).toEqual(["done", "now", "todo"]);
     expect(screen.getByText("Немного поношенное")).toBeInTheDocument();
+  });
+
+  it("a credited sale or a paid card payout offers its review; an offered one does not", async () => {
+    api.getSale.mockResolvedValue({ ...SALE, status: "credited", offer: null });
+    view();
+    expect(await screen.findByTestId("review-slot")).toHaveTextContent("S7K2M9QX");
+    cleanup();
+    api.getSale.mockResolvedValue({
+      ...SALE,
+      status: "payout",
+      offer: null,
+      payout_to: "card",
+      card: { type: "humo", last4: "9015" },
+      payout_status: "paid",
+    });
+    view();
+    expect(await screen.findByTestId("review-slot")).toBeInTheDocument();
+    cleanup();
+    api.getSale.mockResolvedValue(SALE);
+    view();
+    expect(await screen.findByRole("heading", { name: "Примите обмен" })).toBeInTheDocument();
+    expect(screen.queryByTestId("review-slot")).toBeNull();
   });
 });

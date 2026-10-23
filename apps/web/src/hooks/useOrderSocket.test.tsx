@@ -73,7 +73,7 @@ describe("useOrderSocket", () => {
     expect(m.start).not.toHaveBeenCalled();
   });
 
-  it("a changed order invalidates exactly the order, the list, the balance and entries", () => {
+  it("a changed order invalidates exactly the order, the list, the balance, entries and the pending review", () => {
     const client = new QueryClient();
     const spy = vi.spyOn(client, "invalidateQueries");
     mount(client);
@@ -84,7 +84,17 @@ describe("useOrderSocket", () => {
       ["orders", "list"],
       ["wallet", "balance"],
       ["wallet", "entries"],
+      ["reviews", "pending"],
     ]);
+  });
+
+  it("a changed sale re-reads the pending review too", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    mount(client);
+    m.opts[0]?.onSaleChanged?.("S7K2M9QX");
+    const keys = spy.mock.calls.map(([filters]) => filters?.queryKey);
+    expect(keys).toContainEqual(["reviews", "pending"]);
   });
 
   it("stops on unmount and on sign-out", () => {

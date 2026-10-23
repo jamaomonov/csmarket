@@ -23,16 +23,19 @@ const REFRESH_MS = 60_000;
 
 const usd = (v: string | number): string => formatMoneyUsd(v);
 
+const COLS = ["grid-cols-3", "grid-cols-4", "grid-cols-5"] as const;
+
 function Now({ data }: { data: DashboardOut }) {
+  const salesAttention = data.payouts.sales_attention ?? 0;
+  const badReviews = data.reviews_bad_open ?? 0;
+  const extra = Number(salesAttention > 0) + Number(badReviews > 0);
   return (
     <section aria-label="Сделать сейчас" className="space-y-2">
       <h2 className="text-fg-muted text-xs font-medium uppercase tracking-wider">Сделать сейчас</h2>
       {/* One row of compact tiles on a phone, so the period's figures start on the first screen. */}
       <div
         data-testid="now-tiles"
-        className={`grid gap-2 sm:gap-3 ${
-          (data.payouts.sales_attention ?? 0) > 0 ? "grid-cols-4" : "grid-cols-3"
-        }`}
+        className={`grid gap-2 sm:gap-3 ${COLS[extra] ?? "grid-cols-5"}`}
       >
         <Tile
           compact
@@ -53,9 +56,14 @@ function Now({ data }: { data: DashboardOut }) {
         <Tile compact title="В пути" to="/trades?view=active">
           {data.in_flight}
         </Tile>
-        {(data.payouts.sales_attention ?? 0) > 0 ? (
+        {salesAttention > 0 ? (
           <Tile compact title="Продажи: проверить" to="/sales?attention=open" alert>
-            <span className="text-danger">{data.payouts.sales_attention}</span>
+            <span className="text-danger">{salesAttention}</span>
+          </Tile>
+        ) : null}
+        {badReviews > 0 ? (
+          <Tile compact title="Плохие отзывы" to="/reviews" alert>
+            <span className="text-danger">{badReviews}</span>
           </Tile>
         ) : null}
       </div>

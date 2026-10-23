@@ -29,6 +29,7 @@ function useCounters(): Counters {
     toPay: query.data?.payouts.to_pay_count ?? 0,
     salesAttention: query.data?.payouts.sales_attention ?? 0,
     holds: query.data?.holds_open ?? 0,
+    reviews: query.data?.reviews_bad_open ?? 0,
   };
 }
 
