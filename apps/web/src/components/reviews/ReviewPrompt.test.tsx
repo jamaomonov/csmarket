@@ -157,6 +157,32 @@ describe("ReviewPrompt", () => {
     expect(screen.queryByText(/Как прошла покупка/)).toBeNull();
   });
 
+  it("a second deal never replaces the open modal's «Спасибо»", async () => {
+    m.pending.mockResolvedValue({ deal: null });
+    const client = mount();
+    await waitFor(() => {
+      expect(client.getQueryData(REVIEW_PENDING_KEY)).toEqual({ deal: null });
+    });
+    m.pending.mockResolvedValue({ deal: fresh("EF56GH78") });
+    await nudge(client);
+    fireEvent.click(await screen.findByRole("radio", { name: "5 звёзд" }));
+    m.save.mockResolvedValue({});
+    m.pending.mockResolvedValue({ deal: fresh("IJ90KL12") }); // a second deal of this visit
+    fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
+    expect(await screen.findByRole("heading", { name: "Спасибо за отзыв!" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(m.pending).toHaveBeenCalledTimes(3);
+    });
+    expect(screen.getByRole("heading", { name: "Спасибо за отзыв!" })).toBeInTheDocument();
+    // closed, the next nudge asks about the second deal
+    fireEvent.click(screen.getByRole("button", { name: "Закрыть" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await nudge(client);
+    expect(
+      await screen.findByRole("heading", { name: "Обмен прошёл! Как вам покупка?" }),
+    ).toBeInTheDocument();
+  });
+
   it("asks nothing of a signed-out visitor", () => {
     m.auth.value = { status: "anonymous" };
     mount();

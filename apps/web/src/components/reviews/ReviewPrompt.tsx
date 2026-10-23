@@ -40,6 +40,9 @@ export function ReviewPrompt() {
   const opened = useRef(new Set<string>());
   const [strip, setStrip] = useState<PendingDeal | null>(null);
   const [modal, setModal] = useState<{ deal: PendingDeal; rating: number | null } | null>(null);
+  // An open modal is never swapped for the next deal: its «Спасибо» would vanish unread.
+  const modalOpen = useRef(false);
+  modalOpen.current = modal !== null;
   const pending = useQuery({
     queryKey: REVIEW_PENDING_KEY,
     queryFn: getPendingReview,
@@ -79,12 +82,14 @@ export function ReviewPrompt() {
       return;
     }
     const check = { initialNumber: initial.current.number, opened: opened.current, visitStartMs };
-    if (shouldOpenLive(deal, check)) {
+    if (!modalOpen.current && shouldOpenLive(deal, check)) {
       opened.current.add(deal.number);
       setStrip(null);
       setModal({ deal, rating: null });
     }
-  }, [pending.data, deal, visitStartMs]);
+    // every read counts, even an unchanged one: a deal held back by an open modal opens on the
+    // next nudge after it closes
+  }, [pending.data, pending.dataUpdatedAt, deal, visitStartMs]);
 
   const answer = useMutation({
     mutationFn: ({ deal: d, verb }: { deal: PendingDeal; verb: Answer }) =>
