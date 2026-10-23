@@ -3,6 +3,7 @@
 import { cn } from "@csmarket/ui";
 import { Star } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useId, useState } from "react";
 
 interface StarsProps {
   value: number | null;
@@ -14,15 +15,22 @@ interface StarsProps {
 const SIZES = { sm: "size-4", md: "size-6", lg: "size-8" } as const;
 const RATINGS = [1, 2, 3, 4, 5] as const;
 
-/** 1–5 stars: picked (`onChange`) or shown («4 из 5»). */
+/**
+ * 1–5 stars: picked (`onChange`) or shown («Оценка 4 из 5»). Picked, they are native radio inputs
+ * under one name: one Tab stop, arrow keys move the choice, a reader says «2 из 5»; each star is
+ * a 40 px target and lights up to the hovered one.
+ */
 export function Stars({ value, onChange, size = "md" }: StarsProps) {
   const t = useTranslations("web.reviews.stars");
+  const name = useId();
+  const [hover, setHover] = useState<number | null>(null);
+  const lit = hover ?? value;
   const icon = (n: number) => (
     <Star
       aria-hidden
       className={cn(
         SIZES[size],
-        value !== null && n <= value ? "fill-warning text-warning" : "text-fg-dim",
+        lit !== null && n <= lit ? "fill-warning text-warning" : "text-fg-dim",
       )}
     />
   );
@@ -36,21 +44,38 @@ export function Stars({ value, onChange, size = "md" }: StarsProps) {
     );
   }
   return (
-    <div role="radiogroup" aria-label={t("label")} className="inline-flex gap-1">
+    <div
+      role="radiogroup"
+      aria-label={t("label")}
+      className="inline-flex gap-1.5"
+      onMouseLeave={() => {
+        setHover(null);
+      }}
+    >
       {RATINGS.map((n) => (
-        <button
+        <label
           key={n}
-          type="button"
-          role="radio"
-          aria-checked={value === n}
-          aria-label={t("star", { n })}
-          onClick={() => {
-            onChange(n);
+          onMouseEnter={() => {
+            setHover(n);
           }}
-          className="focus-visible:ring-accent rounded-md p-1 focus-visible:outline-none focus-visible:ring-2"
+          className={cn(
+            "has-[:focus-visible]:ring-accent cursor-pointer rounded-md has-[:focus-visible]:ring-2",
+            size === "lg" ? "p-1.5" : "p-2",
+          )}
         >
+          <input
+            type="radio"
+            name={name}
+            value={n}
+            checked={value === n}
+            aria-label={t("star", { n })}
+            onChange={() => {
+              onChange(n);
+            }}
+            className="sr-only"
+          />
           {icon(n)}
-        </button>
+        </label>
       ))}
     </div>
   );

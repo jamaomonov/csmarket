@@ -20,12 +20,14 @@ export function ReviewList({ items, locale }: ReviewListProps) {
           key={r.id}
           className="border-border bg-surface flex flex-col gap-2 rounded-xl border p-4"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             {r.author_avatar_url !== null ? (
               // eslint-disable-next-line @next/next/no-img-element -- Steam CDN avatar, 32px; next/image adds nothing here
               <img src={r.author_avatar_url} alt="" className="size-8 rounded-full" />
             ) : null}
-            <span className="font-medium">{r.author_name ?? t("anonymous")}</span>
+            <span className="min-w-0 max-w-full truncate font-medium">
+              {r.author_name ?? t("anonymous")}
+            </span>
             <Stars value={r.rating} size="sm" />
             <time dateTime={r.created_at} className="text-fg-dim ml-auto text-sm">
               {date.format(new Date(r.created_at))}

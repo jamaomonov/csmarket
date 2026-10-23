@@ -34,7 +34,7 @@ describe("ReviewList", () => {
     const { container } = renderList([ITEM]);
     expect(screen.getByText("<b>hi</b>")).toBeInTheDocument();
     expect(container.querySelector("b")).toBeNull();
-    expect(screen.getByRole("img", { name: "5 из 5" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Оценка 5 из 5" })).toBeInTheDocument();
     expect(screen.getByText("AK-47 | Redline (Field-Tested)")).toBeInTheDocument();
   });
 
