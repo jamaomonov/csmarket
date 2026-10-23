@@ -1057,5 +1057,49 @@
   "consent": {
     "pay": "By paying, you accept the terms of the <link>public offer</link>.",
     "sell": "By pressing «Sell», you accept the <link>buyback terms</link>."
+  },
+  "reviews": {
+    "stars": {
+      "label": "Rating",
+      "star": "{n, plural, one {# star} other {# stars}}",
+      "of": "{n} out of 5"
+    },
+    "prompt": {
+      "titleMarket": "Trade done! How was your purchase?",
+      "titleSale": "How did the sale go?",
+      "placeholderBad": "Tell us what happened?",
+      "placeholderGood": "A few kind words help us a lot",
+      "textLabel": "Your review",
+      "send": "Send",
+      "later": "Not now",
+      "close": "Close",
+      "thanks": "Thank you for your review!",
+      "weWillContact": "We will get in touch",
+      "failed": "Could not send. Please try again."
+    },
+    "strip": {
+      "label": "Review of your deal",
+      "market": "How was buying {name}?",
+      "sale": "How did the sale go?",
+      "later": "Not now",
+      "dismiss": "Don't ask again"
+    },
+    "account": {
+      "label": "Your review",
+      "leave": "Leave a review",
+      "yours": "Your rating",
+      "edit": "Edit"
+    },
+    "page": {
+      "title": "CS2 skin customers' reviews — csmarket",
+      "description": "Ratings and reviews from CS2 skin buyers and sellers in Uzbekistan.",
+      "heading": "Reviews",
+      "summary": "{count, plural, one {# review} other {# reviews}}",
+      "sale": "Skin sale",
+      "anonymous": "Steam user",
+      "more": "Show more",
+      "empty": "No reviews yet",
+      "loadFailed": "Could not load. Please try again."
+    }
   }
 }
