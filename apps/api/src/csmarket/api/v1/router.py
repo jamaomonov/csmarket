@@ -38,6 +38,7 @@ from csmarket.modules.public_api.routes import router as public_api_router
 from csmarket.modules.public_api.site_routes import router as api_key_router
 from csmarket.modules.public_api.tradelink_route import router as public_tradelink_router
 from csmarket.modules.realtime.routes import router as realtime_router
+from csmarket.modules.reviews.routes import router as reviews_router
 from csmarket.modules.risk.admin_routes import limits_router as review_limits_router
 from csmarket.modules.risk.admin_routes import policy_router as risk_policy_router
 from csmarket.modules.sales.admin_payout_routes import router as payouts_admin_router
@@ -95,6 +96,7 @@ router.include_router(payments_router)
 router.include_router(payout_cards_router)
 router.include_router(sales_router)
 router.include_router(realtime_router)
+router.include_router(reviews_router)
 router.include_router(skins_admin_router)
 router.include_router(skins_colors_admin_router)
 router.include_router(skins_pricing_router)

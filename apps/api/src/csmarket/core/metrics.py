@@ -152,6 +152,13 @@ SALE_OUTCOMES = Counter(
     "Sales moved by the status machine, by where they went (spec 2026-10-08).",
     ("outcome",),
 )
+#: Reviews written, by deal kind and stars (spec 2026-10-23-reviews); edits are not counted.
+REVIEWS = Counter(
+    "csmarket_reviews_total",
+    "Reviews written, by deal kind and stars (edits are not counted).",
+    ("kind", "rating"),
+)
+_REVIEW_KINDS = frozenset({"market", "sale"})
 
 
 #: Why an order's money went back to the balance (``orders.failure_reason``).
@@ -806,6 +813,18 @@ def record_lisskins_call(endpoint: LisskinsEndpoint, outcome: LisskinsOutcome) -
         {
             "endpoint": endpoint if endpoint in _LISSKINS_ENDPOINTS else "other",
             "outcome": outcome if outcome in _LISSKINS_OUTCOMES else "other",
+        },
+    )
+
+
+def record_review(kind: str, rating: int) -> None:
+    """Count one new review; a kind or rating outside the sets becomes ``"other"``. Never raises."""
+    _inc(
+        REVIEWS,
+        "csmarket_reviews_total",
+        {
+            "kind": kind if kind in _REVIEW_KINDS else "other",
+            "rating": str(rating) if 1 <= rating <= 5 else "other",
         },
     )
 
