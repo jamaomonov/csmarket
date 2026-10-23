@@ -106,3 +106,69 @@ class PublicReviewsOut(BaseModel):
     count: int
     items: list[PublicReviewOut]
     next_cursor: str | None
+
+
+class AdminUserOut(BaseModel):
+    """A user as the admin's lists name them."""
+
+    id: str
+    display_name: str | None
+    avatar_url: str | None
+
+
+class AdminReviewOut(BaseModel):
+    """One review in the admin's «Отзывы»."""
+
+    id: str
+    #: ``market`` or ``sale``.
+    kind: str
+    #: The order's or the sale's number.
+    number: str
+    rating: int
+    text: str | None
+    locale: str
+    hidden: bool
+    #: Shown on the public page once it is on: good and not hidden.
+    published: bool
+    user: AdminUserOut
+    created_at: datetime
+    updated_at: datetime
+    resolved_at: datetime | None
+    resolved_by: AdminUserOut | None
+    resolved_note: str | None
+
+
+class AdminReviewsPage(BaseModel):
+    """A page of reviews."""
+
+    items: list[AdminReviewOut]
+    next_cursor: str | None
+    #: Unresolved bad reviews, whatever the tab and filters («Плохие N»).
+    bad_open: int
+
+
+class ResolveIn(BaseModel):
+    """«Разобрано»: what the admin did."""
+
+    note: str = Field(min_length=1, max_length=500)
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _trim(cls, value: object) -> object:
+        """A blank note is no note (422)."""
+        return _trimmed(value)
+
+
+class ReviewSettingsIn(BaseModel):
+    """«Показывать отзывы на сайте»."""
+
+    reviews_public: bool
+
+
+class ReviewSettingsOut(BaseModel):
+    """The switch, how many reviews it would show, and who set it last."""
+
+    reviews_public: bool
+    published_count: int
+    updated_at: datetime | None
+    updated_by: AdminUserOut | None
