@@ -313,6 +313,11 @@ PAYMENT_HOLDS_OPEN = Gauge(
     "scheduler's payment_holds job).",
     ("reason",),
 )
+REVIEWS_BAD_OPEN = Gauge(
+    "csmarket_reviews_bad_open",
+    "Bad reviews (1–3 stars) no admin has resolved yet (no alert: the admin menu counts them;"
+    " set by the scheduler's reviews job).",
+)
 SALE_HOLDS_OVERDUE = Gauge(
     "csmarket_sale_holds_overdue",
     "Sales still in hold 6 h past their hold end (alert: SaleHoldOverdue; set by sales.poll).",
@@ -604,6 +609,16 @@ def set_sale_attention_open(reason: SaleAttentionReason, count: int) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_sale_attention_open", error=type(exc).__name__
+        )
+
+
+def set_reviews_bad_open(count: int) -> None:
+    """Set how many bad reviews wait for an admin. Never raises."""
+    try:
+        REVIEWS_BAD_OPEN.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_reviews_bad_open", error=type(exc).__name__
         )
 
 

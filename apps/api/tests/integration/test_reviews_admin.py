@@ -244,3 +244,22 @@ async def test_customers_cannot_touch_it(
         f"{BASE}/settings", json={"reviews_public": True}, headers={**h, **_key()}
     )
     assert r.status_code == 403
+
+
+async def test_the_dashboard_counts_unresolved_bad_reviews(
+    db_session: AsyncSession, integration_client: AsyncClient, admin_headers: Headers
+) -> None:
+    h, admin_id = await _admin(db_session, admin_headers)
+    await make_review(db_session, deal=await delivered_order(db_session), rating=1)
+    await make_review(db_session, deal=await delivered_order(db_session), rating=3)
+    await make_review(db_session, deal=await delivered_order(db_session), rating=5)
+    await make_review(
+        db_session,
+        deal=await delivered_order(db_session),
+        rating=2,
+        resolved_at=now(),
+        resolved_by=admin_id,
+        resolved_note="ok",
+    )
+    r = await integration_client.get("/api/v1/admin/dashboard", headers=h)
+    assert r.json()["reviews_bad_open"] == 2

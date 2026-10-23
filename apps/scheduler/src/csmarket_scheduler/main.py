@@ -24,8 +24,8 @@ from csmarket.modules.p2p import models as _p2p_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
-from csmarket.modules.risk import models as _risk_models  # noqa: F401
 from csmarket.modules.reviews import models as _reviews_models  # noqa: F401
+from csmarket.modules.risk import models as _risk_models  # noqa: F401
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401
 from csmarket.modules.skinslink import models as _skinslink_models  # noqa: F401
@@ -47,6 +47,7 @@ from csmarket_scheduler.jobs import (
     payment_holds,
     public_feed,
     purge_refresh_tokens,
+    reviews,
     sales_poll,
     skins_catalog_import,
     skins_colors,
@@ -100,6 +101,7 @@ def build_scheduler() -> AsyncIOScheduler:
     orders_erase.register(scheduler)
     p2p_sweep.register(scheduler)
     payment_holds.register(scheduler)
+    reviews.register(scheduler)
     return scheduler
 
 
