@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Header, Path, Request, Response
+from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
@@ -19,7 +19,14 @@ from csmarket.modules.admin.api import remember, replayed
 from csmarket.modules.auth.api import current_user, guard_ip
 from csmarket.modules.reviews import service
 from csmarket.modules.reviews.deals import Kind
-from csmarket.modules.reviews.schemas import DealReviewOut, PendingOut, ReviewIn
+from csmarket.modules.reviews.public import public_page
+from csmarket.modules.reviews.schemas import (
+    DealReviewOut,
+    LocaleIn,
+    PendingOut,
+    PublicReviewsOut,
+    ReviewIn,
+)
 from csmarket.modules.users.api import User
 
 router = APIRouter(tags=["reviews"])
@@ -133,3 +140,15 @@ async def post_dismiss(
     """No prompt for this deal again. ``Idempotency-Key`` required; a replay is 204."""
     key = require_idempotency_key(idempotency_key)
     return await _answer(db, verb="dismiss", user_id=user.id, kind=kind, number=number, key=key)
+
+
+@router.get("/reviews", response_model=PublicReviewsOut, summary="Published reviews")
+async def get_reviews(
+    db: Db,
+    locale: Annotated[LocaleIn, Query()] = "ru",
+    cursor: Annotated[str | None, Query(max_length=200)] = None,
+) -> PublicReviewsOut:
+    """Public, no sign-in. While the page is off: ``enabled: false`` and nothing else (200, so
+    the storefront shows «Скоро»). On: the count of the published reviews and 20 of them,
+    ``locale``'s first, newest first. Never a Steam ID, an email, a number or an amount."""
+    return await public_page(db, locale=locale, cursor=cursor)

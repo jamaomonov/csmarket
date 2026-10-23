@@ -79,3 +79,30 @@ class DealReviewOut(BaseModel):
     #: The last moment it may be; ``null`` while the deal has not succeeded.
     editable_until: datetime | None
     review: MyReviewOut | None
+
+
+class PublicReviewOut(BaseModel):
+    """A published review as the public page shows it: no Steam ID, email, number or amount."""
+
+    id: str
+    #: The author's Steam display name and avatar (public on Steam).
+    author_name: str | None
+    author_avatar_url: str | None
+    rating: int
+    text: str | None
+    #: ``market`` or ``sale``.
+    kind: str
+    #: The skin (``market``); ``null`` for a sale (the page says «Продажа скинов»).
+    skin_name: str | None
+    #: ``ru`` / ``uz`` / ``en``: the interface the author wrote in.
+    locale: str
+    created_at: datetime
+
+
+class PublicReviewsOut(BaseModel):
+    """The public page: off, or the published reviews and their count (no average)."""
+
+    enabled: bool
+    count: int
+    items: list[PublicReviewOut]
+    next_cursor: str | None
