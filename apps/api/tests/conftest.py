@@ -64,6 +64,24 @@ def _test_env() -> Iterator[None]:
         cfg.get_settings.cache_clear()
 
 
+@pytest.fixture(autouse=True)
+def _fresh_settings() -> Iterator[None]:
+    """Read the settings anew and run on the real clock around every test.
+
+    A test that flips a setting with ``monkeypatch.setenv`` and clears the cache gets its env
+    back at teardown, but the cache would keep the flipped value for the next test on the same
+    worker; a pinned clock not reset on a failure would leak the same way. Either made a
+    fresh pending order read ``expired`` in ``test_payable_resolver`` on CI (2026-10-26).
+    """
+    from csmarket.core import clock
+    from csmarket.core import config as cfg
+
+    cfg.get_settings.cache_clear()
+    yield
+    cfg.get_settings.cache_clear()
+    clock.reset_clock()
+
+
 @pytest.fixture
 async def app() -> Any:
     """A fresh FastAPI app per test."""

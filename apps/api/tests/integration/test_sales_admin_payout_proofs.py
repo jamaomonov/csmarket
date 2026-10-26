@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from decimal import Decimal
+from typing import Any
 from urllib.parse import quote
 
 import pytest
@@ -62,7 +63,10 @@ async def test_an_admin_attaches_receipts_to_a_paid_payout_and_reads_them_back(
     request = await _paid(db_session)
     status, body = await _upload(integration_client, h, request.id, PNG, 1, name="чек Humo.png")
     assert status == 200, body
-    [proof] = body["proofs"]  # type: ignore[misc]
+    proofs = body["proofs"]
+    assert isinstance(proofs, list)
+    assert len(proofs) == 1
+    proof: dict[str, Any] = proofs[0]  # Any: a JSON object from the response
     assert proof["name"] == "чек Humo.png"
     assert proof["content_type"] == "image/png"
     assert proof["size"] == len(PNG)
