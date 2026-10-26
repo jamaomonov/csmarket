@@ -22,6 +22,11 @@ vi.mock("@/i18n/navigation", () => ({
   ),
 }));
 
+const { fetchArticleLocales } = vi.hoisted(() => ({
+  fetchArticleLocales: vi.fn().mockResolvedValue({ ru: [], uz: [], en: [] }),
+}));
+vi.mock("@/lib/articles-server", () => ({ fetchArticleLocales }));
+
 import { LandingFooter } from "./LandingFooter";
 
 describe("LandingFooter", () => {
@@ -55,5 +60,11 @@ describe("LandingFooter", () => {
     render(await LandingFooter({ locale: "en" }));
     const nav = screen.getByRole("navigation", { name: "Documents" });
     expect(within(nav).getByRole("link", { name: "Privacy policy" })).toBeInTheDocument();
+  });
+
+  it("links «Статьи» once the language has an article", async () => {
+    fetchArticleLocales.mockResolvedValueOnce({ ru: ["news"], uz: [], en: [] });
+    render(await LandingFooter({ locale: "ru" }));
+    expect(screen.getByRole("link", { name: "Статьи" })).toHaveAttribute("href", "/articles");
   });
 });

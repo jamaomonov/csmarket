@@ -10,6 +10,8 @@ import { Analytics } from "@/components/Analytics";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
 import { routing } from "@/i18n/routing";
+import { sectionsIn } from "@/lib/articles";
+import { fetchArticleLocales } from "@/lib/articles-server";
 import { clientMessages } from "@/lib/legal";
 import { SITE } from "@/lib/site";
 
@@ -71,6 +73,7 @@ export default async function LocaleLayout({
   // eslint-disable-next-line @typescript-eslint/no-deprecated -- next/root-params needs Next 16; revisit on upgrade
   setRequestLocale(locale);
   const messages = clientMessages(await getMessages());
+  const articles = sectionsIn(await fetchArticleLocales(), locale).length > 0;
   // Skin pictures come from Steam's CDN: open the connection before the first <img> asks.
   preconnect("https://community.fastly.steamstatic.com");
   return (
@@ -81,7 +84,7 @@ export default async function LocaleLayout({
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>
-            <Header locale={locale} />
+            <Header locale={locale} articles={articles} />
             {children}
           </Providers>
         </NextIntlClientProvider>

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from csmarket.modules.skins.cards import item_cards
 from csmarket.modules.skins.images import steam_image
 from csmarket.modules.skins.inspect import decode_inspect
 from csmarket.modules.skins.listings import (
@@ -23,6 +24,7 @@ from csmarket.modules.skins.offers import (
     parse_offer_id,
 )
 from csmarket.modules.skins.pricing import Bracket, PricingRules, bracket_margin, quote, to_uzs
+from csmarket.modules.skins.schemas import SkinItemOut
 from csmarket.modules.skins.service import get_item, get_item_by_id
 from csmarket.modules.skins.settings import enabled_categories, load_rules
 from csmarket.modules.skins.stickers import Kind as AppliedKind
@@ -66,6 +68,7 @@ __all__ = [
     "PricingRules",
     "SearchClient",
     "SkinItem",
+    "SkinItemOut",
     "SnapshotRow",
     "Source",
     "TradeClient",
@@ -89,6 +92,7 @@ __all__ = [
     "from_listing",
     "get_item",
     "get_item_by_id",
+    "item_cards",
     "listings_budget",
     "listings_for",
     "load_rules",

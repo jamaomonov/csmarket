@@ -79,3 +79,10 @@ export const LEGAL = "/legal";
 export function legalPath(doc: string): string {
   return `${LEGAL}/${doc}`;
 }
+
+/** Articles: the list, a section list, one article (spec 2026-10-26-articles). */
+export const ARTICLES = "/articles";
+
+export function articlePath(slugOrSection: string): string {
+  return `${ARTICLES}/${slugOrSection}`;
+}

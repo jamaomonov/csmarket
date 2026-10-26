@@ -631,3 +631,22 @@ errors, limits and curl examples: [`public-v1.md`](./public-v1.md). Notes:
 - **No external call** on any public request except the advisory `POST /public/tradelink/check`
   (the AGENTS.md §11 trade-link carve-out): the feed and the offers read our own tables and
   Redis.
+
+## Articles
+
+Spec `2026-10-26-articles-design.md`, ADR-0025. Public reads need no sign-in; admin writes take a
+required `Idempotency-Key` and leave an audit row `articles.<verb>`.
+
+| Route                                                | What                                                                                      |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `GET /articles?locale=&section=&cursor=`             | live articles in that language, newest first, 12 a page                                   |
+| `GET /articles/locales`                              | per language, the sections with at least one live article                                 |
+| `GET /articles/sitemap`                              | every live translation with its last change                                               |
+| `GET /articles/{slug}?locale=`                       | `kind: article` (with `embeds` and `related`), `kind: redirect`, or 404                   |
+| `POST /articles/{slug}/view`                         | the page's beacon; keyless, once per visitor per day                                      |
+| `GET /articles/{slug}/me`                            | views, likes and whether I like it                                                        |
+| `PUT` / `DELETE /articles/{slug}/like`               | like / unlike, signed in or not; keyless (a state); `article-like` IP bucket, 30 a minute |
+| `GET /media/{sha256}.{jpg,png,webp}`                 | an article image, `immutable` for a year                                                  |
+| `GET /admin/articles`, `POST`, `GET` / `PATCH /{id}` | the admin's list, create, read, edit                                                      |
+| `POST /admin/articles/{id}/publish` / `unpublish`    | publishing needs a cover and a ready translation                                          |
+| `POST /admin/articles/media`                         | an image as the raw body (≤ 5 MB; Caddy allows 6 MB on this path)                         |

@@ -1,3 +1,5 @@
+import { fetchArticleLocales, fetchArticleSitemap } from "@/lib/articles-server";
+import { articlesXml } from "@/lib/articles-sitemap";
 import { legalPaths } from "@/lib/legal";
 import { CHEAP, HOME, itemPath, MARKET, PAY_METHODS, payPath, REVIEWS, SELL } from "@/lib/paths";
 import { reviewsPublic } from "@/lib/reviews-server";
@@ -13,7 +15,8 @@ const notFound = (): Response => new Response("Not found", { status: 404 });
 /**
  * `/skins-sitemap/<n>.xml`: item pages `n × 5000` onwards, alphabetical;
  * `/skins-sitemap/landings.xml`: the home page, /market, /cheap, the payment-method pages, /sell and
- * the category and weapon landing pages, the legal documents and /reviews while it is on.
+ * the category and weapon landing pages, the legal documents and /reviews while it is on;
+ * `/skins-sitemap/articles.xml`: the live articles and their lists (`lib/articles-sitemap`).
  * An API outage throws (a 500 the crawler retries), it is never a 404.
  */
 export async function GET(
@@ -21,6 +24,10 @@ export async function GET(
   { params }: { params: Promise<{ file: string }> },
 ): Promise<Response> {
   const { file } = await params;
+  if (file === "articles.xml") {
+    const [entries, sections] = await Promise.all([fetchArticleSitemap(), fetchArticleLocales()]);
+    return xmlResponse(articlesXml(entries, sections));
+  }
   if (file === "landings.xml") {
     const [facets, reviewsOn] = await Promise.all([getSkinFacets(), reviewsPublic()]);
     if (!facets) return notFound();

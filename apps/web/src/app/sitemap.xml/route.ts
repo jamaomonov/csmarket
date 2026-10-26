@@ -8,5 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<Response> {
   const { total } = await fetchSkinSlugs(0, 1);
   const files = Array.from({ length: chunkCount(total) }, (_, n) => chunkUrl(String(n)));
-  return xmlResponse(sitemapIndexXml([...files, chunkUrl("landings")], today()));
+  return xmlResponse(
+    sitemapIndexXml([...files, chunkUrl("landings"), chunkUrl("articles")], today()),
+  );
 }

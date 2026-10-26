@@ -246,6 +246,7 @@ class Settings(BaseSettings):
             "sell-inventory": 60,
             "sell-create": 60,
             "review": 60,
+            "article-like": 30,
         },
         description=(
             "Per-bucket per-IP ceilings. Uzbek mobile carriers put many subscribers behind "

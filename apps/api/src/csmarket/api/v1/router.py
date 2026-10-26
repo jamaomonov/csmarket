@@ -19,6 +19,10 @@ from csmarket.modules.admin.payments_routes import router as admin_payments_rout
 from csmarket.modules.admin.routes import router as admin_router
 from csmarket.modules.admin.users_routes import router as admin_users_router
 from csmarket.modules.analytics.routes import router as analytics_router
+from csmarket.modules.articles.admin_routes import router as articles_admin_router
+from csmarket.modules.articles.media_routes import admin_router as articles_media_admin_router
+from csmarket.modules.articles.media_routes import router as articles_media_router
+from csmarket.modules.articles.routes import router as articles_router
 from csmarket.modules.auth.api import router as auth_router
 from csmarket.modules.click.routes import router as click_router
 from csmarket.modules.notifications.routes_dev import router as notifications_dev_router
@@ -75,6 +79,8 @@ router.include_router(admin_payments_router)
 router.include_router(admin_audit_router)
 router.include_router(admin_dashboard_router)
 router.include_router(reviews_admin_router)
+router.include_router(articles_media_admin_router)
+router.include_router(articles_admin_router)
 router.include_router(analytics_router)
 router.include_router(admin_orders_router)
 # Before ``sales_admin_router``: its ``/admin/sales/{number}`` would read ``payouts`` as a sale.
@@ -101,6 +107,8 @@ router.include_router(payout_cards_router)
 router.include_router(sales_router)
 router.include_router(realtime_router)
 router.include_router(reviews_router)
+router.include_router(articles_media_router)
+router.include_router(articles_router)
 router.include_router(skins_admin_router)
 router.include_router(skins_colors_admin_router)
 router.include_router(skins_pricing_router)

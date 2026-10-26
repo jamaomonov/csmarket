@@ -19,7 +19,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
-from csmarket.core.errors import ValidationError
+from csmarket.core.uploads import read_capped_body
 from csmarket.modules.admin.api import record, remember, replayed, require_admin, required_key
 from csmarket.modules.sales.admin_payouts import payout_detail
 from csmarket.modules.sales.admin_proofs import MAX_BYTES, add_proof, delete_proof, read_proof
@@ -34,28 +34,12 @@ Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
 Admin = Annotated[User, Depends(require_admin)]
 Key = Annotated[str, Depends(required_key)]
 
-_TOO_LARGE = "the file is larger than 5 MB"
 _UPLOAD_BODY: dict[str, Any] = {  # an OpenAPI fragment
     "requestBody": {
         "required": True,
         "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}},
     }
 }
-
-
-async def _body(request: Request) -> bytes:
-    """The upload, refused as soon as it passes :data:`MAX_BYTES`."""
-    declared = request.headers.get("content-length")
-    if declared is not None and declared.isdigit() and int(declared) > MAX_BYTES:
-        raise ValidationError(_TOO_LARGE, code="proof_too_large")
-    chunks: list[bytes] = []
-    size = 0
-    async for chunk in request.stream():
-        size += len(chunk)
-        if size > MAX_BYTES:
-            raise ValidationError(_TOO_LARGE, code="proof_too_large")
-        chunks.append(chunk)
-    return b"".join(chunks)
 
 
 async def _finish(
@@ -91,7 +75,7 @@ async def post_proof(
     """A screenshot or a PDF of the transfer (JPG, PNG, WebP, PDF; 5 MB), to a paid payout,
     three at most. Audited ``sales.payout.proof.add`` (no name, no bytes)."""
     rid, scope = str(request_id), "admin.sales.payout.proof.add"
-    data = await _body(request)
+    data = await read_capped_body(request, max_bytes=MAX_BYTES, too_large_code="proof_too_large")
     name = unquote(x_file_name) if x_file_name else None
     replay = {"id": rid, "sha256": hashlib.sha256(data).hexdigest(), "name": name}
     if (hit := await replayed(db, scope=scope, key=key, request=replay)) is not None:

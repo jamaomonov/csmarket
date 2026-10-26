@@ -200,6 +200,11 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - **422 bodies** — an app-wide `RequestValidationError` handler (`bootstrap.py`) answers 422 as
   `{"detail": [{type, loc, msg}]}` and drops `input` and `ctx`, so no request body (card
   numbers, trade links) is echoed back by pydantic.
+- **Article views and likes** (ADR-0025, migration 0042) — a view is deduplicated in Redis by
+  `sha256(daily salt + ip + article id)` until midnight UTC; the salt is random per day and lives
+  only in Redis, the IP is never stored or logged. An anonymous like sets the `csm_aid` cookie (a
+  random UUID, HttpOnly, SameSite=Lax, one year) and is stored by that id; a signed-in like by the
+  user id (erased with the account, `ON DELETE CASCADE`). Neither id is logged.
 - **Payout receipts** (ADR-0024, migration 0041) — `payout_proofs.data` and `.name`: an
   admin's screenshot or PDF of a transfer may show the card, the recipient's name and the bank
   account. Kept in the database (and so in the nightly encrypted backup), served only to an admin
