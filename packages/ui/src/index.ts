@@ -16,3 +16,4 @@ export {
 } from "./components/Dropdown";
 export { Accordion } from "./components/Accordion";
 export { Logo, LogoMark } from "./components/Logo";
+export { Markdown, type MarkdownImage, type MarkdownProps } from "./components/Markdown";
