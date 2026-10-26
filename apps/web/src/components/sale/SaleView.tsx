@@ -287,6 +287,7 @@ export function SaleView({ locale, number }: SaleViewProps) {
           number={sale.data.number}
           title={saleCover(sale.data.items)?.name ?? ""}
           imageUrl={saleCover(sale.data.items)?.image_url ?? null}
+          rarityColor={saleCover(sale.data.items)?.rarity_color ?? null}
         />
       ) : null}
     </div>

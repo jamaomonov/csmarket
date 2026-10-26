@@ -174,6 +174,7 @@ async def pending(db: AsyncSession, *, user_id: str, at: datetime) -> ReviewPend
             number=deal.number,
             title=deal.title,
             image_url=deal.image_url,
+            rarity_color=deal.rarity_color,
             items=deal.items,
             done_at=deal.done_at,
         )

@@ -36,6 +36,7 @@ const OLD: PendingDeal = {
   number: "AB12CD34",
   title: "AK-47 | Redline (Field-Tested)",
   image_url: null,
+  rarity_color: null,
   items: 1,
   done_at: new Date(Date.now() - 2 * 86_400_000).toISOString(),
 };

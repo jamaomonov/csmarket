@@ -44,9 +44,7 @@ describe("SkinTradeCard", () => {
   it("says the offer is on its way while buying", () => {
     card({});
     expect(screen.getByText("Обмен в Steam")).toBeInTheDocument();
-    expect(
-      screen.getByText("Обмен скоро придёт в Steam."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Обмен скоро придёт в Steam.")).toBeInTheDocument();
   });
 
   it("links the sent offer, names the seller and says until when to accept", () => {

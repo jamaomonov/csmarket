@@ -8,6 +8,7 @@ import {
   isVanilla,
   offerHeadline,
   rarityGlow,
+  rarityLight,
   steamDiscount,
   wearColor,
   wearChoices,
@@ -200,5 +201,15 @@ describe("rarityGlow", () => {
   it("stays dark without a colour or with a malformed one", () => {
     expect(rarityGlow(null)).toBeNull();
     expect(rarityGlow("red; background:url(x)")).toBeNull();
+  });
+});
+
+describe("rarityLight", () => {
+  it("is a brighter light than the card glow, for a picture on its own", () => {
+    const light = rarityLight("#eb4b4b");
+    expect(light).toContain("#eb4b4b59");
+    expect(light).toContain("transparent");
+    expect(rarityLight(null)).toBeNull();
+    expect(rarityLight("red")).toBeNull();
   });
 });

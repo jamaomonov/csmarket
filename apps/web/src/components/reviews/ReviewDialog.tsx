@@ -2,6 +2,7 @@
 
 import { isLocale } from "@csmarket/i18n";
 import { Button } from "@csmarket/ui";
+import { rarityLight } from "@csmarket/utils/skins";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -25,6 +26,8 @@ export interface ReviewDeal {
   number: string;
   title: string;
   image_url: string | null;
+  /** Lights the picture by the skin's rarity; `null` when unknown. */
+  rarity_color: string | null;
 }
 
 interface ReviewDialogProps {
@@ -60,6 +63,7 @@ export function ReviewDialog({
   editing = false,
 }: ReviewDialogProps) {
   const t = useTranslations("web.reviews.prompt");
+  const light = rarityLight(deal.rarity_color);
   const locale = useLocale();
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -131,8 +135,18 @@ export function ReviewDialog({
           <X className="size-5" aria-hidden />
         </button>
         {deal.image_url !== null ? (
-          // eslint-disable-next-line @next/next/no-img-element -- a Steam CDN image already cut to size
-          <img src={deal.image_url} alt="" className="h-24 w-auto object-contain" />
+          <div className="relative flex h-28 w-48 items-center justify-center">
+            {light !== null ? (
+              <span
+                aria-hidden
+                data-testid="rarity-light"
+                className="absolute inset-0"
+                style={{ background: light }}
+              />
+            ) : null}
+            {/* eslint-disable-next-line @next/next/no-img-element -- a Steam CDN image already cut to size */}
+            <img src={deal.image_url} alt="" className="relative h-24 w-auto object-contain" />
+          </div>
         ) : null}
         {deal.title !== "" ? <p className="text-fg-muted -mt-2 text-sm">{deal.title}</p> : null}
         <h2 id={titleId} className="text-h3 font-semibold tracking-tight">

@@ -16,6 +16,7 @@ const deal = (number: string, doneAt: number): PendingDeal => ({
   number,
   title: "AK-47 | Redline (Field-Tested)",
   image_url: null,
+  rarity_color: null,
   items: 1,
   done_at: new Date(doneAt).toISOString(),
 });

@@ -198,6 +198,13 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
  * when there is no (well-formed) colour — the value is set inline, so only a plain hex
  * colour is ever let through.
  */
+/** A brighter light than {@link rarityGlow}, for a single picture shown on its own (the review
+ * prompt): the owner asked for the rarity to read at a glance there (2026-10-26). */
+export function rarityLight(color: string | null): string | null {
+  if (!color || !HEX_COLOR.test(color)) return null;
+  return `radial-gradient(ellipse 60% 60% at 50% 50%, ${color}59 0%, ${color}1f 45%, transparent 72%)`;
+}
+
 export function rarityGlow(color: string | null): string | null {
   if (!color || !HEX_COLOR.test(color)) return null;
   // Faint on purpose (redesign 2026-10-15): a hint of the rarity, not a neon blob.

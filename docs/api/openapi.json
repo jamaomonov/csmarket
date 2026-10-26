@@ -5522,6 +5522,17 @@
             "title": "Number",
             "type": "string"
           },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -5532,6 +5543,7 @@
           "number",
           "title",
           "image_url",
+          "rarity_color",
           "items",
           "done_at"
         ],

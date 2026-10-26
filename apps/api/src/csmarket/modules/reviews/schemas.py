@@ -47,6 +47,8 @@ class DealOut(BaseModel):
     #: The skin's name; for a sale, its most valuable item.
     title: str
     image_url: str | None
+    #: The skin's rarity colour (``#rrggbb``) for the light behind its picture.
+    rarity_color: str | None
     #: How many items (1 for an order).
     items: int
     #: When the deal succeeded (rule 7).

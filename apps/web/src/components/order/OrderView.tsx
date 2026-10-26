@@ -156,6 +156,7 @@ export function OrderView({ locale, number }: OrderViewProps) {
           number={data.number}
           title={data.name}
           imageUrl={data.image_url}
+          rarityColor={data.rarity_color}
         />
       ) : null}
     </Panel>

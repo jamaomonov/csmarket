@@ -16,10 +16,11 @@ interface ReviewSlotProps {
   /** The skin's name, for the modal. */
   title: string;
   imageUrl: string | null;
+  rarityColor?: string | null;
 }
 
 /** On a succeeded deal's page: «Оставить отзыв», or the review given (editable for 14 days). */
-export function ReviewSlot({ kind, number, title, imageUrl }: ReviewSlotProps) {
+export function ReviewSlot({ kind, number, title, imageUrl, rarityColor = null }: ReviewSlotProps) {
   const t = useTranslations("web.reviews.account");
   const [open, setOpen] = useState(false);
   const q = useQuery({
@@ -67,7 +68,7 @@ export function ReviewSlot({ kind, number, title, imageUrl }: ReviewSlotProps) {
       )}
       {open ? (
         <ReviewDialog
-          deal={{ kind, number, title, image_url: imageUrl }}
+          deal={{ kind, number, title, image_url: imageUrl, rarity_color: rarityColor }}
           initialRating={review?.rating ?? null}
           initialText={review?.text ?? null}
           editing={review !== null}

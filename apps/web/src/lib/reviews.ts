@@ -15,6 +15,8 @@ export interface PendingDeal {
   /** The skin's name; a sale's most valuable item. Skin names stay English. */
   title: string;
   image_url: string | null;
+  /** The skin's rarity colour, for the light behind its picture. */
+  rarity_color: string | null;
   items: number;
   /** When the deal succeeded. */
   done_at: string;

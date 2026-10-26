@@ -23,6 +23,7 @@ const DEAL: ReviewDeal = {
   number: "AB12CD34",
   title: "AK-47 | Redline (Field-Tested)",
   image_url: null,
+  rarity_color: null,
 };
 
 interface Extra {
@@ -56,6 +57,19 @@ beforeEach(() => {
 });
 
 describe("ReviewDialog", () => {
+  it("lights the skin by its rarity", () => {
+    renderDialog({
+      deal: { ...DEAL, image_url: "https://cdn.test/ak.png", rarity_color: "#eb4b4b" },
+    });
+    const light = screen.getByTestId("rarity-light");
+    expect(light.style.background).toContain("radial-gradient");
+  });
+
+  it("shows the skin without a light when the rarity is unknown", () => {
+    renderDialog({ deal: { ...DEAL, image_url: "https://cdn.test/ak.png" } });
+    expect(screen.queryByTestId("rarity-light")).toBeNull();
+  });
+
   it("asks about the purchase; the placeholder follows the stars", () => {
     renderDialog();
     expect(

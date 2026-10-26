@@ -15,6 +15,8 @@ import pytest
 from csmarket.core import config as cfg
 from csmarket.core.clock import now
 from csmarket.modules.reviews.models import Review, ReviewPrompt
+from csmarket.modules.sales.models import SaleItem
+from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.users.models import User
 from httpx import AsyncClient, Response
 from prometheus_client import REGISTRY
@@ -246,7 +248,7 @@ async def test_pending_snooze_and_dismiss(
     older = (await delivered_order(db_session, user=me, days_ago=2)).number
     newer = (await credited_sale(db_session, user=me, days_ago=1)).number
     deal = (await integration_client.get(f"{BASE}/pending", headers=headers)).json()["deal"]
-    assert set(deal) == {"kind", "number", "title", "image_url", "items", "done_at"}
+    assert set(deal) == {"kind", "number", "title", "image_url", "rarity_color", "items", "done_at"}
     assert (deal["kind"], deal["number"], deal["items"]) == ("sale", newer, 2)
     snoozed = await integration_client.post(
         f"{BASE}/sale/{newer}/snooze", headers={**headers, **_key()}
@@ -289,3 +291,39 @@ async def test_signed_out_is_401(integration_client: AsyncClient) -> None:
         f"{BASE}/market/ABCDEFGH", json={"rating": 5, "locale": "ru"}, headers=_key()
     )
     assert r.status_code == 401
+
+
+async def test_the_pending_deal_carries_its_rarity_color(
+    db_session: AsyncSession, integration_client: AsyncClient, customer_headers: Headers
+) -> None:
+    """The prompt lights the skin by its rarity: an order's item, a sale's top item by name."""
+    headers, me = await _me(db_session, customer_headers)
+    order = await delivered_order(db_session, user=me, days_ago=2)
+    item = await db_session.get(SkinItem, order.skin_item_id)
+    assert item is not None
+    item.rarity_color = "#eb4b4b"
+    await db_session.commit()
+    deal = (await integration_client.get(f"{BASE}/pending", headers=headers)).json()["deal"]
+    assert deal["rarity_color"] == "#eb4b4b"
+
+    sale = await credited_sale(db_session, user=me, days_ago=1)
+    top = await db_session.scalar(
+        select(SaleItem.name)
+        .where(SaleItem.sale_id == sale.id)
+        .order_by(SaleItem.price_uzs.desc(), SaleItem.asset_id)
+        .limit(1)
+    )
+    db_session.add(
+        SkinItem(
+            id=str(uuid4()),
+            market_hash_name=str(top),
+            phase="",
+            slug=f"sold-{uuid4().hex[:6]}",
+            category="knives",
+            search_text="sold",
+            rarity_color="#8847ff",
+        )
+    )
+    await db_session.commit()
+    deal = (await integration_client.get(f"{BASE}/pending", headers=headers)).json()["deal"]
+    assert (deal["kind"], deal["rarity_color"]) == ("sale", "#8847ff")

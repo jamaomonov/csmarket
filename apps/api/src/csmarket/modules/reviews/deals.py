@@ -51,6 +51,8 @@ class Deal(BaseModel):
     #: The skin's name; a sale's most valuable item.
     title: str
     image_url: str | None
+    #: The skin's rarity colour (``#rrggbb``), to light its picture; ``None`` when unknown.
+    rarity_color: str | None = None
     items: int
 
 
@@ -82,7 +84,13 @@ async def _find_order(db: AsyncSession, number: str, *, lock: bool) -> Deal | No
     order = await db.scalar(q.with_for_update() if lock else q)
     if order is None:
         return None
-    image = await db.scalar(select(SkinItem.image_url).where(SkinItem.id == order.skin_item_id))
+    picture = (
+        await db.execute(
+            select(SkinItem.image_url, SkinItem.rarity_color).where(
+                SkinItem.id == order.skin_item_id
+            )
+        )
+    ).first()
     ok = order.status == "delivered" and order.channel == "site"
     return Deal(
         kind="market",
@@ -92,7 +100,8 @@ async def _find_order(db: AsyncSession, number: str, *, lock: bool) -> Deal | No
         sale_id=None,
         done_at=order.delivered_at if ok else None,
         title=order.market_hash_name,
-        image_url=image,
+        image_url=picture.image_url if picture is not None else None,
+        rarity_color=picture.rarity_color if picture is not None else None,
         items=1,
     )
 
@@ -116,6 +125,14 @@ async def _find_sale(db: AsyncSession, number: str, *, lock: bool) -> Deal | Non
         )
     ).first()
     count = await db.scalar(select(func.count()).where(SaleItem.sale_id == sale.id))
+    # A sold item is matched to the catalogue by name: only its colour is read.
+    color = (
+        await db.scalar(
+            select(SkinItem.rarity_color).where(SkinItem.market_hash_name == first.name).limit(1)
+        )
+        if first is not None
+        else None
+    )
     return Deal(
         kind="sale",
         number=sale.number,
@@ -125,6 +142,7 @@ async def _find_sale(db: AsyncSession, number: str, *, lock: bool) -> Deal | Non
         done_at=done,
         title=first.name if first is not None else "",
         image_url=first.image_url if first is not None else None,
+        rarity_color=color,
         items=int(count or 0),
     )
 
