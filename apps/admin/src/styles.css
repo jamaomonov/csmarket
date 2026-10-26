@@ -12,3 +12,32 @@
     --bottom-nav: 0px;
   }
 }
+
+/* An article's preview (features/articles): the storefront's rhythm, for a faithful read. */
+@layer components {
+  .article-body {
+    @apply flex flex-col gap-3 leading-relaxed;
+  }
+  .article-body h2 {
+    @apply mt-4 text-xl font-semibold;
+  }
+  .article-body h3 {
+    @apply mt-3 text-lg font-semibold;
+  }
+  .article-body ul {
+    @apply list-disc pl-6;
+  }
+  .article-body ol {
+    @apply list-decimal pl-6;
+  }
+  .article-body a {
+    @apply text-accent underline;
+  }
+  .article-body img {
+    @apply h-auto max-w-full rounded-lg;
+  }
+  .article-body th,
+  .article-body td {
+    @apply border-border border px-2 py-1;
+  }
+}

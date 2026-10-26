@@ -64,7 +64,7 @@ export const GROUPS: readonly NavGroup[] = [
     ],
   },
   { label: "Аналитика", items: [{ to: "/analytics", label: "Аналитика" }] },
-  { label: "Статьи", items: [{ to: "/articles", label: "Статьи" }] },
+  { label: "Статьи", items: [{ to: "/articles", label: "Статьи", also: ["/articles/"] }] },
   {
     label: "Настройки",
     items: [
