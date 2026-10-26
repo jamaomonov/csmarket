@@ -24,6 +24,7 @@ describe("GET /sitemap.xml", () => {
     expect(body).toContain("https://csmarket.uz/skins-sitemap/2.xml");
     expect(body).not.toContain("https://csmarket.uz/skins-sitemap/3.xml");
     expect(body).toContain("https://csmarket.uz/skins-sitemap/landings.xml");
+    expect(body).toContain("https://csmarket.uz/skins-sitemap/articles.xml");
   });
 
   it("still lists the landings for an empty catalogue", async () => {

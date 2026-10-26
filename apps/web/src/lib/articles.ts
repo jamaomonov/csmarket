@@ -110,3 +110,8 @@ export function pageLanguages(doc: HreflangSource): string[] {
     .map((l) => l.getAttribute("hreflang") ?? "")
     .filter((l) => l !== "" && l !== "x-default");
 }
+
+/** The sections with a live article in `locale` (none for an unknown locale). */
+export function sectionsIn(sections: ArticleLocales, locale: string): Section[] {
+  return Object.entries(sections).find(([l]) => l === locale)?.[1] ?? [];
+}

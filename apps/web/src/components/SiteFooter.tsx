@@ -7,8 +7,11 @@
 import { getTranslations } from "next-intl/server";
 
 import { Link } from "@/i18n/navigation";
+import { sectionsIn } from "@/lib/articles";
+import { fetchArticleLocales } from "@/lib/articles-server";
 import { LEGAL_DOCS } from "@/lib/legal";
 import {
+  ARTICLES,
   categoryPath,
   CHEAP,
   legalPath,
@@ -54,6 +57,8 @@ export async function SiteFooter({ locale }: { locale: string }) {
   const tCat = await getTranslations({ locale, namespace: "web.skins.category" });
   const tBuy = await getTranslations({ locale, namespace: "web.seoPages.footer" });
   const tLegal = await getTranslations({ locale, namespace: "legal" });
+  const tNav = await getTranslations({ locale, namespace: "web.nav" });
+  const articles = sectionsIn(await fetchArticleLocales(), locale).length > 0;
   return (
     <footer className="border-border text-fg-dim text-small border-t">
       <div className="mx-auto grid max-w-[1320px] grid-cols-2 gap-6 px-4 pb-28 pt-8 sm:px-6 md:grid-cols-5 md:pb-10">
@@ -84,6 +89,7 @@ export async function SiteFooter({ locale }: { locale: string }) {
             { href: SELL, label: t("sell") },
             { href: STEAM_TOPUP, label: t("steam") },
             { href: REVIEWS, label: t("reviews") },
+            ...(articles ? [{ href: ARTICLES, label: tNav("articles") }] : []),
           ]}
         />
         <nav aria-label={t("telegram")}>

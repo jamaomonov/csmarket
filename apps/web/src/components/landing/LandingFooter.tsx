@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { PayMarks } from "./Wordmarks";
 
 import { Link } from "@/i18n/navigation";
+import { sectionsIn } from "@/lib/articles";
+import { fetchArticleLocales } from "@/lib/articles-server";
 import { LEGAL_DOCS } from "@/lib/legal";
 import {
   categoryPath,
@@ -12,6 +14,7 @@ import {
   PAY_NAMES,
   legalPath,
   payPath,
+  ARTICLES,
   REVIEWS,
   SELL,
   STEAM_TOPUP,
@@ -29,6 +32,8 @@ export async function LandingFooter({ locale }: { locale: string }) {
   const tCat = await getTranslations({ locale, namespace: "web.skins.category" });
   const tBuy = await getTranslations({ locale, namespace: "web.seoPages.footer" });
   const tLegal = await getTranslations({ locale, namespace: "legal" });
+  const tNav = await getTranslations({ locale, namespace: "web.nav" });
+  const articles = sectionsIn(await fetchArticleLocales(), locale).length > 0;
   return (
     <footer className="site">
       <div className="wrap">
@@ -84,6 +89,11 @@ export async function LandingFooter({ locale }: { locale: string }) {
               <li>
                 <Link href={REVIEWS}>{t("reviews")}</Link>
               </li>
+              {articles ? (
+                <li>
+                  <Link href={ARTICLES}>{tNav("articles")}</Link>
+                </li>
+              ) : null}
               <li>
                 <a href="https://docs.csmarket.uz">{t("api")}</a>
               </li>

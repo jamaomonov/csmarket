@@ -6,7 +6,7 @@ import { Languages, LogOut, Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AppLink } from "./AccountMenu";
-import { ACCOUNT_NAV, MAIN_NAV, type NavEntry } from "./nav";
+import { ACCOUNT_NAV, mainNav, type NavEntry } from "./nav";
 import { SteamIcon } from "../icons/SteamIcon";
 
 import type { ReactNode } from "react";
@@ -17,12 +17,13 @@ import { useAuth } from "@/lib/auth";
 
 interface MobileMenuProps {
   locale: string;
+  articles?: boolean;
   /** Signed in on a phone: the user's avatar opens the menu in place of ☰. */
   avatar?: ReactNode;
 }
 
 /** Phones: one ☰ menu with the nav, the languages and the account. */
-export function MobileMenu({ locale, avatar }: MobileMenuProps) {
+export function MobileMenu({ locale, avatar, articles = false }: MobileMenuProps) {
   const t = useTranslations("web.nav");
   const { status, signInHref, signOut } = useAuth();
   const pathname = usePathname();
@@ -33,7 +34,7 @@ export function MobileMenu({ locale, avatar }: MobileMenuProps) {
     icon: <entry.icon className="text-fg-dim size-4 shrink-0" aria-hidden />,
   });
   const items: DropdownEntry[] = [
-    ...MAIN_NAV.map(link),
+    ...mainNav(articles).map(link),
     { key: "s1", separator: true },
     // A full navigation: the path is already locale-prefixed, AppLink would prefix it again.
     ...LOCALES.map((l) => ({

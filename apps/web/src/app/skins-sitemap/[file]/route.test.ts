@@ -88,3 +88,20 @@ describe("GET /skins-sitemap/<n>.xml", () => {
     expect(dynamic).toBe("force-dynamic");
   });
 });
+
+describe("GET /skins-sitemap/articles.xml", () => {
+  it("lists the live articles and their lists", async () => {
+    mockedApiGet.mockImplementation((path: string) =>
+      Promise.resolve(
+        path === "/articles/sitemap"
+          ? { items: [{ slug: "top", locale: "ru", updated_at: "2026-10-21T00:00:00Z" }] }
+          : { ru: ["tops"], uz: [], en: [] },
+      ),
+    );
+    const body = await (await call("articles.xml")).text();
+    expect(body).toContain(
+      "<loc>https://csmarket.uz/articles/top</loc><lastmod>2026-10-21</lastmod>",
+    );
+    expect(body).toContain("<loc>https://csmarket.uz/articles/tops</loc>");
+  });
+});

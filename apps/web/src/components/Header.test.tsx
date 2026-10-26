@@ -27,10 +27,10 @@ vi.mock("@tanstack/react-query", () => ({
   useQuery: () => ({ data: { balance_uzs: "1250000" } }),
 }));
 
-function renderHeader() {
+function renderHeader(articles = false) {
   return render(
     <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
-      <Header locale="ru" />
+      <Header locale="ru" articles={articles} />
     </NextIntlClientProvider>,
   );
 }
@@ -98,5 +98,13 @@ describe("Header", () => {
     expect(classes).toContain("hidden");
     expect(classes).toContain("md:inline-flex");
     expect(classes).not.toContain("inline-flex");
+  });
+
+  it("shows «Статьи» only when the language has articles", () => {
+    auth.value = { status: "anonymous", user: null, signInHref: () => "/" };
+    renderHeader(false);
+    expect(screen.queryByRole("link", { name: "Статьи" })).toBeNull();
+    renderHeader(true);
+    expect(screen.getByRole("link", { name: "Статьи" })).toHaveAttribute("href", "/articles");
   });
 });

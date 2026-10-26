@@ -4,7 +4,7 @@ import type { ArticleLocales, ArticlesPage, Section } from "@/lib/articles";
 
 import { ArticleCard } from "@/components/articles/ArticleCard";
 import { Link } from "@/i18n/navigation";
-import { SECTIONS, sectionHref } from "@/lib/articles";
+import { SECTIONS, sectionHref, sectionsIn } from "@/lib/articles";
 
 interface ArticleListProps {
   locale: string;
@@ -16,7 +16,7 @@ interface ArticleListProps {
 /** «Статьи» or one section: the tabs (only sections with articles), the cards, «Показать ещё». */
 export function ArticleList({ locale, section, page, sections }: ArticleListProps) {
   const t = useTranslations("web.articles");
-  const live = Object.entries(sections).find(([l]) => l === locale)?.[1] ?? [];
+  const live = sectionsIn(sections, locale);
   const tabs: (Section | null)[] = [null, ...SECTIONS.filter((s) => live.includes(s))];
   const here = sectionHref(section);
   return (

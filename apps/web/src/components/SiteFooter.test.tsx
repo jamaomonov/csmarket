@@ -21,10 +21,24 @@ vi.mock("@/i18n/navigation", () => ({
   ),
 }));
 
+const { fetchArticleLocales } = vi.hoisted(() => ({ fetchArticleLocales: vi.fn() }));
+vi.mock("@/lib/articles-server", () => ({ fetchArticleLocales }));
+
 import { SiteFooter } from "./SiteFooter";
 
 describe("SiteFooter", () => {
+  it("links «Статьи» only in a language that has articles", async () => {
+    fetchArticleLocales.mockResolvedValue({ ru: ["tops"], uz: [], en: [] });
+    const { unmount } = render(await SiteFooter({ locale: "ru" }));
+    expect(screen.getByRole("link", { name: "Статьи" })).toHaveAttribute("href", "/articles");
+    unmount();
+    fetchArticleLocales.mockResolvedValue({ ru: [], uz: [], en: [] });
+    render(await SiteFooter({ locale: "ru" }));
+    expect(screen.queryByRole("link", { name: "Статьи" })).toBeNull();
+  });
+
   it("has the Telegram column the home page has, opening outside the site", async () => {
+    fetchArticleLocales.mockResolvedValue({ ru: [], uz: [], en: [] });
     render(await SiteFooter({ locale: "ru" }));
     const nav = screen.getByRole("navigation", { name: "Telegram" });
     const links = within(nav).getAllByRole("link");

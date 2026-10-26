@@ -8,7 +8,7 @@ import { AccountMenu } from "./header/AccountMenu";
 import { BalanceChip } from "./header/BalanceChip";
 import { LanguageSwitcher } from "./header/LanguageSwitcher";
 import { MobileMenu } from "./header/MobileMenu";
-import { isCurrent, MAIN_NAV } from "./header/nav";
+import { isCurrent, mainNav } from "./header/nav";
 import { SteamIcon } from "./icons/SteamIcon";
 
 import { Link, usePathname } from "@/i18n/navigation";
@@ -17,13 +17,15 @@ import { HOME } from "@/lib/paths";
 
 interface HeaderProps {
   locale: string;
+  /** Whether this language has a live article: «Статьи» shows only then. */
+  articles?: boolean;
 }
 
 const navClass = (on: boolean) =>
   `relative flex h-full items-center whitespace-nowrap text-body font-medium transition-colors ${on ? "text-fg after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-accent" : "text-fg-muted hover:text-fg"}`;
 
 /** Logo, nav, language and the account; on phones a balance and a ☰ menu. */
-export function Header({ locale }: HeaderProps) {
+export function Header({ locale, articles = false }: HeaderProps) {
   const t = useTranslations("web.nav");
   const { status, user } = useAuth();
   const pathname = usePathname();
@@ -35,7 +37,7 @@ export function Header({ locale }: HeaderProps) {
           <Logo className="text-[22px]" />
         </Link>
         <nav className="hidden h-full items-center gap-7 xl:flex">
-          {MAIN_NAV.map((entry) => {
+          {mainNav(articles).map((entry) => {
             const on = isCurrent(entry, pathname);
             return (
               <Link
@@ -69,7 +71,11 @@ export function Header({ locale }: HeaderProps) {
               {/* Phones: the avatar is the menu — no separate ☰. */}
               {user && (
                 <span className="md:hidden">
-                  <MobileMenu locale={locale} avatar={<UserAvatar user={user} size={40} />} />
+                  <MobileMenu
+                    locale={locale}
+                    articles={articles}
+                    avatar={<UserAvatar user={user} size={40} />}
+                  />
                 </span>
               )}
               <span className="hidden md:block">
@@ -80,7 +86,7 @@ export function Header({ locale }: HeaderProps) {
             <SignIn locale={locale} />
           )}
           <span className={signedIn && user ? "hidden md:block xl:hidden" : "xl:hidden"}>
-            <MobileMenu locale={locale} />
+            <MobileMenu locale={locale} articles={articles} />
           </span>
         </div>
       </header>

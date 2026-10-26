@@ -1,10 +1,20 @@
-import { ArrowLeftRight, Gift, HandCoins, ReceiptText, Star, Store, User } from "lucide-react";
+import {
+  ArrowLeftRight,
+  Gift,
+  HandCoins,
+  Newspaper,
+  ReceiptText,
+  Star,
+  Store,
+  User,
+} from "lucide-react";
 
 import type { ComponentType } from "react";
 
 import { SteamIcon } from "@/components/icons/SteamIcon";
 import {
   ACCOUNT,
+  ARTICLES,
   MARKET,
   REFERRAL,
   REVIEWS,
@@ -24,6 +34,7 @@ export interface NavEntry {
     | "market"
     | "steamTopup"
     | "reviews"
+    | "articles"
     | "profile"
     | "transactions"
     | "trades"
@@ -39,6 +50,11 @@ export const MAIN_NAV: NavEntry[] = [
   { key: "steamTopup", href: STEAM_TOPUP, icon: SteamIcon },
   { key: "reviews", href: REVIEWS, icon: Star },
 ];
+
+/** The header's sections, with «Статьи» while the language has at least one live article. */
+export function mainNav(articles: boolean): NavEntry[] {
+  return articles ? [...MAIN_NAV, { key: "articles", href: ARTICLES, icon: Newspaper }] : MAIN_NAV;
+}
 
 /** The account menu (before «Выйти»). */
 export const ACCOUNT_NAV: NavEntry[] = [
