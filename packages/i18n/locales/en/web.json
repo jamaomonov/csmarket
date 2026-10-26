@@ -462,7 +462,7 @@
       "pending": "Awaiting payment",
       "held": "Under review",
       "paid": "Paid",
-      "buying": "Buying",
+      "buying": "Preparing trade",
       "trade_sent": "Trade sent",
       "delivered": "Received",
       "cancelled": "Cancelled",
@@ -471,7 +471,7 @@
     },
     "trade": {
       "title": "Steam trade",
-      "buying": "Buying the skin — the trade will arrive in Steam in about a minute.",
+      "buying": "The trade will arrive in Steam shortly.",
       "offer_sent": "Trade sent — accept it in Steam.",
       "acceptBy": "Accept by {time}",
       "acceptSoon": "Accept the trade within 15 minutes — after that it may be cancelled.",
@@ -715,7 +715,7 @@
     "state": {
       "creating": {
         "title": "Preparing the trade",
-        "text": "A trade offer will arrive in Steam within a minute."
+        "text": "A trade offer will arrive in Steam shortly."
       },
       "offered": {
         "title": "Accept the trade",

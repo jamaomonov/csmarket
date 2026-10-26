@@ -45,7 +45,7 @@ describe("SkinTradeCard", () => {
     card({});
     expect(screen.getByText("Обмен в Steam")).toBeInTheDocument();
     expect(
-      screen.getByText("Покупаем скин — обмен придёт в Steam через минуту."),
+      screen.getByText("Обмен скоро придёт в Steam."),
     ).toBeInTheDocument();
   });
 
@@ -177,7 +177,7 @@ describe("SkinTradeCard", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(/вернулись/)).toBeNull();
       expect(screen.queryByText("Получено")).toBeNull();
-      expect(screen.queryByText(/Покупаем скин/)).toBeNull();
+      expect(screen.queryByText(/Обмен скоро придёт/)).toBeNull();
       expect(screen.queryByRole("link", { name: "Открыть баланс" })).toBeNull();
     },
   );

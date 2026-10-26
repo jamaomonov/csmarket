@@ -4,7 +4,7 @@
  * Polling is the reconciler: the order socket (`lib/realtime.ts`, M4b) only nudges a re-read
  * sooner. A socket can stay "connected" while it is dead (a backgrounded tab, a WebView
  * suspended during the hop to the bank), and a push lost in it must not leave the buyer
- * staring at «Покупаем» — so the poll runs until the order can no longer change.
+ * staring at «Готовим обмен» — so the poll runs until the order can no longer change.
  *
  * - an 8 s base: a crowd of open order pages stays cheap;
  * - ×2 per consecutive failure, up to ×8: an API that is refusing is not knocked on at

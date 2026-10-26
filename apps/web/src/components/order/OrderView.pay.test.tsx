@@ -190,7 +190,7 @@ describe("OrderView — paying", () => {
         expect(state()).toBe("paid");
       });
       expect(m.devPay).toHaveBeenCalledWith(`/api/v1/dev/orders/${number}/pay`);
-      expect(screen.getByText("Покупаем скин — обмен придёт в Steam через минуту.")).toBeVisible();
+      expect(screen.getByText("Обмен скоро придёт в Steam.")).toBeVisible();
       expect(assign).not.toHaveBeenCalled();
     },
   );

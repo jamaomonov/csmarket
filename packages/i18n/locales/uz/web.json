@@ -462,7 +462,7 @@
       "pending": "Toʻlov kutilmoqda",
       "held": "Tekshiruvda",
       "paid": "Toʻlandi",
-      "buying": "Sotib olinmoqda",
+      "buying": "Almashuv tayyorlanmoqda",
       "trade_sent": "Almashuv yuborildi",
       "delivered": "Olindi",
       "cancelled": "Bekor qilindi",
@@ -471,7 +471,7 @@
     },
     "trade": {
       "title": "Steamʼdagi almashuv",
-      "buying": "Skinni sotib olyapmiz — almashuv bir daqiqada Steamʼga keladi.",
+      "buying": "Almashuv tez orada Steamʼga keladi.",
       "offer_sent": "Almashuv yuborildi — uni Steamʼda qabul qiling.",
       "acceptBy": "{time} gacha qabul qiling",
       "acceptSoon": "Almashuvni 15 daqiqa ichida qabul qiling — keyin u bekor qilinishi mumkin.",
@@ -715,7 +715,7 @@
     "state": {
       "creating": {
         "title": "Almashuv tayyorlanmoqda",
-        "text": "Bir daqiqada Steamʼga almashuv taklifi keladi."
+        "text": "Tez orada Steamʼga almashuv taklifi keladi."
       },
       "offered": {
         "title": "Almashuvni qabul qiling",

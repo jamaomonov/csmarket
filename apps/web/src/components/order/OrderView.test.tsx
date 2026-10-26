@@ -87,8 +87,8 @@ describe("OrderView — the trade", () => {
   });
 
   it.each<[OrderOut["status"], Partial<OrderOut>, string | RegExp]>([
-    ["paid", { trade: null }, "Покупаем скин — обмен придёт в Steam через минуту."],
-    ["buying", { trade: tradeOut() }, "Покупаем скин — обмен придёт в Steam через минуту."],
+    ["paid", { trade: null }, "Обмен скоро придёт в Steam."],
+    ["buying", { trade: tradeOut() }, "Обмен скоро придёт в Steam."],
     ["trade_sent", { trade: sent }, "Обмен отправлен — примите его в Steam."],
     ["delivered", { trade: tradeOut({ state: "accepted" }) }, "Получено"],
     [
@@ -221,7 +221,7 @@ describe("OrderView — the trade", () => {
     );
     view();
     expect(await screen.findByText("Оплата получена, проверяем платёж.")).toBeInTheDocument();
-    expect(screen.queryByText(/Покупаем скин/)).toBeNull();
+    expect(screen.queryByText(/Обмен скоро придёт/)).toBeNull();
     expect(screen.queryByText(/Обмен отправлен/)).toBeNull();
   });
 
