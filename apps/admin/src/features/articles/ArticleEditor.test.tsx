@@ -181,4 +181,29 @@ describe("ArticleEditor", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Восстановить" }));
     expect(screen.getByDisplayValue("Черновик заголовка")).toBeInTheDocument();
   });
+
+  it("sends a cleared translation so it leaves the site", async () => {
+    api.getArticle.mockResolvedValue({
+      ...ARTICLE,
+      translations: { ru: TR, uz: { ...TR, title: "Pichoqlar" }, en: null },
+    });
+    api.updateArticle.mockResolvedValue(ARTICLE);
+    renderAt("/articles/a1");
+    await screen.findByDisplayValue("Топ ножей");
+    fireEvent.click(screen.getByRole("tab", { name: /UZ/ }));
+    fireEvent.change(screen.getByLabelText("Заголовок"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Описание"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("Подпись к обложке"), { target: { value: "" } });
+    fireEvent.change(body(), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Перевод готов" }));
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(api.updateArticle).toHaveBeenCalled();
+    });
+    const [, sent] = api.updateArticle.mock.calls[0] as [
+      string,
+      { translations?: { uz?: unknown } },
+    ];
+    expect(sent.translations?.uz).toMatchObject({ title: "", body: "", ready: false });
+  });
 });

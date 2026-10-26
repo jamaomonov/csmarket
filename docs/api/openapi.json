@@ -21164,7 +21164,7 @@
     },
     "/api/v1/articles/{slug}/me": {
       "get": {
-        "description": "Views, likes and whether I like it (by my account, else my anonymous cookie).",
+        "description": "Views, likes and whether I like it (by my account, else my anonymous cookie). An\nanonymous reader without the cookie gets it here, before any like, so two first likes at\nonce (two tabs, a double tap) share one id.",
         "operationId": "get_me_api_v1_articles__slug__me_get",
         "parameters": [
           {

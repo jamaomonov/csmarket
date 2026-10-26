@@ -111,15 +111,33 @@ async def test_signed_in_like_is_keyed_by_the_user(
     assert signed_in.json()["liked"] is True
 
 
-async def test_a_bad_token_reads_as_anonymous(
+async def test_a_presented_but_bad_token_is_401_so_the_client_refreshes(
     db_session: AsyncSession, integration_client: AsyncClient
 ) -> None:
+    """An expired token must not quietly read as anonymous: the like would go on the wrong key."""
     await make_article(db_session, slug="token")
-    r = await integration_client.get(
-        "/api/v1/articles/token/me", headers={"Authorization": "Bearer nonsense"}
-    )
-    assert r.status_code == 200
-    assert r.json()["liked"] is False
+    bad = {"Authorization": "Bearer nonsense"}
+    assert (
+        await integration_client.get("/api/v1/articles/token/me", headers=bad)
+    ).status_code == 401
+    assert (
+        await integration_client.put("/api/v1/articles/token/like", headers=bad)
+    ).status_code == 401
+    anonymous = await integration_client.get("/api/v1/articles/token/me")
+    assert anonymous.status_code == 200
+
+
+async def test_reading_my_counters_gives_an_anonymous_reader_its_id(
+    db_session: AsyncSession, integration_client: AsyncClient
+) -> None:
+    """Two first likes at once (two tabs, a double tap) share the id minted by ``/me``."""
+    await make_article(db_session, slug="first")
+    me = await integration_client.get("/api/v1/articles/first/me")
+    assert me.headers["set-cookie"].startswith("csm_aid=")
+    first = await integration_client.put("/api/v1/articles/first/like")
+    second = await integration_client.put("/api/v1/articles/first/like")
+    assert "set-cookie" not in first.headers
+    assert second.json() == {"likes": 1, "liked": True}
 
 
 async def test_the_like_bucket_limits_an_address(

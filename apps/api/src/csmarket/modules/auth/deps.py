@@ -35,12 +35,13 @@ async def optional_user(
     authorization: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(db_session, scope="function"),  # noqa: B008
 ) -> User | None:
-    """The signed-in user, or ``None`` — never an error: for public routes where signing in is
-    optional (an article's like). A missing, invalid or expired token, or a suspended account,
-    reads as anonymous."""
+    """The signed-in user, or ``None`` without an ``Authorization`` header: for public routes
+    where signing in is optional (an article's like). A token that is presented but invalid or
+    expired is 401, as on any route, so the client refreshes and replays instead of acting as a
+    stranger; a suspended account reads as anonymous."""
     if not authorization:
         return None
     try:
         return await resolve_current_user(db, bearer_token(authorization))
-    except (UnauthorizedError, AccountSuspendedError):
+    except AccountSuspendedError:
         return None

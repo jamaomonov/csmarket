@@ -100,13 +100,30 @@ async def post_view(slug: str, request: Request, db: Db) -> Response:
     responses={404: {"description": "`article_not_found`"}},
     summary="Counters for me",
 )
-async def get_me(slug: str, request: Request, db: Db, user: Reader) -> ArticleMeOut:
-    """Views, likes and whether I like it (by my account, else my anonymous cookie)."""
+async def get_me(slug: str, request: Request, db: Db, user: Reader) -> JSONResponse:
+    """Views, likes and whether I like it (by my account, else my anonymous cookie). An
+    anonymous reader without the cookie gets it here, before any like, so two first likes at
+    once (two tabs, a double tap) share one id."""
     article = await reactions.live_article(db, slug)
-    mine = await reactions.liked(
-        db, article, user_id=user.id if user else None, anon_id=_anon(request)
+    anon = _anon(request)
+    mine = await reactions.liked(db, article, user_id=user.id if user else None, anon_id=anon)
+    response = JSONResponse(
+        ArticleMeOut(likes=article.likes, liked=mine, views=article.views).model_dump()
     )
-    return ArticleMeOut(likes=article.likes, liked=mine, views=article.views)
+    if user is None and anon is None:
+        _set_anon(response, str(uuid.uuid4()))
+    return response
+
+
+def _set_anon(response: JSONResponse, anon: str) -> None:
+    response.set_cookie(
+        reactions.ANON_COOKIE,
+        anon,
+        max_age=reactions.ANON_MAX_AGE,
+        httponly=True,
+        secure=get_settings().is_prod,
+        samesite="lax",
+    )
 
 
 async def _like(
@@ -125,14 +142,7 @@ async def _like(
     )
     response = JSONResponse(LikeOut(likes=likes, liked=on).model_dump())
     if fresh and anon is not None:
-        response.set_cookie(
-            reactions.ANON_COOKIE,
-            anon,
-            max_age=reactions.ANON_MAX_AGE,
-            httponly=True,
-            secure=get_settings().is_prod,
-            samesite="lax",
-        )
+        _set_anon(response, anon)
     return response
 
 

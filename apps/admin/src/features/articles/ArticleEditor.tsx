@@ -90,12 +90,14 @@ function writeDraft(id: string | undefined, form: Form | null): void {
   }
 }
 
-/** Only the languages with something written are sent. */
-function written(t: Form["translations"]): Form["translations"] {
+/** The languages with something written, and every language the server already has (a
+ * cleared one must reach it, or it would stay on the site). */
+function written(t: Form["translations"], saved: AdminArticle | undefined): Form["translations"] {
   const out: Form["translations"] = {};
   for (const l of LOCALES) {
     const v = t[l];
-    if (v && (v.title || v.description || v.body || v.cover_alt || v.ready)) out[l] = v;
+    const onServer = saved?.translations[l] != null;
+    if (v && (onServer || v.title || v.description || v.body || v.cover_alt || v.ready)) out[l] = v;
   }
   return out;
 }
@@ -157,7 +159,7 @@ export function ArticleEditor() {
       const body: ArticleIn = {
         section: form.section,
         slug: form.slug.trim(),
-        translations: written(form.translations),
+        translations: written(form.translations, article.data),
         ...(form.cover ? { cover_hash: form.cover.hash } : {}),
       };
       const key = saveKey.keyFor(JSON.stringify(body));
