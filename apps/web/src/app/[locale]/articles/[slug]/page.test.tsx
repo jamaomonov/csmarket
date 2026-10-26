@@ -46,7 +46,6 @@ const { fetchArticle, fetchArticles, fetchArticleLocales } = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/articles-server", () => ({ fetchArticle, fetchArticles, fetchArticleLocales }));
 
-
 const COVER = {
   hash: "h",
   url: "/media/h.png",

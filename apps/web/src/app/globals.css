@@ -48,10 +48,10 @@
     @apply text-fg flex flex-col gap-4 text-[17px] leading-[1.7];
   }
   .article-body h2 {
-    @apply mt-6 text-2xl leading-tight font-semibold tracking-tight;
+    @apply mt-6 text-2xl font-semibold leading-tight tracking-tight;
   }
   .article-body h3 {
-    @apply mt-4 text-xl leading-snug font-semibold;
+    @apply mt-4 text-xl font-semibold leading-snug;
   }
   .article-body ul {
     @apply list-disc pl-6;
