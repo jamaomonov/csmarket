@@ -20,6 +20,7 @@ from sqlalchemy.orm import undefer
 
 from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
+from csmarket.core.uploads import sniff
 from csmarket.modules.sales.admin_sales import user_of, users_by_id
 from csmarket.modules.sales.admin_schemas import PayoutProofOut
 from csmarket.modules.sales.models import PayoutProof, PayoutRequest
@@ -35,19 +36,6 @@ NAME_LEN = 120
 
 _EXT = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "application/pdf": "pdf"}
 _UNSAFE = re.compile(r"[\x00-\x1f\x7f/\\]")
-
-
-def sniff(data: bytes) -> str | None:
-    """The receipt's type from its first bytes; ``None`` for anything we do not keep."""
-    if data.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
-    if data.startswith(b"\x89PNG\r\n\x1a\n"):
-        return "image/png"
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
-        return "image/webp"
-    if data.startswith(b"%PDF-"):
-        return "application/pdf"
-    return None
 
 
 def clean_name(raw: str | None, content_type: str) -> str:
@@ -188,5 +176,4 @@ __all__ = [
     "delete_until",
     "proofs_out",
     "read_proof",
-    "sniff",
 ]
