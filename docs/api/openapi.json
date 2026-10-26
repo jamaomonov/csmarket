@@ -4544,6 +4544,65 @@
         "title": "ApiOrderIn",
         "type": "object"
       },
+      "ArticleCardOut": {
+        "description": "One article in a list.",
+        "properties": {
+          "cover": {
+            "$ref": "#/components/schemas/MediaOut"
+          },
+          "cover_alt": {
+            "title": "Cover Alt",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "section": {
+            "enum": [
+              "news",
+              "guides",
+              "tops"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "section",
+          "title",
+          "description",
+          "cover",
+          "cover_alt",
+          "published_at",
+          "views",
+          "likes"
+        ],
+        "title": "ArticleCardOut",
+        "type": "object"
+      },
       "ArticleIn": {
         "description": "A new article. ``translations`` holds only the locales written so far.",
         "properties": {
@@ -4593,6 +4652,159 @@
           "slug"
         ],
         "title": "ArticleIn",
+        "type": "object"
+      },
+      "ArticleLocalesOut": {
+        "description": "The sections with at least one live article, per locale.",
+        "properties": {
+          "en": {
+            "items": {
+              "enum": [
+                "news",
+                "guides",
+                "tops"
+              ],
+              "type": "string"
+            },
+            "title": "En",
+            "type": "array"
+          },
+          "ru": {
+            "items": {
+              "enum": [
+                "news",
+                "guides",
+                "tops"
+              ],
+              "type": "string"
+            },
+            "title": "Ru",
+            "type": "array"
+          },
+          "uz": {
+            "items": {
+              "enum": [
+                "news",
+                "guides",
+                "tops"
+              ],
+              "type": "string"
+            },
+            "title": "Uz",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ru",
+          "uz",
+          "en"
+        ],
+        "title": "ArticleLocalesOut",
+        "type": "object"
+      },
+      "ArticleOut": {
+        "description": "One live translation of an article.",
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "cover": {
+            "$ref": "#/components/schemas/MediaOut"
+          },
+          "cover_alt": {
+            "title": "Cover Alt",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "embeds": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/SkinItemOut"
+            },
+            "title": "Embeds",
+            "type": "object"
+          },
+          "kind": {
+            "const": "article",
+            "default": "article",
+            "title": "Kind",
+            "type": "string"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "locales": {
+            "items": {
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "type": "string"
+            },
+            "title": "Locales",
+            "type": "array"
+          },
+          "published_at": {
+            "format": "date-time",
+            "title": "Published At",
+            "type": "string"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/ArticleCardOut"
+            },
+            "title": "Related",
+            "type": "array"
+          },
+          "section": {
+            "enum": [
+              "news",
+              "guides",
+              "tops"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "slug",
+          "section",
+          "title",
+          "description",
+          "cover",
+          "cover_alt",
+          "published_at",
+          "views",
+          "likes",
+          "body",
+          "updated_at",
+          "locales",
+          "embeds",
+          "related"
+        ],
+        "title": "ArticleOut",
         "type": "object"
       },
       "ArticlePatch": {
@@ -4654,6 +4866,72 @@
           }
         },
         "title": "ArticlePatch",
+        "type": "object"
+      },
+      "ArticleRedirectOut": {
+        "description": "A former slug: the storefront answers a 301 to ``slug``.",
+        "properties": {
+          "kind": {
+            "const": "redirect",
+            "default": "redirect",
+            "title": "Kind",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "ArticleRedirectOut",
+        "type": "object"
+      },
+      "ArticleSitemapOut": {
+        "description": "Every live translation.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SitemapEntryOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ArticleSitemapOut",
+        "type": "object"
+      },
+      "ArticlesPageOut": {
+        "description": "A page of live articles, newest first, and the cursor for the next (``None`` on the last).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArticleCardOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "ArticlesPageOut",
         "type": "object"
       },
       "AuditActor": {
@@ -11141,6 +11419,36 @@
           "updated_at"
         ],
         "title": "SettingsOut",
+        "type": "object"
+      },
+      "SitemapEntryOut": {
+        "description": "One live translation for the sitemap.",
+        "properties": {
+          "locale": {
+            "enum": [
+              "ru",
+              "uz",
+              "en"
+            ],
+            "title": "Locale",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "locale",
+          "updated_at"
+        ],
+        "title": "SitemapEntryOut",
         "type": "object"
       },
       "SkinCrateOut": {
@@ -20480,6 +20788,206 @@
         "summary": "Adjust the USD balance",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/articles": {
+      "get": {
+        "description": "Live articles in ``locale``, newest first, 12 a page; ``section`` filters.",
+        "operationId": "get_articles_api_v1_articles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "title": "Locale",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "section",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "news",
+                    "guides",
+                    "tops"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Section"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticlesPageOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Live articles",
+        "tags": [
+          "articles"
+        ]
+      }
+    },
+    "/api/v1/articles/locales": {
+      "get": {
+        "description": "Per locale, the sections that have at least one live article.",
+        "operationId": "get_locales_api_v1_articles_locales_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleLocalesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sections with articles",
+        "tags": [
+          "articles"
+        ]
+      }
+    },
+    "/api/v1/articles/sitemap": {
+      "get": {
+        "description": "Every live translation with its last change, for the storefront's sitemap.",
+        "operationId": "get_sitemap_api_v1_articles_sitemap_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleSitemapOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live translations",
+        "tags": [
+          "articles"
+        ]
+      }
+    },
+    "/api/v1/articles/{slug}": {
+      "get": {
+        "description": "The live ``locale`` translation (``kind: article``), or ``kind: redirect`` with the\ncurrent slug when ``slug`` is a former one; 404 when nothing is live in ``locale``.",
+        "operationId": "get_article_api_v1_articles__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "locale",
+            "required": false,
+            "schema": {
+              "default": "ru",
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "title": "Locale",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ArticleOut"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ArticleRedirectOut"
+                    }
+                  ],
+                  "title": "Response Get Article Api V1 Articles  Slug  Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One article",
+        "tags": [
+          "articles"
         ]
       }
     },

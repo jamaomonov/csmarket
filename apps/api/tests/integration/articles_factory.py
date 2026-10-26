@@ -4,6 +4,12 @@ from __future__ import annotations
 
 import struct
 import zlib
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from csmarket.modules.articles.models import Article
+    from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def png(width: int = 640, height: int = 360, salt: bytes = b"") -> bytes:
@@ -33,3 +39,44 @@ def tr(
         "body": body,
         "ready": ready,
     }
+
+
+async def make_article(
+    db: AsyncSession,
+    *,
+    slug: str,
+    section: str = "tops",
+    status: str = "published",
+    translations: dict[str, dict[str, object]] | None = None,
+    published_at: datetime | None = None,
+) -> Article:
+    """A committed article with a cover; ``translations`` default to one ready ru text."""
+    from datetime import UTC
+    from hashlib import sha256
+
+    from csmarket.modules.articles.models import Article, ArticleMedia, ArticleTranslation
+
+    data = png(salt=slug.encode())
+    media = ArticleMedia(
+        hash=sha256(data).hexdigest(),
+        content_type="image/png",
+        width=640,
+        height=360,
+        size=len(data),
+        data=data,
+    )
+    db.add(media)
+    await db.flush()
+    article = Article(
+        section=section,
+        slug=slug,
+        status=status,
+        cover_media_id=media.id,
+        published_at=published_at or (datetime.now(UTC) if status == "published" else None),
+    )
+    db.add(article)
+    await db.flush()
+    for locale, values in (translations or {"ru": tr()}).items():
+        db.add(ArticleTranslation(article_id=article.id, locale=locale, **values))
+    await db.commit()
+    return article

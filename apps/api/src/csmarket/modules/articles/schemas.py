@@ -8,6 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from csmarket.modules.articles.models import BODY_MAX, COVER_ALT_MAX, DESCRIPTION_MAX, TITLE_MAX
+from csmarket.modules.skins.api import SkinItemOut
 
 
 class MediaOut(BaseModel):
@@ -101,3 +102,66 @@ class AdminArticlesOut(BaseModel):
     """The admin's list, last edited first."""
 
     items: list[AdminArticleRow]
+
+
+class ArticleCardOut(BaseModel):
+    """One article in a list."""
+
+    slug: str
+    section: Section
+    title: str
+    description: str
+    cover: MediaOut
+    cover_alt: str
+    published_at: datetime
+    views: int
+    likes: int
+
+
+class ArticlesPageOut(BaseModel):
+    """A page of live articles, newest first, and the cursor for the next (``None`` on the last)."""
+
+    items: list[ArticleCardOut]
+    next_cursor: str | None
+
+
+class ArticleOut(ArticleCardOut):
+    """One live translation of an article."""
+
+    kind: Literal["article"] = "article"
+    body: str
+    updated_at: datetime
+    #: The locales with a live translation of this article.
+    locales: list[Locale]
+    #: The skin cards behind its ``[[skin:<slug>]]`` lines; a slug missing here is not shown.
+    embeds: dict[str, SkinItemOut]
+    related: list[ArticleCardOut]
+
+
+class ArticleRedirectOut(BaseModel):
+    """A former slug: the storefront answers a 301 to ``slug``."""
+
+    kind: Literal["redirect"] = "redirect"
+    slug: str
+
+
+class ArticleLocalesOut(BaseModel):
+    """The sections with at least one live article, per locale."""
+
+    ru: list[Section]
+    uz: list[Section]
+    en: list[Section]
+
+
+class SitemapEntryOut(BaseModel):
+    """One live translation for the sitemap."""
+
+    slug: str
+    locale: Locale
+    updated_at: datetime
+
+
+class ArticleSitemapOut(BaseModel):
+    """Every live translation."""
+
+    items: list[SitemapEntryOut]

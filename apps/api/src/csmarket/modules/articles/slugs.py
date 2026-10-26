@@ -16,8 +16,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.errors import ConflictError, ValidationError
 from csmarket.modules.articles.models import SECTIONS, Article, ArticleSlugOld
 
-#: Section words: the storefront serves the section lists at ``/articles/<section>``.
-RESERVED_SLUGS = frozenset(SECTIONS)
+#: Section words (the storefront serves the section lists at ``/articles/<section>``) and the
+#: API's own ``/articles/locales`` and ``/articles/sitemap``.
+RESERVED_SLUGS = frozenset((*SECTIONS, "locales", "sitemap"))
 _SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 
 

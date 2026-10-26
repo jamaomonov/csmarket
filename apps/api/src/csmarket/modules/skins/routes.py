@@ -25,9 +25,11 @@ from csmarket.core.config import get_settings
 from csmarket.core.errors import ValidationError
 from csmarket.core.redis import get_redis
 from csmarket.modules.auth.api import guard_ip
-from csmarket.modules.fx.api import current_usd_uzs
 from csmarket.modules.lisskins.api import offers_for as lisskins_offers
 from csmarket.modules.skins.cachekeys import catalog_version
+from csmarket.modules.skins.cards import item_out as _item_out
+from csmarket.modules.skins.cards import usd_uzs_rate
+from csmarket.modules.skins.cards import uzs_text as _to_uzs
 from csmarket.modules.skins.colors import SKIN_COLORS
 from csmarket.modules.skins.images import steam_image, steam_image_only
 from csmarket.modules.skins.listings import (
@@ -38,14 +40,11 @@ from csmarket.modules.skins.listings import (
     search_client,
     steam_inspect_url,
 )
-from csmarket.modules.skins.models import SkinItem
 from csmarket.modules.skins.offers import from_listing, merge_offers, offer_id_of
 from csmarket.modules.skins.pricing import (
-    PricingRules,
     max_usd_for_uzs,
     min_usd_for_uzs,
     quote,
-    to_uzs,
 )
 from csmarket.modules.skins.schemas import (
     FacetOut,
@@ -54,7 +53,6 @@ from csmarket.modules.skins.schemas import (
     SkinDetailOut,
     SkinFacetsOut,
     SkinFamilyMemberOut,
-    SkinItemOut,
     SkinListingOut,
     SkinListingsOut,
     SkinListingSummaryOut,
@@ -83,53 +81,6 @@ router = APIRouter(prefix="/skins", tags=["skins"])
 #: A JSON-ready page body as cached in Redis.
 # Any: the ``model_dump(mode="json")`` of one of this module's response models.
 _Body = dict[str, Any]
-
-
-async def usd_uzs_rate(db: AsyncSession) -> Decimal | None:
-    """Soʻm per dollar for display, or ``None`` (pages then show dollars — ruling Q3)."""
-    settings = get_settings()
-    fx = await current_usd_uzs(db, get_redis(), max_age_days=settings.fx_max_age_days)
-    return None if fx is None else fx.rate
-
-
-def _to_uzs(usd: Decimal | None, rate: Decimal | None, rules: PricingRules) -> str | None:
-    if usd is None or rate is None:
-        return None
-    return str(to_uzs(usd, rate, round_to=rules.uzs_round_to))
-
-
-def _units_to_usd(units: int | None) -> str | None:
-    return None if units is None else str(Decimal(units) / Decimal(1000))
-
-
-def _item_out(item: SkinItem, rules: PricingRules, rate: Decimal | None) -> SkinItemOut:
-    # Stored by ``repricing.reprice_rows`` from the same ``quote()``: the card
-    # shows the number every filter and sort reads.
-    price = item.sell_price_usd
-    discount = (
-        item.discount_percent if item.discount_percent and item.discount_percent > 0 else None
-    )
-    return SkinItemOut(
-        slug=item.slug,
-        name=item.market_hash_name,
-        phase=item.phase or None,
-        category=item.category,
-        weapon=item.weapon,
-        skin=item.skin,
-        exterior=item.exterior,
-        stattrak=item.stattrak,
-        souvenir=item.souvenir,
-        rarity=item.rarity,
-        rarity_color=item.rarity_color,
-        image_url=steam_image(item.image_url, host=get_settings().skins_image_host),
-        price_usd=None if price is None else str(price),
-        price_uzs=_to_uzs(price, rate, rules),
-        steam_price_usd=_units_to_usd(item.steam_price_units),
-        discount_percent=discount,
-        count=item.stock_count,
-        min_float=None if item.min_float is None else str(item.min_float),
-        max_float=None if item.max_float is None else str(item.max_float),
-    )
 
 
 # Any: query values of mixed types (str, bool, Decimal, None), digested via ``default=str``.

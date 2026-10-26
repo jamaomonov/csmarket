@@ -22,6 +22,7 @@ from csmarket.modules.analytics.routes import router as analytics_router
 from csmarket.modules.articles.admin_routes import router as articles_admin_router
 from csmarket.modules.articles.media_routes import admin_router as articles_media_admin_router
 from csmarket.modules.articles.media_routes import router as articles_media_router
+from csmarket.modules.articles.routes import router as articles_router
 from csmarket.modules.auth.api import router as auth_router
 from csmarket.modules.click.routes import router as click_router
 from csmarket.modules.notifications.routes_dev import router as notifications_dev_router
@@ -107,6 +108,7 @@ router.include_router(sales_router)
 router.include_router(realtime_router)
 router.include_router(reviews_router)
 router.include_router(articles_media_router)
+router.include_router(articles_router)
 router.include_router(skins_admin_router)
 router.include_router(skins_colors_admin_router)
 router.include_router(skins_pricing_router)
