@@ -6812,6 +6812,40 @@
         "title": "MePatchIn",
         "type": "object"
       },
+      "MediaOut": {
+        "description": "An uploaded image. ``url`` is the relative path Markdown stores (``/media/<hash>.<ext>``).",
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "hash": {
+            "title": "Hash",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hash",
+          "url",
+          "width",
+          "height",
+          "content_type"
+        ],
+        "title": "MediaOut",
+        "type": "object"
+      },
       "Money": {
         "description": "One amount in both currencies.",
         "properties": {
@@ -13683,6 +13717,69 @@
         ]
       }
     },
+    "/api/v1/admin/articles/media": {
+      "post": {
+        "description": "A JPG, PNG or WebP image up to 5 MB; the same bytes again return the same image.\nAudited ``articles.media.add``.",
+        "operationId": "post_media_api_v1_admin_articles_media_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "`media_empty`, `media_too_large` or `media_type`"
+          }
+        },
+        "summary": "Upload an article image",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/audit": {
       "get": {
         "description": "Newest first; each filter is an exact match and they combine with AND.",
@@ -20451,6 +20548,57 @@
         "summary": "Check my trade link",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/api/v1/media/{digest}.{ext}": {
+      "get": {
+        "description": "The image's bytes; cached for a year by browsers and Cloudflare (the name is its hash).",
+        "operationId": "get_media_api_v1_media__digest___ext__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "digest",
+            "required": true,
+            "schema": {
+              "title": "Digest",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ext",
+            "required": true,
+            "schema": {
+              "title": "Ext",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/*": {}
+            },
+            "description": "The image"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "An article image",
+        "tags": [
+          "articles"
         ]
       }
     },
