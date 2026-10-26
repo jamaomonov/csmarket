@@ -8,7 +8,7 @@ from fastapi import Depends, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
-from csmarket.core.errors import UnauthorizedError
+from csmarket.core.errors import AccountSuspendedError, UnauthorizedError
 from csmarket.modules.auth.service import resolve_current_user
 from csmarket.modules.users.models import User
 
@@ -29,3 +29,18 @@ async def current_user(
 ) -> User:
     """The authenticated user; 401 when absent/invalid, 403 when banned."""
     return await resolve_current_user(db, bearer_token(authorization))
+
+
+async def optional_user(
+    authorization: Annotated[str | None, Header()] = None,
+    db: AsyncSession = Depends(db_session, scope="function"),  # noqa: B008
+) -> User | None:
+    """The signed-in user, or ``None`` — never an error: for public routes where signing in is
+    optional (an article's like). A missing, invalid or expired token, or a suspended account,
+    reads as anonymous."""
+    if not authorization:
+        return None
+    try:
+        return await resolve_current_user(db, bearer_token(authorization))
+    except (UnauthorizedError, AccountSuspendedError):
+        return None

@@ -4702,6 +4702,30 @@
         "title": "ArticleLocalesOut",
         "type": "object"
       },
+      "ArticleMeOut": {
+        "description": "The live counters for this reader (the article page itself stays cached).",
+        "properties": {
+          "liked": {
+            "title": "Liked",
+            "type": "boolean"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "likes",
+          "liked",
+          "views"
+        ],
+        "title": "ArticleMeOut",
+        "type": "object"
+      },
       "ArticleOut": {
         "description": "One live translation of an article.",
         "properties": {
@@ -7172,6 +7196,25 @@
           "amount_uzs"
         ],
         "title": "KeyCount",
+        "type": "object"
+      },
+      "LikeOut": {
+        "description": "The article's likes after a like or unlike, and whether this reader likes it.",
+        "properties": {
+          "liked": {
+            "title": "Liked",
+            "type": "boolean"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "likes",
+          "liked"
+        ],
+        "title": "LikeOut",
         "type": "object"
       },
       "LiquidityBand-Input": {
@@ -20986,6 +21029,235 @@
           }
         },
         "summary": "One article",
+        "tags": [
+          "articles"
+        ]
+      }
+    },
+    "/api/v1/articles/{slug}/like": {
+      "delete": {
+        "description": "Take my like back; without one nothing changes. Keyless, like ``PUT``.",
+        "operationId": "delete_like_api_v1_articles__slug__like_delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "rate limited"
+          }
+        },
+        "summary": "Unlike",
+        "tags": [
+          "articles"
+        ]
+      },
+      "put": {
+        "description": "Like the article, signed in or not; liking twice changes nothing. Keyless: the call sets\na state, so a repeat is harmless. The first anonymous like sets the ``csm_aid`` cookie.",
+        "operationId": "put_like_api_v1_articles__slug__like_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "description": "rate limited"
+          }
+        },
+        "summary": "Like",
+        "tags": [
+          "articles"
+        ]
+      }
+    },
+    "/api/v1/articles/{slug}/me": {
+      "get": {
+        "description": "Views, likes and whether I like it (by my account, else my anonymous cookie).",
+        "operationId": "get_me_api_v1_articles__slug__me_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleMeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Counters for me",
+        "tags": [
+          "articles"
+        ]
+      }
+    },
+    "/api/v1/articles/{slug}/view": {
+      "post": {
+        "description": "The page's beacon after it renders. Keyless on purpose: it only moves a counter, at most\nonce per visitor per day, and a repeat changes nothing.",
+        "operationId": "post_view_api_v1_articles__slug__view_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Count a view",
         "tags": [
           "articles"
         ]

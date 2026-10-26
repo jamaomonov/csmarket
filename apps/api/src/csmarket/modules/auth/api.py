@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from csmarket.modules.auth.deps import current_user
+from csmarket.modules.auth.deps import current_user, optional_user
 from csmarket.modules.auth.ip_guard import guard_ip, hit_counter
 from csmarket.modules.auth.routes import router
 from csmarket.modules.auth.schemas import TokensOut
@@ -24,6 +24,7 @@ __all__ = [
     "guard_ip",
     "hash_token",
     "hit_counter",
+    "optional_user",
     "revoke_all_sessions",
     "router",
     "trade_hold_days",

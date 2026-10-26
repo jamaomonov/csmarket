@@ -165,3 +165,16 @@ class ArticleSitemapOut(BaseModel):
     """Every live translation."""
 
     items: list[SitemapEntryOut]
+
+
+class LikeOut(BaseModel):
+    """The article's likes after a like or unlike, and whether this reader likes it."""
+
+    likes: int
+    liked: bool
+
+
+class ArticleMeOut(LikeOut):
+    """The live counters for this reader (the article page itself stays cached)."""
+
+    views: int
