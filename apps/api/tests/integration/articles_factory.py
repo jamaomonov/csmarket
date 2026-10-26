@@ -17,3 +17,19 @@ def png(width: int = 640, height: int = 360, salt: bytes = b"") -> bytes:
         + struct.pack(">I", zlib.crc32(chunk))
         + salt
     )
+
+
+ADMIN = "/api/v1/admin/articles"
+
+
+def tr(
+    title: str = "Топ бюджетных ножей", *, ready: bool = True, body: str = "Текст."
+) -> dict[str, object]:
+    """A translation body for the admin API."""
+    return {
+        "title": title,
+        "description": "Описание",
+        "cover_alt": "Обложка",
+        "body": body,
+        "ready": ready,
+    }

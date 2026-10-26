@@ -275,6 +275,227 @@
         "title": "AdminApiKeysOut",
         "type": "object"
       },
+      "AdminArticleOut": {
+        "description": "One article in the admin's editor.",
+        "properties": {
+          "cover": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MediaOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "live_locales": {
+            "items": {
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "type": "string"
+            },
+            "title": "Live Locales",
+            "type": "array"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "section": {
+            "enum": [
+              "news",
+              "guides",
+              "tops"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "translations": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TranslationOut"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "propertyNames": {
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ]
+            },
+            "title": "Translations",
+            "type": "object"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "slug",
+          "status",
+          "cover",
+          "translations",
+          "live_locales",
+          "views",
+          "likes",
+          "published_at",
+          "updated_at",
+          "created_at"
+        ],
+        "title": "AdminArticleOut",
+        "type": "object"
+      },
+      "AdminArticleRow": {
+        "description": "One line of the admin's list.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "likes": {
+            "title": "Likes",
+            "type": "integer"
+          },
+          "live_locales": {
+            "items": {
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ],
+              "type": "string"
+            },
+            "title": "Live Locales",
+            "type": "array"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "section": {
+            "enum": [
+              "news",
+              "guides",
+              "tops"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "published"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "section",
+          "slug",
+          "status",
+          "title",
+          "live_locales",
+          "views",
+          "likes",
+          "published_at",
+          "updated_at"
+        ],
+        "title": "AdminArticleRow",
+        "type": "object"
+      },
+      "AdminArticlesOut": {
+        "description": "The admin's list, last edited first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminArticleRow"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AdminArticlesOut",
+        "type": "object"
+      },
       "AdminEntryOut": {
         "description": "One balance-history line with who booked it and why.",
         "properties": {
@@ -4321,6 +4542,118 @@
           "client_order_id"
         ],
         "title": "ApiOrderIn",
+        "type": "object"
+      },
+      "ArticleIn": {
+        "description": "A new article. ``translations`` holds only the locales written so far.",
+        "properties": {
+          "cover_hash": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Hash"
+          },
+          "section": {
+            "enum": [
+              "news",
+              "guides",
+              "tops"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "slug": {
+            "maxLength": 80,
+            "title": "Slug",
+            "type": "string"
+          },
+          "translations": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TranslationIn"
+            },
+            "propertyNames": {
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ]
+            },
+            "title": "Translations",
+            "type": "object"
+          }
+        },
+        "required": [
+          "section",
+          "slug"
+        ],
+        "title": "ArticleIn",
+        "type": "object"
+      },
+      "ArticlePatch": {
+        "description": "An edit: only what is given changes; a given locale's translation is replaced whole.",
+        "properties": {
+          "cover_hash": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Hash"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "enum": [
+                  "news",
+                  "guides",
+                  "tops"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Section"
+          },
+          "slug": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slug"
+          },
+          "translations": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TranslationIn"
+            },
+            "propertyNames": {
+              "enum": [
+                "ru",
+                "uz",
+                "en"
+              ]
+            },
+            "title": "Translations",
+            "type": "object"
+          }
+        },
+        "title": "ArticlePatch",
         "type": "object"
       },
       "AuditActor": {
@@ -12307,6 +12640,86 @@
         "title": "TradeLinkOut",
         "type": "object"
       },
+      "TranslationIn": {
+        "description": "An article's words in one locale, as the admin saves them.",
+        "properties": {
+          "body": {
+            "default": "",
+            "maxLength": 60000,
+            "title": "Body",
+            "type": "string"
+          },
+          "cover_alt": {
+            "default": "",
+            "maxLength": 160,
+            "title": "Cover Alt",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Description",
+            "type": "string"
+          },
+          "ready": {
+            "default": false,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "TranslationIn",
+        "type": "object"
+      },
+      "TranslationOut": {
+        "description": "A saved translation.",
+        "properties": {
+          "body": {
+            "default": "",
+            "maxLength": 60000,
+            "title": "Body",
+            "type": "string"
+          },
+          "cover_alt": {
+            "default": "",
+            "maxLength": 160,
+            "title": "Cover Alt",
+            "type": "string"
+          },
+          "description": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Description",
+            "type": "string"
+          },
+          "ready": {
+            "default": false,
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "updated_at"
+        ],
+        "title": "TranslationOut",
+        "type": "object"
+      },
       "UndoIn": {
         "description": "\u00ab\u0412\u0435\u0440\u043d\u0443\u0442\u044c \u0432 \u043e\u0447\u0435\u0440\u0435\u0434\u044c\u00bb with the reason (required).",
         "properties": {
@@ -13717,6 +14130,163 @@
         ]
       }
     },
+    "/api/v1/admin/articles": {
+      "get": {
+        "description": "Every article, last edited first; ``section`` and ``status`` filter.",
+        "operationId": "get_articles_api_v1_admin_articles_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "section",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "news",
+                    "guides",
+                    "tops"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Section"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "published"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArticlesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Articles",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "A new draft. Audited ``articles.create``.",
+        "operationId": "post_article_api_v1_admin_articles_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArticleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "409": {
+            "description": "`slug_taken` or `idempotency_mismatch`"
+          },
+          "422": {
+            "description": "`slug_invalid` or `cover_not_found`"
+          }
+        },
+        "summary": "New article",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/articles/media": {
       "post": {
         "description": "A JPG, PNG or WebP image up to 5 MB; the same bytes again return the same image.\nAudited ``articles.media.add``.",
@@ -13775,6 +14345,292 @@
           }
         },
         "summary": "Upload an article image",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/articles/{article_id}": {
+      "get": {
+        "description": "The article with all three translations (``null`` where none is written).",
+        "operationId": "get_article_api_v1_admin_articles__article_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "article_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Article Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArticleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One article",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "description": "Change the given fields; a given locale's translation is replaced whole. Audited\n``articles.update``.",
+        "operationId": "patch_article_api_v1_admin_articles__article_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "article_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Article Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArticlePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArticleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "409": {
+            "description": "`slug_taken` or `idempotency_mismatch`"
+          },
+          "422": {
+            "description": "`slug_invalid` or `cover_not_found`"
+          }
+        },
+        "summary": "Edit",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/articles/{article_id}/publish": {
+      "post": {
+        "description": "Readers see its ready translations. Audited ``articles.publish``.",
+        "operationId": "post_publish_api_v1_admin_articles__article_id__publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "article_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Article Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArticleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "409": {
+            "description": "`publish_needs_cover`, `publish_needs_translation`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Publish",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/articles/{article_id}/unpublish": {
+      "post": {
+        "description": "Readers no longer see it. Audited ``articles.unpublish``.",
+        "operationId": "post_unpublish_api_v1_admin_articles__article_id__unpublish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "article_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Article Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminArticleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`article_not_found`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unpublish",
         "tags": [
           "admin"
         ]
