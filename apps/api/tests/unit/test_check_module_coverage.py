@@ -24,6 +24,7 @@ MODULES = (
     "public_api",
     "risk",
     "reviews",
+    "articles",
 )
 
 
