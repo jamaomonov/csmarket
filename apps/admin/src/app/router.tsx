@@ -9,6 +9,7 @@ import { Layout } from "./Layout";
 import { OrdersRedirect } from "./OrdersRedirect";
 
 import { ApiKeyRedirect } from "@/features/apiKeys/ApiKeyCard";
+import { ArticlesPage } from "@/features/articles/ArticlesPage";
 import { AuditPage } from "@/features/audit/AuditPage";
 import { AuthGuard } from "@/features/auth/AuthGuard";
 import { LoginPage } from "@/features/auth/LoginPage";
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
           { path: "/sale-settings", element: <SaleSettingsPage /> },
           { path: "/sale-blocks", element: <SellBlocksPage /> },
           { path: "/reviews", element: <ReviewsPage /> },
+          { path: "/articles", element: <ArticlesPage /> },
           { path: "/api-keys", element: <Navigate to="/users?has_api_key=true" replace /> },
           { path: "/api-keys/:id", element: <ApiKeyRedirect /> },
           { path: "*", element: <NotFoundPage /> },

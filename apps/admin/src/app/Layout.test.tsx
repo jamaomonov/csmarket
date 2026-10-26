@@ -43,7 +43,7 @@ describe("Layout", () => {
       within(nav)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["Дашборд", "Аналитика", "Журнал"]);
+    ).toEqual(["Дашборд", "Аналитика", "Статьи", "Журнал"]);
     for (const group of ["Очередь", "Деньги", "Люди", "Настройки"]) {
       expect(within(nav).getByRole("button", { name: new RegExp(group) })).toBeInTheDocument();
     }
@@ -169,6 +169,7 @@ describe("Layout", () => {
       [
         "/",
         "/analytics",
+        "/articles",
         "/trades",
         "/payouts",
         "/sales",
