@@ -79,6 +79,18 @@ export interface PayoutRisk {
   shared_card_users: AdminUser[];
 }
 
+/** A receipt attached to a paid payout; its bytes come from `proofFile`. */
+export interface PayoutProof {
+  id: string;
+  name: string;
+  content_type: string;
+  size: number;
+  uploaded_by: AdminUser | null;
+  created_at: string;
+  /** «Удалить» is possible until then; `null` after. */
+  delete_until: string | null;
+}
+
 export interface PayoutDetail {
   request: PayoutRow;
   note: string | null;
@@ -94,6 +106,8 @@ export interface PayoutDetail {
   /** «Выплачено» needs an override reason: the account is banned or its wallet frozen. */
   paid_needs_override?: boolean;
   risk?: PayoutRisk | null;
+  /** «Подтверждение оплаты», oldest first, three at most. */
+  proofs?: PayoutProof[];
 }
 
 export function listPayouts(tab: PayoutTab, cursor?: string, q?: string): Promise<PayoutsPage> {
@@ -152,4 +166,27 @@ export function cancelPayout(id: string, reason: string, key: string): Promise<P
 /** «Вернуть в очередь»: undo a «Выплачено» / «Отклонить» of the last minutes. */
 export function undoPayout(id: string, reason: string, key: string): Promise<PayoutDetail> {
   return post(id, "undo", { reason }, key);
+}
+
+/** Attach a receipt (JPG, PNG, WebP or PDF, 5 MB) to a paid payout; the file is the body. */
+export function addProof(id: string, file: File, key: string): Promise<PayoutDetail> {
+  return session.api<PayoutDetail>(`${BASE}/${encodeURIComponent(id)}/proofs`, {
+    method: "POST",
+    body: file,
+    headers: { "X-File-Name": encodeURIComponent(file.name) },
+    idempotencyKey: key,
+  });
+}
+
+/** A receipt's bytes (admins only; never a public link). */
+export function proofFile(id: string, proofId: string): Promise<Blob> {
+  return session.apiBlob(`${BASE}/${encodeURIComponent(id)}/proofs/${encodeURIComponent(proofId)}`);
+}
+
+/** Delete a receipt uploaded in the last 10 minutes. */
+export function deleteProof(id: string, proofId: string, key: string): Promise<PayoutDetail> {
+  return session.api<PayoutDetail>(
+    `${BASE}/${encodeURIComponent(id)}/proofs/${encodeURIComponent(proofId)}`,
+    { method: "DELETE", idempotencyKey: key },
+  );
 }

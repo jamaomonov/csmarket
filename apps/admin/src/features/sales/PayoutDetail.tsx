@@ -1,7 +1,8 @@
 /**
  * «Заявка на выплату», built for paying from a phone: on top what to send and where
  * (`PayBlock`: «Беру в работу», amount, card, sale number), a red banner when the seller is
- * banned or the wallet frozen, the decisions (`PayoutActions`), the risks (`RiskBlock`), then
+ * banned or the wallet frozen, the decisions (`PayoutActions`), the receipts of a paid payout
+ * (`ProofsBlock`), the risks (`RiskBlock`), then
  * the money breakdown, the items and the seller's other sales and payouts.
  */
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +14,7 @@ import { ItemList } from "./Parts";
 import { PayBlock } from "./PayBlock";
 import { CANCEL_LABEL, PayoutActions } from "./PayoutActions";
 import { getPayout, type PayoutDetail as Detail } from "./payoutsApi";
+import { ProofsBlock } from "./ProofsBlock";
 import { RiskBlock } from "./RiskBlock";
 
 import { Money } from "@/components/Money";
@@ -177,6 +179,7 @@ export function PayoutDetail() {
           <>
             <PayBlock key={d.request.id} detail={d} onChanged={refresh} />
             <PayoutActions detail={d} onStale={refresh} />
+            <ProofsBlock detail={d} />
             <RiskBlock detail={d} />
             <ItemList items={s.items} />
           </>

@@ -39,7 +39,7 @@ export interface SessionClientOptions {
 
 export interface SessionRequestOptions {
   method?: string;
-  /** JSON-encoded when present. */
+  /** JSON-encoded when present; a `Blob` (a file) is sent as it is, typed by itself. */
   body?: unknown;
   headers?: HeadersInit;
   /** Omit the Authorization header even if a token is held. */
@@ -62,6 +62,8 @@ export interface SessionClient {
   apiPost: <T = unknown>(path: string, body: unknown, options?: SessionWriteOptions) => Promise<T>;
   apiPatch: <T = unknown>(path: string, body: unknown, options?: SessionWriteOptions) => Promise<T>;
   apiPut: <T = unknown>(path: string, body: unknown, options?: SessionWriteOptions) => Promise<T>;
+  /** A file the API serves (the same token and refresh), as a `Blob`. */
+  apiBlob: (path: string, options?: SessionReadOptions) => Promise<Blob>;
   getAccessToken: () => string | null;
   /** Hold `token` in memory and set the session hint. */
   setAccessToken: (token: string) => void;
@@ -167,18 +169,20 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
     return refreshInFlight;
   };
 
-  const request = async <T>(
+  const send = async (
     path: string,
     init: SessionRequestOptions,
     allowRefresh: boolean,
-  ): Promise<T> => {
+  ): Promise<Response> => {
     const { anonymous, idempotencyKey, body, headers, method, signal } = init;
     // Ours = relative to baseUrl. Anything absolute is a third party: no token, no cookies.
     const ours = !path.startsWith("http");
     const url = ours ? `${baseUrl}${path}` : path;
     const h = new Headers(headers);
     h.set("Accept", "application/json");
-    if (body !== undefined && !h.has("Content-Type")) h.set("Content-Type", "application/json");
+    const file = body instanceof Blob ? body : null;
+    if (body !== undefined && !h.has("Content-Type"))
+      h.set("Content-Type", file ? file.type || "application/octet-stream" : "application/json");
     if (idempotencyKey) h.set("Idempotency-Key", idempotencyKey);
     const sentToken = anonymous || !ours ? null : accessToken;
     if (sentToken) h.set("Authorization", `Bearer ${sentToken}`);
@@ -187,7 +191,7 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
       method: method ?? "GET",
       headers: h,
       credentials: ours ? "include" : "omit",
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined ? { body: file ?? JSON.stringify(body) } : {}),
       ...(signal ? { signal } : {}),
     });
 
@@ -202,7 +206,7 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
       // A parallel call may have rotated the token already: replay with it.
       const ok =
         accessToken !== null && accessToken !== sentToken ? true : await refreshAccessToken();
-      if (ok) return request<T>(path, init, false);
+      if (ok) return send(path, init, false);
     }
 
     if (!response.ok) {
@@ -212,6 +216,15 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
         await readErrorBody(response),
       );
     }
+    return response;
+  };
+
+  const request = async <T>(
+    path: string,
+    init: SessionRequestOptions,
+    allowRefresh: boolean,
+  ): Promise<T> => {
+    const response = await send(path, init, allowRefresh);
     // 204 carries no body; callers type such endpoints as `undefined`.
     if (response.status === 204) return undefined as T;
     // The API's JSON contract is the caller's `T`.
@@ -232,6 +245,8 @@ export function createSessionClient(opts: SessionClientOptions): SessionClient {
     apiPost: write("POST"),
     apiPatch: write("PATCH"),
     apiPut: write("PUT"),
+    apiBlob: async (path: string, options: SessionReadOptions = {}) =>
+      (await send(path, options, true)).blob(),
     getAccessToken: () => accessToken,
     setAccessToken,
     clearSession,

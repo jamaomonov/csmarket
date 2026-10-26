@@ -73,6 +73,12 @@ const PAYOUT_ERRORS: Record<string, string> = {
   settings_stale:
     "Настройки уже сохранил кто-то другой. Обновите страницу и внесите правки заново.",
   nothing_to_resolve: "У продажи нет пометки — проверять нечего.",
+  payout_not_paid: "Файлы можно прикрепить только к выплаченной заявке.",
+  proof_limit: "Можно прикрепить не больше 3 файлов.",
+  proof_empty: "Файл пустой.",
+  proof_too_large: "Файл больше 5 МБ.",
+  proof_type: "Подходят только JPG, PNG, WebP или PDF.",
+  proof_delete_expired: "Удалить уже нельзя: прошло больше 10 минут.",
 };
 
 export function payoutErrorText(err: unknown): string {

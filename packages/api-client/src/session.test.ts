@@ -216,4 +216,31 @@ describe("createSessionClient", () => {
     const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(new Headers(init.headers).get("Idempotency-Key")).toBe("k".repeat(20));
   });
+
+  it("sends a Blob body as it is, not as JSON", async () => {
+    const c = make();
+    c.setAccessToken("A");
+    fetchMock.mockResolvedValueOnce(json(200, { ok: true }));
+    const file = new Blob([new Uint8Array([1, 2, 3])], { type: "image/png" });
+    await c.apiPost("/api/v1/upload", file, { idempotencyKey: "k".repeat(20) });
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(init.body).toBe(file);
+    expect(new Headers(init.headers).get("Content-Type")).toBe("image/png");
+  });
+
+  it("reads a file as a Blob with the token, refreshing on 401", async () => {
+    const c = make();
+    c.setAccessToken("old");
+    fetchMock
+      .mockResolvedValueOnce(json(401, {}))
+      .mockResolvedValueOnce(json(200, { access_token: "new", expires_in: 900 }))
+      .mockResolvedValueOnce(
+        new Response("%PDF-", { headers: { "Content-Type": "application/pdf" } }),
+      );
+    const blob = await c.apiBlob("/api/v1/file");
+    expect(blob.type).toBe("application/pdf");
+    expect(await blob.text()).toBe("%PDF-");
+    const init = fetchMock.mock.calls[2]?.[1] as RequestInit;
+    expect(new Headers(init.headers).get("Authorization")).toBe("Bearer new");
+  });
 });
