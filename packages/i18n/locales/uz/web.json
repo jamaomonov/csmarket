@@ -35,7 +35,8 @@
     "referral": "Referal",
     "trades": "Treydlar",
     "cards": "Kartalarim",
-    "inHold": "+{sum} kutilmoqda"
+    "inHold": "+{sum} kutilmoqda",
+    "articles": "Maqolalar"
   },
   "auth": {
     "callback": {
@@ -1107,5 +1108,35 @@
       "empty": "Hozircha sharhlar yoʻq",
       "loadFailed": "Yuklab boʻlmadi. Qaytadan urinib koʻring."
     }
+  },
+  "articles": {
+    "title": "CS2 haqida maqolalar: yangiliklar, qoʻllanmalar va skin toʻplamlari",
+    "description": "CS2 yangiliklari, qoʻllanmalar va skin toʻplamlari: qaysi pichoqni tanlash, AK-47 uchun eng yaxshi skinlar va soʻmdagi narxlar.",
+    "heading": "Maqolalar",
+    "sections": {
+      "all": "Hammasi",
+      "news": "Yangiliklar",
+      "guides": "Qoʻllanmalar",
+      "tops": "Toʻplamlar"
+    },
+    "sectionTitles": {
+      "news": "CS2 yangiliklari",
+      "guides": "CS2 boʻyicha qoʻllanmalar",
+      "tops": "CS2 skin toʻplamlari"
+    },
+    "sectionDescriptions": {
+      "news": "CS2 yangilanishlari va skin narxlarida nima boʻlyapti.",
+      "guides": "CS2 skinlarini qanday tanlash, sotib olish va sotish.",
+      "tops": "Soʻmdagi narxlari bilan eng yaxshi CS2 skinlari."
+    },
+    "more": "Yana koʻrsatish",
+    "related": "Boʻlimda yana",
+    "updated": "Yangilangan: {date}",
+    "views": "{n, plural, other {# marta koʻrildi}}",
+    "like": "Yoqdi",
+    "unlike": "Yoqtirishni bekor qilish",
+    "likes": "{n, plural, other {# ta yoqtirish}}",
+    "empty": "Hozircha bu yerda maqolalar yoʻq.",
+    "author": "csmarket tahririyati"
   }
 }

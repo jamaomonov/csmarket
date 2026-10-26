@@ -51,6 +51,21 @@ export function alternates(
   return { canonical: localeUrl(locale, path), languages };
 }
 
+/**
+ * Like {@link alternates}, but only for the locales in `live` (an article answers 404 in the
+ * others); `x-default` points at ru only when ru is among them.
+ */
+export function alternatesFor(
+  locale: string,
+  path: string,
+  live: readonly string[],
+): { canonical: string; languages: Record<string, string> } {
+  const languages: Record<string, string> = {};
+  for (const l of LOCALES) if (live.includes(l)) languages[l] = localeUrl(l, path);
+  if (live.includes("ru")) languages["x-default"] = localeUrl("ru", path);
+  return { canonical: localeUrl(locale, path), languages };
+}
+
 export function ogLocale(locale: string): { locale: string; alternateLocale: string[] } {
   return {
     locale: OG_LOCALE[locale] ?? "ru_RU",

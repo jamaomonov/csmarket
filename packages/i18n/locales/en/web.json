@@ -35,7 +35,8 @@
     "referral": "Referral",
     "trades": "Trades",
     "cards": "My cards",
-    "inHold": "+{sum} on hold"
+    "inHold": "+{sum} on hold",
+    "articles": "Articles"
   },
   "auth": {
     "callback": {
@@ -1107,5 +1108,35 @@
       "empty": "No reviews yet",
       "loadFailed": "Could not load. Please try again."
     }
+  },
+  "articles": {
+    "title": "CS2 articles: news, guides and skin top lists",
+    "description": "CS2 news, guides and skin top lists: which knife to pick, the best AK-47 skins and prices in soʻm.",
+    "heading": "Articles",
+    "sections": {
+      "all": "All",
+      "news": "News",
+      "guides": "Guides",
+      "tops": "Top lists"
+    },
+    "sectionTitles": {
+      "news": "CS2 news",
+      "guides": "CS2 guides",
+      "tops": "CS2 skin top lists"
+    },
+    "sectionDescriptions": {
+      "news": "CS2 updates and what is happening to skin prices.",
+      "guides": "How to choose, buy and sell CS2 skins.",
+      "tops": "The best CS2 skins with prices in soʻm."
+    },
+    "more": "Show more",
+    "related": "More in this section",
+    "updated": "Updated {date}",
+    "views": "{n, plural, one {# view} other {# views}}",
+    "like": "Like",
+    "unlike": "Remove like",
+    "likes": "{n, plural, one {# like} other {# likes}}",
+    "empty": "No articles here yet.",
+    "author": "csmarket editorial team"
   }
 }

@@ -12,6 +12,7 @@ import { SteamIcon } from "../icons/SteamIcon";
 import type { ReactNode } from "react";
 
 import { getPathname, usePathname } from "@/i18n/navigation";
+import { pageLanguages, switchTarget } from "@/lib/articles";
 import { useAuth } from "@/lib/auth";
 
 interface MobileMenuProps {
@@ -40,7 +41,8 @@ export function MobileMenu({ locale, avatar }: MobileMenuProps) {
       label: t(`languages.${l}`),
       icon: <Languages className="text-fg-dim size-4 shrink-0" aria-hidden />,
       onSelect: () => {
-        window.location.assign(getPathname({ href: pathname, locale: l }) + window.location.search);
+        const href = switchTarget(pathname, pageLanguages(document), l);
+        window.location.assign(getPathname({ href, locale: l }) + window.location.search);
       },
       current: l === locale,
     })),

@@ -30,3 +30,20 @@ describe("seo", () => {
     expect(shareImage("xx", "a").openGraph[0]?.url).toBe("https://csmarket.uz/og/ru.jpg");
   });
 });
+
+describe("alternatesFor", () => {
+  it("lists only the live locales and x-default only with ru", async () => {
+    const { alternatesFor } = await import("./seo");
+    expect(alternatesFor("en", "/articles/a", ["en", "uz"])).toEqual({
+      canonical: "https://csmarket.uz/en/articles/a",
+      languages: {
+        uz: "https://csmarket.uz/uz/articles/a",
+        en: "https://csmarket.uz/en/articles/a",
+      },
+    });
+    expect(alternatesFor("ru", "/articles/a", ["ru"]).languages).toEqual({
+      ru: "https://csmarket.uz/articles/a",
+      "x-default": "https://csmarket.uz/articles/a",
+    });
+  });
+});

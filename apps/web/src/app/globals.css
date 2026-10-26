@@ -41,3 +41,41 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* An article's Markdown (components/articles/ArticleBody): readable measure and rhythm. */
+@layer components {
+  .article-body {
+    @apply text-fg flex flex-col gap-4 text-[17px] leading-[1.7];
+  }
+  .article-body h2 {
+    @apply mt-6 text-2xl leading-tight font-semibold tracking-tight;
+  }
+  .article-body h3 {
+    @apply mt-4 text-xl leading-snug font-semibold;
+  }
+  .article-body ul {
+    @apply list-disc pl-6;
+  }
+  .article-body ol {
+    @apply list-decimal pl-6;
+  }
+  .article-body li + li {
+    @apply mt-1;
+  }
+  .article-body a {
+    @apply text-accent underline underline-offset-2;
+  }
+  .article-body blockquote {
+    @apply border-border text-fg-muted border-l-2 pl-4;
+  }
+  .article-body table {
+    @apply block w-full overflow-x-auto text-sm;
+  }
+  .article-body th,
+  .article-body td {
+    @apply border-border border px-3 py-2 text-left;
+  }
+  .article-body code {
+    @apply bg-surface-2 rounded px-1 text-[0.9em];
+  }
+}
