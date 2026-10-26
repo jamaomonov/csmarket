@@ -49,6 +49,9 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
 - `admin_payout_routes.py` (mounted before `admin_routes`), `admin_queue.py` (tabs, search,
   totals, the dashboard summary), `admin_claims.py` («Беру в работу»), `admin_risk.py` (row
   flags and the «Риски» block), `admin_undo.py` («Вернуть в очередь»).
+- `admin_proofs.py`, `admin_proof_routes.py` — «Подтверждение оплаты» (ADR-0024): up to three
+  receipts of a paid payout in `payout_proofs`, the bytes in the row, the type sniffed, deleted
+  only within 10 minutes; admins only.
 
 ## Boundaries
 

@@ -7541,6 +7541,14 @@
             "title": "Paid Needs Override",
             "type": "boolean"
           },
+          "proofs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PayoutProofOut"
+            },
+            "title": "Proofs",
+            "type": "array"
+          },
           "reject_reason": {
             "anyOf": [
               {
@@ -7633,6 +7641,65 @@
           "to"
         ],
         "title": "PayoutIn",
+        "type": "object"
+      },
+      "PayoutProofOut": {
+        "description": "A receipt attached to a paid payout (ADR-0024); the bytes come from its own route.",
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delete_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delete Until"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "uploaded_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminUserOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "content_type",
+          "size",
+          "uploaded_by",
+          "created_at",
+          "delete_until"
+        ],
+        "title": "PayoutProofOut",
         "type": "object"
       },
       "PayoutRiskOut": {
@@ -16877,6 +16944,245 @@
           }
         },
         "summary": "Mark a payout paid",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/payouts/{request_id}/proofs": {
+      "post": {
+        "description": "A screenshot or a PDF of the transfer (JPG, PNG, WebP, PDF; 5 MB), to a paid payout,\nthree at most. Audited ``sales.payout.proof.add`` (no name, no bytes).",
+        "operationId": "post_proof_api_v1_admin_sales_payouts__request_id__proofs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-file-name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-File-Name"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "format": "binary",
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`payout_not_paid`, `proof_limit` or `idempotency_mismatch`"
+          },
+          "422": {
+            "description": "`proof_empty`, `proof_too_large` (over 5 MB) or `proof_type`"
+          }
+        },
+        "summary": "Attach a payment receipt",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/sales/payouts/{request_id}/proofs/{proof_id}": {
+      "delete": {
+        "description": "Within 10 minutes of its upload; after that the receipt stays. Audited\n``sales.payout.proof.delete``.",
+        "operationId": "delete_proof_route_api_v1_admin_sales_payouts__request_id__proofs__proof_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proof_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proof Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutDetailOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "409": {
+            "description": "`proof_delete_expired` or `idempotency_mismatch`"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete a receipt uploaded minutes ago",
+        "tags": [
+          "admin"
+        ]
+      },
+      "get": {
+        "description": "The receipt's bytes with its sniffed type; never cached.",
+        "operationId": "get_proof_api_v1_admin_sales_payouts__request_id__proofs__proof_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "proof_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proof Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "The file"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A payment receipt",
         "tags": [
           "admin"
         ]

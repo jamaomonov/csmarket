@@ -10,6 +10,7 @@
 - :class:`SaleCheck` — «ask Skinslink about sale N»: queued by the webhook, drained by the
   worker's ``sales`` queue.
 - :class:`SaleBlock` — a user an admin stopped from selling (``POST /sell`` refuses them).
+- :class:`PayoutProof` — a receipt an admin attached to a paid payout (ADR-0024); admins only.
 """
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, deferred, mapped_column
 
 from csmarket.core.db import Base
 from csmarket.core.ids import new_id
@@ -315,6 +316,33 @@ class SaleBlock(Base):
     created_at: Mapped[datetime] = _ts()
 
 
+class PayoutProof(Base):
+    """A receipt (a screenshot or a PDF) of a paid payout, kept for a dispute (ADR-0024).
+
+    The bytes live in the row, so the nightly ``pg_dump`` keeps them; ``data`` is deferred,
+    and only the download reads it.
+    """
+
+    __tablename__ = "payout_proofs"
+
+    id: Mapped[str] = mapped_column(UUID(as_uuid=False), primary_key=True, default=new_id)
+    request_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("payout_requests.id", ondelete="RESTRICT"), nullable=False
+    )
+    #: The file's name as uploaded, cleaned (PII: may name the seller; admins only).
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    #: Read from the bytes, never from the client: ``PROOF_TYPES``.
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    size: Mapped[int] = mapped_column(Integer, nullable=False)
+    data: Mapped[bytes] = deferred(mapped_column(LargeBinary, nullable=False))
+    uploaded_by: Mapped[str | None] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = _ts()
+
+    __table_args__ = (Index("ix_payout_proofs_request_id", "request_id"),)
+
+
 __all__ = [
     "ATTENTION_REASONS",
     "CARD_FP_PURPOSE",
@@ -326,6 +354,7 @@ __all__ = [
     "SALES_CHANNEL",
     "SALE_STATUSES",
     "PayoutCard",
+    "PayoutProof",
     "PayoutRequest",
     "Sale",
     "SaleBlock",

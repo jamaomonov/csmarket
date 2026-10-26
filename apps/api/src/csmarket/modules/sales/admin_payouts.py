@@ -35,6 +35,7 @@ from csmarket.core.logging import get_logger
 from csmarket.modules.admin.api import record
 from csmarket.modules.realtime.api import nudge_sale
 from csmarket.modules.sales import admin_claims
+from csmarket.modules.sales.admin_proofs import proofs_out
 from csmarket.modules.sales.admin_queue import PayoutsSummary, list_payouts, payouts_summary, rows
 from csmarket.modules.sales.admin_risk import frozen_users, payout_risk
 from csmarket.modules.sales.admin_sales import sale_admin_out, sale_row, user_of, users_by_id
@@ -116,6 +117,7 @@ async def payout_detail(db: AsyncSession, request_id: str) -> PayoutDetailOut:
         paid_needs_override=request.status == "to_pay"
         and (risk.banned or risk.wallet_frozen or sale.attention_reason == "rolled_back"),
         risk=risk,
+        proofs=await proofs_out(db, request.id),
     )
 
 

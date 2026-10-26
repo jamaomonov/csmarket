@@ -149,7 +149,19 @@ api.csmarket.uz {
 	header X-Robots-Tag "noindex, nofollow"
 	# Ordinary JSON; the app streams webhook bodies through its own caps. Without this an
 	# origin reached past Cloudflare could post a body as large as the container's memory.
-	request_body {
+	# One exception: an admin's payout receipt (ADR-0024), 5 MB in the app, 6 MB here.
+	@proofUpload {
+		method POST
+		path_regexp ^/api/v1/admin/sales/payouts/[^/]+/proofs$
+	}
+	request_body @proofUpload {
+		max_size 6MB
+	}
+	@notProofUpload not {
+		method POST
+		path_regexp ^/api/v1/admin/sales/payouts/[^/]+/proofs$
+	}
+	request_body @notProofUpload {
 		max_size 1MB
 	}
 	# CORS is FastAPI's job (CSMARKET_CORS_ALLOW_ORIGINS); doing it here too

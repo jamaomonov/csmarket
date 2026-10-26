@@ -218,6 +218,21 @@ class AdminSaleOut(BaseModel):
     payout: PayoutRowOut | None
 
 
+class PayoutProofOut(BaseModel):
+    """A receipt attached to a paid payout (ADR-0024); the bytes come from its own route."""
+
+    id: str
+    #: As uploaded, cleaned; PII (may name the seller), admins only.
+    name: str
+    #: ``image/jpeg``, ``image/png``, ``image/webp`` or ``application/pdf``.
+    content_type: str
+    size: int
+    uploaded_by: AdminUserOut | None
+    created_at: datetime
+    #: «Удалить» is possible until then (10 minutes after the upload); ``null`` after.
+    delete_until: datetime | None
+
+
 class PayoutDetailOut(BaseModel):
     """A request's page: the request, its sale, the seller's history, what may be done."""
 
@@ -238,6 +253,8 @@ class PayoutDetailOut(BaseModel):
     #: «Выплачено» needs ``override_reason``: the account is banned or its wallet frozen.
     paid_needs_override: bool = False
     risk: PayoutRiskOut | None = None
+    #: «Подтверждение оплаты», oldest first; at most ``admin_proofs.MAX_PROOFS``.
+    proofs: list[PayoutProofOut] = []
 
 
 class RevealIn(BaseModel):

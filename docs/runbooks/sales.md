@@ -82,6 +82,15 @@ required, audited `sales.payout.undo`):
 
 After 10 minutes nothing can be undone from the page.
 
+**Receipts («Подтверждение оплаты», ADR-0024).** A paid request's page takes up to three files
+— a screenshot or a PDF of the transfer (JPG, PNG, WebP, PDF, 5 MB each), optional. Attach the
+bank's receipt right after «Выплачено»: it is the proof when a seller says the money never
+came. A file opens in a new tab from the admin only (the seller never sees it). A wrong file
+can be deleted for 10 minutes after its upload; after that it stays for good. Audited
+`sales.payout.proof.add` / `.delete`. «Вернуть в очередь» keeps the files, and a request back in
+«К выплате» takes no new ones until it is paid again. «Подходят только JPG, PNG, WebP или PDF»:
+the type is read from the file itself — a renamed file is refused; send a screenshot instead.
+
 **Finding a request** when a seller calls: the search takes the sale number (`S…`), the card's
 last four, part of the name or the Steam ID, across all statuses.
 

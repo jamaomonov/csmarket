@@ -200,6 +200,14 @@ field, a log line, a metric or a third party that sees one of these values (`AGE
 - **422 bodies** — an app-wide `RequestValidationError` handler (`bootstrap.py`) answers 422 as
   `{"detail": [{type, loc, msg}]}` and drops `input` and `ctx`, so no request body (card
   numbers, trade links) is echoed back by pydantic.
+- **Payout receipts** (ADR-0024, migration 0041) — `payout_proofs.data` and `.name`: an
+  admin's screenshot or PDF of a transfer may show the card, the recipient's name and the bank
+  account. Kept in the database (and so in the nightly encrypted backup), served only to an admin
+  by `GET /admin/sales/payouts/{id}/proofs/{proof_id}` with `Cache-Control: no-store`, never by a
+  public link, never shown to the seller. The audit row keeps the id, type and size; the
+  idempotency replay keeps the file's SHA-256 and name, never its bytes; nothing logs either.
+  Caddy's access log drops headers (the name travels in `X-File-Name`). Deletion only within
+  10 minutes of upload; retention follows the payout's (M5).
 - **Retention** — a deleted card is soft-deleted: a paid request must keep pointing at its
   card for disputes. Erasing old encrypted numbers is M5's retention work.
 - **Skinslink's deposit webhook** carries the seller's Steam id; it is never read or logged.
