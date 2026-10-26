@@ -62,6 +62,7 @@
 - **P2P top-ups and kassa switches** (spec `2026-10-19-p2p-topup-design.md`, plan `2026-10-19-p2p-topup.md`, ADR-0021, runbook `p2p.md`): balance top-ups by a card transfer matched from HUMO's Telegram notifications through a relay shared with YuPay, and on / maintenance / off per kassa — built on branch `p2p`, not merged; P2P ships off.
 - **Payment risk limits** (spec `2026-10-21-payment-risk-limits-design.md`, ADR-0022, runbook `payment-held-for-review.md`): money over a kassa or user window limit is held for an admin («На проверке») instead of being credited or bought — merged to `main` 2026-10-22.
 - **Reviews** (spec `2026-10-23-reviews-design.md`, plan `2026-10-23-reviews.md`, ADR-0023): 1–5 stars after a delivered order or a paid sale, the live prompt on any page, the admin's «Отзывы», `/reviews` behind «Показывать отзывы на сайте» — merged to `main` and deployed 2026-10-23 (`sha-e18f01a`), the public page off.
+- **Articles** (spec `2026-10-26-articles-design.md`, plan `2026-10-26-articles.md`, ADR-0025, runbook `articles.md`): news, guides and top lists in ru / uz / en written in the admin's «Статьи», live skin cards, views and likes, `/articles` on the storefront — built on branch `articles`, not merged, not deployed.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
@@ -282,7 +283,7 @@ csmarket/
 
 - **TDD** when building a module or fixing a reproducible bug: the failing test first.
 - **Coverage gates:** Python ≥ 80 % (enforced: `fail_under = 80` in `pyproject.toml`, CI
-  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales`, `public_api`, `risk`, `reviews` ≥ 95 % each (enforced:
+  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales`, `public_api`, `risk`, `reviews`, `articles` ≥ 95 % each (enforced:
   `scripts/check-module-coverage.py` reads `coverage.json` after `make test-py` and CI
   `test-py`, and fails naming the module under the line). TS ≥ 70 % is a target; no
   threshold is configured yet.
