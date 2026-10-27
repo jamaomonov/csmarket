@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import base64
 from collections.abc import Awaitable, Callable
 from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 from csmarket.core.clock import now
-from csmarket.modules.referrals.models import ReferralPartner, ReferralVisitDay
+from csmarket.modules.referrals.models import ReferralPartner, ReferralReward, ReferralVisitDay
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -111,8 +112,12 @@ async def test_rewards_page_and_bad_cursor(
     for days in range(23):
         order = await delivered_order(db_session, days_ago=days + 1)
         await make_reward(db_session, partner=me, order=order)
+    order_ids = {str(o) for o in (await db_session.scalars(select(ReferralReward.order_id))).all()}
     first = (await integration_client.get(f"{ME}/rewards", headers=h)).json()
     assert len(first["items"]) == 20
+    token = first["next_cursor"]
+    raw = base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)).decode()
+    assert not any(order_id in raw for order_id in order_ids)  # no order identity, even here
     second = (
         await integration_client.get(
             f"{ME}/rewards", params={"cursor": first["next_cursor"]}, headers=h

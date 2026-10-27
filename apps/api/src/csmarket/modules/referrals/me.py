@@ -103,10 +103,10 @@ async def rewards(db: AsyncSession, user_id: str, *, after: str | None) -> Partn
     q = (
         select(r)
         .where(r.partner_id == partner.user_id)
-        .order_by(r.delivered_at.desc(), r.order_id.desc())
+        .order_by(r.delivered_at.desc(), cursor.partner_tie().desc())
         .limit(PAGE + 1)
     )
-    if (past := cursor.after(after)) is not None:
+    if (past := cursor.after(after, cursor.partner_tie())) is not None:
         q = q.where(past)
     rows = list((await db.scalars(q)).all())
     page = rows[:PAGE]
@@ -122,7 +122,9 @@ async def rewards(db: AsyncSession, user_id: str, *, after: str | None) -> Partn
             )
             for w in page
         ],
-        next_cursor=cursor.encode(last.delivered_at, last.order_id) if last else None,
+        next_cursor=cursor.encode(last.delivered_at, cursor.masked(last.order_id))
+        if last
+        else None,
     )
 
 

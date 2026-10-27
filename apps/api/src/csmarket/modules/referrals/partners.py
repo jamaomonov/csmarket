@@ -234,10 +234,10 @@ async def detail(db: AsyncSession, *, user_id: str, after: str | None) -> AdminP
         select(r, Order.number)
         .join(Order, Order.id == r.order_id)
         .where(r.partner_id == partner.user_id)
-        .order_by(r.delivered_at.desc(), r.order_id.desc())
+        .order_by(r.delivered_at.desc(), cursor.admin_tie().desc())
         .limit(PAGE + 1)
     )
-    if (past := cursor.after(after)) is not None:
+    if (past := cursor.after(after, cursor.admin_tie())) is not None:
         q = q.where(past)
     rows = (await db.execute(q)).all()
     page = rows[:PAGE]
