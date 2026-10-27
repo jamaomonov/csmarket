@@ -49,6 +49,7 @@ describe("AnalyticsPage — Бизнес", () => {
     expect(revenue).toHaveTextContent("430 000 сум");
     expect(revenue).toHaveTextContent("▲ +115 %");
     expect(api.getBusiness).toHaveBeenCalledWith("2026-10-09", "2026-10-10", "all");
+    expect(screen.getByTestId("tile-Партнёрам")).toHaveTextContent("12 000 сум");
   });
 
   it("draws no «—» line under a tile with nothing to compare against", async () => {

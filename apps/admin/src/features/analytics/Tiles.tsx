@@ -76,6 +76,9 @@ export function Tiles({ now, before }: { now: Totals; before: Totals }) {
       <Tile title="Новых покупателей" change={delta(now.new_buyers, before.new_buyers)}>
         {now.new_buyers}
       </Tile>
+      <Tile title="Партнёрам" sub="начислено на балансы, не вычтено из прибыли">
+        {som(now.partners_uzs)}
+      </Tile>
     </div>
   );
 }
