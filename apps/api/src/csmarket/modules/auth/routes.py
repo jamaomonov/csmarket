@@ -32,6 +32,7 @@ from csmarket.modules.auth.service import (
     refresh_session,
     steam_login,
 )
+from csmarket.modules.referrals.models import REF_COOKIE
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -87,7 +88,9 @@ async def steam_complete(
     request: Request,
     response: Response,
     db: Annotated[AsyncSession, Depends(db_session, scope="function")],
+    *,
     oid: Annotated[str | None, Cookie(alias=OID_COOKIE_NAME)] = None,
+    ref: Annotated[str | None, Cookie(alias=REF_COOKIE)] = None,
 ) -> TokensOut | JSONResponse:
     """Verify the callback with Steam and open a session.
 
@@ -95,13 +98,16 @@ async def steam_complete(
     cookie (login-CSRF defence). The nonce is single-use: the cookie is cleared on every
     outcome, so a failure is retried from ``/auth/steam/start``.
 
+    A partner link remembered in ``csm_ref`` (``POST /referrals/visit``) ties an account this
+    sign-in creates on the storefront to that partner; it is cleared on every outcome too.
+
     Keyless by design: replaying an OpenID assertion is refused by Steam itself
     (``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.
     """
     s = get_settings()
     try:
         await guard_ip(request, bucket="steam-login")
-        tokens = await steam_login(db, body.params, app=body.app, nonce=oid)
+        tokens = await steam_login(db, body.params, app=body.app, nonce=oid, ref_code=ref)
     except AppError as exc:
         # Rendered here rather than raised so the refusal can clear the nonce cookie too
         # (a raised error gets a fresh response). Roll back by hand: the request session
@@ -109,8 +115,10 @@ async def steam_complete(
         await db.rollback()
         refused = await app_error_handler(request, exc)
         clear_oid_cookie(refused, settings=s)
+        refused.delete_cookie(REF_COOKIE)
         return refused
     clear_oid_cookie(response, settings=s)
+    response.delete_cookie(REF_COOKIE)
     return _session_response(response, tokens)
 
 

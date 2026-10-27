@@ -43,6 +43,7 @@ from csmarket.modules.public_api.site_routes import router as api_key_router
 from csmarket.modules.public_api.tradelink_route import router as public_tradelink_router
 from csmarket.modules.realtime.routes import router as realtime_router
 from csmarket.modules.referrals.admin_routes import router as referrals_admin_router
+from csmarket.modules.referrals.routes import router as referrals_router
 from csmarket.modules.reviews.admin_routes import router as reviews_admin_router
 from csmarket.modules.reviews.routes import router as reviews_router
 from csmarket.modules.risk.admin_routes import limits_router as review_limits_router
@@ -108,6 +109,7 @@ router.include_router(payments_router)
 router.include_router(payout_cards_router)
 router.include_router(sales_router)
 router.include_router(realtime_router)
+router.include_router(referrals_router)
 router.include_router(reviews_router)
 router.include_router(articles_media_router)
 router.include_router(articles_router)

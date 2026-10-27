@@ -43,6 +43,9 @@ PERCENT_MAX = Decimal("20")
 TERM_MAX = 120
 DEFAULT_TERM = 6
 CODE_PATTERN = r"^[a-z0-9-]{3,32}$"
+#: The link a visitor came by, remembered on the API host until the sign-in reads it.
+REF_COOKIE = "csm_ref"
+REF_MAX_AGE = 30 * 24 * 3600
 
 
 def _in(values: tuple[str, ...]) -> str:
@@ -174,6 +177,8 @@ __all__ = [
     "HOLD",
     "PERCENT_MAX",
     "PERCENT_MIN",
+    "REF_COOKIE",
+    "REF_MAX_AGE",
     "REWARD_STATUSES",
     "TERM_MAX",
     "ReferralAttribution",
