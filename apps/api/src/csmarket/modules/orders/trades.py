@@ -178,6 +178,8 @@ def flag(
     trade.attention_reason = reason
     trade.resolved_at = trade.resolved_by = trade.resolved_note = None
     trade.updated_at = now()
+    if reason == "rolled_back" and trade.rolled_back_at is None:
+        trade.rolled_back_at = trade.updated_at
     record_trade_attention(reason)
     return True
 

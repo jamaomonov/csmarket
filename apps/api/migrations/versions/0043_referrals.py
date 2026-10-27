@@ -1,6 +1,7 @@
 """Referrals: partners, the accounts they bring, their rewards and link visits (ADR-0026).
 
-Also widens ``wallet_accounts.kind`` with ``house_referrals``, the credit partner of a reward.
+Also widens ``wallet_accounts.kind`` with ``house_referrals``, the credit partner of a reward,
+and stamps ``rolled_back_at`` on the trade / purchase rows (backfilled from open rollbacks).
 
 Revision ID: 0043_referrals
 Revises: 0042_articles
@@ -25,6 +26,8 @@ _KINDS_OLD = (
     "'house_adjustments_usd', 'house_fx_uzs', 'house_fx_usd'"
 )
 _KINDS_NEW = _KINDS_OLD + ", 'house_referrals'"
+#: Where an order's buy keeps its attention; each gets a never-cleared ``rolled_back_at``.
+_BUY_ROWS = ("skin_trades", "skinslink_purchases", "lisskins_purchases")
 
 
 def _ts(name: str) -> sa.Column[Any]:
@@ -50,6 +53,7 @@ def _partners() -> None:
         sa.Column("percent", sa.Numeric(4, 1), nullable=False),
         sa.Column("term_months", sa.Integer(), nullable=True),
         sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
+        _ts("active_since"),
         sa.Column("note", sa.Text(), nullable=True),
         _ts("created_at"),
         _ts("updated_at"),
@@ -102,6 +106,7 @@ def _rewards() -> None:
         _at("available_at"),
         _at("credited_at", nullable=True),
         sa.Column("cancelled_reason", sa.String(32), nullable=True),
+        _at("checked_at", nullable=True),
         _ts("created_at"),
         sa.CheckConstraint("amount_uzs > 0", name="amount_positive"),
         sa.CheckConstraint("status IN ('held', 'credited', 'cancelled')", name="status"),
@@ -139,6 +144,11 @@ def upgrade() -> None:
     _rewards()
     op.drop_constraint("kind", "wallet_accounts", type_="check")
     op.create_check_constraint("kind", "wallet_accounts", f"kind IN ({_KINDS_NEW})")
+    for table in _BUY_ROWS:
+        op.add_column(table, sa.Column("rolled_back_at", sa.DateTime(timezone=True)))
+        op.execute(
+            f"UPDATE {table} SET rolled_back_at = updated_at WHERE attention_reason = 'rolled_back'"
+        )
 
 
 def downgrade() -> None:
@@ -150,6 +160,8 @@ def downgrade() -> None:
     )
     if found:
         raise RuntimeError("cannot downgrade: house_referrals wallet accounts exist")
+    for table in _BUY_ROWS:
+        op.drop_column(table, "rolled_back_at")
     op.drop_constraint("kind", "wallet_accounts", type_="check")
     op.create_check_constraint("kind", "wallet_accounts", f"kind IN ({_KINDS_OLD})")
     op.drop_table("referral_visit_days")

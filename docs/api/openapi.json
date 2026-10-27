@@ -554,7 +554,8 @@
               "payout_return",
               "payout_return_reversal",
               "fx_convert",
-              "admin_adjust_usd"
+              "admin_adjust_usd",
+              "referral_reward"
             ],
             "title": "Kind",
             "type": "string"
@@ -6589,7 +6590,8 @@
               "payout_return",
               "payout_return_reversal",
               "fx_convert",
-              "admin_adjust_usd"
+              "admin_adjust_usd",
+              "referral_reward"
             ],
             "title": "Kind",
             "type": "string"
@@ -22392,7 +22394,7 @@
     },
     "/api/v1/auth/steam": {
       "post": {
-        "description": "Verify the callback with Steam and open a session.\n\nThe signed ``return_to`` must carry the nonce of this browser's ``csmarket_oid``\ncookie (login-CSRF defence). The nonce is single-use: the cookie is cleared on every\noutcome, so a failure is retried from ``/auth/steam/start``.\n\nA partner link remembered in ``csm_ref`` (``POST /referrals/visit``) ties an account this\nsign-in creates on the storefront to that partner; it is cleared on every outcome too.\n\nKeyless by design: replaying an OpenID assertion is refused by Steam itself\n(``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.",
+        "description": "Verify the callback with Steam and open a session.\n\nThe signed ``return_to`` must carry the nonce of this browser's ``csmarket_oid``\ncookie (login-CSRF defence). The nonce is single-use: the cookie is cleared on every\noutcome, so a failure is retried from ``/auth/steam/start``.\n\nA partner link remembered in ``csm_ref`` (``POST /referrals/visit``) ties an account this\nsign-in creates on the storefront to that partner; it is cleared once a sign-in succeeds\n(a refused attempt keeps it, so the retry is still attributed).\n\nKeyless by design: replaying an OpenID assertion is refused by Steam itself\n(``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.",
         "operationId": "steam_complete_api_v1_auth_steam_post",
         "parameters": [
           {

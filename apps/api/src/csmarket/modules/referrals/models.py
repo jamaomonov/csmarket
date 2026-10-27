@@ -77,6 +77,9 @@ class ReferralPartner(Base):
     #: Months a referred account earns for the partner; ``None`` = forever.
     term_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=sql_text("true"))
+    #: When the partner was last switched on: deliveries before it never earn, so a partner
+    #: switched off and back on is not paid for the days it was off.
+    active_since: Mapped[datetime] = _ts()
     #: The admin's own note; never shown to the partner, never in an audit payload.
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = _ts()
@@ -136,6 +139,9 @@ class ReferralReward(Base):
     available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     credited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    #: When ``settle`` last left it waiting; the never-checked go first, so rewards that can
+    #: only wait (a banned partner, a frozen wallet) never hold up the rest.
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = _ts()
 
     __table_args__ = (

@@ -108,7 +108,7 @@ async def test_cookie_carried_through_the_route_and_cleared(
     assert row.partner_id == partner_id
 
 
-async def test_cookie_cleared_on_refusal(
+async def test_cookie_kept_on_refusal_so_the_retry_still_counts(
     db_session: AsyncSession,
     integration_client: AsyncClient,
     begin_steam: Begin,
@@ -123,4 +123,4 @@ async def test_cookie_cleared_on_refusal(
         "/api/v1/auth/steam", json={"app": "web", "params": steam_assertion(return_to)}
     )
     assert r.status_code == 401
-    assert integration_client.cookies.get("csm_ref") is None
+    assert integration_client.cookies.get("csm_ref") == "refused"

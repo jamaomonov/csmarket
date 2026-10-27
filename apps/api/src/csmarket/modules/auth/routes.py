@@ -99,7 +99,8 @@ async def steam_complete(
     outcome, so a failure is retried from ``/auth/steam/start``.
 
     A partner link remembered in ``csm_ref`` (``POST /referrals/visit``) ties an account this
-    sign-in creates on the storefront to that partner; it is cleared on every outcome too.
+    sign-in creates on the storefront to that partner; it is cleared once a sign-in succeeds
+    (a refused attempt keeps it, so the retry is still attributed).
 
     Keyless by design: replaying an OpenID assertion is refused by Steam itself
     (``check_authentication`` succeeds once), so an ``Idempotency-Key`` adds nothing.
@@ -115,7 +116,6 @@ async def steam_complete(
         await db.rollback()
         refused = await app_error_handler(request, exc)
         clear_oid_cookie(refused, settings=s)
-        refused.delete_cookie(REF_COOKIE)
         return refused
     clear_oid_cookie(response, settings=s)
     response.delete_cookie(REF_COOKIE)

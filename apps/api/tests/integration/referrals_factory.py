@@ -29,6 +29,8 @@ async def make_partner(
         "code": f"p-{owner.id[-12:]}",
         "percent": Decimal("1.0"),
         "term_months": 6,
+        # on long enough that the tests' back-dated deliveries count
+        "active_since": now() - timedelta(days=10 * 365),
     }
     values.update(over)
     partner = ReferralPartner(**values)

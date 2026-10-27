@@ -666,4 +666,4 @@ and leave an audit row `referrals.partner.<verb>` (no note text).
 | `GET /admin/referrals/users/{id}`              | who brought this account, and whether it is a partner                                                                                    |
 
 `POST /auth/steam` reads `csm_ref`: an account this sign-in creates on the storefront is tied to
-that partner; the cookie is cleared on every outcome.
+that partner; the cookie is cleared once a sign-in succeeds (a refused attempt keeps it).

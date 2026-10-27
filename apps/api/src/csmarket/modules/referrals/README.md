@@ -30,8 +30,13 @@ page, the visit), `rewards.py` (`accrue`, `hold_state`, `settle`; the scheduler 
 - A reward per delivered site order (`api_key_id IS NULL`) delivered at or after the
   attribution and before `attributed_at + term_months` (none for forever), from an active,
   unbanned partner; `floor(price_uzs × percent / 100) > 0`. `accrue` looks back 14 days.
-- After `available_at`: `rolled_back` on the trade / purchase (resolved or not) cancels; another
-  open attention, a banned partner or a frozen wallet waits; else credited, once per order.
+- A delivery earns only from `active_since` on (set when the partner is created or switched
+  back on): a partner switched off and on is not paid for the days it was off.
+- After `available_at`: a rollback on the trade / purchase — the `rolled_back` attention now, or
+  ever (`rolled_back_at`, stamped by `orders.trades.flag` and never cleared) — cancels; another
+  open attention, a banned partner or a frozen wallet waits (`checked_at` is stamped, and the
+  never-checked go first, so waiting rows never starve the rest); else credited, once per order.
+- The `csm_ref` cookie is cleared only by a successful sign-in; a refused attempt keeps it.
 - The partner never sees the buyer: its views carry amounts and dates only.
 
 The ledger side is `wallet.credit_referral_reward` (kind `referral_reward`, D `user_wallet` /

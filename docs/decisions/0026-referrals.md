@@ -36,7 +36,7 @@ writes one `held` reward per order, `settle` credits it after the hold as kind `
 
 - `orders` stays unaware of `referrals`; the reward key is the order, so the job is idempotent.
 - The cookie lives on the API host (`HttpOnly`, `Lax`, 30 days), like `csm_aid`; the sign-in call
-  goes there and clears it.
+  goes there and clears it once the sign-in succeeds.
 - A `rolled_back` attention on the order's trade or purchase cancels the reward; another open
   attention, a frozen wallet or a banned partner keeps it waiting.
 

@@ -22,13 +22,12 @@ async def run() -> None:
         async with get_session_factory()() as db:
             await accrue(db)
             result = await settle(db)
-        if result.credited or result.cancelled:
-            log.info(
-                "scheduler.referrals.settled",
-                credited=result.credited,
-                cancelled=result.cancelled,
-                waiting=result.waiting,
-            )
+        log.info(
+            "scheduler.referrals.settled",
+            credited=result.credited,
+            cancelled=result.cancelled,
+            waiting=result.waiting,
+        )
     except Exception:
         log.exception("scheduler.referrals.crashed")
 

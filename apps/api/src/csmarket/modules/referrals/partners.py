@@ -157,8 +157,10 @@ async def _apply(db: AsyncSession, partner: ReferralPartner, patch: PartnerPatch
         changed["percent"] = str(patch.percent)
     if "term_months" in fields:
         partner.term_months = changed["term_months"] = patch.term_months
-    if "active" in fields and patch.active is not None:
+    if "active" in fields and patch.active is not None and patch.active != partner.active:
         partner.active = changed["active"] = patch.active
+        if patch.active:
+            partner.active_since = now()
     if "note" in fields:
         partner.note = patch.note
         changed["note"] = True  # changed, never the text

@@ -10,9 +10,12 @@ from uuid import uuid4
 
 import pytest
 from csmarket.core.clock import now
+from csmarket.modules.orders.trades import flag
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.referrals.models import ReferralPartner, ReferralReward
+from csmarket.modules.referrals.partners import update_partner
 from csmarket.modules.referrals.rewards import accrue, settle
+from csmarket.modules.referrals.schemas import PartnerPatch
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import user_account, user_balance
 from csmarket.modules.wallet.models import WalletTransaction
@@ -220,3 +223,59 @@ async def test_settle_twice_books_once(db_session: AsyncSession) -> None:
         .where(WalletTransaction.kind == "referral_reward")
     )
     assert count == 1
+
+
+async def test_switched_off_then_on_earns_nothing_for_the_off_days(
+    db_session: AsyncSession,
+) -> None:
+    partner, buyer = await _setup(db_session)
+    partner_id = partner.user_id
+    admin_id = (await make_user(db_session)).id
+    await update_partner(
+        db_session, user_id=partner_id, patch=PartnerPatch(active=False), admin_id=admin_id
+    )
+    await db_session.commit()
+    off = (await delivered_order(db_session, user=buyer, days_ago=0)).id
+    await update_partner(
+        db_session, user_id=partner_id, patch=PartnerPatch(active=True), admin_id=admin_id
+    )
+    await db_session.commit()
+    on = (await delivered_order(db_session, user=buyer, days_ago=0)).id
+    assert await accrue(db_session) == 1
+    assert {r.order_id for r in await _rewards(db_session)} == {on}
+    assert off != on
+
+
+async def test_waiting_rewards_do_not_block_the_rest(db_session: AsyncSession) -> None:
+    stuck, buyer = await _setup(db_session)
+    owner = await db_session.get(User, stuck.user_id)
+    assert owner is not None
+    owner.banned_at = now()
+    await db_session.commit()
+    for days in (12, 11):  # the oldest due rows, and they can only wait
+        order = await delivered_order(db_session, user=buyer, days_ago=days)
+        await make_reward(db_session, partner=stuck, order=order)
+    _, fine = await _due(db_session)  # due later than the stuck ones
+    fine_id = fine.order_id
+    first = await settle(db_session, limit=2)
+    second = await settle(db_session, limit=2)
+    assert (first.credited, first.waiting) == (0, 2)
+    assert second.credited == 1
+    status = {r.order_id: r.status for r in await _rewards(db_session)}
+    assert status[fine_id] == "credited"
+
+
+async def test_a_rollback_overwritten_by_another_attention_still_cancels(
+    db_session: AsyncSession,
+) -> None:
+    partner, buyer = await _setup(db_session)
+    order = await delivered_order(db_session, user=buyer, days_ago=9)
+    trade = await make_trade(db_session, order)
+    await make_reward(db_session, partner=partner, order=order)
+    flag(trade, "rolled_back")
+    trade.resolved_at = now()  # the admin resolved it
+    flag(trade, "audit_divergence", reopen=True)  # the audit opens another one on top
+    trade.resolved_at = now()  # …and that is resolved too
+    await db_session.commit()
+    result = await settle(db_session)
+    assert (result.credited, result.cancelled) == (0, 1)

@@ -6,9 +6,13 @@
 
 :func:`settle` takes the rewards whose hold is over:
 
-- a ``rolled_back`` attention on the order's trade or purchase (resolved or not) → ``cancelled``;
+- a ``rolled_back`` attention on the order's trade or purchase, now or ever (``rolled_back_at``,
+  resolved or written over) → ``cancelled``;
 - another unresolved attention, a banned partner or a frozen wallet → stays ``held``;
 - else the wallet is credited (``referral_reward:{order_id}``) and the reward ``credited``.
+
+A waiting reward gets ``checked_at``; each run takes the never-checked first, then the longest
+unchecked, so waiting rows never starve the others.
 """
 
 from __future__ import annotations
@@ -82,6 +86,7 @@ async def accrue(db: AsyncSession) -> int:
             o.api_key_id.is_(None),
             o.delivered_at >= now() - LOOKBACK,
             o.delivered_at >= a.attributed_at,
+            o.delivered_at >= p.active_since,
             p.term_months.is_(None) | (o.delivered_at < term_end),
             p.active.is_(True),
             User.banned_at.is_(None),
@@ -120,12 +125,15 @@ async def hold_state(db: AsyncSession, order_ids: list[str]) -> dict[str, HoldSt
     states: dict[str, HoldState] = dict.fromkeys(order_ids, "clear")
     for table in (SkinTrade, SkinslinkPurchase, LisskinsPurchase):
         found = await db.execute(
-            select(table.order_id, table.attention_reason, table.resolved_at).where(
-                table.order_id.in_(order_ids), table.attention_reason.is_not(None)
+            select(
+                table.order_id, table.attention_reason, table.resolved_at, table.rolled_back_at
+            ).where(
+                table.order_id.in_(order_ids),
+                table.attention_reason.is_not(None) | table.rolled_back_at.is_not(None),
             )
         )
-        for order_id, reason, resolved_at in found.all():
-            if reason == "rolled_back":
+        for order_id, reason, resolved_at, rolled_back_at in found.all():
+            if reason == "rolled_back" or rolled_back_at is not None:
                 states[order_id] = "rolled_back"
             elif resolved_at is None and states[order_id] == "clear":
                 states[order_id] = "open"
@@ -164,7 +172,7 @@ async def settle(db: AsyncSession, *, limit: int = 200) -> SettleResult:
             .join(ReferralPartner, ReferralPartner.user_id == r.partner_id)
             .join(User, User.id == r.partner_id)
             .where(r.status == "held", r.available_at <= now())
-            .order_by(r.available_at)
+            .order_by(r.checked_at.asc().nulls_first(), r.available_at)
             .limit(limit)
             .with_for_update(of=r, skip_locked=True)
         )
@@ -176,11 +184,10 @@ async def settle(db: AsyncSession, *, limit: int = 200) -> SettleResult:
         if state == "rolled_back":
             _cancel(reward, code)
             cancelled += 1
-        elif state == "open" or banned_at is not None:
-            waiting += 1
-        elif await _credit(db, reward, code):
+        elif state != "open" and banned_at is None and await _credit(db, reward, code):
             credited += 1
         else:
+            reward.checked_at = now()
             waiting += 1
     await db.commit()
     return SettleResult(credited=credited, cancelled=cancelled, waiting=waiting)
