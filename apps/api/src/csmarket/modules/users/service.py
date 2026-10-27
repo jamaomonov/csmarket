@@ -35,18 +35,18 @@ def _refresh_profile(user: User, *, display_name: str | None, avatar_url: str | 
     user.updated_at = now()
 
 
-async def upsert_user_by_steam(
+async def sign_in_by_steam(
     db: AsyncSession,
     *,
     steam_id: str,
     display_name: str | None,
     avatar_url: str | None,
-) -> User:
-    """Find-or-create the account for a verified steamid64.
+) -> tuple[User, bool]:
+    """Find-or-create the account for a verified steamid64, saying whether it was created.
 
     Two concurrent first sign-ins for one account both see "not found"; the loser's
     INSERT hits ``uq_users_steam_id`` inside a SAVEPOINT, re-reads the winner's row and
-    continues as an existing account instead of 500ing.
+    continues as an existing account (``created`` is ``False``) instead of 500ing.
 
     Args:
         db: The request's session; flushed, never committed here.
@@ -55,7 +55,7 @@ async def upsert_user_by_steam(
         avatar_url: Steam avatar URL, if Steam gave one.
 
     Returns:
-        The existing or newly created user.
+        The existing or newly created user, and whether this call created it.
     """
     name = safe_display_name(display_name)
     avatar = safe_avatar_url(avatar_url)
@@ -63,7 +63,7 @@ async def upsert_user_by_steam(
     if existing is not None:
         _refresh_profile(existing, display_name=name, avatar_url=avatar)
         await db.flush()
-        return existing
+        return existing, False
     user = User(
         id=new_id(), steam_id=steam_id, display_name=name, avatar_url=avatar, locale="ru", roles=[]
     )
@@ -77,7 +77,22 @@ async def upsert_user_by_steam(
             raise
         _refresh_profile(winner, display_name=name, avatar_url=avatar)
         await db.flush()
-        return winner
+        return winner, False
+    return user, True
+
+
+async def upsert_user_by_steam(
+    db: AsyncSession,
+    *,
+    steam_id: str,
+    display_name: str | None,
+    avatar_url: str | None,
+) -> User:
+    """Find-or-create the account for a verified steamid64 (:func:`sign_in_by_steam` without
+    the ``created`` flag)."""
+    user, _ = await sign_in_by_steam(
+        db, steam_id=steam_id, display_name=display_name, avatar_url=avatar_url
+    )
     return user
 
 
