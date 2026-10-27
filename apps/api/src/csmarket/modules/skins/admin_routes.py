@@ -49,6 +49,7 @@ from csmarket.modules.skins.images import steam_image
 from csmarket.modules.skins.job_status import JOB_IMPORT, JOB_PRICE_SYNC, JobStatus, read_job
 from csmarket.modules.skins.models import SkinItem, SkinSearchAlias
 from csmarket.modules.skins.naming import search_text
+from csmarket.modules.skins.repricing import cost_units
 from csmarket.modules.users.models import User
 
 router = APIRouter(prefix="/admin/skins", tags=["admin"], dependencies=[Depends(require_admin)])
@@ -89,7 +90,11 @@ def _job_out(job: JobStatus | None) -> JobOut | None:
 
 
 def item_out(item: SkinItem) -> AdminSkinItemOut:
-    """One item as the admin search and the pricing override answer it."""
+    """One item as the admin search and the pricing override answer it.
+
+    Cost and count are the storefront's: the cheapest source, every source's stock.
+    """
+    cost = cost_units(item.min_auto_units, item.skinslink_min_units, item.lisskins_min_units)
     return AdminSkinItemOut(
         slug=item.slug,
         name=item.market_hash_name,
@@ -103,10 +108,8 @@ def item_out(item: SkinItem) -> AdminSkinItemOut:
         active=item.active,
         hidden=item.hidden,
         price_usd=None if item.sell_price_usd is None else str(item.sell_price_usd),
-        count=item.count_auto,
-        cost_usd=None
-        if item.min_auto_units is None
-        else _plain(Decimal(item.min_auto_units) / Decimal(1000)),
+        count=item.count_auto + item.skinslink_count + item.lisskins_count,
+        cost_usd=None if cost is None else _plain(Decimal(cost) / Decimal(1000)),
         margin_override_pp=_text(item.margin_override_pp),
         fixed_price_usd=_text(item.fixed_price_usd),
         colors=list(item.colors),

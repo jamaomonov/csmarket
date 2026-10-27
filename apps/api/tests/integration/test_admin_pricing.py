@@ -332,3 +332,56 @@ async def test_customers_are_refused(
         f"{BASE}/pricing/preview", json={"cost_usd": "1", "category": "rifles"}, headers=headers
     )
     assert r.status_code == 403
+
+
+async def _other_sources_item(db: AsyncSession, slug: str, *, stocked: bool) -> None:
+    """Waxpeer has nothing; Skinslink and LIS-SKINS carry the stock (Waxpeer is off)."""
+    db.add(
+        SkinItem(
+            id=new_id(),
+            market_hash_name=slug,
+            phase="",
+            slug=slug,
+            category="knives",
+            weapon="Skeleton Knife",
+            search_text=slug.replace("-", " "),
+            active=True,
+            skinslink_min_units=300_000 if stocked else None,
+            skinslink_count=1 if stocked else 0,
+            lisskins_min_units=250_000 if stocked else None,
+            lisskins_count=2 if stocked else 0,
+            source="bymykel",
+        )
+    )
+    await record_snapshot(db, rate=Decimal("12700"), source="cbu")
+    await db.commit()
+
+
+async def test_preview_costs_a_skin_by_every_source_like_the_storefront(
+    integration_client: AsyncClient, db_session: AsyncSession, admin_headers: Headers
+) -> None:
+    await _other_sources_item(db_session, "skeleton-knife-stained-fn", stocked=True)
+    headers = await admin_headers()
+    await _put_rules(integration_client, headers, _rules())
+    stored = (await _prices(db_session))["skeleton-knife-stained-fn"]
+    r = await integration_client.post(
+        f"{BASE}/pricing/preview", json={"slug": "skeleton-knife-stained-fn"}, headers=headers
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["cost_usd"] == "250"
+    assert Decimal(r.json()["price_usd"]) == stored
+    listed = await integration_client.get(f"{BASE}/items?q=skeleton", headers=headers)
+    [item] = listed.json()["items"]
+    assert (item["cost_usd"], item["count"]) == ("250", 3)
+
+
+async def test_preview_of_a_skin_with_no_offers_is_refused(
+    integration_client: AsyncClient, db_session: AsyncSession, admin_headers: Headers
+) -> None:
+    await _other_sources_item(db_session, "skeleton-knife-empty", stocked=False)
+    headers = await admin_headers()
+    r = await integration_client.post(
+        f"{BASE}/pricing/preview", json={"slug": "skeleton-knife-empty"}, headers=headers
+    )
+    assert r.status_code == 422
+    assert r.json()["code"] == "no_offers"

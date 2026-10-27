@@ -26,6 +26,7 @@ export function errorText(err: unknown): string {
   if (err.code === "idempotency_mismatch") {
     return "Эта операция уже была выполнена с другими данными. Обновите страницу.";
   }
+  if (err.code === "no_offers") return "Сейчас этого скина нет ни у одного поставщика — цены нет.";
   if (err.status === 422) return rulesProblem(err);
   if (err.status === 404) return "Скин не найден.";
   if (err.status === 403) return "Нет доступа.";

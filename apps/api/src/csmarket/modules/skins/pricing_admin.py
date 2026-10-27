@@ -17,7 +17,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.config import get_settings
-from csmarket.core.errors import NotFoundError
+from csmarket.core.errors import NotFoundError, ValidationError
 from csmarket.core.redis import get_redis
 from csmarket.modules.admin.api import record
 from csmarket.modules.fx.api import current_usd_uzs
@@ -29,7 +29,7 @@ from csmarket.modules.skins.admin_schemas import (
 )
 from csmarket.modules.skins.models import SkinItem, SkinPricingRules
 from csmarket.modules.skins.pricing import PricingRules, quote, to_uzs
-from csmarket.modules.skins.repricing import lock_pricing, reprice_rows
+from csmarket.modules.skins.repricing import cost_units, lock_pricing, reprice_rows
 from csmarket.modules.skins.settings import load_rules, read_rules, save_rules
 from csmarket.modules.users.models import User
 
@@ -127,6 +127,8 @@ async def preview(db: AsyncSession, body: PreviewIn) -> PreviewOut:
 
     Raises:
         NotFoundError: ``slug`` names no item.
+        ValidationError: ``code="no_offers"`` — the item has no stock anywhere and the request
+            gave no cost: it has no price to show.
     """
     rules = body.rules or await read_rules(db)
     item = None
@@ -135,7 +137,10 @@ async def preview(db: AsyncSession, body: PreviewIn) -> PreviewOut:
         if item is None:
             raise NotFoundError("skin not found")
     own = _ItemFacts.of(item)
-    cost = _pick(body.cost_usd, own.cost_usd) or Decimal(0)
+    picked = _pick(body.cost_usd, own.cost_usd)
+    if item is not None and picked is None:
+        raise ValidationError("the item has no offers", code="no_offers")
+    cost = picked or Decimal(0)
     q = quote(
         int((cost * _UNITS_PER_USD).to_integral_value(rounding=ROUND_HALF_UP)),
         rules=rules,
@@ -179,12 +184,13 @@ class _ItemFacts:
     def of(cls, item: SkinItem | None) -> _ItemFacts:
         if item is None:
             return cls()
-        units = item.min_auto_units
+        # The storefront's cost and liquidity (``repricing.reprice_rows``): every source.
+        units = cost_units(item.min_auto_units, item.skinslink_min_units, item.lisskins_min_units)
         return cls(
             cost_usd=None if units is None else Decimal(units) / _UNITS_PER_USD,
             category=item.category,
             weapon=item.weapon,
-            count_auto=item.count_auto,
+            count_auto=item.count_auto + item.skinslink_count + item.lisskins_count,
             item_pp=item.margin_override_pp,
             fixed_price_usd=item.fixed_price_usd,
             steam_price_units=item.steam_price_units,
