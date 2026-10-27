@@ -44,6 +44,8 @@ log = get_logger("csmarket.referrals.rewards")
 
 #: How far back :func:`accrue` looks for deliveries; a job down longer than this misses some.
 LOOKBACK = timedelta(days=14)
+#: A reward still held this long past its hold is stuck (alert: ReferralRewardsStuck).
+STUCK_AFTER = timedelta(days=3)
 HoldState = Literal["rolled_back", "open", "clear"]
 
 
@@ -193,4 +195,21 @@ async def settle(db: AsyncSession, *, limit: int = 200) -> SettleResult:
     return SettleResult(credited=credited, cancelled=cancelled, waiting=waiting)
 
 
-__all__ = ["LOOKBACK", "HoldState", "SettleResult", "accrue", "hold_state", "settle"]
+async def stuck_count(db: AsyncSession) -> int:
+    """Rewards still ``held`` :data:`STUCK_AFTER` past their hold (an attention nobody resolves,
+    a frozen wallet, a banned partner, or the job not running)."""
+    r = ReferralReward
+    q = select(func.count()).where(r.status == "held", r.available_at < now() - STUCK_AFTER)
+    return int(await db.scalar(q) or 0)
+
+
+__all__ = [
+    "LOOKBACK",
+    "STUCK_AFTER",
+    "HoldState",
+    "SettleResult",
+    "accrue",
+    "hold_state",
+    "settle",
+    "stuck_count",
+]

@@ -14,7 +14,7 @@ from csmarket.modules.orders.trades import flag
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.referrals.models import ReferralPartner, ReferralReward
 from csmarket.modules.referrals.partners import update_partner
-from csmarket.modules.referrals.rewards import accrue, settle
+from csmarket.modules.referrals.rewards import accrue, settle, stuck_count
 from csmarket.modules.referrals.schemas import PartnerPatch
 from csmarket.modules.users.models import User
 from csmarket.modules.wallet.api import user_account, user_balance
@@ -279,3 +279,13 @@ async def test_a_rollback_overwritten_by_another_attention_still_cancels(
     await db_session.commit()
     result = await settle(db_session)
     assert (result.credited, result.cancelled) == (0, 1)
+
+
+async def test_stuck_counts_held_rewards_days_past_their_hold(db_session: AsyncSession) -> None:
+    partner, buyer = await _setup(db_session)
+    for days in (20, 9):  # due 12 days ago (stuck) and 1 day ago (not yet)
+        order = await delivered_order(db_session, user=buyer, days_ago=days)
+        await make_reward(db_session, partner=partner, order=order)
+    done = await delivered_order(db_session, user=buyer, days_ago=30)
+    await make_reward(db_session, partner=partner, order=done, status="credited")
+    assert await stuck_count(db_session) == 1

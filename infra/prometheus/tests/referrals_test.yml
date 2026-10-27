@@ -1,0 +1,29 @@
+# Unit tests for ../alerts/referrals.yml. Run from the repo root:
+#
+#   docker run --rm -v "$PWD/infra/prometheus:/p" --entrypoint promtool \
+#     prom/prometheus test rules /p/tests/referrals_test.yml
+rule_files:
+  - ../alerts/referrals.yml
+
+evaluation_interval: 1m
+
+tests:
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_referral_rewards_stuck{job="scheduler"}'
+        values: "0 3x200"
+      - series: 'csmarket_referral_rewards_stuck{job="api"}'
+        values: "0x200"
+    alert_rule_test:
+      - eval_time: 100m
+        alertname: ReferralRewardsStuck
+        exp_alerts: []
+      - eval_time: 130m
+        alertname: ReferralRewardsStuck
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "3 partner reward(s) stuck past their hold"
+              description: "Open «Партнёры» in the admin, find the rewards «В ожидании» past their date and follow the runbook: resolve the order's attention, unfreeze the wallet, or check the scheduler's `scheduler.referrals.*` logs.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/referrals.md#stuck"

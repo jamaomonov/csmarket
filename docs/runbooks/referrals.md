@@ -31,6 +31,23 @@ nothing, rewards already held still credit.
   waits and is credited on the first run after it clears.
 - A rollback found after the reward was credited: take it back with «Коррекция баланса».
 
+## Stuck
+
+Alert `ReferralRewardsStuck`: rewards still «В ожидании» 3 days past their date
+(`csmarket_referral_rewards_stuck`, set hourly). The scheduler logs
+`scheduler.referrals.settled` every run with `waiting`; a crash logs
+`scheduler.referrals.accrue_crashed` / `settle_crashed`. Per reward:
+
+- an open attention on its order («Трейды» / the order page) — resolve it; the next run credits;
+- the partner's wallet frozen — unfreeze it, or leave it waiting on purpose;
+- the partner banned — rewards wait until unbanned, or cancel them by hand with the owner.
+
+## Ending a partnership
+
+There is no delete. Switch the partner off: its link stops working and nothing new is earned.
+The account keeps the `partner` role, the «Реферал» page (with «Отключена») and its history.
+There is no tool to take the role away; leave the partner switched off.
+
 ## Risk: a partner buying through its own link
 
 A partner can sign in a second Steam account through its own link and earn on its own buys,

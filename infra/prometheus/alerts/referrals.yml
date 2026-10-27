@@ -1,0 +1,19 @@
+groups:
+  - name: referrals
+    rules:
+      # The gauge comes from the scheduler's hourly `referrals.rewards` job, so the selector is
+      # pinned to job="scheduler": the API and the worker expose it but never set it.
+
+      # A partner reward still held 3 days past its 8-day hold: an attention nobody resolved, a
+      # frozen wallet, a banned partner, or the job not crediting.
+      - alert: ReferralRewardsStuck
+        expr: max(csmarket_referral_rewards_stuck{job="scheduler"}) > 0
+        for: 2h
+        labels: { severity: warn }
+        annotations:
+          summary: '{{ $value | printf "%.0f" }} partner reward(s) stuck past their hold'
+          description: >
+            Open «Партнёры» in the admin, find the rewards «В ожидании» past their date and follow
+            the runbook: resolve the order's attention, unfreeze the wallet, or check the
+            scheduler's `scheduler.referrals.*` logs.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/referrals.md#stuck"

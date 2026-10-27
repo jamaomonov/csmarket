@@ -11,6 +11,7 @@ import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from csmarket.modules.referrals.rewards import SettleResult
 from csmarket_scheduler.jobs import referrals
+from prometheus_client import REGISTRY
 
 
 class _FakeSession:
@@ -44,9 +45,24 @@ async def test_run_accrues_then_settles(monkeypatch: pytest.MonkeyPatch) -> None
     assert calls == ["accrue", "settle"]
 
 
-async def test_run_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_a_failed_accrue_still_settles_and_sets_the_gauge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settle = AsyncMock(return_value=SettleResult())
     monkeypatch.setattr(referrals, "get_session_factory", lambda: _FakeSession)
     monkeypatch.setattr(referrals, "accrue", AsyncMock(side_effect=RuntimeError("db")))
+    monkeypatch.setattr(referrals, "settle", settle)
+    monkeypatch.setattr(referrals, "stuck_count", AsyncMock(return_value=4))
+    await referrals.run()
+    settle.assert_awaited_once()
+    assert REGISTRY.get_sample_value("csmarket_referral_rewards_stuck") == 4
+
+
+async def test_run_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    failing = AsyncMock(side_effect=RuntimeError("db"))
+    monkeypatch.setattr(referrals, "get_session_factory", lambda: _FakeSession)
+    for name in ("accrue", "settle", "stuck_count"):
+        monkeypatch.setattr(referrals, name, failing)
     await referrals.run()
 
 
