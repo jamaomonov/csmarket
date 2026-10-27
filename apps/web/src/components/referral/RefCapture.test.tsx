@@ -30,6 +30,14 @@ describe("RefCapture", () => {
     );
   });
 
+  it("takes an uppercase code as the server does, without keepalive", () => {
+    window.history.replaceState(null, "", "/?ref=ZufarMax");
+    render(<RefCapture />);
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(init.body as string)).toEqual({ code: "zufarmax" }); // our JSON string
+    expect(init.keepalive).toBeUndefined();
+  });
+
   it("ignores a malformed code but still cleans the address", () => {
     window.history.replaceState(null, "", "/?ref=Bad%20Code!");
     render(<RefCapture />);

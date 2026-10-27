@@ -73,7 +73,6 @@ export function rememberVisit(code: string): void {
   void fetch(`${API_BASE}/api/v1/referrals/visit`, {
     method: "POST",
     credentials: "include",
-    keepalive: true,
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ code }),
   }).catch(() => undefined);
