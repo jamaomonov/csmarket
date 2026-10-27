@@ -11,6 +11,7 @@ import re
 from decimal import Decimal
 
 from sqlalchemy import exists, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
@@ -54,6 +55,25 @@ def clean_code(raw: str) -> str:
             "the code must be 3–32 latin letters, digits or -", code="code_invalid"
         )
     return code
+
+
+async def _existing(db: AsyncSession, user_id: str) -> ReferralPartner | None:
+    return await db.get(ReferralPartner, user_id)
+
+
+async def _save(db: AsyncSession, partner: ReferralPartner, *, new: bool) -> None:
+    """Write ``partner`` in a savepoint; a lost race on the code or the account is 409, not 500
+    (two admin tabs pass the checks at once and the unique index decides)."""
+    try:
+        async with db.begin_nested():
+            if new:
+                db.add(partner)
+            await db.flush()
+    except IntegrityError as exc:
+        holder = select(ReferralPartner.user_id).where(ReferralPartner.user_id == partner.user_id)
+        if new and await db.scalar(holder) is not None:
+            raise ConflictError("the account is a partner already", code="partner_exists") from exc
+        raise ConflictError("this code is taken", code="code_taken") from exc
 
 
 async def _code_free(db: AsyncSession, code: str, *, mine: str | None = None) -> None:
@@ -109,7 +129,7 @@ async def create_partner(db: AsyncSession, *, body: PartnerIn, admin_id: str) ->
     user = await get_user_by_id(db, body.user_id)
     if user is None:
         raise NotFoundError("no such account", code="user_not_found")
-    if await db.get(ReferralPartner, user.id) is not None:
+    if await _existing(db, user.id) is not None:
         raise ConflictError("the account is a partner already", code="partner_exists")
     await _code_free(db, code)
     partner = ReferralPartner(
@@ -119,8 +139,7 @@ async def create_partner(db: AsyncSession, *, body: PartnerIn, admin_id: str) ->
         term_months=body.term_months,
         note=body.note,
     )
-    db.add(partner)
-    await db.flush()
+    await _save(db, partner, new=True)
     await db.refresh(partner)
     await set_roles(db, user, [*user.roles, PARTNER_ROLE])
     payload: AuditPayload = {
@@ -181,7 +200,7 @@ async def update_partner(
     changed = await _apply(db, partner, patch)
     if changed:
         partner.updated_at = now()
-        await db.flush()
+        await _save(db, partner, new=False)
         await record(
             db,
             actor_id=admin_id,

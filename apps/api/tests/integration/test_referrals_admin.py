@@ -7,8 +7,11 @@ from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+from csmarket.core.errors import ConflictError
 from csmarket.modules.admin.models import AdminAuditLog
+from csmarket.modules.referrals import partners
 from csmarket.modules.referrals.models import ReferralPartner
+from csmarket.modules.referrals.schemas import PartnerIn
 from csmarket.modules.users.models import User
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -236,3 +239,37 @@ async def test_customers_get_403(
 ) -> None:
     h = await customer_headers()
     assert (await integration_client.get(f"{BASE}/partners", headers=h)).status_code == 403
+
+
+async def test_a_lost_race_is_409_not_500(
+    db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Two admin tabs create at once: both pass the checks, the database decides."""
+    admin = await make_user(db_session)
+    taken = await make_partner(db_session, code="raced")
+    newcomer = await make_user(db_session)
+    admin_id, newcomer_id, taken_id = admin.id, newcomer.id, taken.user_id
+
+    async def _free(*_: object, **__: object) -> None:
+        return None
+
+    async def _none(*_: object, **__: object) -> None:
+        return None
+
+    monkeypatch.setattr(partners, "_code_free", _free)
+    with pytest.raises(ConflictError) as code:
+        await partners.create_partner(
+            db_session,
+            body=PartnerIn(user_id=newcomer_id, code="raced", percent=Decimal("1")),
+            admin_id=admin_id,
+        )
+    assert code.value.extra["code"] == "code_taken"
+    monkeypatch.setattr(partners, "_existing", _none)
+    db_session.expunge_all()  # the other tab's session never saw the row
+    with pytest.raises(ConflictError) as dup:
+        await partners.create_partner(
+            db_session,
+            body=PartnerIn(user_id=taken_id, code="fresh-one", percent=Decimal("1")),
+            admin_id=admin_id,
+        )
+    assert dup.value.extra["code"] == "partner_exists"
