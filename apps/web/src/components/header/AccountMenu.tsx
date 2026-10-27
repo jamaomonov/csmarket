@@ -4,11 +4,12 @@ import { Dropdown, type DropdownLinkProps } from "@csmarket/ui";
 import { ChevronDown, LogOut } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-import { ACCOUNT_NAV } from "./nav";
+import { accountNav } from "./nav";
 
 import { UserAvatar } from "@/components/account/UserAvatar";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth";
+import { isPartner } from "@/lib/referrals";
 
 /** next-intl's locale-aware Link, shaped for `Dropdown`. */
 export function AppLink({ href, children, ...rest }: DropdownLinkProps) {
@@ -36,7 +37,7 @@ export function AccountMenu() {
         </>
       }
       items={[
-        ...ACCOUNT_NAV.map((entry) => ({
+        ...accountNav(isPartner(user)).map((entry) => ({
           key: entry.key,
           label: t(entry.key),
           href: entry.href,

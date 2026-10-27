@@ -6,7 +6,7 @@ import { Languages, LogOut, Menu } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { AppLink } from "./AccountMenu";
-import { ACCOUNT_NAV, mainNav, type NavEntry } from "./nav";
+import { accountNav, mainNav, type NavEntry } from "./nav";
 import { SteamIcon } from "../icons/SteamIcon";
 
 import type { ReactNode } from "react";
@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { getPathname, usePathname } from "@/i18n/navigation";
 import { pageLanguages, switchTarget } from "@/lib/articles";
 import { useAuth } from "@/lib/auth";
+import { isPartner } from "@/lib/referrals";
 
 interface MobileMenuProps {
   locale: string;
@@ -25,7 +26,7 @@ interface MobileMenuProps {
 /** Phones: one ☰ menu with the nav, the languages and the account. */
 export function MobileMenu({ locale, avatar, articles = false }: MobileMenuProps) {
   const t = useTranslations("web.nav");
-  const { status, signInHref, signOut } = useAuth();
+  const { status, user, signInHref, signOut } = useAuth();
   const pathname = usePathname();
   const link = (entry: NavEntry) => ({
     key: entry.key,
@@ -50,7 +51,7 @@ export function MobileMenu({ locale, avatar, articles = false }: MobileMenuProps
     { key: "s2", separator: true },
     ...(status === "signed_in"
       ? [
-          ...ACCOUNT_NAV.map(link),
+          ...accountNav(isPartner(user)).map(link),
           {
             key: "out",
             label: t("signOut"),

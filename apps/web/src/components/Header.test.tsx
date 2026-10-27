@@ -51,7 +51,7 @@ describe("Header", () => {
   it("shows the balance chip and the account menu to a signed-in user", () => {
     auth.value = {
       status: "signed_in",
-      user: { display_name: "Player", avatar_url: null },
+      user: { display_name: "Player", avatar_url: null, roles: [] },
       signInHref: () => "",
       signOut: () => Promise.resolve(),
     };

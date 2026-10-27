@@ -6,7 +6,7 @@ import { ApiKeyCard } from "./ApiKeyCard";
 import { CardsList } from "./CardsList";
 import { EmailForm } from "./EmailForm";
 import { ProfileHero } from "./ProfileHero";
-import { ProfileSetup, ReferralTeaser, type SetupStep } from "./ProfileSetup";
+import { ProfileSetup, type SetupStep } from "./ProfileSetup";
 import { SettingsPanel } from "./SettingsCard";
 import { TradeLinkForm } from "./TradeLinkForm";
 
@@ -99,7 +99,6 @@ export function ProfileView({ locale }: ProfileViewProps) {
         </div>
         <aside className="flex flex-col gap-6 lg:sticky lg:top-24">
           <ProfileSetup steps={steps} />
-          <ReferralTeaser />
         </aside>
       </div>
     </div>

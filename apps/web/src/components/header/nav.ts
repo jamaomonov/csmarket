@@ -64,6 +64,11 @@ export const ACCOUNT_NAV: NavEntry[] = [
   { key: "referral", href: REFERRAL, icon: Gift },
 ];
 
+/** The account menu for this account: «Реферал» only for a partner (the admin makes one). */
+export function accountNav(isPartner: boolean): NavEntry[] {
+  return isPartner ? ACCOUNT_NAV : ACCOUNT_NAV.filter((entry) => entry.key !== "referral");
+}
+
 /** «Трейды» is the list and every order and sale page it opens. */
 const TRADE_PATHS = ["/orders", "/account/sales"];
 

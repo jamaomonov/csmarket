@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import { Analytics } from "@/components/Analytics";
 import { Header } from "@/components/Header";
 import { Providers } from "@/components/Providers";
+import { RefCapture } from "@/components/referral/RefCapture";
 import { routing } from "@/i18n/routing";
 import { sectionsIn } from "@/lib/articles";
 import { fetchArticleLocales } from "@/lib/articles-server";
@@ -89,6 +90,7 @@ export default async function LocaleLayout({
           </Providers>
         </NextIntlClientProvider>
         <Analytics />
+        <RefCapture />
       </body>
     </html>
   );
