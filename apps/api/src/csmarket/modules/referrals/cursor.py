@@ -61,11 +61,12 @@ def decode(token: str) -> RewardCursor:
     try:
         padded = token + "=" * (-len(token) % 4)
         stamp, tie = json.loads(base64.urlsafe_b64decode(padded).decode())
-        if not isinstance(tie, str) or not _TIE.fullmatch(tie):
-            raise ValueError("tie")
-        return RewardCursor(datetime.fromisoformat(stamp), tie)
+        at = datetime.fromisoformat(stamp)
     except (binascii.Error, ValueError, UnicodeDecodeError, TypeError, AttributeError) as exc:
         raise ValidationError("invalid cursor", code="cursor") from exc
+    if not isinstance(tie, str) or not _TIE.fullmatch(tie):
+        raise ValidationError("invalid cursor", code="cursor")
+    return RewardCursor(at, tie)
 
 
 def after(token: str | None, tie: ColumnElement[str]) -> ColumnElement[bool] | None:
