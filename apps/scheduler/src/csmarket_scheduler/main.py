@@ -48,6 +48,7 @@ from csmarket_scheduler.jobs import (
     payment_holds,
     public_feed,
     purge_refresh_tokens,
+    referrals,
     reviews,
     sales_poll,
     skins_catalog_import,
@@ -103,6 +104,7 @@ def build_scheduler() -> AsyncIOScheduler:
     p2p_sweep.register(scheduler)
     payment_holds.register(scheduler)
     reviews.register(scheduler)
+    referrals.register(scheduler)
     return scheduler
 
 
