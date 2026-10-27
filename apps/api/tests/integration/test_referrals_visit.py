@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import UTC, date, datetime
+
 import pytest
 from csmarket.core import redis as core_redis
+from csmarket.modules.referrals import visits
 from csmarket.modules.referrals.models import ReferralVisitDay
 from httpx import AsyncClient
 from redis.exceptions import ConnectionError as RedisConnectionError
@@ -77,3 +80,18 @@ async def test_redis_down_still_204(
     assert r.status_code == 204
     assert integration_client.cookies.get("csm_ref") == "no-redis"
     assert await _visits(db_session, partner.user_id) == 0
+
+
+async def test_the_visit_day_is_tashkents(
+    db_session: AsyncSession, integration_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """00:30 on 1 November in Tashkent is still 31 October in UTC: the visit is November's."""
+    partner = await make_partner(db_session, code="tz-visit")
+    partner_id = partner.user_id
+    monkeypatch.setattr(visits, "now", lambda: datetime(2026, 10, 31, 19, 30, tzinfo=UTC))
+    await integration_client.post(URL, json={"code": "tz-visit"})
+    db_session.expire_all()
+    day = await db_session.scalar(
+        select(ReferralVisitDay.day).where(ReferralVisitDay.partner_id == partner_id)
+    )
+    assert day == date(2026, 11, 1)
