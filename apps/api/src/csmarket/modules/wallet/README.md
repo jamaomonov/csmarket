@@ -62,6 +62,7 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
 | `provider_clearing`       | `provider` / `click`, `payme`, `uzum` | C           | What a kassa collected for us               |
 | `house_payments_received` | `house` / `house`                     | D           | Orders paid from the balance (M4a)          |
 | `house_adjustments`       | `house` / `house`                     | D           | Contra-account of admin balance adjustments |
+| `house_referrals`         | `house` / `house`                     | C           | What partners were paid (spec 2026-10-27)   |
 
 ## Transaction kinds and keys
 
@@ -72,6 +73,10 @@ domain-pure (no other domain module); only `wallet.routes` imports `auth.api` an
 | `admin_adjust`   | credit: D `user_wallet` / C `house_adjustments`; clawback: the mirror                                                       | `admin_adjust:{idempotency_key}` |
 | `purchase`       | D `house_payments_received` / C `user_wallet` (an order paid from the balance)                                              | `purchase:order:{order_id}`      |
 | `refund`         | balance-paid order: D `user_wallet` / C `house_payments_received`; kassa-paid: D `user_wallet` / C `provider_clearing` (R9) | `refund:order:{order_id}`        |
+
+**Referrals (2026-10-27):** kind `referral_reward`, D `user_wallet` / C `house_referrals`, key
+`referral_reward:{order_id}`, reference `("referral", order_id)` — the partner's history shows
+no order number. `credit_referral_reward` (`referrals.py`) books it.
 
 USD variants of the same two kinds (an API order, ADR-0017; the account's currency decides):
 

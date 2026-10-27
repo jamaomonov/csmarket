@@ -33,7 +33,8 @@ from csmarket.core.db import Base
 
 #: Who may own an account (ruling R2).
 OWNER_TYPES = ("user", "house", "provider")
-#: Account kinds (ruling R2; ``house_skin_buys`` since spec 2026-10-08); their normal sides
+#: Account kinds (ruling R2; ``house_skin_buys`` since spec 2026-10-08, ``house_referrals`` since
+#: spec 2026-10-27); their normal sides
 #: live in ``service.NORMAL_SIDE``.
 ACCOUNT_KINDS = (
     "user_wallet",
@@ -46,6 +47,7 @@ ACCOUNT_KINDS = (
     "house_adjustments_usd",
     "house_fx_uzs",
     "house_fx_usd",
+    "house_referrals",
 )
 CURRENCIES = ("UZS", "USD")
 ACCOUNT_STATUSES = ("active", "frozen")

@@ -24,6 +24,7 @@ from csmarket.modules.p2p import models as _p2p_models  # noqa: F401
 from csmarket.modules.payme import models as _payme_models  # noqa: F401
 from csmarket.modules.payments import models as _payments_models  # noqa: F401
 from csmarket.modules.public_api import models as _public_api_models  # noqa: F401
+from csmarket.modules.referrals import models as _referrals_models  # noqa: F401
 from csmarket.modules.reviews import models as _reviews_models  # noqa: F401
 from csmarket.modules.risk import models as _risk_models  # noqa: F401
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
