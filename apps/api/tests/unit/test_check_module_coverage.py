@@ -25,6 +25,7 @@ MODULES = (
     "risk",
     "reviews",
     "articles",
+    "referrals",
 )
 
 
