@@ -121,3 +121,45 @@ class UserReferralOut(BaseModel):
     partner: PartnerRefOut | None
     attributed_at: datetime | None
     is_partner: bool
+
+
+class Counts(BaseModel):
+    """A partner's numbers over a period."""
+
+    visits: int
+    accounts: int
+    purchases: int
+    #: Held and credited rewards, soʻm.
+    earned_uzs: str
+
+
+class PartnerMeOut(BaseModel):
+    """«Реферал» for the partner itself: its terms, this month and all time, its money."""
+
+    code: str
+    percent: Decimal
+    term_months: int | None
+    active: bool
+    month: Counts
+    all_time: Counts
+    held_uzs: str
+    #: When the next held reward becomes available; ``null`` with none held.
+    next_available_at: datetime | None
+    credited_uzs: str
+
+
+class PartnerRewardOut(BaseModel):
+    """A reward as the partner sees it: amounts and dates, never the buyer or the order."""
+
+    delivered_at: datetime
+    base_uzs: str
+    amount_uzs: str
+    status: RewardStatus
+    available_at: datetime
+
+
+class PartnerRewardsOut(BaseModel):
+    """A page of the partner's rewards, newest first."""
+
+    items: list[PartnerRewardOut]
+    next_cursor: str | None

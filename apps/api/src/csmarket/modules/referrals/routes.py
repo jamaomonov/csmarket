@@ -4,20 +4,24 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.api.v1.deps import db_session
 from csmarket.core.client_ip import client_ip
 from csmarket.core.config import get_settings
-from csmarket.modules.auth.api import guard_ip
+from csmarket.modules.auth.api import current_user, guard_ip
+from csmarket.modules.referrals import me
 from csmarket.modules.referrals.models import REF_COOKIE, REF_MAX_AGE
+from csmarket.modules.referrals.schemas import PartnerMeOut, PartnerRewardsOut
 from csmarket.modules.referrals.visits import count_visit, earning_partner
+from csmarket.modules.users.api import User
 
 router = APIRouter(prefix="/referrals", tags=["referrals"])
 
 Db = Annotated[AsyncSession, Depends(db_session, scope="function")]
+Me = Annotated[User, Depends(current_user)]
 
 
 class VisitIn(BaseModel):
@@ -54,3 +58,27 @@ async def post_visit(body: VisitIn, request: Request, db: Db) -> Response:
         samesite="lax",
     )
     return response
+
+
+@router.get(
+    "/me",
+    response_model=PartnerMeOut,
+    responses={404: {"description": "`not_a_partner`"}},
+    summary="My partner page",
+)
+async def get_me(user: Me, db: Db) -> PartnerMeOut:
+    """The partner's terms, this month and all time, money held and credited."""
+    return await me.overview(db, user.id)
+
+
+@router.get(
+    "/me/rewards",
+    response_model=PartnerRewardsOut,
+    responses={404: {"description": "`not_a_partner`"}, 422: {"description": "`cursor`"}},
+    summary="My rewards",
+)
+async def get_my_rewards(
+    user: Me, db: Db, cursor: Annotated[str | None, Query(max_length=200)] = None
+) -> PartnerRewardsOut:
+    """20 rewards a page, newest first: amounts and dates, never the buyer."""
+    return await me.rewards(db, user.id, after=cursor)
