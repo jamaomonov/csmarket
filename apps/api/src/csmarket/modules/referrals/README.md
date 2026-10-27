@@ -14,7 +14,7 @@ their site balance after an 8-day hold (spec `2026-10-27-referrals-design.md`, A
   `available_at = delivered_at + 8 days`.
 - `referral_visit_days` — link visits per partner per UTC day.
 
-**Interface (`api.py`):** the four models, `REF_COOKIE`, `credited_between` (analytics'
+**Interface (`api.py`):** the four models, `REF_COOKIE`, `credited_between`, `restart_after_unban` (analytics'
 «Партнёрам»). `auth.service.steam_login` calls `attribution.attribute_new` for an account its
 sign-in created on the storefront.
 
@@ -30,8 +30,9 @@ page, the visit), `rewards.py` (`accrue`, `hold_state`, `settle`; the scheduler 
 - A reward per delivered site order (`api_key_id IS NULL`) delivered at or after the
   attribution and before `attributed_at + term_months` (none for forever), from an active,
   unbanned partner; `floor(price_uzs × percent / 100) > 0`. `accrue` looks back 14 days.
-- A delivery earns only from `active_since` on (set when the partner is created or switched
-  back on): a partner switched off and on is not paid for the days it was off.
+- A delivery earns only from `active_since` on (set when the partner is created, switched back
+  on, or its account unbanned — `admin.users_service.unban` calls `restart_after_unban`): the
+  days it was off or banned never pay.
 - After `available_at`: a rollback on the trade / purchase — the `rolled_back` attention now, or
   ever (`rolled_back_at`, stamped by `orders.trades.flag` and never cleared) — cancels; another
   open attention, a banned partner or a frozen wallet waits (`checked_at` is stamped, and the

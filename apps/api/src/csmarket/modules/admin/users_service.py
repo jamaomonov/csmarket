@@ -39,6 +39,7 @@ from csmarket.modules.auth.api import revoke_all_sessions
 from csmarket.modules.orders.api import Order
 from csmarket.modules.payments.api import Payment, WalletTopup
 from csmarket.modules.public_api.api import ApiKey
+from csmarket.modules.referrals.api import restart_after_unban
 from csmarket.modules.users.api import User
 from csmarket.modules.wallet.api import (
     admin_adjust,
@@ -285,6 +286,7 @@ async def unban(db: AsyncSession, *, admin: User, user: User, reason: str) -> No
     user.banned_at = None
     user.ban_reason = None
     user.updated_at = now()
+    await restart_after_unban(db, user_id=user.id)
     await record(
         db,
         actor_id=admin.id,

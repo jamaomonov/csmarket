@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import pytest
 from csmarket.core.clock import now
+from csmarket.modules.admin.users_service import unban
 from csmarket.modules.orders.trades import flag
 from csmarket.modules.public_api.models import ApiKey
 from csmarket.modules.referrals.models import ReferralPartner, ReferralReward
@@ -289,3 +290,21 @@ async def test_stuck_counts_held_rewards_days_past_their_hold(db_session: AsyncS
     done = await delivered_order(db_session, user=buyer, days_ago=30)
     await make_reward(db_session, partner=partner, order=done, status="credited")
     assert await stuck_count(db_session) == 1
+
+
+async def test_unbanned_partner_earns_nothing_for_the_ban_days(db_session: AsyncSession) -> None:
+    partner, buyer = await _setup(db_session)
+    admin = await make_user(db_session)
+    owner = await db_session.get(User, partner.user_id)
+    assert owner is not None
+    owner.banned_at = now()
+    await db_session.commit()
+    banned_day = (await delivered_order(db_session, user=buyer, days_ago=0)).id
+    owner = await db_session.get(User, partner.user_id)
+    assert owner is not None
+    await unban(db_session, admin=admin, user=owner, reason="разобрались")
+    await db_session.commit()
+    after = (await delivered_order(db_session, user=buyer, days_ago=0)).id
+    assert await accrue(db_session) == 1
+    assert {r.order_id for r in await _rewards(db_session)} == {after}
+    assert banned_day != after
