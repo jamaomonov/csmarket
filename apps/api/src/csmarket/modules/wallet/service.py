@@ -51,6 +51,9 @@ NORMAL_SIDE: dict[str, Direction] = {
     # A conversion's counter-accounts: soʻm in (D-normal), dollars out (C-normal).
     "house_fx_uzs": "D",
     "house_fx_usd": "C",
+    # Credit partner of ``user_wallet`` when a partner is paid its referral reward
+    # (spec 2026-10-27): grows with what partners were paid.
+    "house_referrals": "C",
 }
 
 Currency = Literal["UZS", "USD"]
@@ -74,6 +77,7 @@ TX_KINDS: tuple[str, ...] = (
     "payout_return_reversal",
     "fx_convert",
     "admin_adjust_usd",
+    "referral_reward",
 )
 
 #: ``numeric(14,0)`` holds at most 14 digits.

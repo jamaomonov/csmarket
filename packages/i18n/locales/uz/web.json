@@ -103,8 +103,6 @@
       "copied": "Nusxalandi",
       "steamProfile": "Steam profili",
       "yourAccount": "Hisobingiz",
-      "referralTitle": "Referal kod",
-      "referralHint": "Referal dasturi tez orada paydo boʻladi.",
       "nav": "Profil boʻlimlari",
       "edit": "Oʻzgartirish",
       "cancel": "Bekor qilish",
@@ -151,7 +149,8 @@
       "payout_return": "Balansga toʻlov",
       "payout_return_reversal": "Balansga toʻlov bekor qilindi",
       "fx_convert": "USD ga oʻtkazma",
-      "admin_adjust_usd": "USD tuzatish"
+      "admin_adjust_usd": "USD tuzatish",
+      "referral_reward": "Hamkorlik daromadi"
     },
     "topup": {
       "waiting": "Toʻlov kutilmoqda",
@@ -1138,5 +1137,39 @@
     "likes": "{n, plural, other {# ta yoqtirish}}",
     "empty": "Hozircha bu yerda maqolalar yoʻq.",
     "author": "csmarket tahririyati"
+  },
+  "referral": {
+    "title": "Hamkorlik dasturi",
+    "signedOut": "Hamkor sahifasini ochish uchun kiring.",
+    "invite": "Hamkorlik dasturi taklif bo'yicha ishlaydi. Kanalingiz, hamjamiyatingiz yoki kompyuter klubingiz bo'lsa — qo'llab-quvvatlash xizmatiga yozing.",
+    "error": "Sahifani yuklab bo'lmadi. Birozdan keyin yangilang.",
+    "link": "Sizning havolangiz",
+    "linkHint": "Havolani ulashing: u orqali ro'yxatdan o'tganlarning xaridlaridan balansingizga foiz tushadi.",
+    "copy": "Nusxa olish",
+    "copied": "Nusxa olindi",
+    "terms": "Xaridlardan {percent} % · {term}",
+    "months": "{count, plural, one {# oy} other {# oy}}",
+    "forever": "muddatsiz",
+    "off": "O'chirilgan",
+    "offHint": "Yangi xaridlar hozir hisoblanmaydi. Kutilayotgan to'lovlar tushadi.",
+    "held": "Kutilmoqda",
+    "nextAt": "Eng yaqin to'lov {date}",
+    "credited": "Hisoblandi",
+    "creditedHint": "Balansda",
+    "month": "Shu oy",
+    "allTime": "Butun davr",
+    "visits": "O'tishlar",
+    "accounts": "Yangi akkauntlar",
+    "purchases": "Xaridlar",
+    "earned": "Ishlab topildi",
+    "rewards": "To'lovlar",
+    "rewardsEmpty": "Hozircha to'lovlar yo'q.",
+    "purchase": "{sum} lik xarid",
+    "status": {
+      "held": "{date} gacha kutilmoqda",
+      "credited": "Hisoblandi",
+      "cancelled": "Bekor qilindi"
+    },
+    "more": "Yana ko'rsatish"
   }
 }

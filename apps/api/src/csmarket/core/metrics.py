@@ -318,6 +318,11 @@ REVIEWS_BAD_OPEN = Gauge(
     "Bad reviews (1–3 stars) no admin has resolved yet (no alert: the admin menu counts them;"
     " set by the scheduler's reviews job).",
 )
+REFERRAL_REWARDS_STUCK = Gauge(
+    "csmarket_referral_rewards_stuck",
+    "Partner rewards still held 3 days past their hold (alert: ReferralRewardsStuck; set by the"
+    " scheduler's referrals.rewards job).",
+)
 SALE_HOLDS_OVERDUE = Gauge(
     "csmarket_sale_holds_overdue",
     "Sales still in hold 6 h past their hold end (alert: SaleHoldOverdue; set by sales.poll).",
@@ -619,6 +624,18 @@ def set_reviews_bad_open(count: int) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_reviews_bad_open", error=type(exc).__name__
+        )
+
+
+def set_referral_rewards_stuck(count: int) -> None:
+    """Set how many partner rewards are stuck past their hold. Never raises."""
+    try:
+        REFERRAL_REWARDS_STUCK.set(count)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed",
+            metric="csmarket_referral_rewards_stuck",
+            error=type(exc).__name__,
         )
 
 

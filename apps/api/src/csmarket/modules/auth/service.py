@@ -33,7 +33,14 @@ from csmarket.modules.auth import jwt as authjwt
 from csmarket.modules.auth import steam
 from csmarket.modules.auth.models import RefreshToken
 from csmarket.modules.auth.security import hash_token, new_refresh_token
-from csmarket.modules.users.api import User, get_user_by_id, set_roles, upsert_user_by_steam
+from csmarket.modules.referrals.attribution import attribute_new
+from csmarket.modules.users.api import (
+    User,
+    get_user_by_id,
+    set_roles,
+    sign_in_by_steam,
+    upsert_user_by_steam,
+)
 
 log = get_logger("csmarket.auth.service")
 
@@ -129,6 +136,7 @@ async def steam_login(
     settings: Settings | None = None,
     verifier: SteamVerifier | None = None,
     persona: PersonaFetcher | None = None,
+    ref_code: str | None = None,
 ) -> SessionTokens:
     """Verify a Steam OpenID callback for ``app`` and open a session.
 
@@ -145,6 +153,8 @@ async def steam_login(
         settings: Overrides the process settings; for tests.
         verifier: Replaces :func:`steam.verify_callback`; for tests.
         persona: Replaces :func:`steam.fetch_persona`; for tests.
+        ref_code: The partner link this browser came by (``csm_ref``); ties the account to
+            that partner when this sign-in creates it on the storefront.
 
     Returns:
         The new session's tokens.
@@ -175,9 +185,11 @@ async def steam_login(
     if s.steam_api_key:
         fetch = persona or steam.fetch_persona
         name, avatar = await fetch(steam_id, api_key=s.steam_api_key)
-    user = await upsert_user_by_steam(
+    user, created = await sign_in_by_steam(
         db, steam_id=str(steam_id), display_name=name, avatar_url=avatar
     )
+    if created and app == "web":
+        await attribute_new(db, user=user, code=ref_code)
     return await open_session(db, user=user, settings=s)
 
 

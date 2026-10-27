@@ -8,7 +8,12 @@ import { describe, expect, it, vi } from "vitest";
 import { MobileMenu } from "./MobileMenu";
 
 vi.mock("@/lib/auth", () => ({
-  useAuth: () => ({ status: "signed_in", signInHref: () => "", signOut: () => Promise.resolve() }),
+  useAuth: () => ({
+    status: "signed_in",
+    user: { roles: ["partner"] },
+    signInHref: () => "",
+    signOut: () => Promise.resolve(),
+  }),
 }));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (

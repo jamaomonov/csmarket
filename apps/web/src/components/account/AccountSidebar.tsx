@@ -3,8 +3,10 @@
 import { cn } from "@csmarket/ui";
 import { useTranslations } from "next-intl";
 
-import { ACCOUNT_NAV, isCurrent } from "@/components/header/nav";
+import { accountNav, isCurrent } from "@/components/header/nav";
 import { Link, usePathname } from "@/i18n/navigation";
+import { useAuth } from "@/lib/auth";
+import { isPartner } from "@/lib/referrals";
 
 const item = (on: boolean) =>
   cn(
@@ -17,12 +19,13 @@ export function AccountSidebar() {
   const t = useTranslations("web.nav");
   const a = useTranslations("web.account");
   const pathname = usePathname();
+  const { user } = useAuth();
   return (
     <nav
       aria-label={a("profile.nav")}
       className="border-border -mx-4 flex gap-6 overflow-x-auto border-b px-4 [scrollbar-width:none] sm:mx-0 sm:px-0"
     >
-      {ACCOUNT_NAV.map((entry) => {
+      {accountNav(isPartner(user)).map((entry) => {
         // The profile is /account itself, not everything under it.
         const on = entry.href === "/account" ? pathname === "/account" : isCurrent(entry, pathname);
         return (

@@ -43,6 +43,7 @@ const KINDS: Record<string, string> = {
   purchase: "Покупка",
   refund: "Возврат на баланс",
   sale_credit: "Продажа скинов",
+  referral_reward: "Партнёрское начисление",
   payout_return: "Выплата на баланс",
   payout_return_reversal: "Отмена выплаты на баланс",
   fx_convert: "Перевод в USD",

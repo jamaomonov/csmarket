@@ -4,7 +4,7 @@ Owns the `users` table: one row per customer, keyed by `steam_id` (steamid64 as 
 Steam is the only identity; roles (`admin`) live in `users.roles`.
 
 - **Public interface:** `users.api` — `User`, `STEAM64_BASE`, `get_user_by_id`,
-  `get_user_by_steam_id`, `upsert_user_by_steam`, `set_roles`. Other modules import
+  `get_user_by_steam_id`, `sign_in_by_steam` (also says whether it created the account), `upsert_user_by_steam`, `set_roles`. Other modules import
   nothing else from here.
 - **Sign-in upsert:** `upsert_user_by_steam` finds or creates the account and refreshes the
   profile; a concurrent first sign-in loses the INSERT race inside a SAVEPOINT and continues

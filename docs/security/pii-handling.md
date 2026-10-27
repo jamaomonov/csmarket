@@ -244,3 +244,13 @@ form (`••••XY`) for disputes; the purchase stays findable at Waxpeer by 
 `orders.erase`) rewrites `orders.trade_link` to the masked form and stamps
 `trade_link_erased_at`; a value that does not parse becomes `erased`. The same job drops a
 `verify` outbox row's address a week after it was queued (its link dies after 24 h).
+
+## Referrals (2026-10-27)
+
+- `referral_attributions` links a referred account to its partner's account. Admins see it on
+  the user card; the partner never sees who it brought: its page and `/referrals/me/rewards`
+  carry amounts and dates only — no name, Steam ID or order number.
+- A link visit is counted per visitor per day by a salted digest in Redis
+  (`referrals:visited:*`); the IP is never stored or logged. The `csm_ref` cookie (HttpOnly,
+  30 days, API host) holds only the partner's public code and is cleared at sign-in.
+- Logs name the partner's code and amounts, never the buyer.

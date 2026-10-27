@@ -21,6 +21,7 @@ import { useIdempotencyKey } from "./useIdempotencyKey";
 import { ApiKeyPanel } from "../apiKeys/ApiKeyCard";
 import { type AdminOrderRow } from "../orders/api";
 import { OrdersTable } from "../orders/OrdersTable";
+import { UserReferralBlock } from "../referrals/UserReferralBlock";
 import { UserSales, useUserSales } from "../sales/UserSales";
 
 import { DataTable } from "@/components/DataTable";
@@ -231,6 +232,7 @@ function Overview({ card, onUsd }: { card: AdminUserCard; onUsd: () => void }) {
         <Profile card={card} />
       </Section>
       <RiskBlock userId={card.user.id} />
+      <UserReferralBlock userId={card.user.id} />
       <UsdBlock card={card} onSwitch={onUsd} />
     </>
   );

@@ -41,6 +41,8 @@ class Totals(BaseModel):
     new_buyers: int
     #: Orders' profit + buy-back profit, soʻm.
     gross_profit_uzs: str
+    #: What partners were credited in the window (referrals), soʻm; not taken off the profit.
+    partners_uzs: str = "0"
 
 
 class DayOut(BaseModel):

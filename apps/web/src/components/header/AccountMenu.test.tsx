@@ -8,10 +8,11 @@ import { describe, expect, it, vi } from "vitest";
 import { AccountMenu } from "./AccountMenu";
 
 const signOut = vi.fn(() => Promise.resolve());
+const roles = vi.hoisted(() => ({ value: ["partner"] as string[] }));
 vi.mock("@/lib/auth", () => ({
   useAuth: () => ({
     status: "signed_in",
-    user: { display_name: "Jam", avatar_url: null },
+    user: { display_name: "Jam", avatar_url: null, roles: roles.value },
     signOut,
   }),
 }));
@@ -42,5 +43,17 @@ describe("AccountMenu", () => {
     for (const a of items) expect(a.querySelector("svg")).not.toBeNull();
     fireEvent.click(screen.getByRole("menuitem", { name: "Выйти" }));
     expect(signOut).toHaveBeenCalledOnce();
+  });
+
+  it("hides «Реферал» from an account that is not a partner", () => {
+    roles.value = [];
+    render(
+      <NextIntlClientProvider locale="ru" messages={{ web: ru, common }}>
+        <AccountMenu />
+      </NextIntlClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Jam/ }));
+    expect(screen.queryByRole("menuitem", { name: "Реферал" })).toBeNull();
+    roles.value = ["partner"];
   });
 });

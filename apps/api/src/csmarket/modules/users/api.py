@@ -13,6 +13,7 @@ from csmarket.modules.users.service import (
     get_user_by_id,
     get_user_by_steam_id,
     set_roles,
+    sign_in_by_steam,
     upsert_user_by_steam,
 )
 from csmarket.modules.users.tradelink import (
@@ -41,6 +42,7 @@ __all__ = [
     "mask_trade_link",
     "parse_tradelink",
     "set_roles",
+    "sign_in_by_steam",
     "tradelink_checkers",
     "upsert_user_by_steam",
 ]

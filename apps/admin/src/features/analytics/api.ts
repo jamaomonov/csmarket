@@ -30,6 +30,8 @@ export interface Totals {
   refunds_uzs: string;
   new_buyers: number;
   gross_profit_uzs: string;
+  /** What partners were credited in the window (not taken off the profit). */
+  partners_uzs: string;
 }
 
 export interface DayOut {

@@ -47,6 +47,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "p2p.sweep",
         "payment_holds",
         "reviews.bad_open",
+        "referrals.rewards",
     ]
 
 

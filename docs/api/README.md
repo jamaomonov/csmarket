@@ -650,3 +650,20 @@ required `Idempotency-Key` and leave an audit row `articles.<verb>`.
 | `GET /admin/articles`, `POST`, `GET` / `PATCH /{id}` | the admin's list, create, read, edit                                                      |
 | `POST /admin/articles/{id}/publish` / `unpublish`    | publishing needs a cover and a ready translation                                          |
 | `POST /admin/articles/media`                         | an image as the raw body (≤ 5 MB; Caddy allows 6 MB on this path)                         |
+
+## Referrals
+
+Spec `2026-10-27-referrals-design.md`, ADR-0026. Admin writes take a required `Idempotency-Key`
+and leave an audit row `referrals.partner.<verb>` (no note text).
+
+| Route                                          | What                                                                                                                                     |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /referrals/visit {code}`                 | keyless (a counter and a cookie); 204 always; an active partner's code sets `csm_ref` (30 days); `referral-visit` IP bucket, 60 a minute |
+| `GET /referrals/me`                            | the signed-in partner's terms, this month / all time, held and credited; 404 `not_a_partner`                                             |
+| `GET /referrals/me/rewards?cursor=`            | 20 a page, newest first: amounts and dates, never the buyer                                                                              |
+| `GET /admin/referrals/partners`, `POST`        | the list (most revenue first), «Сделать партнёром» (adds the `partner` role)                                                             |
+| `GET` / `PATCH /admin/referrals/partners/{id}` | a partner's page (months, 50 rewards a page with orders); change code (until an attribution), percent, term, switch, note                |
+| `GET /admin/referrals/users/{id}`              | who brought this account, and whether it is a partner                                                                                    |
+
+`POST /auth/steam` reads `csm_ref`: an account this sign-in creates on the storefront is tied to
+that partner; the cookie is cleared once a sign-in succeeds (a refused attempt keeps it).

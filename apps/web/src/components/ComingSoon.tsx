@@ -8,7 +8,7 @@ import { MARKET } from "@/lib/paths";
 
 interface ComingSoonProps {
   /** The section's key under `web.nav`. */
-  section: "sell" | "steamTopup" | "reviews" | "referral";
+  section: "sell" | "steamTopup" | "reviews";
   icon: NavIcon;
 }
 

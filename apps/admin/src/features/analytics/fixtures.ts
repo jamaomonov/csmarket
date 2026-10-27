@@ -17,6 +17,7 @@ const ZERO_TOTALS: Totals = {
   refunds_uzs: "0",
   new_buyers: 0,
   gross_profit_uzs: "0",
+  partners_uzs: "0",
 };
 
 export const BUSINESS: BusinessOut = {
@@ -38,6 +39,7 @@ export const BUSINESS: BusinessOut = {
     refunds: 1,
     refunds_uzs: "90000",
     new_buyers: 3,
+    partners_uzs: "12000",
     gross_profit_uzs: "58254",
   },
   previous: {

@@ -103,8 +103,6 @@
       "copied": "Copied",
       "steamProfile": "Steam profile",
       "yourAccount": "Your account",
-      "referralTitle": "Referral code",
-      "referralHint": "The referral programme is coming soon.",
       "nav": "Profile sections",
       "edit": "Edit",
       "cancel": "Cancel",
@@ -151,7 +149,8 @@
       "payout_return": "Payout to balance",
       "payout_return_reversal": "Payout to balance undone",
       "fx_convert": "Transfer to USD",
-      "admin_adjust_usd": "USD adjustment"
+      "admin_adjust_usd": "USD adjustment",
+      "referral_reward": "Partner reward"
     },
     "topup": {
       "waiting": "Waiting for payment",
@@ -1138,5 +1137,39 @@
     "likes": "{n, plural, one {# like} other {# likes}}",
     "empty": "No articles here yet.",
     "author": "csmarket editorial team"
+  },
+  "referral": {
+    "title": "Partner programme",
+    "signedOut": "Sign in to open your partner page.",
+    "invite": "The partner programme is by invitation. If you run a channel, a community or a gaming club, write to our support.",
+    "error": "We couldn't load the page. Refresh it a little later.",
+    "link": "Your link",
+    "linkHint": "Share the link: you earn a percentage, to your balance, on purchases by those who sign up through it.",
+    "copy": "Copy",
+    "copied": "Copied",
+    "terms": "{percent}% of purchases · {term}",
+    "months": "{count, plural, one {# month} other {# months}}",
+    "forever": "forever",
+    "off": "Switched off",
+    "offHint": "New purchases don't earn right now. Pending rewards will still arrive.",
+    "held": "Pending",
+    "nextAt": "Next reward {date}",
+    "credited": "Credited",
+    "creditedHint": "Already on your balance",
+    "month": "This month",
+    "allTime": "All time",
+    "visits": "Visits",
+    "accounts": "New accounts",
+    "purchases": "Purchases",
+    "earned": "Earned",
+    "rewards": "Rewards",
+    "rewardsEmpty": "No rewards yet.",
+    "purchase": "Purchase of {sum}",
+    "status": {
+      "held": "Pending until {date}",
+      "credited": "Credited",
+      "cancelled": "Cancelled"
+    },
+    "more": "Show more"
   }
 }

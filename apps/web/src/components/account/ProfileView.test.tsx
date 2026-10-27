@@ -65,7 +65,7 @@ describe("ProfileView", () => {
     expect(screen.getByText("Скопировано")).toBeInTheDocument();
   });
 
-  it("«Ваш аккаунт»: the trade link, the email and the referral code (soon)", () => {
+  it("«Ваш аккаунт»: the trade link and the email; no referral teaser", () => {
     auth.value = signedIn();
     renderView();
     expect(screen.getByRole("heading", { name: "Ваш аккаунт" })).toBeInTheDocument();
@@ -73,8 +73,7 @@ describe("ProfileView", () => {
     expect(screen.getByRole("heading", { name: "Steam" })).toBeInTheDocument();
     // A saved address reads as text, with «Изменить».
     expect(screen.getByText("p@example.com")).toBeInTheDocument();
-    expect(screen.getByText("Реферальный код", { selector: "h3" })).toBeInTheDocument();
-    expect(screen.getByText("Скоро")).toBeInTheDocument();
+    expect(screen.queryByText("Реферальный код")).toBeNull();
   });
 
   it("«Настройка профиля»: what is set, and links to what is left", () => {

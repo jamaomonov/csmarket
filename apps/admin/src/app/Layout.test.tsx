@@ -53,7 +53,7 @@ describe("Layout", () => {
   it.each([
     ["Очередь", ["Обмены", "Заявки на выплату", "На проверке"]],
     ["Деньги", ["Платежи", "P2P", "Продажи", "Сверка"]],
-    ["Люди", ["Пользователи", "Запрет выкупа", "Отзывы"]],
+    ["Люди", ["Пользователи", "Запрет выкупа", "Отзывы", "Партнёры"]],
     ["Настройки", ["Цены", "Каталог", "Настройки выкупа", "Оплата"]],
   ])("the menu «%s» opens its pages", (group, pages) => {
     renderLayout();
@@ -141,7 +141,7 @@ describe("Layout", () => {
       within(people)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["Пользователи", "Запрет выкупа", "Отзывы"]);
+    ).toEqual(["Пользователи", "Запрет выкупа", "Отзывы", "Партнёры"]);
     expect(within(sheet).getByRole("link", { name: "Журнал" })).toHaveAttribute("href", "/audit");
     expect(within(sheet).getByRole("link", { name: "Аналитика" })).toHaveAttribute(
       "href",
@@ -176,6 +176,7 @@ describe("Layout", () => {
         "/sales/reconciliation",
         "/sale-blocks",
         "/reviews",
+        "/partners",
         "/users",
         "/payments",
         "/payment-holds",

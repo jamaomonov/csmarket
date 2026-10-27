@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AccountSidebar } from "./AccountSidebar";
 
+vi.mock("@/lib/auth", () => ({ useAuth: () => ({ user: { roles: ["partner"] } }) }));
 vi.mock("@/i18n/navigation", () => ({
   Link: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
     <a href={href} {...rest}>

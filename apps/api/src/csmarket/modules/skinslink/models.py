@@ -141,6 +141,9 @@ class SkinslinkPurchase(Base):
     attention_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
     last_polled_at: Mapped[datetime | None] = _at()
     resolved_at: Mapped[datetime | None] = _at()
+    #: When a ``rolled_back`` attention first opened; never cleared, so a later attention
+    #: written over it cannot hide the reversal (referrals cancel the partner's reward on it).
+    rolled_back_at: Mapped[datetime | None] = _at()
     resolved_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     resolved_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = _ts()

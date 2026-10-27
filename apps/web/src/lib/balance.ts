@@ -59,6 +59,7 @@ export type EntryKind =
   | "purchase"
   | "refund"
   | "sale_credit"
+  | "referral_reward"
   | "payout_return"
   | "payout_return_reversal"
   | "fx_convert"

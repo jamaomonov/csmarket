@@ -91,6 +91,7 @@ class EntryOut(BaseModel):
         "payout_return_reversal",
         "fx_convert",
         "admin_adjust_usd",
+        "referral_reward",
     ]
     currency: Currency = "UZS"
     #: Signed whole soʻm: ``+50000`` credited, ``-10000`` debited; ``"0"`` on a dollar line.

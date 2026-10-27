@@ -1,5 +1,5 @@
-import { Badge, cn } from "@csmarket/ui";
-import { Check, ChevronRight, Gift } from "lucide-react";
+import { cn } from "@csmarket/ui";
+import { Check, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export interface SetupStep {
@@ -75,28 +75,6 @@ export function ProfileSetup({ steps }: ProfileSetupProps) {
           );
         })}
       </ul>
-    </section>
-  );
-}
-
-/** The referral programme, not open yet: a teaser card. */
-export function ReferralTeaser() {
-  const t = useTranslations("web.account.profile");
-  const soon = useTranslations("web.soon");
-  return (
-    <section className="bg-surface border-border relative overflow-hidden rounded-xl border p-4 sm:p-5">
-      <div className="relative flex items-start gap-3">
-        <span className="bg-accent-subtle text-accent grid size-10 shrink-0 place-items-center rounded-lg">
-          <Gift className="size-5" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-lead font-semibold">{t("referralTitle")}</h3>
-            <Badge tone="neutral">{soon("badge")}</Badge>
-          </div>
-          <p className="text-fg-muted mt-1 text-sm">{t("referralHint")}</p>
-        </div>
-      </div>
     </section>
   );
 }
