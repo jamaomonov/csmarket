@@ -20,6 +20,7 @@ from csmarket.modules.analytics.schemas import DayOut, Money, Totals
 from csmarket.modules.analytics.window import Channel, Window
 from csmarket.modules.fx.api import FxSnapshot
 from csmarket.modules.orders.api import Order
+from csmarket.modules.referrals.api import credited_between
 from csmarket.modules.sales.api import SalesPnl, sales_pnl_between
 
 
@@ -114,8 +115,19 @@ async def buyback(db: AsyncSession, w: Window, channel: Channel) -> SalesPnl | N
     return await sales_pnl_between(db, since=w.start, until=w.end)
 
 
+async def partners(db: AsyncSession, w: Window, channel: Channel) -> Decimal:
+    """What partners were credited in the window; none for the API channel (no referrals)."""
+    if channel == "api":
+        return ZERO
+    return await credited_between(db, since=w.start, until=w.end)
+
+
 def _totals(
-    per_day: dict[date, DayNums], bb: SalesPnl | None, refunded: tuple[int, Decimal], new: int
+    per_day: dict[date, DayNums],
+    bb: SalesPnl | None,
+    refunded: tuple[int, Decimal],
+    new: int,
+    paid_partners: Decimal,
 ) -> Totals:
     t = sum(per_day.values(), DayNums())
     bb_uzs = bb.profit_uzs if bb is not None else ZERO
@@ -136,6 +148,7 @@ def _totals(
         refunds_uzs=som(refunded[1]),
         new_buyers=new,
         gross_profit_uzs=som(profit_uzs + bb_uzs),
+        partners_uzs=som(paid_partners),
     )
 
 
@@ -163,7 +176,13 @@ async def summary(
     """The window's totals, its days (zeros included) and its buy-back P&L, read once."""
     per_day = await orders_by_day(db, w, channel)
     bb = await buyback(db, w, channel)
-    head = _totals(per_day, bb, await refunds(db, w, channel), await new_buyers(db, w, channel))
+    head = _totals(
+        per_day,
+        bb,
+        await refunds(db, w, channel),
+        await new_buyers(db, w, channel),
+        await partners(db, w, channel),
+    )
     return head, _days(w, per_day, bb), bb
 
 
