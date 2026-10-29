@@ -13,7 +13,6 @@ import {
   type Counter,
   countOf,
   DASHBOARD,
-  GROUPS,
   type NavGroup,
   type NavItem,
 } from "./nav";
@@ -155,13 +154,14 @@ function SheetLink({ item, current, counters, onPick }: SheetLinkProps) {
 }
 
 interface MoreSheetProps {
+  groups: readonly NavGroup[];
   current: NavItem | undefined;
   counters: Counters;
   onClose: () => void;
 }
 
 /** «Ещё» on a phone: a bottom sheet with every page, each group under a heading and a divider. */
-export function MoreSheet({ current, counters, onClose }: MoreSheetProps) {
+export function MoreSheet({ groups, current, counters, onClose }: MoreSheetProps) {
   const closeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     closeButton.current?.focus();
@@ -200,7 +200,7 @@ export function MoreSheet({ current, counters, onClose }: MoreSheetProps) {
           </button>
         </div>
         <SheetLink item={DASHBOARD} current={current} counters={counters} onPick={onClose} />
-        {GROUPS.map((group) => (
+        {groups.map((group) => (
           <section
             key={group.label}
             aria-label={group.label}
@@ -239,6 +239,7 @@ const cellClass = (active: boolean): string =>
   }`;
 
 interface BottomBarProps {
+  groups: readonly NavGroup[];
   current: NavItem | undefined;
   counters: Counters;
   moreOpen: boolean;
@@ -246,9 +247,9 @@ interface BottomBarProps {
 }
 
 /** The phone's bottom bar: Обмены, Выплаты, Проверка with their counters, and «Ещё». */
-export function BottomBar({ current, counters, moreOpen, onMore }: BottomBarProps) {
+export function BottomBar({ groups, current, counters, moreOpen, onMore }: BottomBarProps) {
   const onBar = BOTTOM_ITEMS.some((i) => i === current);
-  const rest = GROUPS.flatMap((g) => g.items).filter((i) => !BOTTOM_ITEMS.includes(i));
+  const rest = groups.flatMap((g) => g.items).filter((i) => !BOTTOM_ITEMS.includes(i));
   return (
     <nav
       aria-label="Быстрый доступ"

@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Layout } from "./Layout";
 
+const auth = vi.hoisted(() => ({ me: null as { roles: string[] } | null }));
 vi.mock("@/features/auth/authStore", () => ({
-  useAuthStore: (pick: (s: { me: null; signOut: () => void }) => unknown) =>
-    pick({ me: null, signOut: () => undefined }),
+  useAuthStore: (pick: (s: { me: { roles: string[] } | null; signOut: () => void }) => unknown) =>
+    pick({ me: auth.me, signOut: () => undefined }),
 }));
 
 const getDashboard = vi.fn();
@@ -27,6 +28,7 @@ function renderLayout(path = "/") {
 }
 
 beforeEach(() => {
+  auth.me = null;
   getDashboard.mockResolvedValue({
     attention: 3,
     payouts: { to_pay_count: 2, sales_attention: 5 },
@@ -197,5 +199,19 @@ describe("Layout", () => {
       "href",
       "#main-content",
     );
+  });
+
+  it("shows «Мои сделки» only to an admin with the desk role", () => {
+    auth.me = { roles: ["admin"] };
+    renderLayout();
+    const nav = screen.getByRole("navigation", { name: "Основная навигация" });
+    expect(within(nav).queryByRole("link", { name: "Мои сделки" })).toBeNull();
+  });
+
+  it("an admin with desk sees «Мои сделки» as a link", () => {
+    auth.me = { roles: ["admin", "desk"] };
+    renderLayout();
+    const nav = screen.getByRole("navigation", { name: "Основная навигация" });
+    expect(within(nav).getByRole("link", { name: "Мои сделки" })).toHaveAttribute("href", "/desk");
   });
 });
