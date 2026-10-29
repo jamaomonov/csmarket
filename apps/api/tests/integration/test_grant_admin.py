@@ -32,3 +32,19 @@ async def test_cli_rejects_a_malformed_steam_id(capsys: pytest.CaptureFixture[st
     captured = capsys.readouterr()
     assert "17 digits" in captured.err
     assert "not-a-steam-id" not in captured.err + captured.out
+
+
+async def test_grant_desk_adds_and_revoke_removes_only_desk(db_session: AsyncSession) -> None:
+    await upsert_user_by_steam(db_session, steam_id=SID, display_name=None, avatar_url=None)
+    assert await grant(db_session, steam_id=SID, revoke=False) == "granted"
+    assert await grant(db_session, steam_id=SID, revoke=False, role="desk") == "granted"
+    user = await get_user_by_steam_id(db_session, SID)
+    assert user is not None
+    assert user.roles == ["admin", "desk"]
+    assert await grant(db_session, steam_id=SID, revoke=True, role="desk") == "revoked"
+    assert user.roles == ["admin"]
+
+
+async def test_cli_refuses_an_unknown_role() -> None:
+    with pytest.raises(SystemExit):
+        main(["--steam-id", SID, "--role", "root"])

@@ -79,6 +79,20 @@ export const GROUPS: readonly NavGroup[] = [
   { label: "Журнал", items: [{ to: "/audit", label: "Журнал" }] },
 ];
 
+/** «Мои сделки» — the owner's own deals; only for an admin with the `desk` role. */
+export const DESK_GROUP: NavGroup = {
+  label: "Мои сделки",
+  items: [
+    { to: "/desk", label: "Сделки", also: ["/desk/new", "/desk/deals/"] },
+    { to: "/desk/stock", label: "Склад" },
+  ],
+};
+
+/** The menu groups this admin sees: «Мои сделки» last, with the `desk` role only. */
+export function groupsFor(roles: readonly string[] | undefined): readonly NavGroup[] {
+  return roles?.includes("desk") ? [...GROUPS, DESK_GROUP] : GROUPS;
+}
+
 /** The phone's bottom bar: the three queues; everything else is behind «Ещё». */
 export const BOTTOM_ITEMS: readonly NavItem[] = [TRADES, PAYOUTS, HOLDS];
 
@@ -90,7 +104,7 @@ export const COUNTER_LABEL: Record<Counter, string> = {
   reviews: "плохие отзывы",
 };
 
-const ALL: readonly NavItem[] = [DASHBOARD, ...GROUPS.flatMap((g) => g.items)];
+const ALL: readonly NavItem[] = [DASHBOARD, ...[...GROUPS, DESK_GROUP].flatMap((g) => g.items)];
 
 /** How long a prefix of `pathname` the item matches; -1 when it does not. */
 function matchLength(item: NavItem, pathname: string): number {

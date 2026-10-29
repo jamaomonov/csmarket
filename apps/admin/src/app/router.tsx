@@ -17,6 +17,10 @@ import { LoginPage } from "@/features/auth/LoginPage";
 import { SteamCallback } from "@/features/auth/SteamCallback";
 import { CataloguePage } from "@/features/catalogue/CataloguePage";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { DealPage } from "@/features/desk/DealPage";
+import { DeskPage } from "@/features/desk/DeskPage";
+import { NewDealPage } from "@/features/desk/NewDealPage";
+import { StockPage } from "@/features/desk/StockPage";
 import { OrderDetail } from "@/features/orders/OrderDetail";
 import { P2PPage } from "@/features/p2p/P2PPage";
 import { FeeSettingsPage } from "@/features/payments/FeeSettingsPage";
@@ -81,6 +85,10 @@ export const router = createBrowserRouter([
           { path: "/sales", element: <SalesPage /> },
           { path: "/sales/reconciliation", element: <ReconciliationPage /> },
           { path: "/sales/price-check", element: <PriceCheckPage /> },
+          { path: "/desk", element: <DeskPage /> },
+          { path: "/desk/new", element: <NewDealPage /> },
+          { path: "/desk/stock", element: <StockPage /> },
+          { path: "/desk/deals/:id", element: <DealPage /> },
           { path: "/sales/:number", element: <SaleDetail /> },
           { path: "/sale-settings", element: <SaleSettingsPage /> },
           { path: "/sale-blocks", element: <SellBlocksPage /> },

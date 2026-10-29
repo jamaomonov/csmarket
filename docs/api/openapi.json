@@ -6425,67 +6425,268 @@
         "title": "DashboardOut",
         "type": "object"
       },
-      "DealOut": {
-        "description": "The deal the prompt asks about.",
+      "DealIn": {
         "properties": {
-          "done_at": {
-            "format": "date-time",
-            "title": "Done At",
-            "type": "string"
-          },
-          "image_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Image Url"
-          },
           "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemIn"
+            },
+            "maxItems": 200,
+            "minItems": 1,
             "title": "Items",
-            "type": "integer"
+            "type": "array"
           },
-          "kind": {
+          "method": {
+            "default": "direct",
             "enum": [
-              "market",
-              "sale"
+              "direct",
+              "guarantor"
             ],
-            "title": "Kind",
+            "title": "Method",
             "type": "string"
           },
-          "number": {
-            "title": "Number",
-            "type": "string"
-          },
-          "rarity_color": {
+          "note": {
             "anyOf": [
               {
+                "maxLength": 4000,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Rarity Color"
+            "title": "Note"
           },
-          "title": {
-            "title": "Title",
+          "paid_amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,19}0*$)\\d{0,12}\\.\\d{0,6}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Amount"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "paid_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UZS",
+                  "USD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Currency"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "trade_link": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          },
+          "trader": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Trader",
             "type": "string"
           }
         },
         "required": [
-          "kind",
-          "number",
-          "title",
-          "image_url",
-          "rarity_color",
-          "items",
-          "done_at"
+          "trader",
+          "items"
         ],
-        "title": "DealOut",
+        "title": "DealIn",
+        "type": "object"
+      },
+      "DealPatch": {
+        "properties": {
+          "guarantor_released": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor Released"
+          },
+          "method": {
+            "anyOf": [
+              {
+                "enum": [
+                  "direct",
+                  "guarantor"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "paid_amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,19}0*$)\\d{0,12}\\.\\d{0,6}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Amount"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "paid_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UZS",
+                  "USD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Currency"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "agreed",
+                  "paid",
+                  "received",
+                  "closed",
+                  "cancelled",
+                  "reverted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "trade_link": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          },
+          "trader": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trader"
+          }
+        },
+        "title": "DealPatch",
         "type": "object"
       },
       "DealReviewOut": {
@@ -6538,6 +6739,263 @@
           "review"
         ],
         "title": "DealReviewOut",
+        "type": "object"
+      },
+      "DealRowOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "method": {
+            "enum": [
+              "direct",
+              "guarantor"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "paid_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Amount"
+          },
+          "paid_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UZS",
+                  "USD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Currency"
+          },
+          "paid_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Usd"
+          },
+          "profit_usd": {
+            "title": "Profit Usd",
+            "type": "string"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "agreed",
+              "paid",
+              "received",
+              "closed",
+              "cancelled",
+              "reverted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trader": {
+            "title": "Trader",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "trader",
+          "method",
+          "created_at",
+          "paid_amount",
+          "paid_currency",
+          "paid_usd",
+          "items",
+          "profit_usd",
+          "resolved"
+        ],
+        "title": "DealRowOut",
+        "type": "object"
+      },
+      "DealsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DealRowOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "title": "DealsOut",
+        "type": "object"
+      },
+      "DepositOut": {
+        "properties": {
+          "accepted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted At"
+          },
+          "amount_estimated": {
+            "title": "Amount Estimated",
+            "type": "boolean"
+          },
+          "amount_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credited_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credited At"
+          },
+          "fail_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Reason"
+          },
+          "hold_end_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold End Date"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "offer_expiry_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Expiry At"
+          },
+          "reverted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reverted At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "trade_offer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Offer Id"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "amount_usd",
+          "amount_estimated",
+          "trade_offer_id",
+          "offer_expiry_at",
+          "hold_end_date",
+          "fail_reason",
+          "accepted_at",
+          "credited_at",
+          "reverted_at",
+          "created_at"
+        ],
+        "title": "DepositOut",
         "type": "object"
       },
       "EmailConfirmIn": {
@@ -7079,37 +7537,54 @@
         "title": "IncomingPage",
         "type": "object"
       },
-      "InventoryOut": {
-        "description": "The priced inventory; ``max_items`` is the most one sale may carry.",
+      "InventoryIn": {
         "properties": {
-          "fetched_at": {
-            "format": "date-time",
-            "title": "Fetched At",
-            "type": "string"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/SellItemOut"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "max_items": {
-            "title": "Max Items",
-            "type": "integer"
-          },
-          "min_sum_uzs": {
-            "title": "Min Sum Uzs",
+          "trade_link": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Trade Link",
             "type": "string"
           }
         },
         "required": [
-          "items",
-          "max_items",
-          "min_sum_uzs",
-          "fetched_at"
+          "trade_link"
         ],
-        "title": "InventoryOut",
+        "title": "InventoryIn",
+        "type": "object"
+      },
+      "InventoryItemOut": {
+        "properties": {
+          "asset_id": {
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price_usd": {
+            "title": "Price Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "name",
+          "image_url",
+          "price_usd"
+        ],
+        "title": "InventoryItemOut",
         "type": "object"
       },
       "IpAllowlistIn": {
@@ -7129,6 +7604,239 @@
           "ip_allowlist"
         ],
         "title": "IpAllowlistIn",
+        "type": "object"
+      },
+      "ItemIn": {
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "destination": {
+            "enum": [
+              "skinslink",
+              "stock"
+            ],
+            "title": "Destination",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "skinslink_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,19}0*$)\\d{0,12}\\.\\d{0,6}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skinslink Usd"
+          }
+        },
+        "required": [
+          "name",
+          "destination"
+        ],
+        "title": "ItemIn",
+        "type": "object"
+      },
+      "ItemOut": {
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "deposit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Id"
+          },
+          "destination": {
+            "enum": [
+              "skinslink",
+              "stock"
+            ],
+            "title": "Destination",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "skinslink_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skinslink Usd"
+          },
+          "sold_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Amount"
+          },
+          "sold_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UZS",
+                  "USD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Currency"
+          },
+          "sold_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Usd"
+          },
+          "sold_where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Where"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "asset_id",
+          "image_url",
+          "skinslink_usd",
+          "destination",
+          "cost_usd",
+          "state",
+          "deposit_id",
+          "sold_where",
+          "sold_amount",
+          "sold_currency",
+          "sold_usd",
+          "resolved_at",
+          "note"
+        ],
+        "title": "ItemOut",
         "type": "object"
       },
       "ItemPricingIn": {
@@ -7873,6 +8581,23 @@
           "earned_uzs"
         ],
         "title": "MonthOut",
+        "type": "object"
+      },
+      "MoveIn": {
+        "properties": {
+          "destination": {
+            "enum": [
+              "skinslink",
+              "stock"
+            ],
+            "title": "Destination",
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination"
+        ],
+        "title": "MoveIn",
         "type": "object"
       },
       "MyReviewOut": {
@@ -10390,6 +11115,26 @@
         "title": "RarityFacetOut",
         "type": "object"
       },
+      "RateOut": {
+        "properties": {
+          "usd_uzs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usd Uzs"
+          }
+        },
+        "required": [
+          "usd_uzs"
+        ],
+        "title": "RateOut",
+        "type": "object"
+      },
       "ReconOut": {
         "properties": {
           "credited_usd": {
@@ -10874,7 +11619,7 @@
           "deal": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/DealOut"
+                "$ref": "#/components/schemas/csmarket__modules__reviews__schemas__DealOut"
               },
               {
                 "type": "null"
@@ -11965,35 +12710,6 @@
           "max_cards"
         ],
         "title": "SellConfigOut",
-        "type": "object"
-      },
-      "SellIn": {
-        "description": "``POST /sell``: the chosen asset ids, where the money goes, the payout the cart showed.",
-        "properties": {
-          "asset_ids": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 200,
-            "minItems": 1,
-            "title": "Asset Ids",
-            "type": "array"
-          },
-          "expected_payout_uzs": {
-            "minimum": 0.0,
-            "title": "Expected Payout Uzs",
-            "type": "integer"
-          },
-          "payout": {
-            "$ref": "#/components/schemas/PayoutIn"
-          }
-        },
-        "required": [
-          "asset_ids",
-          "payout",
-          "expected_payout_uzs"
-        ],
-        "title": "SellIn",
         "type": "object"
       },
       "SellItemOut": {
@@ -13411,6 +14127,255 @@
         "title": "SteamCallbackIn",
         "type": "object"
       },
+      "StockItemOut": {
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asset Id"
+          },
+          "bought_at": {
+            "format": "date-time",
+            "title": "Bought At",
+            "type": "string"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "deal_id": {
+            "title": "Deal Id",
+            "type": "string"
+          },
+          "deposit_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Id"
+          },
+          "destination": {
+            "enum": [
+              "skinslink",
+              "stock"
+            ],
+            "title": "Destination",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "skinslink_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skinslink Usd"
+          },
+          "sold_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Amount"
+          },
+          "sold_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UZS",
+                  "USD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Currency"
+          },
+          "sold_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Usd"
+          },
+          "sold_where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sold Where"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "trader": {
+            "title": "Trader",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "asset_id",
+          "image_url",
+          "skinslink_usd",
+          "destination",
+          "cost_usd",
+          "state",
+          "deposit_id",
+          "sold_where",
+          "sold_amount",
+          "sold_currency",
+          "sold_usd",
+          "resolved_at",
+          "note",
+          "deal_id",
+          "trader",
+          "bought_at"
+        ],
+        "title": "StockItemOut",
+        "type": "object"
+      },
+      "StockOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StockItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total_cost_usd": {
+            "title": "Total Cost Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "total_cost_usd"
+        ],
+        "title": "StockOut",
+        "type": "object"
+      },
+      "SummaryOut": {
+        "properties": {
+          "deals_closed": {
+            "title": "Deals Closed",
+            "type": "integer"
+          },
+          "in_transit_usd": {
+            "title": "In Transit Usd",
+            "type": "string"
+          },
+          "items_resolved": {
+            "title": "Items Resolved",
+            "type": "integer"
+          },
+          "profit_usd": {
+            "title": "Profit Usd",
+            "type": "string"
+          },
+          "revenue_usd": {
+            "title": "Revenue Usd",
+            "type": "string"
+          },
+          "skinslink_share_usd": {
+            "title": "Skinslink Share Usd",
+            "type": "string"
+          },
+          "stock_usd": {
+            "title": "Stock Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profit_usd",
+          "revenue_usd",
+          "deals_closed",
+          "items_resolved",
+          "in_transit_usd",
+          "stock_usd",
+          "skinslink_share_usd"
+        ],
+        "title": "SummaryOut",
+        "type": "object"
+      },
       "TokensOut": {
         "description": "Response for any endpoint that opens or rotates a session.\n\nThe refresh token is intentionally absent: it is delivered as an ``HttpOnly`` cookie\n(see :mod:`csmarket.modules.auth.cookies`) so JS cannot read it. Only the short-lived\naccess token \u2014 which the app attaches as a Bearer header \u2014 is returned in the body.",
         "properties": {
@@ -14227,6 +15192,107 @@
         "title": "WebhookOut",
         "type": "object"
       },
+      "WithdrawalIn": {
+        "properties": {
+          "amount_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,19}0*$)\\d{0,12}\\.\\d{0,6}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Amount Usd"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "amount_usd"
+        ],
+        "title": "WithdrawalIn",
+        "type": "object"
+      },
+      "WithdrawalOut": {
+        "properties": {
+          "amount_usd": {
+            "title": "Amount Usd",
+            "type": "string"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "id",
+          "amount_usd",
+          "note",
+          "at"
+        ],
+        "title": "WithdrawalOut",
+        "type": "object"
+      },
+      "WithdrawalsOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WithdrawalOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WithdrawalsOut",
+        "type": "object"
+      },
+      "WriteOffIn": {
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "WriteOffIn",
+        "type": "object"
+      },
       "csmarket__modules__admin__dashboard_schemas__DayOut": {
         "properties": {
           "day": {
@@ -14347,6 +15413,281 @@
           "by_reason"
         ],
         "title": "RefundsOut",
+        "type": "object"
+      },
+      "csmarket__modules__desk__schemas__DealOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deposits": {
+            "items": {
+              "$ref": "#/components/schemas/DepositOut"
+            },
+            "title": "Deposits",
+            "type": "array"
+          },
+          "guarantor_released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor Released At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "method": {
+            "enum": [
+              "direct",
+              "guarantor"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "paid_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Amount"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "paid_currency": {
+            "anyOf": [
+              {
+                "enum": [
+                  "UZS",
+                  "USD"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Currency"
+          },
+          "paid_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid Usd"
+          },
+          "profit_usd": {
+            "title": "Profit Usd",
+            "type": "string"
+          },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "agreed",
+              "paid",
+              "received",
+              "closed",
+              "cancelled",
+              "reverted"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trade_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          },
+          "trader": {
+            "title": "Trader",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "trader",
+          "note",
+          "trade_link",
+          "paid_amount",
+          "paid_currency",
+          "rate",
+          "paid_usd",
+          "method",
+          "paid_at",
+          "guarantor_released_at",
+          "created_at",
+          "updated_at",
+          "items",
+          "deposits",
+          "protected_until",
+          "profit_usd",
+          "resolved"
+        ],
+        "title": "DealOut",
+        "type": "object"
+      },
+      "csmarket__modules__desk__schemas__InventoryOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/InventoryItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "InventoryOut",
+        "type": "object"
+      },
+      "csmarket__modules__desk__schemas__SellIn": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,19}0*$)\\d{0,12}\\.\\d{0,6}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "currency": {
+            "enum": [
+              "UZS",
+              "USD"
+            ],
+            "title": "Currency",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,8}|(?=[\\d.]{1,13}0*$)\\d{0,8}\\.\\d{0,4}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate"
+          },
+          "where": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "where",
+          "amount",
+          "currency"
+        ],
+        "title": "SellIn",
         "type": "object"
       },
       "csmarket__modules__p2p__schemas__CardOut": {
@@ -14486,6 +15827,69 @@
         "title": "TradeLinkCheckIn",
         "type": "object"
       },
+      "csmarket__modules__reviews__schemas__DealOut": {
+        "description": "The deal the prompt asks about.",
+        "properties": {
+          "done_at": {
+            "format": "date-time",
+            "title": "Done At",
+            "type": "string"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "market",
+              "sale"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          },
+          "rarity_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rarity Color"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "number",
+          "title",
+          "image_url",
+          "rarity_color",
+          "items",
+          "done_at"
+        ],
+        "title": "DealOut",
+        "type": "object"
+      },
       "csmarket__modules__sales__schemas__CardOut": {
         "description": "A saved card: its type and last four digits, never the number.",
         "properties": {
@@ -14536,6 +15940,68 @@
           "items"
         ],
         "title": "CardsOut",
+        "type": "object"
+      },
+      "csmarket__modules__sales__schemas__InventoryOut": {
+        "description": "The priced inventory; ``max_items`` is the most one sale may carry.",
+        "properties": {
+          "fetched_at": {
+            "format": "date-time",
+            "title": "Fetched At",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SellItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "max_items": {
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "min_sum_uzs": {
+            "title": "Min Sum Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "max_items",
+          "min_sum_uzs",
+          "fetched_at"
+        ],
+        "title": "InventoryOut",
+        "type": "object"
+      },
+      "csmarket__modules__sales__schemas__SellIn": {
+        "description": "``POST /sell``: the chosen asset ids, where the money goes, the payout the cart showed.",
+        "properties": {
+          "asset_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "expected_payout_uzs": {
+            "minimum": 0.0,
+            "title": "Expected Payout Uzs",
+            "type": "integer"
+          },
+          "payout": {
+            "$ref": "#/components/schemas/PayoutIn"
+          }
+        },
+        "required": [
+          "asset_ids",
+          "payout",
+          "expected_payout_uzs"
+        ],
+        "title": "SellIn",
         "type": "object"
       },
       "csmarket__modules__users__schemas__MeOut": {
@@ -16071,6 +17537,979 @@
           }
         },
         "summary": "The dashboard",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/deals": {
+      "get": {
+        "description": "Newest first, 50 a page.",
+        "operationId": "get_deals_api_v1_admin_desk_deals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "agreed",
+                    "paid",
+                    "received",
+                    "closed",
+                    "cancelled",
+                    "reverted"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 300,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DealsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Deals",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "A deal with its items and, if given, its price.",
+        "operationId": "post_deal_api_v1_admin_desk_deals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A new deal",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/deals/{deal_id}": {
+      "get": {
+        "description": "The deal page.",
+        "operationId": "get_deal_api_v1_admin_desk_deals__deal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A deal",
+        "tags": [
+          "admin"
+        ]
+      },
+      "patch": {
+        "description": "Any of the deal's fields; a new price recosts the unresolved items.",
+        "operationId": "patch_deal_api_v1_admin_desk_deals__deal_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DealPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change a deal",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/deals/{deal_id}/deposit": {
+      "post": {
+        "description": "\u00ab\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u043c\u0435\u043d\u00bb: a Skinslink bot offers the trader a trade for the deal's skins.\n\nThe deposit is committed before the one Skinslink call; a lost answer is left to the poll.",
+        "operationId": "post_deposit_api_v1_admin_desk_deals__deal_id__deposit_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Send to Skinslink",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/inventory": {
+      "post": {
+        "description": "What Skinslink takes from a trade link's inventory now, with prices.\n\nKeyless: it writes nothing anywhere.",
+        "operationId": "post_inventory_api_v1_admin_desk_inventory_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InventoryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__InventoryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "A trader's inventory",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/items/{item_id}/move": {
+      "post": {
+        "description": "Send an open item the other way.",
+        "operationId": "post_move_api_v1_admin_desk_items__item_id__move_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MoveIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skinslink \u2194 stock",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/items/{item_id}/sell": {
+      "post": {
+        "description": "A stock skin sold by hand: where, how much.",
+        "operationId": "post_sell_api_v1_admin_desk_items__item_id__sell_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/csmarket__modules__desk__schemas__SellIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sold from stock",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/items/{item_id}/write-off": {
+      "post": {
+        "description": "Lost or given up: a loss of its cost.",
+        "operationId": "post_write_off_api_v1_admin_desk_items__item_id__write_off_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteOffIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write off",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/rate": {
+      "get": {
+        "description": "The CBU rate (no uplift) a so\u02bbm price is converted at by default.",
+        "operationId": "get_rate_api_v1_admin_desk_rate_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The CBU rate",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/stock": {
+      "get": {
+        "description": "Skins in the owner's own Steam account, with their cost.",
+        "operationId": "get_stock_api_v1_admin_desk_stock_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StockOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My stock",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/summary": {
+      "get": {
+        "description": "Profit and revenue in the window (Tashkent days), in transit, stock, the share.",
+        "operationId": "get_summary_api_v1_admin_desk_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "My figures",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/withdrawals": {
+      "get": {
+        "description": "Newest first.",
+        "operationId": "get_withdrawals_api_v1_admin_desk_withdrawals_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawalsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "What I took out",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "\u00ab\u0412\u044b\u0432\u0435\u043b \u0441\u0435\u0431\u0435\u00bb: the Skinslink share drops.",
+        "operationId": "post_withdrawal_api_v1_admin_desk_withdrawals_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WithdrawalIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Took out",
         "tags": [
           "admin"
         ]
@@ -25783,7 +28222,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SellIn"
+                "$ref": "#/components/schemas/csmarket__modules__sales__schemas__SellIn"
               }
             }
           },
@@ -25886,7 +28325,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InventoryOut"
+                  "$ref": "#/components/schemas/csmarket__modules__sales__schemas__InventoryOut"
                 }
               }
             },

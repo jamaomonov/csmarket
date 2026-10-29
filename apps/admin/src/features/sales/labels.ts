@@ -88,3 +88,15 @@ export function payoutErrorText(err: unknown): string {
   }
   return errorText(err);
 }
+
+/** Why Steam refuses a trade link, in words (Skinslink's account codes). */
+export const STEAM_REASONS: Record<string, string> = {
+  profile_private: "профиль или инвентарь закрыт",
+  trade_banned: "у аккаунта бан обменов",
+  limited_account: "аккаунт ограничен (не пополнялся на $5)",
+  hold: "у аккаунта холд обменов",
+  permissions: "обмены запрещены настройками",
+  hold_and_permissions: "холд и запрет обменов",
+  trade_link_revoked: "ссылка устарела, нужна новая",
+  trade_link_invalid: "ссылка не подходит",
+};

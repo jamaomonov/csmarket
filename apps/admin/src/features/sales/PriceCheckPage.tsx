@@ -6,6 +6,7 @@ import { Button } from "@csmarket/ui";
 import { useMutation } from "@tanstack/react-query";
 import { type ReactNode, type SubmitEvent, useState } from "react";
 
+import { STEAM_REASONS } from "./labels";
 import {
   type CardKind,
   checkSalePrices,
@@ -20,17 +21,6 @@ import { SkinThumb } from "@/components/SkinThumb";
 import { ApiError } from "@/lib/api";
 
 const CARDS: Record<CardKind, string> = { uzcard: "Uzcard", humo: "Humo", uzum_visa: "Uzum Visa" };
-
-const STEAM_REASONS: Record<string, string> = {
-  profile_private: "профиль или инвентарь закрыт",
-  trade_banned: "у аккаунта бан обменов",
-  limited_account: "аккаунт ограничен (не пополнялся на $5)",
-  hold: "у аккаунта холд обменов",
-  permissions: "обмены запрещены настройками",
-  hold_and_permissions: "холд и запрет обменов",
-  trade_link_revoked: "ссылка устарела, нужна новая",
-  trade_link_invalid: "ссылка не подходит",
-};
 
 export function checkErrorText(err: unknown): string {
   if (!(err instanceof ApiError)) return "Не получилось. Попробуйте ещё раз.";

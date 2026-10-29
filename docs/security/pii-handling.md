@@ -254,3 +254,10 @@ form (`••••XY`) for disputes; the purchase stays findable at Waxpeer by 
   (`referrals:visited:*`); the IP is never stored or logged. The `csm_ref` cookie (HttpOnly,
   30 days, API host) holds only the partner's public code and is cleared at sign-in.
 - Logs name the partner's code and amounts, never the buyer.
+
+## «Мои сделки» (2026-10-29)
+
+- `desk_deals.trade_link` (a trader's trade link with its token), `trader` (a name or handle)
+  and `note` are the owner's own records, readable only with the `desk` role. Never logged:
+  `desk.*` logs carry codes and error types only. The link goes to Skinslink with the deposit,
+  as the shop's sales do.

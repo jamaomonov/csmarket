@@ -1,9 +1,11 @@
-"""Grant or revoke the ``admin`` role by Steam ID (ruling P5).
+"""Grant or revoke the ``admin`` role (ruling P5) or the ``desk`` role (the owner's «Мои
+сделки», spec 2026-10-29-desk) by Steam ID.
 
 Run inside the api container::
 
     docker compose exec api python -m csmarket.scripts.grant_admin --steam-id 7656119XXXXXXXXXX
     docker compose exec api python -m csmarket.scripts.grant_admin --steam-id 7656119XXXXXXXXXX --revoke
+    docker compose exec api python -m csmarket.scripts.grant_admin --steam-id 7656119XXXXXXXXXX --role desk
 
 The account must exist: the person signs in with Steam once first. The script prints
 only an outcome word — never the Steam ID — because its output ends up in shell history
@@ -26,28 +28,30 @@ from csmarket.core.db import dispose_engine, get_session_factory
 from csmarket.modules.users.api import get_user_by_steam_id, set_roles
 
 Outcome = Literal["granted", "revoked", "unchanged", "not_found"]
+Role = Literal["admin", "desk"]
+ROLES: tuple[Role, ...] = ("admin", "desk")
 
 
-async def grant(db: AsyncSession, *, steam_id: str, revoke: bool) -> Outcome:
-    """Add or remove ``admin``; flushes, the caller commits."""
+async def grant(db: AsyncSession, *, steam_id: str, revoke: bool, role: Role = "admin") -> Outcome:
+    """Add or remove ``role``; flushes, the caller commits."""
     user = await get_user_by_steam_id(db, steam_id)
     if user is None:
         return "not_found"
-    has = "admin" in user.roles
+    has = role in user.roles
     if revoke and has:
-        await set_roles(db, user, [r for r in user.roles if r != "admin"])
+        await set_roles(db, user, [r for r in user.roles if r != role])
         return "revoked"
     if not revoke and not has:
-        await set_roles(db, user, [*user.roles, "admin"])
+        await set_roles(db, user, [*user.roles, role])
         return "granted"
     return "unchanged"
 
 
-async def _main(steam_id: str, *, revoke: bool) -> int:
+async def _main(steam_id: str, *, revoke: bool, role: Role) -> int:
     factory = get_session_factory()
     try:
         async with factory() as db:
-            outcome = await grant(db, steam_id=steam_id, revoke=revoke)
+            outcome = await grant(db, steam_id=steam_id, revoke=revoke, role=role)
             await db.commit()
     finally:
         await dispose_engine()
@@ -60,11 +64,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--steam-id", required=True, help="steamid64 (17 digits)")
     parser.add_argument("--revoke", action="store_true")
+    parser.add_argument("--role", choices=ROLES, default="admin")
     args = parser.parse_args(argv)
     if not (args.steam_id.isdigit() and len(args.steam_id) == 17):
         print("steam id must be 17 digits", file=sys.stderr)
         return 2
-    return asyncio.run(_main(args.steam_id, revoke=args.revoke))
+    return asyncio.run(_main(args.steam_id, revoke=args.revoke, role=args.role))
 
 
 if __name__ == "__main__":

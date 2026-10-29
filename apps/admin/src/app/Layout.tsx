@@ -10,7 +10,7 @@ import { LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 
-import { currentItem, DASHBOARD, GROUPS } from "./nav";
+import { currentItem, DASHBOARD, groupsFor } from "./nav";
 import { BottomBar, type Counters, MoreSheet, TopLink, TopMenu } from "./NavParts";
 
 import { useAuthStore } from "@/features/auth/authStore";
@@ -51,6 +51,7 @@ export function Layout() {
   }, [sheetOpen]);
 
   const current = currentItem(pathname);
+  const groups = groupsFor(me?.roles);
   return (
     <div className="flex min-h-screen flex-col">
       <a
@@ -68,7 +69,7 @@ export function Layout() {
         </Link>
         <nav aria-label="Основная навигация" className="hidden h-full items-stretch lg:flex">
           <TopLink item={DASHBOARD} current={current} />
-          {GROUPS.map((group) =>
+          {groups.map((group) =>
             group.items.length === 1 && group.items[0] !== undefined ? (
               <TopLink key={group.label} item={group.items[0]} current={current} />
             ) : (
@@ -94,6 +95,7 @@ export function Layout() {
       </header>
       {sheetOpen && (
         <MoreSheet
+          groups={groups}
           current={current}
           counters={counters}
           onClose={() => {
@@ -111,6 +113,7 @@ export function Layout() {
       {/* Keeps the end of a page above the phone's bottom bar. */}
       <div aria-hidden className="h-(--bottom-nav) shrink-0" />
       <BottomBar
+        groups={groups}
         current={current}
         counters={counters}
         moreOpen={sheetOpen}

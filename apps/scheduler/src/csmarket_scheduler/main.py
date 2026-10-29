@@ -16,6 +16,7 @@ from csmarket.core.observability import init_sentry
 # every mapper must be registered before any job opens a session (AGENTS.md §4).
 from csmarket.modules.auth import models as _auth_models  # noqa: F401
 from csmarket.modules.click import models as _click_models  # noqa: F401
+from csmarket.modules.desk import models as _desk_models  # noqa: F401
 from csmarket.modules.fx import models as _fx_models  # noqa: F401
 from csmarket.modules.lisskins import models as _lisskins_models  # noqa: F401
 from csmarket.modules.notifications import models as _notifications_models  # noqa: F401
@@ -36,6 +37,7 @@ from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 
 from csmarket_scheduler.jobs import (
     click_timeout,
+    desk_poll,
     fx_refresh,
     lisskins_balance,
     lisskins_reconcile,
@@ -105,6 +107,7 @@ def build_scheduler() -> AsyncIOScheduler:
     payment_holds.register(scheduler)
     reviews.register(scheduler)
     referrals.register(scheduler)
+    desk_poll.register(scheduler)
     return scheduler
 
 

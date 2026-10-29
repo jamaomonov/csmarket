@@ -48,6 +48,7 @@ def test_build_scheduler_is_utc_with_the_registered_jobs() -> None:
         "payment_holds",
         "reviews.bad_open",
         "referrals.rewards",
+        "desk.poll",
     ]
 
 

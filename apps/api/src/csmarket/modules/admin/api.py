@@ -6,7 +6,7 @@ The router is mounted from ``api/v1/router.py`` (``admin.routes`` directly), lik
 from __future__ import annotations
 
 from csmarket.modules.admin.audit import AuditPayload, record
-from csmarket.modules.admin.deps import has_role, require_admin, required_key
+from csmarket.modules.admin.deps import has_role, require_admin, require_desk, required_key
 from csmarket.modules.admin.users_service import remember, replayed
 
 __all__ = [
@@ -16,5 +16,6 @@ __all__ = [
     "remember",
     "replayed",
     "require_admin",
+    "require_desk",
     "required_key",
 ]

@@ -31,6 +31,7 @@ from csmarket.modules.public_api import models as _public_api_models  # noqa: F4
 from csmarket.modules.risk import models as _risk_models  # noqa: F401
 from csmarket.modules.articles import models as _articles_models  # noqa: F401
 from csmarket.modules.referrals import models as _referrals_models  # noqa: F401
+from csmarket.modules.desk import models as _desk_models  # noqa: F401
 from csmarket.modules.reviews import models as _reviews_models  # noqa: F401
 from csmarket.modules.sales import models as _sales_models  # noqa: F401
 from csmarket.modules.skins import models as _skins_models  # noqa: F401

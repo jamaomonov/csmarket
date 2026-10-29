@@ -24,6 +24,7 @@ from csmarket.core.config import get_settings
 from csmarket.core.errors import ForbiddenError, NotFoundError, ValidationError
 from csmarket.core.logging import get_logger
 from csmarket.core.request_body import read_capped
+from csmarket.modules.desk.api import DESK_TX_PREFIX, mark_due
 from csmarket.modules.sales.api import enqueue_sale_check
 from csmarket.modules.skinslink.checks import enqueue_check
 from csmarket.modules.skinslink.webhook import verify
@@ -66,7 +67,11 @@ async def skinslink_webhook(request: Request, db: DbSession) -> dict[str, bool]:
     if kind == "purchase":
         await enqueue_check(db, pid)
     else:
-        await enqueue_sale_check(db, body.get("merchant_tx_id"))
+        tx_id = body.get("merchant_tx_id")
+        if isinstance(tx_id, str) and tx_id.startswith(DESK_TX_PREFIX):
+            await mark_due(db, tx_id)  # the owner's own deal (ADR-0027), never a sale
+        else:
+            await enqueue_sale_check(db, tx_id)
     await db.commit()
     log.info("skinslink.webhook", kind=kind)
     return {"ok": True}

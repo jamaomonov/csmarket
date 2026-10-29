@@ -64,6 +64,7 @@
 - **Reviews** (spec `2026-10-23-reviews-design.md`, plan `2026-10-23-reviews.md`, ADR-0023): 1–5 stars after a delivered order or a paid sale, the live prompt on any page, the admin's «Отзывы», `/reviews` behind «Показывать отзывы на сайте» — merged to `main` and deployed 2026-10-23 (`sha-e18f01a`), the public page off.
 - **Articles** (spec `2026-10-26-articles-design.md`, plan `2026-10-26-articles.md`, ADR-0025, runbook `articles.md`): news, guides and top lists in ru / uz / en written in the admin's «Статьи», live skin cards, views and likes, `/articles` on the storefront — merged to `main` and deployed 2026-10-26 (`sha-95eca13`); «Статьи» show in the header once a language has a published article.
 - **Referrals** (spec `2026-10-27-referrals-design.md`, plan `2026-10-27-referrals.md`, ADR-0026, runbook `referrals.md`): partners the admin picks («Сделать партнёром» on the user card) earn a percentage of what the new accounts their `?ref=` link brings buy, credited to their balance after an 8-day hold by the hourly job `referrals.rewards`; the partner page is `/account/referral`, the admin's «Партнёры», «Партнёрам» in «Аналитика», alert `ReferralRewardsStuck` — merged to `main` and deployed 2026-10-27 (`sha-f4295c5`).
+- **«Мои сделки»** (spec `2026-10-29-desk-design.md`, plan `2026-10-29-desk.md`, ADR-0027, runbook `desk.md`): the owner's personal deals with traders — a trader's inventory priced by Skinslink, the deposit sent as `desk-{id}`, stock sold by hand, profit in USD as a ledger, «Моя доля на Skinslink» as a figure only; behind the role `desk` (`grant_admin --role desk`), apart from the shop's numbers — built on branch `desk`, not merged.
 - **Owner inputs still pending:** the M0 deploy needs the GitHub repo, the VPS, DNS for the
   hosts in Cloudflare and the repo secrets `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`
   (`docs/runbooks/first-deploy.md`). M3's real-kassa check needs the Click / Payme / Uzum
@@ -284,7 +285,7 @@ csmarket/
 
 - **TDD** when building a module or fixing a reproducible bug: the failing test first.
 - **Coverage gates:** Python ≥ 80 % (enforced: `fail_under = 80` in `pyproject.toml`, CI
-  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales`, `public_api`, `risk`, `reviews`, `articles`, `referrals` ≥ 95 % each (enforced:
+  `--cov-fail-under=80`). `payments`, `wallet`, `orders`, `skins`, `notifications`, `realtime`, `skinslink`, `lisskins`, `sales`, `public_api`, `risk`, `reviews`, `articles`, `referrals`, `desk` ≥ 95 % each (enforced:
   `scripts/check-module-coverage.py` reads `coverage.json` after `make test-py` and CI
   `test-py`, and fails naming the module under the line). TS ≥ 70 % is a target; no
   threshold is configured yet.
@@ -362,7 +363,10 @@ csmarket/
   already in the latency alerts' `handler` regexes. A sixth and a seventh (ADR-0016): `GET /sell/inventory` asks Skinslink `inventory` on a cache miss — 15 s timeout, a 120 s breaker after 3 failures in a row, the result kept 5 minutes per user, its own `ip_guard` bucket, no DB connection held across it; `POST /sell` commits the sale, then calls `create-deposit` once — 10 s, nothing open across it, a timeout left to the poll. Both routes are in the latency alerts' `handler` regexes. **The public API (`/api/v1/public/*`, ADR-0017)** reads its feed and offers from our own tables and Redis; `POST /public/orders` checks the trade link for form only and debits the USD wallet in one transaction — with a ninth carve-out (ADR-0017, 2026-10-10): a chosen LIS-SKINS lot is confirmed with one `check-availability` first (`public_api.offer_check.live_quote`: 4 s, the breaker, no DB connection held); sold is `offer_gone`, never a substitute lot. A tenth, the same check as a partner route: `GET /public/catalog/{item_id}/offers/{offer_id}` (the key's `check` limit, not cached). Both partner paths spend the API's own share of the LIS-SKINS check budget, 40/min; the storefront's checkout keeps 60/min. Both routes are in the `handler` regexes. An eighth (ADR-0018): `POST /admin/orders/{number}/refund` of a Skinslink / LIS-SKINS order asks the supplier once before it books — Skinslink `purchase/status` or LIS-SKINS `market/info`, 4 s timeout, no lock and no open transaction across it, a failed lookup refuses the refund (`source_unavailable`); the route is already in the `handler` regexes. An eleventh, admin only (ADR-0016
   amendment 2026-10-29): `POST /admin/sales/price-check` asks Skinslink `get-prices` (price
   only) or `inventory` once — 15 s, no DB connection held across it, no cache or breaker; the
-  route is in the `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
+  route is in the `handler` regexes. A twelfth, owner only (ADR-0027): `POST /admin/desk/inventory`
+  asks Skinslink `inventory` and `POST /admin/desk/deals/{id}/deposit` commits the deposit,
+  then calls `create-deposit` once — 15 s, no DB connection held across either; both routes are
+  in the `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
   regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in
   `docs/architecture/cache-keys.md`; indices land in the same migration as the query.
