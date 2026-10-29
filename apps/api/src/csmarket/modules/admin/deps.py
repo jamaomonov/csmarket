@@ -33,6 +33,14 @@ async def require_admin(user: Annotated[User, Depends(current_user)]) -> User:
     return user
 
 
+async def require_desk(user: Annotated[User, Depends(require_admin)]) -> User:
+    """FastAPI dependency: an admin who also has ``desk`` — the owner's own trading section
+    (spec 2026-10-29-desk); 403 otherwise."""
+    if not has_role(user, "desk"):
+        raise ForbiddenError("desk role required")
+    return user
+
+
 #: ``idempotent_responses.idempotency_key`` is ``varchar(160)``.
 _MAX_KEY_LENGTH = 160
 
