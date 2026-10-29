@@ -18,7 +18,7 @@ from csmarket.api.v1.deps import db_session
 from csmarket.core.config import get_settings
 from csmarket.core.redis import get_redis
 from csmarket.modules.admin.api import remember, replayed, require_desk, required_key
-from csmarket.modules.desk import deals, stock, summary
+from csmarket.modules.desk import deals, deposits, stock, summary
 from csmarket.modules.desk.inventory import load_inventory
 from csmarket.modules.desk.money import plain
 from csmarket.modules.desk.schemas import (
@@ -121,6 +121,22 @@ async def patch_deal(deal_id: str, body: DealPatch, db: Db, key: Key) -> DealOut
     return DealOut.model_validate(
         await _keyed(db, scope="admin.desk.deal.update", key=key, asked=asked, run=run)
     )
+
+
+@router.post("/deals/{deal_id}/deposit", response_model=DealOut, summary="Send to Skinslink")
+async def post_deposit(deal_id: str, db: Db, key: Key, client: Client) -> DealOut:
+    """«Отправить обмен»: a Skinslink bot offers the trader a trade for the deal's skins.
+
+    The deposit is committed before the one Skinslink call; a lost answer is left to the poll.
+    """
+    asked: dict[str, Any] = {"deal_id": deal_id}
+    scope = "admin.desk.deposit"
+    if (hit := await replayed(db, scope=scope, key=key, request=asked)) is not None:
+        return DealOut.model_validate(hit)
+    out = await deals.deal_out(db, await deposits.send(db, client, deal_id))
+    await remember(db, scope=scope, key=key, request=asked, response=out.model_dump(mode="json"))
+    await db.commit()
+    return out
 
 
 @router.post("/items/{item_id}/sell", response_model=DealOut, summary="Sold from stock")

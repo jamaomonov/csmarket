@@ -37,6 +37,7 @@ from csmarket.modules.wallet import models as _wallet_models  # noqa: F401
 
 from csmarket_scheduler.jobs import (
     click_timeout,
+    desk_poll,
     fx_refresh,
     lisskins_balance,
     lisskins_reconcile,
@@ -106,6 +107,7 @@ def build_scheduler() -> AsyncIOScheduler:
     payment_holds.register(scheduler)
     reviews.register(scheduler)
     referrals.register(scheduler)
+    desk_poll.register(scheduler)
     return scheduler
 
 
