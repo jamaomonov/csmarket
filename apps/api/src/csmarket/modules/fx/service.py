@@ -28,6 +28,7 @@ from csmarket.core.clock import now
 from csmarket.core.config import get_settings
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
+from csmarket.modules.fx.cbu import CbuError
 from csmarket.modules.fx.models import FxSnapshot
 
 log = get_logger("csmarket.fx.service")
@@ -38,6 +39,8 @@ _REDIS_TTL_SECONDS = 86_400
 _RATE_PLACES = Decimal("0.01")
 #: A refresh with an unchanged rate adds a row only when the newest is this old.
 _REFRESH_ROW_AFTER = timedelta(hours=20)
+#: ``fx_snapshots.source`` of a rate from :mod:`.fallback`.
+FALLBACK_SOURCE = "er-api"
 
 
 @dataclass(frozen=True)
@@ -174,3 +177,40 @@ async def refresh_usd_uzs(
     await db.commit()
     await _cache(redis, value)
     return value
+
+
+async def rate_age(db: AsyncSession) -> timedelta | None:
+    """How old the newest snapshot is; ``None`` without one (the stale-rate alert reads it)."""
+    latest = await _latest(db)
+    return None if latest is None else now() - latest.fetched_at
+
+
+async def refresh_with_fallback(
+    db: AsyncSession,
+    redis: Redis,
+    *,
+    primary: Callable[[], Awaitable[Decimal]],
+    fallback: Callable[[], Awaitable[Decimal]],
+    fallback_after: timedelta,
+) -> UsdUzs:
+    """The CBU first; when it fails and the newest rate is ``fallback_after`` old (or there is
+    none), the fallback source (``source='er-api'``). A fresh rate — the admin's manual one
+    too — is never replaced by the fallback.
+
+    Raises:
+        CbuError: The CBU failed and the newest rate is still fresh, or both failed.
+    """
+    try:
+        return await refresh_usd_uzs(db, redis, fetch=primary)
+    except CbuError as exc:
+        await db.rollback()
+        age = await rate_age(db)
+        if age is not None and age < fallback_after:
+            raise
+        log.warning("fx.cbu.unreachable_fallback", reason=str(exc))
+    return await refresh_usd_uzs(db, redis, fetch=fallback, source=FALLBACK_SOURCE)
+
+
+async def cache_snapshot(redis: Redis, row: FxSnapshot) -> None:
+    """Put a committed snapshot in the Redis copy (the admin's manual rate)."""
+    await _cache(redis, _of(row))

@@ -327,6 +327,11 @@ REVIEWS_BAD_OPEN = Gauge(
     "Bad reviews (1–3 stars) no admin has resolved yet (no alert: the admin menu counts them;"
     " set by the scheduler's reviews job).",
 )
+FX_RATE_AGE = Gauge(
+    "csmarket_fx_rate_age_seconds",
+    "Age of the newest USD/UZS snapshot; 1e9 with none (alerts: FxRateStale, FxRateExpiring;"
+    " set by the scheduler's fx.refresh job).",
+)
 REFERRAL_REWARDS_STUCK = Gauge(
     "csmarket_referral_rewards_stuck",
     "Partner rewards still held 3 days past their hold (alert: ReferralRewardsStuck; set by the"
@@ -633,6 +638,16 @@ def set_reviews_bad_open(count: int) -> None:
     except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
         log.warning(
             "metrics.set_failed", metric="csmarket_reviews_bad_open", error=type(exc).__name__
+        )
+
+
+def set_fx_rate_age(seconds: float | None) -> None:
+    """Set the newest rate's age; ``None`` (no rate at all) reads as 1e9 s. Never raises."""
+    try:
+        FX_RATE_AGE.set(1e9 if seconds is None else seconds)
+    except Exception as exc:  # noqa: BLE001 -- Rule 2 in the module docstring
+        log.warning(
+            "metrics.set_failed", metric="csmarket_fx_rate_age_seconds", error=type(exc).__name__
         )
 
 

@@ -8399,6 +8399,53 @@
         "title": "LossesOut",
         "type": "object"
       },
+      "ManualRateIn": {
+        "description": "So\u02bbm per dollar, as cbu.uz shows it today.",
+        "properties": {
+          "usd_uzs": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 1000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,11}0*$)\\d{0,6}\\.\\d{0,4}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Usd Uzs"
+          }
+        },
+        "required": [
+          "usd_uzs"
+        ],
+        "title": "ManualRateIn",
+        "type": "object"
+      },
+      "ManualRateOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "usd_uzs": {
+            "title": "Usd Uzs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "usd_uzs",
+          "source"
+        ],
+        "title": "ManualRateOut",
+        "type": "object"
+      },
       "MeKeyOut": {
         "description": "The calling key.",
         "properties": {
@@ -18510,6 +18557,75 @@
           }
         },
         "summary": "Took out",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/fx/rate": {
+      "post": {
+        "description": "A new snapshot at ``usd_uzs``; so\u02bbm prices use it at once.",
+        "operationId": "post_rate_api_v1_admin_fx_rate_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualRateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualRateOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set the rate by hand",
         "tags": [
           "admin"
         ]

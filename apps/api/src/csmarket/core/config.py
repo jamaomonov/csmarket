@@ -314,6 +314,15 @@ class Settings(BaseSettings):
     fx_refresh_interval_minutes: int = Field(
         default=60, ge=5, description="Minutes between CBU rate refreshes."
     )
+    fx_fallback_url: str = Field(
+        default="https://open.er-api.com/v6/latest/USD",
+        description="Fallback USD/UZS source when cbu.uz cannot be reached (fx.fallback).",
+    )
+    fx_fallback_after_hours: int = Field(
+        default=12,
+        ge=1,
+        description="Hours the newest rate must be old before the fallback source is used.",
+    )
     fx_max_age_days: int = Field(
         default=7, ge=1, description="A rate snapshot older than this counts as no rate."
     )
