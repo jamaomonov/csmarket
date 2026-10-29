@@ -146,7 +146,7 @@ async def test_inventory_down_is_503(
         (SkinslinkError("x", code="profile_private", status=400), 409, "steam_refused"),
     ],
 )
-async def test_a_refused_offer_frees_the_items(
+async def test_a_refused_offer_frees_the_items(  # noqa: PLR0917 -- fixtures + parameters
     integration_client: AsyncClient,
     desk_headers: Headers,
     fake: FakeDepositClient,
