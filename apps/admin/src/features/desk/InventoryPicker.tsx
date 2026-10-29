@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { type Destination, type InventoryItem } from "./api";
-import { DestinationSwitch } from "./Parts";
+import { DestinationSwitch, usdToUzs } from "./Parts";
 
 import { Money } from "@/components/Money";
 import { SkinThumb } from "@/components/SkinThumb";
@@ -17,11 +17,13 @@ interface InventoryPickerProps {
   items: InventoryItem[];
   picked: Record<string, Picked>;
   onChange: (next: Record<string, Picked>) => void;
+  /** The CBU rate, for the soʻm in brackets; `null` hides them. */
+  rate: string | null;
 }
 
 const FILTER_FROM = 20;
 
-export function InventoryPicker({ items, picked, onChange }: InventoryPickerProps) {
+export function InventoryPicker({ items, picked, onChange, rate }: InventoryPickerProps) {
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
   const shown = needle ? items.filter((i) => i.name.toLowerCase().includes(needle)) : items;
@@ -71,7 +73,10 @@ export function InventoryPicker({ items, picked, onChange }: InventoryPickerProp
                 />
                 <SkinThumb url={it.image_url} />
                 <span className="min-w-0 flex-1 truncate">{it.name}</span>
-                <Money usd={it.price_usd} />
+                <span className="text-right">
+                  <Money usd={it.price_usd} />
+                  <UzsNote usd={it.price_usd} rate={rate} />
+                </span>
               </label>
               {p && (
                 <div className="pb-2 pl-9">
@@ -89,5 +94,16 @@ export function InventoryPicker({ items, picked, onChange }: InventoryPickerProp
         })}
       </ul>
     </div>
+  );
+}
+
+/** «(14 300 000 сум)» under a dollar price, at the CBU rate. */
+export function UzsNote({ usd, rate }: { usd: string | number; rate: string | null }) {
+  const uzs = usdToUzs(usd, rate);
+  if (uzs === null) return null;
+  return (
+    <span className="text-fg-muted block text-xs">
+      (<Money uzs={uzs} />)
+    </span>
   );
 }

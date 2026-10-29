@@ -33,3 +33,35 @@ def test_registers_on_the_configured_interval_with_an_early_first_run() -> None:
     assert job.id == "fx.refresh"
     assert job.trigger.interval == timedelta(minutes=60)
     assert job.next_run_time - datetime.now(UTC) <= timedelta(seconds=20)
+
+
+async def test_refresh_asks_the_fallback_and_exports_the_rate_age(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    seen: dict[str, object] = {}
+
+    async def _refresh(db: object, redis: object, **kw: object) -> None:
+        seen.update(kw)
+
+    monkeypatch.setattr(fx_refresh, "refresh_with_fallback", _refresh)
+    monkeypatch.setattr(fx_refresh, "rate_age", AsyncMock(return_value=timedelta(hours=3)))
+    ages: list[float | None] = []
+    monkeypatch.setattr(fx_refresh, "set_fx_rate_age", ages.append)
+    assert await fx_refresh.run() is True
+    assert seen["fallback_after"] == timedelta(hours=12)
+    assert callable(seen["primary"])
+    assert callable(seen["fallback"])
+    assert ages == [10800.0]
+
+
+async def test_the_age_is_exported_even_when_both_sources_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        fx_refresh, "refresh_with_fallback", AsyncMock(side_effect=CbuError("down"))
+    )
+    monkeypatch.setattr(fx_refresh, "rate_age", AsyncMock(return_value=None))
+    ages: list[float | None] = []
+    monkeypatch.setattr(fx_refresh, "set_fx_rate_age", ages.append)
+    assert await fx_refresh.run() is False
+    assert ages == [None]

@@ -1,13 +1,14 @@
 /**
  * «Состояние» of the catalogue as four tiles like the dashboard: skins on sale, the last
  * catalogue import, the last price sync (red when it failed, with the last good time) and the
- * CBU rate.
+ * CBU rate (with its source and «Курс вручную»).
  */
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode } from "react";
 
 import { type CatalogStatus, getStatus, type JobOut } from "./api";
 import { formatNumber, formatWhen } from "./format";
+import { ManualRate } from "./ManualRate";
 
 import { Section } from "@/components/Section";
 import { Reason } from "@/components/Status";
@@ -16,6 +17,13 @@ import { ApiError, formatApiError } from "@/lib/api";
 import { formatRate } from "@/lib/format";
 
 const SMALL = "text-fg-muted text-sm font-normal";
+
+/** Where the rate came from, in words. */
+const FX_SOURCE: Record<string, string> = {
+  cbu: "ЦБ",
+  "er-api": "запасной источник",
+  manual: "вручную",
+};
 
 interface JobTileProps {
   title: string;
@@ -78,11 +86,14 @@ function StatusBody({ s }: { s: CatalogStatus }) {
           {s.fx ? (
             <>
               <span>{formatRate(s.fx.usd_uzs)}</span>
-              <span className={SMALL}>{formatWhen(s.fx.fetched_at)}</span>
+              <span className={SMALL}>
+                {formatWhen(s.fx.fetched_at)} · {FX_SOURCE[s.fx.source] ?? s.fx.source}
+              </span>
             </>
           ) : (
             <span className={SMALL}>Курса нет — цены показываются в долларах</span>
           )}
+          <ManualRate />
         </Tile>
       </div>
       {(!s.sync_enabled || !s.waxpeer_key_set) && (

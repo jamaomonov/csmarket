@@ -20,7 +20,7 @@ import {
 } from "./api";
 import { InventoryPicker, type Picked } from "./InventoryPicker";
 import { deskErrorText, METHOD } from "./labels";
-import { cleanAmount, TAP } from "./Parts";
+import { cleanAmount, TAP, usdToUzs } from "./Parts";
 import { CurrencySwitch, RateField, toUsd } from "./SellForm";
 
 import { Money } from "@/components/Money";
@@ -143,9 +143,20 @@ export function NewDealPage() {
       </Section>
       {inventory.data && (
         <Section title="Скины трейдера">
-          <InventoryPicker items={inventory.data.items} picked={picked} onChange={setPicked} />
+          <InventoryPicker
+            items={inventory.data.items}
+            picked={picked}
+            onChange={setPicked}
+            rate={cbu.data?.usd_uzs ?? null}
+          />
           <p className="mt-2 text-sm">
             Skinslink сейчас даст за отмеченное: <Money usd={skinslinkSum} />
+            {usdToUzs(skinslinkSum, cbu.data?.usd_uzs) !== null && (
+              <span className="text-fg-muted">
+                {" "}
+                (<Money uzs={usdToUzs(skinslinkSum, cbu.data?.usd_uzs) ?? "0"} />)
+              </span>
+            )}
           </p>
         </Section>
       )}

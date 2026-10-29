@@ -489,6 +489,8 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
 - `GET /payout-cards`; `DELETE /payout-cards/{id}` — `Idempotency-Key` required, but **no replay
   is stored**: the soft delete is its own replay (a repeat is a no-op 204).
 - Socket: `{"type": "sale.updated", "number"}` on the order socket.
+- Admin «Курс вручную»: `POST /admin/fx/rate {usd_uzs}` (keyed, audited `fx.rate.manual`;
+  1 000..100 000, 422 otherwise) records the CBU rate by hand as `source='manual'` (ADR-0028).
 - Admin «Мои сделки» (`/admin/desk/*`, ADR-0027; `admin` **and** `desk` roles, 403
   otherwise): `POST /inventory {trade_link}` (**keyless**: reads a trader's inventory at
   Skinslink, writes nothing), `GET /rate`, `POST /deals`, `PATCH /deals/{id}`,

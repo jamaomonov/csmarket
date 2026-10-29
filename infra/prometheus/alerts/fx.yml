@@ -1,0 +1,30 @@
+groups:
+  - name: fx
+    rules:
+      # The gauge comes from the scheduler's hourly `fx.refresh` job (set even when both
+      # sources fail), so the selector is pinned to job="scheduler". With no rate at all it
+      # reads 1e9 s. Soʻm prices stop once the newest rate is `fx_max_age_days` (7) old.
+
+      # cbu.uz refuses our EU server (2026-10-22); the fallback source takes over after 12 h.
+      # A rate over 26 h old means the fallback fails too.
+      - alert: FxRateStale
+        expr: max(csmarket_fx_rate_age_seconds{job="scheduler"}) / 3600 > 26
+        for: 30m
+        labels: { severity: warn }
+        annotations:
+          summary: 'The USD/UZS rate is {{ $value | printf "%.0f" }} h old'
+          description: >
+            cbu.uz and the fallback source both fail. Open «Каталог» in the admin and set «Курс
+            вручную» from cbu.uz; the runbook says how.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/fx-rate.md"
+
+      - alert: FxRateExpiring
+        expr: max(csmarket_fx_rate_age_seconds{job="scheduler"}) / 86400 > 5
+        for: 15m
+        labels: { severity: page }
+        annotations:
+          summary: 'The USD/UZS rate is {{ $value | printf "%.1f" }} days old: soʻm prices stop at 7'
+          description: >
+            Set «Курс вручную» in the admin («Каталог») from cbu.uz now, then fix the source; the
+            runbook says how.
+          runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/fx-rate.md"

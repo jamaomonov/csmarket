@@ -1,0 +1,48 @@
+# Unit tests for ../alerts/fx.yml. Run from the repo root:
+#
+#   docker run --rm -v "$PWD/infra/prometheus:/p" --entrypoint promtool \
+#     prom/prometheus test rules /p/tests/fx_test.yml
+rule_files:
+  - ../alerts/fx.yml
+
+evaluation_interval: 1m
+
+tests:
+  # 25 h old for an hour (fine), then 27 h (stale).
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_fx_rate_age_seconds{job="scheduler"}'
+        values: "90000x60 97200x60"
+      - series: 'csmarket_fx_rate_age_seconds{job="api"}'
+        values: "1000000000x120"
+    alert_rule_test:
+      - eval_time: 60m
+        alertname: FxRateStale
+        exp_alerts: []
+      - eval_time: 100m
+        alertname: FxRateStale
+        exp_alerts:
+          - exp_labels:
+              severity: warn
+            exp_annotations:
+              summary: "The USD/UZS rate is 27 h old"
+              description: "cbu.uz and the fallback source both fail. Open «Каталог» in the admin and set «Курс вручную» from cbu.uz; the runbook says how.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/fx-rate.md"
+      - eval_time: 100m
+        alertname: FxRateExpiring
+        exp_alerts: []
+  # Over 5 days: soʻm prices vanish at 7.
+  - interval: 1m
+    input_series:
+      - series: 'csmarket_fx_rate_age_seconds{job="scheduler"}'
+        values: "440000x30"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: FxRateExpiring
+        exp_alerts:
+          - exp_labels:
+              severity: page
+            exp_annotations:
+              summary: "The USD/UZS rate is 5.1 days old: soʻm prices stop at 7"
+              description: "Set «Курс вручную» in the admin («Каталог») from cbu.uz now, then fix the source; the runbook says how.\n"
+              runbook: "https://github.com/jamaomonov/csmarket/blob/main/docs/runbooks/fx-rate.md"

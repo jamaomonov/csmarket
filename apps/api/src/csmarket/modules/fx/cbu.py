@@ -15,7 +15,7 @@ from csmarket.core.logging import get_logger
 log = get_logger("csmarket.fx.cbu")
 
 #: Soʻm per dollar outside this band is a parsing error, not a market move.
-_PLAUSIBLE = (Decimal(1000), Decimal(100000))
+PLAUSIBLE = (Decimal(1000), Decimal(100000))
 
 
 class CbuError(Exception):
@@ -63,6 +63,6 @@ async def fetch_usd_uzs(
     except (KeyError, InvalidOperation, ZeroDivisionError) as exc:
         raise CbuError("bad rate") from exc
     # ``NaN`` parses as a Decimal and would raise on the comparison below.
-    if not rate.is_finite() or not _PLAUSIBLE[0] <= rate <= _PLAUSIBLE[1]:
+    if not rate.is_finite() or not PLAUSIBLE[0] <= rate <= PLAUSIBLE[1]:
         raise CbuError("implausible rate")
     return rate.quantize(Decimal("0.0001"))

@@ -111,3 +111,10 @@ export async function deleteAlias(alias: string): Promise<void> {
     ...freshKey(),
   });
 }
+
+/** «Курс вручную»: the CBU rate set by hand when no source answers (`POST /admin/fx/rate`). */
+export function setManualRate(
+  usd_uzs: string,
+): Promise<{ id: string; usd_uzs: string; source: string }> {
+  return session.apiPost("/api/v1/admin/fx/rate", { usd_uzs }, freshKey());
+}
