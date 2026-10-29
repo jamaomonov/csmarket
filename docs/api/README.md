@@ -489,6 +489,14 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
 - `GET /payout-cards`; `DELETE /payout-cards/{id}` — `Idempotency-Key` required, but **no replay
   is stored**: the soft delete is its own replay (a repeat is a no-op 204).
 - Socket: `{"type": "sale.updated", "number"}` on the order socket.
+- Admin «Мои сделки» (`/admin/desk/*`, ADR-0027; `admin` **and** `desk` roles, 403
+  otherwise): `POST /inventory {trade_link}` (**keyless**: reads a trader's inventory at
+  Skinslink, writes nothing), `GET /rate`, `POST /deals`, `PATCH /deals/{id}`,
+  `POST /deals/{id}/deposit`, `POST /items/{id}/sell|move|write-off`, `POST /withdrawals` (all
+  keyed); `GET /deals`, `/deals/{id}`, `/stock`, `/summary?from=&to=`, `/withdrawals`. 422
+  `rate_required` (soʻm without a rate), `trade_link_invalid`; 409 `deposit_open`,
+  `nothing_to_send`, `trade_link_missing`, `prices_moved`, `steam_refused` (`reason`),
+  `item_not_open`; 503 `desk_unavailable`.
 - Admin «Цена выкупа»: `POST /admin/sales/price-check {names | trade_link}` — **keyless**: it
   writes nothing (Skinslink `get-prices` is asked with `no_deposit_intent`). Up to 200 names;
   answers each item's Skinslink price and ours, the names Skinslink does not buy, and totals

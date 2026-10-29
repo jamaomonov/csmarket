@@ -1,0 +1,45 @@
+# «Мои сделки» — the owner's personal desk
+
+Spec `2026-10-29-desk-design.md`, ADR-0027. Admin → «Мои сделки» (visible only with the `desk`
+role).
+
+## Give the owner access
+
+The account must have signed in once and be an admin:
+
+```bash
+docker compose -f docker-compose.prod.yml exec api \
+  python -m csmarket.scripts.grant_admin --steam-id <17 digits> --role desk
+```
+
+`--revoke --role desk` takes it back (the `admin` role stays). The script prints only an
+outcome word.
+
+## A deal step by step
+
+1. «Новая сделка»: trader, note, trade link → «Загрузить инвентарь» → tick the skins; each goes
+   to Skinslink or «Себе». Price in сум (the CBU rate is filled in; put your real rate) or $.
+   A guarantor's fee goes into the price.
+2. On the deal page «Отправить обмен» — a Skinslink bot offers the trader a trade.
+3. When the trader accepts, the deal shows «защита до …» (Steam's 7 days). Paying a guarantor
+   or a trusted trader before that date risks a revert.
+4. Skinslink's credit closes the Skinslink items; «Себе» items wait in «Склад» until you mark
+   them «Продал…» (where, amount, currency).
+
+## A deposit stuck «отправляем…»
+
+The `create-deposit` answer was lost. The 60 s `desk.poll` asks Skinslink by `desk-{id}`; after
+10 minutes unknown to Skinslink it is marked failed and the skins are free to send again. Do
+not press «Отправить обмен» twice — it is refused while one is open.
+
+## A revert
+
+Red banner «Трейдер откатил обмен». Skinslink took its money back; the deal's profit becomes the
+loss of what you paid, booked on the day of the revert. «Моя доля на Skinslink» drops by the
+credited amount.
+
+## «Моя доля на Skinslink»
+
+Everything Skinslink credited for desk deals, less reverts, less what you marked «Вывел себе».
+It is a number for you only: the shop may spend the whole Skinslink balance, and the dashboard
+and the `SkinslinkBalanceLow` alert ignore it.

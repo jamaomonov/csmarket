@@ -67,7 +67,8 @@ groups:
       # Selling (ADR-0016) asks Skinslink on `GET /sell/inventory` (6 s) and `POST /sell`
       # (`create-deposit`, 10 s); `/sell/config` and the sale reads do not match. The admin's
       # «Цена выкупа» (`POST /admin/sales/price-check`) asks Skinslink `get-prices` or
-      # `inventory` (15 s).
+      # `inventory` (15 s). The owner's «Мои сделки» (ADR-0027) asks `inventory` on
+      # `POST /admin/desk/inventory` and `create-deposit` on `POST /admin/desk/deals/{id}/deposit`.
       - alert: ApiHighLatency
         expr: |
           histogram_quantile(
@@ -76,7 +77,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler!~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/v1/public/orders|/v1/public/catalog/[^/]+/offers/[^/]+|/admin/orders/[^/]+/refund|/v1/sell(/inventory)?|/admin/sales/price-check)"
+                  handler!~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/v1/public/orders|/v1/public/catalog/[^/]+/offers/[^/]+|/admin/orders/[^/]+/refund|/v1/sell(/inventory)?|/admin/sales/price-check|/admin/desk/inventory|/admin/desk/deals/[^/]+/deposit)"
                 }[5m]
               )
             ) by (le)
@@ -102,7 +103,7 @@ groups:
               rate(
                 http_request_duration_seconds_bucket{
                   job="api",
-                  handler=~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/v1/public/orders|/v1/public/catalog/[^/]+/offers/[^/]+|/admin/orders/[^/]+/refund|/v1/sell(/inventory)?|/admin/sales/price-check)"
+                  handler=~".*(/skins/.*/listings|/trade-?link/check|/v1/orders|/v1/public/orders|/v1/public/catalog/[^/]+/offers/[^/]+|/admin/orders/[^/]+/refund|/v1/sell(/inventory)?|/admin/sales/price-check|/admin/desk/inventory|/admin/desk/deals/[^/]+/deposit)"
                 }[5m]
               )
             ) by (le)

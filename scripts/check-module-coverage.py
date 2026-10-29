@@ -36,6 +36,7 @@ MODULES = (
     "reviews",
     "articles",
     "referrals",
+    "desk",
 )
 THRESHOLD = 95.0
 
