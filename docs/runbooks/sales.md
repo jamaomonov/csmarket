@@ -202,6 +202,15 @@ the reads work, the next poll pays the sale.
 does not move. Find `sales.unknown_status` in the logs (status, sale number), check the deposit
 in the cabinet, and teach `sales/status.py` the status.
 
+## Checking a buy-back price
+
+«Выкуп» → «Цена выкупа» in the admin: paste market names (one per line, up to 200) or a
+trade link. It shows what Skinslink pays now, what we would pay the seller (before the balance
+bonus or a card fee), our margin, the totals to the balance and to each card, and the names
+Skinslink does not buy. Nothing is created anywhere. «Steam не даёт обмениваться» names the
+account's problem (closed inventory, trade ban, hold); «Skinslink сейчас не отвечает» means
+retry later — it does not affect selling.
+
 ## P&L and «Сверка»
 
 Spec `2026-10-13-sales-pnl`. The dashboard's «Выкуп» block (today / 7 / 30 Tashkent days)

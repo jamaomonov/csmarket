@@ -29,6 +29,7 @@ import { PartnersPage } from "@/features/referrals/PartnersPage";
 import { ReviewsPage } from "@/features/reviews/ReviewsPage";
 import { PayoutDetail } from "@/features/sales/PayoutDetail";
 import { PayoutsPage } from "@/features/sales/PayoutsPage";
+import { PriceCheckPage } from "@/features/sales/PriceCheckPage";
 import { ReconciliationPage } from "@/features/sales/ReconciliationPage";
 import { SaleDetail } from "@/features/sales/SaleDetail";
 import { SaleSettingsPage } from "@/features/sales/SaleSettingsPage";
@@ -79,6 +80,7 @@ export const router = createBrowserRouter([
           { path: "/payouts/:id", element: <PayoutDetail /> },
           { path: "/sales", element: <SalesPage /> },
           { path: "/sales/reconciliation", element: <ReconciliationPage /> },
+          { path: "/sales/price-check", element: <PriceCheckPage /> },
           { path: "/sales/:number", element: <SaleDetail /> },
           { path: "/sale-settings", element: <SaleSettingsPage /> },
           { path: "/sale-blocks", element: <SellBlocksPage /> },

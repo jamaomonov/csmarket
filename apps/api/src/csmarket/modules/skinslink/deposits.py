@@ -54,6 +54,19 @@ class Inventory:
 
 
 @dataclass(frozen=True)
+class PriceQuote:
+    """What Skinslink pays for one market name now (``get-prices``), USD.
+
+    ``price_usd`` is after Skinslink's multipliers (what we are credited); ``original_usd``
+    the raw price before them.
+    """
+
+    name: str
+    price_usd: Decimal
+    original_usd: Decimal | None
+
+
+@dataclass(frozen=True)
 class Deposit:
     """A deposit as Skinslink reports it (Create Deposit / Deposit Status).
 
@@ -95,6 +108,10 @@ class DepositClient(Protocol):
         """The deposit under ``merchant_tx_id``, or ``None`` when Skinslink has none."""
         ...
 
+    async def get_prices(self, names: Sequence[str]) -> list[PriceQuote]:
+        """What Skinslink pays now for each of ``names`` it accepts (price only)."""
+        ...
+
 
 # Any: one JSON object of Skinslink's, read field by field.
 def _inventory_item(raw: Mapping[str, Any]) -> InventoryItem | None:
@@ -114,6 +131,16 @@ def _inventory_item(raw: Mapping[str, Any]) -> InventoryItem | None:
         rarity=_str(raw.get("rarity")),
         rarity_color=_str(raw.get("rarity_color")),
     )
+
+
+# Any: one JSON object of Skinslink's, read field by field.
+def _quote(raw: Mapping[str, Any]) -> PriceQuote | None:
+    """A ``get-prices`` row, or ``None`` when its name or price is unusable."""
+    name = _str(raw.get("name"))
+    price = _decimal(raw.get("price"))
+    if name is None or price is None or price <= 0:
+        return None
+    return PriceQuote(name=name, price_usd=price, original_usd=_decimal(raw.get("originalPrice")))
 
 
 def _deposit(raw: object) -> Deposit:
@@ -217,6 +244,29 @@ class SkinslinkDepositClient(SkinslinkClient):
             raise
         return _deposit(data)
 
+    async def get_prices(self, names: Sequence[str]) -> list[PriceQuote]:
+        """``POST /merchant/get-prices`` with ``no_deposit_intent``: prices, no trade record.
+
+        Names Skinslink does not accept are simply absent (``items`` is ``null`` when none).
+
+        Raises:
+            SkinslinkError: A refusal.
+            SkinslinkForbiddenError: HTTP 403.
+            SkinslinkUnavailableError: Transport, 408/5xx, 429 or an unreadable body.
+        """
+        data = await self._request(
+            "POST",
+            "/merchant/get-prices",
+            endpoint="get_prices",
+            json_body={"game": "csgo", "marketHashNames": list(names), "no_deposit_intent": True},
+        )
+        if not isinstance(data, Mapping):
+            raise SkinslinkUnavailableError("unexpected body")
+        rows = data.get("items") or []
+        if not isinstance(rows, list):
+            raise SkinslinkUnavailableError("unexpected body")
+        return [q for raw in rows if isinstance(raw, Mapping) and (q := _quote(raw)) is not None]
+
 
 def deposit_client_for(settings: Settings, *, timeout_seconds: float) -> SkinslinkDepositClient:
     """The process's deposit client with ``timeout_seconds`` per call."""
@@ -234,6 +284,7 @@ __all__ = [
     "DepositClient",
     "Inventory",
     "InventoryItem",
+    "PriceQuote",
     "SkinslinkDepositClient",
     "deposit_client_for",
 ]

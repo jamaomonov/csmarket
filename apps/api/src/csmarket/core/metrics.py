@@ -86,7 +86,15 @@ WAXPEER_CALLS = Counter(
 
 #: A Skinslink merchant API call (spec 2026-10-06; deposits since 2026-10-08).
 SkinslinkEndpoint = Literal[
-    "available", "events", "purchase", "status", "balance", "inventory", "deposit", "deposit_status"
+    "available",
+    "events",
+    "purchase",
+    "status",
+    "balance",
+    "inventory",
+    "deposit",
+    "deposit_status",
+    "get_prices",
 ]
 #: ``refused`` = a 4xx or ``success: false``; ``not_found`` = 404 (a status lookup of an
 #: unknown purchase); ``unavailable`` = transport, 408/5xx or an unreadable body.
@@ -102,6 +110,7 @@ _SKINSLINK_ENDPOINTS = frozenset(
         "inventory",
         "deposit",
         "deposit_status",
+        "get_prices",
     )
 )
 _SKINSLINK_OUTCOMES = frozenset(

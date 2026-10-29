@@ -489,6 +489,11 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
 - `GET /payout-cards`; `DELETE /payout-cards/{id}` — `Idempotency-Key` required, but **no replay
   is stored**: the soft delete is its own replay (a repeat is a no-op 204).
 - Socket: `{"type": "sale.updated", "number"}` on the order socket.
+- Admin «Цена выкупа»: `POST /admin/sales/price-check {names | trade_link}` — **keyless**: it
+  writes nothing (Skinslink `get-prices` is asked with `no_deposit_intent`). Up to 200 names;
+  answers each item's Skinslink price and ours, the names Skinslink does not buy, and totals
+  to the balance and to each card type. 409 `steam_refused` (`reason`), 503
+  `sales_unavailable`, 503 `rate_unavailable`.
 - Admin (`/admin/sales`): `GET /payouts?status=` (tabs with `counts`), `GET /payouts/{id}`,
   `POST /payouts/{id}/reveal {purpose: show|copy}` (**keyless on purpose**: it changes only the
   audit trail and a replay would store the number; audited on every call),

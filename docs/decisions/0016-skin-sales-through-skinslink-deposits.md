@@ -134,6 +134,16 @@ Not done: a required bank reference on «Выплачено» (the comment says 
 optional), a CSV export and a ledger entry for card payouts (M10's accounting half), the bank
 name / holder name of a card (L8), the per-request action trail on the page (L3).
 
+## Amendment 2026-10-29 — «Цена выкупа» in the admin
+
+The owner asked to see what Skinslink pays for a skin by its market name, and for a whole
+inventory by a trade link, before anyone sells. `POST /admin/sales/price-check` asks Skinslink
+synchronously — `get-prices` with `no_deposit_intent` (no trade record) or `inventory` — on the
+`GET /sell/inventory` client (15 s), with no database connection held across the call. It is
+an admin's advisory read, not the money path: no cache, no breaker (one admin's look must never
+close selling for sellers), its route in the latency alerts' `handler` regexes and a line in
+AGENTS §11.
+
 ## Validation
 
 Integration tests pin the double credit, a reversal before and after the credit, the forged

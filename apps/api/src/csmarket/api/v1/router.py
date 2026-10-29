@@ -49,6 +49,7 @@ from csmarket.modules.reviews.routes import router as reviews_router
 from csmarket.modules.risk.admin_routes import limits_router as review_limits_router
 from csmarket.modules.risk.admin_routes import policy_router as risk_policy_router
 from csmarket.modules.sales.admin_payout_routes import router as payouts_admin_router
+from csmarket.modules.sales.admin_price_check_routes import router as sale_price_check_router
 from csmarket.modules.sales.admin_proof_routes import router as payout_proofs_admin_router
 from csmarket.modules.sales.admin_recon_routes import router as sales_recon_router
 from csmarket.modules.sales.admin_routes import router as sales_admin_router
@@ -90,6 +91,7 @@ router.include_router(admin_orders_router)
 router.include_router(payouts_admin_router)
 router.include_router(payout_proofs_admin_router)
 router.include_router(sales_recon_router)
+router.include_router(sale_price_check_router)
 router.include_router(sales_admin_router)
 router.include_router(api_key_router)
 router.include_router(public_api_router)

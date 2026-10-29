@@ -49,6 +49,14 @@ Does not own: the Skinslink HTTP client (`skinslink`), the ledger (`wallet`), th
 - `admin_payout_routes.py` (mounted before `admin_routes`), `admin_queue.py` (tabs, search,
   totals, the dashboard summary), `admin_claims.py` («Беру в работу»), `admin_risk.py` (row
   flags and the «Риски» block), `admin_undo.py` («Вернуть в очередь»).
+- `admin_price_check.py`, `admin_price_check_routes.py` — «Цена выкупа»:
+  `POST /admin/sales/price-check {names[1..200] | trade_link}` (keyless: it writes nothing,
+  here or at Skinslink). By names it asks Skinslink `get-prices` with `no_deposit_intent`
+  (price only, no trade record); by a trade link `inventory` (what Skinslink takes and can
+  trade now). Each item is priced by `quote_item` at today's sale rate, whatever the switches;
+  totals add the balance bonus and each card's fee. A Steam account refusal is 409
+  `steam_refused` with `reason`; any other refusal or outage 503 `sales_unavailable` (no
+  breaker: an admin's look never closes selling). The trade link is never logged or kept.
 - `admin_proofs.py`, `admin_proof_routes.py` — «Подтверждение оплаты» (ADR-0024): up to three
   receipts of a paid payout in `payout_proofs`, the bytes in the row, the type sniffed, deleted
   only within 10 minutes; admins only.

@@ -8,7 +8,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from decimal import Decimal
 
-from csmarket.modules.skinslink.api import Deposit, Inventory, InventoryItem
+from csmarket.modules.skinslink.api import Deposit, Inventory, InventoryItem, PriceQuote
 
 
 def deposit(status: str = "active", **over: object) -> Deposit:
@@ -45,7 +45,8 @@ def inv_item(
 
 class FakeDepositClient:
     """``inventory``: answers popped per call (the last one repeats); ``created``: the
-    create-deposit answer or exception; ``status``: the deposit-status answer or exception."""
+    create-deposit answer or exception; ``status``: the deposit-status answer or exception;
+    ``prices``: the get-prices answer or exception."""
 
     def __init__(
         self,
@@ -53,6 +54,7 @@ class FakeDepositClient:
         inventory: Sequence[Inventory | BaseException] = (),
         created: Deposit | BaseException | None = None,
         status: Deposit | BaseException | None = None,
+        prices: Sequence[PriceQuote] | BaseException = (),
     ) -> None:
         self.inventories: deque[Inventory | BaseException] = deque(inventory)
         self.created = created
@@ -60,6 +62,8 @@ class FakeDepositClient:
         self.inventory_calls = 0
         self.deposit_calls: list[dict[str, object]] = []
         self.status_calls: list[str] = []
+        self.prices = prices
+        self.price_calls: list[list[str]] = []
 
     async def inventory(self, *, partner: int, token: str) -> Inventory:
         self.inventory_calls += 1
@@ -94,3 +98,9 @@ class FakeDepositClient:
         if isinstance(self.status, BaseException):
             raise self.status
         return self.status
+
+    async def get_prices(self, names: Sequence[str]) -> list[PriceQuote]:
+        self.price_calls.append(list(names))
+        if isinstance(self.prices, BaseException):
+            raise self.prices
+        return list(self.prices)

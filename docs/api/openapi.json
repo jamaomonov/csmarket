@@ -6139,6 +6139,58 @@
         "title": "CheapTail",
         "type": "object"
       },
+      "CheckedItemOut": {
+        "properties": {
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "original_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Original Usd"
+          },
+          "price_uzs": {
+            "title": "Price Uzs",
+            "type": "string"
+          },
+          "skinslink_usd": {
+            "title": "Skinslink Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "image_url",
+          "skinslink_usd",
+          "original_usd",
+          "price_uzs",
+          "margin_usd"
+        ],
+        "title": "CheckedItemOut",
+        "type": "object"
+      },
       "ClaimIn": {
         "description": "\u00ab\u0411\u0435\u0440\u0443 \u0432 \u0440\u0430\u0431\u043e\u0442\u0443\u00bb; ``takeover`` takes a request another admin holds.",
         "properties": {
@@ -9576,6 +9628,75 @@
           "applied"
         ],
         "title": "PreviewOut",
+        "type": "object"
+      },
+      "PriceCheckIn": {
+        "description": "Exactly one: market names (one per line in the admin) or a Steam trade link.",
+        "properties": {
+          "names": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Names"
+          },
+          "trade_link": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade Link"
+          }
+        },
+        "title": "PriceCheckIn",
+        "type": "object"
+      },
+      "PriceCheckOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CheckedItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/TotalsOut"
+          }
+        },
+        "required": [
+          "items",
+          "missing",
+          "totals",
+          "rate"
+        ],
+        "title": "PriceCheckOut",
         "type": "object"
       },
       "PricingOut": {
@@ -13507,6 +13628,49 @@
           "gross_profit_uzs"
         ],
         "title": "Totals",
+        "type": "object"
+      },
+      "TotalsOut": {
+        "properties": {
+          "balance_uzs": {
+            "title": "Balance Uzs",
+            "type": "string"
+          },
+          "card_uzs": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "uzcard",
+                "humo",
+                "uzum_visa"
+              ]
+            },
+            "title": "Card Uzs",
+            "type": "object"
+          },
+          "items_uzs": {
+            "title": "Items Uzs",
+            "type": "string"
+          },
+          "margin_usd": {
+            "title": "Margin Usd",
+            "type": "string"
+          },
+          "skinslink_usd": {
+            "title": "Skinslink Usd",
+            "type": "string"
+          }
+        },
+        "required": [
+          "skinslink_usd",
+          "items_uzs",
+          "balance_uzs",
+          "card_uzs",
+          "margin_usd"
+        ],
+        "title": "TotalsOut",
         "type": "object"
       },
       "TradeLinkCheckOut": {
@@ -19821,6 +19985,66 @@
         ]
       }
     },
+    "/api/v1/admin/sales/price-check": {
+      "post": {
+        "description": "What Skinslink pays and what we would pay, by names or a trade link's inventory.\n\nKeyless: it writes nothing anywhere.",
+        "operationId": "price_check_api_v1_admin_sales_price_check_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Skinslink buy-back prices",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/sales/reconciliation": {
       "get": {
         "description": "Sales Skinslink completed in the window (and any open revert): quoted, credited, the\ndifference and a flag \u2014 ``short`` (under 99 % of the quote), ``missing`` (completed with no\namount) or ``reverted``. Any ``days`` but 1, 7 or 30 is 422 ``dashboard_days``.",
@@ -20510,7 +20734,7 @@
     },
     "/api/v1/admin/skins/items": {
       "get": {
-        "description": "Substring match on the folded name; ``hidden`` and ``overridden`` (a margin override\nor a pinned price) filter; most listings first.",
+        "description": "Every word of ``q`` in any order (``admin_search``); ``hidden`` and ``overridden`` (a\nmargin override or a pinned price) filter. Without ``q``, most stock first.",
         "operationId": "search_items_api_v1_admin_skins_items_get",
         "parameters": [
           {

@@ -53,6 +53,7 @@ export const GROUPS: readonly NavGroup[] = [
       { to: "/p2p", label: "P2P" },
       { to: "/sales", label: "Продажи", counter: "salesAttention" },
       { to: "/sales/reconciliation", label: "Сверка" },
+      { to: "/sales/price-check", label: "Цена выкупа" },
     ],
   },
   {

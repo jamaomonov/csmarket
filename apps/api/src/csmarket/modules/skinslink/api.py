@@ -31,6 +31,7 @@ from csmarket.modules.skinslink.deposits import (
     DepositClient,
     Inventory,
     InventoryItem,
+    PriceQuote,
     SkinslinkDepositClient,
     deposit_client_for,
 )
@@ -68,6 +69,7 @@ __all__ = [
     "Inventory",
     "InventoryItem",
     "MirrorResult",
+    "PriceQuote",
     "Purchase",
     "SkinslinkCheck",
     "SkinslinkClient",

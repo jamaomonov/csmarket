@@ -303,3 +303,43 @@ async def test_a_validation_refusal_logs_the_field_it_names_never_a_value() -> N
         await _create()
     refused = [e for e in logs if e["event"] == "skinslink.refused"]
     assert refused[0]["fields"] == ["CreateDepositRequest.Amount:gt"]
+
+
+@respx.mock
+async def test_get_prices_asks_price_only_and_reads_both_prices() -> None:
+    route = respx.post(f"{BASE}/merchant/get-prices").mock(
+        return_value=httpx.Response(
+            200,
+            json=_ok(
+                {
+                    "total": 1,
+                    "sum": 12.45,
+                    "items": [
+                        {
+                            "name": "AK-47 | Redline (Field-Tested)",
+                            "price": 12.45,
+                            "originalPrice": 14.1,
+                        },
+                        {"name": "Broken", "price": "x"},
+                    ],
+                }
+            ),
+        )
+    )
+    quotes = await _client().get_prices(["AK-47 | Redline (Field-Tested)", "Nope"])
+    assert json.loads(route.calls[0].request.content) == {
+        "game": "csgo",
+        "marketHashNames": ["AK-47 | Redline (Field-Tested)", "Nope"],
+        "no_deposit_intent": True,
+    }
+    assert [(q.name, q.price_usd, q.original_usd) for q in quotes] == [
+        ("AK-47 | Redline (Field-Tested)", Decimal("12.45"), Decimal("14.1"))
+    ]
+
+
+@respx.mock
+async def test_get_prices_with_nothing_priced_is_empty() -> None:
+    respx.post(f"{BASE}/merchant/get-prices").mock(
+        return_value=httpx.Response(200, json=_ok({"total": 0, "sum": 0, "items": None}))
+    )
+    assert await _client().get_prices(["Nope"]) == []
