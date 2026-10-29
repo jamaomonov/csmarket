@@ -82,7 +82,10 @@ export const GROUPS: readonly NavGroup[] = [
 /** «Мои сделки» — the owner's own deals; only for an admin with the `desk` role. */
 export const DESK_GROUP: NavGroup = {
   label: "Мои сделки",
-  items: [{ to: "/desk", label: "Мои сделки", also: ["/desk/"] }],
+  items: [
+    { to: "/desk", label: "Сделки", also: ["/desk/new", "/desk/deals/"] },
+    { to: "/desk/stock", label: "Склад" },
+  ],
 };
 
 /** The menu groups this admin sees: «Мои сделки» last, with the `desk` role only. */

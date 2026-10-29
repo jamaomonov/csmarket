@@ -66,9 +66,9 @@ describe("DeskPage", () => {
     for (const title of [
       "Прибыль",
       "Выручка Skinslink",
-      "В пути",
+      "Оплачено, не продано",
       "На складе",
-      "Моя доля на Skinslink",
+      "Мои деньги на Skinslink",
     ]) {
       expect(tiles).toHaveTextContent(title);
     }
@@ -90,11 +90,17 @@ describe("DeskPage", () => {
   it("records «Вывел себе»", async () => {
     api.addWithdrawal.mockResolvedValue({ id: "w1", amount_usd: "25", note: null, at: "" });
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: "Вывел себе" }));
-    fireEvent.change(screen.getByLabelText("Сколько вывел, $"), { target: { value: "25,5" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Вывод себе" }));
+    fireEvent.change(screen.getByLabelText("Сколько выведено, $"), { target: { value: "25.5" } });
     fireEvent.click(screen.getByRole("button", { name: "Записать" }));
     await waitFor(() => {
       expect(api.addWithdrawal).toHaveBeenCalledWith("25.5", undefined);
     });
+  });
+
+  it("an empty list offers a new deal", async () => {
+    api.listDeals.mockResolvedValue({ items: [], next_cursor: null });
+    renderPage();
+    expect(await screen.findByText("Сделок пока нет")).toBeInTheDocument();
   });
 });

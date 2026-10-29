@@ -5,8 +5,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { DESK_KEY, listStock } from "./api";
+import { TAP } from "./Parts";
 import { SellForm } from "./SellForm";
 
+import { EmptyState } from "@/components/EmptyState";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { SkinThumb } from "@/components/SkinThumb";
@@ -28,7 +30,10 @@ export function StockPage() {
           ) : null
         }
       />
-      {stock.data?.items.length === 0 && <p className="text-fg-muted">Склад пуст.</p>}
+      {stock.isPending && <p className="text-fg-muted">Загружаем…</p>}
+      {stock.data?.items.length === 0 && (
+        <EmptyState>На складе пусто. Сюда попадают скины, отмеченные «Себе».</EmptyState>
+      )}
       <ul className="divide-border border-border divide-y rounded-lg border">
         {stock.data?.items.map((i) => (
           <li key={i.id} className="px-3 py-3">
@@ -48,19 +53,20 @@ export function StockPage() {
               </span>
               {selling !== i.id && (
                 <Button
-                  size="sm"
                   variant="secondary"
+                  className={TAP}
                   onClick={() => {
                     setSelling(i.id);
                   }}
                 >
-                  Продал…
+                  Продажа…
                 </Button>
               )}
             </div>
             {selling === i.id && (
               <SellForm
                 itemId={i.id}
+                costUsd={i.cost_usd}
                 onDone={() => {
                   setSelling(null);
                 }}

@@ -42,12 +42,15 @@ describe("StockPage", () => {
     api.getRate.mockReset().mockResolvedValue({ usd_uzs: "13000" });
   });
 
-  it("sells a stock skin with where and how much", async () => {
+  it("sells a stock skin in dollars and previews the profit", async () => {
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: "Продал…" }));
-    fireEvent.change(screen.getByLabelText("Где продал"), { target: { value: "Market.csgo" } });
-    fireEvent.change(screen.getByLabelText("Сумма"), { target: { value: "70" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Продажа…" }));
+    fireEvent.change(screen.getByLabelText("Где продано"), { target: { value: "Market.csgo" } });
     fireEvent.click(screen.getByRole("button", { name: "$" }));
+    fireEvent.change(screen.getByLabelText("Сумма, $"), { target: { value: "70" } });
+    expect(
+      screen.getByText((_, el) => el?.tagName === "P" && el.textContent.includes("Прибыль: +$16")),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Записать продажу" }));
     await waitFor(() => {
       expect(api.sellItem).toHaveBeenCalledWith("s1", {
@@ -56,5 +59,30 @@ describe("StockPage", () => {
         currency: "USD",
       });
     });
+  });
+
+  it("takes a rate typed with a space and a comma", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Продажа…" }));
+    fireEvent.change(screen.getByLabelText("Где продано"), { target: { value: "Buff" } });
+    fireEvent.change(screen.getByLabelText("Сумма, сум"), { target: { value: "910000" } });
+    fireEvent.change(screen.getByLabelText("Курс (ЦБ на сегодня)"), {
+      target: { value: "12 650,5" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Записать продажу" }));
+    await waitFor(() => {
+      expect(api.sellItem).toHaveBeenCalledWith("s1", {
+        where: "Buff",
+        amount: "910000",
+        currency: "UZS",
+        rate: "12650.5",
+      });
+    });
+  });
+
+  it("an empty stock says where skins come from", async () => {
+    api.listStock.mockResolvedValue({ items: [], total_cost_usd: "0" });
+    renderPage();
+    expect(await screen.findByText(/Сюда попадают скины, отмеченные «Себе»/)).toBeInTheDocument();
   });
 });

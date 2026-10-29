@@ -205,13 +205,19 @@ describe("Layout", () => {
     auth.me = { roles: ["admin"] };
     renderLayout();
     const nav = screen.getByRole("navigation", { name: "Основная навигация" });
-    expect(within(nav).queryByRole("link", { name: "Мои сделки" })).toBeNull();
+    expect(within(nav).queryByRole("button", { name: /Мои сделки/ })).toBeNull();
   });
 
-  it("an admin with desk sees «Мои сделки» as a link", () => {
+  it("an admin with desk sees «Мои сделки» with Сделки and Склад", () => {
     auth.me = { roles: ["admin", "desk"] };
     renderLayout();
     const nav = screen.getByRole("navigation", { name: "Основная навигация" });
-    expect(within(nav).getByRole("link", { name: "Мои сделки" })).toHaveAttribute("href", "/desk");
+    fireEvent.click(within(nav).getByRole("button", { name: /Мои сделки/ }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Сделки" })).toHaveAttribute("href", "/desk");
+    expect(within(menu).getByRole("menuitem", { name: "Склад" })).toHaveAttribute(
+      "href",
+      "/desk/stock",
+    );
   });
 });

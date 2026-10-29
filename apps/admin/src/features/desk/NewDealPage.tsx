@@ -1,6 +1,7 @@
 /**
- * «Новая сделка»: the trader, their inventory as Skinslink prices it (tick the skins, each to
- * Skinslink or «Себе»), skins added by hand, the price in soʻm or dollars, how it was paid.
+ * «Новая сделка»: who sells, their inventory as Skinslink prices it (tick skins, each to
+ * Skinslink or «Себе»), skins added by hand, what was paid and how. The total and the expected
+ * profit stay pinned to the bottom with «Сохранить сделку».
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -11,27 +12,31 @@ import {
   createDeal,
   type Currency,
   DESK_KEY,
-  type Destination,
   getRate,
-  type InventoryItem,
   loadInventory,
   type Method,
   type NewDeal,
   type NewItem,
 } from "./api";
+import { InventoryPicker, type Picked } from "./InventoryPicker";
 import { deskErrorText, METHOD } from "./labels";
-import { cleanAmount, CurrencySwitch } from "./SellForm";
+import { cleanAmount, TAP } from "./Parts";
+import { CurrencySwitch, RateField, toUsd } from "./SellForm";
 
 import { Money } from "@/components/Money";
+import { MoneyInput } from "@/components/MoneyInput";
 import { PageHeader } from "@/components/PageHeader";
 import { Section } from "@/components/Section";
-import { SkinThumb } from "@/components/SkinThumb";
 import { findItems } from "@/features/catalogue/api";
 import { SkinSearch } from "@/features/catalogue/SkinSearch";
 
-interface Picked {
-  item: InventoryItem;
-  destination: Destination;
+const STEAM_LINK_HELP = "https://steamcommunity.com/my/tradeoffers/privacy#trade_offer_access_url";
+
+function skins(n: number): string {
+  const last = n % 10;
+  if (last === 1 && n % 100 !== 11) return `${String(n)} скин`;
+  if (last >= 2 && last <= 4 && (n % 100 < 12 || n % 100 > 14)) return `${String(n)} скина`;
+  return `${String(n)} скинов`;
 }
 
 export function NewDealPage() {
@@ -55,15 +60,7 @@ export function NewDealPage() {
   });
 
   const shownRate = rate ?? cbu.data?.usd_uzs ?? "";
-  const value = cleanAmount(amount);
-  const paidUsd =
-    Number(value) > 0
-      ? currency === "USD"
-        ? Number(value)
-        : Number(cleanAmount(shownRate)) > 0
-          ? Number(value) / Number(cleanAmount(shownRate))
-          : null
-      : null;
+  const paidUsd = toUsd(amount, currency, shownRate);
   const chosen = Object.values(picked);
   const skinslinkSum = chosen.reduce((s, p) => s + Number(p.item.price_usd), 0);
   const items: NewItem[] = [
@@ -75,10 +72,7 @@ export function NewDealPage() {
     })),
     ...manual.map((name) => ({ name, destination: "stock" as const })),
   ];
-  const ready =
-    trader.trim() !== "" &&
-    items.length > 0 &&
-    (value === "" || (Number(value) > 0 && paidUsd !== null));
+  const ready = trader.trim() !== "" && items.length > 0 && (amount === "" || paidUsd !== null);
 
   const submit = () => {
     if (!ready) return;
@@ -88,78 +82,58 @@ export function NewDealPage() {
       ...(link.trim() && { trade_link: link.trim() }),
       method,
       items,
-      ...(value !== "" && {
-        paid_amount: value,
+      ...(amount !== "" && {
+        paid_amount: cleanAmount(amount),
         paid_currency: currency,
         ...(currency === "UZS" && { rate: cleanAmount(shownRate) }),
       }),
     });
   };
-
-  const toggle = (it: InventoryItem) => {
-    setPicked((cur) => {
-      if (cur[it.asset_id]) {
-        return Object.fromEntries(Object.entries(cur).filter(([k]) => k !== it.asset_id));
-      }
-      return { ...cur, [it.asset_id]: { item: it, destination: "skinslink" } };
-    });
-  };
-  const flip = (it: InventoryItem) => {
-    setPicked((cur) => {
-      const was = cur[it.asset_id];
-      const destination: Destination = was?.destination === "stock" ? "skinslink" : "stock";
-      return { ...cur, [it.asset_id]: { item: it, destination } };
-    });
-  };
   const input = "border-border bg-bg h-11 rounded-md border px-3";
+  const field = (label: string, value: string, set: (v: string) => void, hint: string) => (
+    <label className="flex flex-col gap-1 text-sm">
+      {label}
+      <input
+        value={value}
+        onChange={(e) => {
+          set(e.target.value);
+        }}
+        placeholder={hint}
+        className={input}
+      />
+    </label>
+  );
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 pb-28">
       <PageHeader title="Новая сделка" back={{ to: "/desk", label: "Мои сделки" }} />
       <Section title="Кто продаёт">
         <div className="grid gap-3 md:grid-cols-2">
-          <label className="flex flex-col gap-1 text-sm">
-            Трейдер
-            <input
-              value={trader}
-              onChange={(e) => {
-                setTrader(e.target.value);
-              }}
-              placeholder="Имя или ник в чате"
-              className={input}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm">
-            Заметка
-            <input
-              value={note}
-              onChange={(e) => {
-                setNote(e.target.value);
-              }}
-              placeholder="Где договорились"
-              className={input}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-sm md:col-span-2">
-            Трейд-ссылка
-            <input
-              value={link}
-              onChange={(e) => {
-                setLink(e.target.value);
-              }}
-              placeholder="https://steamcommunity.com/tradeoffer/new/?partner=…&token=…"
-              className={input}
-            />
-          </label>
+          {field("Трейдер", trader, setTrader, "Имя или ник в чате")}
+          {field("Заметка", note, setNote, "Где договорились")}
+          <div className="md:col-span-2">
+            {field("Трейд-ссылка", link, setLink, "steamcommunity.com/tradeoffer/new/…")}
+            <a
+              href={STEAM_LINK_HELP}
+              target="_blank"
+              rel="noreferrer"
+              className="text-accent text-xs underline"
+            >
+              где найти?
+            </a>{" "}
+            <span className="text-fg-muted text-xs">
+              Трейдер присылает её сам; нужна для обмена через Skinslink.
+            </span>
+          </div>
         </div>
         <Button
-          className="mt-3"
+          className={`mt-3 ${TAP}`}
           variant="secondary"
           disabled={!link.trim() || inventory.isPending}
           onClick={() => {
             inventory.mutate();
           }}
         >
-          Загрузить инвентарь
+          {inventory.isPending ? "Загружаем…" : "Загрузить инвентарь"}
         </Button>
         {inventory.isError && (
           <p role="alert" className="text-danger mt-2">
@@ -168,40 +142,8 @@ export function NewDealPage() {
         )}
       </Section>
       {inventory.data && (
-        <Section title="Скины">
-          {inventory.data.items.length === 0 && (
-            <p className="text-fg-muted">Skinslink ничего из инвентаря не берёт.</p>
-          )}
-          <ul aria-label="Инвентарь трейдера" className="divide-border divide-y">
-            {inventory.data.items.map((it) => {
-              const p = picked[it.asset_id];
-              return (
-                <li key={it.asset_id} className="flex flex-wrap items-center gap-3 py-2">
-                  <input
-                    type="checkbox"
-                    className="accent-accent size-5"
-                    aria-label={it.name}
-                    checked={p !== undefined}
-                    onChange={() => {
-                      toggle(it);
-                    }}
-                  />
-                  <SkinThumb url={it.image_url} />
-                  <span className="min-w-0 flex-1 truncate">{it.name}</span>
-                  <Money usd={it.price_usd} />
-                  <Button
-                    size="sm"
-                    variant={p?.destination === "stock" ? "primary" : "secondary"}
-                    onClick={() => {
-                      flip(it);
-                    }}
-                  >
-                    {p?.destination === "stock" ? "В Skinslink" : "Себе"}
-                  </Button>
-                </li>
-              );
-            })}
-          </ul>
+        <Section title="Скины трейдера">
+          <InventoryPicker items={inventory.data.items} picked={picked} onChange={setPicked} />
           <p className="mt-2 text-sm">
             Skinslink сейчас даст за отмеченное: <Money usd={skinslinkSum} />
           </p>
@@ -218,17 +160,17 @@ export function NewDealPage() {
         {manual.length > 0 && (
           <ul className="mt-2 text-sm">
             {manual.map((name, n) => (
-              <li key={`${name}-${String(n)}`} className="flex items-center gap-2">
-                {name} · себе
-                <button
-                  type="button"
-                  className="text-accent underline"
+              <li key={`${name}-${String(n)}`} className="flex min-h-11 items-center gap-2">
+                <span className="flex-1">{name} · себе</span>
+                <Button
+                  variant="secondary"
+                  className={TAP}
                   onClick={() => {
                     setManual((m) => m.filter((_, k) => k !== n));
                   }}
                 >
-                  убрать
-                </button>
+                  Убрать
+                </Button>
               </li>
             ))}
           </ul>
@@ -237,33 +179,20 @@ export function NewDealPage() {
       <Section title="Оплата">
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-1 text-sm">
-            Цена
-            <input
-              inputMode="decimal"
+            Сколько заплачено
+            <MoneyInput
+              label="Сколько заплачено"
+              unit={currency === "UZS" ? "сум" : "$"}
+              decimal={currency === "USD"}
               value={amount}
-              onChange={(e) => {
-                setAmount(e.target.value);
-              }}
-              placeholder="Сколько заплатил"
-              className={`${input} w-44`}
+              onChange={setAmount}
+              className="w-48"
             />
           </label>
           <CurrencySwitch value={currency} onChange={setCurrency} />
-          {currency === "UZS" && (
-            <label className="flex flex-col gap-1 text-sm">
-              Курс
-              <input
-                inputMode="decimal"
-                value={shownRate}
-                onChange={(e) => {
-                  setRate(e.target.value);
-                }}
-                className={`${input} w-28`}
-              />
-            </label>
-          )}
+          {currency === "UZS" && <RateField value={shownRate} onChange={setRate} />}
           <label className="flex flex-col gap-1 text-sm">
-            Как платил
+            Способ оплаты
             <select
               value={method}
               onChange={(e) => {
@@ -276,14 +205,8 @@ export function NewDealPage() {
             </select>
           </label>
         </div>
-        {paidUsd !== null && skinslinkSum > 0 && (
-          <p className="mt-2 text-sm">
-            Прибыль, если Skinslink заплатит как сейчас:{" "}
-            <Money usd={(skinslinkSum - paidUsd).toFixed(2)} signed />
-          </p>
-        )}
-        <p className="text-fg-muted mt-1 text-xs">
-          Комиссию гаранта включайте в цену. Пустая цена — «договорились», без оплаты.
+        <p className="text-fg-muted mt-2 text-xs">
+          Комиссию гаранта включите в цену. Ещё не заплатили — оставьте цену пустой.
         </p>
       </Section>
       {save.isError && (
@@ -291,9 +214,32 @@ export function NewDealPage() {
           {deskErrorText(save.error)}
         </p>
       )}
-      <Button disabled={!ready || save.isPending} onClick={submit}>
-        Сохранить сделку
-      </Button>
+      <div
+        role="region"
+        aria-label="Итог сделки"
+        className="border-border bg-bg/95 bottom-(--bottom-nav) fixed inset-x-0 z-30 border-t px-4 py-3 backdrop-blur md:px-6 lg:bottom-0"
+      >
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3">
+          <span className="text-sm">
+            {skins(items.length)}
+            {paidUsd !== null && (
+              <>
+                {" "}
+                · <Money usd={(-paidUsd).toFixed(2)} />
+              </>
+            )}
+          </span>
+          {paidUsd !== null && skinslinkSum > 0 && (
+            <p className="text-sm">
+              Прибыль, если Skinslink заплатит как сейчас:{" "}
+              <Money usd={(skinslinkSum - paidUsd).toFixed(2)} signed />
+            </p>
+          )}
+          <Button className={`ml-auto ${TAP}`} disabled={!ready || save.isPending} onClick={submit}>
+            {save.isPending ? "Сохраняем…" : "Сохранить сделку"}
+          </Button>
+        </div>
+      </div>
     </section>
   );
 }

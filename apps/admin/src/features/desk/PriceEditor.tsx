@@ -1,16 +1,20 @@
-/** A deal's price: the amount in soʻm (at a rate, the CBU's by default) or dollars. */
+/** A deal's price: soʻm at a rate (the CBU's filled in) or dollars. Closes once it is saved. */
 import { Button } from "@csmarket/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { type Currency, type Deal, type DealPatch, DESK_KEY, getRate } from "./api";
-import { cleanAmount, CurrencySwitch } from "./SellForm";
+import { deskErrorText } from "./labels";
+import { cleanAmount, grouped, TAP } from "./Parts";
+import { CurrencySwitch, RateField, toUsd } from "./SellForm";
 
 import { Money } from "@/components/Money";
+import { MoneyInput } from "@/components/MoneyInput";
 
 interface PriceEditorProps {
   deal: Deal;
-  onSave: (body: DealPatch) => void;
+  /** Resolves when saved; a rejection keeps the form open with its reason. */
+  onSave: (body: DealPatch) => Promise<unknown>;
 }
 
 export function PriceEditor({ deal, onSave }: PriceEditorProps) {
@@ -18,74 +22,96 @@ export function PriceEditor({ deal, onSave }: PriceEditorProps) {
   const [amount, setAmount] = useState(deal.paid_amount ?? "");
   const [currency, setCurrency] = useState<Currency>(deal.paid_currency ?? "UZS");
   const [rate, setRate] = useState<string | null>(deal.rate);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const cbu = useQuery({ queryKey: [...DESK_KEY, "rate"], queryFn: getRate });
   const shownRate = rate ?? cbu.data?.usd_uzs ?? "";
   if (!editing) {
     return (
-      <p className="text-sm">
-        Заплатил:{" "}
-        {deal.paid_currency === "UZS" && deal.paid_amount ? (
-          <>
-            <Money uzs={deal.paid_amount} /> по курсу {deal.rate} ={" "}
-          </>
-        ) : null}
-        {deal.paid_usd && <Money usd={deal.paid_usd} />}{" "}
-        <button
-          type="button"
-          className="text-accent underline"
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span>
+          Оплачено:{" "}
+          {deal.paid_currency === "UZS" && deal.paid_amount ? (
+            <>
+              <Money uzs={deal.paid_amount} /> по курсу {grouped(deal.rate ?? "0")} ={" "}
+            </>
+          ) : null}
+          {deal.paid_usd && <Money usd={deal.paid_usd} />}
+        </span>
+        <Button
+          variant="secondary"
+          className={TAP}
           onClick={() => {
             setEditing(true);
           }}
         >
-          изменить
-        </button>
-      </p>
+          Изменить цену
+        </Button>
+      </div>
     );
   }
-  const value = cleanAmount(amount);
-  const ready = Number(value) > 0 && (currency === "USD" || Number(cleanAmount(shownRate)) > 0);
+  const ready = toUsd(amount, currency, shownRate) !== null;
+  const save = () => {
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    onSave({
+      paid_amount: cleanAmount(amount),
+      paid_currency: currency,
+      ...(currency === "UZS" && { rate: cleanAmount(shownRate) }),
+    })
+      .then(() => {
+        setEditing(false);
+      })
+      .catch(setError)
+      .finally(() => {
+        setBusy(false);
+      });
+  };
   return (
     <form
       className="flex flex-wrap items-end gap-2 text-sm"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!ready) return;
-        onSave({
-          paid_amount: value,
-          paid_currency: currency,
-          ...(currency === "UZS" && { rate: cleanAmount(shownRate) }),
-        });
-        setEditing(false);
+        save();
       }}
     >
       <label className="flex flex-col gap-1">
-        Сколько заплатил
-        <input
-          inputMode="decimal"
+        Сколько заплачено
+        <MoneyInput
+          label="Сколько заплачено"
+          unit={currency === "UZS" ? "сум" : "$"}
+          decimal={currency === "USD"}
           value={amount}
-          onChange={(e) => {
-            setAmount(e.target.value);
-          }}
-          className="border-border bg-bg h-10 w-36 rounded-md border px-2"
+          onChange={setAmount}
+          className="w-44"
         />
       </label>
       <CurrencySwitch value={currency} onChange={setCurrency} />
-      {currency === "UZS" && (
-        <label className="flex flex-col gap-1">
-          Курс
-          <input
-            inputMode="decimal"
-            value={shownRate}
-            onChange={(e) => {
-              setRate(e.target.value);
+      {currency === "UZS" && <RateField value={shownRate} onChange={setRate} />}
+      <div className="flex w-full gap-2">
+        {deal.paid_amount !== null && (
+          <Button
+            type="button"
+            variant="secondary"
+            className={TAP}
+            onClick={() => {
+              setEditing(false);
+              setError(null);
             }}
-            className="border-border bg-bg h-10 w-24 rounded-md border px-2"
-          />
-        </label>
+          >
+            Отмена
+          </Button>
+        )}
+        <Button type="submit" className={TAP} disabled={!ready || busy}>
+          {busy ? "Сохраняем…" : "Сохранить цену"}
+        </Button>
+      </div>
+      {error !== null && (
+        <p role="alert" className="text-danger w-full">
+          {deskErrorText(error)}
+        </p>
       )}
-      <Button type="submit" size="sm" disabled={!ready}>
-        Сохранить цену
-      </Button>
     </form>
   );
 }

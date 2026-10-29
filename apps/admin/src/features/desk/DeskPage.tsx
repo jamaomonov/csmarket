@@ -4,13 +4,17 @@
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, type SubmitEvent, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { addWithdrawal, DESK_KEY, getSummary, listDeals } from "./api";
 import { DEAL_STATUS, deskErrorText, METHOD } from "./labels";
+import { TAP } from "./Parts";
 
+import { CONFIRM_BUTTONS, ConfirmSheet } from "@/components/ConfirmSheet";
+import { EmptyState } from "@/components/EmptyState";
 import { Money } from "@/components/Money";
+import { MoneyField } from "@/components/MoneyInput";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { Tabs } from "@/components/Tabs";
@@ -38,6 +42,7 @@ export function DeskPage() {
     queryFn: () => listDeals(q.trim() ? { q: q.trim() } : {}),
   });
   const s = summary.data;
+  const [withdrawing, setWithdrawing] = useState(false);
   return (
     <section className="space-y-4">
       <PageHeader
@@ -46,10 +51,12 @@ export function DeskPage() {
         actions={
           <div className="flex gap-2">
             <Link to="/desk/stock">
-              <Button variant="secondary">Склад</Button>
+              <Button variant="secondary" className={TAP}>
+                Склад
+              </Button>
             </Link>
             <Link to="/desk/new">
-              <Button>Новая сделка</Button>
+              <Button className={TAP}>Новая сделка</Button>
             </Link>
           </div>
         }
@@ -66,24 +73,42 @@ export function DeskPage() {
         </p>
       )}
       {s && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-5" aria-label="Итоги">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5" aria-label="Итоги">
           <Tile title="Прибыль">
             <Money usd={s.profit_usd} signed />
           </Tile>
           <Tile title="Выручка Skinslink">
             <Money usd={s.revenue_usd} />
           </Tile>
-          <Tile title="В пути">
+          <Tile
+            title="Оплачено, не продано"
+            hint="Деньги в скинах, которые ещё не зачислены Skinslink"
+          >
             <Money usd={s.in_transit_usd} />
           </Tile>
-          <Tile title="На складе">
+          <Tile title="На складе" hint="Скины «Себе» по цене покупки">
             <Money usd={s.stock_usd} />
           </Tile>
-          <Tile title="Моя доля на Skinslink">
+          <Tile title="Мои деньги на Skinslink" hint="Зачислено по сделкам минус выведенное" wide>
             <Money usd={s.skinslink_share_usd} />
-            <Withdraw />
+            <Button
+              variant="secondary"
+              className={`mt-2 w-full ${TAP}`}
+              onClick={() => {
+                setWithdrawing(true);
+              }}
+            >
+              Вывод себе
+            </Button>
           </Tile>
         </div>
+      )}
+      {withdrawing && (
+        <Withdraw
+          onClose={() => {
+            setWithdrawing(false);
+          }}
+        />
       )}
       <label className="flex max-w-sm flex-col gap-1 text-sm">
         Трейдер
@@ -97,9 +122,21 @@ export function DeskPage() {
           className="border-border bg-bg h-11 rounded-md border px-3"
         />
       </label>
-      {deals.data?.items.length === 0 && (
-        <p className="text-fg-muted">Сделок пока нет. Начните с «Новая сделка».</p>
-      )}
+      {deals.isPending && <p className="text-fg-muted">Загружаем…</p>}
+      {deals.data?.items.length === 0 &&
+        (q.trim() ? (
+          <p className="text-fg-muted">Ничего не нашли по «{q.trim()}».</p>
+        ) : (
+          <EmptyState
+            action={
+              <Link to="/desk/new">
+                <Button className={TAP}>Новая сделка</Button>
+              </Link>
+            }
+          >
+            Сделок пока нет
+          </EmptyState>
+        ))}
       <ul className="divide-border border-border divide-y rounded-lg border" aria-label="Сделки">
         {deals.data?.items.map((d) => (
           <li key={d.id}>
@@ -125,8 +162,9 @@ export function DeskPage() {
               <StatusChip tone={DEAL_STATUS[d.status].tone}>
                 {DEAL_STATUS[d.status].label}
               </StatusChip>
-              <span className="w-24 text-right text-sm" title={d.resolved ? "итог" : "пока"}>
+              <span className="w-24 text-right text-sm">
                 <Money usd={d.profit_usd} signed />
+                {!d.resolved && <span className="text-fg-muted block text-xs">пока</span>}
               </span>
             </Link>
           </li>
@@ -136,72 +174,70 @@ export function DeskPage() {
   );
 }
 
-function Tile({ title, children }: { title: string; children: ReactNode }) {
+interface TileProps {
+  title: string;
+  hint?: string;
+  wide?: boolean;
+  children: ReactNode;
+}
+
+function Tile({ title, hint, wide = false, children }: TileProps) {
   return (
-    <div className="border-border bg-surface rounded-lg border p-3">
+    <div
+      className={`border-border bg-surface rounded-lg border p-3 ${wide ? "col-span-2 md:col-span-1" : ""}`}
+    >
       <p className="text-fg-muted text-xs">{title}</p>
       <div className="mt-1 font-semibold">{children}</div>
+      {hint && <p className="text-fg-dim mt-1 text-xs">{hint}</p>}
     </div>
   );
 }
 
-/** «Вывел себе»: an amount in dollars and a note; the share drops by it. */
-function Withdraw() {
+/** «Вывод себе»: an amount in dollars and a note; «Мои деньги на Skinslink» drop by it. */
+function Withdraw({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const save = useMutation({
-    mutationFn: () => addWithdrawal(amount.trim(), note.trim() || undefined),
+    mutationFn: () => addWithdrawal(amount, note.trim() || undefined),
     onSuccess: () => {
-      setOpen(false);
-      setAmount("");
-      setNote("");
       void qc.invalidateQueries({ queryKey: DESK_KEY });
+      onClose();
     },
   });
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className="text-accent mt-1 block text-xs font-normal underline"
-        onClick={() => {
-          setOpen(true);
-        }}
-      >
-        Вывел себе
-      </button>
-    );
-  }
-  const submit = (e: SubmitEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (Number(amount) > 0) save.mutate();
-  };
   return (
-    <form className="mt-2 flex flex-col gap-2 text-sm font-normal" onSubmit={submit}>
-      <input
-        aria-label="Сколько вывел, $"
-        inputMode="decimal"
-        value={amount}
-        onChange={(e) => {
-          setAmount(e.target.value.replace(",", "."));
-        }}
-        placeholder="$"
-        className="border-border bg-bg h-10 rounded-md border px-2"
-      />
-      <input
-        aria-label="Заметка"
-        value={note}
-        onChange={(e) => {
-          setNote(e.target.value);
-        }}
-        placeholder="куда"
-        className="border-border bg-bg h-10 rounded-md border px-2"
-      />
-      {save.isError && <p className="text-danger text-xs">{deskErrorText(save.error)}</p>}
-      <Button type="submit" size="sm" disabled={save.isPending || !(Number(amount) > 0)}>
-        Записать
-      </Button>
-    </form>
+    <ConfirmSheet title="Вывод себе" busy={save.isPending} onClose={onClose}>
+      <MoneyField label="Сколько выведено" unit="$" decimal value={amount} onChange={setAmount} />
+      <label className="flex flex-col gap-1 text-sm">
+        Заметка
+        <input
+          value={note}
+          onChange={(e) => {
+            setNote(e.target.value);
+          }}
+          placeholder="Куда, например на карту"
+          className="border-border bg-bg h-11 rounded-md border px-3"
+        />
+      </label>
+      {save.isError && (
+        <p role="alert" className="text-danger text-sm">
+          {deskErrorText(save.error)}
+        </p>
+      )}
+      <div className={CONFIRM_BUTTONS}>
+        <Button variant="secondary" className={TAP} disabled={save.isPending} onClick={onClose}>
+          Отмена
+        </Button>
+        <Button
+          className={TAP}
+          disabled={save.isPending || !(Number(amount) > 0)}
+          onClick={() => {
+            save.mutate();
+          }}
+        >
+          Записать
+        </Button>
+      </div>
+    </ConfirmSheet>
   );
 }

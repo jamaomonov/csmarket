@@ -64,16 +64,21 @@ describe("NewDealPage", () => {
     fireEvent.change(screen.getByLabelText("Трейд-ссылка"), { target: { value: LINK } });
     fireEvent.click(screen.getByRole("button", { name: "Загрузить инвентарь" }));
     const inv = await screen.findByRole("list", { name: "Инвентарь трейдера" });
-    for (const box of within(inv).getAllByRole("checkbox")) fireEvent.click(box);
-    const [, second] = within(inv).getAllByRole("button", { name: "Себе" });
+    expect(within(inv).queryAllByRole("radio")).toEqual([]); // the switch shows once ticked
+    fireEvent.click(within(inv).getByText("AK-47 | Redline (Field-Tested)")); // the whole row ticks
+    fireEvent.click(within(inv).getByRole("checkbox", { name: "AWP | Asiimov (Field-Tested)" }));
+    const [, second] = within(inv).getAllByRole("radio", { name: "Себе" });
     if (second) fireEvent.click(second);
     expect(
       screen.getByText(para(/Skinslink сейчас даст за отмеченное: \$1\s200/)),
     ).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Цена"), { target: { value: "14 300 000" } });
-    await waitFor(() => {
-      expect(screen.getByLabelText("Курс")).toHaveValue("13000");
+    fireEvent.change(screen.getByLabelText("Сколько заплачено, сум"), {
+      target: { value: "14 300 000" },
     });
+    await waitFor(() => {
+      expect(screen.getByLabelText("Курс (ЦБ на сегодня)")).toHaveValue("13000");
+    });
+    expect(screen.getByRole("region", { name: "Итог сделки" })).toHaveTextContent("2 скина");
     expect(
       screen.getByText(para(/Прибыль, если Skinslink заплатит как сейчас: \+?\$100/)),
     ).toBeInTheDocument();
@@ -115,10 +120,31 @@ describe("NewDealPage", () => {
     const inv = await screen.findByRole("list", { name: "Инвентарь трейдера" });
     const [box] = within(inv).getAllByRole("checkbox");
     if (box) fireEvent.click(box);
-    fireEvent.change(screen.getByLabelText("Цена"), { target: { value: "1000000" } });
+    fireEvent.change(screen.getByLabelText("Сколько заплачено, сум"), {
+      target: { value: "1000000" },
+    });
     await waitFor(() => {
       expect(api.getRate).toHaveBeenCalled();
     });
     expect(screen.getByRole("button", { name: "Сохранить сделку" })).toBeDisabled();
+  });
+
+  it("filters a long inventory by name", async () => {
+    api.loadInventory.mockResolvedValue({
+      items: Array.from({ length: 25 }, (_, n) => ({
+        asset_id: String(n),
+        name: n === 7 ? "★ Karambit | Doppler (Factory New)" : `Skin ${String(n)}`,
+        image_url: null,
+        price_usd: "1",
+      })),
+    });
+    renderPage();
+    fireEvent.change(screen.getByLabelText("Трейд-ссылка"), { target: { value: LINK } });
+    fireEvent.click(screen.getByRole("button", { name: "Загрузить инвентарь" }));
+    fireEvent.change(await screen.findByLabelText("Найти в инвентаре"), {
+      target: { value: "karambit" },
+    });
+    const inv = screen.getByRole("list", { name: "Инвентарь трейдера" });
+    expect(within(inv).getAllByRole("checkbox")).toHaveLength(1);
   });
 });

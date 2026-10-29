@@ -14,8 +14,14 @@ export const DEAL_STATUS: Record<DealStatus, { label: string; tone: Tone }> = {
   reverted: { label: "откат", tone: "danger" },
 };
 
+/** An item's state in words; an open one reads by where it goes. */
+export function itemState(state: ItemState, destination: "skinslink" | "stock"): string {
+  if (state === "open") return destination === "stock" ? "на складе" : "не отправлен";
+  return ITEM_STATE[state];
+}
+
 export const ITEM_STATE: Record<ItemState, string> = {
-  open: "ждёт",
+  open: "не отправлен",
   sent: "в обмене",
   credited: "Skinslink заплатил",
   sold: "продан",
@@ -34,7 +40,7 @@ export const DEPOSIT_STATUS: Record<string, string> = {
   new: "создан",
   pending: "бот готовит обмен",
   active: "обмен у трейдера",
-  hold: "принят, холд Steam",
+  hold: "принят, Steam держит 7 дней",
   completed: "завершён",
   failed: "не прошёл",
   canceled: "отменён",
