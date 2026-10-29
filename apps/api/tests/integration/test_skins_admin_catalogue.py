@@ -5,11 +5,13 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from decimal import Decimal
 
+import pytest
 from csmarket.core.ids import new_id
 from csmarket.modules.admin.models import AdminAuditLog
 from csmarket.modules.fx.api import record_snapshot
 from csmarket.modules.skins.job_status import JOB_IMPORT, record_job
 from csmarket.modules.skins.models import SkinItem, SkinSearchAlias
+from csmarket.modules.skins.naming import search_text, slug_for
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -319,3 +321,70 @@ async def test_status_reports_the_last_job(
     assert job["finished_at"]
     assert body["fx"] is None
     assert body["items_total"] == 0
+
+
+async def _real_names(db: AsyncSession) -> None:
+    """Real market names; stock sits on Skinslink and LIS-SKINS (Waxpeer is off)."""
+    for name, phase, stock in (
+        ("AK-47 | Redline (Field-Tested)", "", 3),
+        ("AK-47 | Redline (Minimal Wear)", "", 40),
+        ("StatTrak™ AK-47 | Redline (Field-Tested)", "", 9),
+        ("★ Karambit | Doppler (Factory New)", "Phase 2", 2),
+        ("M4A4 | Desert-Strike (Field-Tested)", "", 0),
+    ):
+        db.add(
+            SkinItem(
+                id=new_id(),
+                market_hash_name=name,
+                phase=phase,
+                slug=slug_for(name, phase),
+                category="rifles",
+                search_text=search_text(name, phase),
+                active=True,
+                skinslink_min_units=10_000 if stock else None,
+                skinslink_count=stock,
+                source="bymykel",
+            )
+        )
+    await db.commit()
+
+
+async def _found(c: AsyncClient, h: dict[str, str], q: str) -> list[str]:
+    r = await c.get("/api/v1/admin/skins/items", params={"q": q}, headers=h)
+    assert r.status_code == 200, r.text
+    return [i["name"] for i in r.json()["items"]]
+
+
+@pytest.mark.parametrize(
+    ("q", "first"),
+    [
+        ("AK-47 | Redline (Field-Tested)", "AK-47 | Redline (Field-Tested)"),
+        ("ak-47|redline (field-tested)", "AK-47 | Redline (Field-Tested)"),
+        ("redline ak ft", "AK-47 | Redline (Field-Tested)"),
+        ("redline mw", "AK-47 | Redline (Minimal Wear)"),
+        ("StatTrak™ AK-47 | Redline", "StatTrak™ AK-47 | Redline (Field-Tested)"),
+        ("★ Karambit | Doppler (Factory New)", "★ Karambit | Doppler (Factory New)"),
+        ("karambit phase 2", "★ Karambit | Doppler (Factory New)"),
+        ("redlin", "AK-47 | Redline (Minimal Wear)"),
+    ],
+)
+async def test_admin_search_finds_a_skin_however_it_is_typed(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    admin_headers: Headers,
+    q: str,
+    first: str,
+) -> None:
+    await _real_names(db_session)
+    found = await _found(integration_client, await admin_headers(), q)
+    assert found, q
+    assert found[0] == first, found
+
+
+async def test_admin_search_puts_the_best_stocked_match_first(
+    integration_client: AsyncClient, db_session: AsyncSession, admin_headers: Headers
+) -> None:
+    await _real_names(db_session)
+    found = await _found(integration_client, await admin_headers(), "redline")
+    assert found[0] == "AK-47 | Redline (Minimal Wear)"
+    assert "M4A4 | Desert-Strike (Field-Tested)" not in found

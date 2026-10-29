@@ -137,7 +137,7 @@ describe("ArticleEditor", () => {
     body().setSelectionRange(6, 6);
     fireEvent.click(screen.getByRole("button", { name: "Скин" }));
     fireEvent.change(screen.getByLabelText("Поиск скина"), { target: { value: "redline" } });
-    fireEvent.click(await screen.findByRole("button", { name: /AK-47 \| Redline/ }));
+    fireEvent.mouseDown(await screen.findByRole("option", { name: /AK-47 \| Redline/ }));
     expect(body().value).toBe("Текст.\n\n[[skin:ak-47-redline-field-tested]]\n\n");
   });
 

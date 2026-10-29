@@ -18,6 +18,7 @@ import { points } from "./QuoteView";
 
 import { MoneyField } from "@/components/MoneyInput";
 import { Section } from "@/components/Section";
+import { SkinSearch } from "@/features/catalogue/SkinSearch";
 import { useIdempotencyKey } from "@/features/users/useIdempotencyKey";
 import { formatSum } from "@/lib/format";
 import { useDebounced } from "@/lib/useDebounced";
@@ -123,51 +124,37 @@ function Editor({ item, onSaved }: EditorProps) {
 
 export function OverrideCard() {
   const qc = useQueryClient();
-  const [text, setText] = useState("");
   const [onlyOverridden, setOnlyOverridden] = useState(false);
   const [chosen, setChosen] = useState<PricedItem | null>(null);
-  const debounced = useDebounced(text.trim(), DEBOUNCE_MS);
-  const q = debounced.length >= 2 ? debounced : undefined;
   const list = useQuery({
-    queryKey: ["pricing", "items", q, onlyOverridden],
-    queryFn: () => findPricedItems(q, onlyOverridden),
-    enabled: q !== undefined || onlyOverridden,
+    queryKey: ["pricing", "items", "overridden"],
+    queryFn: () => findPricedItems(undefined, true),
+    enabled: onlyOverridden,
   });
   return (
     <Section title="Цена одного скина">
       <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="flex flex-1 flex-col gap-1 text-sm">
-            Найти скин
-            <input
-              type="search"
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value);
-              }}
-              placeholder="Например: asiimov"
-              className="border-border bg-bg h-11 rounded-md border px-3"
-            />
-          </label>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="accent-accent size-5"
-              checked={onlyOverridden}
-              onChange={(e) => {
-                setOnlyOverridden(e.target.checked);
-              }}
-            />
-            Только с ручной ценой
-          </label>
-        </div>
+        <SkinSearch find={(q) => findPricedItems(q, false)} note={manualNote} onPick={setChosen} />
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="accent-accent size-5"
+            checked={onlyOverridden}
+            onChange={(e) => {
+              setOnlyOverridden(e.target.checked);
+            }}
+          />
+          Показать скины с ручной ценой
+        </label>
         {list.isError && (
           <p role="alert" className="text-danger">
             {errorText(list.error)}
           </p>
         )}
-        {list.data?.items.length === 0 && <p className="text-fg-muted">Ничего не найдено.</p>}
-        {(list.data?.items.length ?? 0) > 0 && (
+        {onlyOverridden && list.data?.items.length === 0 && (
+          <p className="text-fg-muted">Ручных цен нет.</p>
+        )}
+        {onlyOverridden && (list.data?.items.length ?? 0) > 0 && (
           <ul className="flex flex-col gap-1">
             {list.data?.items.map((item) => (
               <li key={item.slug}>
@@ -179,8 +166,7 @@ export function OverrideCard() {
                   }}
                 >
                   {item.name}
-                  {item.margin_override_pp ? ` · ${points(item.margin_override_pp)}` : ""}
-                  {item.fixed_price_usd ? ` · $${item.fixed_price_usd}` : ""}
+                  {item.phase ? ` · ${item.phase}` : ""} · {manualNote(item)}
                 </button>
               </li>
             ))}
@@ -199,4 +185,11 @@ export function OverrideCard() {
       </div>
     </Section>
   );
+}
+
+/** «+10 п.п.» / «$99.50» / «по правилам» — what overrides this skin's price. */
+function manualNote(item: PricedItem): string {
+  if (item.fixed_price_usd) return `ручная цена $${item.fixed_price_usd}`;
+  if (item.margin_override_pp) return `надбавка ${points(item.margin_override_pp)}`;
+  return "по правилам";
 }

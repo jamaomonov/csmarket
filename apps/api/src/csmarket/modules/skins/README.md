@@ -280,10 +280,12 @@ rarity, team, min_uzs, max_uzs, q, sort` default `-price`, `cursor`, `limit` 1..
   `prices_updated_at` (the newest tick), `import_job` / `price_sync_job` (`job_status.read_job`,
   ruling Q6), `fx` (`{usd_uzs, fetched_at, source}` or `null` without a fresh rate),
   `sync_enabled` and `waxpeer_key_set` (a bool, never the key).
-- `GET /items?q=&hidden=&limit=` -> `AdminSkinItemsOut`: `q` (2..80) folded by
-  `naming.search_text` and matched as an escaped `ILIKE` substring of `search_text`; `hidden`
-  filters; `limit` 1..100 (20); hidden and inactive items included; most listings first, then
-  slug.
+- `GET /items?q=&hidden=&limit=` -> `AdminSkinItemsOut` (`admin_search.py`): `q` (2..80) is
+  expanded by the search aliases and folded by `naming.search_text`; every word must appear in
+  `search_text`, in any order (an escaped `ILIKE` each), and `fn`/`mw`/`ft`/`ww`/`bs`/`st` also
+  match their long forms; best trigram similarity first, then the stock of every source, then
+  slug. `hidden` filters; `limit` 1..100 (20); hidden and inactive items included. Cost and
+  count in the answer are every source's (the storefront's). Without `q`: most stock first.
 - `PATCH /items/{slug}` `{hidden}` -> `AdminSkinItemOut` (ruling Q4): off every public read at
   once, still priced by the sync, so unhiding is instant. Unknown slug: 404.
 - `GET /aliases`, `PUT /aliases/{alias}` `{text}` -> `AliasOut`, `DELETE /aliases/{alias}` ->

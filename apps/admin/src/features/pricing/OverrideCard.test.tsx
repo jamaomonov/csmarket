@@ -43,7 +43,7 @@ function renderCard() {
 }
 
 async function pick(): Promise<void> {
-  fireEvent.click(screen.getByLabelText("Только с ручной ценой"));
+  fireEvent.click(screen.getByLabelText("Показать скины с ручной ценой"));
   fireEvent.click(await screen.findByRole("button", { name: /AWP \| Asiimov/ }));
 }
 

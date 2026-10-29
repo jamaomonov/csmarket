@@ -33,6 +33,7 @@ from csmarket.core.idempotency import (
 from csmarket.core.redis import get_redis
 from csmarket.modules.admin.api import record, require_admin
 from csmarket.modules.fx.api import current_usd_uzs
+from csmarket.modules.skins import admin_search
 from csmarket.modules.skins.admin_schemas import (
     AdminSkinItemOut,
     AdminSkinItemPatchIn,
@@ -48,7 +49,6 @@ from csmarket.modules.skins.cachekeys import bump_catalog_version
 from csmarket.modules.skins.images import steam_image
 from csmarket.modules.skins.job_status import JOB_IMPORT, JOB_PRICE_SYNC, JobStatus, read_job
 from csmarket.modules.skins.models import SkinItem, SkinSearchAlias
-from csmarket.modules.skins.naming import search_text
 from csmarket.modules.skins.repricing import cost_units
 from csmarket.modules.users.models import User
 
@@ -127,10 +127,6 @@ def _plain(value: Decimal) -> str:
     return str(whole) if value == whole else str(value)
 
 
-def _like_escape(needle: str) -> str:
-    return needle.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-
 @router.get("/catalog/status", response_model=CatalogStatusOut, summary="Catalogue status")
 async def catalog_status(db: Db) -> CatalogStatusOut:
     """Item counts, the newest price tick, the last job runs, the rate and the switches."""
@@ -170,20 +166,23 @@ async def search_items(
     overridden: bool | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AdminSkinItemsOut:
-    """Substring match on the folded name; ``hidden`` and ``overridden`` (a margin override
-    or a pinned price) filter; most listings first."""
+    """Every word of ``q`` in any order (``admin_search``); ``hidden`` and ``overridden`` (a
+    margin override or a pinned price) filter. Without ``q``, most stock first."""
     stmt = select(SkinItem)
-    if q is not None:
-        needle = search_text(q, "")
-        if not needle:
-            return AdminSkinItemsOut(items=[])
-        stmt = stmt.where(SkinItem.search_text.ilike(f"%{_like_escape(needle)}%", escape="\\"))
     if hidden is not None:
         stmt = stmt.where(SkinItem.hidden.is_(hidden))
     if overridden is not None:
         has = or_(SkinItem.margin_override_pp.is_not(None), SkinItem.fixed_price_usd.is_not(None))
         stmt = stmt.where(has if overridden else not_(has))
-    stmt = stmt.order_by(SkinItem.count_auto.desc(), SkinItem.slug).limit(limit)
+    if q is None:
+        stock = SkinItem.count_auto + SkinItem.skinslink_count + SkinItem.lisskins_count
+        stmt = stmt.order_by(stock.desc(), SkinItem.slug)
+    else:
+        matched = await admin_search.match(db, stmt, q)
+        if matched is None:
+            return AdminSkinItemsOut(items=[])
+        stmt = matched
+    stmt = stmt.limit(limit)
     return AdminSkinItemsOut(items=[item_out(i) for i in (await db.execute(stmt)).scalars()])
 
 
