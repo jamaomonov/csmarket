@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import get_args
 
 from redis.asyncio import Redis
@@ -20,7 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.config import Settings
 from csmarket.core.errors import ConflictError
 from csmarket.core.logging import get_logger
-from csmarket.modules.sales.gate import sale_rate_now
+from csmarket.modules.fx.api import current_usd_uzs
+from csmarket.modules.sales.gate import RateUnavailableError, sale_rate_now
 from csmarket.modules.sales.inventory import unavailable
 from csmarket.modules.sales.pricing import payout_for, quote_item
 from csmarket.modules.sales.rules import CardType, SaleSettings
@@ -47,6 +48,8 @@ class CheckedItem:
     name: str
     image_url: str | None
     skinslink_usd: Decimal
+    #: ``skinslink_usd`` at the CBU rate, whole soʻm — for the owner's eye only.
+    skinslink_uzs: Decimal
     original_usd: Decimal | None
     price_uzs: Decimal
     margin_usd: Decimal
@@ -57,6 +60,7 @@ class Totals:
     """The whole list sold at once."""
 
     skinslink_usd: Decimal
+    skinslink_uzs: Decimal
     items_uzs: Decimal
     balance_uzs: Decimal
     card_uzs: dict[CardType, Decimal]
@@ -71,6 +75,7 @@ class PriceCheck:
     missing: list[str]
     totals: Totals
     rate: Decimal
+    cbu_rate: Decimal
 
 
 def clean_names(names: Sequence[str]) -> list[str]:
@@ -82,19 +87,35 @@ def clean_names(names: Sequence[str]) -> list[str]:
     return list(seen)
 
 
+@dataclass(frozen=True)
+class _Rates:
+    sale: Decimal
+    cbu: Decimal
+
+
+def _whole(amount: Decimal) -> Decimal:
+    return amount.quantize(Decimal(1), rounding=ROUND_HALF_UP)
+
+
 def _priced(
     rows: Sequence[tuple[str, str | None, Decimal, Decimal | None]],
     doc: SaleSettings,
-    rate: Decimal,
+    rates: _Rates,
 ) -> tuple[list[CheckedItem], Totals]:
     items = []
     for name, image, usd, original in rows:
-        q = quote_item(usd, doc, rate)
-        items.append(CheckedItem(name, image, usd, original, q.price_uzs, q.margin_usd))
+        q = quote_item(usd, doc, rates.sale)
+        items.append(
+            CheckedItem(
+                name, image, usd, _whole(usd * rates.cbu), original, q.price_uzs, q.margin_usd
+            )
+        )
     items.sort(key=lambda i: i.skinslink_usd, reverse=True)
     items_uzs = sum((i.price_uzs for i in items), Decimal(0))
+    skinslink_usd = sum((i.skinslink_usd for i in items), Decimal(0))
     totals = Totals(
-        skinslink_usd=sum((i.skinslink_usd for i in items), Decimal(0)),
+        skinslink_usd=skinslink_usd,
+        skinslink_uzs=_whole(skinslink_usd * rates.cbu),
         items_uzs=items_uzs,
         balance_uzs=payout_for(items_uzs, doc, to="balance", card_type=None).payout_uzs,
         card_uzs={
@@ -106,11 +127,16 @@ def _priced(
     return items, totals
 
 
-async def _rules(
-    db: AsyncSession, redis: Redis, settings: Settings
-) -> tuple[SaleSettings, Decimal]:
+async def _rules(db: AsyncSession, redis: Redis, settings: Settings) -> tuple[SaleSettings, _Rates]:
     doc = await read_sale_settings(db)
-    return doc, await sale_rate_now(db, redis, settings, doc)
+    sale = await sale_rate_now(db, redis, settings, doc)
+    # ``sale_rate_now`` raised already if there were none; read again for the plain figure.
+    fx = await current_usd_uzs(
+        db, redis, max_age_days=settings.fx_max_age_days, uplift_pct=Decimal(0)
+    )
+    if fx is None:
+        raise RateUnavailableError("no soʻm rate", code="rate_unavailable")
+    return doc, _Rates(sale=sale, cbu=fx.rate)
 
 
 def _refused(exc: SkinslinkError) -> Exception:
@@ -131,7 +157,7 @@ async def by_names(
         SalesUnavailableError: Skinslink refused or could not be asked.
         RateUnavailableError: No soʻm rate.
     """
-    doc, rate = await _rules(db, redis, settings)
+    doc, rates = await _rules(db, redis, settings)
     try:
         quotes: list[PriceQuote] = await client.get_prices(names)
     except SkinslinkError as exc:
@@ -141,9 +167,9 @@ async def by_names(
         raise unavailable() from None
     priced = {q.name: q for q in quotes}
     items, totals = _priced(
-        [(q.name, None, q.price_usd, q.original_usd) for q in priced.values()], doc, rate
+        [(q.name, None, q.price_usd, q.original_usd) for q in priced.values()], doc, rates
     )
-    return PriceCheck(items, [n for n in names if n not in priced], totals, rate)
+    return PriceCheck(items, [n for n in names if n not in priced], totals, rates.sale, rates.cbu)
 
 
 async def by_trade_link(
@@ -156,7 +182,7 @@ async def by_trade_link(
         SalesUnavailableError: Skinslink refused otherwise or could not be asked.
         RateUnavailableError: No soʻm rate.
     """
-    doc, rate = await _rules(db, redis, settings)
+    doc, rates = await _rules(db, redis, settings)
     try:
         inventory = await client.inventory(partner=link.partner, token=link.token)
     except SkinslinkError as exc:
@@ -165,9 +191,9 @@ async def by_trade_link(
         log.warning("sales.price_check.unavailable", error=type(exc).__name__)
         raise unavailable() from None
     items, totals = _priced(
-        [(i.name, i.image_url, i.price_usd, None) for i in inventory.items], doc, rate
+        [(i.name, i.image_url, i.price_usd, None) for i in inventory.items], doc, rates
     )
-    return PriceCheck(items, [], totals, rate)
+    return PriceCheck(items, [], totals, rates.sale, rates.cbu)
 
 
 __all__ = [

@@ -133,7 +133,10 @@ function Result({ data }: { data: PriceCheck }) {
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5" aria-label="Итоги">
             <Total title="Платит Skinslink">
-              <Money usd={t.skinslink_usd} />
+              <Money usd={t.skinslink_usd} />{" "}
+              <span className="text-fg-muted text-sm font-normal">
+                (<Money uzs={t.skinslink_uzs} />)
+              </span>
             </Total>
             <Total title="Наша маржа">
               <Money usd={t.margin_usd} />
@@ -175,6 +178,9 @@ function Result({ data }: { data: PriceCheck }) {
                     </td>
                     <td className="px-3 py-2 text-right">
                       <Money usd={i.skinslink_usd} />
+                      <span className="text-fg-muted block text-xs">
+                        (<Money uzs={i.skinslink_uzs} />)
+                      </span>
                       {i.original_usd && i.original_usd !== i.skinslink_usd && (
                         <span className="text-fg-muted block text-xs">
                           без множителей <Money usd={i.original_usd} />
@@ -193,8 +199,8 @@ function Result({ data }: { data: PriceCheck }) {
             </table>
           </div>
           <p className="text-fg-muted text-xs">
-            Курс выкупа {data.rate} сум за $1 (ЦБ минус срез из настроек выкупа). «Клиенту» — до
-            бонуса за баланс и комиссии карты.
+            Сумы в скобках — по курсу ЦБ {data.cbu_rate}. Курс выкупа {data.rate} сум за $1 (ЦБ
+            минус срез из настроек выкупа). «Клиенту» — до бонуса за баланс и комиссии карты.
           </p>
         </>
       )}

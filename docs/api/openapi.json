@@ -6178,12 +6178,17 @@
           "skinslink_usd": {
             "title": "Skinslink Usd",
             "type": "string"
+          },
+          "skinslink_uzs": {
+            "title": "Skinslink Uzs",
+            "type": "string"
           }
         },
         "required": [
           "name",
           "image_url",
           "skinslink_usd",
+          "skinslink_uzs",
           "original_usd",
           "price_uzs",
           "margin_usd"
@@ -9668,6 +9673,10 @@
       },
       "PriceCheckOut": {
         "properties": {
+          "cbu_rate": {
+            "title": "Cbu Rate",
+            "type": "string"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/CheckedItemOut"
@@ -9694,7 +9703,8 @@
           "items",
           "missing",
           "totals",
-          "rate"
+          "rate",
+          "cbu_rate"
         ],
         "title": "PriceCheckOut",
         "type": "object"
@@ -13661,10 +13671,15 @@
           "skinslink_usd": {
             "title": "Skinslink Usd",
             "type": "string"
+          },
+          "skinslink_uzs": {
+            "title": "Skinslink Uzs",
+            "type": "string"
           }
         },
         "required": [
           "skinslink_usd",
+          "skinslink_uzs",
           "items_uzs",
           "balance_uzs",
           "card_uzs",

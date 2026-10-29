@@ -16,6 +16,7 @@ const RESULT = {
       name: "AK-47 | Redline (Field-Tested)",
       image_url: null,
       skinslink_usd: "12.45",
+      skinslink_uzs: "157499",
       original_usd: "14.1",
       price_uzs: "149600",
       margin_usd: "0.62",
@@ -24,12 +25,14 @@ const RESULT = {
   missing: ["Nope | Gone"],
   totals: {
     skinslink_usd: "12.45",
+    skinslink_uzs: "157499",
     items_uzs: "149600",
     balance_uzs: "152500",
     card_uzs: { uzcard: "142100", humo: "142100", uzum_visa: "142100" },
     margin_usd: "0.62",
   },
   rate: "12650.5",
+  cbu_rate: "12650.5",
 };
 
 function renderPage() {
@@ -62,6 +65,8 @@ describe("PriceCheckPage", () => {
     });
     expect(await screen.findByText("AK-47 | Redline (Field-Tested)")).toBeInTheDocument();
     expect(screen.getByText(/без множителей/)).toBeInTheDocument();
+    // Skinslink's dollars also in soʻm at the CBU rate, in brackets
+    expect(screen.getAllByText(/157\s499/).length).toBeGreaterThan(0);
     expect(screen.getByText("Nope | Gone")).toBeInTheDocument();
     expect(screen.getByLabelText("Итоги")).toHaveTextContent("На баланс (с бонусом)");
   });

@@ -7,6 +7,8 @@ export interface CheckedItem {
   name: string;
   image_url: string | null;
   skinslink_usd: string;
+  /** `skinslink_usd` at the CBU rate, whole soʻm. */
+  skinslink_uzs: string;
   /** Skinslink's raw price before its multipliers (names only). */
   original_usd: string | null;
   /** What we pay for it, soʻm, before the balance bonus or a card fee. */
@@ -20,12 +22,15 @@ export interface PriceCheck {
   missing: string[];
   totals: {
     skinslink_usd: string;
+    skinslink_uzs: string;
     items_uzs: string;
     balance_uzs: string;
     card_uzs: Record<CardKind, string>;
     margin_usd: string;
   };
   rate: string;
+  /** The plain CBU rate `skinslink_uzs` is at. */
+  cbu_rate: string;
 }
 
 export type PriceCheckIn = { names: string[] } | { trade_link: string };

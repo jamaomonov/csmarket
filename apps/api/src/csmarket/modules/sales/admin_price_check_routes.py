@@ -53,6 +53,8 @@ class CheckedItemOut(BaseModel):
     name: str
     image_url: str | None
     skinslink_usd: str
+    #: ``skinslink_usd`` at the CBU rate, whole soʻm.
+    skinslink_uzs: str
     #: Skinslink's raw price before its multipliers (names only).
     original_usd: str | None
     #: What we would pay for it, soʻm, before the balance bonus or a card fee.
@@ -62,6 +64,7 @@ class CheckedItemOut(BaseModel):
 
 class TotalsOut(BaseModel):
     skinslink_usd: str
+    skinslink_uzs: str
     items_uzs: str
     balance_uzs: str
     card_uzs: dict[CardType, str]
@@ -75,6 +78,8 @@ class PriceCheckOut(BaseModel):
     totals: TotalsOut
     #: The sale rate used (CBU less the cut), soʻm per dollar.
     rate: str
+    #: The plain CBU rate ``skinslink_uzs`` is at.
+    cbu_rate: str
 
     @classmethod
     def of(cls, c: PriceCheck) -> PriceCheckOut:
@@ -85,6 +90,7 @@ class PriceCheckOut(BaseModel):
                     name=i.name,
                     image_url=i.image_url,
                     skinslink_usd=_plain(i.skinslink_usd),
+                    skinslink_uzs=_plain(i.skinslink_uzs),
                     original_usd=None if i.original_usd is None else _plain(i.original_usd),
                     price_uzs=_plain(i.price_uzs),
                     margin_usd=_plain(i.margin_usd),
@@ -94,12 +100,14 @@ class PriceCheckOut(BaseModel):
             missing=c.missing,
             totals=TotalsOut(
                 skinslink_usd=_plain(c.totals.skinslink_usd),
+                skinslink_uzs=_plain(c.totals.skinslink_uzs),
                 items_uzs=_plain(c.totals.items_uzs),
                 balance_uzs=_plain(c.totals.balance_uzs),
                 card_uzs={t: _plain(v) for t, v in c.totals.card_uzs.items()},
                 margin_usd=_plain(c.totals.margin_usd),
             ),
             rate=_plain(c.rate),
+            cbu_rate=_plain(c.cbu_rate),
         )
 
 

@@ -71,7 +71,11 @@ async def test_names_are_priced_with_our_payout_and_margin(
         ("P250 | Sand Dune (Field-Tested)", "0.5", None, "5600"),
     ]
     assert body["missing"] == ["Nope | Gone"]
+    # Skinslink's dollars in soʻm at the CBU rate (12 650.5), whole soʻm
+    assert body["cbu_rate"] == "12650.5"
+    assert [i["skinslink_uzs"] for i in body["items"]] == ["157499", "6325"]
     totals = body["totals"]
+    assert totals["skinslink_uzs"] == "163824"
     assert (totals["skinslink_usd"], totals["items_uzs"]) == ("12.95", "155200")
     assert totals["balance_uzs"] == "158300"  # +2 % bonus, rounded down to 100
     assert totals["card_uzs"] == {"uzcard": "147400", "humo": "147400", "uzum_visa": "147400"}
