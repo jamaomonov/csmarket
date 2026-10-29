@@ -82,6 +82,9 @@ def _deposits() -> None:
         sa.Column("skinslink_id", sa.Integer(), nullable=True),
         sa.Column("status", sa.String(16), nullable=False),
         sa.Column("amount_usd", _USD, nullable=True),
+        sa.Column(
+            "amount_estimated", sa.Boolean(), nullable=False, server_default=sa.text("false")
+        ),
         sa.Column("trade_offer_id", sa.String(40), nullable=True),
         sa.Column("offer_expiry_at", sa.String(40), nullable=True),
         sa.Column("hold_end_date", sa.String(40), nullable=True),

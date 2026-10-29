@@ -26,6 +26,16 @@ outcome word.
 4. Skinslink's credit closes the Skinslink items; «Себе» items wait in «Склад» until you mark
    them «Продал…» (where, amount, currency).
 
+## Rules that keep the profit honest
+
+- Nothing is sent, sold or written off before the deal has a price («Сначала укажите, сколько
+  заплатили»): each skin's profit is measured against its share of it.
+- Once one skin is sold, credited or written off, the price is locked. Fix a wrong price
+  before the first sale.
+- When the trade was saved after a lost answer, Skinslink's status gives no dollar amount: the
+  deal is credited at the skins' Skinslink prices and shows «≈». Check the real figure in the
+  Skinslink cabinet.
+
 ## A deposit stuck «отправляем…»
 
 The `create-deposit` answer was lost. The 60 s `desk.poll` asks Skinslink by `desk-{id}`; after
@@ -34,8 +44,9 @@ not press «Отправить обмен» twice — it is refused while one is
 
 ## A revert
 
-Red banner «Трейдер откатил обмен». Skinslink took its money back; the deal's profit becomes the
-loss of what you paid, booked on the day of the revert. «Моя доля на Skinslink» drops by the
+Red banner «Трейдер откатил обмен». Skinslink took its money back (or never paid, if the revert
+came during the hold); the deal's profit becomes the loss of what you paid, booked on the day of
+the revert. «Моя доля на Skinslink» drops by the
 credited amount.
 
 ## «Моя доля на Skinslink»

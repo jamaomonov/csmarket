@@ -52,6 +52,7 @@ describe("DealPage", () => {
             id: "x",
             status: "hold",
             amount_usd: "1200",
+            amount_estimated: false,
             trade_offer_id: "6912345678",
             offer_expiry_at: null,
             hold_end_date: null,

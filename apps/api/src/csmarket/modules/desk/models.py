@@ -17,7 +17,17 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Integer, Numeric, String, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -115,6 +125,11 @@ class DeskDeposit(Base):
     #: ``creating`` until Skinslink answers, then Skinslink's own status.
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_usd: Mapped[Decimal | None] = mapped_column(_USD, nullable=True)
+    #: ``deposit/status`` carries no USD amount: a deposit adopted after a lost create answer
+    #: is credited at the items' Skinslink prices, flagged here.
+    amount_estimated: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=sql_text("false"), default=False
+    )
     trade_offer_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
     offer_expiry_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     hold_end_date: Mapped[str | None] = mapped_column(String(40), nullable=True)

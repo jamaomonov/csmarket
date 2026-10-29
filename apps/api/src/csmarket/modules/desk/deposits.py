@@ -26,7 +26,7 @@ from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
-from csmarket.modules.desk.deals import close_if_done, items_of, load_deal
+from csmarket.modules.desk.deals import close_if_done, items_of, load_deal, require_price
 from csmarket.modules.desk.inventory import refused, unavailable
 from csmarket.modules.desk.models import (
     DEPOSIT_DEAD,
@@ -125,18 +125,21 @@ async def _revert(db: AsyncSession, deal: DeskDeal, deposit: DeskDeposit, at: da
             continue
         item.state = "reverted"
         item.resolved_at = at
-        if (credit := credited.get(item.id)) is not None:
-            db.add(
-                DeskEntry(
-                    id=new_id(),
-                    deal_id=deal.id,
-                    item_id=item.id,
-                    kind="revert",
-                    revenue_usd=-credit.revenue_usd,
-                    profit_usd=-credit.revenue_usd,
-                    at=at,
-                )
+        credit = credited.get(item.id)
+        # After a credit: undo its revenue. Before one (a revert in hold): the cost is lost.
+        revenue = Decimal(0) if credit is None else -credit.revenue_usd
+        profit = -(item.cost_usd or Decimal(0)) if credit is None else revenue
+        db.add(
+            DeskEntry(
+                id=new_id(),
+                deal_id=deal.id,
+                item_id=item.id,
+                kind="revert",
+                revenue_usd=revenue,
+                profit_usd=profit,
+                at=at,
             )
+        )
     deal.status = "reverted"
     deal.updated_at = at
 
@@ -178,11 +181,13 @@ async def apply_report(
             await _free(db, deposit.id)
         elif report.status == "reverted" and deposit.reverted_at is None:
             await _revert(db, deal, deposit, at)
-        elif (
-            report.status == "completed"
-            and deposit.amount_usd is not None
-            and deposit.credited_at is None
-        ):
+        elif report.status == "completed" and deposit.credited_at is None:
+            if deposit.amount_usd is None:  # adopted: ``deposit/status`` has no USD amount
+                items = await _sent_items(db, deposit.id)
+                deposit.amount_usd = sum(
+                    (i.skinslink_usd or Decimal(0) for i in items if i.state == "sent"), Decimal(0)
+                )
+                deposit.amount_estimated = True
             await _credit(db, deal, deposit, at)
     deposit.next_check_at = _next_check(deposit, at)
     await db.flush()
@@ -213,6 +218,7 @@ async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDea
     ]
     if not items:
         raise ConflictError("no skins to send", code="nothing_to_send")
+    require_price(deal)
     deposit = DeskDeposit(
         id=new_id(), deal_id=deal.id, status="creating", next_check_at=now() + LIVE_EVERY
     )

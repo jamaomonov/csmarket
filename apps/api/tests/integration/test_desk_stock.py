@@ -87,26 +87,6 @@ async def test_move_and_only_stock_is_sold_by_hand(
     assert moved.json()["items"][0]["destination"] == "stock"
 
 
-async def test_repricing_keeps_resolved_items_cost(
-    integration_client: AsyncClient,
-    desk_headers: Headers,  # noqa: F811
-) -> None:
-    h = await desk_headers()
-    deal = await create(integration_client, h, **_stock_deal())
-    a = deal["items"][0]["id"]
-    await integration_client.post(
-        f"{BASE}/items/{a}/sell",
-        json={"where": "x", "amount": "70", "currency": "USD"},
-        headers=h | key(),
-    )
-    r = await integration_client.patch(
-        f"{BASE}/deals/{deal['id']}",
-        json={"paid_amount": "100", "paid_currency": "USD"},
-        headers=h | key(),
-    )
-    assert [i["cost_usd"] for i in r.json()["items"]] == ["54", "40"]
-
-
 async def test_summary_window_and_share(
     integration_client: AsyncClient,
     desk_headers: Headers,  # noqa: F811

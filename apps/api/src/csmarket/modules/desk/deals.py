@@ -17,7 +17,7 @@ from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
-from csmarket.core.errors import NotFoundError, ValidationError
+from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
 from csmarket.core.ids import new_id
 from csmarket.modules.desk.models import RESOLVED, DeskDeal, DeskDeposit, DeskEntry, DeskItem
 from csmarket.modules.desk.money import Currency, plain, split_cost, to_usd
@@ -140,6 +140,11 @@ async def update_deal(db: AsyncSession, deal_id: str, patch: DealPatch) -> DeskD
         deal.guarantor_released_at = now() if patch.guarantor_released else None
     if fields & {"paid_amount", "paid_currency", "rate"}:
         items = await items_of(db, deal.id)  # before the price changes: no autoflush mid-way
+        if any(i.state in RESOLVED for i in items):
+            raise ConflictError(
+                "the price is locked once a skin is sold, credited or written off",
+                code="price_locked",
+            )
         if "paid_amount" in fields:
             deal.paid_amount = patch.paid_amount
             deal.paid_currency = patch.paid_currency
@@ -156,6 +161,17 @@ async def update_deal(db: AsyncSession, deal_id: str, patch: DealPatch) -> DeskD
     deal.updated_at = now()
     await db.flush()
     return deal
+
+
+def require_price(deal: DeskDeal) -> None:
+    """Nothing resolves before the deal has a price: each item's profit is measured against
+    its share of it.
+
+    Raises:
+        ConflictError: ``price_required``.
+    """
+    if deal.paid_usd is None:
+        raise ConflictError("set the deal's price first", code="price_required")
 
 
 async def close_if_done(db: AsyncSession, deal: DeskDeal) -> None:
@@ -195,6 +211,7 @@ def _deposit_out(d: DeskDeposit) -> DepositOut:
         id=d.id,
         status=d.status,
         amount_usd=plain(d.amount_usd),
+        amount_estimated=d.amount_estimated,
         trade_offer_id=d.trade_offer_id,
         offer_expiry_at=d.offer_expiry_at,
         hold_end_date=d.hold_end_date,
@@ -349,5 +366,6 @@ __all__ = [
     "items_of",
     "list_deals",
     "load_deal",
+    "require_price",
     "update_deal",
 ]

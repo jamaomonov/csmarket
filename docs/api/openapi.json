@@ -6884,6 +6884,10 @@
             ],
             "title": "Accepted At"
           },
+          "amount_estimated": {
+            "title": "Amount Estimated",
+            "type": "boolean"
+          },
           "amount_usd": {
             "anyOf": [
               {
@@ -6981,6 +6985,7 @@
           "id",
           "status",
           "amount_usd",
+          "amount_estimated",
           "trade_offer_id",
           "offer_expiry_at",
           "hold_end_date",

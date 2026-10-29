@@ -121,6 +121,8 @@ class DepositOut(BaseModel):
     id: str
     status: str
     amount_usd: str | None
+    #: The amount is the items' Skinslink prices, not Skinslink's own figure.
+    amount_estimated: bool
     trade_offer_id: str | None
     offer_expiry_at: str | None
     hold_end_date: str | None

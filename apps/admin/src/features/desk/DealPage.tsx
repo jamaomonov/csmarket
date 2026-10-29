@@ -155,7 +155,8 @@ export function DealPage() {
             {x.trade_offer_id && <>обмен №{x.trade_offer_id} · </>}
             {x.amount_usd && (
               <>
-                Skinslink: <Money usd={x.amount_usd} /> ·{" "}
+                Skinslink: {x.amount_estimated ? "≈ " : ""}
+                <Money usd={x.amount_usd} /> ·{" "}
               </>
             )}
             {x.fail_reason && <>причина: {x.fail_reason}</>}

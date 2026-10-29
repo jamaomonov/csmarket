@@ -31,6 +31,8 @@ export interface DeskDeposit {
   id: string;
   status: string;
   amount_usd: string | null;
+  /** The items' Skinslink prices stand in: Skinslink's own figure was not seen. */
+  amount_estimated: boolean;
   trade_offer_id: string | null;
   offer_expiry_at: string | null;
   hold_end_date: string | null;

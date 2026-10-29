@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.ids import new_id
-from csmarket.modules.desk.deals import close_if_done, item_out, load_deal
+from csmarket.modules.desk.deals import close_if_done, item_out, load_deal, require_price
 from csmarket.modules.desk.models import DeskDeal, DeskEntry, DeskItem
 from csmarket.modules.desk.money import plain, to_usd
 from csmarket.modules.desk.schemas import MoveIn, SellIn, StockItemOut, StockOut, WriteOffIn
@@ -56,6 +56,7 @@ async def sell(db: AsyncSession, item_id: str, body: SellIn) -> DeskDeal:
     item = await _open_item(db, item_id)
     if item.destination != "stock":
         raise ConflictError("only a stock item is sold by hand", code="item_not_open")
+    require_price(await load_deal(db, item.deal_id))
     at = body.at or now()
     item.sold_where = body.where.strip()
     item.sold_amount = body.amount
@@ -82,6 +83,7 @@ async def move(db: AsyncSession, item_id: str, body: MoveIn) -> DeskDeal:
 async def write_off(db: AsyncSession, item_id: str, body: WriteOffIn) -> DeskDeal:
     """Lost or given up: ``written_off`` and a loss of its cost."""
     item = await _open_item(db, item_id)
+    require_price(await load_deal(db, item.deal_id))
     at = now()
     item.state = "written_off"
     item.note = body.note.strip()

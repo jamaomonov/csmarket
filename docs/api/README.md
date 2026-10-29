@@ -496,7 +496,10 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
   keyed); `GET /deals`, `/deals/{id}`, `/stock`, `/summary?from=&to=`, `/withdrawals`. 422
   `rate_required` (soʻm without a rate), `trade_link_invalid`; 409 `deposit_open`,
   `nothing_to_send`, `trade_link_missing`, `prices_moved`, `steam_refused` (`reason`),
-  `item_not_open`; 503 `desk_unavailable`.
+  `item_not_open`, `price_required` (nothing resolves before the deal has a price),
+  `price_locked` (the price is fixed once a skin is resolved); 503 `desk_unavailable`. A
+  same-key retry of `POST /deals/{id}/deposit` while the first is still at Skinslink gets 409
+  `deposit_open`, not a replay — never a second offer.
 - Admin «Цена выкупа»: `POST /admin/sales/price-check {names | trade_link}` — **keyless**: it
   writes nothing (Skinslink `get-prices` is asked with `no_deposit_intent`). Up to 200 names;
   answers each item's Skinslink price and ours, the names Skinslink does not buy, and totals
