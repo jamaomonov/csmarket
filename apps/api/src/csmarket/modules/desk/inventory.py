@@ -1,0 +1,76 @@
+"""A trader's inventory as Skinslink prices it, by trade link — for a new deal. One
+``inventory`` call, nothing held across it, nothing kept; the link is never logged.
+"""
+
+from __future__ import annotations
+
+from csmarket.core.errors import ConflictError, UpstreamUnavailableError
+from csmarket.core.logging import get_logger
+from csmarket.modules.desk.money import plain
+from csmarket.modules.desk.schemas import InventoryItemOut, InventoryOut
+from csmarket.modules.skinslink.api import (
+    STEAM_ACCOUNT_CODES,
+    DepositClient,
+    SkinslinkError,
+    SkinslinkUnavailableError,
+)
+from csmarket.modules.users.api import parse_tradelink
+
+log = get_logger("csmarket.desk.inventory")
+
+
+class DeskUnavailableError(UpstreamUnavailableError):
+    """Skinslink refused or could not be asked; expected, a warning only."""
+
+    status_code = 503
+    report = False
+    type_uri = "https://csmarket.uz/errors/desk-unavailable"
+    title = "Skinslink unavailable"
+
+
+def unavailable() -> DeskUnavailableError:
+    """The one 503 the desk answers for Skinslink."""
+    return DeskUnavailableError("Skinslink is unavailable", code="desk_unavailable")
+
+
+def refused(exc: SkinslinkError) -> Exception:
+    """A Steam account refusal → 409 ``steam_refused`` with ``reason``; anything else → 503."""
+    if exc.code in STEAM_ACCOUNT_CODES:
+        return ConflictError(
+            "Steam does not let this account trade", code="steam_refused", reason=exc.code
+        )
+    log.warning("desk.skinslink.refused", code=exc.code)
+    return unavailable()
+
+
+async def load_inventory(client: DepositClient, trade_link: str) -> InventoryOut:
+    """The trader's tradable items Skinslink takes, dearest first.
+
+    Raises:
+        ValidationError: ``trade_link_invalid``.
+        ConflictError: ``steam_refused``.
+        DeskUnavailableError: ``desk_unavailable``.
+    """
+    link = parse_tradelink(trade_link)
+    try:
+        inv = await client.inventory(partner=link.partner, token=link.token)
+    except SkinslinkError as exc:
+        raise refused(exc) from None
+    except SkinslinkUnavailableError as exc:
+        log.warning("desk.skinslink.unavailable", error=type(exc).__name__)
+        raise unavailable() from None
+    items = sorted(inv.items, key=lambda i: i.price_usd, reverse=True)
+    return InventoryOut(
+        items=[
+            InventoryItemOut(
+                asset_id=i.id,
+                name=i.name,
+                image_url=i.image_url,
+                price_usd=plain(i.price_usd) or "0",
+            )
+            for i in items
+        ]
+    )
+
+
+__all__ = ["DeskUnavailableError", "load_inventory", "refused", "unavailable"]

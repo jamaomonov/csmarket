@@ -53,4 +53,11 @@ def split_revenue(amount_usd: Decimal, weights: Sequence[Decimal | None]) -> lis
     return split_cost(amount_usd, weights)
 
 
-__all__ = ["USD_PLACES", "Currency", "split_cost", "split_revenue", "to_usd"]
+def plain(value: Decimal | None) -> str | None:
+    """A Decimal without trailing zeros or an exponent (``733.333333``, ``1300000``)."""
+    if value is None:
+        return None
+    return format(value.normalize(), "f")
+
+
+__all__ = ["USD_PLACES", "Currency", "plain", "split_cost", "split_revenue", "to_usd"]

@@ -140,6 +140,11 @@ async def _reset_realtime_redis() -> AsyncIterator[None]:
 #: with plain `DELETE` (fast on empty tables); a wrong order raises and falls back to
 #: `TRUNCATE … CASCADE`. A new table goes in front of whatever it references.
 _EMPTY_IN_ORDER: tuple[str, ...] = (
+    "desk_entries",
+    "desk_items",
+    "desk_deposits",
+    "desk_withdrawals",
+    "desk_deals",
     "referral_rewards",
     "referral_visit_days",
     "referral_attributions",
