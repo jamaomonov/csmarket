@@ -23,7 +23,6 @@ async def test_skipped_without_a_key(monkeypatch: pytest.MonkeyPatch) -> None:
     tick.assert_not_awaited()
 
 
-
 async def test_a_failure_never_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(job, "poll_deposits", AsyncMock(side_effect=RuntimeError("boom")))
     _settings(monkeypatch, skinslink_api_key="k")
