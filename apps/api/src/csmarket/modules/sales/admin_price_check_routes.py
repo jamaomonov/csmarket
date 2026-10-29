@@ -110,7 +110,7 @@ def _plain(value: Decimal) -> str:
 @router.post("/price-check", response_model=PriceCheckOut, summary="Skinslink buy-back prices")
 async def price_check(
     body: PriceCheckIn,
-    db: Annotated[AsyncSession, Depends(db_session)],
+    db: Annotated[AsyncSession, Depends(db_session, scope="function")],
     client: Annotated[DepositClient, Depends(inventory_client)],
 ) -> PriceCheckOut:
     """What Skinslink pays and what we would pay, by names or a trade link's inventory.

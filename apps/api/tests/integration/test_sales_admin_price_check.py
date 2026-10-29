@@ -128,7 +128,10 @@ async def test_skinslink_down_is_503(
     [{}, {"names": [REDLINE], "trade_link": LINK}, {"names": []}, {"trade_link": "nope"}],
 )
 async def test_one_of_names_or_a_valid_trade_link(
-    integration_client: AsyncClient, admin_headers: Headers, fake: FakeDepositClient, body: dict
+    integration_client: AsyncClient,
+    admin_headers: Headers,
+    fake: FakeDepositClient,
+    body: dict[str, object],
 ) -> None:
     r = await integration_client.post(URL, json=body, headers=await admin_headers())
     assert r.status_code == 422
