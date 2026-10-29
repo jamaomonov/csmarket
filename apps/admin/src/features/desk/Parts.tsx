@@ -67,3 +67,10 @@ export function grouped(value: string | number): string {
     .toLocaleString("ru-RU", { maximumFractionDigits: 4 })
     .replace(/\u00a0/g, " ");
 }
+
+/** Dollars in soʻm at the CBU rate, whole soʻm (for the eye only); `null` without a rate. */
+export function usdToUzs(usd: string | number, rate: string | null | undefined): string | null {
+  const r = Number(rate);
+  if (!(r > 0)) return null;
+  return String(Math.round(Number(usd) * r));
+}

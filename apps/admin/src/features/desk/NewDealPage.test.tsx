@@ -65,6 +65,8 @@ describe("NewDealPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Загрузить инвентарь" }));
     const inv = await screen.findByRole("list", { name: "Инвентарь трейдера" });
     expect(within(inv).queryAllByRole("radio")).toEqual([]); // the switch shows once ticked
+    // Skinslink's dollars also in soʻm at the CBU rate (800 × 13 000), in brackets
+    expect(await within(inv).findByText(/10\s400\s000/)).toBeInTheDocument();
     fireEvent.click(within(inv).getByText("AK-47 | Redline (Field-Tested)")); // the whole row ticks
     fireEvent.click(within(inv).getByRole("checkbox", { name: "AWP | Asiimov (Field-Tested)" }));
     const [, second] = within(inv).getAllByRole("radio", { name: "Себе" });
