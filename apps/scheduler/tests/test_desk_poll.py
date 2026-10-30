@@ -35,3 +35,17 @@ def test_registers_every_60_seconds() -> None:
     registered = scheduler.get_job(job.JOB_ID)
     assert registered is not None
     assert registered.trigger.interval.total_seconds() == 60
+
+
+async def test_the_bot_profile_is_read_only_with_a_steam_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tick = AsyncMock(return_value=0)
+    monkeypatch.setattr(job, "poll_deposits", tick)
+    _settings(monkeypatch, skinslink_api_key="k", steam_api_key="")
+    await job.run()
+    assert tick.await_args is not None
+    assert tick.await_args.kwargs["persona"] is None
+    _settings(monkeypatch, skinslink_api_key="k", steam_api_key="s")
+    await job.run()
+    assert tick.await_args.kwargs["persona"] is not None

@@ -19,6 +19,7 @@ def deposit(status: str = "active", **over: object) -> Deposit:
         "status": status,
         "amount_usd": None,
         "bot_name": "Bot #3",
+        "bot_steam_id": "76561190000000003",
         "trade_offer_id": "6912345678",
         "offer_expiry_at": "2026-10-08T12:30:00Z",
         "hold_end_date": None,

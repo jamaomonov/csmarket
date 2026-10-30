@@ -42,6 +42,20 @@ The `create-deposit` answer was lost. The 60 s `desk.poll` asks Skinslink by `de
 10 minutes unknown to Skinslink it is marked failed and the skins are free to send again. Do
 not press «Отправить обмен» twice — it is refused while one is open.
 
+## A deposit Skinslink turned down
+
+The deal page shows it in red, «Skinslink отклонил обмен: …», with the reason in words
+(`price_changed`: Skinslink's price fell under the one loaded with the inventory). The skins go
+back to «не отправлен». The page refreshes every 5 s while an offer is open, so the state shows
+by itself.
+
+## The bot
+
+The deposit card names the Skinslink bot that sends the offer (Skinslink's `bot_name`), with its
+Steam avatar and a link to its profile: the poll reads them once per bot through the Steam Web
+API (`consumer="desk"` in `csmarket_steam_web_api_calls_total`). Without a Steam key only the
+name shows; a failed read is retried on the next poll and never holds the deposit up.
+
 ## A revert
 
 Red banner «Трейдер откатил обмен». Skinslink took its money back (or never paid, if the revert

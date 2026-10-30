@@ -44,7 +44,7 @@ describe("NewDealPage", () => {
         {
           asset_id: "100",
           name: "AK-47 | Redline (Field-Tested)",
-          image_url: null,
+          image_url: "https://img.test/100.png",
           price_usd: "800",
         },
         {
@@ -96,6 +96,7 @@ describe("NewDealPage", () => {
         {
           name: "AK-47 | Redline (Field-Tested)",
           asset_id: "100",
+          image_url: "https://img.test/100.png",
           skinslink_usd: "800",
           destination: "skinslink",
         },

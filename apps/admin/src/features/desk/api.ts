@@ -37,6 +37,11 @@ export interface DeskDeposit {
   offer_expiry_at: string | null;
   hold_end_date: string | null;
   fail_reason: string | null;
+  /** The bot that sends the offer, as Skinslink names it, and its Steam profile. */
+  bot_name: string | null;
+  bot_steam_id: string | null;
+  bot_persona: string | null;
+  bot_avatar_url: string | null;
   accepted_at: string | null;
   credited_at: string | null;
   reverted_at: string | null;

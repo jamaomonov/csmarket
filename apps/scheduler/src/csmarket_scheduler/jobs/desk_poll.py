@@ -1,7 +1,8 @@
 """Every 60 s: ask Skinslink about the owner's open desk deposits (``desk.poll_deposits``).
 
 The fallback for statuses Skinslink sends no webhook for; the webhook only makes a deposit
-due sooner. Skipped without a Skinslink key. ``max_instances=1`` and ``coalesce=True``. A
+due sooner. Skipped without a Skinslink key. With a Steam key, a new bot's Steam name and
+avatar are read once (``consumer="desk"``). ``max_instances=1`` and ``coalesce=True``. A
 failure is logged by type only.
 """
 
@@ -11,6 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from csmarket.core.config import get_settings
 from csmarket.core.db import get_session_factory
 from csmarket.core.logging import get_logger
+from csmarket.modules.auth.api import resolve_persona
 from csmarket.modules.desk.api import poll_deposits
 from csmarket.modules.skinslink.api import deposit_client_for
 
@@ -30,8 +32,15 @@ async def run() -> None:
     client = deposit_client_for(
         settings, timeout_seconds=settings.skinslink_request_timeout_seconds
     )
+    key = settings.steam_api_key
+
+    async def persona(steam_id: int) -> tuple[str | None, str | None] | None:
+        return await resolve_persona(steam_id, api_key=key, consumer="desk")
+
     try:
-        looked = await poll_deposits(get_session_factory(), client)
+        looked = await poll_deposits(
+            get_session_factory(), client, persona=persona if key else None
+        )
     except Exception as exc:  # noqa: BLE001 -- a tick never raises; the next one retries
         log.warning("desk.poll.failed", error=type(exc).__name__)
         return

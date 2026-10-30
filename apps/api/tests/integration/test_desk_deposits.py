@@ -256,3 +256,61 @@ async def test_poll_tick_survives_one_failure(  # noqa: PLR0917 -- fixtures
     factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
     assert await poll_deposits(factory, fake) == 2
     assert calls["n"] == 2
+
+
+async def test_the_bot_is_shown_and_the_poll_fills_its_steam_profile(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+    desk_headers: Headers,
+    fake: FakeDepositClient,
+) -> None:
+    h = await desk_headers()
+    deal = await create(integration_client, h, **PRICED)
+    sent = (await _send(integration_client, h, deal["id"])).json()["deposits"][0]
+    assert (sent["bot_name"], sent["bot_steam_id"], sent["bot_avatar_url"]) == (
+        "Bot #3",
+        "76561190000000003",
+        None,
+    )
+    asked: list[int] = []
+
+    async def persona(steam_id: int) -> tuple[str | None, str | None] | None:
+        asked.append(steam_id)
+        return "Skinslink Bot 3", "https://avatars.test/b3.jpg"
+
+    await db_session.execute(update(DeskDeposit).values(next_check_at=datetime.now(UTC)))
+    await db_session.commit()
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    await poll_deposits(factory, fake, persona=persona)
+    await db_session.execute(update(DeskDeposit).values(next_check_at=datetime.now(UTC)))
+    await db_session.commit()
+    await poll_deposits(factory, fake, persona=persona)
+    assert asked == [76561190000000003]  # once per bot
+    dep = (await _get(integration_client, h, deal["id"]))["deposits"][0]
+    assert (dep["bot_persona"], dep["bot_avatar_url"]) == (
+        "Skinslink Bot 3",
+        "https://avatars.test/b3.jpg",
+    )
+
+
+async def test_a_failed_steam_lookup_leaves_the_deposit_alone(
+    integration_client: AsyncClient,
+    db_session: AsyncSession,
+    db_engine: AsyncEngine,
+    desk_headers: Headers,
+    fake: FakeDepositClient,
+) -> None:
+    h = await desk_headers()
+    deal = await create(integration_client, h, **PRICED)
+    await _send(integration_client, h, deal["id"])
+
+    async def broken(steam_id: int) -> tuple[str | None, str | None] | None:
+        raise RuntimeError("steam down")
+
+    await db_session.execute(update(DeskDeposit).values(next_check_at=datetime.now(UTC)))
+    await db_session.commit()
+    factory = async_sessionmaker(bind=db_engine, expire_on_commit=False)
+    assert await poll_deposits(factory, fake, persona=broken) == 1
+    row = await _deposit_row(db_session)
+    assert (row.status, row.bot_avatar_url) == ("active", None)

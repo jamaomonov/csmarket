@@ -8,8 +8,9 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 
 import { type Deal, type DealPatch, DESK_KEY, getDeal, patchDeal, sendDeposit } from "./api";
+import { DepositCard, OPEN_DEPOSIT } from "./DepositCard";
 import { ItemRow } from "./ItemRow";
-import { DEAL_STATUS, DEPOSIT_STATUS, deskErrorText, METHOD } from "./labels";
+import { DEAL_STATUS, deskErrorText, METHOD } from "./labels";
 import { TAP } from "./Parts";
 import { PriceEditor } from "./PriceEditor";
 import { StatusSheet } from "./StatusSheet";
@@ -21,7 +22,7 @@ import { StatusChip } from "@/components/StatusChip";
 import { When } from "@/components/When";
 import { formatDateTime } from "@/lib/format";
 
-const OPEN_DEPOSIT = new Set(["creating", "new", "pending", "active"]);
+const REFRESH_MS = 5_000;
 
 type Sheet = "send" | "status" | "guarantor" | null;
 
@@ -29,7 +30,13 @@ export function DealPage() {
   const { id = "" } = useParams();
   const qc = useQueryClient();
   const key = [...DESK_KEY, "deal", id];
-  const deal = useQuery({ queryKey: key, queryFn: () => getDeal(id) });
+  const deal = useQuery({
+    queryKey: key,
+    queryFn: () => getDeal(id),
+    // While Skinslink's offer is on its way, its state changes by itself: keep it fresh.
+    refetchInterval: (q) =>
+      q.state.data?.deposits.some((x) => OPEN_DEPOSIT.has(x.status)) ? REFRESH_MS : false,
+  });
   const [error, setError] = useState<unknown>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
   const act = useMutation({
@@ -167,23 +174,7 @@ export function DealPage() {
         </Button>
       )}
       {d.deposits.map((x) => (
-        <div key={x.id} className="border-border rounded-lg border p-3 text-sm">
-          <p className="font-medium">Обмен Skinslink: {DEPOSIT_STATUS[x.status] ?? x.status}</p>
-          <p className="text-fg-muted">
-            {x.trade_offer_id && <>обмен №{x.trade_offer_id} · </>}
-            {x.amount_usd &&
-              (x.amount_estimated ? (
-                <>
-                  примерно <Money usd={x.amount_usd} /> — точная сумма в кабинете Skinslink ·{" "}
-                </>
-              ) : (
-                <>
-                  Skinslink: <Money usd={x.amount_usd} /> ·{" "}
-                </>
-              ))}
-            {x.fail_reason && <>причина: {x.fail_reason}</>}
-          </p>
-        </div>
+        <DepositCard key={x.id} deposit={x} />
       ))}
       {sheet === "send" && (
         <ConfirmSheet

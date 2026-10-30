@@ -37,7 +37,7 @@ log = get_logger("csmarket.metrics")
 SteamApiEndpoint = Literal["get_player_summaries", "get_trade_hold_durations"]
 
 #: Which feature spent the quota. Sum across it for "are we near the ceiling".
-SteamApiConsumer = Literal["auth_signin", "trade_link"]
+SteamApiConsumer = Literal["auth_signin", "trade_link", "desk"]
 
 #: About the *call*, not the body: a 200 we could not parse still spent quota.
 SteamApiOutcome = Literal["ok", "error"]

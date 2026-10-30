@@ -127,6 +127,11 @@ class DepositOut(BaseModel):
     offer_expiry_at: str | None
     hold_end_date: str | None
     fail_reason: str | None
+    bot_name: str | None
+    bot_steam_id: str | None
+    #: The bot's Steam profile name and avatar, once the poll has read them.
+    bot_persona: str | None
+    bot_avatar_url: str | None
     accepted_at: datetime | None
     credited_at: datetime | None
     reverted_at: datetime | None

@@ -176,6 +176,7 @@ async def test_create_deposit_sends_floors_rounded_down_and_reads_the_offer() ->
         offer_expiry_at="2026-02-16T12:30:00Z",
         hold_end_date=None,
         fail_reason=None,
+        bot_steam_id="76561190000000003",
     )
     assert json.loads(route.calls.last.request.content) == {
         "merchant_tx_id": "sale-1",

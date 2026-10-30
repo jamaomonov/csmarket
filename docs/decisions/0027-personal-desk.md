@@ -54,6 +54,15 @@ figure only (owner ruling 2026-10-29).
 - A desk deposit counts in `csmarket_skinslink_calls_total` like any other (one merchant).
 - `desk` is in the 95 % coverage list.
 
+## Amendment 2026-10-30: the bot and a turned-down deposit
+
+- `desk_deposits` keeps the bot (`bot_name`, `bot_steam_id` from Skinslink's deposit answer)
+  and its Steam profile (`bot_persona`, `bot_avatar_url`), read once per bot by `desk.poll`
+  through `GetPlayerSummaries` — a scheduler call, not on a request path; a new `desk` consumer
+  label on `csmarket_steam_web_api_calls_total`. Migration `0045_desk_bot`.
+- The deal page refreshes every 5 s while a deposit is open and shows a failed one in red with
+  the reason in words; the item's Skinslink image is now saved with the deal.
+
 ## Validation
 
 Integration tests pin a lost `create-deposit` answer adopted by the poll, the webhook's routing

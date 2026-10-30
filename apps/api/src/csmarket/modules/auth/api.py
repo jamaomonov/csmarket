@@ -13,7 +13,7 @@ from csmarket.modules.auth.service import (
     authenticate,
     revoke_all_sessions,
 )
-from csmarket.modules.auth.steam import trade_hold_days
+from csmarket.modules.auth.steam import resolve_persona, trade_hold_days
 
 __all__ = [
     "AuthenticatedUser",
@@ -25,6 +25,7 @@ __all__ = [
     "hash_token",
     "hit_counter",
     "optional_user",
+    "resolve_persona",
     "revoke_all_sessions",
     "router",
     "trade_hold_days",

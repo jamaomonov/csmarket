@@ -223,6 +223,13 @@ const MARKET_REASON: Record<string, string> = {
   cancelled: "обмен отменён",
   declined: "покупатель отклонил обмен",
   expired: "время на обмен вышло",
+  price_changed: "цена на Skinslink изменилась",
+  item_specified_price_not_found: "цена на Skinslink ниже заданной",
+  item_sold: "скин уже продан",
+  item_not_available: "скин недоступен",
+  inventory_reload: "инвентарь у Skinslink устарел",
+  not_found: "Skinslink не нашёл обмен",
+  forbidden: "Skinslink отказал в доступе",
 };
 
 const CATALOGUE_JOB: Record<string, string> = {

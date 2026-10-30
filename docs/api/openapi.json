@@ -6899,6 +6899,50 @@
             ],
             "title": "Amount Usd"
           },
+          "bot_avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Avatar Url"
+          },
+          "bot_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Name"
+          },
+          "bot_persona": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Persona"
+          },
+          "bot_steam_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bot Steam Id"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -6990,6 +7034,10 @@
           "offer_expiry_at",
           "hold_end_date",
           "fail_reason",
+          "bot_name",
+          "bot_steam_id",
+          "bot_persona",
+          "bot_avatar_url",
           "accepted_at",
           "credited_at",
           "reverted_at",

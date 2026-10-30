@@ -134,6 +134,12 @@ class DeskDeposit(Base):
     offer_expiry_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
     hold_end_date: Mapped[str | None] = mapped_column(String(40), nullable=True)
     fail_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: The bot that sends the offer, as Skinslink names it.
+    bot_name: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    bot_steam_id: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    #: The bot's Steam profile (name and avatar), filled once by the poll.
+    bot_persona: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    bot_avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     next_check_at: Mapped[datetime] = _ts()
     #: When the trader accepted (first seen in ``hold`` or ``completed``).
     accepted_at: Mapped[datetime | None] = _at()

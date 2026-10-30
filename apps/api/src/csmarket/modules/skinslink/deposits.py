@@ -83,6 +83,8 @@ class Deposit:
     offer_expiry_at: str | None
     hold_end_date: str | None
     fail_reason: str | None
+    #: The bot's 64-bit Steam id, as a string (Skinslink sends a number).
+    bot_steam_id: str | None = None
 
 
 class DepositClient(Protocol):
@@ -143,6 +145,14 @@ def _quote(raw: Mapping[str, Any]) -> PriceQuote | None:
     return PriceQuote(name=name, price_usd=price, original_usd=_decimal(raw.get("originalPrice")))
 
 
+def _steam_id(raw: object) -> str | None:
+    """A 17-digit Steam id sent as a number or a string; anything else is ``None``."""
+    if isinstance(raw, bool) or not isinstance(raw, int | str):
+        return None
+    text = str(raw).strip()
+    return text if text.isdigit() and len(text) == 17 else None
+
+
 def _deposit(raw: object) -> Deposit:
     """A deposit answer; one without an integer id or a status is an outage, not a deposit."""
     if not isinstance(raw, Mapping):
@@ -161,6 +171,7 @@ def _deposit(raw: object) -> Deposit:
         offer_expiry_at=_str(raw.get("trade_offer_expiry_at")),
         hold_end_date=_str(raw.get("hold_end_date")),
         fail_reason=_str(raw.get("fail_reason")),
+        bot_steam_id=_steam_id(raw.get("bot_steam_id")),
     )
 
 

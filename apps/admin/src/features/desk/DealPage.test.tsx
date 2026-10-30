@@ -30,6 +30,10 @@ const HOLD: DeskDeposit = {
   offer_expiry_at: null,
   hold_end_date: null,
   fail_reason: null,
+  bot_name: "Skinslink Bot #3",
+  bot_steam_id: "76561190000000003",
+  bot_persona: null,
+  bot_avatar_url: null,
   accepted_at: "2026-10-29T10:00:00Z",
   credited_at: null,
   reverted_at: null,
@@ -126,6 +130,58 @@ describe("DealPage", () => {
     await waitFor(() => {
       expect(api.patchDeal).toHaveBeenCalledWith("d1", { guarantor_released: true });
     });
+  });
+
+  it("says in words that Skinslink turned the offer down", async () => {
+    api.getDeal.mockResolvedValue(
+      deal({
+        deposits: [{ ...HOLD, status: "failed", fail_reason: "price_changed", accepted_at: null }],
+      }),
+    );
+    renderPage();
+    expect(
+      await screen.findByText("Skinslink отклонил обмен: цена на Skinslink изменилась"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/price_changed/)).not.toBeInTheDocument();
+  });
+
+  it("shows the bot that sends the offer, with its Steam profile", async () => {
+    api.getDeal.mockResolvedValue(
+      deal({
+        deposits: [
+          {
+            ...HOLD,
+            status: "active",
+            bot_persona: "SL Bot 3",
+            bot_avatar_url: "https://avatars.test/b3.jpg",
+          },
+        ],
+      }),
+    );
+    renderPage();
+    const bot = await screen.findByRole("link", { name: /SL Bot 3/ });
+    expect(bot).toHaveAttribute("href", "https://steamcommunity.com/profiles/76561190000000003");
+    expect(within(bot).getByRole("presentation")).toHaveAttribute(
+      "src",
+      "https://avatars.test/b3.jpg",
+    );
+  });
+
+  it("refreshes by itself while the offer is open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      api.getDeal.mockResolvedValue(deal({ deposits: [{ ...HOLD, status: "pending" }] }));
+      renderPage();
+      await screen.findByText(/бот готовит обмен/);
+      expect(api.getDeal).toHaveBeenCalledTimes(1);
+      api.getDeal.mockResolvedValue(
+        deal({ deposits: [{ ...HOLD, status: "failed", fail_reason: "price_changed" }] }),
+      );
+      await vi.advanceTimersByTimeAsync(5_000);
+      expect(await screen.findByText(/Skinslink отклонил обмен/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("shows a red banner on a revert", async () => {

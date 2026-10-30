@@ -67,6 +67,7 @@ export function NewDealPage() {
     ...chosen.map((p) => ({
       name: p.item.name,
       asset_id: p.item.asset_id,
+      ...(p.item.image_url ? { image_url: p.item.image_url } : {}),
       skinslink_usd: p.item.price_usd,
       destination: p.destination,
     })),

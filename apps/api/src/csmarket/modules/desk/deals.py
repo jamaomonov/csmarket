@@ -216,6 +216,10 @@ def _deposit_out(d: DeskDeposit) -> DepositOut:
         offer_expiry_at=d.offer_expiry_at,
         hold_end_date=d.hold_end_date,
         fail_reason=d.fail_reason,
+        bot_name=d.bot_name,
+        bot_steam_id=d.bot_steam_id,
+        bot_persona=d.bot_persona,
+        bot_avatar_url=d.bot_avatar_url or None,  # "": Steam had none
         accepted_at=d.accepted_at,
         credited_at=d.credited_at,
         reverted_at=d.reverted_at,

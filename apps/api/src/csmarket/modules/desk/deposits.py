@@ -16,6 +16,7 @@ amount (``money.split_revenue``) and a ``credit`` row of ``share − cost``; ``f
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -49,6 +50,10 @@ from csmarket.modules.skinslink.api import (
 from csmarket.modules.users.api import parse_tradelink
 
 log = get_logger("csmarket.desk.deposits")
+
+#: The bot's Steam profile, ``(persona name, avatar url)``; ``None`` when Steam has no such
+#: account (``auth.resolve_persona`` with our key).
+PersonaLookup = Callable[[int], Awaitable[tuple[str | None, str | None] | None]]
 
 #: A ``creating`` deposit Skinslink does not know is given up after this (as SB-1 in sales).
 NOT_FOUND_GRACE = timedelta(minutes=10)
@@ -172,6 +177,11 @@ async def apply_report(
         deposit.offer_expiry_at = report.offer_expiry_at or deposit.offer_expiry_at
         deposit.hold_end_date = report.hold_end_date or deposit.hold_end_date
         deposit.fail_reason = report.fail_reason
+        if report.bot_name:
+            deposit.bot_name = report.bot_name[:64]
+        if report.bot_steam_id and report.bot_steam_id != deposit.bot_steam_id:
+            deposit.bot_steam_id = report.bot_steam_id
+            deposit.bot_persona = deposit.bot_avatar_url = None
         if report.status in ("hold", "completed") and deposit.accepted_at is None:
             deposit.accepted_at = at
             if deal.status in ("agreed", "paid"):
@@ -300,6 +310,29 @@ async def check_deposit(db: AsyncSession, client: DepositClient, *, deposit_id: 
     await db.commit()
 
 
+async def fill_bot(db: AsyncSession, deposit_id: str, persona: PersonaLookup) -> None:
+    """The bot's Steam name and avatar, read once per bot; best-effort, a failure waits for
+    the next poll."""
+    row = await db.get(DeskDeposit, deposit_id, populate_existing=True)
+    if row is None or row.bot_steam_id is None or row.bot_avatar_url is not None:
+        await db.rollback()
+        return
+    steam_id = int(row.bot_steam_id)
+    await db.commit()
+    try:
+        found = await persona(steam_id)
+    except Exception as exc:  # noqa: BLE001 -- cosmetic: the deposit's state never waits on Steam
+        log.warning("desk.bot_unread", error=type(exc).__name__)
+        return
+    name, avatar = found if found is not None else (None, None)
+    await db.execute(
+        update(DeskDeposit)
+        .where(DeskDeposit.id == deposit_id, DeskDeposit.bot_steam_id == str(steam_id))
+        .values(bot_persona=name[:64] if name else None, bot_avatar_url=avatar or "")
+    )
+    await db.commit()
+
+
 async def mark_due(db: AsyncSession, merchant_tx_id: object) -> bool:
     """The webhook's hand-off: a known desk deposit is asked about on the next poll.
 
@@ -328,9 +361,11 @@ async def due_deposits(db: AsyncSession, *, at: datetime, limit: int = 100) -> l
 
 __all__ = [
     "NOT_FOUND_GRACE",
+    "PersonaLookup",
     "apply_report",
     "check_deposit",
     "due_deposits",
+    "fill_bot",
     "mark_due",
     "send",
 ]
