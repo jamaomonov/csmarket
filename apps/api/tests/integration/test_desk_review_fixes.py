@@ -16,7 +16,14 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tests.integration.desk_factory import BASE, Headers, create, desk_headers, key  # noqa: F401
+from tests.integration.desk_factory import (  # noqa: F401
+    BASE,
+    Headers,
+    create,
+    desk_headers,
+    key,
+    trader_inventory,
+)
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit
 from tests.integration.sales_kit import use_client
 
@@ -26,7 +33,9 @@ PRICED = {"paid_amount": "1100", "paid_currency": "USD"}
 
 @pytest.fixture
 def fake(integration_app: FastAPI) -> Iterator[FakeDepositClient]:
-    client = FakeDepositClient(created=deposit("active"), status=deposit("active"))
+    client = FakeDepositClient(
+        inventory=[trader_inventory()], created=deposit("active"), status=deposit("active")
+    )
     use_client(integration_app, client)
     yield client
     integration_app.dependency_overrides.clear()

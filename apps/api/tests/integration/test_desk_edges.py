@@ -31,6 +31,7 @@ from tests.integration.desk_factory import (  # noqa: F401
     create,
     desk_headers,
     key,
+    trader_inventory,
 )
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit
 from tests.integration.sales_kit import use_client
@@ -41,7 +42,9 @@ PRICED = {"paid_amount": "1100", "paid_currency": "USD"}
 
 @pytest.fixture
 def fake(integration_app: FastAPI) -> Iterator[FakeDepositClient]:
-    client = FakeDepositClient(created=deposit("active"), status=deposit("active"))
+    client = FakeDepositClient(
+        inventory=[trader_inventory()], created=deposit("active"), status=deposit("active")
+    )
     use_client(integration_app, client)
     yield client
     integration_app.dependency_overrides.clear()
@@ -126,6 +129,7 @@ async def test_patch_link_rate_and_date(
 async def test_inventory_down_is_503(
     integration_client: AsyncClient, desk_headers: Headers, fake: FakeDepositClient
 ) -> None:
+    fake.inventories.clear()
     fake.inventories.append(SkinslinkUnavailableError("down"))
     r = await integration_client.post(
         f"{BASE}/inventory", json={"trade_link": LINK}, headers=await desk_headers()

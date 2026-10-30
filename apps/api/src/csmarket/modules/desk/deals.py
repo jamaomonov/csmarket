@@ -67,7 +67,7 @@ async def items_of(db: AsyncSession, deal_id: str) -> list[DeskItem]:
     return sorted(rows.all(), key=lambda i: i.id)
 
 
-def _price(deal: DeskDeal, items: list[DeskItem]) -> None:
+def recost(deal: DeskDeal, items: list[DeskItem]) -> None:
     """Set ``paid_usd`` from the price and recost the unresolved items."""
     if deal.paid_amount is None or deal.paid_currency is None:
         deal.paid_usd = None
@@ -111,7 +111,7 @@ async def create_deal(db: AsyncSession, body: DealIn) -> DeskDeal:
         )
         for i in body.items
     ]
-    _price(deal, items)
+    recost(deal, items)
     db.add(deal)
     await db.flush()
     db.add_all(items)
@@ -155,7 +155,7 @@ async def update_deal(db: AsyncSession, deal_id: str, patch: DealPatch) -> DeskD
         if deal.paid_amount is not None and deal.status == "agreed":
             deal.status = "paid"
             deal.paid_at = deal.paid_at or now()
-        _price(deal, items)
+        recost(deal, items)
     if "paid_at" in fields and patch.paid_at is not None:
         deal.paid_at = patch.paid_at
     deal.updated_at = now()
@@ -370,6 +370,7 @@ __all__ = [
     "items_of",
     "list_deals",
     "load_deal",
+    "recost",
     "require_price",
     "update_deal",
 ]

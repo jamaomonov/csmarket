@@ -364,8 +364,8 @@ csmarket/
   amendment 2026-10-29): `POST /admin/sales/price-check` asks Skinslink `get-prices` (price
   only) or `inventory` once — 15 s, no DB connection held across it, no cache or breaker; the
   route is in the `handler` regexes. A twelfth, owner only (ADR-0027): `POST /admin/desk/inventory`
-  asks Skinslink `inventory` and `POST /admin/desk/deals/{id}/deposit` commits the deposit,
-  then calls `create-deposit` once — 15 s, no DB connection held across either; both routes are
+  asks Skinslink `inventory` and `POST /admin/desk/deals/{id}/deposit` reads the trader's `inventory` (fresh prices),
+  commits the deposit, then calls `create-deposit` once — 15 s, no DB connection held across either; both routes are
   in the `handler` regexes. A new one needs an ADR and a line here — and its route in the `handler`
   regexes of `ApiHighLatency` / `ApiWaxpeerLatency` (`infra/prometheus/alerts/api.yml`).
 - N+1 guarded by query-count tests on list endpoints; cache keys catalogued in

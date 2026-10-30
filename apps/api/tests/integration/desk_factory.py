@@ -6,11 +6,13 @@ from collections.abc import Awaitable, Callable
 from typing import Any
 
 import pytest
+from csmarket.modules.skinslink.api import Inventory
 from csmarket.modules.users.api import get_user_by_steam_id, set_roles
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tests.integration.conftest import ADMIN_STEAM_ID, dev_login_headers
+from tests.integration.fake_deposit_client import inv_item
 
 Headers = Callable[[], Awaitable[dict[str, str]]]
 BASE = "/api/v1/admin/desk"
@@ -40,6 +42,14 @@ def desk_headers(integration_client: AsyncClient, db_session: AsyncSession) -> H
         return headers
 
     return _headers
+
+
+def trader_inventory(redline: str = "800", asiimov: str = "400") -> Inventory:
+    """The trader's inventory as Skinslink prices it now: :func:`deal_body`'s two skins."""
+    return Inventory(
+        items=[inv_item("100", redline, REDLINE), inv_item("101", asiimov, ASIIMOV)],
+        max_items=50,
+    )
 
 
 def deal_body(**over: Any) -> dict[str, Any]:

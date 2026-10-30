@@ -27,11 +27,18 @@ from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
-from csmarket.modules.desk.deals import close_if_done, items_of, load_deal, require_price
+from csmarket.modules.desk.deals import (
+    close_if_done,
+    items_of,
+    load_deal,
+    recost,
+    require_price,
+)
 from csmarket.modules.desk.inventory import refused, unavailable
 from csmarket.modules.desk.models import (
     DEPOSIT_DEAD,
     DESK_TX_PREFIX,
+    RESOLVED,
     DeskDeal,
     DeskDeposit,
     DeskEntry,
@@ -43,11 +50,12 @@ from csmarket.modules.skinslink.api import (
     PRICE_CODES,
     Deposit,
     DepositClient,
+    InventoryItem,
     SkinslinkError,
     SkinslinkForbiddenError,
     SkinslinkUnavailableError,
 )
-from csmarket.modules.users.api import parse_tradelink
+from csmarket.modules.users.api import TradeLink, parse_tradelink
 
 log = get_logger("csmarket.desk.deposits")
 
@@ -203,19 +211,12 @@ async def apply_report(
     await db.flush()
 
 
-async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDeal:
-    """«Отправить обмен»: one deposit for the deal's open Skinslink items with an asset id.
+async def _to_send(db: AsyncSession, deal: DeskDeal) -> list[DeskItem]:
+    """The deal's open Skinslink items with an asset id, none of its deposits open.
 
     Raises:
-        NotFoundError: ``deal_not_found``.
-        ConflictError: ``trade_link_missing``, ``deposit_open``, ``nothing_to_send``,
-            ``prices_moved``, ``steam_refused``.
-        DeskUnavailableError: ``desk_unavailable`` — refused otherwise, or a 403.
+        ConflictError: ``deposit_open``, ``nothing_to_send``, ``price_required``.
     """
-    deal = await load_deal(db, deal_id, lock=True)
-    if not deal.trade_link:
-        raise ConflictError("the deal has no trade link", code="trade_link_missing")
-    link = parse_tradelink(deal.trade_link)
     open_one = await db.scalar(
         select(DeskDeposit.id).where(DeskDeposit.deal_id == deal.id, DeskDeposit.status.in_(_OPEN))
     )
@@ -229,6 +230,67 @@ async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDea
     if not items:
         raise ConflictError("no skins to send", code="nothing_to_send")
     require_price(deal)
+    return items
+
+
+async def _fresh_prices(client: DepositClient, link: TradeLink) -> dict[str, InventoryItem]:
+    """The trader's inventory as Skinslink prices it now, by asset id.
+
+    Raises:
+        ConflictError: ``steam_refused``.
+        DeskUnavailableError: ``desk_unavailable``.
+    """
+    try:
+        inv = await client.inventory(partner=link.partner, token=link.token)
+    except SkinslinkError as exc:
+        raise refused(exc) from None
+    except SkinslinkUnavailableError as exc:
+        log.warning("desk.skinslink.unavailable", error=type(exc).__name__)
+        raise unavailable() from None
+    return {i.id: i for i in inv.items}
+
+
+async def _reprice(
+    db: AsyncSession, deal: DeskDeal, items: list[DeskItem], fresh: dict[str, InventoryItem]
+) -> None:
+    """Each item to send at Skinslink's price now; the price paid split again while nothing of
+    the deal is resolved (after that the split is fixed, as ``price_locked``)."""
+    moved = False
+    for item in items:
+        now_priced = fresh[item.asset_id or ""]
+        if item.skinslink_usd != now_priced.price_usd:
+            item.skinslink_usd = now_priced.price_usd
+            moved = True
+        item.image_url = item.image_url or now_priced.image_url
+    everything = await items_of(db, deal.id)
+    if moved and not any(i.state in RESOLVED for i in everything):
+        recost(deal, everything)
+
+
+async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDeal:
+    """«Отправить обмен»: one deposit for the deal's open Skinslink items with an asset id.
+
+    The trader's inventory is read first (nothing held across it): each item goes at
+    Skinslink's price now, the floors follow it, and an item no longer there stays behind.
+
+    Raises:
+        NotFoundError: ``deal_not_found``.
+        ConflictError: ``trade_link_missing``, ``deposit_open``, ``nothing_to_send``,
+            ``skins_gone``, ``prices_moved``, ``steam_refused``.
+        DeskUnavailableError: ``desk_unavailable`` — refused otherwise, or a 403.
+    """
+    deal = await load_deal(db, deal_id)
+    if not deal.trade_link:
+        raise ConflictError("the deal has no trade link", code="trade_link_missing")
+    link = parse_tradelink(deal.trade_link)
+    await _to_send(db, deal)  # refuse early, before asking Skinslink
+    await db.commit()
+    fresh = await _fresh_prices(client, link)
+    deal = await load_deal(db, deal_id, lock=True)
+    items = [i for i in await _to_send(db, deal) if i.asset_id in fresh]
+    if not items:
+        raise ConflictError("the skins are no longer in the inventory", code="skins_gone")
+    await _reprice(db, deal, items, fresh)
     deposit = DeskDeposit(
         id=new_id(), deal_id=deal.id, status="creating", next_check_at=now() + LIVE_EVERY
     )
@@ -257,7 +319,7 @@ async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDea
         await _settle_failure(db, deposit.id, exc.code or f"http_{exc.status}")
         if exc.code in PRICE_CODES:
             raise ConflictError(
-                "Skinslink's prices moved; load the inventory again", code="prices_moved"
+                "Skinslink's prices moved; send again", code="prices_moved"
             ) from None
         raise refused(exc) from None
     except SkinslinkUnavailableError as exc:

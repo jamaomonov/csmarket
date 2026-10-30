@@ -49,6 +49,12 @@ The deal page shows it in red, «Skinslink отклонил обмен: …», w
 back to «не отправлен». The page refreshes every 5 s while an offer is open, so the state shows
 by itself.
 
+«Отправить обмен» reads the trader's inventory first and sends each skin at Skinslink's price
+now, so sending again after `price_changed` works. While nothing of the deal is sold, credited or
+written off, the price you paid is split again over the fresh prices; after that the split stays.
+A skin no longer in the inventory stays behind («не отправлен»); none left → «Этих скинов уже нет
+в инвентаре трейдера».
+
 ## The bot
 
 The deposit card names the Skinslink bot that sends the offer (Skinslink's `bot_name`), with its

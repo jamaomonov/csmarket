@@ -60,6 +60,11 @@ figure only (owner ruling 2026-10-29).
   and its Steam profile (`bot_persona`, `bot_avatar_url`), read once per bot by `desk.poll`
   through `GetPlayerSummaries` — a scheduler call, not on a request path; a new `desk` consumer
   label on `csmarket_steam_web_api_calls_total`. Migration `0045_desk_bot`.
+- «Отправить обмен» reads the trader's `inventory` first (no DB held across it, 15 s) and sends
+  each item at Skinslink's price now — the floors follow it; an item gone from the inventory
+  stays behind (`skins_gone` when none is left). The price paid is split again over the fresh
+  prices while no item of the deal is resolved (the `price_locked` rule). Owner ruling
+  2026-10-30: a resend after `price_changed` must work without a new deal.
 - The deal page refreshes every 5 s while a deposit is open and shows a failed one in red with
   the reason in words; the item's Skinslink image is now saved with the deal.
 

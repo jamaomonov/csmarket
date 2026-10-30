@@ -102,7 +102,20 @@ describe("DealPage", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Отправить обмен" }));
     fireEvent.click(within(confirm()).getByRole("button", { name: "Отправить" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Цены Skinslink изменились");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Цена Skinslink изменилась при отправке",
+    );
+  });
+
+  it("says when the skins left the trader's inventory", async () => {
+    api.sendDeposit.mockRejectedValue(new ApiError(409, "Conflict", { code: "skins_gone" }));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Отправить обмен" }));
+    expect(confirm()).toHaveTextContent("Цены Skinslink обновятся перед отправкой");
+    fireEvent.click(within(confirm()).getByRole("button", { name: "Отправить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Этих скинов уже нет в инвентаре трейдера",
+    );
   });
 
   it("changes the status only through the confirm step", async () => {

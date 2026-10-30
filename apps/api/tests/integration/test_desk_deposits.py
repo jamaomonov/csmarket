@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import hashlib
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -23,7 +24,14 @@ from httpx import AsyncClient, Response
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
-from tests.integration.desk_factory import BASE, Headers, create, desk_headers, key  # noqa: F401
+from tests.integration.desk_factory import (  # noqa: F401
+    BASE,
+    Headers,
+    create,
+    desk_headers,
+    key,
+    trader_inventory,
+)
 from tests.integration.fake_deposit_client import FakeDepositClient, deposit
 from tests.integration.sales_kit import SECRET, sales_on, use_client  # noqa: F401
 
@@ -34,7 +42,9 @@ PRICED = {"paid_amount": "1100", "paid_currency": "USD"}
 
 @pytest.fixture
 def fake(integration_app: FastAPI) -> Iterator[FakeDepositClient]:
-    client = FakeDepositClient(created=deposit("active"), status=deposit("active"))
+    client = FakeDepositClient(
+        inventory=[trader_inventory()], created=deposit("active"), status=deposit("active")
+    )
     use_client(integration_app, client)
     yield client
     integration_app.dependency_overrides.clear()
@@ -314,3 +324,63 @@ async def test_a_failed_steam_lookup_leaves_the_deposit_alone(
     assert await poll_deposits(factory, fake, persona=broken) == 1
     row = await _deposit_row(db_session)
     assert (row.status, row.bot_avatar_url) == ("active", None)
+
+
+async def test_send_reprices_from_the_traders_inventory_first(
+    integration_client: AsyncClient, desk_headers: Headers, fake: FakeDepositClient
+) -> None:
+    h = await desk_headers()
+    deal = await create(integration_client, h, **PRICED)
+    fake.inventories.clear()
+    fake.inventories.append(trader_inventory(redline="700", asiimov="400"))
+    r = await _send(integration_client, h, deal["id"])
+    assert r.status_code == 200, r.text
+    assert fake.inventory_calls == 1
+    [call] = fake.deposit_calls
+    assert call["min_prices"] == {"100": Decimal("693"), "101": Decimal("396")}
+    items = r.json()["items"]
+    assert [i["skinslink_usd"] for i in items] == ["700", "400"]
+    # The price paid is split again over the fresh prices: 1100 × 700/1100, 1100 × 400/1100.
+    assert [i["cost_usd"] for i in items] == ["700", "400"]
+    assert items[0]["image_url"] == "https://img.test/100.png"
+
+
+async def test_a_skin_gone_from_the_inventory_is_not_sent(
+    integration_client: AsyncClient, desk_headers: Headers, fake: FakeDepositClient
+) -> None:
+    h = await desk_headers()
+    deal = await create(integration_client, h, **PRICED)
+    only_asiimov = trader_inventory()
+    fake.inventories.clear()
+    fake.inventories.append(replace(only_asiimov, items=only_asiimov.items[1:]))
+    r = await _send(integration_client, h, deal["id"])
+    assert r.status_code == 200, r.text
+    assert fake.deposit_calls[0]["asset_ids"] == ["101"]
+    assert [i["state"] for i in r.json()["items"]] == ["open", "sent"]
+
+
+async def test_nothing_left_in_the_inventory_is_skins_gone(
+    integration_client: AsyncClient, desk_headers: Headers, fake: FakeDepositClient
+) -> None:
+    h = await desk_headers()
+    deal = await create(integration_client, h, **PRICED)
+    fake.inventories.clear()
+    fake.inventories.append(replace(trader_inventory(), items=[]))
+    r = await _send(integration_client, h, deal["id"])
+    assert (r.status_code, r.json()["code"]) == (409, "skins_gone")
+    assert fake.deposit_calls == []
+    page = await _get(integration_client, h, deal["id"])
+    assert page["deposits"] == []
+    assert [i["state"] for i in page["items"]] == ["open", "open"]
+
+
+async def test_an_inventory_outage_sends_nothing(
+    integration_client: AsyncClient, desk_headers: Headers, fake: FakeDepositClient
+) -> None:
+    h = await desk_headers()
+    deal = await create(integration_client, h, **PRICED)
+    fake.inventories.clear()
+    fake.inventories.append(SkinslinkUnavailableError("timeout"))
+    r = await _send(integration_client, h, deal["id"])
+    assert (r.status_code, r.json()["code"]) == (503, "desk_unavailable")
+    assert fake.deposit_calls == []

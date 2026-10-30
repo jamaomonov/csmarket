@@ -186,8 +186,8 @@ export function DealPage() {
         >
           <p className="text-sm">
             {toSend.length} {toSend.length === 1 ? "скин" : toSend.length < 5 ? "скина" : "скинов"}{" "}
-            в Skinslink, сейчас ≈ <Money usd={sendSum.toFixed(2)} />. Бот Skinslink пришлёт трейдеру
-            обмен.
+            в Skinslink, было ≈ <Money usd={sendSum.toFixed(2)} />. Цены Skinslink обновятся перед
+            отправкой. Бот Skinslink пришлёт трейдеру обмен.
           </p>
           <div className={CONFIRM_BUTTONS}>
             <Button
