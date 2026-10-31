@@ -10,16 +10,25 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Text, cast, select
+from sqlalchemy import ColumnElement, Text, cast, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.ids import new_id
+from csmarket.core.logging import get_logger
 from csmarket.modules.desk.deals import close_if_done, item_out, load_deal, require_price
+from csmarket.modules.desk.inventory import refused, unavailable
 from csmarket.modules.desk.models import DeskDeal, DeskEntry, DeskItem
 from csmarket.modules.desk.money import plain, to_usd
 from csmarket.modules.desk.schemas import MoveIn, SellIn, StockItemOut, StockOut, WriteOffIn
+from csmarket.modules.skinslink.api import (
+    DepositClient,
+    SkinslinkError,
+    SkinslinkUnavailableError,
+)
+
+log = get_logger("csmarket.desk.stock")
 
 
 async def _open_item(db: AsyncSession, item_id: str) -> DeskItem:
@@ -73,8 +82,16 @@ async def sell(db: AsyncSession, item_id: str, body: SellIn) -> DeskDeal:
 
 
 async def move(db: AsyncSession, item_id: str, body: MoveIn) -> DeskDeal:
-    """Send an open item the other way (Skinslink ↔ stock)."""
+    """Send an open item the other way (Skinslink ↔ stock).
+
+    Raises:
+        NotFoundError: ``item_not_found``.
+        ConflictError: ``item_not_open``; ``no_asset`` — Skinslink takes a skin by its
+            asset id, and this one has none.
+    """
     item = await _open_item(db, item_id)
+    if body.destination == "skinslink" and not item.asset_id:
+        raise ConflictError("Skinslink needs the skin's asset id", code="no_asset")
     item.destination = body.destination
     await db.flush()
     return await load_deal(db, item.deal_id)
@@ -95,13 +112,23 @@ async def write_off(db: AsyncSession, item_id: str, body: WriteOffIn) -> DeskDea
     return deal
 
 
+def _in_stock() -> tuple[ColumnElement[bool], ...]:
+    """Open stock items of a deal that is not cancelled."""
+    return (
+        DeskItem.destination == "stock",
+        DeskItem.state == "open",
+        DeskDeal.status != "cancelled",
+    )
+
+
 async def list_stock(db: AsyncSession) -> StockOut:
-    """The skins in the owner's stock, oldest first, with their cost."""
+    """The skins in the owner's stock, oldest first, with their cost (cancelled deals
+    left out)."""
     rows = (
         await db.execute(
             select(DeskItem, DeskDeal)
             .join(DeskDeal, DeskDeal.id == DeskItem.deal_id)
-            .where(DeskItem.destination == "stock", DeskItem.state == "open")
+            .where(*_in_stock())
             .order_by(DeskDeal.created_at, DeskItem.id)
         )
     ).all()
@@ -115,4 +142,38 @@ async def list_stock(db: AsyncSession) -> StockOut:
     return StockOut(items=items, total_cost_usd=plain(total) or "0")
 
 
-__all__ = ["list_stock", "move", "sell", "write_off"]
+#: Skinslink ``get-prices`` takes at most this many names.
+MAX_NAMES = 2000
+
+
+async def stock_prices(db: AsyncSession, client: DepositClient) -> dict[str, str]:
+    """What Skinslink pays now for each stock skin, by market name (``get-prices``, price
+    only). The names are read and the session committed before the one call, so no
+    connection is held across it; names Skinslink does not take are left out.
+
+    Raises:
+        DeskUnavailableError: ``desk_unavailable``.
+    """
+    names = (
+        await db.scalars(
+            select(DeskItem.name)
+            .join(DeskDeal, DeskDeal.id == DeskItem.deal_id)
+            .where(*_in_stock())
+            .order_by(DeskDeal.created_at, DeskItem.id)
+        )
+    ).all()
+    await db.commit()
+    unique = list(dict.fromkeys(names))[:MAX_NAMES]
+    if not unique:
+        return {}
+    try:
+        quotes = await client.get_prices(unique)
+    except SkinslinkError as exc:
+        raise refused(exc) from None
+    except SkinslinkUnavailableError as exc:
+        log.warning("desk.skinslink.unavailable", error=type(exc).__name__)
+        raise unavailable() from None
+    return {q.name: plain(q.price_usd) or "0" for q in quotes}
+
+
+__all__ = ["MAX_NAMES", "list_stock", "move", "sell", "stock_prices", "write_off"]

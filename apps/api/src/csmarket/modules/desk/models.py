@@ -44,6 +44,8 @@ RESOLVED = frozenset({"credited", "sold", "written_off", "reverted"})
 ENTRY_KINDS = ("credit", "sale", "revert", "write_off")
 #: Skinslink deposit statuses that end it (no more polling once settled).
 DEPOSIT_DEAD = ("failed", "canceled", "reverted")
+#: Skinslink deposit statuses before the trader answers the offer.
+DEPOSIT_OPEN = ("creating", "new", "pending", "active")
 DESK_TX_PREFIX = "desk-"
 _USD = Numeric(18, 6)
 
@@ -94,6 +96,8 @@ class DeskDeal(Base):
     method: Mapped[str] = mapped_column(
         String(16), nullable=False, server_default=sql_text("'direct'")
     )
+    #: Who held the money for a ``guarantor`` deal — PII-ish, never logged.
+    guarantor: Mapped[str | None] = mapped_column(String(120), nullable=True)
     paid_at: Mapped[datetime | None] = _at()
     guarantor_released_at: Mapped[datetime | None] = _at()
     created_at: Mapped[datetime] = _ts()
@@ -236,6 +240,7 @@ class DeskWithdrawal(Base):
 __all__ = [
     "CURRENCIES",
     "DEAL_STATUSES",
+    "DEPOSIT_OPEN",
     "DESK_TX_PREFIX",
     "DESTINATIONS",
     "ENTRY_KINDS",

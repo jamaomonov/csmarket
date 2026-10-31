@@ -60,13 +60,13 @@ async def summary(db: AsyncSession, start: date | None, end: date | None) -> Sum
             DeskDeal.status == "closed", DeskDeal.updated_at >= lo, DeskDeal.updated_at < hi
         )
     )
-    unresolved = DeskItem.state.in_(("open", "sent"))
+    live = DeskItem.deal_id.in_(select(DeskDeal.id).where(DeskDeal.status != "cancelled"))
     in_transit = await _sum(
         db,
         DeskItem.cost_usd,
         DeskItem.destination == "skinslink",
-        unresolved,
-        DeskItem.deal_id.in_(select(DeskDeal.id).where(DeskDeal.status.in_(("paid", "received")))),
+        DeskItem.state.in_(("open", "sent")),
+        live,
     )
     booked = await _sum(db, DeskEntry.revenue_usd)
     taken = await _sum(db, DeskWithdrawal.amount_usd)
@@ -78,7 +78,11 @@ async def summary(db: AsyncSession, start: date | None, end: date | None) -> Sum
         in_transit_usd=plain(in_transit) or "0",
         stock_usd=plain(
             await _sum(
-                db, DeskItem.cost_usd, DeskItem.destination == "stock", DeskItem.state == "open"
+                db,
+                DeskItem.cost_usd,
+                DeskItem.destination == "stock",
+                DeskItem.state == "open",
+                live,
             )
         )
         or "0",

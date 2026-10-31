@@ -10,8 +10,8 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from csmarket.modules.desk import deals as desk_deals
 from csmarket.modules.desk import deposits as desk_deposits
+from csmarket.modules.desk import listing as desk_listing
 from csmarket.modules.desk.models import DeskDeposit
 from csmarket.modules.fx.api import record_snapshot
 from csmarket.modules.skinslink.api import (
@@ -67,7 +67,7 @@ async def test_unknown_deal_is_404(integration_client: AsyncClient, desk_headers
 async def test_paging_status_filter_and_a_bad_cursor(
     integration_client: AsyncClient, desk_headers: Headers, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(desk_deals, "PAGE", 2)
+    monkeypatch.setattr(desk_listing, "PAGE", 2)
     h = await desk_headers()
     ids = [(await create(integration_client, h))["id"] for _ in range(3)]
     first = (await integration_client.get(f"{BASE}/deals", headers=h)).json()
@@ -193,7 +193,13 @@ async def test_a_lost_deposit_is_given_up_after_the_grace(
     fake.status = None
     await desk_deposits.check_deposit(db_session, fake, deposit_id=dep.id)
     assert (await _row(db_session)).status == "creating"  # still within the grace
-    old = datetime.now(UTC) - timedelta(minutes=11)
+    await db_session.execute(
+        update(DeskDeposit).values(created_at=datetime.now(UTC) - timedelta(minutes=11))
+    )
+    await db_session.commit()
+    await desk_deposits.check_deposit(db_session, fake, deposit_id=dep.id)
+    assert (await _row(db_session)).status == "creating"  # an hour: a late offer may come
+    old = datetime.now(UTC) - timedelta(minutes=61)
     await db_session.execute(update(DeskDeposit).values(created_at=old))
     await db_session.commit()
     await desk_deposits.check_deposit(db_session, fake, deposit_id=dep.id)

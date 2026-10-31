@@ -23,6 +23,7 @@ from csmarket.modules.skins.offers import (
     offer_id_of,
     parse_offer_id,
 )
+from csmarket.modules.skins.pictures import images_by_name
 from csmarket.modules.skins.pricing import Bracket, PricingRules, bracket_margin, quote, to_uzs
 from csmarket.modules.skins.schemas import SkinItemOut
 from csmarket.modules.skins.service import get_item, get_item_by_id
@@ -92,6 +93,7 @@ __all__ = [
     "from_listing",
     "get_item",
     "get_item_by_id",
+    "images_by_name",
     "item_cards",
     "listings_budget",
     "listings_for",
