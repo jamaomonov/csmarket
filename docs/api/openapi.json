@@ -6427,6 +6427,19 @@
       },
       "DealIn": {
         "properties": {
+          "guarantor": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/ItemIn"
@@ -6544,6 +6557,19 @@
       },
       "DealPatch": {
         "properties": {
+          "guarantor": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor"
+          },
           "guarantor_released": {
             "anyOf": [
               {
@@ -6648,9 +6674,7 @@
                   "agreed",
                   "paid",
                   "received",
-                  "closed",
-                  "cancelled",
-                  "reverted"
+                  "cancelled"
                 ],
                 "type": "string"
               },
@@ -6748,6 +6772,39 @@
             "title": "Created At",
             "type": "string"
           },
+          "first_item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FirstItemOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "guarantor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor"
+          },
+          "guarantor_released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor Released At"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -6763,6 +6820,17 @@
             ],
             "title": "Method",
             "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
           },
           "paid_amount": {
             "anyOf": [
@@ -6805,9 +6873,32 @@
             "title": "Profit Usd",
             "type": "string"
           },
+          "protected_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected Until"
+          },
           "resolved": {
             "title": "Resolved",
             "type": "boolean"
+          },
+          "skinslink_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skinslink Usd"
           },
           "status": {
             "enum": [
@@ -6831,13 +6922,19 @@
           "status",
           "trader",
           "method",
+          "guarantor",
+          "note",
           "created_at",
           "paid_amount",
           "paid_currency",
           "paid_usd",
           "items",
+          "first_item",
+          "skinslink_usd",
           "profit_usd",
-          "resolved"
+          "resolved",
+          "protected_until",
+          "guarantor_released_at"
         ],
         "title": "DealRowOut",
         "type": "object"
@@ -6868,6 +6965,28 @@
           "next_cursor"
         ],
         "title": "DealsOut",
+        "type": "object"
+      },
+      "DepositIn": {
+        "properties": {
+          "item_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 200,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Ids"
+          }
+        },
+        "title": "DepositIn",
         "type": "object"
       },
       "DepositOut": {
@@ -7222,6 +7341,31 @@
           "fee_uzs"
         ],
         "title": "FeeOut",
+        "type": "object"
+      },
+      "FirstItemOut": {
+        "properties": {
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "image_url"
+        ],
+        "title": "FirstItemOut",
         "type": "object"
       },
       "FxOut": {
@@ -7931,6 +8075,24 @@
           "fixed_price_usd"
         ],
         "title": "ItemPricingIn",
+        "type": "object"
+      },
+      "ItemsIn": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemIn"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ItemsIn",
         "type": "object"
       },
       "JobOut": {
@@ -14876,6 +15038,73 @@
         "title": "TradeLinkOut",
         "type": "object"
       },
+      "TraderOut": {
+        "properties": {
+          "deals": {
+            "title": "Deals",
+            "type": "integer"
+          },
+          "last_deal_at": {
+            "format": "date-time",
+            "title": "Last Deal At",
+            "type": "string"
+          },
+          "last_trade_link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Trade Link"
+          },
+          "paid_usd": {
+            "title": "Paid Usd",
+            "type": "string"
+          },
+          "profit_usd": {
+            "title": "Profit Usd",
+            "type": "string"
+          },
+          "reverts": {
+            "title": "Reverts",
+            "type": "integer"
+          },
+          "trader": {
+            "title": "Trader",
+            "type": "string"
+          }
+        },
+        "required": [
+          "trader",
+          "deals",
+          "paid_usd",
+          "profit_usd",
+          "reverts",
+          "last_trade_link",
+          "last_deal_at"
+        ],
+        "title": "TraderOut",
+        "type": "object"
+      },
+      "TradersOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TraderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TradersOut",
+        "type": "object"
+      },
       "TranslationIn": {
         "description": "An article's words in one locale, as the admin saves them.",
         "properties": {
@@ -15525,6 +15754,17 @@
             "title": "Deposits",
             "type": "array"
           },
+          "guarantor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guarantor"
+          },
           "guarantor_released_at": {
             "anyOf": [
               {
@@ -15691,6 +15931,7 @@
           "rate",
           "paid_usd",
           "method",
+          "guarantor",
           "paid_at",
           "guarantor_released_at",
           "created_at",
@@ -17640,7 +17881,7 @@
     },
     "/api/v1/admin/desk/deals": {
       "get": {
-        "description": "Newest first, 50 a page.",
+        "description": "Newest first, 50 a page; ``q`` matches the trader or an item's name.",
         "operationId": "get_deals_api_v1_admin_desk_deals_get",
         "parameters": [
           {
@@ -17950,7 +18191,7 @@
     },
     "/api/v1/admin/desk/deals/{deal_id}/deposit": {
       "post": {
-        "description": "\u00ab\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u043c\u0435\u043d\u00bb: a Skinslink bot offers the trader a trade for the deal's skins.\n\nThe deposit is committed before the one Skinslink call; a lost answer is left to the poll.",
+        "description": "\u00ab\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u043c\u0435\u043d\u00bb: a Skinslink bot offers the trader a trade for the deal's skins \u2014\nonly ``item_ids`` when given.\n\nThe deposit is committed before the one Skinslink call; a lost answer is left to the poll.",
         "operationId": "post_deposit_api_v1_admin_desk_deals__deal_id__deposit_post",
         "parameters": [
           {
@@ -17988,6 +18229,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DepositIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -18016,9 +18274,87 @@
         ]
       }
     },
+    "/api/v1/admin/desk/deals/{deal_id}/items": {
+      "post": {
+        "description": "More skins for the deal; the price is split again (``price_locked`` once one resolved).",
+        "operationId": "post_items_api_v1_admin_desk_deals__deal_id__items_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "deal_id",
+            "required": true,
+            "schema": {
+              "title": "Deal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add skins",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/desk/inventory": {
       "post": {
-        "description": "What Skinslink takes from a trade link's inventory now, with prices.\n\nKeyless: it writes nothing anywhere.",
+        "description": "What Skinslink takes from a trade link's inventory now, with prices and our pictures.\n\nKeyless: it writes nothing anywhere.",
         "operationId": "post_inventory_api_v1_admin_desk_inventory_post",
         "parameters": [
           {
@@ -18071,6 +18407,74 @@
           }
         },
         "summary": "A trader's inventory",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/items/{item_id}": {
+      "delete": {
+        "description": "An open skin off its deal; the price is split again over the rest.",
+        "operationId": "delete_item_api_v1_admin_desk_items__item_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove a skin",
         "tags": [
           "admin"
         ]
@@ -18227,6 +18631,74 @@
           }
         },
         "summary": "Sold from stock",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/items/{item_id}/undo": {
+      "post": {
+        "description": "A sold or written-off skin back to open; its ledger row is deleted (audited).",
+        "operationId": "post_undo_api_v1_admin_desk_items__item_id__undo_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/csmarket__modules__desk__schemas__DealOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undo a sale or write-off",
         "tags": [
           "admin"
         ]
@@ -18410,6 +18882,60 @@
         ]
       }
     },
+    "/api/v1/admin/desk/stock/prices": {
+      "post": {
+        "description": "What Skinslink pays now for each stock skin: ``{market name: price_usd}``; names it\ndoes not take are left out.\n\nKeyless: it only reads Skinslink ``get-prices`` and writes nothing.",
+        "operationId": "post_stock_prices_api_v1_admin_desk_stock_prices_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Post Stock Prices Api V1 Admin Desk Stock Prices Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stock at Skinslink",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/desk/summary": {
       "get": {
         "description": "Profit and revenue in the window (Tashkent days), in transit, stock, the share.",
@@ -18489,6 +19015,73 @@
           }
         },
         "summary": "My figures",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/desk/traders": {
+      "get": {
+        "description": "Deals grouped by trader (case ignored): deals, paid, profit, reverts, the last link.",
+        "operationId": "get_traders_api_v1_admin_desk_traders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TradersOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Traders",
         "tags": [
           "admin"
         ]
