@@ -17,7 +17,13 @@ from csmarket.core.clock import now
 from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.ids import new_id
 from csmarket.core.logging import get_logger
-from csmarket.modules.desk.deals import close_if_done, item_out, load_deal, require_price
+from csmarket.modules.desk.deals import (
+    close_if_done,
+    item_out,
+    load_deal,
+    require_live,
+    require_price,
+)
 from csmarket.modules.desk.inventory import refused, unavailable
 from csmarket.modules.desk.models import DeskDeal, DeskEntry, DeskItem
 from csmarket.modules.desk.money import plain, to_usd
@@ -32,11 +38,11 @@ log = get_logger("csmarket.desk.stock")
 
 
 async def _open_item(db: AsyncSession, item_id: str) -> DeskItem:
-    """The item ``FOR UPDATE``; it must be ``open``.
+    """The item ``FOR UPDATE``; it must be ``open``, its deal not cancelled.
 
     Raises:
         NotFoundError: ``item_not_found``.
-        ConflictError: ``item_not_open``.
+        ConflictError: ``item_not_open``, ``deal_busy`` — the deal is cancelled.
     """
     item = await db.scalar(
         select(DeskItem).where(cast(DeskItem.id, Text) == item_id).with_for_update()
@@ -45,6 +51,7 @@ async def _open_item(db: AsyncSession, item_id: str) -> DeskItem:
         raise NotFoundError("no such item", code="item_not_found")
     if item.state != "open":
         raise ConflictError("the item is not open", code="item_not_open")
+    require_live(await load_deal(db, item.deal_id))
     return item
 
 

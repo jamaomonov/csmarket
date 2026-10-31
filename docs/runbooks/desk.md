@@ -32,6 +32,13 @@ outcome word.
   заплатили»): each skin's profit is measured against its share of it.
 - Once one skin is sold, credited or written off, the price is locked. Fix a wrong price
   before the first sale.
+- The expected profit («≈ +$B») is what is booked so far plus, for each skin still bound for
+  Skinslink (not sent yet or on its way), its Skinslink price less its cost; «Себе» skins are
+  not counted until sold. A partly done deal shows both: «пока +$A · ≈ +$B». A cancelled deal
+  shows no expected profit.
+- «Сделок» in the period's figures counts a closed deal on the day of its last sale, credit,
+  write-off or revert — editing the deal later (note, guarantor, «Подтвердить гаранту») does not
+  move it to another period.
 - When the trade was saved after a lost answer, Skinslink's status gives no dollar amount: the
   deal is credited at the skins' Skinslink prices and shows «≈». Check the real figure in the
   Skinslink cabinet.
@@ -78,7 +85,9 @@ turns `reverted` (not `closed`) when its last skin is resolved.
 set by the system. «Отменена» is refused («deal_busy») while a skin is at Skinslink or anything
 of the deal is sold, credited or written off; a cancelled deal can be set back. A closed or
 reverted deal's status cannot be changed by hand — undo a sale or write-off instead. Cancelled
-deals are left out of «В пути», «На складе» and the stock list.
+deals are left out of «В пути», «На складе» and the stock list. A cancelled deal is frozen:
+sending, selling, writing off, moving a skin and adding skins are refused («deal_busy») and the
+page hides those buttons; set the status back to work on it again.
 
 ## Skins after the deal is made
 

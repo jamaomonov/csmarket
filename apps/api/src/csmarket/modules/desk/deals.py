@@ -225,6 +225,40 @@ async def _set_status(db: AsyncSession, deal: DeskDeal, status: str) -> None:
     deal.status = status
 
 
+def require_live(deal: DeskDeal) -> None:
+    """A cancelled deal is frozen: nothing of it is sent, sold, written off, moved or added.
+
+    Raises:
+        ConflictError: ``deal_busy``.
+    """
+    if deal.status == "cancelled":
+        raise ConflictError("the deal is cancelled", code="deal_busy")
+
+
+#: Item states still on their way to Skinslink: their profit is not booked yet.
+PENDING = ("open", "sent")
+
+
+def expected_profit(deal: DeskDeal, items: Iterable[DeskItem], booked: Decimal) -> Decimal | None:
+    """The profit booked so far plus, for each skin still bound for Skinslink (``open`` /
+    ``sent``), its Skinslink price less its cost.
+
+    ``None`` for a cancelled deal, one without a price, or when no priced skin is left
+    for Skinslink (an unpriced one makes the figure unknown).
+    """
+    if deal.status == "cancelled" or deal.paid_usd is None:
+        return None
+    pending = [i for i in items if i.destination == "skinslink" and i.state in PENDING]
+    if not pending:
+        return None
+    total = booked
+    for i in pending:
+        if i.skinslink_usd is None or i.cost_usd is None:
+            return None
+        total += i.skinslink_usd - i.cost_usd
+    return total
+
+
 def require_price(deal: DeskDeal) -> None:
     """Nothing resolves before the deal has a price: each item's profit is measured against
     its share of it.
@@ -314,6 +348,8 @@ async def deal_out(db: AsyncSession, deal: DeskDeal) -> DealOut:
         ).all()
     )
     accepted = [d.accepted_at for d in deposits if d.accepted_at and d.reverted_at is None]
+    booked = await _profit(db, deal.id)
+    expected = expected_profit(deal, items, booked)
     return DealOut(
         id=deal.id,
         status=deal.status,  # type: ignore[arg-type]  # the CHECK keeps it one of DealStatus
@@ -333,7 +369,8 @@ async def deal_out(db: AsyncSession, deal: DeskDeal) -> DealOut:
         items=[item_out(i) for i in items],
         deposits=[_deposit_out(d) for d in deposits],
         protected_until=max(accepted) + PROTECTION if accepted else None,
-        profit_usd=plain(await _profit(db, deal.id)) or "0",
+        profit_usd=plain(booked) or "0",
+        expected_profit_usd=plain(expected),
         resolved=bool(items) and all(i.state in RESOLVED for i in items),
     )
 
@@ -344,6 +381,7 @@ __all__ = [
     "close_if_done",
     "create_deal",
     "deal_out",
+    "expected_profit",
     "fill_images",
     "item_out",
     "items_of",
@@ -351,6 +389,7 @@ __all__ = [
     "new_items",
     "picture",
     "recost",
+    "require_live",
     "require_price",
     "update_deal",
 ]

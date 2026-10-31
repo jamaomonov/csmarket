@@ -6772,6 +6772,17 @@
             "title": "Created At",
             "type": "string"
           },
+          "expected_profit_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Profit Usd"
+          },
           "first_item": {
             "anyOf": [
               {
@@ -6932,6 +6943,7 @@
           "first_item",
           "skinslink_usd",
           "profit_usd",
+          "expected_profit_usd",
           "resolved",
           "protected_until",
           "guarantor_released_at"
@@ -15754,6 +15766,17 @@
             "title": "Deposits",
             "type": "array"
           },
+          "expected_profit_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Profit Usd"
+          },
           "guarantor": {
             "anyOf": [
               {
@@ -15940,6 +15963,7 @@
           "deposits",
           "protected_until",
           "profit_usd",
+          "expected_profit_usd",
           "resolved"
         ],
         "title": "DealOut",

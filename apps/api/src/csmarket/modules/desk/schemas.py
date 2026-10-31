@@ -189,6 +189,9 @@ class DealOut(BaseModel):
     protected_until: datetime | None
     #: The profit booked so far (the sum of its ledger rows).
     profit_usd: str
+    #: Booked so far plus Skinslink's price less the cost of each skin still bound for it
+    #: (``open`` / ``sent``); ``null`` when cancelled, unpriced or nothing is left for it.
+    expected_profit_usd: str | None
     #: Every item credited, sold, written off or reverted: the profit is final.
     resolved: bool
 
@@ -215,6 +218,8 @@ class DealRowOut(BaseModel):
     #: The deal's items at their Skinslink prices; ``null`` when none is priced.
     skinslink_usd: str | None
     profit_usd: str
+    #: As :attr:`DealOut.expected_profit_usd`.
+    expected_profit_usd: str | None
     resolved: bool
     protected_until: datetime | None
     guarantor_released_at: datetime | None

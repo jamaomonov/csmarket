@@ -21,6 +21,7 @@ from csmarket.modules.desk.deals import (
     load_deal,
     new_items,
     recost,
+    require_live,
 )
 from csmarket.modules.desk.models import RESOLVED, DeskDeal, DeskDeposit, DeskEntry, DeskItem
 from csmarket.modules.desk.schemas import ItemsIn
@@ -57,9 +58,10 @@ async def add_items(db: AsyncSession, deal_id: str, body: ItemsIn) -> DeskDeal:
 
     Raises:
         NotFoundError: ``deal_not_found``.
-        ConflictError: ``price_locked``.
+        ConflictError: ``deal_busy`` — the deal is cancelled; ``price_locked``.
     """
     deal = await load_deal(db, deal_id, lock=True)
+    require_live(deal)
     items = await items_of(db, deal.id)
     _unlocked(items)
     added = new_items(deal.id, body.items)

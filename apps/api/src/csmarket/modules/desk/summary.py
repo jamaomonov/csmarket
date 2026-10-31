@@ -2,7 +2,7 @@
 owner's share of our Skinslink balance»).
 
 Profit and Skinslink revenue are sums of ``desk_entries`` rows dated inside the window
-(Tashkent days, inclusive). The share is all-time: Skinslink money the desk booked less what
+(Tashkent days, inclusive); a closed deal counts in the window of its last ledger row. The share is all-time: Skinslink money the desk booked less what
 the owner marked as taken out — a figure only (owner ruling 2026-10-29).
 """
 
@@ -55,10 +55,17 @@ async def summary(db: AsyncSession, start: date | None, end: date | None) -> Sum
             *in_window, DeskEntry.kind != "revert"
         )
     )
+    # A closed deal counts on the day of its last ledger row — editing it later never moves it.
+    last = (
+        select(DeskEntry.deal_id, func.max(DeskEntry.at).label("at"))
+        .group_by(DeskEntry.deal_id)
+        .subquery()
+    )
     closed = await db.scalar(
-        select(func.count()).where(
-            DeskDeal.status == "closed", DeskDeal.updated_at >= lo, DeskDeal.updated_at < hi
-        )
+        select(func.count())
+        .select_from(DeskDeal)
+        .join(last, last.c.deal_id == DeskDeal.id)
+        .where(DeskDeal.status == "closed", last.c.at >= lo, last.c.at < hi)
     )
     live = DeskItem.deal_id.in_(select(DeskDeal.id).where(DeskDeal.status != "cancelled"))
     in_transit = await _sum(

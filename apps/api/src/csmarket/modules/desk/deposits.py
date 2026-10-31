@@ -34,6 +34,7 @@ from csmarket.modules.desk.deals import (
     items_of,
     load_deal,
     recost,
+    require_live,
     require_price,
 )
 from csmarket.modules.desk.inventory import refused, unavailable
@@ -230,11 +231,13 @@ async def _to_send(
     db: AsyncSession, deal: DeskDeal, item_ids: list[str] | None = None
 ) -> list[DeskItem]:
     """The deal's open Skinslink items with an asset id (only ``item_ids`` when given), none
-    of its deposits open.
+    of its deposits open, the deal not cancelled.
 
     Raises:
-        ConflictError: ``deposit_open``, ``nothing_to_send``, ``price_required``.
+        ConflictError: ``deal_busy``, ``deposit_open``, ``nothing_to_send``,
+            ``price_required``.
     """
+    require_live(deal)
     open_one = await db.scalar(
         select(DeskDeposit.id).where(
             DeskDeposit.deal_id == deal.id, DeskDeposit.status.in_(DEPOSIT_OPEN)
@@ -301,7 +304,7 @@ async def send(
 
     Raises:
         NotFoundError: ``deal_not_found``.
-        ConflictError: ``trade_link_missing``, ``deposit_open``, ``nothing_to_send``,
+        ConflictError: ``trade_link_missing``, ``deal_busy``, ``deposit_open``, ``nothing_to_send``,
             ``skins_gone``, ``prices_moved``, ``steam_refused``.
         DeskUnavailableError: ``desk_unavailable`` — refused otherwise, or a 403.
     """

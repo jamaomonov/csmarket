@@ -15,11 +15,22 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Text, and_, cast, exists, func, or_, select
+from sqlalchemy import (
+    ColumnElement,
+    Text,
+    and_,
+    cast,
+    exists,
+    func,
+    or_,
+    select,
+)
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import QueryableAttribute
 
 from csmarket.core.errors import ValidationError
-from csmarket.modules.desk.deals import PROTECTION, picture
+from csmarket.modules.desk.deals import PROTECTION, expected_profit, picture
 from csmarket.modules.desk.models import RESOLVED, DeskDeal, DeskDeposit, DeskEntry, DeskItem
 from csmarket.modules.desk.money import plain
 from csmarket.modules.desk.schemas import (
@@ -68,6 +79,7 @@ class _Items:
     done: int = 0
     priced: Decimal | None = None
     first: DeskItem | None = None
+    rows: list[DeskItem] = field(default_factory=list)
 
 
 def _dearer(a: DeskItem | None, b: DeskItem) -> bool:
@@ -83,6 +95,7 @@ async def _items(db: AsyncSession, ids: list[str]) -> dict[str, _Items]:
     for item in sorted(rows.all(), key=lambda i: i.id):
         agg = out.setdefault(item.deal_id, _Items())
         agg.n += 1
+        agg.rows.append(item)
         agg.done += item.state in RESOLVED
         if item.skinslink_usd is not None:
             agg.priced = (agg.priced or Decimal(0)) + item.skinslink_usd
@@ -127,6 +140,7 @@ def _row(d: DeskDeal, agg: _Items, profit: Decimal, protected: datetime | None) 
         else FirstItemOut(name=first.name, image_url=picture(first.image_url)),
         skinslink_usd=plain(agg.priced),
         profit_usd=plain(profit) or "0",
+        expected_profit_usd=plain(expected_profit(d, agg.rows, profit)),
         resolved=agg.n > 0 and agg.n == agg.done,
         protected_until=protected,
         guarantor_released_at=d.guarantor_released_at,
@@ -184,63 +198,86 @@ async def list_deals(
     )
 
 
-@dataclass
-class _Trader:
-    name: str
-    last_at: datetime
-    link: str | None = None
-    deals: int = 0
-    paid: Decimal = Decimal(0)
-    profit: Decimal = Decimal(0)
-    reverts: int = 0
-    ids: list[str] = field(default_factory=list)
+def _trader_key() -> ColumnElement[str]:
+    return func.lower(func.trim(DeskDeal.trader))
+
+
+async def _newest(
+    db: AsyncSession,
+    column: QueryableAttribute[str | None],
+    keys: list[str],
+    *where: ColumnElement[bool],
+) -> dict[str, str]:
+    """``column`` of each group's newest deal (matching ``where``), by group key."""
+    k = _trader_key()
+    rows = await db.execute(
+        select(k, column)
+        .ext(distinct_on(k))
+        .where(k.in_(keys), *where)
+        .order_by(k, DeskDeal.created_at.desc(), DeskDeal.id.desc())
+    )
+    return {str(g): str(v) for g, v in rows.all()}
+
+
+async def _per_trader(
+    db: AsyncSession,
+    value: ColumnElement[Decimal] | ColumnElement[int],
+    keys: list[str],
+    *where: ColumnElement[bool],
+) -> dict[str, Decimal]:
+    """``value`` over the ledger rows of each group's live deals, by group key."""
+    k = _trader_key()
+    rows = await db.execute(
+        select(k, value)
+        .join(DeskDeal, DeskDeal.id == DeskEntry.deal_id)
+        .where(k.in_(keys), DeskDeal.status != "cancelled", *where)
+        .group_by(k)
+    )
+    return {str(g): Decimal(str(v or 0)) for g, v in rows.all()}
 
 
 async def traders(db: AsyncSession, q: str | None) -> TradersOut:
-    """Deals grouped by ``lower(trader)``, the latest first, :data:`TRADERS` at most.
+    """Deals grouped by ``lower(trader)`` in SQL, the latest first, :data:`TRADERS` at most.
 
     Counts and sums leave out cancelled deals; the name and trade link are the newest deal's
     (a cancelled one included — it still names the trader).
     """
-    stmt = select(DeskDeal).order_by(DeskDeal.created_at.desc(), DeskDeal.id.desc())
+    k = _trader_key()
+    live = DeskDeal.status != "cancelled"
+    last_at = func.max(DeskDeal.created_at)
+    stmt = (
+        select(
+            k,
+            last_at,
+            func.count().filter(live),
+            func.coalesce(func.sum(DeskDeal.paid_usd).filter(live), 0),
+        )
+        .group_by(k)
+        .order_by(last_at.desc(), k)
+        .limit(TRADERS)
+    )
     if q and q.strip():
         stmt = stmt.where(DeskDeal.trader.ilike(_like(q), escape="\\"))
-    deals = list((await db.scalars(stmt)).all())
-    groups: dict[str, _Trader] = {}
-    for d in deals:
-        g = groups.setdefault(d.trader.strip().lower(), _Trader(d.trader, d.created_at))
-        g.link = g.link or d.trade_link
-        if d.status != "cancelled":
-            g.deals += 1
-            g.paid += d.paid_usd or Decimal(0)
-            g.ids.append(d.id)
-    chosen = list(groups.values())[:TRADERS]
-    ids = [i for g in chosen for i in g.ids]
-    profits = await _profits(db, ids)
-    reverted = set(
-        (
-            await db.scalars(
-                select(DeskEntry.deal_id).where(
-                    DeskEntry.deal_id.in_(ids), DeskEntry.kind == "revert"
-                )
-            )
-        ).all()
+    groups = (await db.execute(stmt)).all()
+    keys = [str(g[0]) for g in groups]
+    names = await _newest(db, DeskDeal.trader, keys)
+    links = await _newest(db, DeskDeal.trade_link, keys, DeskDeal.trade_link.is_not(None))
+    profits = await _per_trader(db, func.sum(DeskEntry.profit_usd), keys)
+    reverts = await _per_trader(
+        db, func.count(func.distinct(DeskEntry.deal_id)), keys, DeskEntry.kind == "revert"
     )
-    for g in chosen:
-        g.profit = sum((profits.get(i, Decimal(0)) for i in g.ids), Decimal(0))
-        g.reverts = sum(1 for i in g.ids if i in reverted)
     return TradersOut(
         items=[
             TraderOut(
-                trader=g.name,
-                deals=g.deals,
-                paid_usd=plain(g.paid) or "0",
-                profit_usd=plain(g.profit) or "0",
-                reverts=g.reverts,
-                last_trade_link=g.link,
-                last_deal_at=g.last_at,
+                trader=names[key],
+                deals=int(deals),
+                paid_usd=plain(Decimal(paid or 0)) or "0",
+                profit_usd=plain(profits.get(key, Decimal(0))) or "0",
+                reverts=int(reverts.get(key, Decimal(0))),
+                last_trade_link=links.get(key),
+                last_deal_at=at,
             )
-            for g in chosen
+            for key, (_, at, deals, paid) in zip(keys, groups, strict=True)
         ]
     )
 
