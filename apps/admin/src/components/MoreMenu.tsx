@@ -9,13 +9,14 @@ export interface MoreAction {
   danger?: boolean;
 }
 
-export function MoreMenu({
-  actions,
-  label = "Ещё действия",
-}: {
+interface MoreMenuProps {
   actions: MoreAction[];
   label?: string;
-}) {
+  /** The «⋯» button's size; 36 px unless a page asks for a thumb-sized one. */
+  size?: string;
+}
+
+export function MoreMenu({ actions, label = "Ещё действия", size = "size-9" }: MoreMenuProps) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -45,7 +46,7 @@ export function MoreMenu({
         onClick={() => {
           setOpen((v) => !v);
         }}
-        className="border-border hover:bg-surface-2 text-fg-muted grid size-9 place-items-center rounded-md border"
+        className={`border-border hover:bg-surface-2 text-fg-muted grid place-items-center rounded-md border ${size}`}
       >
         <MoreHorizontal className="size-4" aria-hidden />
       </button>
@@ -64,7 +65,7 @@ export function MoreMenu({
                 setOpen(false);
                 a.onSelect();
               }}
-              className={`hover:bg-surface-2 block w-full rounded-md px-3 py-2 text-left text-sm ${
+              className={`hover:bg-surface-2 block min-h-11 w-full rounded-md px-3 py-2 text-left text-sm sm:min-h-0 ${
                 a.danger === true ? "text-danger" : ""
               }`}
             >
