@@ -26,7 +26,7 @@ export type OrderStatus =
 export type TradeState = "buying" | "offer_sent" | "accepted" | "released" | "failed";
 
 export type TradeReason =
-  "not_accepted" | "sold_out" | "try_later" | "trade_link" | "support" | "other";
+  "not_accepted" | "sold_out" | "try_later" | "trade_link" | "cant_trade" | "support" | "other";
 
 /** `SkinSellerOut`: who sends the trade, as Steam shows them. */
 export interface SkinSellerOut {

@@ -136,3 +136,33 @@ async def test_a_refund_an_attention_blocks_is_held(db_session: AsyncSession) ->
     report = purchase("return", custom_id=order.id, return_reason="trade_timeout")
     outcome, row, _ = await _apply(db_session, order, report)
     assert (outcome, row.status) == ("held", "trade_sent")
+
+
+@pytest.mark.parametrize("status", ["wait_unlock", "wait_withdraw"])
+async def test_a_parked_skin_the_buyer_cannot_take_is_said_plainly(
+    db_session: AsyncSession, status: str
+) -> None:
+    order, _ = await make_lisskins_order(db_session, status="buying", skin_status=None)
+    report = purchase(status, custom_id=order.id, error="user_cant_trade")
+    outcome, row, p = await _apply(db_session, order, report)
+    assert (outcome, row.status, p.attention_reason) == ("cant_trade", "buying", None)
+    card = skin_trade_out(row, None, purchase=p)
+    assert card is not None
+    assert (card.state, card.reason_code, card.refunded_to) == ("buying", "cant_trade", None)
+    assert (await _apply(db_session, order, report))[0] == "unchanged"  # said once
+
+
+async def test_the_parked_skin_returned_later_refunds_as_a_trade_link_failure(
+    db_session: AsyncSession,
+) -> None:
+    order, _ = await make_lisskins_order(db_session, status="buying", skin_status=None)
+    await _apply(
+        db_session, order, purchase("wait_withdraw", custom_id=order.id, error="user_cant_trade")
+    )
+    back = purchase("return", custom_id=order.id, return_reason="withdraw_timeout")
+    outcome, row, p = await _apply(db_session, order, back)
+    assert (outcome, row.status, row.failure_reason) == ("failed", "failed", "invalid_trade_link")
+    assert await user_balance(db_session, order.user_id) == PRICE
+    card = skin_trade_out(row, None, purchase=p)
+    assert card is not None
+    assert (card.state, card.reason_code, card.refunded_to) == ("failed", "trade_link", "balance")

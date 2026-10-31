@@ -179,6 +179,29 @@ describe("OrderDetail", () => {
     expect(screen.queryByRole("region", { name: "Обмен" })).toBeNull();
   });
 
+  it("says when LIS-SKINS holds the skin because the buyer cannot trade", async () => {
+    api.getOrder.mockResolvedValue({
+      ...DETAIL,
+      order: { ...DETAIL.order, source: "lisskins", offer_id: "ls:125345", listing_id: null },
+      trade: null,
+      lisskins: {
+        ...LISSKINS,
+        status: "wait_withdraw",
+        offer_id: null,
+        offer_url: null,
+        offer_expiry_at: null,
+        error: "user_cant_trade",
+        attention_reason: null,
+      },
+    });
+    renderDetail();
+    const purchase = await screen.findByRole("region", { name: "Покупка LIS-SKINS" });
+    expect(within(purchase).getByText("лежит у нас в LIS-SKINS")).toBeInTheDocument();
+    expect(
+      within(purchase).getByText("покупатель не может обмениваться в Steam"),
+    ).toBeInTheDocument();
+  });
+
   it("offers «Разобрано» for a purchase's open attention", async () => {
     api.getOrder.mockResolvedValue({
       ...DETAIL,

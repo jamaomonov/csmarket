@@ -47,6 +47,12 @@ describe("SkinTradeCard", () => {
     expect(screen.getByText("Обмен скоро придёт в Steam.")).toBeInTheDocument();
   });
 
+  it("says plainly when the buyer's Steam cannot take the skin", () => {
+    card({ reason_code: "cant_trade" });
+    expect(screen.getByText(/ваш аккаунт сейчас не может обмениваться/)).toBeInTheDocument();
+    expect(screen.queryByText("Обмен скоро придёт в Steam.")).toBeNull();
+  });
+
   it("links the sent offer, names the seller and says until when to accept", () => {
     card({
       state: "offer_sent",

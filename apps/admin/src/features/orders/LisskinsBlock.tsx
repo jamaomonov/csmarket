@@ -39,6 +39,11 @@ export function LisskinsBlock({ purchase: p }: LisskinsBlockProps) {
             {p.error !== null && <span className="text-fg-muted"> · {p.error}</span>}
           </Row>
         )}
+        {p.return_reason === null && p.error !== null && (
+          <Row label="Ошибка">
+            <Reason of="market" code={p.error} />
+          </Row>
+        )}
         {p.buy_pending && <Row label="Покупка">ждёт попытки</Row>}
         {p.buy_unconfirmed_at !== null && (
           <Row label="Ответ потерян">{when(p.buy_unconfirmed_at)}</Row>

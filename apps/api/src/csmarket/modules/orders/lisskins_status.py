@@ -14,6 +14,9 @@ order as the skin's status says. Callers hold the order row, then the purchase r
 ``return``, ``trade_create_error``, before  ``failed`` + refund ``invalid_trade_link`` (a link
 an offer                                    error) or ``source_refused``
 ``return``, any other reason                ``returned`` + refund ``not_accepted``
+``wait_unlock`` / ``wait_withdraw`` with a  ``cant_trade``: no attention, the buyer is told
+trade-link error (``user_cant_trade``)      their Steam cannot take the skin; the later
+                                            ``return`` refunds ``invalid_trade_link``
 ``wait_unlock`` / ``wait_withdraw``         attention ``ambiguous_trade`` (we never buy
                                             locked lots)
 ==========================================  ==================================================
@@ -51,7 +54,7 @@ from csmarket.modules.realtime.api import nudge
 log = get_logger("csmarket.orders.lisskins_status")
 
 #: Outcomes that change what the buyer sees; a refund is nudged by the refund itself.
-_NUDGED = frozenset({"trade_sent", "delivered", "rolled_back", "ambiguous"})
+_NUDGED = frozenset({"trade_sent", "delivered", "rolled_back", "ambiguous", "cant_trade"})
 
 
 def _when(text: str | None) -> datetime | None:
@@ -64,6 +67,9 @@ def _when(text: str | None) -> datetime | None:
         return None
     return at if at.tzinfo is not None else at.replace(tzinfo=UTC)
 
+
+#: A skin LIS-SKINS holds for us instead of sending it.
+_PARKED = ("wait_unlock", "wait_withdraw")
 
 #: The ``lisskins_purchases`` column widths: ``status`` and the other reported words.
 _STATUS_MAX, _TEXT_MAX = 16, 32
@@ -103,16 +109,38 @@ async def _returned(
         return "unchanged"
     if order.status not in ("buying", "trade_sent"):
         return "unchanged"
-    if reason == "trade_create_error" and order.status == "buying":
-        why = "invalid_trade_link" if skin.error in TRADE_LINK_ERRORS else "source_refused"
-        if why == "invalid_trade_link" and skin.error != "user_inventory_full":
+    error = skin.error or purchase.error
+    # A skin LIS-SKINS parked because the buyer's Steam could not take it (``cant_trade``)
+    # comes back the same way as a trade it could not create.
+    parked = error in TRADE_LINK_ERRORS and not purchase.steam_trade_offer_id
+    if order.status == "buying" and (reason == "trade_create_error" or parked):
+        why = "invalid_trade_link" if error in TRADE_LINK_ERRORS else "source_refused"
+        if why == "invalid_trade_link" and error != "user_inventory_full":
             await remember_rejection(get_redis(), order.trade_link)  # the partner API hears it
         return await refund_or_hold(db, order, "failed", why)
     return await refund_or_hold(db, order, "returned", "not_accepted")
 
 
+async def _cant_trade(
+    order: Order, purchase: LisskinsPurchase, skin: PurchasedSkin, *, was: str | None
+) -> str:
+    """LIS-SKINS bought the skin, but the buyer's Steam refused the trade: it waits in our
+    LIS-SKINS inventory until LIS-SKINS returns it, which refunds (``_returned``). Said once."""
+    if was in _PARKED or purchase.attention_reason is not None:
+        return "unchanged"
+    if skin.error != "user_inventory_full":
+        await remember_rejection(get_redis(), order.trade_link)  # the partner API hears it
+    log.warning("orders.lisskins.cant_trade", number=order.number, error=skin.error)
+    return "cant_trade"
+
+
 async def _apply(  # noqa: PLR0911 -- one return per row of the status table
-    db: AsyncSession, *, order: Order, purchase: LisskinsPurchase, skin: PurchasedSkin
+    db: AsyncSession,
+    *,
+    order: Order,
+    purchase: LisskinsPurchase,
+    skin: PurchasedSkin,
+    was: str | None = None,
 ) -> str:
     if skin.status == "wait_accept":
         if skin.offer_id and order.status == "buying":
@@ -124,7 +152,9 @@ async def _apply(  # noqa: PLR0911 -- one return per row of the status table
             return "unchanged"
         move(order, "delivered")
         return "delivered"
-    if skin.status in ("wait_unlock", "wait_withdraw"):
+    if skin.status in _PARKED:
+        if skin.error in TRADE_LINK_ERRORS and order.status == "buying":
+            return await _cant_trade(order, purchase, skin, was=was)
         return "ambiguous" if flag(purchase, "ambiguous_trade") else "unchanged"
     if skin.status == "return":
         return await _returned(db, order=order, purchase=purchase, skin=skin)
@@ -145,11 +175,12 @@ async def apply_report(
 
     Returns:
         ``unchanged``, ``trade_sent``, ``delivered``, ``returned``, ``failed``,
-        ``rolled_back``, ``ambiguous`` or ``held``.
+        ``rolled_back``, ``ambiguous``, ``cant_trade`` or ``held``.
     """
     before = public_status(order, None, purchase)
+    was = purchase.status
     skin = mirror_report(purchase, report)
-    outcome = await _apply(db, order=order, purchase=purchase, skin=skin)
+    outcome = await _apply(db, order=order, purchase=purchase, skin=skin, was=was)
     if outcome in _NUDGED:
         await nudge(db, user_id=order.user_id, number=order.number)
     if outcome == "trade_sent":

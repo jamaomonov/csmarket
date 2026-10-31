@@ -482,6 +482,7 @@
       "soldOut": "Someone bought this skin before you — the money is back on your balance. Pick another one in the market.",
       "tryLater": "Couldn't buy the skin — the money is on your balance. Try again in a few minutes.",
       "tradeLink": "The trade link didn't work — check it in your account. The money is on your balance.",
+      "cantTrade": "Steam won't let us send you the skin: your account can't trade right now. Check your trade restrictions in Steam. The money will return to your balance — this page will update.",
       "support": "We're checking the purchase. The status will update on this page.",
       "toBalance": "Open balance"
     }

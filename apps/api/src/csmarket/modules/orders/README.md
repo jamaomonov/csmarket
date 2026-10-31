@@ -539,15 +539,16 @@ purchase row (`lisskins_purchases`) belongs to the `lisskins` module; these file
   LIS-SKINS' report onto the purchase (`purchase_id`, `status`, `return_reason`, `error`, the
   offer id and expiry, `amount_units`; a missing field never erases ours) and moves the order:
 
-  | LIS-SKINS skin status                                  | Order                                                                       |
-  | ------------------------------------------------------ | --------------------------------------------------------------------------- |
-  | `processing`                                           | nothing                                                                     |
-  | `wait_accept` with an offer                            | `buying → trade_sent` (+ the `trade_sent` letter with the offer's expiry)   |
-  | `accepted`                                             | `→ delivered`                                                               |
-  | `return`, `rollback_…`, or any `return` after delivery | attention `rolled_back` (the skin may be spent; no automatic refund)        |
-  | `return`, `trade_create_error`, before an offer        | `failed` + refund `invalid_trade_link` (a buyer-side `error`) or `sold_out` |
-  | `return`, any other reason                             | `returned` + refund `not_accepted`                                          |
-  | `wait_unlock` / `wait_withdraw`                        | attention `ambiguous_trade` (we never buy locked lots)                      |
+  | LIS-SKINS skin status                                   | Order                                                                                 |
+  | ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+  | `processing`                                            | nothing                                                                               |
+  | `wait_accept` with an offer                             | `buying → trade_sent` (+ the `trade_sent` letter with the offer's expiry)             |
+  | `accepted`                                              | `→ delivered`                                                                         |
+  | `return`, `rollback_…`, or any `return` after delivery  | attention `rolled_back` (the skin may be spent; no automatic refund)                  |
+  | `return`, `trade_create_error`, before an offer         | `failed` + refund `invalid_trade_link` (a buyer-side `error`) or `sold_out`           |
+  | `return`, any other reason                              | `returned` + refund `not_accepted`                                                    |
+  | `wait_unlock` / `wait_withdraw` with a trade-link error | no attention; buyer reads `cant_trade`; the later `return` fails `invalid_trade_link` |
+  | `wait_unlock` / `wait_withdraw`                         | attention `ambiguous_trade` (we never buy locked lots)                                |
 
   A refund an open attention blocks leaves the order as it is (`held`).
 

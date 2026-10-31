@@ -13,7 +13,8 @@ Waxpeer's numbers become five states a customer understands:
 ``reason_code`` says why a trade failed: ``not_accepted`` (declined or expired),
 ``sold_out`` (nothing left to buy), ``try_later`` (the purchase could not go through for
 now — a retry in a few minutes may work), ``trade_link`` (the buyer's trade link did not
-work — they fix it in their profile), ``support`` (an unresolved attention — a buy we
+work — they fix it in their profile), ``cant_trade`` (a LIS-SKINS skin was bought but the
+buyer's Steam refused the trade; the money comes back when LIS-SKINS returns it), ``support`` (an unresolved attention — a buy we
 could not confirm, an ambiguous lookup, a rollback after acceptance, a Waxpeer refusal or an
 audit divergence; a person settles it), ``other``. ``support`` shows whatever the state while
 the attention is unresolved (ruling R3): the page says «мы проверяем покупку», never a bare
@@ -41,12 +42,14 @@ from typing import Any, Literal
 import pydantic
 from pydantic import BaseModel
 
-from csmarket.modules.lisskins.api import LisskinsPurchase
+from csmarket.modules.lisskins.api import TRADE_LINK_ERRORS, LisskinsPurchase
 from csmarket.modules.orders.models import ATTENTION_REASONS, Order, SkinTrade
 from csmarket.modules.skinslink.api import SkinslinkPurchase
 
 SkinTradeState = Literal["buying", "offer_sent", "accepted", "released", "failed"]
-SkinTradeReason = Literal["not_accepted", "sold_out", "try_later", "trade_link", "support", "other"]
+SkinTradeReason = Literal[
+    "not_accepted", "sold_out", "try_later", "trade_link", "cant_trade", "support", "other"
+]
 RefundedTo = Literal["balance"]
 
 #: Attention reasons the buyer reads as «we are checking the purchase» — every one (R3):
@@ -191,6 +194,10 @@ def _lisskins_out(order: Order, purchase: LisskinsPurchase) -> SkinTradeOut:
         reason = _reason(order, purchase)
     elif _needs_support(purchase):
         reason = "support"
+    elif (
+        purchase.status in ("wait_unlock", "wait_withdraw") and purchase.error in TRADE_LINK_ERRORS
+    ):
+        reason = "cant_trade"  # bought, but the buyer's Steam refused the trade
     offer = purchase.steam_trade_offer_id
     return SkinTradeOut(
         state=state,

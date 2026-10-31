@@ -105,6 +105,8 @@ const MARKET: Record<string, StatusWord> = {
   pending: { label: "ждёт", tone: "progress" },
   active: { label: "идёт", tone: "progress" },
   wait_accept: { label: "ждёт принятия", tone: "progress" },
+  wait_withdraw: { label: "лежит у нас в LIS-SKINS", tone: "danger" },
+  wait_unlock: { label: "ждёт разблокировки", tone: "danger" },
   hold: { label: "на холде", tone: "info" },
   accepted: { label: "принят", tone: "info" },
   completed: { label: "завершена", tone: "success" },
@@ -230,6 +232,12 @@ const MARKET_REASON: Record<string, string> = {
   inventory_reload: "инвентарь у Skinslink устарел",
   not_found: "Skinslink не нашёл обмен",
   forbidden: "Skinslink отказал в доступе",
+  user_cant_trade: "покупатель не может обмениваться в Steam",
+  user_trade_ban: "у покупателя трейд-бан в Steam",
+  private_inventory: "инвентарь покупателя скрыт",
+  invalid_trade_url: "трейд-ссылка покупателя не работает",
+  user_inventory_full: "инвентарь покупателя полон",
+  too_many_failed_attempts_for_user: "слишком много неудачных обменов у покупателя",
 };
 
 const CATALOGUE_JOB: Record<string, string> = {

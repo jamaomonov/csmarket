@@ -240,8 +240,8 @@ by that `custom_id` (the order id; an order bought before ADR-0013 may carry `<o
 - `rolled_back` — a `return` with `rollback_user` / `rollback_supplier`, or a `return` after
   delivery. Steam undid an accepted trade; the skin may be gone from the buyer. Decide with the
   buyer what is owed. Nothing was refunded automatically.
-- `ambiguous_trade` — LIS-SKINS reports `wait_unlock` / `wait_withdraw` (we never buy locked
-  lots), or a buy went through while the order had moved. Check what LIS-SKINS holds under the
+- `ambiguous_trade` — LIS-SKINS reports `wait_unlock` / `wait_withdraw` with no trade-link
+  error (we never buy locked lots), or a buy went through while the order had moved. Check what LIS-SKINS holds under the
   `custom_id`.
 - `buy_unconfirmed` — a lost buy was sent again and LIS-SKINS refused the lot, while
   `market/info` showed nothing under the `custom_id` (see [Buy failures](#buy-failures)).
@@ -254,6 +254,16 @@ by that `custom_id` (the order id; an order bought before ADR-0013 may carry `<o
   the refund answers `order_in_flight` or the attention reopens: check again and repeat.
 - `source_forbidden` — see [Buy failures](#buy-failures); it clears itself once a buy goes
   through.
+
+**The buyer's Steam cannot take the skin (since 2026-10-31).** LIS-SKINS bought the skin, its
+trade to the buyer failed (`error`: `user_cant_trade`, `user_trade_ban`, `private_inventory`, …)
+and it parked the skin in our LIS-SKINS inventory as `wait_withdraw` («лежит у нас в LIS-SKINS»,
+the error in words in «Покупка LIS-SKINS»). No attention opens: the buyer's page says Steam will
+not let us send the skin and the money comes back. When LIS-SKINS returns the purchase (its
+timer, about 12 h, or «Cancel» in the cabinet to speed it up) the order fails
+`invalid_trade_link` and the price goes back to the balance by itself. Do not press «Accept
+trade» in the cabinet. Our trade-link check passing does not rule this out: Waxpeer's
+`check-tradelink` and Steam's hold check do not see every trade restriction.
 
 When checked, press «Разобрано»: it works on a LIS-SKINS purchase, and resolving it frees a
 refund the attention held (for `buy_unconfirmed` too, since 2026-10-11: ADR-0018 amendment). Admin retry still refuses a LIS-SKINS order (409); the admin refund asks LIS-SKINS first (`docs/runbooks/public-api.md`, «Refund of a Skinslink / LIS-SKINS order», ADR-0018).

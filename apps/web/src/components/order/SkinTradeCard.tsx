@@ -2,7 +2,14 @@
 
 import { buttonVariants } from "@csmarket/ui";
 import { assertNever } from "@csmarket/utils";
-import { CheckCircle2, ExternalLink, Loader2, SearchCheck, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  SearchCheck,
+  Wallet,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useId, useState, type ReactNode } from "react";
 
@@ -57,7 +64,14 @@ export function SkinTradeCard({ trade, locale, steps = null }: SkinTradeCardProp
         {t("title")}
       </h2>
       {steps}
-      {review && !actionable ? null : <TradeBody trade={trade} locale={locale} />}
+      {trade.reason_code === "cant_trade" ? (
+        <p className="flex items-center gap-2">
+          <AlertTriangle aria-hidden className="text-warning h-4 w-4 shrink-0" />
+          {t("cantTrade")}
+        </p>
+      ) : review && !actionable ? null : (
+        <TradeBody trade={trade} locale={locale} />
+      )}
       {review ? (
         <p className="flex items-center gap-2">
           <SearchCheck aria-hidden className="text-accent h-4 w-4 shrink-0" />
