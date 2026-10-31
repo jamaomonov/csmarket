@@ -1,9 +1,10 @@
-/** A trader's inventory as Skinslink prices it: tick a skin by its whole row; a ticked one
- * gets its Skinslink | Себе switch. A long list gets a name filter. */
+/** A trader's inventory as Skinslink prices it, dearest first: tick a skin by its whole row (or
+ * «Выбрать все»); a ticked one gets its Skinslink | Себе switch. A long list gets a name filter. */
+import { Button } from "@csmarket/ui";
 import { useState } from "react";
 
 import { type Destination, type InventoryItem } from "./api";
-import { DestinationSwitch, usdToUzs } from "./Parts";
+import { DestinationSwitch, TAP, usdToUzs } from "./Parts";
 
 import { Money } from "@/components/Money";
 import { SkinThumb } from "@/components/SkinThumb";
@@ -19,14 +20,36 @@ interface InventoryPickerProps {
   onChange: (next: Record<string, Picked>) => void;
   /** The CBU rate, for the soʻm in brackets; `null` hides them. */
   rate: string | null;
+  /** Asset ids not to offer (already in the deal). */
+  exclude?: ReadonlySet<string>;
 }
 
 const FILTER_FROM = 20;
 
-export function InventoryPicker({ items, picked, onChange, rate }: InventoryPickerProps) {
+export function InventoryPicker({
+  items: all,
+  picked,
+  onChange,
+  rate,
+  exclude,
+}: InventoryPickerProps) {
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
+  const items = all
+    .filter((i) => exclude?.has(i.asset_id) !== true)
+    .sort((a, b) => Number(b.price_usd) - Number(a.price_usd));
   const shown = needle ? items.filter((i) => i.name.toLowerCase().includes(needle)) : items;
+  const allPicked = shown.length > 0 && shown.every((i) => picked[i.asset_id] !== undefined);
+  const pickAll = () => {
+    if (allPicked) {
+      const off = new Set(shown.map((i) => i.asset_id));
+      onChange(Object.fromEntries(Object.entries(picked).filter(([k]) => !off.has(k))));
+      return;
+    }
+    const next = { ...picked };
+    for (const it of shown) next[it.asset_id] ??= { item: it, destination: "skinslink" };
+    onChange(next);
+  };
   const toggle = (it: InventoryItem) => {
     if (picked[it.asset_id]) {
       onChange(Object.fromEntries(Object.entries(picked).filter(([k]) => k !== it.asset_id)));
@@ -35,7 +58,13 @@ export function InventoryPicker({ items, picked, onChange, rate }: InventoryPick
     }
   };
   if (items.length === 0) {
-    return <p className="text-fg-muted">Skinslink сейчас ничего из этого инвентаря не берёт.</p>;
+    return (
+      <p className="text-fg-muted">
+        {all.length > 0
+          ? "Все скины из инвентаря уже в сделке."
+          : "Skinslink сейчас ничего из этого инвентаря не берёт."}
+      </p>
+    );
   }
   return (
     <div className="space-y-2">
@@ -52,6 +81,11 @@ export function InventoryPicker({ items, picked, onChange, rate }: InventoryPick
             className="border-border bg-bg h-11 rounded-md border px-3"
           />
         </label>
+      )}
+      {shown.length > 1 && (
+        <Button variant="secondary" className={TAP} onClick={pickAll}>
+          {allPicked ? "Снять все" : "Выбрать все"}
+        </Button>
       )}
       {needle && shown.length === 0 && (
         <p className="text-fg-muted">Ничего не нашли по «{q.trim()}».</p>

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { type Currency, type Deal, type DealPatch, DESK_KEY, getRate } from "./api";
 import { deskErrorText } from "./labels";
 import { cleanAmount, grouped, TAP } from "./Parts";
-import { CurrencySwitch, RateField, toUsd } from "./SellForm";
+import { CurrencySwitch, RateField, toUsd } from "./SellSheet";
 
 import { Money } from "@/components/Money";
 import { MoneyInput } from "@/components/MoneyInput";

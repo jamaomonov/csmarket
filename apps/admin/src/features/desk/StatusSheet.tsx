@@ -1,28 +1,35 @@
-/** «Сменить статус»: the six statuses as options, saved only on «Сохранить». */
+/** «Сменить статус»: the four statuses the owner may set, saved only on «Сохранить». */
 import { Button } from "@csmarket/ui";
 import { useState } from "react";
 
-import { type DealStatus } from "./api";
+import { type DealStatus, type HandStatus } from "./api";
 import { DEAL_STATUS } from "./labels";
 import { TAP } from "./Parts";
 
 import { CONFIRM_BUTTONS, ConfirmSheet } from "@/components/ConfirmSheet";
 
+const HAND: readonly HandStatus[] = ["agreed", "paid", "received", "cancelled"];
+
+/** `closed` and `reverted` are the system's: no hand change from them or to them. */
+export function isHand(s: DealStatus): s is HandStatus {
+  return HAND.some((h) => h === s);
+}
+
 interface StatusSheetProps {
-  current: DealStatus;
+  current: HandStatus;
   busy: boolean;
   onClose: () => void;
-  onSave: (status: DealStatus) => void;
+  onSave: (status: HandStatus) => void;
 }
 
 export function StatusSheet({ current, busy, onClose, onSave }: StatusSheetProps) {
-  const [chosen, setChosen] = useState<DealStatus>(current);
-  const dropping = chosen === "cancelled" || chosen === "reverted";
+  const [chosen, setChosen] = useState<HandStatus>(current);
+  const dropping = chosen === "cancelled";
   return (
     <ConfirmSheet title="Сменить статус" busy={busy} onClose={onClose}>
       <fieldset className="flex flex-col gap-1">
         <legend className="sr-only">Статус сделки</legend>
-        {(Object.keys(DEAL_STATUS) as DealStatus[]).map((s) => (
+        {HAND.map((s) => (
           <label key={s} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
             <input
               type="radio"

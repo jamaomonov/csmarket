@@ -1,22 +1,42 @@
-/** «Склад»: skins the owner took into his own Steam account, with their cost; sold by hand. */
+/**
+ * «Склад»: skins the owner took into his own Steam account — what they cost, what Skinslink gives
+ * for them now, sold by hand. Filter by name, sort by cost or age; each row opens its deal.
+ */
 import { Button } from "@csmarket/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router-dom";
 
-import { DESK_KEY, listStock } from "./api";
-import { TAP } from "./Parts";
-import { SellForm } from "./SellForm";
+import { DESK_KEY, listStock, type StockItem, stockPrices } from "./api";
+import { deskErrorText } from "./labels";
+import { DeskError, RowsSkeleton, skins, TAP } from "./Parts";
+import { SellSheet } from "./SellSheet";
+import { StockRow } from "./StockRow";
 
 import { EmptyState } from "@/components/EmptyState";
 import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
-import { SkinThumb } from "@/components/SkinThumb";
-import { When } from "@/components/When";
+
+const SORTS = { cost: "Дороже сначала", age: "Давно лежат сначала" } as const;
+type Sort = keyof typeof SORTS;
+
+function arrange(items: StockItem[], q: string, sort: Sort): StockItem[] {
+  const needle = q.trim().toLowerCase();
+  const shown = needle ? items.filter((i) => i.name.toLowerCase().includes(needle)) : [...items];
+  return shown.sort((a, b) =>
+    sort === "cost"
+      ? Number(b.cost_usd ?? 0) - Number(a.cost_usd ?? 0)
+      : a.bought_at.localeCompare(b.bought_at),
+  );
+}
 
 export function StockPage() {
-  const [selling, setSelling] = useState<string | null>(null);
+  const [selling, setSelling] = useState<StockItem | null>(null);
+  const [q, setQ] = useState("");
+  const [sort, setSort] = useState<Sort>("cost");
   const stock = useQuery({ queryKey: [...DESK_KEY, "stock"], queryFn: listStock });
+  const prices = useMutation({ mutationFn: stockPrices });
+  const items = stock.data?.items ?? [];
+  const field = "border-border bg-bg h-11 rounded-md border px-3";
   return (
     <section className="space-y-4">
       <PageHeader
@@ -25,56 +45,93 @@ export function StockPage() {
         meta={
           stock.data ? (
             <>
-              На складе по себестоимости: <Money usd={stock.data.total_cost_usd} />
+              {skins(items.length)} · <Money usd={stock.data.total_cost_usd} /> по себестоимости
             </>
           ) : null
         }
       />
-      {stock.isPending && <p className="text-fg-muted">Загружаем…</p>}
-      {stock.data?.items.length === 0 && (
+      {stock.isError && (
+        <DeskError
+          error={stock.error}
+          back
+          onRetry={() => {
+            void stock.refetch();
+          }}
+        />
+      )}
+      {stock.isPending && <RowsSkeleton />}
+      {stock.data && items.length === 0 && (
         <EmptyState>На складе пусто. Сюда попадают скины, отмеченные «Себе».</EmptyState>
       )}
-      <ul className="divide-border border-border divide-y rounded-lg border">
-        {stock.data?.items.map((i) => (
-          <li key={i.id} className="px-3 py-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <SkinThumb url={i.image_url} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate">{i.name}</span>
-                <span className="text-fg-muted text-xs">
-                  <Link to={`/desk/deals/${i.deal_id}`} className="underline">
-                    {i.trader}
-                  </Link>{" "}
-                  · <When iso={i.bought_at} />
-                </span>
-              </span>
-              <span className="text-sm">
-                {i.cost_usd ? <Money usd={i.cost_usd} /> : <span className="text-fg-muted">—</span>}
-              </span>
-              {selling !== i.id && (
-                <Button
-                  variant="secondary"
-                  className={TAP}
-                  onClick={() => {
-                    setSelling(i.id);
-                  }}
-                >
-                  Продажа…
-                </Button>
-              )}
-            </div>
-            {selling === i.id && (
-              <SellForm
-                itemId={i.id}
-                costUsd={i.cost_usd}
-                onDone={() => {
-                  setSelling(null);
+      {items.length > 0 && (
+        <>
+          <div className="flex flex-wrap items-end gap-3 text-sm">
+            <label className="flex min-w-0 flex-1 flex-col gap-1">
+              Найти на складе
+              <input
+                type="search"
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                }}
+                placeholder="Название скина"
+                className={field}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              Сортировка
+              <select
+                value={sort}
+                onChange={(e) => {
+                  setSort(e.target.value === "age" ? "age" : "cost");
+                }}
+                className={field}
+              >
+                {(Object.keys(SORTS) as Sort[]).map((k) => (
+                  <option key={k} value={k}>
+                    {SORTS[k]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Button
+              variant="secondary"
+              className={TAP}
+              disabled={prices.isPending}
+              onClick={() => {
+                prices.mutate();
+              }}
+            >
+              {prices.isPending ? "Спрашиваем Skinslink…" : "Обновить цены"}
+            </Button>
+          </div>
+          {prices.isError && (
+            <p role="alert" className="text-danger text-sm">
+              {deskErrorText(prices.error)}
+            </p>
+          )}
+          <ul className="divide-border border-border divide-y rounded-lg border" aria-label="Склад">
+            {arrange(items, q, sort).map((i) => (
+              <StockRow
+                key={i.id}
+                item={i}
+                now={prices.data?.[i.name]}
+                onSell={() => {
+                  setSelling(i);
                 }}
               />
-            )}
-          </li>
-        ))}
-      </ul>
+            ))}
+          </ul>
+        </>
+      )}
+      {selling && (
+        <SellSheet
+          item={selling}
+          onDone={() => {
+            setSelling(null);
+          }}
+        />
+      )}
     </section>
   );
 }
