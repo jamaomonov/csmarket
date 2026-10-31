@@ -1,33 +1,39 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DeskPage } from "./DeskPage";
+import { row } from "./fixtures";
+
+import { ApiError } from "@/lib/api";
 
 const api = vi.hoisted(() => ({
   DESK_KEY: ["admin", "desk"],
   getSummary: vi.fn(),
   listDeals: vi.fn(),
   addWithdrawal: vi.fn(),
+  listWithdrawals: vi.fn(),
 }));
 vi.mock("./api", () => api);
 
 const SUMMARY = {
   profit_usd: "100",
   revenue_usd: "1200",
-  deals_closed: 1,
+  deals_closed: 3,
   items_resolved: 2,
   in_transit_usd: "366.67",
   stock_usd: "54",
   skinslink_share_usd: "1175",
 };
 
-function renderPage() {
+const PAST = "2026-10-01T10:00:00Z";
+
+function renderPage(url = "/desk") {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[url]}>
         <DeskPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -40,62 +46,106 @@ describe("DeskPage", () => {
       if (typeof f === "function") f.mockReset();
     });
     api.getSummary.mockResolvedValue(SUMMARY);
-    api.listDeals.mockResolvedValue({
-      items: [
-        {
-          id: "d1",
-          status: "closed",
-          trader: "trader one",
-          method: "guarantor",
-          created_at: "2026-10-29T10:00:00Z",
-          paid_amount: "14300000",
-          paid_currency: "UZS",
-          paid_usd: "1100",
-          items: 2,
-          profit_usd: "100",
-          resolved: true,
-        },
-      ],
-      next_cursor: null,
-    });
+    api.listWithdrawals.mockResolvedValue({ items: [] });
+    api.listDeals.mockResolvedValue({ items: [row()], next_cursor: null });
   });
 
-  it("shows the five figures and the deals", async () => {
+  it("puts the profit first and names the other figures", async () => {
     renderPage();
     const tiles = await screen.findByLabelText("Итоги");
+    expect(within(tiles).getByTestId("desk-profit")).toHaveTextContent("+$100.00 · 3 сделки");
     for (const title of [
-      "Прибыль",
-      "Выручка Skinslink",
-      "Оплачено, не продано",
-      "На складе",
+      "Зачислено Skinslink",
+      "В пути",
+      "На складе (по себестоимости)",
       "Мои деньги на Skinslink",
     ]) {
       expect(tiles).toHaveTextContent(title);
     }
-    const link = await screen.findByRole("link", { name: /trader one/ });
-    expect(link).toHaveAttribute("href", "/desk/deals/d1");
-    expect(link).toHaveTextContent("закрыта");
-    expect(link).toHaveTextContent("через гаранта");
   });
 
-  it("asks for the chosen period", async () => {
+  it("a row shows the dearest skin, the trader and the expected profit", async () => {
+    api.listDeals.mockResolvedValue({
+      items: [row({ note: "из чата", method: "guarantor", protected_until: PAST })],
+      next_cursor: null,
+    });
     renderPage();
-    await screen.findByLabelText("Итоги");
-    fireEvent.click(screen.getByRole("tab", { name: "7 дней" }));
+    const link = await screen.findByRole("link", { name: /trader one/ });
+    expect(link).toHaveAttribute("href", "/desk/deals/d1");
+    expect(link).toHaveTextContent("AK-47 | Redline (Field-Tested)");
+    expect(link).toHaveTextContent("+1");
+    expect(link).toHaveTextContent("через гаранта");
+    expect(link).toHaveTextContent("из чата");
+    expect(link).toHaveTextContent("≈ +$100.00");
+    expect(link).toHaveTextContent("14,3 млн сум");
+    expect(link).toHaveTextContent("Skinslink $1 200.00");
+    expect(link).toHaveTextContent("можно платить гаранту");
+  });
+
+  it("a deal with booked profit shows it, not the estimate", async () => {
+    api.listDeals.mockResolvedValue({
+      items: [row({ status: "closed", profit_usd: "90", resolved: true })],
+      next_cursor: null,
+    });
+    renderPage();
+    const link = await screen.findByRole("link", { name: /trader one/ });
+    expect(link).toHaveTextContent("+$90.00");
+    expect(link).not.toHaveTextContent("≈");
+    expect(link).not.toHaveTextContent("можно платить гаранту");
+  });
+
+  it("«в работе» asks for paid and received deals", async () => {
+    renderPage();
+    await screen.findByRole("link", { name: /trader one/ });
+    fireEvent.click(screen.getByRole("button", { name: "в работе" }));
     await waitFor(() => {
-      expect(api.getSummary).toHaveBeenCalledTimes(2);
+      expect(api.listDeals).toHaveBeenCalledWith({ status: "paid" });
+    });
+    expect(api.listDeals).toHaveBeenCalledWith({ status: "received" });
+  });
+
+  it("searches by the URL's q and keeps typing in the URL", async () => {
+    renderPage("/desk?q=trader%20one");
+    await waitFor(() => {
+      expect(api.listDeals).toHaveBeenCalledWith({ q: "trader one" });
+    });
+    fireEvent.change(screen.getByLabelText("Трейдер или скин"), { target: { value: "awp" } });
+    await waitFor(() => {
+      expect(api.listDeals).toHaveBeenCalledWith({ q: "awp" });
     });
   });
 
-  it("records «Вывел себе»", async () => {
+  it("asks for a custom period", async () => {
+    renderPage();
+    await screen.findByLabelText("Итоги");
+    fireEvent.click(screen.getByRole("tab", { name: "Свой период" }));
+    fireEvent.change(screen.getByLabelText("С"), { target: { value: "2026-10-01" } });
+    fireEvent.change(screen.getByLabelText("По"), { target: { value: "2026-10-15" } });
+    await waitFor(() => {
+      expect(api.getSummary).toHaveBeenCalledWith("2026-10-01", "2026-10-15");
+    });
+  });
+
+  it("records «Вывел себе» and lists what was taken out", async () => {
+    api.listWithdrawals.mockResolvedValue({
+      items: [{ id: "w0", amount_usd: "40", note: "на карту", at: "2026-10-20T10:00:00Z" }],
+    });
     api.addWithdrawal.mockResolvedValue({ id: "w1", amount_usd: "25", note: null, at: "" });
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: "Вывод себе" }));
+    expect(await screen.findByText("на карту")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Вывел себе…" }));
     fireEvent.change(screen.getByLabelText("Сколько выведено, $"), { target: { value: "25.5" } });
     fireEvent.click(screen.getByRole("button", { name: "Записать" }));
     await waitFor(() => {
       expect(api.addWithdrawal).toHaveBeenCalledWith("25.5", undefined);
     });
+  });
+
+  it("a failed list can be asked again", async () => {
+    api.listDeals.mockRejectedValueOnce(new ApiError(500, "Server Error", {}));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Попробовать ещё раз" }));
+    expect(await screen.findByRole("link", { name: /trader one/ })).toBeInTheDocument();
   });
 
   it("an empty list offers a new deal", async () => {
