@@ -494,12 +494,19 @@ Signed in unless said. Money in whole soʻm as strings; a card by its type and l
 - Admin «Мои сделки» (`/admin/desk/*`, ADR-0027; `admin` **and** `desk` roles, 403
   otherwise): `POST /inventory {trade_link}` (**keyless**: reads a trader's inventory at
   Skinslink, writes nothing), `GET /rate`, `POST /deals`, `PATCH /deals/{id}`,
-  `POST /deals/{id}/deposit`, `POST /items/{id}/sell|move|write-off`, `POST /withdrawals` (all
-  keyed); `GET /deals`, `/deals/{id}`, `/stock`, `/summary?from=&to=`, `/withdrawals`. 422
-  `rate_required` (soʻm without a rate), `trade_link_invalid`; 409 `deposit_open`,
-  `nothing_to_send`, `trade_link_missing`, `prices_moved`, `steam_refused` (`reason`),
-  `item_not_open`, `price_required` (nothing resolves before the deal has a price),
-  `price_locked` (the price is fixed once a skin is resolved); 503 `desk_unavailable`. A
+  `POST /deals/{id}/deposit {item_ids?}`, `POST /deals/{id}/items {items}`,
+  `DELETE /items/{id}`, `POST /items/{id}/sell|move|write-off|undo`, `POST /withdrawals` (all
+  keyed; undo is audited `desk.item.undo`); `POST /stock/prices` (**keyless**: Skinslink
+  `get-prices` for the stock's names, answers `{name: price_usd}`); `GET /deals?status=&q=`
+  (`q`: the trader or an item name), `/deals/{id}`, `/traders?q=`, `/stock`,
+  `/summary?from=&to=`, `/withdrawals`. 422 `rate_required` (soʻm without a rate),
+  `trade_link_invalid`, a `paid_at` / `at` without a timezone or in the future, a hand-set
+  `closed` / `reverted`; 409 `deposit_open`, `nothing_to_send`, `trade_link_missing`,
+  `prices_moved`, `steam_refused` (`reason`), `item_not_open`, `price_required` (nothing
+  resolves before the deal has a price), `price_locked` (the price and the deal's skins are
+  fixed once a skin is resolved), `deal_busy` (cancelling with a skin at Skinslink or resolved,
+  or changing a settled deal's status), `no_asset` (moving to Skinslink without an asset id),
+  `last_item`, `item_not_undoable`; 503 `desk_unavailable`. A
   same-key retry of `POST /deals/{id}/deposit` while the first is still at Skinslink gets 409
   `deposit_open`, not a replay — never a second offer.
 - Admin «Цена выкупа»: `POST /admin/sales/price-check {names | trade_link}` — **keyless**: it
