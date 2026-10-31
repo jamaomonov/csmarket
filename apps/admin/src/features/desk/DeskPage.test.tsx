@@ -84,7 +84,9 @@ describe("DeskPage", () => {
 
   it("a deal with booked profit shows it, not the estimate", async () => {
     api.listDeals.mockResolvedValue({
-      items: [row({ status: "closed", profit_usd: "90", resolved: true })],
+      items: [
+        row({ status: "closed", profit_usd: "90", resolved: true, expected_profit_usd: null }),
+      ],
       next_cursor: null,
     });
     renderPage();
@@ -92,6 +94,46 @@ describe("DeskPage", () => {
     expect(link).toHaveTextContent("+$90.00");
     expect(link).not.toHaveTextContent("≈");
     expect(link).not.toHaveTextContent("можно платить гаранту");
+  });
+
+  it("a cancelled deal shows no expected profit", async () => {
+    api.listDeals.mockResolvedValue({
+      items: [row({ status: "cancelled" })],
+      next_cursor: null,
+    });
+    renderPage();
+    const link = await screen.findByRole("link", { name: /trader one/ });
+    expect(link).not.toHaveTextContent("≈");
+    expect(link).toHaveTextContent("—");
+  });
+
+  it("a partly done deal shows the booked and the expected profit together", async () => {
+    api.listDeals.mockResolvedValue({
+      items: [row({ profit_usd: "40", expected_profit_usd: "110" })],
+      next_cursor: null,
+    });
+    renderPage();
+    const link = await screen.findByRole("link", { name: /trader one/ });
+    expect(link).toHaveTextContent("пока +$40.00 · ≈ +$110.00");
+  });
+
+  it("counts «Сегодня» by the day in Tashkent, not the browser's", async () => {
+    const tz = process.env.TZ;
+    process.env.TZ = "UTC";
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-30T20:30:00Z")); // 01:30 on the 31st in Tashkent
+    try {
+      renderPage();
+      await screen.findByLabelText("Итоги");
+      fireEvent.click(screen.getByRole("tab", { name: "Сегодня" }));
+      await waitFor(() => {
+        expect(api.getSummary).toHaveBeenCalledWith("2026-10-31", undefined);
+      });
+      expect(api.getSummary).toHaveBeenCalledWith("2026-10-02", undefined);
+    } finally {
+      vi.useRealTimers();
+      process.env.TZ = tz;
+    }
   });
 
   it("«в работе» asks for paid and received deals", async () => {

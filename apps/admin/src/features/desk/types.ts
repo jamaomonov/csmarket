@@ -67,6 +67,9 @@ export interface Deal {
   deposits: DeskDeposit[];
   protected_until: string | null;
   profit_usd: string;
+  /** Booked so far plus Skinslink's price less the cost of each skin still bound for it;
+   * `null` when cancelled, unpriced or nothing is left for Skinslink. */
+  expected_profit_usd: string | null;
   resolved: boolean;
 }
 
@@ -87,6 +90,8 @@ export interface DealRow {
   /** The deal's skins at their Skinslink prices; `null` when none is priced. */
   skinslink_usd: string | null;
   profit_usd: string;
+  /** As `Deal.expected_profit_usd`. */
+  expected_profit_usd: string | null;
   resolved: boolean;
   protected_until: string | null;
   guarantor_released_at: string | null;

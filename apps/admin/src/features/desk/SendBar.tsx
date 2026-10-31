@@ -1,6 +1,7 @@
 /**
  * «Отправить обмен»: a bar pinned above the bottom navigation on a phone, with how many skins and
- * what Skinslink gives for them — or why it cannot be sent. The sheet ticks the skins to send.
+ * what Skinslink gives for them — or why it cannot be sent (no price, no trade link, an offer
+ * open). A cancelled deal has no bar. The sheet ticks the skins to send.
  */
 import { Button } from "@csmarket/ui";
 import { useState } from "react";
@@ -8,6 +9,7 @@ import { useState } from "react";
 import { type Deal, type DeskItem } from "./api";
 import { OPEN_DEPOSIT } from "./DepositCard";
 import { skins, TAP } from "./Parts";
+import { focusPrice } from "./PriceEditor";
 
 import { CONFIRM_BUTTONS, ConfirmSheet } from "@/components/ConfirmSheet";
 import { Money } from "@/components/Money";
@@ -31,7 +33,7 @@ interface SendBarProps {
 
 export function SendBar({ deal: d, busy, onOpen, onEdit }: SendBarProps) {
   const items = sendable(d);
-  if (items.length === 0) return null;
+  if (items.length === 0 || d.status === "cancelled") return null;
   const open = d.deposits.some((x) => OPEN_DEPOSIT.has(x.status));
   return (
     <div
@@ -42,7 +44,14 @@ export function SendBar({ deal: d, busy, onOpen, onEdit }: SendBarProps) {
       <span className="text-sm">
         {skins(items.length)} · ≈ <Money usd={worth(items)} />
       </span>
-      {d.trade_link === null ? (
+      {d.paid_usd === null ? (
+        <>
+          <span className="text-warning text-sm">Сначала укажите, сколько заплатили.</span>
+          <Button variant="secondary" className={`ml-auto ${TAP}`} onClick={focusPrice}>
+            Указать цену
+          </Button>
+        </>
+      ) : d.trade_link === null ? (
         <>
           <span className="text-warning text-sm">Нет трейд-ссылки — обмен не отправить.</span>
           <Button variant="secondary" className={`ml-auto ${TAP}`} onClick={onEdit}>
@@ -101,7 +110,7 @@ export function SendSheet({ deal: d, busy, onClose, onSend }: SendSheetProps) {
         ))}
       </ul>
       <p className="text-sm">
-        {skins(chosen.length)} в Skinslink, было ≈ <Money usd={worth(chosen)} />. Цены Skinslink
+        {skins(chosen.length)} · ≈ <Money usd={worth(chosen)} /> по ценам Skinslink. Цены Skinslink
         обновятся перед отправкой. Бот Skinslink пришлёт трейдеру обмен.
       </p>
       <div className={CONFIRM_BUTTONS}>

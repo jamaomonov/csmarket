@@ -23,6 +23,8 @@ interface ItemRowProps {
   busy: boolean;
   /** «Убрать» is offered while the deal's price can still be split again. */
   removable: boolean;
+  /** The deal is cancelled: no action on its skins. */
+  frozen?: boolean;
 }
 
 type Mode = "sell" | "off" | "remove" | "undo" | null;
@@ -58,7 +60,7 @@ function Line({ item }: { item: DeskItem }) {
   );
 }
 
-export function ItemRow({ item, act, busy, removable }: ItemRowProps) {
+export function ItemRow({ item, act, busy, removable, frozen = false }: ItemRowProps) {
   const [mode, setMode] = useState<Mode>(null);
   const [note, setNote] = useState("");
   const close = () => {
@@ -67,7 +69,7 @@ export function ItemRow({ item, act, busy, removable }: ItemRowProps) {
   const run = (call: () => Promise<Deal>) => {
     void act(call).finally(close);
   };
-  const open = item.state === "open";
+  const open = item.state === "open" && !frozen;
   const undo = UNDO[item.state];
   const menu: MoreAction[] = [
     ...(removable

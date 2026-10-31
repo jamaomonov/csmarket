@@ -4,7 +4,6 @@
  * the guarantor; «Изменить» and the trader's other deals.
  */
 import { Button } from "@csmarket/ui";
-import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { type Deal, type DealPatch } from "./api";
@@ -32,28 +31,26 @@ export function skinslinkValue(d: Deal): number | null {
   return priced.reduce((s, i) => s + Number(i.skinslink_usd), 0);
 }
 
+/** «итог +$A», or «пока +$A · ≈ +$B по ценам Skinslink»; a cancelled deal expects nothing. */
 function Profit({ d }: { d: Deal }) {
-  const value = skinslinkValue(d);
   const booked = d.resolved || Number(d.profit_usd) !== 0;
-  const expected =
-    !d.resolved && value !== null && d.paid_usd !== null ? value - Number(d.paid_usd) : null;
-  const parts: ReactNode[] = [];
-  if (booked) {
-    parts.push(
-      <span key="b">
-        <Money usd={d.profit_usd} signed /> {d.resolved ? "итог" : "пока"}
-      </span>,
-    );
-  }
-  if (expected !== null) {
-    parts.push(
-      <span key="e" className={booked ? "text-fg-muted" : ""}>
-        ≈ <Money usd={expected.toFixed(2)} signed /> по ценам Skinslink
-      </span>,
-    );
-  }
-  if (parts.length === 0) return <span className="text-fg-muted">—</span>;
-  return <span className="flex flex-col">{parts}</span>;
+  const expected = d.status === "cancelled" ? null : d.expected_profit_usd;
+  if (!booked && expected === null) return <span className="text-fg-muted">—</span>;
+  return (
+    <span>
+      {booked && (
+        <>
+          {d.resolved ? "итог" : "пока"} <Money usd={d.profit_usd} signed />
+        </>
+      )}
+      {booked && expected !== null && " · "}
+      {expected !== null && (
+        <span className={booked ? "text-fg-muted" : ""}>
+          ≈ <Money usd={expected} signed /> по ценам Skinslink
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function DealSummary({ deal: d, onSavePrice, onEdit, onRelease, busy }: DealSummaryProps) {

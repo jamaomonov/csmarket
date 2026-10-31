@@ -52,6 +52,7 @@ export function deal(over: Partial<Deal> = {}): Deal {
     deposits: [],
     protected_until: null,
     profit_usd: "0",
+    expected_profit_usd: "100",
     resolved: false,
     ...over,
   };
@@ -73,6 +74,7 @@ export function row(over: Partial<DealRow> = {}): DealRow {
     first_item: { name: "AK-47 | Redline (Field-Tested)", image_url: null },
     skinslink_usd: "1200",
     profit_usd: "0",
+    expected_profit_usd: "100",
     resolved: false,
     protected_until: null,
     guarantor_released_at: null,

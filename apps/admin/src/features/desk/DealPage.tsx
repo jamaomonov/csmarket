@@ -142,7 +142,14 @@ export function DealPage() {
       />
       <ul className="divide-border border-border divide-y rounded-lg border" aria-label="Скины">
         {d.items.map((i) => (
-          <ItemRow key={i.id} item={i} act={run} busy={act.isPending} removable={removable} />
+          <ItemRow
+            key={i.id}
+            item={i}
+            act={run}
+            busy={act.isPending}
+            removable={removable}
+            frozen={status === "cancelled"}
+          />
         ))}
       </ul>
       {removable && <AddItems deal={d} onAdd={(items) => commit(() => addItems(d.id, items))} />}

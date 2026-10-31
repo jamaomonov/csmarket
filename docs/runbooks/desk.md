@@ -29,7 +29,8 @@ outcome word.
 ## Rules that keep the profit honest
 
 - Nothing is sent, sold or written off before the deal has a price («Сначала укажите, сколько
-  заплатили»): each skin's profit is measured against its share of it.
+  заплатили»): each skin's profit is measured against its share of it. Without a price the send
+  bar says so and «Указать цену» leads to the price form.
 - Once one skin is sold, credited or written off, the price is locked. Fix a wrong price
   before the first sale.
 - The expected profit («≈ +$B») is what is booked so far plus, for each skin still bound for

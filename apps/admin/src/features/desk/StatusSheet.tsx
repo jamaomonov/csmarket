@@ -46,7 +46,7 @@ export function StatusSheet({ current, busy, onClose, onSave }: StatusSheetProps
       </fieldset>
       {dropping && chosen !== current && (
         <p className="text-warning text-sm">
-          Это только пометка: зачисления и продажи по сделке остаются в прибыли.
+          Отменить можно, пока ничего не отправлено и не продано.
         </p>
       )}
       <div className={CONFIRM_BUTTONS}>

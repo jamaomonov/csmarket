@@ -72,13 +72,26 @@ export function guarantorDue(d: DealRow, now = new Date()): boolean {
   );
 }
 
-/** The booked profit, or before anything is booked the Skinslink value less the price. */
+/**
+ * The booked profit and the expected one (booked + Skinslink less the cost of the skins still
+ * bound for it): «пока +$A · ≈ +$B» while part of the deal is done. A cancelled deal shows «—».
+ */
 function RowProfit({ d }: { d: DealRow }) {
-  if (d.resolved || Number(d.profit_usd) !== 0) return <Money usd={d.profit_usd} signed />;
-  if (d.skinslink_usd !== null && d.paid_usd !== null) {
+  if (d.status === "cancelled") return <span className="text-fg-muted">—</span>;
+  const booked = d.resolved || Number(d.profit_usd) !== 0;
+  const expected = d.expected_profit_usd;
+  if (booked && expected !== null) {
+    return (
+      <span title="Прибыль пока и ожидаемая по ценам Skinslink">
+        пока <Money usd={d.profit_usd} signed /> · ≈ <Money usd={expected} signed />
+      </span>
+    );
+  }
+  if (booked) return <Money usd={d.profit_usd} signed />;
+  if (expected !== null) {
     return (
       <span title="Ожидаемая прибыль по ценам Skinslink">
-        ≈ <Money usd={(Number(d.skinslink_usd) - Number(d.paid_usd)).toFixed(2)} signed />
+        ≈ <Money usd={expected} signed />
       </span>
     );
   }

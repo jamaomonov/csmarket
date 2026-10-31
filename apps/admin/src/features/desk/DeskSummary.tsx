@@ -22,11 +22,19 @@ const PERIODS = {
 } as const;
 type Period = keyof typeof PERIODS;
 
-/** `YYYY-MM-DD` of `days − 1` days ago, in the browser's day (the owner is in Tashkent). */
+/** Today's date in Tashkent as `YYYY-MM-DD`, whatever the browser's time zone. */
+const TASHKENT_DAY = new Intl.DateTimeFormat("sv-SE", {
+  timeZone: "Asia/Tashkent",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** `YYYY-MM-DD` of `days − 1` days ago, by the day in Tashkent (the server's window). */
 function since(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - (days - 1));
-  return d.toLocaleDateString("sv-SE");
+  const d = new Date(`${TASHKENT_DAY.format(new Date())}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - (days - 1));
+  return d.toISOString().slice(0, 10);
 }
 
 export function DeskSummary() {
