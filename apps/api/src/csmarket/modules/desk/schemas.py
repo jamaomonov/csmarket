@@ -5,18 +5,35 @@ Money leaves as plain strings (``"733.333333"``, ``"1300000"``); the admin forma
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AfterValidator, AwareDatetime, BaseModel, Field, model_validator
+
+from csmarket.core.clock import now
 
 Currency = Literal["UZS", "USD"]
 Method = Literal["direct", "guarantor"]
 Destination = Literal["skinslink", "stock"]
 DealStatus = Literal["agreed", "paid", "received", "closed", "cancelled", "reverted"]
+#: What the owner may set by hand; ``closed`` and ``reverted`` are the system's.
+HandStatus = Literal["agreed", "paid", "received", "cancelled"]
 Amount = Annotated[Decimal, Field(gt=0, max_digits=18, decimal_places=6)]
 Rate = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=4)]
+#: A clock a little ahead of ours is not the future.
+_SKEW = timedelta(minutes=5)
+
+
+def _not_ahead(value: datetime) -> datetime:
+    if value > now() + _SKEW:
+        raise ValueError("may not be in the future")
+    return value
+
+
+#: A moment with a timezone, not in the future (spec 2026-10-31-desk-v2, bug 6).
+Past = Annotated[AwareDatetime, AfterValidator(_not_ahead)]
+Guarantor = Annotated[str, Field(min_length=1, max_length=120)]
 
 
 class ItemIn(BaseModel):
@@ -31,7 +48,7 @@ class _Price(BaseModel):
     paid_amount: Amount | None = None
     paid_currency: Currency | None = None
     rate: Rate | None = None
-    paid_at: datetime | None = None
+    paid_at: Past | None = None
 
     @model_validator(mode="after")
     def _pair(self) -> _Price:
@@ -45,7 +62,18 @@ class DealIn(_Price):
     note: str | None = Field(default=None, max_length=4000)
     trade_link: str | None = Field(default=None, max_length=300)
     method: Method = "direct"
+    #: Who held the money for a ``guarantor`` deal, as the owner writes it.
+    guarantor: Guarantor | None = None
     items: list[ItemIn] = Field(min_length=1, max_length=200)
+
+
+class ItemsIn(BaseModel):
+    items: list[ItemIn] = Field(min_length=1, max_length=200)
+
+
+class DepositIn(BaseModel):
+    #: Only these of the deal's open Skinslink items; all of them when omitted.
+    item_ids: list[str] | None = Field(default=None, min_length=1, max_length=200)
 
 
 class DealPatch(_Price):
@@ -53,7 +81,8 @@ class DealPatch(_Price):
     note: str | None = Field(default=None, max_length=4000)
     trade_link: str | None = Field(default=None, max_length=300)
     method: Method | None = None
-    status: DealStatus | None = None
+    guarantor: Guarantor | None = None
+    status: HandStatus | None = None
     #: ``true`` stamps «Подтвердил гаранту», ``false`` clears it.
     guarantor_released: bool | None = None
 
@@ -63,7 +92,7 @@ class SellIn(BaseModel):
     amount: Amount
     currency: Currency
     rate: Rate | None = None
-    at: datetime | None = None
+    at: Past | None = None
 
 
 class MoveIn(BaseModel):
@@ -149,6 +178,7 @@ class DealOut(BaseModel):
     rate: str | None
     paid_usd: str | None
     method: Method
+    guarantor: str | None
     paid_at: datetime | None
     guarantor_released_at: datetime | None
     created_at: datetime
@@ -159,8 +189,16 @@ class DealOut(BaseModel):
     protected_until: datetime | None
     #: The profit booked so far (the sum of its ledger rows).
     profit_usd: str
+    #: Booked so far plus Skinslink's price less the cost of each skin still bound for it
+    #: (``open`` / ``sent``); ``null`` when cancelled, unpriced or nothing is left for it.
+    expected_profit_usd: str | None
     #: Every item credited, sold, written off or reverted: the profit is final.
     resolved: bool
+
+
+class FirstItemOut(BaseModel):
+    name: str
+    image_url: str | None
 
 
 class DealRowOut(BaseModel):
@@ -168,13 +206,23 @@ class DealRowOut(BaseModel):
     status: DealStatus
     trader: str
     method: Method
+    guarantor: str | None
+    note: str | None
     created_at: datetime
     paid_amount: str | None
     paid_currency: Currency | None
     paid_usd: str | None
     items: int
+    #: The dearest skin by Skinslink price (the first added when none is priced).
+    first_item: FirstItemOut | None
+    #: The deal's items at their Skinslink prices; ``null`` when none is priced.
+    skinslink_usd: str | None
     profit_usd: str
+    #: As :attr:`DealOut.expected_profit_usd`.
+    expected_profit_usd: str | None
     resolved: bool
+    protected_until: datetime | None
+    guarantor_released_at: datetime | None
 
 
 class DealsOut(BaseModel):
@@ -211,9 +259,28 @@ class SummaryOut(BaseModel):
     revenue_usd: str
     deals_closed: int
     items_resolved: int
-    #: Cost of the paid deals' items still on their way to Skinslink.
+    #: Cost of the items bound for Skinslink, not yet credited (``open`` / ``sent``), over
+    #: every deal but a cancelled one.
     in_transit_usd: str
-    #: Cost of the skins in the owner's stock.
+    #: Cost of the skins in the owner's stock (cancelled deals left out).
     stock_usd: str
     #: All-time Skinslink money of the desk less what the owner took out.
     skinslink_share_usd: str
+
+
+class TraderOut(BaseModel):
+    #: The name as written on the trader's newest deal.
+    trader: str
+    #: Deals not cancelled.
+    deals: int
+    paid_usd: str
+    profit_usd: str
+    #: Deals in which a trade was reverted.
+    reverts: int
+    #: The newest deal's trade link that has one — PII, never logged.
+    last_trade_link: str | None
+    last_deal_at: datetime
+
+
+class TradersOut(BaseModel):
+    items: list[TraderOut]

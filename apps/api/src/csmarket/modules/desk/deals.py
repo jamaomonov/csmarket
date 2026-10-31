@@ -1,40 +1,45 @@
-"""Deals: create, change, read, list (spec 2026-10-29-desk «The deal»).
+"""Deals: create, change, read (spec 2026-10-29-desk «The deal», 2026-10-31-desk-v2).
 
 A price recosts every **unresolved** item (``money.split_cost`` over all items' Skinslink
 prices, so shares stay comparable); a resolved item keeps the cost its profit was booked
-with. A deal whose items are all resolved closes itself (:func:`close_if_done`).
+with. A deal whose items are all resolved settles itself (:func:`close_if_done`): ``closed``,
+or ``reverted`` when any of its items was reverted.
+
+The owner sets ``agreed`` / ``paid`` / ``received`` / ``cancelled`` by hand; ``cancelled``
+only while nothing of the deal is with Skinslink or resolved (``deal_busy``), and a settled
+deal's status is the system's.
 """
 
 from __future__ import annotations
 
-import base64
-import binascii
-import json
-from datetime import datetime, timedelta
+from collections.abc import Iterable
+from datetime import timedelta
 from decimal import Decimal
 
-from sqlalchemy import Text, and_, cast, func, or_, select
+from sqlalchemy import Text, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from csmarket.core.clock import now
-from csmarket.core.errors import ConflictError, NotFoundError, ValidationError
+from csmarket.core.config import get_settings
+from csmarket.core.errors import ConflictError, NotFoundError
 from csmarket.core.ids import new_id
-from csmarket.modules.desk.models import RESOLVED, DeskDeal, DeskDeposit, DeskEntry, DeskItem
-from csmarket.modules.desk.money import Currency, plain, split_cost, to_usd
-from csmarket.modules.desk.schemas import (
-    DealIn,
-    DealOut,
-    DealPatch,
-    DealRowOut,
-    DealsOut,
-    DepositOut,
-    ItemOut,
+from csmarket.modules.desk.models import (
+    DEPOSIT_OPEN,
+    RESOLVED,
+    DeskDeal,
+    DeskDeposit,
+    DeskEntry,
+    DeskItem,
 )
+from csmarket.modules.desk.money import Currency, plain, split_cost, to_usd
+from csmarket.modules.desk.schemas import DealIn, DealOut, DealPatch, DepositOut, ItemIn, ItemOut
+from csmarket.modules.skins.api import images_by_name, steam_image
 from csmarket.modules.users.api import parse_tradelink
 
 #: Steam lets a trade be reversed for 7 days after it is accepted.
 PROTECTION = timedelta(days=7)
-PAGE = 50
+#: Statuses only the system sets.
+SETTLED = ("closed", "reverted")
 
 
 def _link(raw: str | None) -> str | None:
@@ -80,6 +85,36 @@ def recost(deal: DeskDeal, items: list[DeskItem]) -> None:
             item.cost_usd = share
 
 
+def picture(url: str | None) -> str | None:
+    """A stored picture as the admin loads it (a Steam CDN host our side can reach)."""
+    return steam_image(url, host=get_settings().skins_image_host)
+
+
+async def fill_images(db: AsyncSession, items: Iterable[DeskItem]) -> None:
+    """Our catalogue's picture for each item that has none (by market name, phase ignored)."""
+    bare = [i for i in items if not i.image_url]
+    found = await images_by_name(db, (i.name for i in bare))
+    for item in bare:
+        item.image_url = found.get(item.name)
+
+
+def new_items(deal_id: str, body: Iterable[ItemIn]) -> list[DeskItem]:
+    """Rows for ``body``, ``open``."""
+    return [
+        DeskItem(
+            id=new_id(),
+            deal_id=deal_id,
+            name=i.name.strip(),
+            asset_id=i.asset_id,
+            image_url=i.image_url,
+            skinslink_usd=i.skinslink_usd,
+            destination=i.destination,
+            state="open",
+        )
+        for i in body
+    ]
+
+
 async def create_deal(db: AsyncSession, body: DealIn) -> DeskDeal:
     """A new deal and its items; ``paid`` when it has a price, else ``agreed``.
 
@@ -96,21 +131,11 @@ async def create_deal(db: AsyncSession, body: DealIn) -> DeskDeal:
         paid_currency=body.paid_currency,
         rate=body.rate if body.paid_currency == "UZS" else None,
         method=body.method,
+        guarantor=body.guarantor.strip() if body.guarantor else None,
         paid_at=body.paid_at or (now() if body.paid_amount is not None else None),
     )
-    items = [
-        DeskItem(
-            id=new_id(),
-            deal_id=deal.id,
-            name=i.name.strip(),
-            asset_id=i.asset_id,
-            image_url=i.image_url,
-            skinslink_usd=i.skinslink_usd,
-            destination=i.destination,
-            state="open",
-        )
-        for i in body.items
-    ]
+    items = new_items(deal.id, body.items)
+    await fill_images(db, items)
     recost(deal, items)
     db.add(deal)
     await db.flush()
@@ -119,21 +144,29 @@ async def create_deal(db: AsyncSession, body: DealIn) -> DeskDeal:
     return deal
 
 
+def _plain_fields(deal: DeskDeal, patch: DealPatch) -> None:
+    """Trader, note, method, guarantor as set; only the note and the guarantor may be cleared."""
+    for name in ("trader", "note", "method", "guarantor"):
+        if name not in patch.model_fields_set:
+            continue
+        value = getattr(patch, name)
+        if value is not None or name in ("note", "guarantor"):
+            setattr(deal, name, value.strip() if name == "guarantor" and value else value)
+
+
 async def update_deal(db: AsyncSession, deal_id: str, patch: DealPatch) -> DeskDeal:
     """Apply the fields ``patch`` sets.
 
     Raises:
         NotFoundError: ``deal_not_found``.
+        ConflictError: ``deal_busy``, ``price_locked``.
         ValidationError: ``rate_required``, ``trade_link_invalid``, ``price_incomplete``.
     """
     deal = await load_deal(db, deal_id, lock=True)
     fields = patch.model_fields_set
-    for name in ("trader", "note", "method", "status"):
-        if name not in fields:
-            continue
-        value = getattr(patch, name)
-        if value is not None or name == "note":  # only the note may be cleared
-            setattr(deal, name, value)
+    _plain_fields(deal, patch)
+    if "status" in fields and patch.status is not None:
+        await _set_status(db, deal, patch.status)
     if "trade_link" in fields:
         deal.trade_link = _link(patch.trade_link)
     if "guarantor_released" in fields and patch.guarantor_released is not None:
@@ -163,6 +196,69 @@ async def update_deal(db: AsyncSession, deal_id: str, patch: DealPatch) -> DeskD
     return deal
 
 
+def _busy() -> ConflictError:
+    return ConflictError("the deal has skins with Skinslink or resolved", code="deal_busy")
+
+
+async def _set_status(db: AsyncSession, deal: DeskDeal, status: str) -> None:
+    """A hand-set status (spec 2026-10-31-desk-v2, bug 2).
+
+    Raises:
+        ConflictError: ``deal_busy`` — a settled deal, or cancelling one with an open
+            deposit or a skin sent or resolved.
+    """
+    if status == deal.status:
+        return
+    if deal.status in SETTLED:
+        raise _busy()
+    if status == "cancelled":
+        moving = await db.scalar(
+            select(func.count()).where(DeskItem.deal_id == deal.id, DeskItem.state != "open")
+        )
+        open_deposit = await db.scalar(
+            select(func.count()).where(
+                DeskDeposit.deal_id == deal.id, DeskDeposit.status.in_(DEPOSIT_OPEN)
+            )
+        )
+        if moving or open_deposit:
+            raise _busy()
+    deal.status = status
+
+
+def require_live(deal: DeskDeal) -> None:
+    """A cancelled deal is frozen: nothing of it is sent, sold, written off, moved or added.
+
+    Raises:
+        ConflictError: ``deal_busy``.
+    """
+    if deal.status == "cancelled":
+        raise ConflictError("the deal is cancelled", code="deal_busy")
+
+
+#: Item states still on their way to Skinslink: their profit is not booked yet.
+PENDING = ("open", "sent")
+
+
+def expected_profit(deal: DeskDeal, items: Iterable[DeskItem], booked: Decimal) -> Decimal | None:
+    """The profit booked so far plus, for each skin still bound for Skinslink (``open`` /
+    ``sent``), its Skinslink price less its cost.
+
+    ``None`` for a cancelled deal, one without a price, or when no priced skin is left
+    for Skinslink (an unpriced one makes the figure unknown).
+    """
+    if deal.status == "cancelled" or deal.paid_usd is None:
+        return None
+    pending = [i for i in items if i.destination == "skinslink" and i.state in PENDING]
+    if not pending:
+        return None
+    total = booked
+    for i in pending:
+        if i.skinslink_usd is None or i.cost_usd is None:
+            return None
+        total += i.skinslink_usd - i.cost_usd
+    return total
+
+
 def require_price(deal: DeskDeal) -> None:
     """Nothing resolves before the deal has a price: each item's profit is measured against
     its share of it.
@@ -175,12 +271,16 @@ def require_price(deal: DeskDeal) -> None:
 
 
 async def close_if_done(db: AsyncSession, deal: DeskDeal) -> None:
-    """``closed`` once every item is resolved (a cancelled or reverted deal stays so)."""
-    if deal.status in ("cancelled", "reverted", "closed"):
+    """Once every item is resolved: ``reverted`` if any item was reverted, else ``closed``
+    (a cancelled deal stays so)."""
+    if deal.status == "cancelled":
         return
     items = await items_of(db, deal.id)
-    if items and all(i.state in RESOLVED for i in items):
-        deal.status = "closed"
+    if not items or not all(i.state in RESOLVED for i in items):
+        return
+    target = "reverted" if any(i.state == "reverted" for i in items) else "closed"
+    if deal.status != target:
+        deal.status = target
         deal.updated_at = now()
         await db.flush()
 
@@ -191,7 +291,7 @@ def item_out(i: DeskItem) -> ItemOut:
         id=i.id,
         name=i.name,
         asset_id=i.asset_id,
-        image_url=i.image_url,
+        image_url=picture(i.image_url),
         skinslink_usd=plain(i.skinslink_usd),
         destination="stock" if i.destination == "stock" else "skinslink",
         cost_usd=plain(i.cost_usd),
@@ -248,6 +348,8 @@ async def deal_out(db: AsyncSession, deal: DeskDeal) -> DealOut:
         ).all()
     )
     accepted = [d.accepted_at for d in deposits if d.accepted_at and d.reverted_at is None]
+    booked = await _profit(db, deal.id)
+    expected = expected_profit(deal, items, booked)
     return DealOut(
         id=deal.id,
         status=deal.status,  # type: ignore[arg-type]  # the CHECK keeps it one of DealStatus
@@ -259,6 +361,7 @@ async def deal_out(db: AsyncSession, deal: DeskDeal) -> DealOut:
         rate=plain(deal.rate),
         paid_usd=plain(deal.paid_usd),
         method=deal.method,  # type: ignore[arg-type]  # CHECK: direct or guarantor
+        guarantor=deal.guarantor,
         paid_at=deal.paid_at,
         guarantor_released_at=deal.guarantor_released_at,
         created_at=deal.created_at,
@@ -266,111 +369,27 @@ async def deal_out(db: AsyncSession, deal: DeskDeal) -> DealOut:
         items=[item_out(i) for i in items],
         deposits=[_deposit_out(d) for d in deposits],
         protected_until=max(accepted) + PROTECTION if accepted else None,
-        profit_usd=plain(await _profit(db, deal.id)) or "0",
+        profit_usd=plain(booked) or "0",
+        expected_profit_usd=plain(expected),
         resolved=bool(items) and all(i.state in RESOLVED for i in items),
-    )
-
-
-def _cursor(at: datetime, deal_id: str) -> str:
-    raw = json.dumps([at.isoformat(), deal_id]).encode()
-    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
-
-
-def _after(token: str) -> tuple[datetime, str]:
-    try:
-        stamp, deal_id = json.loads(base64.urlsafe_b64decode(token + "=" * (-len(token) % 4)))
-        return datetime.fromisoformat(stamp), str(deal_id)
-    except (binascii.Error, ValueError, TypeError) as exc:
-        raise ValidationError("invalid cursor", code="cursor") from exc
-
-
-async def list_deals(
-    db: AsyncSession, *, status: str | None, q: str | None, cursor: str | None
-) -> DealsOut:
-    """Newest first, :data:`PAGE` a page; ``q`` matches the trader."""
-    stmt = select(DeskDeal)
-    if status:
-        stmt = stmt.where(DeskDeal.status == status)
-    if q:
-        escaped = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-        stmt = stmt.where(DeskDeal.trader.ilike(f"%{escaped}%", escape="\\"))
-    if cursor:
-        at, last_id = _after(cursor)
-        stmt = stmt.where(
-            or_(
-                DeskDeal.created_at < at,
-                and_(DeskDeal.created_at == at, cast(DeskDeal.id, Text) < last_id),
-            )
-        )
-    deals = list(
-        (
-            await db.scalars(
-                stmt.order_by(DeskDeal.created_at.desc(), DeskDeal.id.desc()).limit(PAGE + 1)
-            )
-        ).all()
-    )
-    more = len(deals) > PAGE
-    deals = deals[:PAGE]
-    ids = [d.id for d in deals]
-    counts: dict[str, tuple[int, int]] = {
-        str(deal_id): (int(n), int(done))
-        for deal_id, n, done in (
-            await db.execute(
-                select(
-                    DeskItem.deal_id,
-                    func.count(),
-                    func.count().filter(DeskItem.state.in_(RESOLVED)),
-                )
-                .where(DeskItem.deal_id.in_(ids))
-                .group_by(DeskItem.deal_id)
-            )
-        ).all()
-    }
-    profits: dict[str, Decimal] = {
-        str(deal_id): Decimal(total)
-        for deal_id, total in (
-            await db.execute(
-                select(DeskEntry.deal_id, func.sum(DeskEntry.profit_usd))
-                .where(DeskEntry.deal_id.in_(ids))
-                .group_by(DeskEntry.deal_id)
-            )
-        ).all()
-    }
-    rows = []
-    for d in deals:
-        n, done = counts.get(d.id, (0, 0))
-        rows.append(
-            DealRowOut(
-                id=d.id,
-                status=d.status,  # type: ignore[arg-type]  # CHECK keeps it a DealStatus
-                trader=d.trader,
-                method=d.method,  # type: ignore[arg-type]  # CHECK: direct or guarantor
-                created_at=d.created_at,
-                paid_amount=plain(d.paid_amount),
-                paid_currency=d.paid_currency,  # type: ignore[arg-type]  # CHECK: UZS/USD
-                paid_usd=plain(d.paid_usd),
-                items=n,
-                profit_usd=plain(profits.get(d.id, Decimal(0))) or "0",
-                resolved=n > 0 and n == done,
-            )
-        )
-    last = deals[-1] if deals else None
-    return DealsOut(
-        items=rows,
-        next_cursor=_cursor(last.created_at, last.id) if more and last is not None else None,
     )
 
 
 __all__ = [
     "PROTECTION",
+    "SETTLED",
     "close_if_done",
     "create_deal",
     "deal_out",
+    "expected_profit",
+    "fill_images",
     "item_out",
     "items_of",
-    "list_deals",
     "load_deal",
+    "new_items",
+    "picture",
     "recost",
+    "require_live",
     "require_price",
     "update_deal",
 ]

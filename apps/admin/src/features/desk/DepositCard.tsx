@@ -2,6 +2,7 @@
 import { type DeskDeposit } from "./api";
 import { DEPOSIT_STATUS } from "./labels";
 
+import { CopyButton } from "@/components/CopyButton";
 import { Money } from "@/components/Money";
 import { reasonText } from "@/lib/dictionary";
 
@@ -57,7 +58,12 @@ export function DepositCard({ deposit: x }: { deposit: DeskDeposit }) {
       )}
       <Bot deposit={x} />
       <p className="text-fg-muted">
-        {x.trade_offer_id && <>обмен №{x.trade_offer_id}</>}
+        {x.trade_offer_id && (
+          <>
+            обмен №{x.trade_offer_id}
+            <CopyButton value={x.trade_offer_id} label="Копировать номер обмена" />
+          </>
+        )}
         {x.trade_offer_id && x.amount_usd && " · "}
         {x.amount_usd &&
           (x.amount_estimated ? (

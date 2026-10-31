@@ -2,7 +2,7 @@
 owner's share of our Skinslink balance»).
 
 Profit and Skinslink revenue are sums of ``desk_entries`` rows dated inside the window
-(Tashkent days, inclusive). The share is all-time: Skinslink money the desk booked less what
+(Tashkent days, inclusive); a closed deal counts in the window of its last ledger row. The share is all-time: Skinslink money the desk booked less what
 the owner marked as taken out — a figure only (owner ruling 2026-10-29).
 """
 
@@ -55,18 +55,25 @@ async def summary(db: AsyncSession, start: date | None, end: date | None) -> Sum
             *in_window, DeskEntry.kind != "revert"
         )
     )
-    closed = await db.scalar(
-        select(func.count()).where(
-            DeskDeal.status == "closed", DeskDeal.updated_at >= lo, DeskDeal.updated_at < hi
-        )
+    # A closed deal counts on the day of its last ledger row — editing it later never moves it.
+    last = (
+        select(DeskEntry.deal_id, func.max(DeskEntry.at).label("at"))
+        .group_by(DeskEntry.deal_id)
+        .subquery()
     )
-    unresolved = DeskItem.state.in_(("open", "sent"))
+    closed = await db.scalar(
+        select(func.count())
+        .select_from(DeskDeal)
+        .join(last, last.c.deal_id == DeskDeal.id)
+        .where(DeskDeal.status == "closed", last.c.at >= lo, last.c.at < hi)
+    )
+    live = DeskItem.deal_id.in_(select(DeskDeal.id).where(DeskDeal.status != "cancelled"))
     in_transit = await _sum(
         db,
         DeskItem.cost_usd,
         DeskItem.destination == "skinslink",
-        unresolved,
-        DeskItem.deal_id.in_(select(DeskDeal.id).where(DeskDeal.status.in_(("paid", "received")))),
+        DeskItem.state.in_(("open", "sent")),
+        live,
     )
     booked = await _sum(db, DeskEntry.revenue_usd)
     taken = await _sum(db, DeskWithdrawal.amount_usd)
@@ -78,7 +85,11 @@ async def summary(db: AsyncSession, start: date | None, end: date | None) -> Sum
         in_transit_usd=plain(in_transit) or "0",
         stock_usd=plain(
             await _sum(
-                db, DeskItem.cost_usd, DeskItem.destination == "stock", DeskItem.state == "open"
+                db,
+                DeskItem.cost_usd,
+                DeskItem.destination == "stock",
+                DeskItem.state == "open",
+                live,
             )
         )
         or "0",

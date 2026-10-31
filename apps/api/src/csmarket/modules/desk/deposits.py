@@ -10,8 +10,10 @@ switches, limits and risk holds do not apply (the owner's own tool, ADR-0027).
 What a report does (:func:`apply_report`): accepted (``hold`` / ``completed``) → the deal is
 ``received``; ``completed`` with an amount → each item ``credited`` with its share of the
 amount (``money.split_revenue``) and a ``credit`` row of ``share − cost``; ``failed`` /
-``canceled`` → the items go back to ``open``; ``reverted`` → the items ``reverted``, the deal
-``reverted``, and after a credit a ``revert`` row per item undoing its revenue, dated now.
+``canceled`` → the items go back to ``open``; ``reverted`` → the items ``reverted``, after a
+credit a ``revert`` row per item undoing its revenue, dated now, and the deal ``reverted`` once
+none of its items is left unresolved (spec 2026-10-31-desk-v2, bug 1). A report never takes a
+``completed`` or ``reverted`` deposit back, nor erases a stored ``fail_reason`` (bug 5).
 """
 
 from __future__ import annotations
@@ -32,11 +34,13 @@ from csmarket.modules.desk.deals import (
     items_of,
     load_deal,
     recost,
+    require_live,
     require_price,
 )
 from csmarket.modules.desk.inventory import refused, unavailable
 from csmarket.modules.desk.models import (
     DEPOSIT_DEAD,
+    DEPOSIT_OPEN,
     DESK_TX_PREFIX,
     RESOLVED,
     DeskDeal,
@@ -63,14 +67,16 @@ log = get_logger("csmarket.desk.deposits")
 #: account (``auth.resolve_persona`` with our key).
 PersonaLookup = Callable[[int], Awaitable[tuple[str | None, str | None] | None]]
 
-#: A ``creating`` deposit Skinslink does not know is given up after this (as SB-1 in sales).
-NOT_FOUND_GRACE = timedelta(minutes=10)
+#: A ``creating`` deposit Skinslink does not know is given up after this — an hour, so a
+#: second «Отправить обмен» cannot race a late first offer (spec 2026-10-31-desk-v2, bug 3).
+NOT_FOUND_GRACE = timedelta(minutes=60)
 LIVE_EVERY = timedelta(minutes=1)
 HOLD_EVERY = timedelta(minutes=30)
 #: After a credit we keep asking while the trader may still reverse (7 days + a day).
 WATCH_AFTER_ACCEPT = timedelta(days=8)
 WATCH_EVERY = timedelta(hours=1)
-_OPEN = ("creating", "new", "pending", "active")
+#: Where a deposit may still go from a final status (a credit can still be reversed).
+_ONWARD = {"completed": ("completed", "reverted"), "reverted": ("reverted",)}
 #: Far enough that a settled deposit is never due again.
 _NEVER = timedelta(days=3650)
 
@@ -153,8 +159,8 @@ async def _revert(db: AsyncSession, deal: DeskDeal, deposit: DeskDeposit, at: da
                 at=at,
             )
         )
-    deal.status = "reverted"
-    deal.updated_at = at
+    await db.flush()
+    await close_if_done(db, deal)  # ``reverted`` once nothing of the deal is left open
 
 
 def _next_check(deposit: DeskDeposit, at: datetime) -> datetime:
@@ -168,6 +174,28 @@ def _next_check(deposit: DeskDeposit, at: datetime) -> datetime:
     return at + LIVE_EVERY
 
 
+def _take(deposit: DeskDeposit, report: Deposit) -> str:
+    """Copy the report onto the deposit; its status, unless that would go back from a
+    settled one. Nothing stored is erased by an empty field. Returns the status kept."""
+    status = report.status
+    if status not in _ONWARD.get(deposit.status, (status,)):
+        status = deposit.status  # a late report never takes a settled deposit back
+    deposit.skinslink_id = report.id
+    deposit.status = status
+    if report.amount_usd is not None:
+        deposit.amount_usd = report.amount_usd
+    deposit.trade_offer_id = report.trade_offer_id or deposit.trade_offer_id
+    deposit.offer_expiry_at = report.offer_expiry_at or deposit.offer_expiry_at
+    deposit.hold_end_date = report.hold_end_date or deposit.hold_end_date
+    deposit.fail_reason = report.fail_reason or deposit.fail_reason
+    if report.bot_name:
+        deposit.bot_name = report.bot_name[:64]
+    if report.bot_steam_id and report.bot_steam_id != deposit.bot_steam_id:
+        deposit.bot_steam_id = report.bot_steam_id
+        deposit.bot_persona = deposit.bot_avatar_url = None
+    return status
+
+
 async def apply_report(
     db: AsyncSession, deposit: DeskDeposit, report: Deposit | None, *, at: datetime
 ) -> None:
@@ -177,29 +205,17 @@ async def apply_report(
         if deposit.status == "creating" and deposit.created_at < at - NOT_FOUND_GRACE:
             await _fail(db, deposit, "not_found")
     else:
-        deposit.skinslink_id = report.id
-        deposit.status = report.status
-        if report.amount_usd is not None:
-            deposit.amount_usd = report.amount_usd
-        deposit.trade_offer_id = report.trade_offer_id or deposit.trade_offer_id
-        deposit.offer_expiry_at = report.offer_expiry_at or deposit.offer_expiry_at
-        deposit.hold_end_date = report.hold_end_date or deposit.hold_end_date
-        deposit.fail_reason = report.fail_reason
-        if report.bot_name:
-            deposit.bot_name = report.bot_name[:64]
-        if report.bot_steam_id and report.bot_steam_id != deposit.bot_steam_id:
-            deposit.bot_steam_id = report.bot_steam_id
-            deposit.bot_persona = deposit.bot_avatar_url = None
-        if report.status in ("hold", "completed") and deposit.accepted_at is None:
+        status = _take(deposit, report)
+        if status in ("hold", "completed") and deposit.accepted_at is None:
             deposit.accepted_at = at
             if deal.status in ("agreed", "paid"):
                 deal.status = "received"
                 deal.updated_at = at
-        if report.status in ("failed", "canceled"):
+        if status in ("failed", "canceled"):
             await _free(db, deposit.id)
-        elif report.status == "reverted" and deposit.reverted_at is None:
+        elif status == "reverted" and deposit.reverted_at is None:
             await _revert(db, deal, deposit, at)
-        elif report.status == "completed" and deposit.credited_at is None:
+        elif status == "completed" and deposit.credited_at is None:
             if deposit.amount_usd is None:  # adopted: ``deposit/status`` has no USD amount
                 items = await _sent_items(db, deposit.id)
                 deposit.amount_usd = sum(
@@ -211,21 +227,31 @@ async def apply_report(
     await db.flush()
 
 
-async def _to_send(db: AsyncSession, deal: DeskDeal) -> list[DeskItem]:
-    """The deal's open Skinslink items with an asset id, none of its deposits open.
+async def _to_send(
+    db: AsyncSession, deal: DeskDeal, item_ids: list[str] | None = None
+) -> list[DeskItem]:
+    """The deal's open Skinslink items with an asset id (only ``item_ids`` when given), none
+    of its deposits open, the deal not cancelled.
 
     Raises:
-        ConflictError: ``deposit_open``, ``nothing_to_send``, ``price_required``.
+        ConflictError: ``deal_busy``, ``deposit_open``, ``nothing_to_send``,
+            ``price_required``.
     """
+    require_live(deal)
     open_one = await db.scalar(
-        select(DeskDeposit.id).where(DeskDeposit.deal_id == deal.id, DeskDeposit.status.in_(_OPEN))
+        select(DeskDeposit.id).where(
+            DeskDeposit.deal_id == deal.id, DeskDeposit.status.in_(DEPOSIT_OPEN)
+        )
     )
     if open_one is not None:
         raise ConflictError("a deposit of this deal is still open", code="deposit_open")
     items = [
         i
         for i in await items_of(db, deal.id)
-        if i.destination == "skinslink" and i.state == "open" and i.asset_id
+        if i.destination == "skinslink"
+        and i.state == "open"
+        and i.asset_id
+        and (item_ids is None or i.id in item_ids)
     ]
     if not items:
         raise ConflictError("no skins to send", code="nothing_to_send")
@@ -267,15 +293,18 @@ async def _reprice(
         recost(deal, everything)
 
 
-async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDeal:
-    """«Отправить обмен»: one deposit for the deal's open Skinslink items with an asset id.
+async def send(
+    db: AsyncSession, client: DepositClient, deal_id: str, item_ids: list[str] | None = None
+) -> DeskDeal:
+    """«Отправить обмен»: one deposit for the deal's open Skinslink items with an asset id —
+    only those of ``item_ids`` when given (spec 2026-10-31-desk-v2, stage 2).
 
     The trader's inventory is read first (nothing held across it): each item goes at
     Skinslink's price now, the floors follow it, and an item no longer there stays behind.
 
     Raises:
         NotFoundError: ``deal_not_found``.
-        ConflictError: ``trade_link_missing``, ``deposit_open``, ``nothing_to_send``,
+        ConflictError: ``trade_link_missing``, ``deal_busy``, ``deposit_open``, ``nothing_to_send``,
             ``skins_gone``, ``prices_moved``, ``steam_refused``.
         DeskUnavailableError: ``desk_unavailable`` — refused otherwise, or a 403.
     """
@@ -283,11 +312,11 @@ async def send(db: AsyncSession, client: DepositClient, deal_id: str) -> DeskDea
     if not deal.trade_link:
         raise ConflictError("the deal has no trade link", code="trade_link_missing")
     link = parse_tradelink(deal.trade_link)
-    await _to_send(db, deal)  # refuse early, before asking Skinslink
+    await _to_send(db, deal, item_ids)  # refuse early, before asking Skinslink
     await db.commit()
     fresh = await _fresh_prices(client, link)
     deal = await load_deal(db, deal_id, lock=True)
-    items = [i for i in await _to_send(db, deal) if i.asset_id in fresh]
+    items = [i for i in await _to_send(db, deal, item_ids) if i.asset_id in fresh]
     if not items:
         raise ConflictError("the skins are no longer in the inventory", code="skins_gone")
     await _reprice(db, deal, items, fresh)

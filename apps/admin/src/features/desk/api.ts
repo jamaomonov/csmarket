@@ -1,157 +1,25 @@
-/** «Мои сделки»: typed wrappers over `/api/v1/admin/desk` (spec 2026-10-29-desk). */
+/** «Мои сделки»: typed wrappers over `/api/v1/admin/desk` (specs 2026-10-29-desk, -31-desk-v2). */
+import {
+  type Deal,
+  type DealPatch,
+  type DealRow,
+  type DealStatus,
+  type Destination,
+  type InventoryItem,
+  type NewDeal,
+  type NewItem,
+  type SellBody,
+  type StockItem,
+  type Summary,
+  type Trader,
+  type Withdrawal,
+} from "./types";
+
 import { session } from "@/lib/api";
 
+export type * from "./types";
+
 const BASE = "/api/v1/admin/desk";
-
-export type Currency = "UZS" | "USD";
-export type Method = "direct" | "guarantor";
-export type Destination = "skinslink" | "stock";
-export type DealStatus = "agreed" | "paid" | "received" | "closed" | "cancelled" | "reverted";
-export type ItemState = "open" | "sent" | "credited" | "sold" | "written_off" | "reverted";
-
-export interface DeskItem {
-  id: string;
-  name: string;
-  asset_id: string | null;
-  image_url: string | null;
-  skinslink_usd: string | null;
-  destination: Destination;
-  cost_usd: string | null;
-  state: ItemState;
-  deposit_id: string | null;
-  sold_where: string | null;
-  sold_amount: string | null;
-  sold_currency: Currency | null;
-  sold_usd: string | null;
-  resolved_at: string | null;
-  note: string | null;
-}
-
-export interface DeskDeposit {
-  id: string;
-  status: string;
-  amount_usd: string | null;
-  /** The items' Skinslink prices stand in: Skinslink's own figure was not seen. */
-  amount_estimated: boolean;
-  trade_offer_id: string | null;
-  offer_expiry_at: string | null;
-  hold_end_date: string | null;
-  fail_reason: string | null;
-  /** The bot that sends the offer, as Skinslink names it, and its Steam profile. */
-  bot_name: string | null;
-  bot_steam_id: string | null;
-  bot_persona: string | null;
-  bot_avatar_url: string | null;
-  accepted_at: string | null;
-  credited_at: string | null;
-  reverted_at: string | null;
-  created_at: string;
-}
-
-export interface Deal {
-  id: string;
-  status: DealStatus;
-  trader: string;
-  note: string | null;
-  trade_link: string | null;
-  paid_amount: string | null;
-  paid_currency: Currency | null;
-  rate: string | null;
-  paid_usd: string | null;
-  method: Method;
-  paid_at: string | null;
-  guarantor_released_at: string | null;
-  created_at: string;
-  updated_at: string;
-  items: DeskItem[];
-  deposits: DeskDeposit[];
-  protected_until: string | null;
-  profit_usd: string;
-  resolved: boolean;
-}
-
-export interface DealRow {
-  id: string;
-  status: DealStatus;
-  trader: string;
-  method: Method;
-  created_at: string;
-  paid_amount: string | null;
-  paid_currency: Currency | null;
-  paid_usd: string | null;
-  items: number;
-  profit_usd: string;
-  resolved: boolean;
-}
-
-export interface Summary {
-  profit_usd: string;
-  revenue_usd: string;
-  deals_closed: number;
-  items_resolved: number;
-  in_transit_usd: string;
-  stock_usd: string;
-  skinslink_share_usd: string;
-}
-
-export interface InventoryItem {
-  asset_id: string;
-  name: string;
-  image_url: string | null;
-  price_usd: string;
-}
-
-export interface StockItem extends DeskItem {
-  deal_id: string;
-  trader: string;
-  bought_at: string;
-}
-
-export interface Withdrawal {
-  id: string;
-  amount_usd: string;
-  note: string | null;
-  at: string;
-}
-
-export interface NewItem {
-  name: string;
-  asset_id?: string;
-  image_url?: string;
-  skinslink_usd?: string;
-  destination: Destination;
-}
-
-export interface Price {
-  paid_amount?: string | null;
-  paid_currency?: Currency | null;
-  rate?: string | null;
-  paid_at?: string | null;
-}
-
-export interface NewDeal extends Price {
-  trader: string;
-  note?: string;
-  trade_link?: string;
-  method: Method;
-  items: NewItem[];
-}
-
-export interface DealPatch extends Price {
-  trader?: string;
-  note?: string | null;
-  trade_link?: string | null;
-  method?: Method;
-  status?: DealStatus;
-  guarantor_released?: boolean;
-}
-
-export interface SellBody {
-  where: string;
-  amount: string;
-  currency: Currency;
-  rate?: string;
-}
 
 export const DESK_KEY = ["admin", "desk"] as const;
 
@@ -189,8 +57,40 @@ export function patchDeal(id: string, body: DealPatch): Promise<Deal> {
   return session.apiPatch<Deal>(`${BASE}/deals/${encodeURIComponent(id)}`, body, fresh());
 }
 
-export function sendDeposit(id: string): Promise<Deal> {
-  return session.apiPost<Deal>(`${BASE}/deals/${encodeURIComponent(id)}/deposit`, {}, fresh());
+/** «Отправить обмен»: every open Skinslink skin, or only `itemIds`. */
+export function sendDeposit(id: string, itemIds?: string[]): Promise<Deal> {
+  return session.apiPost<Deal>(
+    `${BASE}/deals/${encodeURIComponent(id)}/deposit`,
+    itemIds ? { item_ids: itemIds } : {},
+    fresh(),
+  );
+}
+
+export function addItems(id: string, items: NewItem[]): Promise<Deal> {
+  return session.apiPost<Deal>(`${BASE}/deals/${encodeURIComponent(id)}/items`, { items }, fresh());
+}
+
+export function removeItem(id: string): Promise<Deal> {
+  return session.api<Deal>(`${BASE}/items/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    ...fresh(),
+  });
+}
+
+/** A sold or written-off skin back to open. */
+export function undoItem(id: string): Promise<Deal> {
+  return session.apiPost<Deal>(`${BASE}/items/${encodeURIComponent(id)}/undo`, undefined, fresh());
+}
+
+export function listTraders(q: string): Promise<{ items: Trader[] }> {
+  const p = new URLSearchParams();
+  if (q) p.set("q", q);
+  return session.apiGet(`${BASE}/traders?${p.toString()}`);
+}
+
+/** The stock skins at Skinslink now, `{name: price_usd}`; keyless — it writes nothing. */
+export function stockPrices(): Promise<Record<string, string>> {
+  return session.apiPost(`${BASE}/stock/prices`, undefined);
 }
 
 export function sellItem(id: string, body: SellBody): Promise<Deal> {

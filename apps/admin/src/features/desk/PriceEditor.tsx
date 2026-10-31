@@ -6,10 +6,19 @@ import { useState } from "react";
 import { type Currency, type Deal, type DealPatch, DESK_KEY, getRate } from "./api";
 import { deskErrorText } from "./labels";
 import { cleanAmount, grouped, TAP } from "./Parts";
-import { CurrencySwitch, RateField, toUsd } from "./SellForm";
+import { CurrencySwitch, RateField, toUsd } from "./SellSheet";
 
 import { Money } from "@/components/Money";
 import { MoneyInput } from "@/components/MoneyInput";
+
+/** The price form's id: «Указать цену» elsewhere on the page leads to it. */
+export const PRICE_FORM_ID = "deal-price";
+
+/** Focuses (and so scrolls to) the price form's amount, when the form is open. */
+export function focusPrice(): void {
+  const input = document.getElementById(PRICE_FORM_ID)?.querySelector("input");
+  input?.focus();
+}
 
 interface PriceEditorProps {
   deal: Deal;
@@ -70,6 +79,7 @@ export function PriceEditor({ deal, onSave }: PriceEditorProps) {
   };
   return (
     <form
+      id={PRICE_FORM_ID}
       className="flex flex-wrap items-end gap-2 text-sm"
       onSubmit={(e) => {
         e.preventDefault();

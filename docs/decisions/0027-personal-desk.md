@@ -68,6 +68,30 @@ figure only (owner ruling 2026-10-29).
 - The deal page refreshes every 5 s while a deposit is open and shows a failed one in red with
   the reason in words; the item's Skinslink image is now saved with the deal.
 
+## Amendment 2026-10-31: v2 — fixes, the list, the missing pieces
+
+Spec `docs/superpowers/specs/2026-10-31-desk-v2-design.md`.
+
+- Pictures: a desk item without one takes our catalogue's `skin_items.image_url` by market name
+  (phase ignored, an item without a phase first) — on create, on add, in the inventory answer —
+  through `skins.api.images_by_name`; served through `steam_image`. Migration `0046_desk_v2`
+  fills existing items and adds `desk_deals.guarantor`.
+- A deal turns `reverted` only once none of its items is left unresolved, and settles as
+  `reverted` rather than `closed` when any item was reverted. `closed` / `reverted` are not
+  hand-set (422); `cancelled` is refused (409 `deal_busy`) with an item sent or resolved or a
+  deposit open; a settled deal's status is not changed by hand (`deal_busy`). The summary's
+  «в пути» / «На складе» and the stock list leave cancelled deals out.
+- A `creating` deposit unknown to Skinslink is given up after 60 minutes (was 10). A report
+  never erases a stored `fail_reason` and never takes a `completed` / `reverted` deposit back.
+  Moving an item without an asset id to Skinslink is 409 `no_asset`. `paid_at` / `at` need a
+  timezone and may not be ahead (5 min skew allowed).
+- Items after creation (`POST /deals/{id}/items`, `DELETE /items/{id}`; `price_locked` once an
+  item is resolved; `last_item`), `item_ids` on the deposit, undo of a sale or write-off
+  (`POST /items/{id}/undo`, the ledger row deleted, audited `desk.item.undo`; a settled deal
+  reopens as `received` if a trade was accepted, else `paid`), `GET /traders`.
+- AGENTS §11's twelfth carve-out grows by `POST /admin/desk/stock/prices` (`get-prices`,
+  price only, the session committed before it); its route joins the `handler` regexes.
+
 ## Validation
 
 Integration tests pin a lost `create-deposit` answer adopted by the poll, the webhook's routing

@@ -18,8 +18,14 @@ const api = vi.hoisted(() => ({
   moveItem: vi.fn(),
   writeOff: vi.fn(),
   getRate: vi.fn(),
+  addItems: vi.fn(),
+  removeItem: vi.fn(),
+  undoItem: vi.fn(),
+  loadInventory: vi.fn(),
+  listTraders: vi.fn(),
 }));
 vi.mock("./api", () => api);
+vi.mock("@/features/catalogue/SkinSearch", () => ({ SkinSearch: () => null }));
 
 const HOLD: DeskDeposit = {
   id: "x",
@@ -47,6 +53,7 @@ function renderPage() {
       <MemoryRouter initialEntries={["/desk/deals/d1"]}>
         <Routes>
           <Route path="/desk/deals/:id" element={<DealPage />} />
+          <Route path="/desk" element={<p>desk list</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -66,6 +73,7 @@ describe("DealPage", () => {
     });
     api.getDeal.mockResolvedValue(deal());
     api.getRate.mockResolvedValue({ usd_uzs: "13000" });
+    api.listTraders.mockResolvedValue({ items: [] });
   });
 
   it("asks before sending the offer, then shows when paying is safe", async () => {
@@ -80,7 +88,8 @@ describe("DealPage", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Отправить обмен" }));
     expect(api.sendDeposit).not.toHaveBeenCalled();
-    expect(confirm()).toHaveTextContent("2 скина в Skinslink");
+    expect(confirm()).toHaveTextContent("2 скина · ≈ $1 200.00 по ценам Skinslink");
+    expect(within(confirm()).getAllByRole("checkbox")).toHaveLength(2);
     fireEvent.click(within(confirm()).getByRole("button", { name: "Отправить" }));
     await waitFor(() => {
       expect(api.sendDeposit).toHaveBeenCalledWith("d1");
@@ -122,8 +131,10 @@ describe("DealPage", () => {
     api.patchDeal.mockResolvedValue(deal({ status: "cancelled" }));
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Сменить статус" }));
+    expect(within(confirm()).getAllByRole("radio")).toHaveLength(4);
+    expect(within(confirm()).queryByRole("radio", { name: "закрыта" })).toBeNull();
     fireEvent.click(within(confirm()).getByRole("radio", { name: "отменена" }));
-    expect(confirm()).toHaveTextContent("Это только пометка");
+    expect(confirm()).toHaveTextContent("пока ничего не отправлено");
     fireEvent.click(within(confirm()).getByRole("button", { name: "Сохранить" }));
     await waitFor(() => {
       expect(api.patchDeal).toHaveBeenCalledWith("d1", { status: "cancelled" });
@@ -200,26 +211,154 @@ describe("DealPage", () => {
   it("shows a red banner on a revert", async () => {
     api.getDeal.mockResolvedValue(deal({ status: "reverted", profit_usd: "-1100" }));
     renderPage();
-    expect(await screen.findByText(/Трейдер откатил обмен/)).toBeInTheDocument();
+    expect(await screen.findByText(/Трейдер откатил обмен:/)).toBeInTheDocument();
+    // The system's status: not for the owner to change.
+    expect(screen.queryByRole("button", { name: "Сменить статус" })).toBeNull();
   });
 
-  it("moves an item to stock", async () => {
-    api.moveItem.mockResolvedValue(deal());
+  it("sends only the ticked skins", async () => {
+    api.sendDeposit.mockResolvedValue(deal());
     renderPage();
-    const [first] = await screen.findAllByRole("radio", { name: "Себе" });
-    if (first) fireEvent.click(first);
+    const bar = await screen.findByRole("region", { name: "Отправка" });
+    expect(bar).toHaveTextContent("2 скина · ≈ $1 200.00");
+    fireEvent.click(within(bar).getByRole("button", { name: /Отправить обмен/ }));
+    fireEvent.click(
+      within(confirm()).getByRole("checkbox", { name: "AWP | Asiimov (Field-Tested)" }),
+    );
+    expect(confirm()).toHaveTextContent("1 скин · ≈ $800.00 по ценам Skinslink");
+    fireEvent.click(within(confirm()).getByRole("button", { name: "Отправить" }));
     await waitFor(() => {
-      expect(api.moveItem).toHaveBeenCalledWith("i1", "stock");
+      expect(api.sendDeposit).toHaveBeenCalledWith("d1", ["i1"]);
     });
   });
 
-  it("keeps the price form open when the save fails", async () => {
-    api.patchDeal.mockRejectedValue(new ApiError(409, "Conflict", { code: "price_locked" }));
+  it("says why it cannot send without a trade link", async () => {
+    api.getDeal.mockResolvedValue(deal({ trade_link: null }));
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: "Изменить цену" }));
-    fireEvent.change(screen.getByLabelText("Сколько заплачено, $"), { target: { value: "1200" } });
-    fireEvent.click(screen.getByRole("button", { name: "Сохранить цену" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Цену уже не изменить");
-    expect(screen.getByRole("button", { name: "Сохранить цену" })).toBeInTheDocument();
+    const bar = await screen.findByRole("region", { name: "Отправка" });
+    expect(bar).toHaveTextContent("Нет трейд-ссылки");
+    expect(within(bar).queryByRole("button", { name: /Отправить обмен/ })).toBeNull();
+    fireEvent.click(within(bar).getByRole("button", { name: "Указать ссылку" }));
+    expect(screen.getByLabelText("Трейд-ссылка")).toBeInTheDocument();
+  });
+
+  it("says to set the price before sending, and leads to it", async () => {
+    api.getDeal.mockResolvedValue(
+      deal({ paid_amount: null, paid_currency: null, paid_usd: null, expected_profit_usd: null }),
+    );
+    renderPage();
+    const bar = await screen.findByRole("region", { name: "Отправка" });
+    expect(bar).toHaveTextContent("Сначала укажите, сколько заплатили");
+    expect(within(bar).queryByRole("button", { name: /Отправить обмен/ })).toBeNull();
+    fireEvent.click(within(bar).getByRole("button", { name: "Указать цену" }));
+    expect(screen.getByRole("textbox", { name: /^Сколько заплачено/ })).toHaveFocus();
+  });
+
+  it("a cancelled deal offers no sending, selling or writing off, and no expected profit", async () => {
+    api.getDeal.mockResolvedValue(
+      deal({
+        status: "cancelled",
+        items: [item(), item({ id: "i2", destination: "stock", asset_id: null })],
+      }),
+    );
+    renderPage();
+    const sum = await screen.findByRole("region", { name: "Сделка" });
+    expect(sum).not.toHaveTextContent("≈");
+    expect(screen.queryByRole("region", { name: "Отправка" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Продал" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Ещё:/ })).toBeNull();
+    expect(screen.queryByRole("radio", { name: /Skinslink/ })).toBeNull();
+  });
+
+  it("warns what cancelling needs", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Сменить статус" }));
+    fireEvent.click(screen.getByRole("radio", { name: "отменена" }));
+    expect(confirm()).toHaveTextContent("Отменить можно, пока ничего не отправлено и не продано.");
+  });
+
+  it("a partly done deal shows the profit so far and the expected one", async () => {
+    api.getDeal.mockResolvedValue(deal({ profit_usd: "40", expected_profit_usd: "110" }));
+    renderPage();
+    const sum = await screen.findByRole("region", { name: "Сделка" });
+    expect(sum).toHaveTextContent("пока +$40.00 · ≈ +$110.00 по ценам Skinslink");
+  });
+
+  it("says an offer is already open", async () => {
+    api.getDeal.mockResolvedValue(
+      deal({
+        items: [item({ state: "sent", deposit_id: "x" }), item({ id: "i2", asset_id: "101" })],
+        deposits: [{ ...HOLD, status: "active" }],
+      }),
+    );
+    renderPage();
+    const bar = await screen.findByRole("region", { name: "Отправка" });
+    expect(bar).toHaveTextContent("Обмен уже идёт");
+  });
+
+  it("shows what the deal is: paid, Skinslink, the expected profit, the note", async () => {
+    api.getDeal.mockResolvedValue(
+      deal({
+        paid_amount: "14300000",
+        paid_currency: "UZS",
+        rate: "13000",
+        note: "из чата",
+        method: "guarantor",
+        guarantor: "garant42",
+      }),
+    );
+    renderPage();
+    const sum = await screen.findByRole("region", { name: "Сделка" });
+    expect(sum).toHaveTextContent("14 300 000");
+    expect(sum).toHaveTextContent("$1 100.00");
+    expect(sum).toHaveTextContent("$1 200.00");
+    expect(sum).toHaveTextContent("≈ +$100.00");
+    expect(sum).toHaveTextContent("из чата");
+    expect(sum).toHaveTextContent("garant42");
+    expect(screen.getByRole("link", { name: "Все сделки с трейдером" })).toHaveAttribute(
+      "href",
+      "/desk?q=trader+one",
+    );
+  });
+
+  it("edits the deal, sending only what changed", async () => {
+    api.patchDeal.mockResolvedValue(deal({ note: "новое" }));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Изменить" }));
+    fireEvent.change(screen.getByLabelText("Заметка"), { target: { value: "новое" } });
+    fireEvent.click(screen.getByRole("radio", { name: "через гаранта" }));
+    fireEvent.change(screen.getByLabelText("Гарант"), { target: { value: "garant42" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(api.patchDeal).toHaveBeenCalledWith("d1", {
+        note: "новое",
+        method: "guarantor",
+        guarantor: "garant42",
+      });
+    });
+  });
+
+  it("says in words why the status cannot change", async () => {
+    api.patchDeal.mockRejectedValue(new ApiError(409, "Conflict", { code: "deal_busy" }));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Сменить статус" }));
+    fireEvent.click(within(confirm()).getByRole("radio", { name: "отменена" }));
+    fireEvent.click(within(confirm()).getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Сейчас статус не сменить");
+  });
+
+  it("copies the offer number", async () => {
+    api.getDeal.mockResolvedValue(deal({ deposits: [HOLD] }));
+    renderPage();
+    expect(
+      await screen.findByRole("button", { name: "Копировать номер обмена" }),
+    ).toBeInTheDocument();
+  });
+
+  it("a failed load can be asked again", async () => {
+    api.getDeal.mockRejectedValueOnce(new ApiError(500, "Server Error", {}));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Попробовать ещё раз" }));
+    expect(await screen.findByRole("heading", { name: "trader one" })).toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 # «Мои сделки» — the owner's personal desk
 
-Spec `2026-10-29-desk-design.md`, ADR-0027. Admin → «Мои сделки» (visible only with the `desk`
-role).
+Specs `2026-10-29-desk-design.md` and `2026-10-31-desk-v2-design.md`, ADR-0027. Admin → «Мои
+сделки» (visible only with the `desk` role).
 
 ## Give the owner access
 
@@ -29,9 +29,17 @@ outcome word.
 ## Rules that keep the profit honest
 
 - Nothing is sent, sold or written off before the deal has a price («Сначала укажите, сколько
-  заплатили»): each skin's profit is measured against its share of it.
+  заплатили»): each skin's profit is measured against its share of it. Without a price the send
+  bar says so and «Указать цену» leads to the price form.
 - Once one skin is sold, credited or written off, the price is locked. Fix a wrong price
   before the first sale.
+- The expected profit («≈ +$B») is what is booked so far plus, for each skin still bound for
+  Skinslink (not sent yet or on its way), its Skinslink price less its cost; «Себе» skins are
+  not counted until sold. A partly done deal shows both: «пока +$A · ≈ +$B». A cancelled deal
+  shows no expected profit.
+- «Сделок» in the period's figures counts a closed deal on the day of its last sale, credit,
+  write-off or revert — editing the deal later (note, guarantor, «Подтвердить гаранту») does not
+  move it to another period.
 - When the trade was saved after a lost answer, Skinslink's status gives no dollar amount: the
   deal is credited at the skins' Skinslink prices and shows «≈». Check the real figure in the
   Skinslink cabinet.
@@ -39,8 +47,9 @@ outcome word.
 ## A deposit stuck «отправляем…»
 
 The `create-deposit` answer was lost. The 60 s `desk.poll` asks Skinslink by `desk-{id}`; after
-10 minutes unknown to Skinslink it is marked failed and the skins are free to send again. Do
-not press «Отправить обмен» twice — it is refused while one is open.
+60 minutes unknown to Skinslink it is marked failed and the skins are free to send again (an
+hour, so a late first offer cannot cross a second one). Do not press «Отправить обмен» twice —
+it is refused while one is open.
 
 ## A deposit Skinslink turned down
 
@@ -65,9 +74,41 @@ name shows; a failed read is retried on the next poll and never holds the deposi
 ## A revert
 
 Red banner «Трейдер откатил обмен». Skinslink took its money back (or never paid, if the revert
-came during the hold); the deal's profit becomes the loss of what you paid, booked on the day of
-the revert. «Моя доля на Skinslink» drops by the
-credited amount.
+came during the hold); the reverted skins' profit becomes the loss of what you paid for them,
+booked on the day of the revert. «Моя доля на Skinslink» drops by the credited amount. The deal
+turns «трейдер откатил обмен» only once none of its skins is left open — while a «Себе» skin
+still waits to be sold, the deal keeps its status and the deposit card shows the revert; it
+turns `reverted` (not `closed`) when its last skin is resolved.
+
+## Statuses by hand
+
+«Сменить статус» offers `agreed`, `paid`, `received`, `cancelled`; `closed` and `reverted` are
+set by the system. «Отменена» is refused («deal_busy») while a skin is at Skinslink or anything
+of the deal is sold, credited or written off; a cancelled deal can be set back. A closed or
+reverted deal's status cannot be changed by hand — undo a sale or write-off instead. Cancelled
+deals are left out of «В пути», «На складе» and the stock list. A cancelled deal is frozen:
+sending, selling, writing off, moving a skin and adding skins are refused («deal_busy») and the
+page hides those buttons; set the status back to work on it again.
+
+## Skins after the deal is made
+
+- «Добавить скин» adds skins, «Удалить» takes an open one off (the last one stays). Both split
+  the price again, so both are refused («price_locked») once one skin is sold, credited or
+  written off.
+- «Отправить обмен» can send only some of the skins (a checkbox each).
+- A skin without an asset id (added by hand) cannot be moved to Skinslink («no_asset»).
+- «Отменить продажу» / «Отменить списание» puts a sold or written-off skin back to open and
+  deletes its profit row (audited `desk.item.undo`); a closed deal opens again. A credited or
+  reverted skin cannot be undone.
+- Pictures: a skin Skinslink sends without one takes our catalogue's by market name.
+- Dates («Когда заплатил», «Когда продал») carry a timezone and may not be in the future.
+
+## Stock prices and traders
+
+- «Склад» asks Skinslink `get-prices` for the stock's names (one call, 15 s). Skinslink down →
+  «desk_unavailable»: the stock still lists, without today's prices.
+- «Трейдеры» group deals by name (case ignored): deals and paid $ leave out cancelled ones,
+  profit, deals with a revert, and the last trade link — filled into a new deal.
 
 ## «Моя доля на Skinslink»
 

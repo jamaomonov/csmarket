@@ -1,30 +1,43 @@
 /**
- * One deal: when paying is safe, the profit, the price, the skins with their actions, the
- * Skinslink offer and its state (spec 2026-10-29-desk). Every money step asks first.
+ * One deal: what it is (price, Skinslink value, profit, note, link, guarantor), when paying is
+ * safe, the skins with their actions, the Skinslink offer and its state (specs 2026-10-29-desk,
+ * 2026-10-31-desk-v2). Every money step asks first; «Сменить статус» sits at the bottom.
  */
 import { Button } from "@csmarket/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 
-import { type Deal, type DealPatch, DESK_KEY, getDeal, patchDeal, sendDeposit } from "./api";
+import { AddItems } from "./AddItems";
+import {
+  addItems,
+  type Deal,
+  type DealPatch,
+  DESK_KEY,
+  getDeal,
+  patchDeal,
+  sendDeposit,
+} from "./api";
+import { DealEditSheet } from "./DealEditSheet";
+import { DealSummary } from "./DealSummary";
 import { DepositCard, OPEN_DEPOSIT } from "./DepositCard";
 import { ItemRow } from "./ItemRow";
 import { DEAL_STATUS, deskErrorText, METHOD } from "./labels";
-import { TAP } from "./Parts";
-import { PriceEditor } from "./PriceEditor";
-import { StatusSheet } from "./StatusSheet";
+import { DeskError, TAP } from "./Parts";
+import { SendBar, SendSheet } from "./SendBar";
+import { isHand, StatusSheet } from "./StatusSheet";
 
 import { CONFIRM_BUTTONS, ConfirmSheet } from "@/components/ConfirmSheet";
-import { Money } from "@/components/Money";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusChip } from "@/components/StatusChip";
 import { When } from "@/components/When";
 import { formatDateTime } from "@/lib/format";
 
 const REFRESH_MS = 5_000;
+const LOCKED = new Set(["credited", "sold", "written_off", "reverted"]);
+const FINAL = new Set(["closed", "cancelled", "reverted"]);
 
-type Sheet = "send" | "status" | "guarantor" | null;
+type Sheet = "send" | "status" | "guarantor" | "edit" | null;
 
 export function DealPage() {
   const { id = "" } = useParams();
@@ -39,69 +52,65 @@ export function DealPage() {
   });
   const [error, setError] = useState<unknown>(null);
   const [sheet, setSheet] = useState<Sheet>(null);
+  const fresh = (d: Deal) => {
+    qc.setQueryData(key, d);
+    // The answer is the fresh deal; refresh the lists and figures, not this page.
+    void qc.invalidateQueries({ queryKey: DESK_KEY, predicate: (q) => q.queryKey[2] !== "deal" });
+  };
   const act = useMutation({
     mutationFn: (run: () => Promise<Deal>) => run(),
     onSuccess: (d) => {
       setError(null);
       setSheet(null);
-      qc.setQueryData(key, d);
-      // The answer is the fresh deal; refresh the lists and figures, not this page.
-      void qc.invalidateQueries({ queryKey: DESK_KEY, predicate: (q) => q.queryKey[2] !== "deal" });
+      fresh(d);
     },
     onError: (e) => {
       setError(e);
       setSheet(null);
     },
   });
+  /** For forms that show their own refusal: saves and refreshes, or rejects. */
+  const commit = async (run: () => Promise<Deal>) => {
+    fresh(await run());
+  };
   const d = deal.data;
   if (!d) {
     return deal.isError ? (
-      <p className="text-danger">{deskErrorText(deal.error)}</p>
+      <DeskError
+        error={deal.error}
+        back
+        onRetry={() => {
+          void deal.refetch();
+        }}
+      />
     ) : (
-      <p className="text-fg-muted">Загружаем…</p>
+      <div aria-busy="true" className="bg-surface h-64 animate-pulse rounded-lg" />
     );
   }
-  const patch = (body: DealPatch) => act.mutateAsync(() => patchDeal(d.id, body));
-  const toSend = d.items.filter(
-    (i) => i.destination === "skinslink" && i.state === "open" && i.asset_id,
-  );
-  const sendable =
-    d.trade_link !== null &&
-    !d.deposits.some((x) => OPEN_DEPOSIT.has(x.status)) &&
-    toSend.length > 0;
-  const sendSum = toSend.reduce((s, i) => s + Number(i.skinslink_usd ?? 0), 0);
+  const run = (call: () => Promise<Deal>) => act.mutateAsync(call).catch(() => undefined);
   const safe = d.protected_until !== null && new Date(d.protected_until) <= new Date();
+  const removable = !FINAL.has(d.status) && !d.items.some((i) => LOCKED.has(i.state));
+  const status = d.status;
   return (
     <section className="space-y-4">
       <PageHeader
         title={d.trader}
         back={{ to: "/desk", label: "Мои сделки" }}
         badges={
-          <StatusChip tone={DEAL_STATUS[d.status].tone}>{DEAL_STATUS[d.status].label}</StatusChip>
+          <StatusChip tone={DEAL_STATUS[status].tone}>{DEAL_STATUS[status].label}</StatusChip>
         }
         meta={
           <>
             <When iso={d.created_at} /> · {METHOD[d.method]}
           </>
         }
-        actions={
-          <Button
-            variant="secondary"
-            className={TAP}
-            onClick={() => {
-              setSheet("status");
-            }}
-          >
-            Сменить статус
-          </Button>
-        }
       />
-      {d.status === "reverted" && (
+      {status === "reverted" && (
         <p className="border-danger text-danger rounded-lg border p-3" role="status">
           Трейдер откатил обмен: Skinslink забрал деньги, скины вернулись к трейдеру.
         </p>
       )}
-      {d.protected_until && d.status !== "reverted" && (
+      {d.protected_until && status !== "reverted" && (
         <p
           className={`rounded-lg border p-3 font-medium ${safe ? "border-success text-success" : "border-warning text-warning"}`}
         >
@@ -115,102 +124,79 @@ export function DealPage() {
           {deskErrorText(error)}
         </p>
       )}
-      <div className="border-border bg-surface flex flex-wrap items-center gap-3 rounded-lg border p-3">
-        <span>
-          {d.resolved ? "Прибыль:" : "Прибыль пока:"} <Money usd={d.profit_usd} signed />
-        </span>
-        {d.method === "guarantor" && d.guarantor_released_at === null && (
-          <Button
-            variant={safe ? "primary" : "secondary"}
-            className={`ml-auto ${TAP}`}
-            disabled={act.isPending}
-            onClick={() => {
-              if (safe) void patch({ guarantor_released: true }).catch(() => undefined);
-              else setSheet("guarantor");
-            }}
-          >
-            Подтвердить гаранту
-          </Button>
-        )}
-        {d.guarantor_released_at && (
-          <span className="text-sm">
-            Гаранту подтверждено <When iso={d.guarantor_released_at} />
-          </span>
-        )}
-      </div>
-      <PriceEditor
+      <DealSummary
         deal={d}
-        onSave={async (body) => {
-          // Its own errors show in the form, not on the page.
-          const fresh = await patchDeal(d.id, body);
-          qc.setQueryData(key, fresh);
-          void qc.invalidateQueries({
-            queryKey: DESK_KEY,
-            predicate: (q) => q.queryKey[2] !== "deal",
-          });
+        busy={act.isPending}
+        onSavePrice={(body) => commit(() => patchDeal(d.id, body))}
+        onEdit={() => {
+          setSheet("edit");
         }}
+        onRelease={
+          d.method === "guarantor" && d.guarantor_released_at === null
+            ? () => {
+                if (safe) void run(() => patchDeal(d.id, { guarantor_released: true }));
+                else setSheet("guarantor");
+              }
+            : null
+        }
       />
       <ul className="divide-border border-border divide-y rounded-lg border" aria-label="Скины">
         {d.items.map((i) => (
           <ItemRow
             key={i.id}
             item={i}
-            act={(run) => {
-              act.mutate(run);
-            }}
+            act={run}
             busy={act.isPending}
+            removable={removable}
+            frozen={status === "cancelled"}
           />
         ))}
       </ul>
-      {sendable && (
-        <Button
-          className={TAP}
-          disabled={act.isPending}
-          onClick={() => {
-            setSheet("send");
-          }}
-        >
-          Отправить обмен
-        </Button>
-      )}
+      {removable && <AddItems deal={d} onAdd={(items) => commit(() => addItems(d.id, items))} />}
+      <SendBar
+        deal={d}
+        busy={act.isPending}
+        onOpen={() => {
+          setSheet("send");
+        }}
+        onEdit={() => {
+          setSheet("edit");
+        }}
+      />
       {d.deposits.map((x) => (
         <DepositCard key={x.id} deposit={x} />
       ))}
+      {isHand(status) && (
+        <Button
+          variant="secondary"
+          className={TAP}
+          onClick={() => {
+            setSheet("status");
+          }}
+        >
+          Сменить статус
+        </Button>
+      )}
       {sheet === "send" && (
-        <ConfirmSheet
-          title="Отправить обмен трейдеру?"
+        <SendSheet
+          deal={d}
           busy={act.isPending}
           onClose={() => {
             setSheet(null);
           }}
-        >
-          <p className="text-sm">
-            {toSend.length} {toSend.length === 1 ? "скин" : toSend.length < 5 ? "скина" : "скинов"}{" "}
-            в Skinslink, было ≈ <Money usd={sendSum.toFixed(2)} />. Цены Skinslink обновятся перед
-            отправкой. Бот Skinslink пришлёт трейдеру обмен.
-          </p>
-          <div className={CONFIRM_BUTTONS}>
-            <Button
-              variant="secondary"
-              className={TAP}
-              disabled={act.isPending}
-              onClick={() => {
-                setSheet(null);
-              }}
-            >
-              Отмена
-            </Button>
-            <Button
-              className={TAP}
-              disabled={act.isPending}
-              onClick={() => {
-                act.mutate(() => sendDeposit(d.id));
-              }}
-            >
-              {act.isPending ? "Отправляем…" : "Отправить"}
-            </Button>
-          </div>
-        </ConfirmSheet>
+          onSend={(ids) => {
+            act.mutate(() => (ids ? sendDeposit(d.id, ids) : sendDeposit(d.id)));
+          }}
+        />
+      )}
+      {sheet === "edit" && (
+        <DealEditSheet
+          deal={d}
+          onClose={() => {
+            setSheet(null);
+          }}
+          onSave={(body) => commit(() => patchDeal(d.id, body))}
+        />
       )}
       {sheet === "guarantor" && d.protected_until && (
         <ConfirmSheet
@@ -238,7 +224,7 @@ export function DealPage() {
               className={TAP}
               disabled={act.isPending}
               onClick={() => {
-                void patch({ guarantor_released: true }).catch(() => undefined);
+                void run(() => patchDeal(d.id, { guarantor_released: true }));
               }}
             >
               Всё равно подтвердить
@@ -246,15 +232,15 @@ export function DealPage() {
           </div>
         </ConfirmSheet>
       )}
-      {sheet === "status" && (
+      {sheet === "status" && isHand(status) && (
         <StatusSheet
-          current={d.status}
+          current={status}
           busy={act.isPending}
           onClose={() => {
             setSheet(null);
           }}
-          onSave={(status) => {
-            void patch({ status }).catch(() => undefined);
+          onSave={(next) => {
+            void run(() => patchDeal(d.id, { status: next } satisfies DealPatch));
           }}
         />
       )}
